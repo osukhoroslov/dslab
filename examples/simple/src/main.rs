@@ -10,7 +10,7 @@ use crate::Event::*;
 #[derive(Debug, Clone)]
 pub enum Event {
     Start {
-        other: ActorId,
+        other: String,
     },
     Ping {
     },
@@ -34,7 +34,7 @@ impl Actor<Event> for SimpleActor {
         match event {
             Event::Start { other } => {
                 println!("[{}] received Start from {}", ctx.id, from);
-                ctx.emit(Ping {}, other, 0.);
+                ctx.emit(Ping {}, ActorId::from(&other), 0.);
             }
             Event::Ping {} => {
                 println!("[{}] received Ping from {}", ctx.id, from);
@@ -55,13 +55,11 @@ impl Actor<Event> for SimpleActor {
 
 fn main() {
     let mut sim = Simulation::<Event>::new(123);
-    let actor1_id = ActorId::from("1");
-    let actor2_id = ActorId::from("2");
     let actor1 = Rc::new(RefCell::new(SimpleActor::new()));
     let actor2 = Rc::new(RefCell::new(SimpleActor::new()));
-    sim.add_actor(actor1_id.clone(), actor1);
-    sim.add_actor(actor2_id.clone(), actor2);
-    sim.add_event(Start {other: actor2_id.clone()}, ActorId::from("0"), actor1_id.clone(), 0.);
-    sim.add_event(Start {other: actor1_id.clone()}, ActorId::from("0"), actor2_id.clone(), 0.);
+    sim.add_actor("1", actor1);
+    sim.add_actor("2", actor2);
+    sim.add_event(Start {other: "2".to_string()}, "0", "1", 0.);
+    sim.add_event(Start {other: "1".to_string()}, "0", "2", 0.);
     sim.step_until_no_events();
 }

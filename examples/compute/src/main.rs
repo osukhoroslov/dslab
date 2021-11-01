@@ -93,10 +93,8 @@ impl Actor<Event> for ComputeActor {
 
 fn main() {
     let mut sim = Simulation::<Event>::new(123);
-    let task_id = ActorId::from("task");
-    let comp_id = ActorId::from("compute");
-    sim.add_actor(task_id.clone(), Rc::new(RefCell::new(TaskActor::new(100))));
-    sim.add_actor(comp_id.clone(), Rc::new(RefCell::new(ComputeActor::new(10))));
-    sim.add_event(Start {}, ActorId::from("0"), task_id.clone(), 0.);
+    sim.add_actor("task", Rc::new(RefCell::new(TaskActor::new(100))));
+    sim.add_actor("compute", Rc::new(RefCell::new(ComputeActor::new(10))));
+    sim.add_event(Start {}, "0", "task", 0.);
     sim.step_until_no_events();
 }

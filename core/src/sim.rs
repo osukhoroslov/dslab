@@ -71,15 +71,17 @@ impl<E: Debug> Simulation<E> {
         self.clock.into_inner()
     }
 
-    pub fn add_actor(&mut self, id: ActorId, actor: Rc<RefCell<dyn Actor<E>>>) {
-        self.actors.insert(id, actor);
+    pub fn add_actor(&mut self, id: &str, actor: Rc<RefCell<dyn Actor<E>>>) {
+        self.actors.insert(ActorId(id.to_string()), actor);
     }
 
-    pub fn add_event(&mut self, event: E, src: ActorId, dest: ActorId, delay: f64) -> u64 {
+    pub fn add_event(&mut self, event: E, src: &str, dest: &str, delay: f64) -> u64 {
         let entry = EventEntry {
             id: self.event_count,
             time: self.clock + delay,
-            src, dest, event
+            src: ActorId(src.to_string()),
+            dest: ActorId(dest.to_string()),
+            event
         };
         let id = entry.id;
         self.events.push(entry);
@@ -111,7 +113,7 @@ impl<E: Debug> Simulation<E> {
                             actor.borrow_mut().on(e.event, e.src, &mut ctx);
                             let canceled = ctx.canceled_events.clone();
                             for ctx_e in ctx.events {
-                                self.add_event(ctx_e.event, e.dest.clone(), ctx_e.dest, ctx_e.delay);
+                                self.add_event(ctx_e.event, &e.dest.to(), &ctx_e.dest.to(), ctx_e.delay);
                             };
                             for event_id in canceled {
                                 self.cancel_event(event_id);
