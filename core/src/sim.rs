@@ -13,7 +13,7 @@ use crate::actor::*;
 // EVENT ENTRY /////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct EventEntry<E: Debug> {
+struct EventEntry<E: Debug> {
     id: u64,
     time: R64,
     src: ActorId,
@@ -151,9 +151,5 @@ impl<E: Debug> Simulation<E> {
         let end_time = self.time() + duration;
         while self.step() && self.time() < end_time {
         }
-    }
-
-    pub fn read_undelivered_events(&mut self) -> Vec<EventEntry<E>> {
-        self.undelivered_events.drain(..).collect()
     }
 }
