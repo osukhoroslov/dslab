@@ -110,7 +110,7 @@ impl<E: Debug> Simulation<E> {
                 match actor {
                     Some(actor) => {
                         if actor.borrow().is_active() {
-                            actor.borrow_mut().on(e.event, e.src, &mut ctx);
+                            actor.borrow_mut().on(e.event, e.src, e.id, &mut ctx);
                             let canceled = ctx.canceled_events.clone();
                             for ctx_e in ctx.events {
                                 self.add_event(ctx_e.event, &e.dest.to(), &ctx_e.dest.to(), ctx_e.delay);

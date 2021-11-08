@@ -6,7 +6,7 @@ use rand_pcg::Pcg64;
 // ACTOR ///////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait Actor<E: Debug> {
-    fn on(&mut self, event: E, from: ActorId, ctx: &mut ActorContext<E>);
+    fn on(&mut self, event: E, from: ActorId, event_id: u64, ctx: &mut ActorContext<E>);
     fn is_active(&self) -> bool;
 }
 
