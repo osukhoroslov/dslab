@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::rc::Rc;
 
 use core::sim::Simulation;
@@ -71,7 +71,7 @@ impl DataOperation for ConstantThroughputNetwork {
         ctx.emit(ReceiveData_{data}, ctx.id.clone(), new_message_delivery_time);
     }
 
-    fn recieve_data(&mut self, data: Data, ctx: &mut ActorContext<Event>) {
+    fn recieve_data(&mut self, data: Data, _ctx: &mut ActorContext<Event>) {
         println!("Data ID: {}, From: {}, To {}, Size: {}", data.id, data.source, data.dest, data.size);
     }
 }
@@ -162,7 +162,7 @@ impl NetworkActor {
 }
 
 impl Actor<Event> for NetworkActor {
-    fn on(&mut self, event: Event, from: ActorId, ctx: &mut ActorContext<Event>) {
+    fn on(&mut self, event: Event, _from: ActorId, ctx: &mut ActorContext<Event>) {
         match event {
             Event::SendMessage { message } => {
                 println!("{} send Message '{}' to {}", message.source, message.data, message.dest);
@@ -189,25 +189,44 @@ impl Actor<Event> for NetworkActor {
 
 fn main() {
     let mut sim = Simulation::<Event>::new(123);
+    let sender_actor = ActorId::from("sender");
+    let reciever_actor = ActorId::from("reciever");
 
     let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0)));
     let shared_network = Rc::new(RefCell::new(NetworkActor::new(shared_network_model)));
     sim.add_actor("shared_network", shared_network);
 
-    let sender_actor = ActorId::from("sender");
-    let reciever_actor = ActorId::from("reciever");
     let msg = Message { id: 0, source: sender_actor.clone(), dest: reciever_actor.clone(), data: "Hello World".to_string()};
 
     let data1 = Data{ id: 1, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 100.0};
-    sim.add_event(SendData { data: data1 }, &sender_actor.0, "network", 0.);
+    sim.add_event(SendData { data: data1 }, &sender_actor.0, "shared_network", 0.);
 
     let data2 = Data{ id: 2, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 1000.0};
-    sim.add_event(SendData { data: data2 }, &sender_actor.0, "network", 0.);
+    sim.add_event(SendData { data: data2 }, &sender_actor.0, "shared_network", 0.);
 
     let data3 = Data{ id: 3, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 5.0};
-    sim.add_event(SendData { data: data3 }, &sender_actor.0, "network", 0.);
+    sim.add_event(SendData { data: data3 }, &sender_actor.0, "shared_network", 0.);
 
-    sim.add_event(SendMessage {message: msg}, &sender_actor.0, "network", 0.);
+    sim.add_event(SendMessage {message: msg}, &sender_actor.0, "shared_network", 0.);
+
+    sim.step_until_no_events();
+
+    
+    let constant_network_model = Rc::new(RefCell::new(ConstantThroughputNetwork::new(10.0)));
+    let constant_network = Rc::new(RefCell::new(NetworkActor::new(constant_network_model)));
+    sim.add_actor("constant_network", constant_network);
+    let msg = Message { id: 0, source: sender_actor.clone(), dest: reciever_actor.clone(), data: "Hello World".to_string()};
+
+    let data1 = Data{ id: 1, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 100.0};
+    sim.add_event(SendData { data: data1 }, &sender_actor.0, "constant_network", 0.);
+
+    let data2 = Data{ id: 2, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 1000.0};
+    sim.add_event(SendData { data: data2 }, &sender_actor.0, "constant_network", 0.);
+
+    let data3 = Data{ id: 3, source: sender_actor.clone(), dest: reciever_actor.clone(), size: 5.0};
+    sim.add_event(SendData { data: data3 }, &sender_actor.0, "constant_network", 0.);
+
+    sim.add_event(SendMessage {message: msg}, &sender_actor.0, "constant_network", 0.);
 
     sim.step_until_no_events();
 }
