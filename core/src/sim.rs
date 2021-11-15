@@ -13,30 +13,30 @@ use crate::actor::*;
 // EVENT ENTRY /////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-struct EventEntry<E: Debug> {
+struct EventEntry {
     id: u64,
     time: R64,
     src: ActorId,
     dest: ActorId,
-    event: E,
+    event: Box<dyn Event>,
 }
 
-impl<E: Debug> Eq for EventEntry<E> {}
+impl Eq for EventEntry {}
 
-impl<E: Debug> PartialEq for EventEntry<E> {
+impl PartialEq for EventEntry {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<E: Debug> Ord for EventEntry<E> {
+impl Ord for EventEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         other.time.cmp(&self.time)
             .then_with(|| other.id.cmp(&self.id))
     }
 }
 
-impl<E: Debug> PartialOrd for EventEntry<E> {
+impl PartialOrd for EventEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -44,17 +44,17 @@ impl<E: Debug> PartialOrd for EventEntry<E> {
 
 // SIMULATION //////////////////////////////////////////////////////////////////////////////////////
 
-pub struct Simulation<E: Debug> {
+pub struct Simulation {
     clock: R64,
-    actors: HashMap<ActorId, Rc<RefCell<dyn Actor<E>>>>,
-    events: BinaryHeap<EventEntry<E>>,
+    actors: HashMap<ActorId, Rc<RefCell<dyn Actor>>>,
+    events: BinaryHeap<EventEntry>,
     canceled_events: HashSet<u64>,
-    undelivered_events: Vec<EventEntry<E>>,
+    undelivered_events: Vec<EventEntry>,
     event_count: u64,
     rand: Pcg64,
 }
 
-impl<E: Debug> Simulation<E> {
+impl Simulation {
     pub fn new(seed: u64) -> Self {        
         Self { 
             clock: R64::from_inner(0.0),
@@ -71,16 +71,22 @@ impl<E: Debug> Simulation<E> {
         self.clock.into_inner()
     }
 
-    pub fn add_actor(&mut self, id: &str, actor: Rc<RefCell<dyn Actor<E>>>) {
-        self.actors.insert(ActorId(id.to_string()), actor);
+    pub fn add_actor(&mut self, id: &str, actor: Rc<RefCell<dyn Actor>>) -> ActorId {
+        let id = ActorId::from(id);
+        self.actors.insert(id.clone(), actor);
+        id
     }
 
-    pub fn add_event(&mut self, event: E, src: &str, dest: &str, delay: f64) -> u64 {
+    pub fn add_event<T: Event>(&mut self, event: T, src: &ActorId, dest: &ActorId, delay: f64) -> u64 {
+        self.add_any_event(Box::new(event), src, dest, delay)
+    }
+
+    fn add_any_event(&mut self, event: Box<dyn Event>, src: &ActorId, dest: &ActorId, delay: f64) -> u64 {
         let entry = EventEntry {
             id: self.event_count,
             time: self.clock + delay,
-            src: ActorId(src.to_string()),
-            dest: ActorId(dest.to_string()),
+            src: src.clone(),
+            dest: dest.clone(),
             event
         };
         let id = entry.id;
@@ -110,10 +116,10 @@ impl<E: Debug> Simulation<E> {
                 match actor {
                     Some(actor) => {
                         if actor.borrow().is_active() {
-                            actor.borrow_mut().on(e.event, e.src, &mut ctx);
+                            actor.borrow_mut().on(e.event, &e.src, &mut ctx);
                             let canceled = ctx.canceled_events.clone();
                             for ctx_e in ctx.events {
-                                self.add_event(ctx_e.event, &e.dest.to(), &ctx_e.dest.to(), ctx_e.delay);
+                                self.add_any_event(ctx_e.event, &e.dest, &ctx_e.dest, ctx_e.delay);
                             };
                             for event_id in canceled {
                                 self.cancel_event(event_id);
