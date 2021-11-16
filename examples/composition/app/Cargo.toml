@@ -1,0 +1,9 @@
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+core = { path = "../../../core" }
+compute = { path = "../compute" }
+sugars = "3.0.0"

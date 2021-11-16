@@ -1,58 +1,62 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use sugars::{refcell, rc};
 
+use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext};
-use crate::Event::*;
+use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
-pub enum Event {
-    Start {
-    },
-    CompRequest {
-        amount: u64,
-    },
-    CompStarted {
-    },
-    CompFinished {
-    },
-    CompFailed {
-    }
+#[derive(Debug)]
+pub struct Start {
+}
+
+#[derive(Debug)]
+pub struct CompRequest {
+    amount: u64,
+}
+
+#[derive(Debug)]
+pub struct CompStarted {
+}
+
+#[derive(Debug)]
+pub struct CompFinished {
+}
+
+#[derive(Debug)]
+pub struct CompFailed {
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct TaskActor {
     amount: u64,
+    compute: ActorId,
 }
 
 impl TaskActor {
-    pub fn new(amount: u64) -> Self {
-        Self {amount}
+    pub fn new(amount: u64, compute: &ActorId) -> Self {
+        Self {amount, compute: compute.clone()}
     }
 }
 
-impl Actor<Event> for TaskActor {
-    fn on(&mut self, event: Event, from: ActorId, ctx: &mut ActorContext<Event>) {
-        match event {
-            Event::Start { } => {
+impl Actor for TaskActor {
+    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            Start { } => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                let compute_actor = ActorId::from("compute");
-                ctx.emit(CompRequest { amount: self.amount }, compute_actor, 0.);
-            }
-            Event::CompStarted {} => {
+                ctx.emit(CompRequest { amount: self.amount }, &self.compute, 0.);
+            },
+            CompStarted {} => {
                 println!("{} [{}] received CompStarted from {}", ctx.time(), ctx.id, from);
             },
-            Event::CompFinished {} => {
+            CompFinished {} => {
                 println!("{} [{}] received CompFinished from {}", ctx.time(), ctx.id, from);
             },
-            Event::CompFailed {} => {
+            CompFailed {} => {
                 println!("{} [{}] received CompFailed from {}", ctx.time(), ctx.id, from);
             },
-            _ => ()
-        }
+        })
     }
 
     fn is_active(&self) -> bool {
@@ -70,18 +74,17 @@ impl ComputeActor {
     }
 }
 
-impl Actor<Event> for ComputeActor {
-    fn on(&mut self, event: Event, from: ActorId, ctx: &mut ActorContext<Event>) {
-        match event {
-            Event::CompRequest { amount } => {
+impl Actor for ComputeActor {
+    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            CompRequest { amount } => {
                 println!("{} [{}] received CompRequest from {}", ctx.time(), ctx.id, from);
                 let start_delay = 0.1;
-                ctx.emit(CompStarted {}, from.clone(), start_delay);
-                let compute_time = amount as f64 / self.speed as f64;
+                ctx.emit(CompStarted {}, from, start_delay);
+                let compute_time = *amount as f64 / self.speed as f64;
                 ctx.emit(CompFinished {}, from, start_delay + compute_time);
             },
-            _ => ()
-        }
+        })
     }
 
     fn is_active(&self) -> bool {
@@ -92,9 +95,9 @@ impl Actor<Event> for ComputeActor {
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    let mut sim = Simulation::<Event>::new(123);
-    sim.add_actor("task", Rc::new(RefCell::new(TaskActor::new(100))));
-    sim.add_actor("compute", Rc::new(RefCell::new(ComputeActor::new(10))));
-    sim.add_event(Start {}, "0", "task", 0.);
+    let mut sim = Simulation::new(123);
+    let compute = sim.add_actor("compute", rc!(refcell!(ComputeActor::new(10))));
+    let task = sim.add_actor("task", rc!(refcell!(TaskActor::new(100, &compute))));
+    sim.add_event(Start {}, &ActorId::from("app"), &task, 0.);
     sim.step_until_no_events();
 }
