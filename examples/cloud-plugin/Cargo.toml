@@ -1,0 +1,9 @@
+[package]
+name = "cloud-plugin-example"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+core = { path = "../../core" }
+rand = "0.8.3"
+sugars = "3.0.0"
