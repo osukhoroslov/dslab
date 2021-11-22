@@ -72,6 +72,7 @@ pub struct CtxEvent {
 
 pub struct ActorContext<'a> {
     pub id: ActorId,
+    pub event_id: u64,
     pub(crate) time: f64,
     pub(crate) rand: &'a mut Pcg64,
     pub(crate) next_event_id: u64,

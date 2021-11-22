@@ -106,7 +106,8 @@ impl Simulation {
                 self.clock = e.time;
                 let actor = self.actors.get(&e.dest);
                 let mut ctx = ActorContext{
-                    id: e.dest.clone(), 
+                    id: e.dest.clone(),
+                    event_id: e.id,
                     time: self.clock.into_inner(), 
                     rand: &mut self.rand, 
                     next_event_id: self.event_count,
