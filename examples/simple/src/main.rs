@@ -1,21 +1,22 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use sugars::{refcell, rc};
 
+use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext};
-use crate::Event::*;
+use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
-pub enum Event {
-    Start {
-        other: String,
-    },
-    Ping {
-    },
-    Pong {
-    }
+#[derive(Debug)]
+pub struct Start {
+    other: ActorId,
+}
+
+#[derive(Debug)]
+pub struct Ping {
+}
+
+#[derive(Debug)]
+pub struct Pong {
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
@@ -29,21 +30,21 @@ impl SimpleActor {
     }
 }
 
-impl Actor<Event> for SimpleActor {
-    fn on(&mut self, event: Event, from: ActorId, ctx: &mut ActorContext<Event>) {
-        match event {
-            Event::Start { other } => {
+impl Actor for SimpleActor {
+    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            Start { other } => {
                 println!("[{}] received Start from {}", ctx.id, from);
-                ctx.emit(Ping {}, ActorId::from(&other), 0.);
-            }
-            Event::Ping {} => {
+                ctx.emit(Ping {}, &other, 0.);
+            },
+            Ping {} => {
                 println!("[{}] received Ping from {}", ctx.id, from);
                 ctx.emit(Pong {}, from, 0.);
             },
-            Event::Pong {} => {
+            Pong {} => {
                 println!("[{}] received Pong from {}", ctx.id, from);
-            }
-        }
+            },
+        })
     }
 
     fn is_active(&self) -> bool {
@@ -54,12 +55,11 @@ impl Actor<Event> for SimpleActor {
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    let mut sim = Simulation::<Event>::new(123);
-    let actor1 = Rc::new(RefCell::new(SimpleActor::new()));
-    let actor2 = Rc::new(RefCell::new(SimpleActor::new()));
-    sim.add_actor("1", actor1);
-    sim.add_actor("2", actor2);
-    sim.add_event(Start {other: "2".to_string()}, "0", "1", 0.);
-    sim.add_event(Start {other: "1".to_string()}, "0", "2", 0.);
+    let mut sim = Simulation::new(123);
+    let app = ActorId::from("app");
+    let actor1 = sim.add_actor("1", rc!(refcell!(SimpleActor::new())));
+    let actor2 = sim.add_actor("2", rc!(refcell!(SimpleActor::new())));
+    sim.add_event(Start {other: actor2.clone()}, &app, &actor1, 0.);
+    sim.add_event(Start {other: actor1.clone()}, &app, &actor2, 0.);
     sim.step_until_no_events();
 }

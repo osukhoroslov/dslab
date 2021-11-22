@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 core = { path = "../../core" }
+sugars = "3.0.0"
