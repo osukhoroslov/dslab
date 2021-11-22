@@ -1,18 +1,30 @@
+use std::hash::{Hash, Hasher};
 use std::fmt::{Debug, Error, Formatter};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use downcast_rs::{impl_downcast, Downcast};
 
+
+// EVENT ///////////////////////////////////////////////////////////////////////////////////////////
+
+pub trait Event: Downcast + Debug {
+}
+
+impl_downcast!(Event);
+
+impl<T: Debug + 'static> Event for T {
+}
 
 // ACTOR ///////////////////////////////////////////////////////////////////////////////////////////
 
-pub trait Actor<E: Debug> {
-    fn on(&mut self, event: E, from: ActorId, event_id: u64, ctx: &mut ActorContext<E>);
+pub trait Actor {
+    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext);
     fn is_active(&self) -> bool;
 }
 
 // ACTOR ID ////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone)]
 pub struct ActorId(pub String);
 
 impl ActorId {
@@ -21,6 +33,20 @@ impl ActorId {
     }
     pub fn to(&self) -> String {
         self.0.clone()
+    }
+}
+
+impl PartialEq for ActorId {
+    fn eq(&self, other: &ActorId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for ActorId { }
+
+impl Hash for ActorId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
@@ -38,28 +64,32 @@ impl std::fmt::Debug for ActorId {
 
 // ACTOR CONTEXT ///////////////////////////////////////////////////////////////////////////////////
 
-pub struct CtxEvent<E> {
-    pub(crate) event: E,
+pub struct CtxEvent {
+    pub(crate) event: Box<dyn Event>,
     pub(crate) dest: ActorId,
     pub(crate) delay: f64
 }
 
-pub struct ActorContext<'a, E: Debug> {
+pub struct ActorContext<'a> {
     pub id: ActorId,
     pub(crate) time: f64,
     pub(crate) rand: &'a mut Pcg64,
     pub(crate) next_event_id: u64,
-    pub(crate) events: Vec<CtxEvent<E>>,
+    pub(crate) events: Vec<CtxEvent>,
     pub(crate) canceled_events: Vec<u64>,
 }
 
-impl<'a, E: Debug> ActorContext<'a, E> {
+impl<'a> ActorContext<'a> {
     pub fn time(&self) -> f64 {
         self.time
     }
 
-    pub fn emit(&mut self, event: E, dest: ActorId, delay: f64) -> u64 {
-        let entry = CtxEvent{ event, dest, delay };
+    pub fn emit<T: Event>(&mut self, event: T, dest: &ActorId, delay: f64) -> u64 {
+        self.emit_any(Box::new(event), dest, delay)
+    }
+
+    fn emit_any(&mut self, event: Box<dyn Event>, dest: &ActorId, delay: f64) -> u64 {
+        let entry = CtxEvent{ event, dest: dest.clone(), delay };
         self.events.push(entry);
         self.next_event_id += 1;
         self.next_event_id - 1
@@ -72,5 +102,21 @@ impl<'a, E: Debug> ActorContext<'a, E> {
     pub fn cancel_event(&mut self, event_id: u64) {
         // println!("Canceled event: {}", event_id);
         self.canceled_events.push(event_id);
+    }
+}
+
+// MACRO ///////////////////////////////////////////////////////////////////////////////////////////
+
+#[macro_export]
+macro_rules! match_event {
+    ( $event:ident { $( $pattern:pat => $arm:block ),+ $(,)? } ) => {
+        $(
+            if let Some($pattern) = $event.downcast_ref() {
+                $arm
+            } else
+        )*
+        {
+            println!("Unknown event: {:?}", $event)
+        }
     }
 }
