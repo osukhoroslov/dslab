@@ -67,7 +67,7 @@ impl Actor for Worker {
             TaskAssigned { amount } => {
                 println!("{} [{}] received TaskAssigned from {}", ctx.time(), ctx.id, from);
                 ctx.emit(CompRequest { amount: *amount }, self.compute.clone(), 0.);
-                self.master = Some(from.clone());
+                self.master = Some(from);
             },
             CompStarted {} => {
                 println!("{} [{}] received CompStarted from {}", ctx.time(), ctx.id, from);
