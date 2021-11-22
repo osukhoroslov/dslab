@@ -64,6 +64,7 @@ pub struct ReceiveData_ {
 pub trait DataOperation {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext);
     fn recieve_data(&mut self, data: Data, ctx: &mut ActorContext);
+    fn set_network_params(&mut self, min_delay: f64);
 }
 
 pub trait LogProperties {
@@ -77,24 +78,29 @@ pub trait NetworkModel: DataOperation + LogProperties { }
 #[derive(Debug, Clone)]
 struct ConstantThroughputNetwork {
     throughput: f64,
+    min_delay: f64,
     log_level: LogLevel,
 }
 
 impl ConstantThroughputNetwork {
     pub fn new(throughput: f64) -> ConstantThroughputNetwork {
-        return ConstantThroughputNetwork{throughput, log_level: LogLevel::Empty};
+        return ConstantThroughputNetwork{throughput, min_delay: 0., log_level: LogLevel::Empty};
     }
 }
 
 impl DataOperation for ConstantThroughputNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
-        let new_message_delivery_time = data.size / self.throughput;
+        let new_message_delivery_time = data.size / self.throughput + self.min_delay;
         println!("Data ID: {}, From: {}, To {}, Size: {}, Time: {}", data.id, data.source, data.dest, data.size, new_message_delivery_time);
         ctx.emit(ReceiveData_{data}, &ctx.id.clone(), new_message_delivery_time);
     }
 
     fn recieve_data(&mut self, data: Data, _ctx: &mut ActorContext) {
         println!("Data ID: {}, From: {}, To {}, Size: {}", data.id, data.source, data.dest, data.size);
+    }
+
+    fn set_network_params(&mut self, min_delay: f64) {
+        self.min_delay = min_delay;
     }
 }
 
@@ -109,6 +115,7 @@ impl NetworkModel for ConstantThroughputNetwork {}
 
 #[derive(Debug, Clone)]
 struct SendDataProgress {
+    delay_left: f64,
     size_left: f64,
     last_speed: f64,
     last_time: f64,
@@ -120,18 +127,27 @@ struct SendDataProgress {
 struct SharedThroughputNetwork {
     throughput: f64,
     cur: BTreeMap<usize, SendDataProgress>,
+    min_delay: f64,
     log_level: LogLevel,
 }
 
 impl SharedThroughputNetwork {
     pub fn new(throughput: f64) -> SharedThroughputNetwork {
-        return SharedThroughputNetwork{throughput, cur: BTreeMap::new(), log_level: LogLevel::Empty};
+        return SharedThroughputNetwork{throughput, cur: BTreeMap::new(), min_delay: 0., log_level: LogLevel::Empty};
     }
 
     fn recalculate_recieve_time(&mut self, ctx: &mut ActorContext) {
         let cur_time = ctx.time();
         for (_, send_elem) in self.cur.iter_mut() {
-            send_elem.size_left -= (cur_time - send_elem.last_time) * send_elem.last_speed;
+            let mut delivery_time = cur_time - send_elem.last_time;
+            if delivery_time > send_elem.delay_left {
+                delivery_time -= send_elem.delay_left;
+                send_elem.delay_left = 0.0;
+            } else {
+                send_elem.delay_left -= delivery_time;
+                delivery_time = 0.0;
+            }
+            send_elem.size_left -= delivery_time * send_elem.last_speed;
             ctx.cancel_event(send_elem.recieve_event);
         }
 
@@ -140,7 +156,7 @@ impl SharedThroughputNetwork {
         for (_, send_elem) in self.cur.iter_mut() {
             send_elem.last_speed = new_throughput;
             send_elem.last_time = cur_time;
-            let data_delivery_time = send_elem.size_left / new_throughput;
+            let data_delivery_time = send_elem.size_left / new_throughput + send_elem.delay_left;
             send_elem.recieve_event = ctx.emit(ReceiveData_ { data: send_elem.data.clone()}, &ctx.id.clone(), data_delivery_time);
             if check_log_level(self.log_level.clone(), LogLevel::Full){
                 println!("Calculate Recieve Time. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}", send_elem.data.id, send_elem.data.source,
@@ -152,14 +168,20 @@ impl SharedThroughputNetwork {
 
 impl DataOperation for SharedThroughputNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
+        
+        if check_log_level(self.log_level.clone(), LogLevel::SendRecieve){
+            println!("System time: {}, Send. Data ID: {}, From: {}, To {}, Size: {}", ctx.time(), data.id, data.source, data.dest, data.size.clone());
+        }
 
         let new_send_data_progres = SendDataProgress{
+            delay_left: self.min_delay,
             size_left: data.size,
             last_speed: 0.,
             last_time: 0.,
             recieve_event: 0,
             data: data,
         };
+
 
         let data_id = new_send_data_progres.data.id;
         if self.cur.insert(data_id, new_send_data_progres).is_some() {
@@ -175,6 +197,10 @@ impl DataOperation for SharedThroughputNetwork {
         }
         self.cur.remove(&data.id);
         self.recalculate_recieve_time(ctx);
+    }
+
+    fn set_network_params(&mut self, min_delay: f64) {
+        self.min_delay = min_delay;
     }
 }
 
@@ -198,11 +224,13 @@ pub struct NetworkActor {
 
 impl NetworkActor {
     pub fn new(network_model : Rc<RefCell<dyn NetworkModel>>) -> Self {
+        network_model.borrow_mut().set_network_params(0.1);
         Self {network_model, min_delay: 0.1, log_level: LogLevel::Empty}
     }
 
     pub fn new_with_log(network_model : Rc<RefCell<dyn NetworkModel>>, log_level: LogLevel) -> Self {
         network_model.borrow_mut().set_log_level(log_level.clone());
+        network_model.borrow_mut().set_network_params(0.1);
         Self {network_model, min_delay: 0.1, log_level}
     }
 }
