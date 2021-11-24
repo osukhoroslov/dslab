@@ -31,11 +31,11 @@ impl SimpleActor {
 }
 
 impl Actor for SimpleActor {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             Start { other } => {
                 println!("[{}] received Start from {}", ctx.id, from);
-                ctx.emit(Ping {}, &other, 0.);
+                ctx.emit(Ping {}, other.clone(), 0.);
             },
             Ping {} => {
                 println!("[{}] received Ping from {}", ctx.id, from);
@@ -59,7 +59,7 @@ fn main() {
     let app = ActorId::from("app");
     let actor1 = sim.add_actor("1", rc!(refcell!(SimpleActor::new())));
     let actor2 = sim.add_actor("2", rc!(refcell!(SimpleActor::new())));
-    sim.add_event(Start {other: actor2.clone()}, &app, &actor1, 0.);
-    sim.add_event(Start {other: actor1.clone()}, &app, &actor2, 0.);
+    sim.add_event(Start {other: actor2.clone()}, app.clone(), actor1.clone(), 0.);
+    sim.add_event(Start {other: actor1.clone()}, app.clone(), actor2.clone(), 0.);
     sim.step_until_no_events();
 }

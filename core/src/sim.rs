@@ -77,16 +77,16 @@ impl Simulation {
         id
     }
 
-    pub fn add_event<T: Event>(&mut self, event: T, src: &ActorId, dest: &ActorId, delay: f64) -> u64 {
+    pub fn add_event<T: Event>(&mut self, event: T, src: ActorId, dest: ActorId, delay: f64) -> u64 {
         self.add_any_event(Box::new(event), src, dest, delay)
     }
 
-    fn add_any_event(&mut self, event: Box<dyn Event>, src: &ActorId, dest: &ActorId, delay: f64) -> u64 {
+    fn add_any_event(&mut self, event: Box<dyn Event>, src: ActorId, dest: ActorId, delay: f64) -> u64 {
         let entry = EventEntry {
             id: self.event_count,
             time: self.clock + delay,
-            src: src.clone(),
-            dest: dest.clone(),
+            src,
+            dest,
             event
         };
         let id = entry.id;
@@ -106,7 +106,8 @@ impl Simulation {
                 self.clock = e.time;
                 let actor = self.actors.get(&e.dest);
                 let mut ctx = ActorContext{
-                    id: e.dest.clone(), 
+                    id: e.dest.clone(),
+                    event_id: e.id,
                     time: self.clock.into_inner(), 
                     rand: &mut self.rand, 
                     next_event_id: self.event_count,
@@ -116,10 +117,10 @@ impl Simulation {
                 match actor {
                     Some(actor) => {
                         if actor.borrow().is_active() {
-                            actor.borrow_mut().on(e.event, &e.src, &mut ctx);
+                            actor.borrow_mut().on(e.event, e.src, &mut ctx);
                             let canceled = ctx.canceled_events.clone();
                             for ctx_e in ctx.events {
-                                self.add_any_event(ctx_e.event, &e.dest, &ctx_e.dest, ctx_e.delay);
+                                self.add_any_event(ctx_e.event, e.dest.clone(), ctx_e.dest, ctx_e.delay);
                             };
                             for event_id in canceled {
                                 self.cancel_event(event_id);

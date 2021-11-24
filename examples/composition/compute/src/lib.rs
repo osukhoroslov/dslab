@@ -33,12 +33,12 @@ impl ComputeActor {
 }
 
 impl Actor for ComputeActor {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             CompRequest { amount } => {
                 println!("{} [{}] received CompRequest from {}", ctx.time(), ctx.id, from);
                 let start_delay = 0.1;
-                ctx.emit(CompStarted {}, from, start_delay);
+                ctx.emit(CompStarted {}, from.clone(), start_delay);
                 let compute_time = *amount as f64 / self.speed as f64;
                 ctx.emit(CompFinished {}, from, start_delay + compute_time);
             }

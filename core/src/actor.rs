@@ -18,7 +18,7 @@ impl<T: Debug + 'static> Event for T {
 // ACTOR ///////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait Actor {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext);
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext);
     fn is_active(&self) -> bool;
 }
 
@@ -72,6 +72,7 @@ pub struct CtxEvent {
 
 pub struct ActorContext<'a> {
     pub id: ActorId,
+    pub event_id: u64,
     pub(crate) time: f64,
     pub(crate) rand: &'a mut Pcg64,
     pub(crate) next_event_id: u64,
@@ -84,12 +85,12 @@ impl<'a> ActorContext<'a> {
         self.time
     }
 
-    pub fn emit<T: Event>(&mut self, event: T, dest: &ActorId, delay: f64) -> u64 {
+    pub fn emit<T: Event>(&mut self, event: T, dest: ActorId, delay: f64) -> u64 {
         self.emit_any(Box::new(event), dest, delay)
     }
 
-    fn emit_any(&mut self, event: Box<dyn Event>, dest: &ActorId, delay: f64) -> u64 {
-        let entry = CtxEvent{ event, dest: dest.clone(), delay };
+    fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {
+        let entry = CtxEvent{ event, dest, delay };
         self.events.push(entry);
         self.next_event_id += 1;
         self.next_event_id - 1
