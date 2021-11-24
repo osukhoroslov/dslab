@@ -1,14 +1,13 @@
+use decorum::R64;
+use rand::prelude::*;
+use rand_pcg::Pcg64;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::rc::Rc;
-use decorum::R64;
-use rand::prelude::*;
-use rand_pcg::Pcg64;
 
 use crate::actor::*;
-
 
 // EVENT ENTRY /////////////////////////////////////////////////////////////////////////////////////
 
@@ -31,8 +30,7 @@ impl PartialEq for EventEntry {
 
 impl Ord for EventEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.time.cmp(&self.time)
-            .then_with(|| other.id.cmp(&self.id))
+        other.time.cmp(&self.time).then_with(|| other.id.cmp(&self.id))
     }
 }
 
@@ -55,8 +53,8 @@ pub struct Simulation {
 }
 
 impl Simulation {
-    pub fn new(seed: u64) -> Self {        
-        Self { 
+    pub fn new(seed: u64) -> Self {
+        Self {
             clock: R64::from_inner(0.0),
             actors: HashMap::new(),
             events: BinaryHeap::new(),
@@ -87,7 +85,7 @@ impl Simulation {
             time: self.clock + delay,
             src,
             dest,
-            event
+            event,
         };
         let id = entry.id;
         self.events.push(entry);
@@ -105,11 +103,11 @@ impl Simulation {
                 // println!("{} {}->{} {:?}", e.time, e.src, e.dest, e.event);
                 self.clock = e.time;
                 let actor = self.actors.get(&e.dest);
-                let mut ctx = ActorContext{
+                let mut ctx = ActorContext {
                     id: e.dest.clone(),
                     event_id: e.id,
-                    time: self.clock.into_inner(), 
-                    rand: &mut self.rand, 
+                    time: self.clock.into_inner(),
+                    rand: &mut self.rand,
                     next_event_id: self.event_count,
                     events: Vec::new(),
                     canceled_events: Vec::new(),
@@ -121,10 +119,10 @@ impl Simulation {
                             let canceled = ctx.canceled_events.clone();
                             for ctx_e in ctx.events {
                                 self.add_any_event(ctx_e.event, e.dest.clone(), ctx_e.dest, ctx_e.delay);
-                            };
+                            }
                             for event_id in canceled {
                                 self.cancel_event(event_id);
-                            };
+                            }
                         } else {
                             //println!("Discarded event for inactive actor {}", e.dest);
                         }
@@ -143,20 +141,18 @@ impl Simulation {
     pub fn steps(&mut self, step_count: u32) -> bool {
         for _i in 0..step_count {
             if !self.step() {
-                return false
+                return false;
             }
         }
         true
     }
 
     pub fn step_until_no_events(&mut self) {
-        while self.step() {
-        }
+        while self.step() {}
     }
 
     pub fn step_for_duration(&mut self, duration: f64) {
         let end_time = self.time() + duration;
-        while self.step() && self.time() < end_time {
-        }
+        while self.step() && self.time() < end_time {}
     }
 }

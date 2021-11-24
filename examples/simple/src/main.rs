@@ -1,8 +1,8 @@
-use sugars::{refcell, rc};
+use sugars::{rc, refcell};
 
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -12,17 +12,14 @@ pub struct Start {
 }
 
 #[derive(Debug)]
-pub struct Ping {
-}
+pub struct Ping {}
 
 #[derive(Debug)]
-pub struct Pong {
-}
+pub struct Pong {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
-pub struct SimpleActor {
-}
+pub struct SimpleActor {}
 
 impl SimpleActor {
     pub fn new() -> Self {
@@ -59,7 +56,7 @@ fn main() {
     let app = ActorId::from("app");
     let actor1 = sim.add_actor("1", rc!(refcell!(SimpleActor::new())));
     let actor2 = sim.add_actor("2", rc!(refcell!(SimpleActor::new())));
-    sim.add_event(Start {other: actor2.clone()}, app.clone(), actor1.clone(), 0.);
-    sim.add_event(Start {other: actor1.clone()}, app.clone(), actor2.clone(), 0.);
+    sim.add_event(Start { other: actor2.clone() }, app.clone(), actor1.clone(), 0.);
+    sim.add_event(Start { other: actor1.clone() }, app.clone(), actor2.clone(), 0.);
     sim.step_until_no_events();
 }

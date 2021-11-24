@@ -1,5 +1,5 @@
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
-use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -9,16 +9,13 @@ pub struct CompRequest {
 }
 
 #[derive(Debug)]
-pub struct CompStarted {
-}
+pub struct CompStarted {}
 
 #[derive(Debug)]
-pub struct CompFinished {
-}
+pub struct CompFinished {}
 
 #[derive(Debug)]
-pub struct CompFailed {
-}
+pub struct CompFailed {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,7 +25,7 @@ pub struct ComputeActor {
 
 impl ComputeActor {
     pub fn new(speed: u64) -> Self {
-        Self {speed}
+        Self { speed }
     }
 }
 

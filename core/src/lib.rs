@@ -1,2 +1,2 @@
-pub mod sim;
 pub mod actor;
+pub mod sim;

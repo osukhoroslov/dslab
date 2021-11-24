@@ -1,14 +1,13 @@
-use sugars::{refcell, rc};
+use sugars::{rc, refcell};
 
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct Start {
-}
+pub struct Start {}
 
 #[derive(Debug)]
 pub struct CompRequest {
@@ -16,16 +15,13 @@ pub struct CompRequest {
 }
 
 #[derive(Debug)]
-pub struct CompStarted {
-}
+pub struct CompStarted {}
 
 #[derive(Debug)]
-pub struct CompFinished {
-}
+pub struct CompFinished {}
 
 #[derive(Debug)]
-pub struct CompFailed {
-}
+pub struct CompFailed {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -36,14 +32,14 @@ pub struct TaskActor {
 
 impl TaskActor {
     pub fn new(amount: u64, compute: ActorId) -> Self {
-        Self {amount, compute}
+        Self { amount, compute }
     }
 }
 
 impl Actor for TaskActor {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
-            Start { } => {
+            Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
                 ctx.emit(CompRequest { amount: self.amount }, self.compute.clone(), 0.);
             },
@@ -70,7 +66,7 @@ pub struct ComputeActor {
 
 impl ComputeActor {
     pub fn new(speed: u64) -> Self {
-        Self {speed}
+        Self { speed }
     }
 }
 

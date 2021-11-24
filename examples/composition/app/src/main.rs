@@ -1,24 +1,22 @@
-use sugars::{refcell, rc};
+use sugars::{rc, refcell};
 
+use compute::*;
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext, Event};
-use compute::*;
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct Start {
-}
+pub struct Start {}
 
 #[derive(Debug)]
 pub struct TaskAssigned {
-    amount: u64
+    amount: u64,
 }
 
 #[derive(Debug)]
-pub struct TaskCompleted {
-}
+pub struct TaskCompleted {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -94,6 +92,6 @@ fn main() {
     let compute = sim.add_actor("compute", rc!(refcell!(ComputeActor::new(10))));
     let worker = sim.add_actor("worker", rc!(refcell!(Worker::new(compute))));
     let master = sim.add_actor("master", rc!(refcell!(Master::new(worker))));
-    sim.add_event(Start { }, ActorId::from("app"), master, 0.);
+    sim.add_event(Start {}, ActorId::from("app"), master, 0.);
     sim.step_until_no_events();
 }
