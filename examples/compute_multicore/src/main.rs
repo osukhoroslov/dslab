@@ -1,10 +1,10 @@
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::rc::Rc;
 
+use core::actor::{Actor, ActorContext, ActorId, Event};
+use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext};
-use crate::Event::*;
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -44,12 +44,8 @@ impl Allocation {
 #[derive(Debug, Clone)]
 pub enum CoresDependency {
     Linear,
-    LinearWithFixed {
-        fixed_part: f64,
-    },
-    Custom {
-        func: fn(u64) -> f64,
-    },
+    LinearWithFixed { fixed_part: f64 },
+    Custom { func: fn(u64) -> f64 },
 }
 
 #[derive(Debug, Clone)]
@@ -64,46 +60,63 @@ pub enum FailReason {
 }
 
 #[derive(Debug, Clone)]
-pub enum Event {
-    Start {
-    },
-    CompRequest {
-        computation: Computation,
-        min_cores: u64,
-        max_cores: u64,
-        cores_dependency: CoresDependency,
-    },
-    CompStarted {
-        computation: Computation,
-        cores: u64,
-    },
-    CompFinished {
-        computation: Computation,
-    },
-    CompFailed {
-        computation: Computation,
-        reason: FailReason,
-    },
-    AllocationRequest {
-        allocation: Allocation,
-    },
-    AllocationSuccess {
-        allocation: Allocation,
-    },
-    AllocationFailed {
-        allocation: Allocation,
-        reason: FailReason,
-    },
-    DeallocationRequest {
-        allocation: Allocation,
-    },
-    DeallocationSuccess {
-        allocation: Allocation,
-    },
-    DeallocationFailed {
-        allocation: Allocation,
-        reason: FailReason,
-    },
+pub struct Start {}
+
+#[derive(Debug, Clone)]
+pub struct CompRequest {
+    computation: Computation,
+    min_cores: u64,
+    max_cores: u64,
+    cores_dependency: CoresDependency,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompStarted {
+    computation: Computation,
+    cores: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompFinished {
+    computation: Computation,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompFailed {
+    computation: Computation,
+    reason: FailReason,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllocationRequest {
+    allocation: Allocation,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllocationSuccess {
+    allocation: Allocation,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllocationFailed {
+    allocation: Allocation,
+    reason: FailReason,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeallocationRequest {
+    allocation: Allocation,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeallocationSuccess {
+    allocation: Allocation,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeallocationFailed {
+    allocation: Allocation,
+    reason: FailReason,
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
@@ -126,40 +139,59 @@ impl TaskActor {
     }
 }
 
-impl Actor<Event> for TaskActor {
-    fn on(&mut self, event: Event, from: ActorId, _event_id: u64, ctx: &mut ActorContext<Event>) {
-        match event {
-            Event::Start {} => {
+impl Actor for TaskActor {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
                 let compute_actor = ActorId::from("compute");
-                ctx.emit(CompRequest {
-                                       computation: self.task.clone(),
-                                       min_cores: self.min_cores,
-                                       max_cores: self.max_cores,
-                                       cores_dependency: self.cores_dependency.clone(),
-                                     },
-                         compute_actor, 0.);
+                ctx.emit(
+                    CompRequest {
+                        computation: self.task.clone(),
+                        min_cores: self.min_cores,
+                        max_cores: self.max_cores,
+                        cores_dependency: self.cores_dependency.clone(),
+                    },
+                    compute_actor,
+                    0.,
+                );
+            },
+            CompStarted { computation, cores } => {
+                println!(
+                    "{} [{}] received CompStarted from {} for {:?} on {} cores",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    computation,
+                    cores
+                );
+            },
+            CompFinished { computation } => {
+                println!(
+                    "{} [{}] received CompFinished from {} for {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    computation
+                );
+            },
+            CompFailed { computation, reason } => {
+                println!(
+                    "{} [{}] received CompFailed from {} for {:?} with reason {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    computation,
+                    reason
+                );
             }
-            Event::CompStarted { computation, cores } => {
-                println!("{} [{}] received CompStarted from {} for {:?} on {} cores", ctx.time(), ctx.id, from, computation, cores);
-            },
-            Event::CompFinished { computation } => {
-                println!("{} [{}] received CompFinished from {} for {:?}", ctx.time(), ctx.id, from, computation);
-            },
-            Event::CompFailed { computation, reason } => {
-                println!("{} [{}] received CompFailed from {} for {:?} with reason {:?}", ctx.time(), ctx.id, from, computation, reason);
-            },
-            _ => ()
-        }
+        })
     }
 
     fn is_active(&self) -> bool {
         true
     }
 }
-
-
-
 
 pub struct AllocationActor {
     allocation: Allocation,
@@ -175,37 +207,72 @@ impl AllocationActor {
     }
 }
 
-impl Actor<Event> for AllocationActor {
-    fn on(&mut self, event: Event, from: ActorId, _event_id: u64, ctx: &mut ActorContext<Event>) {
-        match event {
-            Event::Start {} => {
+impl Actor for AllocationActor {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
                 let compute_actor = ActorId::from("compute");
-                ctx.emit(AllocationRequest { allocation: self.allocation.clone() }, compute_actor.clone(), 0.);
-                ctx.emit(DeallocationRequest { allocation: self.allocation.clone() }, compute_actor, self.time);
+                ctx.emit(
+                    AllocationRequest {
+                        allocation: self.allocation.clone(),
+                    },
+                    compute_actor.clone(),
+                    0.,
+                );
+                ctx.emit(
+                    DeallocationRequest {
+                        allocation: self.allocation.clone(),
+                    },
+                    compute_actor,
+                    self.time,
+                );
+            },
+            AllocationFailed { allocation, reason } => {
+                println!(
+                    "{} [{}] received AllocationFailed from {} for {:?} with reason {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    allocation,
+                    reason
+                );
+            },
+            DeallocationFailed { allocation, reason } => {
+                println!(
+                    "{} [{}] received DeallocationFailed from {} for {:?} with reason {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    allocation,
+                    reason
+                );
+            },
+            AllocationSuccess { allocation } => {
+                println!(
+                    "{} [{}] received AllocationSuccess from {} for {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    allocation
+                );
+            },
+            DeallocationSuccess { allocation } => {
+                println!(
+                    "{} [{}] received DeallocationSuccess from {} for {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    from,
+                    allocation
+                );
             }
-            Event::AllocationFailed { allocation, reason } => {
-                println!("{} [{}] received AllocationFailed from {} for {:?} with reason {:?}", ctx.time(), ctx.id, from, allocation, reason);
-            },
-            Event::DeallocationFailed { allocation, reason } => {
-                println!("{} [{}] received DeallocationFailed from {} for {:?} with reason {:?}", ctx.time(), ctx.id, from, allocation, reason);
-            },
-            Event::AllocationSuccess { allocation } => {
-                println!("{} [{}] received AllocationSuccess from {} for {:?}", ctx.time(), ctx.id, from, allocation);
-            },
-            Event::DeallocationSuccess { allocation } => {
-                println!("{} [{}] received DeallocationSuccess from {} for {:?}", ctx.time(), ctx.id, from, allocation);
-            },
-            _ => ()
-        }
+        })
     }
 
     fn is_active(&self) -> bool {
         true
     }
 }
-
-
 
 pub struct ComputeActor {
     speed: u64,
@@ -227,71 +294,141 @@ impl ComputeActor {
     }
 }
 
-impl Actor<Event> for ComputeActor {
-    fn on(&mut self, event: Event, from: ActorId, event_id: u64, ctx: &mut ActorContext<Event>) {
+impl Actor for ComputeActor {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         println!("{} [{}] received {:?} from {}", ctx.time(), ctx.id, event, from);
-        match event {
-            Event::CompRequest { ref computation, min_cores, max_cores, ref cores_dependency } => {
-                if self.memory < computation.memory || self.cores < min_cores {
-                    ctx.emit(CompFailed { computation: computation.clone(), reason: FailReason::NotEnoughResources { available_cores: self.cores, available_memory: self.memory } }, from, 0.);
+        match_event!( event {
+            CompRequest {
+                ref computation,
+                min_cores,
+                max_cores,
+                ref cores_dependency,
+            } => {
+                if self.memory < computation.memory || self.cores < *min_cores {
+                    ctx.emit(
+                        CompFailed {
+                            computation: computation.clone(),
+                            reason: FailReason::NotEnoughResources {
+                                available_cores: self.cores,
+                                available_memory: self.memory,
+                            },
+                        },
+                        from.clone(),
+                        0.,
+                    );
                 } else {
-                    let cores = self.cores.min(max_cores);
+                    let cores = self.cores.min(*max_cores);
                     self.memory -= computation.memory;
                     self.cores -= cores;
-                    ctx.emit(CompStarted { computation: computation.clone(), cores }, from.clone(), 0.);
+                    ctx.emit(
+                        CompStarted {
+                            computation: computation.clone(),
+                            cores,
+                        },
+                        from.clone(),
+                        0.,
+                    );
 
                     let multithreading_coefficient = match cores_dependency {
-                        CoresDependency::Linear => {
-                            1. / cores as f64
-                        },
+                        CoresDependency::Linear => 1. / cores as f64,
                         CoresDependency::LinearWithFixed { fixed_part } => {
                             fixed_part + (1. - fixed_part) / cores as f64
-                        },
-                        CoresDependency::Custom { func } => {
-                            func(cores)
-                        },
+                        }
+                        CoresDependency::Custom { func } => func(cores),
                     };
 
                     let compute_time = computation.flops as f64 / self.speed as f64 * multithreading_coefficient;
-                    let finish_event_id = ctx.emit(CompFinished { computation: computation.clone() }, ctx.id.clone(), compute_time);
+                    let finish_event_id = ctx.emit(
+                        CompFinished {
+                            computation: computation.clone(),
+                        },
+                        ctx.id.clone(),
+                        compute_time,
+                    );
                     self.current_computations.insert(finish_event_id, (cores, from.clone()));
                 }
             },
-            Event::CompFinished { computation } => {
-                let (cores, actor_id) = self.current_computations.remove(&event_id).expect("Unexpected CompFinished event in ComputeActor");
+            CompFinished { computation } => {
+                let (cores, actor_id) = self
+                    .current_computations
+                    .remove(&ctx.event_id)
+                    .expect("Unexpected CompFinished event in ComputeActor");
                 self.memory += computation.memory;
                 self.cores += cores;
-                ctx.emit(CompFinished { computation: computation.clone() }, actor_id, 0.);
+                ctx.emit(
+                    CompFinished {
+                        computation: computation.clone(),
+                    },
+                    actor_id,
+                    0.,
+                );
             },
-            Event::AllocationRequest { allocation } => {
+            AllocationRequest { allocation } => {
                 if self.memory < allocation.memory || self.cores < allocation.cores {
-                    ctx.emit(AllocationFailed { allocation: allocation, reason: FailReason::NotEnoughResources { available_cores: self.cores, available_memory: self.memory } }, from, 0.);
+                    ctx.emit(
+                        AllocationFailed {
+                            allocation: allocation.clone(),
+                            reason: FailReason::NotEnoughResources {
+                                available_cores: self.cores,
+                                available_memory: self.memory,
+                            },
+                        },
+                        from.clone(),
+                        0.,
+                    );
                 } else {
-                    let current_allocation = self.current_allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
+                    let current_allocation = self
+                        .current_allocations
+                        .entry(from.clone())
+                        .or_insert(Allocation::new(0, 0));
                     current_allocation.cores += allocation.cores;
                     current_allocation.memory += allocation.memory;
                     self.cores -= allocation.cores;
                     self.memory -= allocation.memory;
-                    ctx.emit(AllocationSuccess { allocation }, from, 0.);
+                    ctx.emit(
+                        AllocationSuccess {
+                            allocation: allocation.clone(),
+                        },
+                        from.clone(),
+                        0.,
+                    );
                 }
             },
-            Event::DeallocationRequest { allocation } => {
-                let current_allocation = self.current_allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
+            DeallocationRequest { allocation } => {
+                let current_allocation = self
+                    .current_allocations
+                    .entry(from.clone())
+                    .or_insert(Allocation::new(0, 0));
                 if current_allocation.cores >= allocation.cores && current_allocation.memory >= allocation.memory {
                     current_allocation.cores -= allocation.cores;
                     current_allocation.memory -= allocation.memory;
                     self.cores += allocation.cores;
                     self.memory += allocation.memory;
-                    ctx.emit(DeallocationSuccess { allocation }, from.clone(), 0.);
+                    ctx.emit(
+                        DeallocationSuccess {
+                            allocation: allocation.clone(),
+                        },
+                        from.clone(),
+                        0.,
+                    );
                 } else {
-                    ctx.emit(DeallocationFailed { allocation: allocation, reason: FailReason::NotEnoughResources { available_cores: self.cores, available_memory: self.memory } }, from.clone(), 0.);
+                    ctx.emit(
+                        DeallocationFailed {
+                            allocation: allocation.clone(),
+                            reason: FailReason::NotEnoughResources {
+                                available_cores: self.cores,
+                                available_memory: self.memory,
+                            },
+                        },
+                        from.clone(),
+                        0.,
+                    );
                 }
                 if current_allocation.cores == 0 && current_allocation.memory == 0 {
                     self.current_allocations.remove(&from);
                 }
-            },
-            _ => ()
-        }
+            }
+        })
     }
 
     fn is_active(&self) -> bool {
@@ -302,41 +439,55 @@ impl Actor<Event> for ComputeActor {
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    let mut sim = Simulation::<Event>::new(123);
-    sim.add_actor("task1", Rc::new(RefCell::new(TaskActor::new(
-        Computation::new(100, 512, 1),
-        2,
-        6,
-        CoresDependency::Linear,
-    ))));
-    sim.add_actor("task2", Rc::new(RefCell::new(TaskActor::new(
-        Computation::new(100, 512, 2),
-        4,
-        10,
-        CoresDependency::LinearWithFixed{ fixed_part: 0.4 },
-    ))));
-    sim.add_actor("task3", Rc::new(RefCell::new(TaskActor::new(
-        Computation::new(100, 512, 3),
-        5,
-        7,
-        CoresDependency::Custom{ func: |cores: u64| -> f64 {
-            if cores == 7 {
-                0.5
-            } else {
-                1.0
-            }
-        } },
-    ))));
-    sim.add_actor("task4", Rc::new(RefCell::new(TaskActor::new(
-        Computation::new(100, 512, 4),
-        15,
-        20,
-        CoresDependency::Linear,
-    ))));
+    let mut sim = Simulation::new(123);
+    sim.add_actor(
+        "task1",
+        Rc::new(RefCell::new(TaskActor::new(
+            Computation::new(100, 512, 1),
+            2,
+            6,
+            CoresDependency::Linear,
+        ))),
+    );
+    sim.add_actor(
+        "task2",
+        Rc::new(RefCell::new(TaskActor::new(
+            Computation::new(100, 512, 2),
+            4,
+            10,
+            CoresDependency::LinearWithFixed { fixed_part: 0.4 },
+        ))),
+    );
+    sim.add_actor(
+        "task3",
+        Rc::new(RefCell::new(TaskActor::new(
+            Computation::new(100, 512, 3),
+            5,
+            7,
+            CoresDependency::Custom {
+                func: |cores: u64| -> f64 {
+                    if cores == 7 {
+                        0.5
+                    } else {
+                        1.0
+                    }
+                },
+            },
+        ))),
+    );
+    sim.add_actor(
+        "task4",
+        Rc::new(RefCell::new(TaskActor::new(
+            Computation::new(100, 512, 4),
+            15,
+            20,
+            CoresDependency::Linear,
+        ))),
+    );
     sim.add_actor("compute", Rc::new(RefCell::new(ComputeActor::new(1, 10, 1024))));
-    sim.add_event(Start {}, "0", "task1", 0.);
-    sim.add_event(Start {}, "0", "task2", 0.);
-    sim.add_event(Start {}, "0", "task3", 1000.);
-    sim.add_event(Start {}, "0", "task4", 2000.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 0.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task3"), 1000.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task4"), 2000.);
     sim.step_until_no_events();
 }
