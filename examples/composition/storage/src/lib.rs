@@ -15,10 +15,12 @@ pub struct DiskWriteRequest {
 
 #[derive(Debug)]
 pub struct DiskReadCompleted {
+    pub src_event_id: u64
 }
 
 #[derive(Debug)]
 pub struct DiskWriteCompleted {
+    pub src_event_id: u64
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
@@ -56,15 +58,15 @@ impl Disk {
 }
 
 impl Actor for Disk {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             DiskReadRequest { size } => {
                 println!("{} [{}] received DiskReadRequest from {}", ctx.time(), ctx.id, from);
-                ctx.emit(DiskReadCompleted {  }, from, self.calc_read_delay(*size));
+                ctx.emit(DiskReadCompleted { src_event_id: ctx.event_id }, from, self.calc_read_delay(*size));
             },
             DiskWriteRequest { size } => {
                 println!("{} [{}] received DiskWriteRequest from {}", ctx.time(), ctx.id, from);
-                ctx.emit(DiskWriteCompleted { }, from, self.calc_write_delay(*size));
+                ctx.emit(DiskWriteCompleted { src_event_id: ctx.event_id }, from, self.calc_write_delay(*size));
             }
         })
     }
