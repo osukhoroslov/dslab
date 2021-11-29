@@ -1,5 +1,5 @@
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
-use core::actor::{Actor, ActorId, ActorContext, Event};
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -9,16 +9,13 @@ pub struct CompRequest {
 }
 
 #[derive(Debug)]
-pub struct CompStarted {
-}
+pub struct CompStarted {}
 
 #[derive(Debug)]
-pub struct CompFinished {
-}
+pub struct CompFinished {}
 
 #[derive(Debug)]
-pub struct CompFailed {
-}
+pub struct CompFailed {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,17 +25,17 @@ pub struct ComputeActor {
 
 impl ComputeActor {
     pub fn new(speed: u64) -> Self {
-        Self {speed}
+        Self { speed }
     }
 }
 
 impl Actor for ComputeActor {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             CompRequest { amount } => {
                 println!("{} [{}] received CompRequest from {}", ctx.time(), ctx.id, from);
                 let start_delay = 0.1;
-                ctx.emit(CompStarted {}, from, start_delay);
+                ctx.emit(CompStarted {}, from.clone(), start_delay);
                 let compute_time = *amount as f64 / self.speed as f64;
                 ctx.emit(CompFinished {}, from, start_delay + compute_time);
             }

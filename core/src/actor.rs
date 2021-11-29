@@ -1,24 +1,21 @@
-use std::hash::{Hash, Hasher};
-use std::fmt::{Debug, Error, Formatter};
+use downcast_rs::{impl_downcast, Downcast};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use downcast_rs::{impl_downcast, Downcast};
-
+use std::fmt::{Debug, Error, Formatter};
+use std::hash::{Hash, Hasher};
 
 // EVENT ///////////////////////////////////////////////////////////////////////////////////////////
 
-pub trait Event: Downcast + Debug {
-}
+pub trait Event: Downcast + Debug {}
 
 impl_downcast!(Event);
 
-impl<T: Debug + 'static> Event for T {
-}
+impl<T: Debug + 'static> Event for T {}
 
 // ACTOR ///////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait Actor {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext);
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext);
     fn is_active(&self) -> bool;
 }
 
@@ -42,7 +39,7 @@ impl PartialEq for ActorId {
     }
 }
 
-impl Eq for ActorId { }
+impl Eq for ActorId {}
 
 impl Hash for ActorId {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -67,11 +64,12 @@ impl std::fmt::Debug for ActorId {
 pub struct CtxEvent {
     pub(crate) event: Box<dyn Event>,
     pub(crate) dest: ActorId,
-    pub(crate) delay: f64
+    pub(crate) delay: f64,
 }
 
 pub struct ActorContext<'a> {
     pub id: ActorId,
+    pub event_id: u64,
     pub(crate) time: f64,
     pub(crate) rand: &'a mut Pcg64,
     pub(crate) next_event_id: u64,
@@ -84,19 +82,19 @@ impl<'a> ActorContext<'a> {
         self.time
     }
 
-    pub fn emit<T: Event>(&mut self, event: T, dest: &ActorId, delay: f64) -> u64 {
+    pub fn emit<T: Event>(&mut self, event: T, dest: ActorId, delay: f64) -> u64 {
         self.emit_any(Box::new(event), dest, delay)
     }
 
-    fn emit_any(&mut self, event: Box<dyn Event>, dest: &ActorId, delay: f64) -> u64 {
-        let entry = CtxEvent{ event, dest: dest.clone(), delay };
+    fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {
+        let entry = CtxEvent { event, dest, delay };
         self.events.push(entry);
         self.next_event_id += 1;
         self.next_event_id - 1
     }
 
     pub fn rand(&mut self) -> f64 {
-        self.rand.gen_range(0.0 .. 1.0)
+        self.rand.gen_range(0.0..1.0)
     }
 
     pub fn cancel_event(&mut self, event_id: u64) {

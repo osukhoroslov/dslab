@@ -1,24 +1,22 @@
-use sugars::{refcell, rc};
+use sugars::{rc, refcell};
 
+use compute::*;
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
-use core::actor::{Actor, ActorId, ActorContext, Event};
-use compute::*;
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct Start {
-}
+pub struct Start {}
 
 #[derive(Debug)]
 pub struct TaskAssigned {
-    amount: u64
+    amount: u64,
 }
 
 #[derive(Debug)]
-pub struct TaskCompleted {
-}
+pub struct TaskCompleted {}
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -27,17 +25,17 @@ pub struct Master {
 }
 
 impl Master {
-    pub fn new(worker: &ActorId) -> Self {
-        Self { worker: worker.clone() }
+    pub fn new(worker: ActorId) -> Self {
+        Self { worker }
     }
 }
 
 impl Actor for Master {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                ctx.emit(TaskAssigned { amount: 100 }, &self.worker, 0.);
+                ctx.emit(TaskAssigned { amount: 100 }, self.worker.clone(), 0.);
             },
             TaskCompleted {} => {
                 println!("{} [{}] received TaskCompleted from {}", ctx.time(), ctx.id, from);
@@ -56,25 +54,25 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(compute: &ActorId) -> Self {
-        Self { compute: compute.clone(), master: None }
+    pub fn new(compute: ActorId) -> Self {
+        Self { compute, master: None }
     }
 }
 
 impl Actor for Worker {
-    fn on(&mut self, event: Box<dyn Event>, from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             TaskAssigned { amount } => {
                 println!("{} [{}] received TaskAssigned from {}", ctx.time(), ctx.id, from);
-                ctx.emit(CompRequest { amount: *amount }, &self.compute, 0.);
-                self.master = Some(from.clone());
+                ctx.emit(CompRequest { amount: *amount }, self.compute.clone(), 0.);
+                self.master = Some(from);
             },
             CompStarted {} => {
                 println!("{} [{}] received CompStarted from {}", ctx.time(), ctx.id, from);
             },
             CompFinished {} => {
                 println!("{} [{}] received CompFinished from {}", ctx.time(), ctx.id, from);
-                ctx.emit(TaskCompleted {}, self.master.as_ref().unwrap(), 0.);
+                ctx.emit(TaskCompleted {}, self.master.clone().unwrap(), 0.);
             },
             CompFailed {} => {
                 println!("{} [{}] received CompFailed from {}", ctx.time(), ctx.id, from);
@@ -92,8 +90,8 @@ impl Actor for Worker {
 fn main() {
     let mut sim = Simulation::new(123);
     let compute = sim.add_actor("compute", rc!(refcell!(ComputeActor::new(10))));
-    let worker = sim.add_actor("worker", rc!(refcell!(Worker::new(&compute))));
-    let master = sim.add_actor("master", rc!(refcell!(Master::new(&worker))));
-    sim.add_event(Start { }, &ActorId::from("app"), &master, 0.);
+    let worker = sim.add_actor("worker", rc!(refcell!(Worker::new(compute))));
+    let master = sim.add_actor("master", rc!(refcell!(Master::new(worker))));
+    sim.add_event(Start {}, ActorId::from("app"), master, 0.);
     sim.step_until_no_events();
 }
