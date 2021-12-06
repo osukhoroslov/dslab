@@ -1,0 +1,8 @@
+[package]
+name = "topology-example"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+core = { path = "../../core" }
+sugars = "3.0.0"

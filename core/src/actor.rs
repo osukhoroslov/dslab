@@ -118,3 +118,17 @@ macro_rules! match_event {
         }
     }
 }
+
+#[macro_export]
+macro_rules! cast {
+    ( match $event:ident { $( $pattern:pat => $arm:block )+ } ) => {
+        $(
+            if let Some($pattern) = $event.downcast_ref() {
+                $arm
+            } else
+        )*
+        {
+            println!("Unknown event: {:?}", $event)
+        }
+    }
+}
