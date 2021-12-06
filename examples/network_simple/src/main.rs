@@ -119,7 +119,7 @@ impl DataOperation for ConstantThroughputNetwork {
         );
         ctx.emit(
             ReceiveData_ { data },
-            &ctx.id.clone(),
+            ctx.id.clone(),
             new_message_delivery_time,
         );
     }
@@ -201,7 +201,7 @@ impl SharedThroughputNetwork {
                 ReceiveData_ {
                     data: send_elem.data.clone(),
                 },
-                &ctx.id.clone(),
+                ctx.id.clone(),
                 data_delivery_time,
             );
             if check_log_level(self.log_level.clone(), LogLevel::Full) {
@@ -309,26 +309,26 @@ impl NetworkActor {
 }
 
 impl Actor for NetworkActor {
-    fn on(&mut self, event: Box<dyn Event>, _from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             SendMessage { message } => {
                 if check_log_level(self.log_level.clone(), LogLevel::SendReceive){
                     println!("System time: {}, {} send Message '{}' to {}", ctx.time(), message.source, message.data, message.dest);
                 }
-                ctx.emit(ReceiveMessage_ { message: message.clone() }, &ctx.id.clone(), self.min_delay);
+                ctx.emit(ReceiveMessage_ { message: message.clone() }, ctx.id.clone(), self.min_delay);
             },
             ReceiveMessage_ { message } => {
                 if check_log_level(self.log_level.clone(), LogLevel::SendReceive){
                     println!("System time: {}, {} received Message '{}' from {}", ctx.time(), message.dest, message.data, message.source);
                 }
-                ctx.emit(ReceiveMessage {message: message.clone()}, &message.dest, 0.0);
+                ctx.emit(ReceiveMessage {message: message.clone()}, message.dest.clone(), 0.0);
             },
             SendData { data } => {
                 self.network_model.borrow_mut().send_data(data.clone(), ctx);
             },
             ReceiveData_ { data } => {
                 self.network_model.borrow_mut().receive_data( data.clone(), ctx );
-                ctx.emit(ReceiveData {data: data.clone()}, &data.dest, 0.0);
+                ctx.emit(ReceiveData {data: data.clone()}, data.dest.clone(), 0.0);
             },
         })
     }
@@ -356,12 +356,12 @@ impl DataSender {
 }
 
 impl Actor for DataSender {
-    fn on(&mut self, event: Box<dyn Event>, _from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             Start { size, receiver_id } => {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: receiver_id.clone(), size: *size};
-                ctx.emit(SendData { data }, &self.network_id, 0.0);
+                ctx.emit(SendData { data }, self.network_id.clone(), 0.0);
             },
             ReceiveData { data: _ } => {
                 println!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
@@ -385,13 +385,13 @@ impl DataReceiver {
 }
 
 impl Actor for DataReceiver {
-    fn on(&mut self, event: Box<dyn Event>, _from: &ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             ReceiveData { data } => {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let new_size = 1000.0 - data.size;
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: data.source.clone(), size: new_size};
-                ctx.emit(SendData { data }, &self.network_id, 0.0);
+                ctx.emit(SendData { data }, self.network_id.clone(), 0.0);
                 println!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
             },
         })
@@ -403,10 +403,10 @@ impl Actor for DataReceiver {
 }
 
 fn main() {
-    let process_simple_send_1 = true;
-    let process_simple_send_2 = true;
+    let process_simple_send_1 = false;
+    let process_simple_send_2 = false;
     let process_check_order = true;
-    let process_with_actors = true;
+    let process_with_actors = false;
 
     let mut sim = Simulation::new(123);
     let sender_actor = ActorId::from("sender");
@@ -443,8 +443,8 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data1 },
-            &sender_actor,
-            &shared_network_actor,
+            sender_actor.clone(),
+            shared_network_actor.clone(),
             0.,
         );
 
@@ -456,8 +456,8 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data2 },
-            &sender_actor,
-            &shared_network_actor,
+            sender_actor.clone(),
+            shared_network_actor.clone(),
             0.,
         );
 
@@ -469,15 +469,15 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data3 },
-            &sender_actor,
-            &shared_network_actor,
+            sender_actor.clone(),
+            shared_network_actor.clone(),
             0.,
         );
 
         sim.add_event(
             SendMessage { message: msg },
-            &sender_actor,
-            &shared_network_actor,
+            sender_actor.clone(),
+            shared_network_actor.clone(),
             0.,
         );
 
@@ -501,8 +501,8 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data1 },
-            &sender_actor,
-            &constant_network_actor,
+            sender_actor.clone(),
+            constant_network_actor.clone(),
             0.,
         );
 
@@ -514,8 +514,8 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data2 },
-            &sender_actor,
-            &constant_network_actor,
+            sender_actor.clone(),
+            constant_network_actor.clone(),
             0.,
         );
 
@@ -527,15 +527,15 @@ fn main() {
         };
         sim.add_event(
             SendData { data: data3 },
-            &sender_actor,
-            &constant_network_actor,
+            sender_actor.clone(),
+            constant_network_actor.clone(),
             0.,
         );
 
         sim.add_event(
             SendMessage { message: msg },
-            &sender_actor,
-            &constant_network_actor,
+            sender_actor.clone(),
+            constant_network_actor.clone(),
             0.,
         );
 
@@ -560,16 +560,16 @@ fn main() {
             };
             sim.add_event(
                 SendData { data: data1 },
-                &sender_actor,
-                &shared_network_actor,
+                sender_actor.clone(),
+                shared_network_actor.clone(),
                 0.,
             );
         }
 
         sim.add_event(
             SendMessage { message: msg },
-            &sender_actor,
-            &shared_network_actor,
+            sender_actor.clone(),
+            shared_network_actor.clone(),
             0.,
         );
 
@@ -602,8 +602,8 @@ fn main() {
                     size: (i as f64) * 100.0,
                     receiver_id: receivers[i - 1].clone(),
                 },
-                &initial_actor,
-                &senders[i - 1],
+                initial_actor.clone(),
+                senders[i - 1].clone(),
                 0.0,
             );
         }
