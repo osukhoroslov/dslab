@@ -21,7 +21,7 @@ pub trait Actor {
 
 // ACTOR ID ////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone)]
+#[derive(Clone, PartialOrd, Ord)]
 pub struct ActorId(pub String);
 
 impl ActorId {
@@ -84,6 +84,14 @@ impl<'a> ActorContext<'a> {
 
     pub fn emit<T: Event>(&mut self, event: T, dest: ActorId, delay: f64) -> u64 {
         self.emit_any(Box::new(event), dest, delay)
+    }
+
+    pub fn emit_now<T: Event>(&mut self, event: T, dest: ActorId) -> u64 {
+        self.emit(event, dest, 0.)
+    }
+
+    pub fn emit_self<T: Event>(&mut self, event: T, delay: f64) -> u64 {
+        self.emit(event, self.id.clone(), delay)
     }
 
     fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {

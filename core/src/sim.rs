@@ -79,6 +79,10 @@ impl Simulation {
         self.add_any_event(Box::new(event), src, dest, delay)
     }
 
+    pub fn add_event_now<T: Event>(&mut self, event: T, src: ActorId, dest: ActorId) -> u64 {
+        self.add_event(event, src, dest, 0.)
+    }
+
     fn add_any_event(&mut self, event: Box<dyn Event>, src: ActorId, dest: ActorId, delay: f64) -> u64 {
         let entry = EventEntry {
             id: self.event_count,
