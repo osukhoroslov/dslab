@@ -10,6 +10,9 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
 #[derive(Debug)]
+pub struct ReportStatus {}
+
+#[derive(Debug)]
 #[allow(dead_code)]
 pub enum WorkerState {
     Online,
@@ -103,6 +106,35 @@ impl Actor for Master {
                 task.state = TaskState::Completed;
                 let worker = self.workers.get_mut(&from).unwrap();
                 worker.used_cpus -= 1;
+                self.schedule_tasks(ctx);
+            }
+            ReportStatus {} => {
+                println!("{} [{}] workers: {}", ctx.time(), ctx.id, self.workers.len());
+                let total_cpus: u32 = self.workers.values().map(|w| w.total_cpus).sum();
+                let used_cpus: u32 = self.workers.values().map(|w| w.used_cpus).sum();
+                println!(
+                    "{} [{}] cpus: total - {}, used - {}",
+                    ctx.time(),
+                    ctx.id,
+                    total_cpus,
+                    used_cpus
+                );
+                let task_count = self.tasks.len();
+                let completed_count = self
+                    .tasks
+                    .values()
+                    .filter(|t| matches!(t.state, TaskState::Completed))
+                    .count();
+                println!(
+                    "{} [{}] tasks: total - {}, completed - {}",
+                    ctx.time(),
+                    ctx.id,
+                    task_count,
+                    completed_count
+                );
+                if task_count == 0 || completed_count != task_count {
+                    ctx.emit_self(ReportStatus {}, 10.);
+                }
             }
         })
     }

@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct CompRequest {
-    pub id: u64,
     pub size: u64,
     pub requester: ActorId,
 }
@@ -39,28 +38,28 @@ impl Compute {
         self.cpus
     }
 
-    pub fn run(&self, id: u64, size: u64, ctx: &mut ActorContext) {
+    pub fn run(&self, size: u64, ctx: &mut ActorContext) -> u64 {
         let req = CompRequest {
-            id,
             size,
             requester: ctx.id.clone(),
         };
-        ctx.emit_now(req, self.id.clone());
+        ctx.emit_now(req, self.id.clone())
     }
 }
 
 impl Actor for Compute {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            CompRequest { id, size, requester: _ } => {
-                println!("{} [{}] comp started: {:?}", ctx.time(), ctx.id, event);
+            CompRequest { size, requester: _ } => {
+                let comp_id = ctx.event_id;
+                println!("{} [{}] comp {} started: {:?}", ctx.time(), ctx.id, comp_id, event);
                 let comp_time = *size as f64 / self.speed as f64;
-                ctx.emit(CompFinished { id: *id }, from.clone(), comp_time);
-                self.comps.insert(*id, *event.downcast::<CompRequest>().unwrap());
+                ctx.emit(CompFinished { id: comp_id }, from.clone(), comp_time);
+                self.comps.insert(comp_id, *event.downcast::<CompRequest>().unwrap());
             }
             CompFinished { id } => {
                 let comp = self.comps.remove(id).unwrap();
-                println!("{} [{}] comp finished: {:?}", ctx.time(), ctx.id, comp);
+                println!("{} [{}] comp {} finished: {:?}", ctx.time(), ctx.id, *id, comp);
                 ctx.emit_now(CompFinished { id: *id }, comp.requester);
             }
         })
