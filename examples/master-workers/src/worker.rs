@@ -115,7 +115,9 @@ impl Actor for Worker {
                     println!("{} [{}] uploaded output data for task: {}", ctx.time(), ctx.id, task_id);
                     task.state = TaskState::Completed;
                     self.tasks.remove(id);
-                    ctx.emit(TaskCompleted { id: task_id }, self.master.clone(), 0.5);
+                    self.net
+                        .borrow()
+                        .send(TaskCompleted { id: task_id }, self.master.clone(), ctx);
                 }
             }
             DataReadCompleted { id } => {
