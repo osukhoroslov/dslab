@@ -1,3 +1,6 @@
+extern crate log;
+extern crate env_logger;
+use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -6,7 +9,7 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
 use network::network_actor::NetworkActor;
-use network::model::{Data, Message, SendData, SendMessage, ReceiveData, LogLevel};
+use network::model::{Data, Message, DataSend, MessageSend, DataDelivery};
 use network::constant_throughput_model::ConstantThroughputNetwork;
 use network::shared_throughput_model::SharedThroughputNetwork;
 
@@ -36,10 +39,10 @@ impl Actor for DataSender {
             Start { size, receiver_id } => {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: receiver_id.clone(), size: *size};
-                ctx.emit(SendData { data }, self.network_id.clone(), 0.0);
+                ctx.emit(DataSend { data }, self.network_id.clone(), 0.0);
             },
-            ReceiveData { data: _ } => {
-                println!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
+            DataDelivery { data: _ } => {
+                info!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
             },
         })
     }
@@ -62,12 +65,12 @@ impl DataReceiver {
 impl Actor for DataReceiver {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
-            ReceiveData { data } => {
+            DataDelivery { data } => {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let new_size = 1000.0 - data.size;
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: data.source.clone(), size: new_size};
-                ctx.emit(SendData { data }, self.network_id.clone(), 0.0);
-                println!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
+                ctx.emit(DataSend { data }, self.network_id.clone(), 0.0);
+                info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
             },
         })
     }
@@ -78,6 +81,8 @@ impl Actor for DataReceiver {
 }
 
 fn main() {
+    env_logger::init();
+
     let process_simple_send_1 = false;
     let process_simple_send_2 = false;
     let process_check_order = true;
@@ -88,21 +93,19 @@ fn main() {
     let receiver_actor = ActorId::from("receiver");
 
     let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0)));
-    let shared_network = Rc::new(RefCell::new(NetworkActor::new_with_log(
-        shared_network_model,
-        LogLevel::SendReceive,
+    let shared_network = Rc::new(RefCell::new(NetworkActor::new(
+        shared_network_model
     )));
     let shared_network_actor = sim.add_actor("shared_network", shared_network);
 
     let constant_network_model = Rc::new(RefCell::new(ConstantThroughputNetwork::new(10.0)));
-    let constant_network = Rc::new(RefCell::new(NetworkActor::new_with_log(
-        constant_network_model,
-        LogLevel::SendReceive,
+    let constant_network = Rc::new(RefCell::new(NetworkActor::new(
+        constant_network_model
     )));
     let constant_network_actor = sim.add_actor("constant_network", constant_network);
 
     if process_simple_send_1 {
-        println!("Simple send check 1");
+        info!("Simple send check 1");
         let msg = Message {
             id: COUNTER.fetch_add(1, Ordering::Relaxed),
             source: sender_actor.clone(),
@@ -117,7 +120,7 @@ fn main() {
             size: 100.0,
         };
         sim.add_event(
-            SendData { data: data1 },
+            DataSend { data: data1 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -130,7 +133,7 @@ fn main() {
             size: 1000.0,
         };
         sim.add_event(
-            SendData { data: data2 },
+            DataSend { data: data2 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -143,14 +146,14 @@ fn main() {
             size: 5.0,
         };
         sim.add_event(
-            SendData { data: data3 },
+            DataSend { data: data3 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
         );
 
         sim.add_event(
-            SendMessage { message: msg },
+            MessageSend { message: msg },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -160,7 +163,7 @@ fn main() {
     }
 
     if process_simple_send_2 {
-        println!("Simple send check 2");
+        info!("Simple send check 2");
         let msg = Message {
             id: COUNTER.fetch_add(1, Ordering::Relaxed),
             source: sender_actor.clone(),
@@ -175,7 +178,7 @@ fn main() {
             size: 100.0,
         };
         sim.add_event(
-            SendData { data: data1 },
+            DataSend { data: data1 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -188,7 +191,7 @@ fn main() {
             size: 1000.0,
         };
         sim.add_event(
-            SendData { data: data2 },
+            DataSend { data: data2 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -201,14 +204,14 @@ fn main() {
             size: 5.0,
         };
         sim.add_event(
-            SendData { data: data3 },
+            DataSend { data: data3 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
         );
 
         sim.add_event(
-            SendMessage { message: msg },
+            MessageSend { message: msg },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -218,7 +221,7 @@ fn main() {
     }
 
     if process_check_order {
-        println!("Data order check");
+        info!("Data order check");
         let msg = Message {
             id: COUNTER.fetch_add(1, Ordering::Relaxed),
             source: sender_actor.clone(),
@@ -234,7 +237,7 @@ fn main() {
                 size: 1000.0,
             };
             sim.add_event(
-                SendData { data: data1 },
+                DataSend { data: data1 },
                 sender_actor.clone(),
                 shared_network_actor.clone(),
                 0.,
@@ -242,7 +245,7 @@ fn main() {
         }
 
         sim.add_event(
-            SendMessage { message: msg },
+            MessageSend { message: msg },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -252,7 +255,7 @@ fn main() {
     }
 
     if process_with_actors {
-        println!("With actors check");
+        info!("With actors check");
         let mut receivers = Vec::new();
         let mut senders = Vec::new();
 
