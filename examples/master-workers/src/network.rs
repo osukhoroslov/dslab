@@ -21,14 +21,14 @@ struct HostInfo {}
 
 pub struct Network {
     latency: f64,
-    bandwidth: f64,
+    bandwidth: u64,
     hosts: BTreeMap<String, HostInfo>,
     actor_hosts: HashMap<ActorId, String>,
     transfers: BTreeMap<u64, DataTransferRequest>,
 }
 
 impl Network {
-    pub fn new(latency: f64, bandwidth: f64) -> Self {
+    pub fn new(latency: f64, bandwidth: u64) -> Self {
         Self {
             latency,
             bandwidth,
@@ -99,7 +99,7 @@ impl Actor for Network {
                 );
                 let mut transfer_time = 0.;
                 if !self.check_same_host(&source, &dest) {
-                    transfer_time = self.latency + (*size as f64 / self.bandwidth);
+                    transfer_time = self.latency + (*size as f64 / self.bandwidth as f64);
                 }
                 ctx.emit_self(DataTransferCompleted { id: transfer_id }, transfer_time);
                 self.transfers

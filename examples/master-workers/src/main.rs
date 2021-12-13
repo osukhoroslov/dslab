@@ -2,6 +2,7 @@ mod common;
 mod compute;
 mod master;
 mod network;
+mod storage;
 mod task;
 mod worker;
 
@@ -13,6 +14,7 @@ use crate::common::Start;
 use crate::compute::Compute;
 use crate::master::{Master, ReportStatus};
 use crate::network::{Network, NETWORK_ID};
+use crate::storage::Storage;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
 use core::actor::ActorId;
@@ -22,7 +24,8 @@ fn main() {
     // params
     let host_count = 5;
     let latency = 0.5;
-    let bandwidth = 1000.;
+    let storage_bandwidth = 2000;
+    let network_bandwidth = 1000;
     let task_count = 20;
     let seed = 123;
 
@@ -32,7 +35,7 @@ fn main() {
     let client = ActorId::from("client");
 
     // create network and add hosts
-    let net = rc!(refcell!(Network::new(latency, bandwidth)));
+    let net = rc!(refcell!(Network::new(latency, network_bandwidth)));
     sim.add_actor(NETWORK_ID, net.clone());
     for i in 0..host_count {
         net.borrow_mut().add_host(&format!("host{}", i));
@@ -56,9 +59,21 @@ fn main() {
             rand.gen_range(1..4)
         )));
         sim.add_actor(&compute_id, compute.clone());
+        let storage_id = format!("/{}/disk", host);
+        let storage = rc!(refcell!(Storage::new(
+            &storage_id,
+            storage_bandwidth,
+            storage_bandwidth,
+        )));
+        sim.add_actor(&storage_id, storage.clone());
         let worker = sim.add_actor(
             &format!("/{}/worker", host),
-            rc!(refcell!(Worker::new(compute.clone(), net.clone(), master.clone()))),
+            rc!(refcell!(Worker::new(
+                compute.clone(),
+                storage.clone(),
+                net.clone(),
+                master.clone()
+            ))),
         );
         net.borrow_mut().set_actor_host(worker.clone(), host);
         sim.add_event_now(Start {}, admin.clone(), worker.clone());
