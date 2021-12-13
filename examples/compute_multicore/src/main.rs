@@ -192,7 +192,7 @@ fn main() {
             CoresDependency::Custom {
                 func: |cores: u64| -> f64 {
                     if cores == 7 {
-                        0.5
+                        2.0
                     } else {
                         1.0
                     }

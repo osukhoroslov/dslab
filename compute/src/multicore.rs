@@ -18,7 +18,7 @@ impl Allocation {
     }
 }
 
-// [1 .. max_cores] -> [0, 1]
+// [1 .. max_cores] -> [1, +inf]
 #[derive(Debug, Clone)]
 pub enum CoresDependency {
     Linear,
@@ -160,14 +160,14 @@ impl Actor for ComputeActor {
                     );
 
                     let speedup = match cores_dependency {
-                        CoresDependency::Linear => 1. / cores as f64,
+                        CoresDependency::Linear => cores as f64,
                         CoresDependency::LinearWithFixed { fixed_part } => {
-                            fixed_part + (1. - fixed_part) / cores as f64
+                            1. / (fixed_part + (1. - fixed_part) / cores as f64)
                         }
                         CoresDependency::Custom { func } => func(cores),
                     };
 
-                    let compute_time = computation.flops as f64 / self.speed as f64 * speedup;
+                    let compute_time = computation.flops as f64 / self.speed as f64 / speedup;
                     let finish_event_id = ctx.emit(
                         CompFinished {
                             computation: computation.clone(),
