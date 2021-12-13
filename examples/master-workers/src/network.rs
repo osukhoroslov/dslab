@@ -11,7 +11,6 @@ pub struct DataTransferCompleted {
 
 #[derive(Debug)]
 pub struct DataTransferRequest {
-    id: u64,
     source: ActorId,
     dest: ActorId,
     size: u64,
@@ -43,8 +42,18 @@ impl Network {
         self.hosts.insert(host_id.to_string(), HostInfo {});
     }
 
-    pub fn place_actor(&mut self, actor_id: ActorId, host_id: &str) {
+    pub fn set_actor_host(&mut self, actor_id: ActorId, host_id: &str) {
         self.actor_hosts.insert(actor_id, host_id.to_string());
+    }
+
+    pub fn get_actor_host(&self, actor_id: &ActorId) -> Option<&String> {
+        self.actor_hosts.get(&actor_id)
+    }
+
+    pub fn check_same_host(&self, actor1_id: &ActorId, actor2_id: &ActorId) -> bool {
+        let actor1_host = self.get_actor_host(&actor1_id);
+        let actor2_host = self.get_actor_host(&actor2_id);
+        actor1_host.is_some() && actor2_host.is_some() && actor1_host.unwrap() == actor2_host.unwrap()
     }
 
     pub fn get_hosts(&self) -> Vec<String> {
@@ -52,30 +61,21 @@ impl Network {
     }
 
     pub fn send<T: Event>(&self, event: T, dest: ActorId, ctx: &mut ActorContext) {
-        let source_host = self.actor_hosts.get(&ctx.id).unwrap();
-        let dest_host = self.actor_hosts.get(&dest).unwrap();
-        if source_host != dest_host {
+        if !self.check_same_host(&ctx.id, &dest) {
             ctx.emit(event, dest, self.latency);
         } else {
             ctx.emit(event, dest, 0.);
         }
     }
 
-    pub fn transfer(&self, id: u64, source: ActorId, dest: ActorId, size: u64, ctx: &mut ActorContext) {
-        let source_host = self.actor_hosts.get(&source).unwrap();
-        let dest_host = self.actor_hosts.get(&dest).unwrap();
-        if source_host != dest_host {
-            let req = DataTransferRequest {
-                id,
-                source,
-                dest,
-                size,
-                requester: ctx.id.clone(),
-            };
-            ctx.emit_now(req, ActorId::from(NETWORK_ID));
-        } else {
-            ctx.emit_now(DataTransferCompleted { id }, ctx.id.clone());
-        }
+    pub fn transfer(&self, source: ActorId, dest: ActorId, size: u64, ctx: &mut ActorContext) -> u64 {
+        let req = DataTransferRequest {
+            source,
+            dest,
+            size,
+            requester: ctx.id.clone(),
+        };
+        ctx.emit_now(req, ActorId::from(NETWORK_ID))
     }
 }
 
@@ -84,21 +84,36 @@ impl Actor for Network {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             DataTransferRequest {
-                id,
                 source,
                 dest,
                 size,
                 requester,
             } => {
-                println!("{} [{}] data transfer started: {:?}", ctx.time(), ctx.id, event);
-                let transfer_time = self.latency + (*size as f64 / self.bandwidth);
-                ctx.emit_self(DataTransferCompleted { id: *id }, transfer_time);
+                let transfer_id = ctx.event_id;
+                println!(
+                    "{} [{}] data transfer {} started: {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    transfer_id,
+                    event
+                );
+                let mut transfer_time = 0.;
+                if !self.check_same_host(&source, &dest) {
+                    transfer_time = self.latency + (*size as f64 / self.bandwidth);
+                }
+                ctx.emit_self(DataTransferCompleted { id: transfer_id }, transfer_time);
                 self.transfers
-                    .insert(*id, *event.downcast::<DataTransferRequest>().unwrap());
+                    .insert(transfer_id, *event.downcast::<DataTransferRequest>().unwrap());
             }
             DataTransferCompleted { id } => {
                 let transfer = self.transfers.remove(id).unwrap();
-                println!("{} [{}] data transfer completed: {:?}", ctx.time(), ctx.id, transfer);
+                println!(
+                    "{} [{}] data transfer {} completed: {:?}",
+                    ctx.time(),
+                    ctx.id,
+                    *id,
+                    transfer
+                );
                 ctx.emit_now(DataTransferCompleted { id: *id }, transfer.requester);
             }
         })

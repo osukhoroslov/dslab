@@ -27,6 +27,9 @@ pub struct Worker {
     total_cpus: u32,
     used_cpus: u32,
     tasks: HashMap<u64, TaskInfo>,
+    computations: HashMap<u64, u64>,
+    downloads: HashMap<u64, u64>,
+    uploads: HashMap<u64, u64>,
 }
 
 impl Worker {
@@ -39,6 +42,9 @@ impl Worker {
             total_cpus,
             used_cpus: 0,
             tasks: HashMap::new(),
+            computations: HashMap::new(),
+            downloads: HashMap::new(),
+            uploads: HashMap::new(),
         }
     }
 }
@@ -69,38 +75,49 @@ impl Actor for Worker {
                     state: TaskState::Accepted,
                 };
                 self.tasks.insert(*id, task);
-                self.net
+
+                let transfer_id = self
+                    .net
                     .borrow()
-                    .transfer(*id, self.master.clone(), ctx.id.clone(), *input_size, ctx);
+                    .transfer(self.master.clone(), ctx.id.clone(), *input_size, ctx);
+                self.downloads.insert(transfer_id, *id);
             }
             DataTransferCompleted { id } => {
-                let task = self.tasks.get_mut(id).unwrap();
-                match task.state {
-                    // data transfer corresponds to input download
-                    TaskState::Accepted => {
-                        println!("{} [{}] downloaded input data for task: {}", ctx.time(), ctx.id, id);
-                        task.state = TaskState::StagedIn;
-                        self.compute.borrow().run(*id, task.req.comp_size, ctx);
-                        self.used_cpus += 1;
-                    }
-                    // data transfer corresponds to output upload
-                    TaskState::Finished => {
-                        println!("{} [{}] uploaded output data for task: {}", ctx.time(), ctx.id, id);
-                        task.state = TaskState::StagedOut;
-                        self.tasks.remove(id);
-                        ctx.emit(TaskCompleted { id: *id }, self.master.clone(), 0.5);
-                    }
-                    _ => {}
+                // data transfer corresponds to input download
+                if self.downloads.contains_key(id) {
+                    let task_id = self.downloads.remove(id).unwrap();
+                    let task = self.tasks.get_mut(&task_id).unwrap();
+                    println!(
+                        "{} [{}] downloaded input data for task: {}",
+                        ctx.time(),
+                        ctx.id,
+                        task_id
+                    );
+                    task.state = TaskState::StagedIn;
+                    let comp_id = self.compute.borrow().run(task.req.comp_size, ctx);
+                    self.computations.insert(comp_id, task_id);
+                    self.used_cpus += 1;
+                // data transfer corresponds to output upload
+                } else if self.uploads.contains_key(id) {
+                    let task_id = self.uploads.remove(id).unwrap();
+                    let task = self.tasks.get_mut(&task_id).unwrap();
+                    println!("{} [{}] uploaded output data for task: {}", ctx.time(), ctx.id, task_id);
+                    task.state = TaskState::StagedOut;
+                    self.tasks.remove(id);
+                    ctx.emit(TaskCompleted { id: task_id }, self.master.clone(), 0.5);
                 }
             }
             CompFinished { id } => {
-                println!("{} [{}] completed execution of task: {}", ctx.time(), ctx.id, id);
-                let task = self.tasks.get_mut(id).unwrap();
+                let task_id = self.computations.remove(id).unwrap();
+                println!("{} [{}] completed execution of task: {}", ctx.time(), ctx.id, task_id);
+                let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Finished;
                 self.used_cpus -= 1;
-                self.net
-                    .borrow()
-                    .transfer(*id, ctx.id.clone(), self.master.clone(), task.req.output_size, ctx);
+                let transfer_id =
+                    self.net
+                        .borrow()
+                        .transfer(ctx.id.clone(), self.master.clone(), task.req.output_size, ctx);
+                self.uploads.insert(transfer_id, task_id);
             }
         })
     }

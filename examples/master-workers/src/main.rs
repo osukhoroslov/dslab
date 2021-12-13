@@ -11,7 +11,7 @@ use sugars::{rc, refcell};
 
 use crate::common::Start;
 use crate::compute::Compute;
-use crate::master::Master;
+use crate::master::{Master, ReportStatus};
 use crate::network::{Network, NETWORK_ID};
 use crate::task::TaskRequest;
 use crate::worker::Worker;
@@ -23,7 +23,7 @@ fn main() {
     let host_count = 5;
     let latency = 0.5;
     let bandwidth = 1000.;
-    let task_count = 10;
+    let task_count = 20;
     let seed = 123;
 
     let mut sim = Simulation::new(seed);
@@ -40,8 +40,10 @@ fn main() {
     let hosts = net.borrow().get_hosts();
 
     // create and start master on host0
-    let master = sim.add_actor("master", rc!(refcell!(Master::new(net.clone()))));
-    net.borrow_mut().place_actor(master.clone(), &hosts[0]);
+    let host = &hosts[0];
+    let master_id = format!("/{}/master", host);
+    let master = sim.add_actor(&master_id, rc!(refcell!(Master::new(net.clone()))));
+    net.borrow_mut().set_actor_host(master.clone(), host);
     sim.add_event_now(Start {}, admin.clone(), master.clone());
 
     // create and start workers
@@ -58,7 +60,7 @@ fn main() {
             &format!("/{}/worker", host),
             rc!(refcell!(Worker::new(compute.clone(), net.clone(), master.clone()))),
         );
-        net.borrow_mut().place_actor(worker.clone(), host);
+        net.borrow_mut().set_actor_host(worker.clone(), host);
         sim.add_event_now(Start {}, admin.clone(), worker.clone());
     }
 
@@ -75,6 +77,9 @@ fn main() {
         };
         sim.add_event_now(task, client.clone(), master.clone());
     }
+
+    // enable status reporting
+    sim.add_event_now(ReportStatus {}, admin.clone(), master.clone());
 
     // run until completion
     sim.step_until_no_events();
