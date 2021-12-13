@@ -7,6 +7,9 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
 
+#[derive(Debug, Clone)]
+pub struct Start {}
+
 pub struct TaskActor {
     task: Computation,
     min_cores: u64,

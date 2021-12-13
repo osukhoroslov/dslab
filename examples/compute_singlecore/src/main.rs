@@ -7,6 +7,9 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
 
+#[derive(Debug, Clone)]
+pub struct Start {}
+
 pub struct TaskActor {
     task: Computation,
 }
@@ -48,13 +51,14 @@ impl Actor for TaskActor {
                     computation
                 );
             },
-            CompFailed { computation } => {
+            CompFailed { computation, reason } => {
                 println!(
-                    "{} [{}] received CompFailed from {} for {:?}",
+                    "{} [{}] received CompFailed from {} for {:?}, because of {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation
+                    computation,
+                    reason
                 );
             }
         })

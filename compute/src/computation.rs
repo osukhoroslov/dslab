@@ -7,10 +7,6 @@ pub struct Computation {
 
 impl Computation {
     pub fn new(flops: u64, memory: u64, id: u64) -> Self {
-        Self {
-            flops: flops,
-            memory: memory,
-            id: id,
-        }
+        Self { flops, memory, id }
     }
 }
