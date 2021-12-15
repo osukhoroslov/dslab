@@ -69,7 +69,6 @@ impl Master {
 }
 
 impl Actor for Master {
-    #[allow(unused_variables)]
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Start {} => {
@@ -86,12 +85,7 @@ impl Actor for Master {
                 println!("{} [{}] registered worker: {:?}", ctx.time(), ctx.id, worker);
                 self.workers.insert(worker.id.clone(), worker);
             }
-            TaskRequest {
-                id,
-                comp_size,
-                input_size,
-                output_size,
-            } => {
+            TaskRequest { .. } => {
                 println!("{} [{}] task request: {:?}", ctx.time(), ctx.id, event);
                 let task = TaskInfo {
                     req: *event.downcast::<TaskRequest>().unwrap(),
