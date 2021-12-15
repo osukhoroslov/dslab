@@ -57,7 +57,7 @@ impl Network {
     }
 
     pub fn get_hosts(&self) -> Vec<String> {
-        self.hosts.keys().map(|v| v.clone()).collect()
+        self.hosts.keys().cloned().collect()
     }
 
     pub fn send<T: Event>(&self, event: T, dest: ActorId, ctx: &mut ActorContext) {
