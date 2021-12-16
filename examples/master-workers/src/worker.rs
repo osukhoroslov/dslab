@@ -62,8 +62,7 @@ impl Worker {
 }
 
 impl Actor for Worker {
-    #[allow(unused_variables)]
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Start {} => {
                 println!("{} [{}] started", ctx.time(), ctx.id);
@@ -77,9 +76,9 @@ impl Actor for Worker {
             }
             TaskRequest {
                 id,
-                comp_size,
+                comp_size: _,
                 input_size,
-                output_size,
+                output_size: _,
             } => {
                 println!("{} [{}] task request: {:?}", ctx.time(), ctx.id, event);
                 let task = TaskInfo {

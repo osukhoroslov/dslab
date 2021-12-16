@@ -80,14 +80,13 @@ impl Network {
 }
 
 impl Actor for Network {
-    #[allow(unused_variables)]
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             DataTransferRequest {
                 source,
                 dest,
                 size,
-                requester,
+                requester: _,
             } => {
                 let transfer_id = ctx.event_id;
                 println!(
