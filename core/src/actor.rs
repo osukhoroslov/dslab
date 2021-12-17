@@ -21,7 +21,7 @@ pub trait Actor {
 
 // ACTOR ID ////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone)]
+#[derive(Clone, PartialOrd, Ord)]
 pub struct ActorId(pub String);
 
 impl ActorId {
@@ -86,6 +86,14 @@ impl<'a> ActorContext<'a> {
         self.emit_any(Box::new(event), dest, delay)
     }
 
+    pub fn emit_now<T: Event>(&mut self, event: T, dest: ActorId) -> u64 {
+        self.emit(event, dest, 0.)
+    }
+
+    pub fn emit_self<T: Event>(&mut self, event: T, delay: f64) -> u64 {
+        self.emit(event, self.id.clone(), delay)
+    }
+
     fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {
         let entry = CtxEvent { event, dest, delay };
         self.events.push(entry);
@@ -108,6 +116,20 @@ impl<'a> ActorContext<'a> {
 #[macro_export]
 macro_rules! match_event {
     ( $event:ident { $( $pattern:pat => $arm:block ),+ $(,)? } ) => {
+        $(
+            if let Some($pattern) = $event.downcast_ref() {
+                $arm
+            } else
+        )*
+        {
+            println!("Unknown event: {:?}", $event)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! cast {
+    ( match $event:ident { $( $pattern:pat => $arm:block )+ } ) => {
         $(
             if let Some($pattern) = $event.downcast_ref() {
                 $arm
