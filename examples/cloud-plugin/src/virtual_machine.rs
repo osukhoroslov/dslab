@@ -1,22 +1,22 @@
 use core::match_event;
 use core::actor::{ActorId, Actor, Event, ActorContext};
 
-use crate::host::VM_FINISH_TIME;
 use crate::host::ReleaseVmResourses;
+use crate::host::VM_FINISH_TIME;
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct VirtualMachine {
     pub id: String,
-    pub cpu_usage: i64,
-    pub ram_usage: i64,
+    pub cpu_usage: u32,
+    pub ram_usage: u32,
     lifetime: f64,
     pub actor_id: ActorId
 }
 
 impl VirtualMachine {
-    pub fn new(id: String, cpu: i64, ram: i64, lifetime: f64) -> Self {
+    pub fn new(id: String, cpu: u32, ram: u32, lifetime: f64) -> Self {
         Self {
             id: id.clone(),
             cpu_usage: cpu,

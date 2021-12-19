@@ -10,8 +10,8 @@ use std::cell::RefCell;
 #[derive(Clone, Debug)]
 pub struct VirtualMachine {
     id: String,
-    cpu_usage: i64,
-    ram_usage: i64,
+    cpu_usage: u32,
+    ram_usage: u32,
     lifetime: f64,
 }
 
@@ -25,13 +25,13 @@ pub struct EnergyManager {
 pub struct Host {
     id: String,
 
-    cpu_full: i64,
-    cpu_available: i64,
+    cpu_total: u32,
+    cpu_available: u32,
 
-    ram_full: i64,
-    ram_available: i64,
+    ram_total: u32,
+    ram_available: u32,
 
-    vm_s: Vec<VirtualMachine>,
+    vms: Vec<VirtualMachine>,
     vm_counter: u64,
 
     energy_manager: EnergyManager
@@ -65,7 +65,7 @@ pub struct VMFinish {
 // CLOUD PRIMITIVES ////////////////////////////////////////////////////////////
 
 impl VirtualMachine {
-    pub fn new(cpu: i64, ram: i64, lifetime: f64) -> Self {
+    pub fn new(cpu: u32, ram: u32, lifetime: f64) -> Self {
         Self {
             id: "".to_string(),
             cpu_usage: cpu,
@@ -109,22 +109,22 @@ impl Actor for VirtualMachine {
 }
 
 impl Host {
-    pub fn new(cpu_full: i64, ram_full: i64, id: String) -> Self {
+    pub fn new(cpu_total: u32, ram_total: u32, id: String) -> Self {
         Self {
             id: id,
-            cpu_full: cpu_full,
-            ram_full: ram_full,
-            cpu_available: cpu_full,
-            ram_available: ram_full,
-            vm_s: Vec::new(),
+            cpu_total: cpu_total,
+            ram_total: ram_total,
+            cpu_available: cpu_total,
+            ram_available: ram_total,
+            vms: Vec::new(),
             vm_counter: 0,
             energy_manager: EnergyManager::new()
         }
     }
 
     fn find_vm_index(&self, id: String) -> Option<usize> {
-        for i in 0..self.vm_s.len() {
-            if self.vm_s[i].id == id {
+        for i in 0..self.vms.len() {
+            if self.vms[i].id == id {
                return Some(i);
             }
         }
@@ -151,7 +151,7 @@ impl Host {
 
         vm.id = self.id.to_string() + &"/".to_string() + &self.vm_counter.to_string();
         self.vm_counter += 1;
-        self.vm_s.push(vm.clone());
+        self.vms.push(vm.clone());
         
         self.cpu_available -= vm.cpu_usage;
         self.ram_available -= vm.ram_usage;
@@ -164,15 +164,15 @@ impl Host {
         self.ram_available += vm.ram_usage;
 
         let vm_index = self.find_vm_index(vm.id.clone()).unwrap();
-        self.vm_s.swap_remove(vm_index);
+        self.vms.swap_remove(vm_index);
     }
 
     pub fn cpu_load(&self) -> f64 {
-        return 1.0 - self.cpu_available as f64 / self.cpu_full as f64;
+        return 1.0 - self.cpu_available as f64 / self.cpu_total as f64;
     }
 
     pub fn ram_load(&self) -> f64 {
-        return 1.0 - self.ram_available as f64 / self.ram_full as f64;
+        return 1.0 - self.ram_available as f64 / self.ram_total as f64;
     }
 
     pub fn recalculate_energy(&mut self, time: f64) {
@@ -200,13 +200,13 @@ impl CloudSim {
         }
     }
 
-    pub fn spawn_host(&mut self, cpu_full: i64, ram_full: i64) -> String {
+    pub fn spawn_host(&mut self, cpu_total: u32, ram_total: u32) -> String {
         let current_num = self.hosts.len().to_string();
-        self.hosts.push(rc!(refcell!(Host::new(cpu_full, ram_full, current_num.clone()))));
+        self.hosts.push(rc!(refcell!(Host::new(cpu_total, ram_total, current_num.clone()))));
         return current_num;
     }
 
-    pub fn spawn_vm(&mut self, host_id: String, cpu: i64, ram: i64, lifetime: f64)
+    pub fn spawn_vm(&mut self, host_id: String, cpu: u32, ram: u32, lifetime: f64)
     -> Option<String> {
         let host_id_: usize = host_id.parse().unwrap();
         let mut vm = VirtualMachine::new(cpu, ram, lifetime);
@@ -246,7 +246,7 @@ impl CloudSim {
         let host_id_: usize = host_id.parse().unwrap();
 
         let available = self.hosts[host_id_].borrow_mut().cpu_available;
-        let max = self.hosts[host_id_].borrow_mut().cpu_full;
+        let max = self.hosts[host_id_].borrow_mut().cpu_total;
         return 1.0 - available as f64 / max as f64;
     }
 
