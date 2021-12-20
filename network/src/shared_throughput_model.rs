@@ -7,7 +7,6 @@ use crate::model::*;
 
 #[derive(Debug, Clone)]
 struct DataTransfer {
-    delay_left: f64,
     size_left: f64,
     last_speed: f64,
     last_time: f64,
@@ -18,30 +17,21 @@ struct DataTransfer {
 #[derive(Debug, Clone)]
 pub struct SharedThroughputNetwork {
     throughput: f64,
-    transfers: BTreeMap<usize, DataTransfer>,
-    delay: f64
+    transfers: BTreeMap<usize, DataTransfer>
 }
 
 impl SharedThroughputNetwork {
-    pub fn new(throughput: f64, delay: f64) -> SharedThroughputNetwork {
+    pub fn new(throughput: f64) -> SharedThroughputNetwork {
         return SharedThroughputNetwork {
             throughput,
-            transfers: BTreeMap::new(),
-            delay
+            transfers: BTreeMap::new()
         };
     }
 
     fn recalculate_receive_time(&mut self, ctx: &mut ActorContext) {
         let cur_time = ctx.time();
         for (_, send_elem) in self.transfers.iter_mut() {
-            let mut delivery_time = cur_time - send_elem.last_time;
-            if delivery_time > send_elem.delay_left {
-                delivery_time -= send_elem.delay_left;
-                send_elem.delay_left = 0.0;
-            } else {
-                send_elem.delay_left -= delivery_time;
-                delivery_time = 0.0;
-            }
+            let delivery_time = cur_time - send_elem.last_time;
             send_elem.size_left -= delivery_time * send_elem.last_speed;
             ctx.cancel_event(send_elem.receive_event);
         }
@@ -51,7 +41,7 @@ impl SharedThroughputNetwork {
         for (_, send_elem) in self.transfers.iter_mut() {
             send_elem.last_speed = new_throughput;
             send_elem.last_time = cur_time;
-            let data_delivery_time = send_elem.size_left / new_throughput + send_elem.delay_left;
+            let data_delivery_time = send_elem.size_left / new_throughput;
             send_elem.receive_event = ctx.emit(
                 DataReceive {
                     data: send_elem.data.clone(),
@@ -83,7 +73,6 @@ impl DataOperation for SharedThroughputNetwork {
         );
 
         let new_send_data_progres = DataTransfer {
-            delay_left: self.delay,
             size_left: data.size,
             last_speed: 0.,
             last_time: 0.,
@@ -113,10 +102,6 @@ impl DataOperation for SharedThroughputNetwork {
         );
         self.transfers.remove(&data.id);
         self.recalculate_receive_time(ctx);
-    }
-
-    fn delay(&self) -> f64 {
-        self.delay
     }
 }
 

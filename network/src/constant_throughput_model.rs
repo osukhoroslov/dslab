@@ -5,22 +5,20 @@ use crate::model::*;
 
 #[derive(Debug, Clone)]
 pub struct ConstantThroughputNetwork {
-    throughput: f64,
-    delay: f64
+    throughput: f64
 }
 
 impl ConstantThroughputNetwork {
-    pub fn new(throughput: f64, delay: f64) -> ConstantThroughputNetwork {
+    pub fn new(throughput: f64) -> ConstantThroughputNetwork {
         return ConstantThroughputNetwork {
-            throughput,
-            delay: delay
+            throughput
         };
     }
 }
 
 impl DataOperation for ConstantThroughputNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
-        let new_message_delivery_time = data.size / self.throughput + self.delay;
+        let new_message_delivery_time = data.size / self.throughput;
         info!(
             "System time: {}, Data ID: {}, From: {}, To {}, Size: {}, Time: {}",
             ctx.time(),
@@ -46,10 +44,6 @@ impl DataOperation for ConstantThroughputNetwork {
             data.dest,
             data.size
         );
-    }
-
-    fn delay(&self) -> f64 {
-        self.delay
     }
 }
 

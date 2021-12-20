@@ -1,0 +1,10 @@
+[package]
+name = "network-simple-example"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+log = "0.4"
+env_logger = "0.8.4"
+core = { path = "../../../core" }
+network = { path = "../../../network" }
