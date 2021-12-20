@@ -1,42 +1,44 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use compute::computation::Computation;
 use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::match_event;
+use core::cast;
 use core::sim::Simulation;
 
 #[derive(Debug, Clone)]
 pub struct Start {}
 
 pub struct TaskActor {
-    task: Computation,
+    flops: u64,
+    memory: u64,
     min_cores: u64,
     max_cores: u64,
     cores_dependency: CoresDependency,
 }
 
 impl TaskActor {
-    pub fn new(computation: Computation, min_cores: u64, max_cores: u64, cores_dependency: CoresDependency) -> Self {
+    pub fn new(flops: u64, memory: u64, min_cores: u64, max_cores: u64, cores_dependency: CoresDependency) -> Self {
         Self {
-            task: computation,
-            min_cores: min_cores,
-            max_cores: max_cores,
-            cores_dependency: cores_dependency,
+            flops,
+            memory,
+            min_cores,
+            max_cores,
+            cores_dependency,
         }
     }
 }
 
 impl Actor for TaskActor {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
                 let compute_actor = ActorId::from("compute");
                 ctx.emit(
                     CompRequest {
-                        computation: self.task.clone(),
+                        flops: self.flops,
+                        memory: self.memory,
                         min_cores: self.min_cores,
                         max_cores: self.max_cores,
                         cores_dependency: self.cores_dependency.clone(),
@@ -44,33 +46,33 @@ impl Actor for TaskActor {
                     compute_actor,
                     0.,
                 );
-            },
-            CompStarted { computation, cores } => {
+            }
+            CompStarted { id, cores } => {
                 println!(
                     "{} [{}] received CompStarted from {} for {:?} on {} cores",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation,
+                    id,
                     cores
                 );
-            },
-            CompFinished { computation } => {
+            }
+            CompFinished { id } => {
                 println!(
                     "{} [{}] received CompFinished from {} for {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation
+                    id
                 );
-            },
-            CompFailed { computation, reason } => {
+            }
+            CompFailed { id, reason } => {
                 println!(
                     "{} [{}] received CompFailed from {} for {:?} with reason {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation,
+                    id,
                     reason
                 );
             }
@@ -98,7 +100,7 @@ impl AllocationActor {
 
 impl Actor for AllocationActor {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
                 let compute_actor = ActorId::from("compute");
@@ -116,43 +118,43 @@ impl Actor for AllocationActor {
                     compute_actor,
                     self.time,
                 );
-            },
-            AllocationFailed { allocation, reason } => {
+            }
+            AllocationFailed { id, reason } => {
                 println!(
                     "{} [{}] received AllocationFailed from {} for {:?} with reason {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    allocation,
+                    id,
                     reason
                 );
-            },
-            DeallocationFailed { allocation, reason } => {
+            }
+            DeallocationFailed { id, reason } => {
                 println!(
                     "{} [{}] received DeallocationFailed from {} for {:?} with reason {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    allocation,
+                    id,
                     reason
                 );
-            },
-            AllocationSuccess { allocation } => {
+            }
+            AllocationSuccess { id } => {
                 println!(
                     "{} [{}] received AllocationSuccess from {} for {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    allocation
+                    id
                 );
-            },
-            DeallocationSuccess { allocation } => {
+            }
+            DeallocationSuccess { id } => {
                 println!(
                     "{} [{}] received DeallocationSuccess from {} for {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    allocation
+                    id
                 );
             }
         })
@@ -167,17 +169,13 @@ fn main() {
     let mut sim = Simulation::new(123);
     sim.add_actor(
         "task1",
-        Rc::new(RefCell::new(TaskActor::new(
-            Computation::new(100, 512, 1),
-            2,
-            6,
-            CoresDependency::Linear,
-        ))),
+        Rc::new(RefCell::new(TaskActor::new(100, 512, 2, 6, CoresDependency::Linear))),
     );
     sim.add_actor(
         "task2",
         Rc::new(RefCell::new(TaskActor::new(
-            Computation::new(100, 512, 2),
+            100,
+            512,
             4,
             10,
             CoresDependency::LinearWithFixed { fixed_part: 0.4 },
@@ -186,7 +184,8 @@ fn main() {
     sim.add_actor(
         "task3",
         Rc::new(RefCell::new(TaskActor::new(
-            Computation::new(100, 512, 3),
+            100,
+            512,
             5,
             7,
             CoresDependency::Custom {
@@ -202,14 +201,9 @@ fn main() {
     );
     sim.add_actor(
         "task4",
-        Rc::new(RefCell::new(TaskActor::new(
-            Computation::new(100, 512, 4),
-            15,
-            20,
-            CoresDependency::Linear,
-        ))),
+        Rc::new(RefCell::new(TaskActor::new(100, 512, 15, 20, CoresDependency::Linear))),
     );
-    sim.add_actor("compute", Rc::new(RefCell::new(ComputeActor::new(1, 10, 1024))));
+    sim.add_actor("compute", Rc::new(RefCell::new(Compute::new(1, 10, 1024))));
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 0.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task3"), 1000.);

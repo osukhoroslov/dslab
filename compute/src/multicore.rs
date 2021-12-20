@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use crate::computation::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::match_event;
+use core::cast;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -37,11 +36,29 @@ pub enum FailReason {
     },
 }
 
+#[derive(Debug)]
+struct RunningComputation {
+    cores: u64,
+    memory: u64,
+    actor_id: ActorId,
+}
+
+impl RunningComputation {
+    fn new(cores: u64, memory: u64, actor_id: ActorId) -> Self {
+        RunningComputation {
+            cores,
+            memory,
+            actor_id,
+        }
+    }
+}
+
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct CompRequest {
-    pub computation: Computation,
+    pub flops: u64,
+    pub memory: u64,
     pub min_cores: u64,
     pub max_cores: u64,
     pub cores_dependency: CoresDependency,
@@ -49,18 +66,18 @@ pub struct CompRequest {
 
 #[derive(Debug, Clone)]
 pub struct CompStarted {
-    pub computation: Computation,
+    pub id: u64,
     pub cores: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct CompFinished {
-    pub computation: Computation,
+    pub id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct CompFailed {
-    pub computation: Computation,
+    pub id: u64,
     pub reason: FailReason,
 }
 
@@ -71,12 +88,12 @@ pub struct AllocationRequest {
 
 #[derive(Debug, Clone)]
 pub struct AllocationSuccess {
-    pub allocation: Allocation,
+    pub id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct AllocationFailed {
-    pub allocation: Allocation,
+    pub id: u64,
     pub reason: FailReason,
 }
 
@@ -87,18 +104,18 @@ pub struct DeallocationRequest {
 
 #[derive(Debug, Clone)]
 pub struct DeallocationSuccess {
-    pub allocation: Allocation,
+    pub id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct DeallocationFailed {
-    pub allocation: Allocation,
+    pub id: u64,
     pub reason: FailReason,
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
-pub struct ComputeActor {
+pub struct Compute {
     speed: u64,
     #[allow(dead_code)]
     cores_total: u64,
@@ -106,11 +123,11 @@ pub struct ComputeActor {
     #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
-    computations: HashMap<u64, (u64, ActorId)>,
+    computations: HashMap<u64, RunningComputation>,
     allocations: HashMap<ActorId, Allocation>,
 }
 
-impl ComputeActor {
+impl Compute {
     pub fn new(speed: u64, cores: u64, memory: u64) -> Self {
         Self {
             speed,
@@ -124,20 +141,20 @@ impl ComputeActor {
     }
 }
 
-impl Actor for ComputeActor {
+impl Actor for Compute {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        println!("{} [{}] received {:?} from {}", ctx.time(), ctx.id, event, from);
-        match_event!( event {
+        cast!(match event {
             CompRequest {
-                ref computation,
+                flops,
+                memory,
                 min_cores,
                 max_cores,
                 ref cores_dependency,
             } => {
-                if self.memory_available < computation.memory || self.cores_available < *min_cores {
+                if self.memory_available < *memory || self.cores_available < *min_cores {
                     ctx.emit(
                         CompFailed {
-                            computation: computation.clone(),
+                            id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
@@ -148,11 +165,11 @@ impl Actor for ComputeActor {
                     );
                 } else {
                     let cores = self.cores_available.min(*max_cores);
-                    self.memory_available -= computation.memory;
+                    self.memory_available -= *memory;
                     self.cores_available -= cores;
                     ctx.emit(
                         CompStarted {
-                            computation: computation.clone(),
+                            id: ctx.event_id,
                             cores,
                         },
                         from.clone(),
@@ -167,37 +184,26 @@ impl Actor for ComputeActor {
                         CoresDependency::Custom { func } => func(cores),
                     };
 
-                    let compute_time = computation.flops as f64 / self.speed as f64 / speedup;
-                    let finish_event_id = ctx.emit(
-                        CompFinished {
-                            computation: computation.clone(),
-                        },
-                        ctx.id.clone(),
-                        compute_time,
-                    );
-                    self.computations.insert(finish_event_id, (cores, from.clone()));
+                    let compute_time = *flops as f64 / self.speed as f64 / speedup;
+                    ctx.emit(CompFinished { id: ctx.event_id }, ctx.id.clone(), compute_time);
+                    self.computations
+                        .insert(ctx.event_id, RunningComputation::new(cores, *memory, from));
                 }
-            },
-            CompFinished { computation } => {
-                let (cores, actor_id) = self
+            }
+            CompFinished { id } => {
+                let running_computation = self
                     .computations
-                    .remove(&ctx.event_id)
-                    .expect("Unexpected CompFinished event in ComputeActor");
-                self.memory_available += computation.memory;
-                self.cores_available += cores;
-                ctx.emit(
-                    CompFinished {
-                        computation: computation.clone(),
-                    },
-                    actor_id,
-                    0.,
-                );
-            },
+                    .remove(&id)
+                    .expect("Unexpected CompFinished event in Compute");
+                self.memory_available += running_computation.memory;
+                self.cores_available += running_computation.cores;
+                ctx.emit(CompFinished { id: *id }, running_computation.actor_id, 0.);
+            }
             AllocationRequest { allocation } => {
                 if self.memory_available < allocation.memory || self.cores_available < allocation.cores {
                     ctx.emit(
                         AllocationFailed {
-                            allocation: allocation.clone(),
+                            id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
@@ -212,15 +218,9 @@ impl Actor for ComputeActor {
                     current_allocation.memory += allocation.memory;
                     self.cores_available -= allocation.cores;
                     self.memory_available -= allocation.memory;
-                    ctx.emit(
-                        AllocationSuccess {
-                            allocation: allocation.clone(),
-                        },
-                        from.clone(),
-                        0.,
-                    );
+                    ctx.emit(AllocationSuccess { id: ctx.event_id }, from.clone(), 0.);
                 }
-            },
+            }
             DeallocationRequest { allocation } => {
                 let current_allocation = self.allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
                 if current_allocation.cores >= allocation.cores && current_allocation.memory >= allocation.memory {
@@ -228,17 +228,11 @@ impl Actor for ComputeActor {
                     current_allocation.memory -= allocation.memory;
                     self.cores_available += allocation.cores;
                     self.memory_available += allocation.memory;
-                    ctx.emit(
-                        DeallocationSuccess {
-                            allocation: allocation.clone(),
-                        },
-                        from.clone(),
-                        0.,
-                    );
+                    ctx.emit(DeallocationSuccess { id: ctx.event_id }, from.clone(), 0.);
                 } else {
                     ctx.emit(
                         DeallocationFailed {
-                            allocation: allocation.clone(),
+                            id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
