@@ -9,7 +9,7 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
 use network::network_actor::NetworkActor;
-use network::model::{Data, Message, DataSend, MessageSend, DataDelivery};
+use network::model::{Data, Message, DataTransferRequest, MessageSend, DataDelivery};
 use network::constant_throughput_model::ConstantThroughputNetwork;
 use network::shared_throughput_model::SharedThroughputNetwork;
 
@@ -23,23 +23,23 @@ pub struct Start {
     receiver_id: ActorId,
 }
 
-pub struct DataSender {
+pub struct DataTransferRequester {
     network_id: ActorId,
 }
 
-impl DataSender {
+impl DataTransferRequester {
     pub fn new(network_id: ActorId) -> Self {
         Self { network_id }
     }
 }
 
-impl Actor for DataSender {
+impl Actor for DataTransferRequester {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             Start { size, receiver_id } => {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: receiver_id.clone(), size: *size};
-                ctx.emit(DataSend { data }, self.network_id.clone(), 0.0);
+                ctx.emit(DataTransferRequest { data }, self.network_id.clone(), 0.0);
             },
             DataDelivery { data: _ } => {
                 info!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
@@ -69,7 +69,7 @@ impl Actor for DataReceiver {
                 let data_id = COUNTER.fetch_add(1, Ordering::Relaxed);
                 let new_size = 1000.0 - data.size;
                 let data = Data{ id: data_id, source: ctx.id.clone(), dest: data.source.clone(), size: new_size};
-                ctx.emit(DataSend { data }, self.network_id.clone(), 0.0);
+                ctx.emit(DataTransferRequest { data }, self.network_id.clone(), 0.0);
                 info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
             },
         })
@@ -92,13 +92,13 @@ fn main() {
     let sender_actor = ActorId::from("sender");
     let receiver_actor = ActorId::from("receiver");
 
-    let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0)));
+    let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0, 0.1)));
     let shared_network = Rc::new(RefCell::new(NetworkActor::new(
         shared_network_model
     )));
     let shared_network_actor = sim.add_actor("shared_network", shared_network);
 
-    let constant_network_model = Rc::new(RefCell::new(ConstantThroughputNetwork::new(10.0)));
+    let constant_network_model = Rc::new(RefCell::new(ConstantThroughputNetwork::new(10.0, 0.1)));
     let constant_network = Rc::new(RefCell::new(NetworkActor::new(
         constant_network_model
     )));
@@ -120,7 +120,7 @@ fn main() {
             size: 100.0,
         };
         sim.add_event(
-            DataSend { data: data1 },
+            DataTransferRequest { data: data1 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -133,7 +133,7 @@ fn main() {
             size: 1000.0,
         };
         sim.add_event(
-            DataSend { data: data2 },
+            DataTransferRequest { data: data2 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -146,7 +146,7 @@ fn main() {
             size: 5.0,
         };
         sim.add_event(
-            DataSend { data: data3 },
+            DataTransferRequest { data: data3 },
             sender_actor.clone(),
             shared_network_actor.clone(),
             0.,
@@ -178,7 +178,7 @@ fn main() {
             size: 100.0,
         };
         sim.add_event(
-            DataSend { data: data1 },
+            DataTransferRequest { data: data1 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -191,7 +191,7 @@ fn main() {
             size: 1000.0,
         };
         sim.add_event(
-            DataSend { data: data2 },
+            DataTransferRequest { data: data2 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -204,7 +204,7 @@ fn main() {
             size: 5.0,
         };
         sim.add_event(
-            DataSend { data: data3 },
+            DataTransferRequest { data: data3 },
             sender_actor.clone(),
             constant_network_actor.clone(),
             0.,
@@ -237,7 +237,7 @@ fn main() {
                 size: 1000.0,
             };
             sim.add_event(
-                DataSend { data: data1 },
+                DataTransferRequest { data: data1 },
                 sender_actor.clone(),
                 shared_network_actor.clone(),
                 0.,
@@ -268,7 +268,7 @@ fn main() {
             receivers.push(receiver_actor);
 
             let sender_id = "sender_".to_string() + &i.to_string();
-            let sender = Rc::new(RefCell::new(DataSender::new(shared_network_actor.clone())));
+            let sender = Rc::new(RefCell::new(DataTransferRequester::new(shared_network_actor.clone())));
             let sender_actor = sim.add_actor(&sender_id, sender);
             senders.push(sender_actor);
         }

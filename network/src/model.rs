@@ -36,7 +36,7 @@ pub struct MessageDelivery {
 }
 
 #[derive(Debug)]
-pub struct DataSend {
+pub struct DataTransferRequest {
     pub data: Data,
 }
 
@@ -55,7 +55,7 @@ pub struct DataDelivery {
 pub trait DataOperation {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext);
     fn receive_data(&mut self, data: Data, ctx: &mut ActorContext);
-    fn set_network_params(&mut self, min_delay: f64);
+    fn delay(&self) -> f64;
 }
 
 pub trait NetworkModel: DataOperation {}

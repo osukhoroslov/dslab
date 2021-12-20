@@ -8,16 +8,13 @@ use core::match_event;
 use crate::model::*;
 
 pub struct NetworkActor {
-    network_model: Rc<RefCell<dyn NetworkModel>>,
-    min_delay: f64,
+    network_model: Rc<RefCell<dyn NetworkModel>>
 }
 
 impl NetworkActor {
     pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>) -> Self {
-        network_model.borrow_mut().set_network_params(0.1);
         Self {
-            network_model,
-            min_delay: 0.1,
+            network_model
         }
     }
 
@@ -28,13 +25,13 @@ impl Actor for NetworkActor {
         match_event!( event {
             MessageSend { message } => {
                 info!("System time: {}, {} send Message '{}' to {}", ctx.time(), message.source, message.data, message.dest);
-                ctx.emit(MessageReceive { message: message.clone() }, ctx.id.clone(), self.min_delay);
+                ctx.emit(MessageReceive { message: message.clone() }, ctx.id.clone(), self.network_model.borrow().delay());
             },
             MessageReceive { message } => {
                 info!("System time: {}, {} received Message '{}' from {}", ctx.time(), message.dest, message.data, message.source);
                 ctx.emit(MessageDelivery {message: message.clone()}, message.dest.clone(), 0.0);
             },
-            DataSend { data } => {
+            DataTransferRequest { data } => {
                 self.network_model.borrow_mut().send_data(data.clone(), ctx);
             },
             DataReceive { data } => {

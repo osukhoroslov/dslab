@@ -19,15 +19,15 @@ struct DataTransfer {
 pub struct SharedThroughputNetwork {
     throughput: f64,
     transfers: BTreeMap<usize, DataTransfer>,
-    min_delay: f64
+    delay: f64
 }
 
 impl SharedThroughputNetwork {
-    pub fn new(throughput: f64) -> SharedThroughputNetwork {
+    pub fn new(throughput: f64, delay: f64) -> SharedThroughputNetwork {
         return SharedThroughputNetwork {
             throughput,
             transfers: BTreeMap::new(),
-            min_delay: 0.
+            delay
         };
     }
 
@@ -83,7 +83,7 @@ impl DataOperation for SharedThroughputNetwork {
         );
 
         let new_send_data_progres = DataTransfer {
-            delay_left: self.min_delay,
+            delay_left: self.delay,
             size_left: data.size,
             last_speed: 0.,
             last_time: 0.,
@@ -115,8 +115,8 @@ impl DataOperation for SharedThroughputNetwork {
         self.recalculate_receive_time(ctx);
     }
 
-    fn set_network_params(&mut self, min_delay: f64) {
-        self.min_delay = min_delay;
+    fn delay(&self) -> f64 {
+        self.delay
     }
 }
 
