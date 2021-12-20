@@ -19,17 +19,17 @@ pub struct CompRequest {
 
 #[derive(Debug, Clone)]
 pub struct CompStarted {
-    pub computation: Computation,
+    pub id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct CompFinished {
-    pub computation: Computation,
+    pub id: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct CompFailed {
-    pub computation: Computation,
+    pub id: u64,
     pub reason: FailReason,
 }
 
@@ -38,15 +38,17 @@ pub struct CompFailed {
 #[derive(Debug, Clone)]
 struct RunningComputation {
     computation: Computation,
+    finish_event_id: u64,
     actor_id: ActorId,
     last_update_time: f64,
     left_time: f64,
 }
 
 impl RunningComputation {
-    pub fn new(computation: Computation, actor_id: ActorId, last_update_time: f64, left_time: f64) -> Self {
+    pub fn new(computation: Computation, finish_event_id: u64, actor_id: ActorId, last_update_time: f64, left_time: f64) -> Self {
         Self {
             computation,
+            finish_event_id,
             actor_id,
             last_update_time,
             left_time,
@@ -73,6 +75,27 @@ impl ComputeActor {
     }
 }
 
+impl ComputeActor {
+    fn update_computation_time(&mut self, prev_size: usize, new_size: usize, ctx: &mut ActorContext) {
+        for (&id, mut running_computation) in self.computations.iter_mut() {
+            ctx.cancel_event(running_computation.finish_event_id);
+
+            running_computation.left_time = (running_computation.left_time - (ctx.time() - running_computation.last_update_time))
+                / prev_size as f64
+                * new_size as f64;
+            running_computation.last_update_time = ctx.time();
+
+            running_computation.finish_event_id = ctx.emit(
+                CompFinished {
+                    id,
+                },
+                ctx.id.clone(),
+                running_computation.left_time,
+            );
+        }
+    }
+}
+
 impl Actor for ComputeActor {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
@@ -80,7 +103,7 @@ impl Actor for ComputeActor {
                 if self.memory_available < computation.memory {
                     ctx.emit(
                         CompFailed {
-                            computation: computation.clone(),
+                            id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
                                 available_memory: self.memory_available,
                             },
@@ -89,11 +112,10 @@ impl Actor for ComputeActor {
                         0.,
                     );
                 } else {
-                    println!("{} [{}] received {:?} from {}", ctx.time(), ctx.id, event, from);
                     self.memory_available -= computation.memory;
                     ctx.emit(
                         CompStarted {
-                            computation: computation.clone(),
+                            id: ctx.event_id,
                         },
                         from.clone(),
                         0.,
@@ -102,76 +124,36 @@ impl Actor for ComputeActor {
                         computation.flops as f64 / self.speed as f64 * (self.computations.len() + 1) as f64;
                     let finish_event_id = ctx.emit(
                         CompFinished {
-                            computation: computation.clone(),
+                            id: ctx.event_id,
                         },
                         ctx.id.clone(),
                         compute_time,
                     );
 
-                    let mut updated_computations: BTreeMap<u64, RunningComputation> = BTreeMap::new();
-                    updated_computations.insert(
-                        finish_event_id,
-                        RunningComputation::new(computation.clone(), from.clone(), ctx.time(), compute_time),
+                    self.update_computation_time(self.computations.len(), self.computations.len() + 1, ctx);
+
+                    self.computations.insert(
+                        ctx.event_id,
+                        RunningComputation::new(computation.clone(), finish_event_id, from.clone(), ctx.time(), compute_time),
                     );
-                    for (&id, running_computation) in self.computations.iter() {
-                        ctx.cancel_event(id);
-
-                        let mut computation = running_computation.clone();
-                        computation.left_time = (computation.left_time - (ctx.time() - computation.last_update_time))
-                            / self.computations.len() as f64
-                            * (self.computations.len() + 1) as f64;
-                        computation.last_update_time = ctx.time();
-
-                        let updated_finish_event_id = ctx.emit(
-                            CompFinished {
-                                computation: computation.computation.clone(),
-                            },
-                            ctx.id.clone(),
-                            computation.left_time,
-                        );
-
-                        updated_computations.insert(updated_finish_event_id, computation);
-                    }
-                    std::mem::swap(&mut self.computations, &mut updated_computations);
                 }
             },
-            CompFinished { computation } => {
+            CompFinished { id } => {
                 let running_computation = self
                     .computations
-                    .get(&ctx.event_id)
+                    .get(&id)
                     .expect("Unexpected CompFinished event in ComputeActor");
                 ctx.emit(
                     CompFinished {
-                        computation: computation.clone(),
+                        id: *id,
                     },
                     running_computation.actor_id.clone(),
                     0.,
                 );
-                self.memory_available += computation.memory;
-                let mut updated_computations: BTreeMap<u64, RunningComputation> = BTreeMap::new();
-                for (&id, running_computation) in self.computations.iter() {
-                    if id == ctx.event_id {
-                        continue;
-                    }
-                    ctx.cancel_event(id);
+                self.memory_available += running_computation.computation.memory;
 
-                    let mut computation = running_computation.clone();
-                    computation.left_time = (computation.left_time - (ctx.time() - computation.last_update_time))
-                        / self.computations.len() as f64
-                        * (self.computations.len() - 1) as f64;
-                    computation.last_update_time = ctx.time();
-
-                    let updated_finish_event_id = ctx.emit(
-                        CompFinished {
-                            computation: computation.computation.clone(),
-                        },
-                        ctx.id.clone(),
-                        computation.left_time,
-                    );
-
-                    updated_computations.insert(updated_finish_event_id, computation);
-                }
-                std::mem::swap(&mut self.computations, &mut updated_computations);
+                self.computations.remove(id).unwrap();
+                self.update_computation_time(self.computations.len() + 1, self.computations.len(), ctx);
             }
         })
     }

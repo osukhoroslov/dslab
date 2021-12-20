@@ -33,31 +33,31 @@ impl Actor for TaskActor {
                     0.,
                 );
             },
-            CompStarted { computation } => {
+            CompStarted { id } => {
                 println!(
                     "{} [{}] received CompStarted from {} for {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation
+                    id
                 );
             },
-            CompFinished { computation } => {
+            CompFinished { id } => {
                 println!(
                     "{} [{}] received CompFinished from {} for {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation
+                    id
                 );
             },
-            CompFailed { computation, reason } => {
+            CompFailed { id, reason } => {
                 println!(
                     "{} [{}] received CompFailed from {} for {:?}, because of {:?}",
                     ctx.time(),
                     ctx.id,
                     from,
-                    computation,
+                    id,
                     reason
                 );
             }
@@ -73,11 +73,11 @@ fn main() {
     let mut sim = Simulation::new(123);
     sim.add_actor(
         "task1",
-        Rc::new(RefCell::new(TaskActor::new(Computation::new(100, 512, 1)))),
+        Rc::new(RefCell::new(TaskActor::new(Computation::new(100, 512)))),
     );
     sim.add_actor(
         "task2",
-        Rc::new(RefCell::new(TaskActor::new(Computation::new(200, 512, 2)))),
+        Rc::new(RefCell::new(TaskActor::new(Computation::new(200, 512)))),
     );
     sim.add_actor("compute", Rc::new(RefCell::new(ComputeActor::new(10, 1024))));
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
