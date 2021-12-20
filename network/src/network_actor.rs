@@ -1,12 +1,12 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use log::info;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
+use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use core::sim::Simulation;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
+use core::sim::Simulation;
 
 use crate::model::*;
 
@@ -19,7 +19,7 @@ pub struct NetworkActor {
     hosts: BTreeMap<String, HostInfo>,
     actor_hosts: HashMap<ActorId, String>,
     latency: f64,
-    
+
     id_counter: AtomicUsize,
 }
 
@@ -81,16 +81,12 @@ impl NetworkActor {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
             id: data_id,
-            source, 
+            source,
             dest,
-            size
+            size,
         };
-        
-        self.send(
-            DataTransferRequest { data },
-            ActorId::from(NETWORK_ID),
-            ctx
-        );
+
+        self.send(DataTransferRequest { data }, ActorId::from(NETWORK_ID), ctx);
 
         data_id
     }
@@ -99,11 +95,11 @@ impl NetworkActor {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
             id: data_id,
-            source, 
+            source,
             dest,
-            size
+            size,
         };
-        
+
         sim.add_event(
             DataTransferRequest { data },
             ActorId::from(NETWORK_ID),
@@ -122,7 +118,7 @@ impl NetworkActor {
             dest: dest.clone(),
             data: message,
         };
-        
+
         sim.add_event(
             MessageSend { message: msg },
             ActorId::from(NETWORK_ID),
@@ -132,7 +128,6 @@ impl NetworkActor {
 
         msg_id
     }
-
 }
 
 impl Actor for NetworkActor {

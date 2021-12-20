@@ -5,14 +5,12 @@ use crate::model::*;
 
 #[derive(Debug, Clone)]
 pub struct ConstantThroughputNetwork {
-    throughput: f64
+    throughput: f64,
 }
 
 impl ConstantThroughputNetwork {
     pub fn new(throughput: f64) -> ConstantThroughputNetwork {
-        return ConstantThroughputNetwork {
-            throughput
-        };
+        return ConstantThroughputNetwork { throughput };
     }
 }
 
@@ -28,11 +26,7 @@ impl DataOperation for ConstantThroughputNetwork {
             data.size,
             new_message_delivery_time
         );
-        ctx.emit(
-            DataReceive { data },
-            ctx.id.clone(),
-            new_message_delivery_time,
-        );
+        ctx.emit(DataReceive { data }, ctx.id.clone(), new_message_delivery_time);
     }
 
     fn receive_data(&mut self, data: Data, ctx: &mut ActorContext) {

@@ -1,5 +1,5 @@
+use log::{debug, info};
 use std::collections::BTreeMap;
-use log::{info, debug};
 
 use core::actor::ActorContext;
 
@@ -17,14 +17,14 @@ struct DataTransfer {
 #[derive(Debug, Clone)]
 pub struct SharedThroughputNetwork {
     throughput: f64,
-    transfers: BTreeMap<usize, DataTransfer>
+    transfers: BTreeMap<usize, DataTransfer>,
 }
 
 impl SharedThroughputNetwork {
     pub fn new(throughput: f64) -> SharedThroughputNetwork {
         return SharedThroughputNetwork {
             throughput,
-            transfers: BTreeMap::new()
+            transfers: BTreeMap::new(),
         };
     }
 
@@ -49,14 +49,16 @@ impl SharedThroughputNetwork {
                 ctx.id.clone(),
                 data_delivery_time,
             );
-            debug!("System time: {}, Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
+            debug!(
+                "System time: {}, Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
                 ctx.time(),
                 send_elem.data.id,
                 send_elem.data.source,
                 send_elem.data.dest,
                 send_elem.data.size,
                 send_elem.size_left,
-                data_delivery_time);
+                data_delivery_time
+            );
         }
     }
 }
@@ -82,10 +84,7 @@ impl DataOperation for SharedThroughputNetwork {
 
         let data_id = new_send_data_progres.data.id;
         if self.transfers.insert(data_id, new_send_data_progres).is_some() {
-            panic!(
-                "SharedThroughputNetwork: data with id {} already exist",
-                data_id
-            );
+            panic!("SharedThroughputNetwork: data with id {} already exist", data_id);
         }
 
         self.recalculate_receive_time(ctx);

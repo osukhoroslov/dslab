@@ -1,5 +1,5 @@
-extern crate log;
 extern crate env_logger;
+extern crate log;
 use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,8 +7,8 @@ use std::rc::Rc;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
 use core::sim::Simulation;
+use network::model::DataDelivery;
 use network::network_actor::{NetworkActor, NETWORK_ID};
-use network::model::{DataDelivery};
 use network::shared_throughput_model::SharedThroughputNetwork;
 
 // Counter for network ids
@@ -84,20 +84,31 @@ fn main() {
     let receiver_actor = ActorId::from("receiver");
 
     let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0)));
-    let shared_network = Rc::new(RefCell::new(NetworkActor::new(
-        shared_network_model,
-        0.1
-    )));
+    let shared_network = Rc::new(RefCell::new(NetworkActor::new(shared_network_model, 0.1)));
     sim.add_actor(NETWORK_ID, shared_network.clone());
 
     if process_simple_send_1 {
         info!("Simple send check 1");
 
-        shared_network.borrow_mut().transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 100.0, &mut sim);
-        shared_network.borrow_mut().transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 1000.0, &mut sim);
-        shared_network.borrow_mut().transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 5.0, &mut sim);
+        shared_network.borrow_mut().transfer_data_from_sim(
+            sender_actor.clone(),
+            receiver_actor.clone(),
+            100.0,
+            &mut sim,
+        );
+        shared_network.borrow_mut().transfer_data_from_sim(
+            sender_actor.clone(),
+            receiver_actor.clone(),
+            1000.0,
+            &mut sim,
+        );
+        shared_network
+            .borrow_mut()
+            .transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 5.0, &mut sim);
 
-        shared_network.borrow_mut().send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
+        shared_network
+            .borrow_mut()
+            .send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
 
         sim.step_until_no_events();
     }
@@ -106,9 +117,16 @@ fn main() {
         info!("Data order check");
 
         for _i in 1..10 {
-            shared_network.borrow_mut().transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 1000.0, &mut sim);
+            shared_network.borrow_mut().transfer_data_from_sim(
+                sender_actor.clone(),
+                receiver_actor.clone(),
+                1000.0,
+                &mut sim,
+            );
         }
-        shared_network.borrow_mut().send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
+        shared_network
+            .borrow_mut()
+            .send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
 
         sim.step_until_no_events();
     }
@@ -120,9 +138,7 @@ fn main() {
 
         for i in 1..10 {
             let receiver_id = "receiver_".to_string() + &i.to_string();
-            let receiver = Rc::new(RefCell::new(DataReceiver::new(
-                shared_network.clone(),
-            )));
+            let receiver = Rc::new(RefCell::new(DataReceiver::new(shared_network.clone())));
             let receiver_actor = sim.add_actor(&receiver_id, receiver);
             receivers.push(receiver_actor);
 
