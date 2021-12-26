@@ -4,8 +4,8 @@ use log::info;
 use core::cast;
 use core::actor::{ActorId, ActorContext, Event, Actor};
 
-use crate::scheduler::FindHostToAllocateVM;
-use crate::monitoring::StateHostUpdate;
+use crate::scheduler::VMAllocationFailed;
+use crate::monitoring::HostStateUpdate;
 use crate::network::MESSAGE_DELAY;
 use crate::scheduler::UndoReservation;
 use crate::virtual_machine::VMInit;
@@ -136,29 +136,30 @@ impl Actor for HostManager {
                     info!("[time = {}] vm #{} allocated on host #{}",
                          ctx.time(), vm.id, self.id);
    
-                    
-                    ctx.emit(UndoReservation { 
-                                host_id: ctx.id.to_string(),
-                                vm_id: vm.id.to_string()
-                            },
-                        from.clone(), MESSAGE_DELAY + STATS_SEND_PERIOD
-                    );
                     ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
                     info!("[time = {}] not enough space for vm #{} on host #{}",
                         ctx.time(), vm.id, self.id);
-                    ctx.emit(UndoReservation { 
-                                host_id: ctx.id.to_string(),
-                                vm_id: vm.id.to_string()
-                            },
-                        from.clone(), MESSAGE_DELAY
-                    );
-                    ctx.emit(FindHostToAllocateVM { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
+                    ctx.emit(VMAllocationFailed { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
                 }
+
+                ctx.emit(HostStateUpdate {
+                        host_id: ctx.id.clone(),
+                        cpu_available: self.cpu_available,
+                        ram_available: self.ram_available
+                    },
+                    self.monitoring.clone(), MESSAGE_DELAY
+                );
+                ctx.emit(UndoReservation { 
+                            host_id: ctx.id.to_string(),
+                            vm_id: vm.id.to_string()
+                        },
+                    from.clone(), MESSAGE_DELAY
+                );
             }
             SendHostState { } => {
                 info!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
-                ctx.emit(StateHostUpdate {
+                ctx.emit(HostStateUpdate {
                         host_id: ctx.id.clone(),
                         cpu_available: self.cpu_available,
                         ram_available: self.ram_available

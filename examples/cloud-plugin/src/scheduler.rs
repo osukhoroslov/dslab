@@ -69,6 +69,11 @@ pub struct UndoReservation {
     pub vm_id: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct VMAllocationFailed {
+    pub vm: VirtualMachine
+}
+
 impl Actor for Scheduler {
     fn on(&mut self, event: Box<dyn Event>, 
                      _from: ActorId, ctx: &mut ActorContext) {
@@ -102,14 +107,16 @@ impl Actor for Scheduler {
                     info!("[time = {}] scheduler #{} failed to pack vm #{}",
                         ctx.time(), self.id, vm.id);
 
-                    ctx.emit(FindHostToAllocateVM { vm: vm.clone() },
-                            ctx.id.clone(),
-                            ALLOCATION_RETRY_PERIOD
+                    ctx.emit_self(FindHostToAllocateVM { vm: vm.clone() },
+                        ALLOCATION_RETRY_PERIOD
                     );
                 }
             }
             UndoReservation { host_id, vm_id } => {
                 self.reservations.get_mut(host_id).unwrap().remove(vm_id);
+            }
+            VMAllocationFailed { vm } => {
+                ctx.emit_now(FindHostToAllocateVM { vm: vm.clone() }, ctx.id.clone());
             }
         })
     }

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::collections::hash_map::Keys;
+use std::collections::BTreeMap;
+use std::collections::btree_map::Keys;
 use log::info;
 
 use core::actor::{ActorId, Actor, ActorContext, Event};
@@ -16,8 +16,7 @@ pub struct HostState {
 
 #[derive(Debug)]
 pub struct Monitoring {
-    pub id: ActorId,
-    host_states: HashMap<String, HostState>,
+    host_states: BTreeMap<String, HostState>,
 }
 
 impl HostState {
@@ -31,10 +30,9 @@ impl HostState {
 }
 
 impl Monitoring {
-    pub fn new(id: ActorId) -> Self {
+    pub fn new() -> Self {
         Self {
-            id,
-            host_states: HashMap::new()
+            host_states: BTreeMap::new()
         }
     }
 
@@ -54,7 +52,7 @@ impl Monitoring {
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
-pub struct StateHostUpdate {
+pub struct HostStateUpdate {
     pub host_id: ActorId,
     pub cpu_available: u32,
     pub ram_available: u32,
@@ -64,7 +62,7 @@ impl Actor for Monitoring {
     fn on(&mut self, event: Box<dyn Event>, 
                      _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            StateHostUpdate { host_id, cpu_available, ram_available } => {
+            HostStateUpdate { host_id, cpu_available, ram_available } => {
                 info!("[time = {}] monitoring received stats from host #{}",
                     ctx.time(), host_id
                 );

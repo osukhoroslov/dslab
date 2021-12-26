@@ -29,7 +29,7 @@ pub struct CloudSimulation {
 impl CloudSimulation {
     pub fn new(sim: Simulation) -> Self {
         Self {
-            monitoring: rc!(refcell!(Monitoring::new(ActorId::from("monitoring")))),
+            monitoring: rc!(refcell!(Monitoring::new())),
             simulation: sim,
         }
     }
@@ -87,5 +87,5 @@ fn main() {
         let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, allocator.clone());
     }
 
-    cloud_sim.steps(180);
+    cloud_sim.steps(200);
 }
