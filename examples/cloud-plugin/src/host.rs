@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use core::match_event;
+use core::cast;
 use core::actor::{ActorId, ActorContext, Event, Actor};
 
 use crate::scheduler::FindHostToAllocateVM;
-use crate::monitoring::UpdateHostState;
+use crate::monitoring::StateHostUpdate;
 use crate::network::MESSAGE_DELAY;
-use crate::virtual_machine::VM_INIT_TIME;
-use crate::virtual_machine::VMStart;
+use crate::scheduler::UndoReservation;
+use crate::virtual_machine::VMInit;
 use crate::virtual_machine::VirtualMachine;
 
 #[derive(PartialEq)]
@@ -121,30 +121,36 @@ pub struct SendHostState {
 }
 
 #[derive(Debug)]
-pub struct ReleaseVmresources {
+pub struct ReleaseVmResources {
     pub vm_id: String
 }
 
 impl Actor for HostManager {
     fn on(&mut self, event: Box<dyn Event>, 
                      from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             TryAllocateVM { vm } => {
+                ctx.emit(UndoReservation { 
+                            host_id: ctx.id.to_string(),
+                            vm_id: vm.id.to_string()
+                        },
+                    from.clone(), MESSAGE_DELAY
+                );
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
                     println!("[time = {}] vm #{} allocated on host #{}",
                          ctx.time(), vm.id, self.id);
    
-                    ctx.emit(VMStart { }, vm.actor_id.clone(), VM_INIT_TIME);
+                    ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
                     println!("[time = {}] not enough space for vm #{} on host #{}",
                         ctx.time(), vm.id, self.id);
-                    ctx.emit(FindHostToAllocateVM { vm: vm.clone() }, from, MESSAGE_DELAY);
+                    ctx.emit(FindHostToAllocateVM { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
                 }
-            },
+            }
             SendHostState { } => {
                 println!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
-                ctx.emit(UpdateHostState {
+                ctx.emit(StateHostUpdate {
                         host_id: ctx.id.clone(),
                         cpu_available: self.cpu_available,
                         ram_available: self.ram_available
@@ -153,8 +159,8 @@ impl Actor for HostManager {
                 );
 
                 ctx.emit(SendHostState { }, ctx.id.clone(), STATS_SEND_PERIOD);
-            },
-            ReleaseVmresources { vm_id } => {
+            }
+            ReleaseVmResources { vm_id } => {
                 println!("[time = {}] release resources from vm #{} in host #{}",
                     ctx.time(), vm_id, self.id
                 ); 

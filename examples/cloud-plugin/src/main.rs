@@ -40,15 +40,15 @@ impl CloudSimulation {
         let host = rc!(refcell!(HostManager::new(
                 cpu_capacity, ram_capacity, id.to_string(), ActorId::from("monitoring"))));
 
-        let actor = self.simulation.add_actor(&id.clone(), host);
+        let actor = self.simulation.add_actor(id, host);
         self.simulation.add_event(SendHostState { }, actor.clone(), actor.clone(), 0.); 
         return actor;
     }
 
     pub fn spawn_allocator(&mut self, id: &str) -> ActorId {
-        let allocator = rc!(refcell!(Scheduler::new(ActorId::from(&id.clone()), 
+        let allocator = rc!(refcell!(Scheduler::new(ActorId::from(id), 
                                                           self.monitoring.clone())));
-        self.simulation.add_actor(&id.clone(), allocator)
+        self.simulation.add_actor(id, allocator)
     }
 
     pub fn spawn_vm(&mut self, id: &str,
@@ -83,5 +83,5 @@ fn main() {
         let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, allocator.clone());
     }
 
-    cloud_sim.steps(250);
+    cloud_sim.steps(180);
 }

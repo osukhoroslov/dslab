@@ -1,7 +1,7 @@
 use core::match_event;
 use core::actor::{ActorId, Actor, Event, ActorContext};
 
-use crate::host::ReleaseVmresources;
+use crate::host::ReleaseVmResources;
 
 pub static VM_INIT_TIME: f64 = 1.0;
 pub static VM_FINISH_TIME: f64 = 0.5;
@@ -32,7 +32,12 @@ impl VirtualMachine {
 // VM EVENTS ///////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
+pub struct VMInit {
+}
+
+#[derive(Debug)]
 pub struct VMStart {
+    host_actor_id: ActorId
 }
 
 #[derive(Debug)]
@@ -49,9 +54,12 @@ impl Actor for VirtualMachine {
     fn on(&mut self, event: Box<dyn Event>, 
                      from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
-            VMStart { } => {
+            VMInit { } => { 
+                ctx.emit_self(VMStart { host_actor_id: from }, VM_INIT_TIME);
+            },
+            VMStart { host_actor_id } => {
                 println!("[time = {}] vm #{} initialized and started", ctx.time(), self.id);
-                ctx.emit(VMFinish { host_actor_id: from }, ctx.id.clone(), self.lifetime);
+                ctx.emit_self(VMFinish { host_actor_id: host_actor_id.clone() }, self.lifetime);
             },
             VMAllocationFailed { reason } => {
                 println!("[time = {}] vm #{} allocation failed due to: {}",
@@ -59,7 +67,7 @@ impl Actor for VirtualMachine {
             },
             VMFinish { host_actor_id } => {
                 println!("[time = {}] vm #{} stopped due to lifecycle end", ctx.time(), self.id);
-                ctx.emit(ReleaseVmresources { vm_id: self.id.clone() },
+                ctx.emit(ReleaseVmResources { vm_id: self.id.clone() },
                     host_actor_id.clone(),
                     VM_FINISH_TIME
                 );

@@ -53,7 +53,7 @@ impl Monitoring {
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
-pub struct UpdateHostState {
+pub struct StateHostUpdate {
     pub host_id: ActorId,
     pub cpu_available: u32,
     pub ram_available: u32,
@@ -63,7 +63,7 @@ impl Actor for Monitoring {
     fn on(&mut self, event: Box<dyn Event>, 
                      _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            UpdateHostState { host_id, cpu_available, ram_available } => {
+            StateHostUpdate { host_id, cpu_available, ram_available } => {
                 println!("[time = {}] monitoring received stats from host #{}",
                     ctx.time(), host_id
                 );
@@ -75,7 +75,7 @@ impl Actor for Monitoring {
                                 .unwrap().cpu_available = *cpu_available;
                 self.host_states.get_mut(&host_id.to_string())
                                 .unwrap().ram_available = *ram_available;
-            },
+            }
         })
     }
 
