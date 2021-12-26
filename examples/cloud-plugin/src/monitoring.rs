@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Keys;
+use log::info;
 
 use core::actor::{ActorId, Actor, ActorContext, Event};
 use core::cast;
@@ -64,7 +65,7 @@ impl Actor for Monitoring {
                      _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             StateHostUpdate { host_id, cpu_available, ram_available } => {
-                println!("[time = {}] monitoring received stats from host #{}",
+                info!("[time = {}] monitoring received stats from host #{}",
                     ctx.time(), host_id
                 );
                 if !self.host_states.contains_key(&host_id.to_string()) {

@@ -1,5 +1,6 @@
 use core::match_event;
 use core::actor::{ActorId, Actor, Event, ActorContext};
+use log::info;
 
 use crate::host::ReleaseVmResources;
 
@@ -58,15 +59,15 @@ impl Actor for VirtualMachine {
                 ctx.emit_self(VMStart { host_actor_id: from }, VM_INIT_TIME);
             },
             VMStart { host_actor_id } => {
-                println!("[time = {}] vm #{} initialized and started", ctx.time(), self.id);
+                info!("[time = {}] vm #{} initialized and started", ctx.time(), self.id);
                 ctx.emit_self(VMFinish { host_actor_id: host_actor_id.clone() }, self.lifetime);
             },
             VMAllocationFailed { reason } => {
-                println!("[time = {}] vm #{} allocation failed due to: {}",
+                info!("[time = {}] vm #{} allocation failed due to: {}",
                           ctx.time(), self.id, reason);
             },
             VMFinish { host_actor_id } => {
-                println!("[time = {}] vm #{} stopped due to lifecycle end", ctx.time(), self.id);
+                info!("[time = {}] vm #{} stopped due to lifecycle end", ctx.time(), self.id);
                 ctx.emit(ReleaseVmResources { vm_id: self.id.clone() },
                     host_actor_id.clone(),
                     VM_FINISH_TIME

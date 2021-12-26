@@ -19,6 +19,8 @@ use crate::host::SendHostState;
 use crate::host::HostManager;
 use crate::virtual_machine::VirtualMachine;
 
+extern crate env_logger;
+
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
     simulation: Simulation
@@ -70,6 +72,8 @@ impl CloudSimulation {
 }
 
 fn main() {
+    env_logger::init();
+
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim);
     cloud_sim.init_actors();

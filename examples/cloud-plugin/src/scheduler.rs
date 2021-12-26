@@ -4,6 +4,7 @@ use core::actor::{ActorId, Actor, ActorContext, Event};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use log::info;
 
 use crate::host::TryAllocateVM;
 use crate::monitoring::HostState;
@@ -81,7 +82,7 @@ impl Actor for Scheduler {
                     let ram_available = host_state.ram_available;
 
                     if cpu_available >= vm.cpu_usage && ram_available >= vm.ram_usage {
-                        println!("[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
+                        info!("[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
                             ctx.time(), self.id, vm.id, ActorId::from(host)
                         );
                         found = true;
@@ -98,7 +99,7 @@ impl Actor for Scheduler {
                     }
                 }
                 if !found {
-                    println!("[time = {}] scheduler #{} failed to pack vm #{}",
+                    info!("[time = {}] scheduler #{} failed to pack vm #{}",
                         ctx.time(), self.id, vm.id);
 
                     ctx.emit(FindHostToAllocateVM { vm: vm.clone() },

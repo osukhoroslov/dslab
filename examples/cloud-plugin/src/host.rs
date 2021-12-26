@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use log::info;
 
 use core::cast;
 use core::actor::{ActorId, ActorContext, Event, Actor};
@@ -132,7 +133,7 @@ impl Actor for HostManager {
             TryAllocateVM { vm } => {
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
-                    println!("[time = {}] vm #{} allocated on host #{}",
+                    info!("[time = {}] vm #{} allocated on host #{}",
                          ctx.time(), vm.id, self.id);
    
                     
@@ -144,7 +145,7 @@ impl Actor for HostManager {
                     );
                     ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
-                    println!("[time = {}] not enough space for vm #{} on host #{}",
+                    info!("[time = {}] not enough space for vm #{} on host #{}",
                         ctx.time(), vm.id, self.id);
                     ctx.emit(UndoReservation { 
                                 host_id: ctx.id.to_string(),
@@ -156,7 +157,7 @@ impl Actor for HostManager {
                 }
             }
             SendHostState { } => {
-                println!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
+                info!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
                 ctx.emit(StateHostUpdate {
                         host_id: ctx.id.clone(),
                         cpu_available: self.cpu_available,
@@ -168,7 +169,7 @@ impl Actor for HostManager {
                 ctx.emit(SendHostState { }, ctx.id.clone(), STATS_SEND_PERIOD);
             }
             ReleaseVmResources { vm_id } => {
-                println!("[time = {}] release resources from vm #{} in host #{}",
+                info!("[time = {}] release resources from vm #{} in host #{}",
                     ctx.time(), vm_id, self.id
                 ); 
                 self.remove_vm(vm_id)
