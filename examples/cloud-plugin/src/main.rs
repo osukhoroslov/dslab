@@ -1,6 +1,7 @@
-mod allocation_agent;
+mod scheduler;
 mod host;
 mod monitoring;
+mod network;
 mod virtual_machine;
 
 use std::rc::Rc;
@@ -8,14 +9,14 @@ use std::cell::RefCell;
 use sugars::{rc, refcell};
 
 use core::sim::Simulation;
-use core::actor::{ActorId};
+use core::actor::ActorId;
 
-use allocation_agent::AllocationAgent;
+use scheduler::Scheduler;
 use monitoring::Monitoring;
 
-use crate::allocation_agent::FindHostToAllocateVM;
-use crate::host::SendMonitoringStats;
-use crate::host::HostAllocationAgent;
+use crate::scheduler::FindHostToAllocateVM;
+use crate::host::SendHostState;
+use crate::host::HostManager;
 use crate::virtual_machine::VirtualMachine;
 
 pub struct CloudSimulation {
@@ -32,32 +33,31 @@ impl CloudSimulation {
     }
 
     pub fn init_actors(&mut self) {
-        let _actor = self.simulation.add_actor(&"monitoring".to_string(), self.monitoring.clone());
+        self.simulation.add_actor("monitoring", self.monitoring.clone());
     }
 
-    pub fn spawn_host(&mut self, id: String, cpu_capacity: u32, ram_capacity: u32) -> ActorId {
-        let host = rc!(refcell!(HostAllocationAgent::new(
-                cpu_capacity, ram_capacity, id.clone(), ActorId::from("monitoring"))));
+    pub fn spawn_host(&mut self, id: &str, cpu_capacity: u32, ram_capacity: u32) -> ActorId {
+        let host = rc!(refcell!(HostManager::new(
+                cpu_capacity, ram_capacity, id.to_string(), ActorId::from("monitoring"))));
 
-        let actor = self.simulation.add_actor(&id.clone(), host.clone());
-        self.simulation.add_event(SendMonitoringStats { }, actor.clone(), actor.clone(), 0.); 
+        let actor = self.simulation.add_actor(&id.clone(), host);
+        self.simulation.add_event(SendHostState { }, actor.clone(), actor.clone(), 0.); 
         return actor;
     }
 
-    pub fn spawn_allocator(&mut self, id: String) -> ActorId {
-        let allocator = rc!(refcell!(AllocationAgent::new(ActorId::from(&id.clone()), 
+    pub fn spawn_allocator(&mut self, id: &str) -> ActorId {
+        let allocator = rc!(refcell!(Scheduler::new(ActorId::from(&id.clone()), 
                                                           self.monitoring.clone())));
-        let actor = self.simulation.add_actor(&id.clone(), allocator.clone());
-        return actor;
+        self.simulation.add_actor(&id.clone(), allocator)
     }
 
-    pub fn spawn_vm(&mut self, id: String,
+    pub fn spawn_vm(&mut self, id: &str,
                     cpu_usage: u32,
                     ram_usage: u32,
                     lifetime: f64,
                     allocator: ActorId) -> ActorId {
-        let vm = VirtualMachine::new(id.clone(), cpu_usage, ram_usage, lifetime);
-        let actor = self.simulation.add_actor(&id.clone(), rc!(refcell!(vm.clone())).clone());
+        let vm = VirtualMachine::new(id, cpu_usage, ram_usage, lifetime);
+        let actor = self.simulation.add_actor(id, rc!(refcell!(vm.clone())));
         self.simulation.add_event(FindHostToAllocateVM { vm },
                                   allocator.clone(),
                                   allocator.clone(), 0.0);
@@ -74,13 +74,13 @@ fn main() {
     let mut cloud_sim = CloudSimulation::new(sim);
     cloud_sim.init_actors();
 
-    let _host_one = cloud_sim.spawn_host("h1".to_string(), 30, 30);
-    let _host_two = cloud_sim.spawn_host("h2".to_string(), 30, 30);
-    let allocator = cloud_sim.spawn_allocator("a".to_string());
+    let _host_one = cloud_sim.spawn_host("h1", 30, 30);
+    let _host_two = cloud_sim.spawn_host("h2", 30, 30);
+    let allocator = cloud_sim.spawn_allocator("a");
 
     for i in 0..10 {
-        let vm_name = "v".to_owned() + &i.to_string();
-        let _vm = cloud_sim.spawn_vm(vm_name.clone(), 10, 10, 2.0, allocator.clone());
+        let vm_name = format!("v{}", i);
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, allocator.clone());
     }
 
     cloud_sim.steps(250);

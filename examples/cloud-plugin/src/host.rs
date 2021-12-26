@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use core::match_event;
 use core::actor::{ActorId, ActorContext, Event, Actor};
 
-use crate::allocation_agent::FindHostToAllocateVM;
-use crate::monitoring::UpdateHostStats;
+use crate::scheduler::FindHostToAllocateVM;
+use crate::monitoring::UpdateHostState;
+use crate::network::MESSAGE_DELAY;
+use crate::virtual_machine::VM_INIT_TIME;
 use crate::virtual_machine::VMStart;
 use crate::virtual_machine::VirtualMachine;
 
@@ -13,11 +17,7 @@ enum AllocationVerdict {
     Success,
 }
 
-pub static VM_INIT_TIME: f64 = 1.0;
-pub static VM_FINISH_TIME: f64 = 0.5;
 pub static STATS_SEND_PERIOD: f64 = 0.5;
-pub static MESSAGE_DELAY: f64 = 0.2;
-pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ pub struct EnergyManager {
 }
 
 #[derive(Debug, Clone)]
-pub struct HostAllocationAgent {
+pub struct HostManager {
     pub id: String,
 
     cpu_total: u32,
@@ -37,7 +37,7 @@ pub struct HostAllocationAgent {
     ram_total: u32,
     ram_available: u32,
 
-    vms: Vec<VirtualMachine>,
+    vms: HashMap<String, VirtualMachine>,
     vm_counter: u64,
 
     energy_manager: EnergyManager,
@@ -59,27 +59,27 @@ impl EnergyManager {
         self.current_load = new_load;
     }
 
-    pub fn get_total_consumed(self) -> f64 {
+    pub fn get_total_consumed(&self) -> f64 {
         return self.energy_consumed;
     }
 }
 
-impl HostAllocationAgent {
+impl HostManager {
     pub fn new(cpu_total: u32, ram_total: u32, id: String, monitoring: ActorId) -> Self {
         Self {
-            id: id,
-            cpu_total: cpu_total,
-            ram_total: ram_total,
+            id,
+            cpu_total,
+            ram_total,
             cpu_available: cpu_total,
             ram_available: ram_total,
-            vms: Vec::new(),
+            vms: HashMap::new(),
             vm_counter: 0,
             energy_manager: EnergyManager::new(),
             monitoring: monitoring.clone()
         }
     }
 
-    fn can_allocate(&self, vm: VirtualMachine) -> AllocationVerdict {
+    fn can_allocate(&self, vm: &VirtualMachine) -> AllocationVerdict {
         if self.cpu_available < vm.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
@@ -94,12 +94,18 @@ impl HostAllocationAgent {
         return 0.4 + 0.6 * cpu_used / (self.cpu_total as f64);
     }
 
-    fn pickup_vm(&mut self, time: f64, vm: VirtualMachine) {
+    fn place_vm(&mut self, time: f64, vm: &VirtualMachine) {
         self.cpu_available -= vm.cpu_usage;
         self.ram_available -= vm.ram_usage;
 
         self.energy_manager.update_energy(time, self.get_energy_load());
-        self.vms.push(vm.clone())
+        self.vms.entry(vm.id.clone()).or_insert(vm.clone());
+    }
+
+    fn remove_vm(&mut self, vm_id: &str) {
+        self.cpu_available += self.vms[vm_id].cpu_usage;
+        self.ram_available += self.vms[vm_id].ram_usage;
+        self.vms.remove(vm_id);
     }
 }
 
@@ -111,34 +117,34 @@ pub struct TryAllocateVM {
 }
 
 #[derive(Debug)]
-pub struct SendMonitoringStats {
+pub struct SendHostState {
 }
 
 #[derive(Debug)]
-pub struct ReleaseVmResourses {
+pub struct ReleaseVmresources {
     pub vm_id: String
 }
 
-impl Actor for HostAllocationAgent {
+impl Actor for HostManager {
     fn on(&mut self, event: Box<dyn Event>, 
                      from: ActorId, ctx: &mut ActorContext) {
         match_event!( event {
             TryAllocateVM { vm } => {
-                if self.can_allocate(vm.clone()) == AllocationVerdict::Success {
-                    self.pickup_vm(ctx.time(), vm.clone());
+                if self.can_allocate(vm) == AllocationVerdict::Success {
+                    self.place_vm(ctx.time(), vm);
                     println!("[time = {}] vm #{} allocated on host #{}",
                          ctx.time(), vm.id, self.id);
    
                     ctx.emit(VMStart { }, vm.actor_id.clone(), VM_INIT_TIME);
                 } else {
-                    println!("[time = {}] not enouth space for vm #{} on host #{}",
+                    println!("[time = {}] not enough space for vm #{} on host #{}",
                         ctx.time(), vm.id, self.id);
                     ctx.emit(FindHostToAllocateVM { vm: vm.clone() }, from, MESSAGE_DELAY);
                 }
             },
-            SendMonitoringStats { } => {
+            SendHostState { } => {
                 println!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
-                ctx.emit(UpdateHostStats {
+                ctx.emit(UpdateHostState {
                         host_id: ctx.id.clone(),
                         cpu_available: self.cpu_available,
                         ram_available: self.ram_available
@@ -146,21 +152,13 @@ impl Actor for HostAllocationAgent {
                     self.monitoring.clone(), MESSAGE_DELAY
                 );
 
-                ctx.emit(SendMonitoringStats { }, ctx.id.clone(), STATS_SEND_PERIOD);
+                ctx.emit(SendHostState { }, ctx.id.clone(), STATS_SEND_PERIOD);
             },
-            ReleaseVmResourses { vm_id } => {
-                println!("[time = {}] release resourses from vm #{} in host #{}",
+            ReleaseVmresources { vm_id } => {
+                println!("[time = {}] release resources from vm #{} in host #{}",
                     ctx.time(), vm_id, self.id
-                );
-                for i in 0..self.vms.len() {
-                    if self.vms[i].id == *vm_id {
-                        self.cpu_available += self.vms[i].cpu_usage;
-                        self.ram_available += self.vms[i].ram_usage;
-
-                        let _deleted = self.vms.swap_remove(i);
-                        break;
-                    }
-                }
+                ); 
+                self.remove_vm(vm_id)
             }
         })
     }

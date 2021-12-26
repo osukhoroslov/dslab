@@ -1,8 +1,10 @@
 use core::match_event;
 use core::actor::{ActorId, Actor, Event, ActorContext};
 
-use crate::host::ReleaseVmResourses;
-use crate::host::VM_FINISH_TIME;
+use crate::host::ReleaseVmresources;
+
+pub static VM_INIT_TIME: f64 = 1.0;
+pub static VM_FINISH_TIME: f64 = 0.5;
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -16,12 +18,12 @@ pub struct VirtualMachine {
 }
 
 impl VirtualMachine {
-    pub fn new(id: String, cpu: u32, ram: u32, lifetime: f64) -> Self {
+    pub fn new(id: &str, cpu: u32, ram: u32, lifetime: f64) -> Self {
         Self {
-            id: id.clone(),
+            id: id.to_string(),
             cpu_usage: cpu,
             ram_usage: ram,
-            lifetime: lifetime,
+            lifetime,
             actor_id: ActorId::from(&id)
         }
     }
@@ -57,7 +59,7 @@ impl Actor for VirtualMachine {
             },
             VMFinish { host_actor_id } => {
                 println!("[time = {}] vm #{} stopped due to lifecycle end", ctx.time(), self.id);
-                ctx.emit(ReleaseVmResourses { vm_id: self.id.clone() },
+                ctx.emit(ReleaseVmresources { vm_id: self.id.clone() },
                     host_actor_id.clone(),
                     VM_FINISH_TIME
                 );
