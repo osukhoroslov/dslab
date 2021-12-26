@@ -130,21 +130,28 @@ impl Actor for HostManager {
                      from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             TryAllocateVM { vm } => {
-                ctx.emit(UndoReservation { 
-                            host_id: ctx.id.to_string(),
-                            vm_id: vm.id.to_string()
-                        },
-                    from.clone(), MESSAGE_DELAY
-                );
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
                     println!("[time = {}] vm #{} allocated on host #{}",
                          ctx.time(), vm.id, self.id);
    
+                    
+                    ctx.emit(UndoReservation { 
+                                host_id: ctx.id.to_string(),
+                                vm_id: vm.id.to_string()
+                            },
+                        from.clone(), MESSAGE_DELAY + STATS_SEND_PERIOD
+                    );
                     ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
                     println!("[time = {}] not enough space for vm #{} on host #{}",
                         ctx.time(), vm.id, self.id);
+                    ctx.emit(UndoReservation { 
+                                host_id: ctx.id.to_string(),
+                                vm_id: vm.id.to_string()
+                            },
+                        from.clone(), MESSAGE_DELAY
+                    );
                     ctx.emit(FindHostToAllocateVM { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
                 }
             }
