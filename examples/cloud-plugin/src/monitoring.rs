@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
-use std::collections::btree_map::Keys;
 use log::info;
+use std::collections::btree_map::Keys;
+use std::collections::BTreeMap;
 
-use core::actor::{ActorId, Actor, ActorContext, Event};
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
@@ -24,7 +24,7 @@ impl HostState {
         Self {
             id,
             cpu_available: 0,
-            ram_available: 0
+            ram_available: 0,
         }
     }
 }
@@ -32,7 +32,7 @@ impl HostState {
 impl Monitoring {
     pub fn new() -> Self {
         Self {
-            host_states: BTreeMap::new()
+            host_states: BTreeMap::new(),
         }
     }
 
@@ -59,21 +59,24 @@ pub struct HostStateUpdate {
 }
 
 impl Actor for Monitoring {
-    fn on(&mut self, event: Box<dyn Event>, 
-                     _from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            HostStateUpdate { host_id, cpu_available, ram_available } => {
-                info!("[time = {}] monitoring received stats from host #{}",
-                    ctx.time(), host_id
+            HostStateUpdate {
+                host_id,
+                cpu_available,
+                ram_available,
+            } => {
+                info!(
+                    "[time = {}] monitoring received stats from host #{}",
+                    ctx.time(),
+                    host_id
                 );
                 if !self.host_states.contains_key(&host_id.to_string()) {
                     self.add_host(host_id.clone());
                 }
 
-                self.host_states.get_mut(&host_id.to_string())
-                                .unwrap().cpu_available = *cpu_available;
-                self.host_states.get_mut(&host_id.to_string())
-                                .unwrap().ram_available = *ram_available;
+                self.host_states.get_mut(&host_id.to_string()).unwrap().cpu_available = *cpu_available;
+                self.host_states.get_mut(&host_id.to_string()).unwrap().ram_available = *ram_available;
             }
         })
     }

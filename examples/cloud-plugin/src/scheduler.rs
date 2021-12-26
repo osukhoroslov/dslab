@@ -1,10 +1,10 @@
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
-use core::actor::{ActorId, Actor, ActorContext, Event};
 
-use std::rc::Rc;
+use log::info;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use log::info;
+use std::rc::Rc;
 
 use crate::host::TryAllocateVM;
 use crate::monitoring::HostState;
@@ -21,7 +21,7 @@ pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 pub struct Scheduler {
     pub id: ActorId,
     monitoring: Rc<RefCell<Monitoring>>,
-    reservations: HashMap<String, HashMap<String, VirtualMachine>>,
+    host_states: HashMap<String, HostState>,
 }
 
 impl Scheduler {
@@ -29,94 +29,79 @@ impl Scheduler {
         Self {
             id,
             monitoring,
-            reservations: HashMap::new(),
+            host_states: HashMap::new(),
         }
     }
-
-    fn get_host_estimated_state(&self, id: &str) -> HostState {
-        let real_state = self.monitoring.borrow().get_host_state(ActorId::from(id));
-        let mut estimated = real_state;
-
-        if self.reservations.contains_key(id) {
-            for vm in self.reservations[id].values() {
-                if vm.cpu_usage < estimated.cpu_available {
-                    estimated.cpu_available -= vm.cpu_usage;
-                } else {
-                    estimated.cpu_available = 0;
-                }
-                if vm.ram_usage < estimated.ram_available {
-                    estimated.ram_available -= vm.ram_usage;
-                } else {
-                    estimated.ram_available = 0;
-                }
-            }
-        }
-        return estimated;
-    }
-
 }
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct FindHostToAllocateVM {
-    pub vm: VirtualMachine
-}
-
-#[derive(Debug, Clone)]
-pub struct UndoReservation {
-    pub host_id: String,
-    pub vm_id: String,
+    pub vm: VirtualMachine,
 }
 
 #[derive(Debug, Clone)]
 pub struct VMAllocationFailed {
-    pub vm: VirtualMachine
+    pub vm: VirtualMachine,
+}
+
+#[derive(Debug, Clone)]
+pub struct VMFinished {
+    pub host_id: String,
+    pub vm: VirtualMachine,
 }
 
 impl Actor for Scheduler {
-    fn on(&mut self, event: Box<dyn Event>, 
-                     _from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             FindHostToAllocateVM { vm } => {
                 // pack via First Fit policy
                 let mut found = false;
                 for host in self.monitoring.borrow().get_hosts_list() {
-                    let host_state = self.get_host_estimated_state(host);
+                    let mut host_state = self.monitoring.borrow().get_host_state(ActorId::from(host));
+                    if self.host_states.contains_key(host) {
+                        host_state = self.host_states[host].clone();
+                    }
+
                     let cpu_available = host_state.cpu_available;
                     let ram_available = host_state.ram_available;
 
                     if cpu_available >= vm.cpu_usage && ram_available >= vm.ram_usage {
-                        info!("[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
-                            ctx.time(), self.id, vm.id, ActorId::from(host)
+                        info!(
+                            "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
+                            ctx.time(),
+                            self.id,
+                            vm.id,
+                            ActorId::from(host)
                         );
                         found = true;
-                        if !self.reservations.contains_key(host) {
-                            self.reservations.insert(host.to_string(), HashMap::new());
-                        }
-                        self.reservations.get_mut(host).unwrap().insert(vm.id.clone(), vm.clone());
 
-                        ctx.emit(TryAllocateVM { vm: vm.clone() },
-                            ActorId::from(host),
-                            MESSAGE_DELAY
-                        );
+                        self.host_states.entry(host.to_string()).or_insert(host_state);
+                        self.host_states.get_mut(host).unwrap().cpu_available -= vm.cpu_usage;
+                        self.host_states.get_mut(host).unwrap().ram_available -= vm.ram_usage;
+
+                        ctx.emit(TryAllocateVM { vm: vm.clone() }, ActorId::from(host), MESSAGE_DELAY);
                         break;
                     }
                 }
                 if !found {
-                    info!("[time = {}] scheduler #{} failed to pack vm #{}",
-                        ctx.time(), self.id, vm.id);
-
-                    ctx.emit_self(FindHostToAllocateVM { vm: vm.clone() },
-                        ALLOCATION_RETRY_PERIOD
+                    info!(
+                        "[time = {}] scheduler #{} failed to pack vm #{}",
+                        ctx.time(),
+                        self.id,
+                        vm.id
                     );
+
+                    ctx.emit_self(FindHostToAllocateVM { vm: vm.clone() }, ALLOCATION_RETRY_PERIOD);
                 }
-            }
-            UndoReservation { host_id, vm_id } => {
-                self.reservations.get_mut(host_id).unwrap().remove(vm_id);
             }
             VMAllocationFailed { vm } => {
                 ctx.emit_now(FindHostToAllocateVM { vm: vm.clone() }, ctx.id.clone());
+            }
+            VMFinished { host_id, vm } => {
+                self.host_states.get_mut(host_id).unwrap().cpu_available += vm.cpu_usage;
+                self.host_states.get_mut(host_id).unwrap().ram_available += vm.ram_usage;
             }
         })
     }

@@ -1,13 +1,12 @@
-use std::collections::HashMap;
 use log::info;
+use std::collections::HashMap;
 
+use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
-use core::actor::{ActorId, ActorContext, Event, Actor};
 
-use crate::scheduler::VMAllocationFailed;
 use crate::monitoring::HostStateUpdate;
 use crate::network::MESSAGE_DELAY;
-use crate::scheduler::UndoReservation;
+use crate::scheduler::VMAllocationFailed;
 use crate::virtual_machine::VMInit;
 use crate::virtual_machine::VirtualMachine;
 
@@ -26,7 +25,7 @@ pub static STATS_SEND_PERIOD: f64 = 0.5;
 pub struct EnergyManager {
     energy_consumed: f64,
     prev_milestone: f64,
-    current_load: f64
+    current_load: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +42,7 @@ pub struct HostManager {
 
     energy_manager: EnergyManager,
 
-    monitoring: ActorId
+    monitoring: ActorId,
 }
 
 impl EnergyManager {
@@ -51,7 +50,7 @@ impl EnergyManager {
         Self {
             prev_milestone: 0.0,
             energy_consumed: 0.0,
-            current_load: 0.0
+            current_load: 0.0,
         }
     }
 
@@ -76,7 +75,7 @@ impl HostManager {
             vms: HashMap::new(),
             vm_counter: 0,
             energy_manager: EnergyManager::new(),
-            monitoring: monitoring.clone()
+            monitoring: monitoring.clone(),
         }
     }
 
@@ -118,61 +117,56 @@ pub struct TryAllocateVM {
 }
 
 #[derive(Debug)]
-pub struct SendHostState {
-}
+pub struct SendHostState {}
 
 #[derive(Debug)]
 pub struct ReleaseVmResources {
-    pub vm_id: String
+    pub vm_id: String,
 }
 
 impl Actor for HostManager {
-    fn on(&mut self, event: Box<dyn Event>, 
-                     from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             TryAllocateVM { vm } => {
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
-                    info!("[time = {}] vm #{} allocated on host #{}",
-                         ctx.time(), vm.id, self.id);
-   
-                    ctx.emit_now(VMInit { }, vm.actor_id.clone());
+                    info!("[time = {}] vm #{} allocated on host #{}", ctx.time(), vm.id, self.id);
+                    ctx.emit_now(VMInit { scheduler_id: from }, vm.actor_id.clone());
                 } else {
-                    info!("[time = {}] not enough space for vm #{} on host #{}",
-                        ctx.time(), vm.id, self.id);
+                    info!(
+                        "[time = {}] not enough space for vm #{} on host #{}",
+                        ctx.time(),
+                        vm.id,
+                        self.id
+                    );
                     ctx.emit(VMAllocationFailed { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
                 }
-
-                ctx.emit(HostStateUpdate {
-                        host_id: ctx.id.clone(),
-                        cpu_available: self.cpu_available,
-                        ram_available: self.ram_available
-                    },
-                    self.monitoring.clone(), MESSAGE_DELAY
-                );
-                ctx.emit(UndoReservation { 
-                            host_id: ctx.id.to_string(),
-                            vm_id: vm.id.to_string()
-                        },
-                    from.clone(), MESSAGE_DELAY
-                );
             }
-            SendHostState { } => {
-                info!("[time = {}] host #{} sends it`s data to monitoring", ctx.time(), self.id);
-                ctx.emit(HostStateUpdate {
+            SendHostState {} => {
+                info!(
+                    "[time = {}] host #{} sends it`s data to monitoring",
+                    ctx.time(),
+                    self.id
+                );
+                ctx.emit(
+                    HostStateUpdate {
                         host_id: ctx.id.clone(),
                         cpu_available: self.cpu_available,
-                        ram_available: self.ram_available
+                        ram_available: self.ram_available,
                     },
-                    self.monitoring.clone(), MESSAGE_DELAY
+                    self.monitoring.clone(),
+                    MESSAGE_DELAY,
                 );
 
-                ctx.emit(SendHostState { }, ctx.id.clone(), STATS_SEND_PERIOD);
+                ctx.emit(SendHostState {}, ctx.id.clone(), STATS_SEND_PERIOD);
             }
             ReleaseVmResources { vm_id } => {
-                info!("[time = {}] release resources from vm #{} in host #{}",
-                    ctx.time(), vm_id, self.id
-                ); 
+                info!(
+                    "[time = {}] release resources from vm #{} in host #{}",
+                    ctx.time(),
+                    vm_id,
+                    self.id
+                );
                 self.remove_vm(vm_id)
             }
         })
