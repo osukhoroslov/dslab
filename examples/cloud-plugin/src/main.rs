@@ -1,7 +1,7 @@
 use log::info;
 
-use core::sim::Simulation;
 use cloud_plugin::simulation::CloudSimulation;
+use core::sim::Simulation;
 
 extern crate env_logger;
 

@@ -36,10 +36,6 @@ impl Monitoring {
         }
     }
 
-    pub fn add_host(&mut self, host: ActorId) {
-        self.host_states.entry(host.to_string()).or_insert(HostState::new(host));
-    }
-
     pub fn get_host_state(&self, host: ActorId) -> HostState {
         self.host_states[&host.to_string()].clone()
     }
