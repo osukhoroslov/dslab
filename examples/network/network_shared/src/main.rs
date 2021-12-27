@@ -37,7 +37,7 @@ impl Actor for DataTransferRequester {
                     ctx.id.clone(),
                     receiver_id.clone(),
                     *size,
-                    Some(receiver_id.clone()),
+                    receiver_id.clone(),
                     ctx,
                 );
             }
@@ -71,7 +71,7 @@ impl Actor for DataReceiver {
                     ctx.id.clone(),
                     data.source.clone(),
                     new_size,
-                    Some(data.source.clone()),
+                    data.source.clone(),
                     ctx,
                 );
                 info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
@@ -106,21 +106,21 @@ fn main() {
             sender_actor.clone(),
             receiver_actor.clone(),
             100.0,
-            None,
+            sender_actor.clone(),
             &mut sim,
         );
         shared_network.borrow_mut().transfer_data_from_sim(
             sender_actor.clone(),
             receiver_actor.clone(),
             1000.0,
-            None,
+            sender_actor.clone(),
             &mut sim,
         );
         shared_network.borrow_mut().transfer_data_from_sim(
             sender_actor.clone(),
             receiver_actor.clone(),
             5.0,
-            None,
+            sender_actor.clone(),
             &mut sim,
         );
 
@@ -139,7 +139,7 @@ fn main() {
                 sender_actor.clone(),
                 receiver_actor.clone(),
                 1000.0,
-                None,
+                sender_actor.clone(),
                 &mut sim,
             );
         }

@@ -72,14 +72,10 @@ impl Network {
         source: ActorId,
         dest: ActorId,
         size: f64,
-        notification: Option<ActorId>,
+        notification_dest: ActorId,
         ctx: &mut ActorContext,
     ) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
-        let notification_dest = match notification {
-            None => ctx.id.clone(),
-            Some(actor) => actor,
-        };
 
         let data = Data {
             id: data_id,
@@ -99,14 +95,10 @@ impl Network {
         source: ActorId,
         dest: ActorId,
         size: f64,
-        notification: Option<ActorId>,
+        notification_dest: ActorId,
         sim: &mut Simulation,
     ) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
-        let notification_dest = match notification {
-            None => dest.clone(),
-            Some(actor) => actor,
-        };
 
         let data = Data {
             id: data_id,

@@ -6,7 +6,7 @@ use std::rc::Rc;
 use core::actor::ActorId;
 use core::sim::Simulation;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network_actor::{NetworkActor, NETWORK_ID};
+use network::network_actor::{Network, NETWORK_ID};
 
 fn main() {
     env_logger::init();
@@ -15,22 +15,31 @@ fn main() {
     let sender_actor = ActorId::from("sender");
     let receiver_actor = ActorId::from("receiver");
 
-    let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0)));
-    let constant_network = Rc::new(RefCell::new(NetworkActor::new(constant_network_model, 0.1)));
+    let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));
+    let constant_network = Rc::new(RefCell::new(Network::new(constant_network_model)));
     sim.add_actor(NETWORK_ID, constant_network.clone());
 
-    constant_network
-        .borrow_mut()
-        .transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 100.0, &mut sim);
+    constant_network.borrow_mut().transfer_data_from_sim(
+        sender_actor.clone(),
+        receiver_actor.clone(),
+        100.0,
+        sender_actor.clone(),
+        &mut sim,
+    );
     constant_network.borrow_mut().transfer_data_from_sim(
         sender_actor.clone(),
         receiver_actor.clone(),
         1000.0,
+        sender_actor.clone(),
         &mut sim,
     );
-    constant_network
-        .borrow_mut()
-        .transfer_data_from_sim(sender_actor.clone(), receiver_actor.clone(), 5.0, &mut sim);
+    constant_network.borrow_mut().transfer_data_from_sim(
+        sender_actor.clone(),
+        receiver_actor.clone(),
+        5.0,
+        sender_actor.clone(),
+        &mut sim,
+    );
 
     constant_network
         .borrow_mut()
