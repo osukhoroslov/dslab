@@ -71,12 +71,12 @@ impl Actor for Monitoring {
                     ctx.time(),
                     host_id
                 );
-                if !self.host_states.contains_key(&host_id.to_string()) {
-                    self.add_host(host_id.clone());
-                }
-
-                self.host_states.get_mut(&host_id.to_string()).unwrap().cpu_available = *cpu_available;
-                self.host_states.get_mut(&host_id.to_string()).unwrap().ram_available = *ram_available;
+                let host_state = self
+                    .host_states
+                    .entry(host_id.to_string())
+                    .or_insert(HostState::new(host_id.clone()));
+                host_state.cpu_available = *cpu_available;
+                host_state.ram_available = *ram_available;
             }
         })
     }

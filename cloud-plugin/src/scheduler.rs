@@ -59,10 +59,10 @@ impl Actor for Scheduler {
                 // pack via First Fit policy
                 let mut found = false;
                 for host in self.monitoring.borrow().get_hosts_list() {
-                    let mut host_state = self.monitoring.borrow().get_host_state(ActorId::from(host));
-                    if self.host_states.contains_key(host) {
-                        host_state = self.host_states[host].clone();
-                    }
+                    let mut host_state = self
+                        .host_states
+                        .entry(host.to_string())
+                        .or_insert(self.monitoring.borrow().get_host_state(ActorId::from(host)));
 
                     let cpu_available = host_state.cpu_available;
                     let ram_available = host_state.ram_available;
@@ -73,13 +73,12 @@ impl Actor for Scheduler {
                             ctx.time(),
                             self.id,
                             vm.id,
-                            ActorId::from(host)
+                            host
                         );
                         found = true;
 
-                        self.host_states.entry(host.to_string()).or_insert(host_state);
-                        self.host_states.get_mut(host).unwrap().cpu_available -= vm.cpu_usage;
-                        self.host_states.get_mut(host).unwrap().ram_available -= vm.ram_usage;
+                        host_state.cpu_available -= vm.cpu_usage;
+                        host_state.ram_available -= vm.ram_usage;
 
                         ctx.emit(TryAllocateVM { vm: vm.clone() }, ActorId::from(host), MESSAGE_DELAY);
                         break;
@@ -100,8 +99,10 @@ impl Actor for Scheduler {
                 ctx.emit_now(FindHostToAllocateVM { vm: vm.clone() }, ctx.id.clone());
             }
             VMFinished { host_id, vm } => {
-                self.host_states.get_mut(host_id).unwrap().cpu_available += vm.cpu_usage;
-                self.host_states.get_mut(host_id).unwrap().ram_available += vm.ram_usage;
+                self.host_states.get_mut(host_id).map(|state| {
+                    state.cpu_available += vm.cpu_usage;
+                    state.ram_available += vm.ram_usage;
+                });
             }
         })
     }

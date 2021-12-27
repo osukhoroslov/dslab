@@ -34,14 +34,13 @@ pub struct HostManager {
 
     cpu_total: u32,
     cpu_available: u32,
+    
+    #[allow(dead_code)]
     ram_total: u32,
     ram_available: u32,
 
     vms: HashMap<String, VirtualMachine>,
-    vm_counter: u64,
-
     energy_manager: EnergyManager,
-
     monitoring: ActorId,
 }
 
@@ -74,7 +73,6 @@ impl HostManager {
             cpu_available: cpu_total,
             ram_available: ram_total,
             vms: HashMap::new(),
-            vm_counter: 0,
             energy_manager: EnergyManager::new(),
             monitoring: monitoring.clone(),
         }
@@ -103,7 +101,7 @@ impl HostManager {
 
         self.cpu_available -= vm.cpu_usage;
         self.ram_available -= vm.ram_usage;
-        self.vms.entry(vm.id.clone()).or_insert(vm.clone());
+        self.vms.insert(vm.id.clone(), vm.clone());
     }
 
     fn remove_vm(&mut self, time: f64, vm_id: &str) {
