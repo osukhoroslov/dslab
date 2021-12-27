@@ -152,7 +152,7 @@ impl Actor for Compute {
                 ref cores_dependency,
             } => {
                 if self.memory_available < *memory || self.cores_available < *min_cores {
-                    ctx.emit(
+                    ctx.emit_now(
                         CompFailed {
                             id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
@@ -161,19 +161,17 @@ impl Actor for Compute {
                             },
                         },
                         from.clone(),
-                        0.,
                     );
                 } else {
                     let cores = self.cores_available.min(*max_cores);
                     self.memory_available -= *memory;
                     self.cores_available -= cores;
-                    ctx.emit(
+                    ctx.emit_now(
                         CompStarted {
                             id: ctx.event_id,
                             cores,
                         },
                         from.clone(),
-                        0.,
                     );
 
                     let speedup = match cores_dependency {
@@ -201,7 +199,7 @@ impl Actor for Compute {
             }
             AllocationRequest { allocation } => {
                 if self.memory_available < allocation.memory || self.cores_available < allocation.cores {
-                    ctx.emit(
+                    ctx.emit_now(
                         AllocationFailed {
                             id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
@@ -210,7 +208,6 @@ impl Actor for Compute {
                             },
                         },
                         from.clone(),
-                        0.,
                     );
                 } else {
                     let current_allocation = self.allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
@@ -230,16 +227,15 @@ impl Actor for Compute {
                     self.memory_available += allocation.memory;
                     ctx.emit(DeallocationSuccess { id: ctx.event_id }, from.clone(), 0.);
                 } else {
-                    ctx.emit(
+                    ctx.emit_now(
                         DeallocationFailed {
                             id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
-                                available_cores: self.cores_available,
-                                available_memory: self.memory_available,
+                                available_cores: current_allocation.cores,
+                                available_memory: current_allocation.memory,
                             },
                         },
                         from.clone(),
-                        0.,
                     );
                 }
                 if current_allocation.cores == 0 && current_allocation.memory == 0 {

@@ -73,9 +73,7 @@ impl Compute {
             computations: BTreeMap::new(),
         }
     }
-}
 
-impl Compute {
     fn update_computation_time(&mut self, prev_size: usize, new_size: usize, ctx: &mut ActorContext) {
         for (&id, mut running_computation) in self.computations.iter_mut() {
             ctx.cancel_event(running_computation.finish_event_id);
@@ -97,7 +95,7 @@ impl Actor for Compute {
         cast!(match event {
             CompRequest { flops, memory } => {
                 if self.memory_available < *memory {
-                    ctx.emit(
+                    ctx.emit_now(
                         CompFailed {
                             id: ctx.event_id,
                             reason: FailReason::NotEnoughResources {
@@ -105,7 +103,6 @@ impl Actor for Compute {
                             },
                         },
                         from.clone(),
-                        0.,
                     );
                 } else {
                     self.memory_available -= memory;
