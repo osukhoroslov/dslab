@@ -15,15 +15,15 @@ struct DataTransfer {
 }
 
 pub struct SharedBandwidthNetwork {
-    throughput: f64,
+    bandwidth: f64,
     latency: f64,
     transfers: BTreeMap<usize, DataTransfer>,
 }
 
 impl SharedBandwidthNetwork {
-    pub fn new(throughput: f64, latency: f64) -> SharedBandwidthNetwork {
+    pub fn new(bandwidth: f64, latency: f64) -> SharedBandwidthNetwork {
         return SharedBandwidthNetwork {
-            throughput,
+            bandwidth,
             latency,
             transfers: BTreeMap::new(),
         };
@@ -37,12 +37,12 @@ impl SharedBandwidthNetwork {
             ctx.cancel_event(send_elem.receive_event);
         }
 
-        let new_throughput = self.throughput / (self.transfers.len() as f64);
+        let new_bandwidth = self.bandwidth / (self.transfers.len() as f64);
 
         for (_, send_elem) in self.transfers.iter_mut() {
-            send_elem.last_speed = new_throughput;
+            send_elem.last_speed = new_bandwidth;
             send_elem.last_time = cur_time;
-            let data_delivery_time = send_elem.size_left / new_throughput;
+            let data_delivery_time = send_elem.size_left / new_bandwidth;
             send_elem.receive_event = ctx.emit(
                 DataReceive {
                     data: send_elem.data.clone(),
