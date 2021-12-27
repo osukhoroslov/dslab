@@ -1,9 +1,4 @@
-mod host;
-mod monitoring;
-mod network;
-mod scheduler;
-mod virtual_machine;
-
+use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
 use sugars::{rc, refcell};
@@ -11,13 +6,13 @@ use sugars::{rc, refcell};
 use core::actor::ActorId;
 use core::sim::Simulation;
 
-use monitoring::Monitoring;
-use scheduler::Scheduler;
+use cloud_plugin::monitoring::Monitoring;
+use cloud_plugin::scheduler::Scheduler;
 
-use crate::host::HostManager;
-use crate::host::SendHostState;
-use crate::scheduler::FindHostToAllocateVM;
-use crate::virtual_machine::VirtualMachine;
+use cloud_plugin::host::HostManager;
+use cloud_plugin::host::SendHostState;
+use cloud_plugin::scheduler::FindHostToAllocateVM;
+use cloud_plugin::virtual_machine::VirtualMachine;
 
 extern crate env_logger;
 
@@ -38,7 +33,7 @@ impl CloudSimulation {
         self.simulation.add_actor("monitoring", self.monitoring.clone());
     }
 
-    pub fn spawn_host(&mut self, id: &str, cpu_capacity: u32, ram_capacity: u32) -> ActorId {
+    pub fn spawn_host(&mut self, id: &str, cpu_capacity: u32, ram_capacity: u32) -> Rc<RefCell<HostManager>> {
         let host = rc!(refcell!(HostManager::new(
             cpu_capacity,
             ram_capacity,
@@ -46,10 +41,10 @@ impl CloudSimulation {
             ActorId::from("monitoring")
         )));
 
-        let actor = self.simulation.add_actor(id, host);
+        let actor = self.simulation.add_actor(id, host.clone());
         self.simulation
             .add_event(SendHostState {}, actor.clone(), actor.clone(), 0.);
-        return actor;
+        return host;
     }
 
     pub fn spawn_allocator(&mut self, id: &str) -> ActorId {
@@ -68,6 +63,10 @@ impl CloudSimulation {
     pub fn steps(&mut self, step_count: u32) -> bool {
         return self.simulation.steps(step_count);
     }
+
+    pub fn current_time(&mut self) -> f64 {
+        return self.simulation.time();
+    }
 }
 
 fn main() {
@@ -77,8 +76,8 @@ fn main() {
     let mut cloud_sim = CloudSimulation::new(sim);
     cloud_sim.init_actors();
 
-    let _host_one = cloud_sim.spawn_host("h1", 30, 30);
-    let _host_two = cloud_sim.spawn_host("h2", 30, 30);
+    let host_one = cloud_sim.spawn_host("h1", 30, 30);
+    let host_two = cloud_sim.spawn_host("h2", 30, 30);
     let allocator = cloud_sim.spawn_allocator("a");
 
     for i in 0..10 {
@@ -87,4 +86,12 @@ fn main() {
     }
 
     cloud_sim.steps(170);
+    info!(
+        "Total energy consumed on host one: {} watt",
+        host_one.borrow_mut().get_total_consumed(cloud_sim.current_time())
+    );
+    info!(
+        "Total energy consumed on host two: {} watt",
+        host_two.borrow_mut().get_total_consumed(cloud_sim.current_time())
+    );
 }

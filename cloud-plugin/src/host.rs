@@ -57,6 +57,7 @@ impl EnergyManager {
     pub fn update_energy(&mut self, time: f64, new_load: f64) {
         self.energy_consumed += (time - self.prev_milestone) * self.current_load;
         self.current_load = new_load;
+        self.prev_milestone = time;
     }
 
     pub fn get_total_consumed(&self) -> f64 {
@@ -91,21 +92,31 @@ impl HostManager {
 
     fn get_energy_load(&self) -> f64 {
         let cpu_used = (self.cpu_total - self.cpu_available) as f64;
+        if cpu_used == 0. {
+            return 0.;
+        }
         return 0.4 + 0.6 * cpu_used / (self.cpu_total as f64);
     }
 
     fn place_vm(&mut self, time: f64, vm: &VirtualMachine) {
+        self.energy_manager.update_energy(time, self.get_energy_load());
+
         self.cpu_available -= vm.cpu_usage;
         self.ram_available -= vm.ram_usage;
-
-        self.energy_manager.update_energy(time, self.get_energy_load());
         self.vms.entry(vm.id.clone()).or_insert(vm.clone());
     }
 
-    fn remove_vm(&mut self, vm_id: &str) {
+    fn remove_vm(&mut self, time: f64, vm_id: &str) {
+        self.energy_manager.update_energy(time, self.get_energy_load());
+
         self.cpu_available += self.vms[vm_id].cpu_usage;
         self.ram_available += self.vms[vm_id].ram_usage;
         self.vms.remove(vm_id);
+    }
+
+    pub fn get_total_consumed(&mut self, time: f64) -> f64 {
+        self.energy_manager.update_energy(time, self.get_energy_load());
+        return self.energy_manager.get_total_consumed();
     }
 }
 
@@ -167,7 +178,7 @@ impl Actor for HostManager {
                     vm_id,
                     self.id
                 );
-                self.remove_vm(vm_id)
+                self.remove_vm(ctx.time(), vm_id)
             }
         })
     }
