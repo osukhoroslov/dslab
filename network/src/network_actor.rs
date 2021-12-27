@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::match_event;
+use core::cast;
 use core::sim::Simulation;
 
 use crate::model::*;
@@ -14,22 +14,20 @@ pub const NETWORK_ID: &str = "net";
 
 struct HostInfo {}
 
-pub struct NetworkActor {
+pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
     hosts: BTreeMap<String, HostInfo>,
     actor_hosts: HashMap<ActorId, String>,
-    latency: f64,
 
     id_counter: AtomicUsize,
 }
 
-impl NetworkActor {
-    pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>, latency: f64) -> Self {
+impl Network {
+    pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>) -> Self {
         Self {
             network_model,
             hosts: BTreeMap::new(),
             actor_hosts: HashMap::new(),
-            latency,
             id_counter: AtomicUsize::new(1),
         }
     }
@@ -56,14 +54,6 @@ impl NetworkActor {
         self.hosts.keys().cloned().collect()
     }
 
-    fn send<T: Event>(&self, event: T, dest: ActorId, ctx: &mut ActorContext) {
-        if !self.check_same_host(&ctx.id, &dest) {
-            ctx.emit(event, dest, self.latency);
-        } else {
-            ctx.emit(event, dest, 0.);
-        }
-    }
-
     pub fn send_msg(&self, message: String, dest: ActorId, ctx: &mut ActorContext) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
@@ -72,39 +62,64 @@ impl NetworkActor {
             dest: dest.clone(),
             data: message,
         };
-        self.send(MessageSend { message: msg }, ActorId::from(NETWORK_ID), ctx);
+        ctx.emit_now(MessageSend { message: msg }, ActorId::from(NETWORK_ID));
 
         msg_id
     }
 
-    pub fn transfer_data(&self, source: ActorId, dest: ActorId, size: f64, ctx: &mut ActorContext) -> usize {
+    pub fn transfer_data(
+        &self,
+        source: ActorId,
+        dest: ActorId,
+        size: f64,
+        notification: Option<ActorId>,
+        ctx: &mut ActorContext,
+    ) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let notification_dest = match notification {
+            None => ctx.id.clone(),
+            Some(actor) => actor,
+        };
+
         let data = Data {
             id: data_id,
             source,
             dest,
             size,
+            notification_dest,
         };
 
-        self.send(DataTransferRequest { data }, ActorId::from(NETWORK_ID), ctx);
+        ctx.emit_now(DataTransferRequest { data }, ActorId::from(NETWORK_ID));
 
         data_id
     }
 
-    pub fn transfer_data_from_sim(&self, source: ActorId, dest: ActorId, size: f64, sim: &mut Simulation) -> usize {
+    pub fn transfer_data_from_sim(
+        &self,
+        source: ActorId,
+        dest: ActorId,
+        size: f64,
+        notification: Option<ActorId>,
+        sim: &mut Simulation,
+    ) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let notification_dest = match notification {
+            None => dest.clone(),
+            Some(actor) => actor,
+        };
+
         let data = Data {
             id: data_id,
             source,
             dest,
             size,
+            notification_dest,
         };
 
-        sim.add_event(
+        sim.add_event_now(
             DataTransferRequest { data },
             ActorId::from(NETWORK_ID),
             ActorId::from(NETWORK_ID),
-            self.latency,
         );
 
         data_id
@@ -119,35 +134,80 @@ impl NetworkActor {
             data: message,
         };
 
-        sim.add_event(
+        sim.add_event_now(
             MessageSend { message: msg },
             ActorId::from(NETWORK_ID),
             ActorId::from(NETWORK_ID),
-            self.latency,
         );
 
         msg_id
     }
 }
 
-impl Actor for NetworkActor {
+impl Actor for Network {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             MessageSend { message } => {
-                info!("System time: {}, {} send Message '{}' to {}", ctx.time(), message.source, message.data, message.dest);
-                ctx.emit(MessageReceive { message: message.clone() }, ctx.id.clone(), 0.0);
-            },
+                info!(
+                    "System time: {}, {} send Message '{}' to {}",
+                    ctx.time(),
+                    message.source,
+                    message.data,
+                    message.dest.clone()
+                );
+                ctx.emit(
+                    MessageReceive {
+                        message: message.clone(),
+                    },
+                    ActorId::from(NETWORK_ID),
+                    self.network_model.borrow_mut().latency(),
+                );
+            }
             MessageReceive { message } => {
-                info!("System time: {}, {} received Message '{}' from {}", ctx.time(), message.dest, message.data, message.source);
-                ctx.emit(MessageDelivery {message: message.clone()}, message.dest.clone(), 0.0);
-            },
+                info!(
+                    "System time: {}, {} received Message '{}' from {}",
+                    ctx.time(),
+                    message.dest,
+                    message.data,
+                    message.source
+                );
+                ctx.emit_now(
+                    MessageDelivery {
+                        message: message.clone(),
+                    },
+                    message.dest.clone(),
+                );
+            }
             DataTransferRequest { data } => {
+                info!(
+                    "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
+                    ctx.time(),
+                    data.id,
+                    data.source,
+                    data.dest,
+                    data.size
+                );
+                ctx.emit(
+                    StartDataTransfer { data: data.clone() },
+                    ActorId::from(NETWORK_ID),
+                    self.network_model.borrow_mut().latency(),
+                );
+            }
+            StartDataTransfer { data } => {
                 self.network_model.borrow_mut().send_data(data.clone(), ctx);
-            },
+            }
             DataReceive { data } => {
-                self.network_model.borrow_mut().receive_data( data.clone(), ctx );
-                ctx.emit(DataDelivery {data: data.clone()}, data.dest.clone(), 0.0);
-            },
+                info!(
+                    "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
+                    ctx.time(),
+                    data.id,
+                    data.source,
+                    data.dest,
+                    data.size
+                );
+                self.network_model.borrow_mut().receive_data(data.clone(), ctx);
+                ctx.emit_now(DataTransferCompleted { data: data.clone() }, data.dest.clone());
+            }
         })
     }
 

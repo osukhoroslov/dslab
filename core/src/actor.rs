@@ -94,7 +94,7 @@ impl<'a> ActorContext<'a> {
         self.emit(event, self.id.clone(), delay)
     }
 
-    fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {
+    pub fn emit_any(&mut self, event: Box<dyn Event>, dest: ActorId, delay: f64) -> u64 {
         let entry = CtxEvent { event, dest, delay };
         self.events.push(entry);
         self.next_event_id += 1;

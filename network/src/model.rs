@@ -1,4 +1,4 @@
-use core::actor::{ActorContext, ActorId};
+use core::actor::{ActorContext, ActorId, Event};
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
@@ -8,6 +8,7 @@ pub struct Data {
     pub source: ActorId,
     pub dest: ActorId,
     pub size: f64,
+    pub notification_dest: ActorId,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +20,11 @@ pub struct Message {
 }
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub struct EventLatency {
+    pub event: Box<dyn Event>,
+}
 
 #[derive(Debug)]
 pub struct MessageSend {
@@ -41,12 +47,17 @@ pub struct DataTransferRequest {
 }
 
 #[derive(Debug)]
+pub struct StartDataTransfer {
+    pub data: Data,
+}
+
+#[derive(Debug)]
 pub struct DataReceive {
     pub data: Data,
 }
 
 #[derive(Debug)]
-pub struct DataDelivery {
+pub struct DataTransferCompleted {
     pub data: Data,
 }
 
@@ -57,4 +68,8 @@ pub trait DataOperation {
     fn receive_data(&mut self, data: Data, ctx: &mut ActorContext);
 }
 
-pub trait NetworkModel: DataOperation {}
+pub trait NetworkConfiguration {
+    fn latency(&self) -> f64;
+}
+
+pub trait NetworkModel: DataOperation + NetworkConfiguration {}

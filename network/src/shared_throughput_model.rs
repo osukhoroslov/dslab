@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::debug;
 use std::collections::BTreeMap;
 
 use core::actor::ActorContext;
@@ -14,16 +14,17 @@ struct DataTransfer {
     data: Data,
 }
 
-#[derive(Debug, Clone)]
 pub struct SharedThroughputNetwork {
     throughput: f64,
+    latency: f64,
     transfers: BTreeMap<usize, DataTransfer>,
 }
 
 impl SharedThroughputNetwork {
-    pub fn new(throughput: f64) -> SharedThroughputNetwork {
+    pub fn new(throughput: f64, latency: f64) -> SharedThroughputNetwork {
         return SharedThroughputNetwork {
             throughput,
+            latency,
             transfers: BTreeMap::new(),
         };
     }
@@ -63,17 +64,14 @@ impl SharedThroughputNetwork {
     }
 }
 
+impl NetworkConfiguration for SharedThroughputNetwork {
+    fn latency(&self) -> f64 {
+        self.latency
+    }
+}
+
 impl DataOperation for SharedThroughputNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
-        info!(
-            "System time: {}, Send. Data ID: {}, From: {}, To {}, Size: {}",
-            ctx.time(),
-            data.id,
-            data.source,
-            data.dest,
-            data.size.clone()
-        );
-
         let new_send_data_progres = DataTransfer {
             size_left: data.size,
             last_speed: 0.,
@@ -91,14 +89,6 @@ impl DataOperation for SharedThroughputNetwork {
     }
 
     fn receive_data(&mut self, data: Data, ctx: &mut ActorContext) {
-        info!(
-            "System time: {}, Received. Data ID: {}, From: {}, To {}, Size: {}",
-            ctx.time(),
-            data.id,
-            data.source,
-            data.dest,
-            data.size
-        );
         self.transfers.remove(&data.id);
         self.recalculate_receive_time(ctx);
     }
