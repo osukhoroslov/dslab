@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use core::actor::ActorId;
 use core::sim::Simulation;
-use network::constant_throughput_model::ConstantThroughputNetwork;
+use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network_actor::{NetworkActor, NETWORK_ID};
 
 fn main() {
@@ -15,7 +15,7 @@ fn main() {
     let sender_actor = ActorId::from("sender");
     let receiver_actor = ActorId::from("receiver");
 
-    let constant_network_model = Rc::new(RefCell::new(ConstantThroughputNetwork::new(10.0)));
+    let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0)));
     let constant_network = Rc::new(RefCell::new(NetworkActor::new(constant_network_model, 0.1)));
     sim.add_actor(NETWORK_ID, constant_network.clone());
 

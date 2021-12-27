@@ -5,11 +5,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::match_event;
+use core::cast;
 use core::sim::Simulation;
 use network::model::DataTransferCompleted;
 use network::network_actor::{Network, NETWORK_ID};
-use network::shared_throughput_model::SharedThroughputNetwork;
+use network::shared_bandwidth_model::SharedBandwidthNetwork;
 
 // Counter for network ids
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
@@ -31,13 +31,19 @@ impl DataTransferRequester {
 
 impl Actor for DataTransferRequester {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             Start { size, receiver_id } => {
-                self.net.borrow_mut().transfer_data(ctx.id.clone(), receiver_id.clone(), *size, Some(receiver_id.clone()), ctx);
-            },
+                self.net.borrow_mut().transfer_data(
+                    ctx.id.clone(),
+                    receiver_id.clone(),
+                    *size,
+                    Some(receiver_id.clone()),
+                    ctx,
+                );
+            }
             DataTransferCompleted { data: _ } => {
                 info!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
-            },
+            }
         })
     }
 
@@ -58,12 +64,18 @@ impl DataReceiver {
 
 impl Actor for DataReceiver {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
+        cast!(match event {
             DataTransferCompleted { data } => {
                 let new_size = 1000.0 - data.size;
-                self.net.borrow_mut().transfer_data(ctx.id.clone(), data.source.clone(), new_size, Some(data.source.clone()), ctx);
+                self.net.borrow_mut().transfer_data(
+                    ctx.id.clone(),
+                    data.source.clone(),
+                    new_size,
+                    Some(data.source.clone()),
+                    ctx,
+                );
                 info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
-            },
+            }
         })
     }
 
@@ -83,7 +95,7 @@ fn main() {
     let sender_actor = ActorId::from("sender");
     let receiver_actor = ActorId::from("receiver");
 
-    let shared_network_model = Rc::new(RefCell::new(SharedThroughputNetwork::new(10.0, 0.1)));
+    let shared_network_model = Rc::new(RefCell::new(SharedBandwidthNetwork::new(10.0, 0.1)));
     let shared_network = Rc::new(RefCell::new(Network::new(shared_network_model)));
     sim.add_actor(NETWORK_ID, shared_network.clone());
 

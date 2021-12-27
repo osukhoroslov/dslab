@@ -2,24 +2,24 @@ use core::actor::ActorContext;
 
 use crate::model::*;
 
-pub struct ConstantThroughputNetwork {
+pub struct ConstantBandwidthNetwork {
     bandwidth: f64,
     latency: f64,
 }
 
-impl ConstantThroughputNetwork {
-    pub fn new(bandwidth: f64, latency: f64) -> ConstantThroughputNetwork {
-        return ConstantThroughputNetwork { bandwidth, latency };
+impl ConstantBandwidthNetwork {
+    pub fn new(bandwidth: f64, latency: f64) -> ConstantBandwidthNetwork {
+        return ConstantBandwidthNetwork { bandwidth, latency };
     }
 }
 
-impl NetworkConfiguration for ConstantThroughputNetwork {
+impl NetworkConfiguration for ConstantBandwidthNetwork {
     fn latency(&self) -> f64 {
         self.latency
     }
 }
 
-impl DataOperation for ConstantThroughputNetwork {
+impl DataOperation for ConstantBandwidthNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
         let new_message_delivery_time = data.size / self.bandwidth;
         ctx.emit(DataReceive { data }, ctx.id.clone(), new_message_delivery_time);
@@ -28,4 +28,4 @@ impl DataOperation for ConstantThroughputNetwork {
     fn receive_data(&mut self, _data: Data, _ctx: &mut ActorContext) {}
 }
 
-impl NetworkModel for ConstantThroughputNetwork {}
+impl NetworkModel for ConstantBandwidthNetwork {}

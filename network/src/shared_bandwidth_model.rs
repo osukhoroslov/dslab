@@ -14,15 +14,15 @@ struct DataTransfer {
     data: Data,
 }
 
-pub struct SharedThroughputNetwork {
+pub struct SharedBandwidthNetwork {
     throughput: f64,
     latency: f64,
     transfers: BTreeMap<usize, DataTransfer>,
 }
 
-impl SharedThroughputNetwork {
-    pub fn new(throughput: f64, latency: f64) -> SharedThroughputNetwork {
-        return SharedThroughputNetwork {
+impl SharedBandwidthNetwork {
+    pub fn new(throughput: f64, latency: f64) -> SharedBandwidthNetwork {
+        return SharedBandwidthNetwork {
             throughput,
             latency,
             transfers: BTreeMap::new(),
@@ -64,25 +64,25 @@ impl SharedThroughputNetwork {
     }
 }
 
-impl NetworkConfiguration for SharedThroughputNetwork {
+impl NetworkConfiguration for SharedBandwidthNetwork {
     fn latency(&self) -> f64 {
         self.latency
     }
 }
 
-impl DataOperation for SharedThroughputNetwork {
+impl DataOperation for SharedBandwidthNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
         let new_send_data_progres = DataTransfer {
             size_left: data.size,
             last_speed: 0.,
             last_time: 0.,
             receive_event: 0,
-            data: data,
+            data,
         };
 
         let data_id = new_send_data_progres.data.id;
         if self.transfers.insert(data_id, new_send_data_progres).is_some() {
-            panic!("SharedThroughputNetwork: data with id {} already exist", data_id);
+            panic!("SharedBandwidthNetwork: data with id {} already exist", data_id);
         }
 
         self.recalculate_receive_time(ctx);
@@ -94,4 +94,4 @@ impl DataOperation for SharedThroughputNetwork {
     }
 }
 
-impl NetworkModel for SharedThroughputNetwork {}
+impl NetworkModel for SharedBandwidthNetwork {}

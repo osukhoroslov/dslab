@@ -206,7 +206,10 @@ impl Actor for Network {
                     data.size
                 );
                 self.network_model.borrow_mut().receive_data(data.clone(), ctx);
-                ctx.emit_now(DataTransferCompleted { data: data.clone() }, data.dest.clone());
+                ctx.emit_now(
+                    DataTransferCompleted { data: data.clone() },
+                    data.notification_dest.clone(),
+                );
             }
         })
     }
