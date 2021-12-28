@@ -11,8 +11,6 @@ use network::model::DataTransferCompleted;
 use network::network_actor::{Network, NETWORK_ID};
 use network::shared_bandwidth_model::SharedBandwidthNetwork;
 
-// Counter for network ids
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct Start {
     size: f64,
@@ -33,7 +31,7 @@ impl Actor for DataTransferRequester {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Start { size, receiver_id } => {
-                self.net.borrow_mut().transfer_data(
+                self.net.borrow().transfer_data(
                     ctx.id.clone(),
                     receiver_id.clone(),
                     *size,
@@ -67,11 +65,11 @@ impl Actor for DataReceiver {
         cast!(match event {
             DataTransferCompleted { data } => {
                 let new_size = 1000.0 - data.size;
-                self.net.borrow_mut().transfer_data(
+                self.net.borrow().transfer_data(
                     ctx.id.clone(),
-                    data.source.clone(),
+                    data.src.clone(),
                     new_size,
-                    data.source.clone(),
+                    data.src.clone(),
                     ctx,
                 );
                 info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
@@ -87,13 +85,14 @@ impl Actor for DataReceiver {
 fn main() {
     env_logger::init();
 
-    let process_simple_send_1 = true;
-    let process_check_order = true;
+    let process_simple_send_1 = false;
+    let process_check_order = false;
     let process_with_actors = true;
 
     let mut sim = Simulation::new(123);
-    let sender_actor = ActorId::from("sender");
-    let receiver_actor = ActorId::from("receiver");
+    let client = ActorId::from("client");
+    let sender = ActorId::from("sender");
+    let receiver = ActorId::from("receiver");
 
     let shared_network_model = Rc::new(RefCell::new(SharedBandwidthNetwork::new(10.0, 0.1)));
     let shared_network = Rc::new(RefCell::new(Network::new(shared_network_model)));
@@ -102,31 +101,31 @@ fn main() {
     if process_simple_send_1 {
         info!("Simple send check 1");
 
-        shared_network.borrow_mut().transfer_data_from_sim(
-            sender_actor.clone(),
-            receiver_actor.clone(),
+        shared_network.borrow().transfer_data_from_sim(
+            sender.clone(),
+            receiver.clone(),
             100.0,
-            sender_actor.clone(),
+            sender.clone(),
             &mut sim,
         );
-        shared_network.borrow_mut().transfer_data_from_sim(
-            sender_actor.clone(),
-            receiver_actor.clone(),
+        shared_network.borrow().transfer_data_from_sim(
+            sender.clone(),
+            receiver.clone(),
             1000.0,
-            sender_actor.clone(),
+            sender.clone(),
             &mut sim,
         );
-        shared_network.borrow_mut().transfer_data_from_sim(
-            sender_actor.clone(),
-            receiver_actor.clone(),
+        shared_network.borrow().transfer_data_from_sim(
+            sender.clone(),
+            receiver.clone(),
             5.0,
-            sender_actor.clone(),
+            sender.clone(),
             &mut sim,
         );
 
         shared_network
-            .borrow_mut()
-            .send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
+            .borrow()
+            .send_msg_from_sim("Hello World".to_string(), client.clone(), receiver.clone(), &mut sim);
 
         sim.step_until_no_events();
     }
@@ -135,17 +134,17 @@ fn main() {
         info!("Data order check");
 
         for _i in 1..10 {
-            shared_network.borrow_mut().transfer_data_from_sim(
-                sender_actor.clone(),
-                receiver_actor.clone(),
+            shared_network.borrow().transfer_data_from_sim(
+                sender.clone(),
+                receiver.clone(),
                 1000.0,
-                sender_actor.clone(),
+                sender.clone(),
                 &mut sim,
             );
         }
         shared_network
-            .borrow_mut()
-            .send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
+            .borrow()
+            .send_msg_from_sim("Hello World".to_string(), client.clone(), receiver.clone(), &mut sim);
 
         sim.step_until_no_events();
     }
@@ -158,23 +157,23 @@ fn main() {
         for i in 1..10 {
             let receiver_id = "receiver_".to_string() + &i.to_string();
             let receiver = Rc::new(RefCell::new(DataReceiver::new(shared_network.clone())));
-            let receiver_actor = sim.add_actor(&receiver_id, receiver);
-            receivers.push(receiver_actor);
+            let receiver = sim.add_actor(&receiver_id, receiver);
+            receivers.push(receiver);
 
             let sender_id = "sender_".to_string() + &i.to_string();
             let sender = Rc::new(RefCell::new(DataTransferRequester::new(shared_network.clone())));
-            let sender_actor = sim.add_actor(&sender_id, sender);
-            senders.push(sender_actor);
+            let sender = sim.add_actor(&sender_id, sender);
+            senders.push(sender);
         }
 
-        let initial_actor = ActorId::from("app");
+        let client = ActorId::from("app");
         for i in 1..10 {
             sim.add_event(
                 Start {
                     size: (i as f64) * 100.0,
                     receiver_id: receivers[i - 1].clone(),
                 },
-                initial_actor.clone(),
+                client.clone(),
                 senders[i - 1].clone(),
                 0.0,
             );

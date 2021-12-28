@@ -21,8 +21,8 @@ impl NetworkConfiguration for ConstantBandwidthNetwork {
 
 impl DataOperation for ConstantBandwidthNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
-        let new_message_delivery_time = data.size / self.bandwidth;
-        ctx.emit(DataReceive { data }, ctx.id.clone(), new_message_delivery_time);
+        let data_transfer_time = data.size / self.bandwidth;
+        ctx.emit(DataReceive { data }, ctx.id.clone(), data_transfer_time);
     }
 
     fn receive_data(&mut self, _data: Data, _ctx: &mut ActorContext) {}

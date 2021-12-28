@@ -5,7 +5,7 @@ use core::actor::{ActorContext, ActorId, Event};
 #[derive(Debug, Clone)]
 pub struct Data {
     pub id: usize,
-    pub source: ActorId,
+    pub src: ActorId,
     pub dest: ActorId,
     pub size: f64,
     pub notification_dest: ActorId,
@@ -14,7 +14,7 @@ pub struct Data {
 #[derive(Debug, Clone)]
 pub struct Message {
     pub id: usize,
-    pub source: ActorId,
+    pub src: ActorId,
     pub dest: ActorId,
     pub data: String,
 }

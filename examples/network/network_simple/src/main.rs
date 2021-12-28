@@ -12,38 +12,39 @@ fn main() {
     env_logger::init();
 
     let mut sim = Simulation::new(123);
-    let sender_actor = ActorId::from("sender");
+    let client = ActorId::from("client");
+    let sender = ActorId::from("sender");
     let receiver_actor = ActorId::from("receiver");
 
     let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));
     let constant_network = Rc::new(RefCell::new(Network::new(constant_network_model)));
     sim.add_actor(NETWORK_ID, constant_network.clone());
 
-    constant_network.borrow_mut().transfer_data_from_sim(
-        sender_actor.clone(),
+    constant_network.borrow().transfer_data_from_sim(
+        sender.clone(),
         receiver_actor.clone(),
         100.0,
-        sender_actor.clone(),
+        sender.clone(),
         &mut sim,
     );
-    constant_network.borrow_mut().transfer_data_from_sim(
-        sender_actor.clone(),
+    constant_network.borrow().transfer_data_from_sim(
+        sender.clone(),
         receiver_actor.clone(),
         1000.0,
-        sender_actor.clone(),
+        sender.clone(),
         &mut sim,
     );
-    constant_network.borrow_mut().transfer_data_from_sim(
-        sender_actor.clone(),
+    constant_network.borrow().transfer_data_from_sim(
+        sender.clone(),
         receiver_actor.clone(),
         5.0,
-        sender_actor.clone(),
+        sender.clone(),
         &mut sim,
     );
 
     constant_network
-        .borrow_mut()
-        .send_message_from_sim("Hello World".to_string(), receiver_actor.clone(), &mut sim);
+        .borrow()
+        .send_msg_from_sim("Hello World".to_string(), client.clone(), receiver_actor.clone(), &mut sim);
 
     sim.step_until_no_events();
 }

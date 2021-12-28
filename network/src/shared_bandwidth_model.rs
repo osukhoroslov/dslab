@@ -54,7 +54,7 @@ impl SharedBandwidthNetwork {
                 "System time: {}, Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
                 ctx.time(),
                 send_elem.data.id,
-                send_elem.data.source,
+                send_elem.data.src,
                 send_elem.data.dest,
                 send_elem.data.size,
                 send_elem.size_left,

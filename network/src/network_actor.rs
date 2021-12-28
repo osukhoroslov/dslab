@@ -58,7 +58,7 @@ impl Network {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
-            source: ctx.id.clone(),
+            src: ctx.id.clone(),
             dest: dest.clone(),
             data: message,
         };
@@ -69,7 +69,7 @@ impl Network {
 
     pub fn transfer_data(
         &self,
-        source: ActorId,
+        src: ActorId,
         dest: ActorId,
         size: f64,
         notification_dest: ActorId,
@@ -79,7 +79,7 @@ impl Network {
 
         let data = Data {
             id: data_id,
-            source,
+            src,
             dest,
             size,
             notification_dest,
@@ -92,7 +92,7 @@ impl Network {
 
     pub fn transfer_data_from_sim(
         &self,
-        source: ActorId,
+        src: ActorId,
         dest: ActorId,
         size: f64,
         notification_dest: ActorId,
@@ -102,7 +102,7 @@ impl Network {
 
         let data = Data {
             id: data_id,
-            source,
+            src,
             dest,
             size,
             notification_dest,
@@ -117,18 +117,18 @@ impl Network {
         data_id
     }
 
-    pub fn send_message_from_sim(&self, message: String, dest: ActorId, sim: &mut Simulation) -> usize {
+    pub fn send_msg_from_sim(&self, message: String, src: ActorId, dest: ActorId, sim: &mut Simulation) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
-            source: ActorId::from(NETWORK_ID),
+            src: src.clone(),
             dest: dest.clone(),
             data: message,
         };
 
         sim.add_event_now(
             MessageSend { message: msg },
-            ActorId::from(NETWORK_ID),
+            src,
             ActorId::from(NETWORK_ID),
         );
 
@@ -143,7 +143,7 @@ impl Actor for Network {
                 info!(
                     "System time: {}, {} send Message '{}' to {}",
                     ctx.time(),
-                    message.source,
+                    message.src,
                     message.data,
                     message.dest.clone()
                 );
@@ -152,7 +152,7 @@ impl Actor for Network {
                         message: message.clone(),
                     },
                     ActorId::from(NETWORK_ID),
-                    self.network_model.borrow_mut().latency(),
+                    self.network_model.borrow().latency(),
                 );
             }
             MessageReceive { message } => {
@@ -161,7 +161,7 @@ impl Actor for Network {
                     ctx.time(),
                     message.dest,
                     message.data,
-                    message.source
+                    message.src
                 );
                 ctx.emit_now(
                     MessageDelivery {
@@ -175,14 +175,14 @@ impl Actor for Network {
                     "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
                     ctx.time(),
                     data.id,
-                    data.source,
+                    data.src,
                     data.dest,
                     data.size
                 );
                 ctx.emit(
                     StartDataTransfer { data: data.clone() },
                     ActorId::from(NETWORK_ID),
-                    self.network_model.borrow_mut().latency(),
+                    self.network_model.borrow().latency(),
                 );
             }
             StartDataTransfer { data } => {
@@ -193,7 +193,7 @@ impl Actor for Network {
                     "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
                     ctx.time(),
                     data.id,
-                    data.source,
+                    data.src,
                     data.dest,
                     data.size
                 );
