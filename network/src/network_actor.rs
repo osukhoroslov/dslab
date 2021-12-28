@@ -67,6 +67,24 @@ impl Network {
         msg_id
     }
 
+    pub fn send_msg_from_sim(&self, message: String, src: ActorId, dest: ActorId, sim: &mut Simulation) -> usize {
+        let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let msg = Message {
+            id: msg_id,
+            src: src.clone(),
+            dest: dest.clone(),
+            data: message,
+        };
+
+        sim.add_event_now(
+            MessageSend { message: msg },
+            src,
+            ActorId::from(NETWORK_ID),
+        );
+
+        msg_id
+    }
+
     pub fn transfer_data(
         &self,
         src: ActorId,
@@ -115,24 +133,6 @@ impl Network {
         );
 
         data_id
-    }
-
-    pub fn send_msg_from_sim(&self, message: String, src: ActorId, dest: ActorId, sim: &mut Simulation) -> usize {
-        let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
-        let msg = Message {
-            id: msg_id,
-            src: src.clone(),
-            dest: dest.clone(),
-            data: message,
-        };
-
-        sim.add_event_now(
-            MessageSend { message: msg },
-            src,
-            ActorId::from(NETWORK_ID),
-        );
-
-        msg_id
     }
 }
 
