@@ -10,13 +10,14 @@ use core::sim::Simulation;
 pub struct Start {}
 
 pub struct TaskActor {
+    compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
 }
 
 impl TaskActor {
-    pub fn new(flops: u64, memory: u64) -> Self {
-        Self { flops, memory }
+    pub fn new(compute: Rc<RefCell<Compute>>, flops: u64, memory: u64) -> Self {
+        Self { compute, flops, memory }
     }
 }
 
@@ -25,14 +26,7 @@ impl Actor for TaskActor {
         cast!(match event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                ctx.emit(
-                    CompRequest {
-                        flops: self.flops,
-                        memory: self.memory,
-                    },
-                    ActorId::from("compute"),
-                    0.,
-                );
+                self.compute.borrow().run(self.flops, self.memory, ctx);
             }
             CompStarted { id } => {
                 println!(
@@ -72,9 +66,16 @@ impl Actor for TaskActor {
 
 fn main() {
     let mut sim = Simulation::new(123);
-    sim.add_actor("task1", Rc::new(RefCell::new(TaskActor::new(100, 512))));
-    sim.add_actor("task2", Rc::new(RefCell::new(TaskActor::new(200, 512))));
-    sim.add_actor("compute", Rc::new(RefCell::new(Compute::new(10, 1024))));
+    let compute = Rc::new(RefCell::new(Compute::new("compute", 10, 1024)));
+    sim.add_actor(
+        "task1",
+        Rc::new(RefCell::new(TaskActor::new(compute.clone(), 100, 512))),
+    );
+    sim.add_actor(
+        "task2",
+        Rc::new(RefCell::new(TaskActor::new(compute.clone(), 200, 512))),
+    );
+    sim.add_actor("compute", compute);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 5.);
     sim.step_until_no_events();

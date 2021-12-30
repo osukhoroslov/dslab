@@ -15,6 +15,7 @@ pub enum FailReason {
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
+    pub requester: ActorId,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +58,7 @@ impl RunningComputation {
 }
 
 pub struct Compute {
+    id: ActorId,
     speed: u64,
     #[allow(dead_code)]
     memory_total: u64,
@@ -65,8 +67,9 @@ pub struct Compute {
 }
 
 impl Compute {
-    pub fn new(speed: u64, memory: u64) -> Self {
+    pub fn new(id: &str, speed: u64, memory: u64) -> Self {
         Self {
+            id: ActorId::from(id),
             speed,
             memory_total: memory,
             memory_available: memory,
@@ -88,12 +91,25 @@ impl Compute {
                 ctx.emit(CompFinished { id }, ctx.id.clone(), running_computation.left_time);
         }
     }
+
+    pub fn run(&self, flops: u64, memory: u64, ctx: &mut ActorContext) -> u64 {
+        let request = CompRequest {
+            flops,
+            memory,
+            requester: ctx.id.clone(),
+        };
+        ctx.emit_now(request, self.id.clone())
+    }
 }
 
 impl Actor for Compute {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            CompRequest { flops, memory } => {
+            CompRequest {
+                flops,
+                memory,
+                requester,
+            } => {
                 if self.memory_available < *memory {
                     ctx.emit_now(
                         CompFailed {
@@ -102,11 +118,11 @@ impl Actor for Compute {
                                 available_memory: self.memory_available,
                             },
                         },
-                        from.clone(),
+                        requester.clone(),
                     );
                 } else {
                     self.memory_available -= memory;
-                    ctx.emit(CompStarted { id: ctx.event_id }, from.clone(), 0.);
+                    ctx.emit(CompStarted { id: ctx.event_id }, requester.clone(), 0.);
                     let compute_time = *flops as f64 / self.speed as f64 * (self.computations.len() + 1) as f64;
                     let finish_event_id = ctx.emit(CompFinished { id: ctx.event_id }, ctx.id.clone(), compute_time);
 
@@ -114,7 +130,7 @@ impl Actor for Compute {
 
                     self.computations.insert(
                         ctx.event_id,
-                        RunningComputation::new(*memory, finish_event_id, from.clone(), ctx.time(), compute_time),
+                        RunningComputation::new(*memory, finish_event_id, requester.clone(), ctx.time(), compute_time),
                     );
                 }
             }

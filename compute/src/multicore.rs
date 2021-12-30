@@ -7,8 +7,8 @@ use core::cast;
 
 #[derive(Debug, Clone)]
 pub struct Allocation {
-    cores: u64,
-    memory: u64,
+    pub cores: u64,
+    pub memory: u64,
 }
 
 impl Allocation {
@@ -62,6 +62,7 @@ pub struct CompRequest {
     pub min_cores: u64,
     pub max_cores: u64,
     pub cores_dependency: CoresDependency,
+    pub requester: ActorId,
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +85,7 @@ pub struct CompFailed {
 #[derive(Debug, Clone)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
+    pub requester: ActorId,
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +102,7 @@ pub struct AllocationFailed {
 #[derive(Debug, Clone)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
+    pub requester: ActorId,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +119,7 @@ pub struct DeallocationFailed {
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct Compute {
+    id: ActorId,
     speed: u64,
     #[allow(dead_code)]
     cores_total: u64,
@@ -128,8 +132,9 @@ pub struct Compute {
 }
 
 impl Compute {
-    pub fn new(speed: u64, cores: u64, memory: u64) -> Self {
+    pub fn new(id: &str, speed: u64, cores: u64, memory: u64) -> Self {
         Self {
+            id: ActorId::from(id),
             speed,
             cores_total: cores,
             cores_available: cores,
@@ -139,10 +144,46 @@ impl Compute {
             allocations: HashMap::new(),
         }
     }
+
+    pub fn run(
+        &self,
+        flops: u64,
+        memory: u64,
+        min_cores: u64,
+        max_cores: u64,
+        cores_dependency: CoresDependency,
+        ctx: &mut ActorContext,
+    ) -> u64 {
+        let request = CompRequest {
+            flops,
+            memory,
+            min_cores,
+            max_cores,
+            cores_dependency,
+            requester: ctx.id.clone(),
+        };
+        ctx.emit_now(request, self.id.clone())
+    }
+
+    pub fn allocate(&self, cores: u64, memory: u64, ctx: &mut ActorContext) -> u64 {
+        let request = AllocationRequest {
+            allocation: Allocation::new(cores, memory),
+            requester: ctx.id.clone(),
+        };
+        ctx.emit_now(request, self.id.clone())
+    }
+
+    pub fn deallocate(&self, cores: u64, memory: u64, ctx: &mut ActorContext) -> u64 {
+        let request = DeallocationRequest {
+            allocation: Allocation::new(cores, memory),
+            requester: ctx.id.clone(),
+        };
+        ctx.emit_now(request, self.id.clone())
+    }
 }
 
 impl Actor for Compute {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             CompRequest {
                 flops,
@@ -150,6 +191,7 @@ impl Actor for Compute {
                 min_cores,
                 max_cores,
                 ref cores_dependency,
+                requester,
             } => {
                 if self.memory_available < *memory || self.cores_available < *min_cores {
                     ctx.emit_now(
@@ -160,7 +202,7 @@ impl Actor for Compute {
                                 available_memory: self.memory_available,
                             },
                         },
-                        from.clone(),
+                        requester.clone(),
                     );
                 } else {
                     let cores = self.cores_available.min(*max_cores);
@@ -171,7 +213,7 @@ impl Actor for Compute {
                             id: ctx.event_id,
                             cores,
                         },
-                        from.clone(),
+                        requester.clone(),
                     );
 
                     let speedup = match cores_dependency {
@@ -185,7 +227,7 @@ impl Actor for Compute {
                     let compute_time = *flops as f64 / self.speed as f64 / speedup;
                     ctx.emit(CompFinished { id: ctx.event_id }, ctx.id.clone(), compute_time);
                     self.computations
-                        .insert(ctx.event_id, RunningComputation::new(cores, *memory, from));
+                        .insert(ctx.event_id, RunningComputation::new(cores, *memory, requester.clone()));
                 }
             }
             CompFinished { id } => {
@@ -197,7 +239,7 @@ impl Actor for Compute {
                 self.cores_available += running_computation.cores;
                 ctx.emit(CompFinished { id: *id }, running_computation.actor_id, 0.);
             }
-            AllocationRequest { allocation } => {
+            AllocationRequest { allocation, requester } => {
                 if self.memory_available < allocation.memory || self.cores_available < allocation.cores {
                     ctx.emit_now(
                         AllocationFailed {
@@ -207,25 +249,31 @@ impl Actor for Compute {
                                 available_memory: self.memory_available,
                             },
                         },
-                        from.clone(),
+                        requester.clone(),
                     );
                 } else {
-                    let current_allocation = self.allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
+                    let current_allocation = self
+                        .allocations
+                        .entry(requester.clone())
+                        .or_insert(Allocation::new(0, 0));
                     current_allocation.cores += allocation.cores;
                     current_allocation.memory += allocation.memory;
                     self.cores_available -= allocation.cores;
                     self.memory_available -= allocation.memory;
-                    ctx.emit(AllocationSuccess { id: ctx.event_id }, from.clone(), 0.);
+                    ctx.emit(AllocationSuccess { id: ctx.event_id }, requester.clone(), 0.);
                 }
             }
-            DeallocationRequest { allocation } => {
-                let current_allocation = self.allocations.entry(from.clone()).or_insert(Allocation::new(0, 0));
+            DeallocationRequest { allocation, requester } => {
+                let current_allocation = self
+                    .allocations
+                    .entry(requester.clone())
+                    .or_insert(Allocation::new(0, 0));
                 if current_allocation.cores >= allocation.cores && current_allocation.memory >= allocation.memory {
                     current_allocation.cores -= allocation.cores;
                     current_allocation.memory -= allocation.memory;
                     self.cores_available += allocation.cores;
                     self.memory_available += allocation.memory;
-                    ctx.emit(DeallocationSuccess { id: ctx.event_id }, from.clone(), 0.);
+                    ctx.emit(DeallocationSuccess { id: ctx.event_id }, requester.clone(), 0.);
                 } else {
                     ctx.emit_now(
                         DeallocationFailed {
@@ -235,11 +283,11 @@ impl Actor for Compute {
                                 available_memory: current_allocation.memory,
                             },
                         },
-                        from.clone(),
+                        requester.clone(),
                     );
                 }
                 if current_allocation.cores == 0 && current_allocation.memory == 0 {
-                    self.allocations.remove(&from);
+                    self.allocations.remove(&requester);
                 }
             }
         })

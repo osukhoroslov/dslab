@@ -9,7 +9,11 @@ use core::sim::Simulation;
 #[derive(Debug, Clone)]
 pub struct Start {}
 
+#[derive(Debug, Clone)]
+pub struct Deallocate {}
+
 pub struct TaskActor {
+    compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
     min_cores: u64,
@@ -18,8 +22,16 @@ pub struct TaskActor {
 }
 
 impl TaskActor {
-    pub fn new(flops: u64, memory: u64, min_cores: u64, max_cores: u64, cores_dependency: CoresDependency) -> Self {
+    pub fn new(
+        compute: Rc<RefCell<Compute>>,
+        flops: u64,
+        memory: u64,
+        min_cores: u64,
+        max_cores: u64,
+        cores_dependency: CoresDependency,
+    ) -> Self {
         Self {
+            compute,
             flops,
             memory,
             min_cores,
@@ -34,17 +46,13 @@ impl Actor for TaskActor {
         cast!(match event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                let compute_actor = ActorId::from("compute");
-                ctx.emit(
-                    CompRequest {
-                        flops: self.flops,
-                        memory: self.memory,
-                        min_cores: self.min_cores,
-                        max_cores: self.max_cores,
-                        cores_dependency: self.cores_dependency.clone(),
-                    },
-                    compute_actor,
-                    0.,
+                self.compute.borrow().run(
+                    self.flops,
+                    self.memory,
+                    self.min_cores,
+                    self.max_cores,
+                    self.cores_dependency.clone(),
+                    ctx,
                 );
             }
             CompStarted { id, cores } => {
@@ -85,15 +93,17 @@ impl Actor for TaskActor {
 }
 
 pub struct AllocationActor {
+    compute: Rc<RefCell<Compute>>,
     allocation: Allocation,
     time: f64,
 }
 
 impl AllocationActor {
-    pub fn new(allocation: Allocation, time: f64) -> Self {
+    pub fn new(compute: Rc<RefCell<Compute>>, allocation: Allocation, time: f64) -> Self {
         Self {
-            allocation: allocation,
-            time: time,
+            compute,
+            allocation,
+            time,
         }
     }
 }
@@ -103,21 +113,15 @@ impl Actor for AllocationActor {
         cast!(match event {
             Start {} => {
                 println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                let compute_actor = ActorId::from("compute");
-                ctx.emit(
-                    AllocationRequest {
-                        allocation: self.allocation.clone(),
-                    },
-                    compute_actor.clone(),
-                    0.,
-                );
-                ctx.emit(
-                    DeallocationRequest {
-                        allocation: self.allocation.clone(),
-                    },
-                    compute_actor,
-                    self.time,
-                );
+                self.compute
+                    .borrow()
+                    .allocate(self.allocation.cores, self.allocation.memory, ctx);
+                ctx.emit(Deallocate {}, ctx.id.clone(), self.time);
+            }
+            Deallocate {} => {
+                self.compute
+                    .borrow()
+                    .deallocate(self.allocation.cores, self.allocation.memory, ctx);
             }
             AllocationFailed { id, reason } => {
                 println!(
@@ -167,13 +171,22 @@ impl Actor for AllocationActor {
 
 fn main() {
     let mut sim = Simulation::new(123);
+    let compute = Rc::new(RefCell::new(Compute::new("compute", 1, 10, 1024)));
     sim.add_actor(
         "task1",
-        Rc::new(RefCell::new(TaskActor::new(100, 512, 2, 6, CoresDependency::Linear))),
+        Rc::new(RefCell::new(TaskActor::new(
+            compute.clone(),
+            100,
+            512,
+            2,
+            6,
+            CoresDependency::Linear,
+        ))),
     );
     sim.add_actor(
         "task2",
         Rc::new(RefCell::new(TaskActor::new(
+            compute.clone(),
             100,
             512,
             4,
@@ -184,6 +197,7 @@ fn main() {
     sim.add_actor(
         "task3",
         Rc::new(RefCell::new(TaskActor::new(
+            compute.clone(),
             100,
             512,
             5,
@@ -201,12 +215,46 @@ fn main() {
     );
     sim.add_actor(
         "task4",
-        Rc::new(RefCell::new(TaskActor::new(100, 512, 15, 20, CoresDependency::Linear))),
+        Rc::new(RefCell::new(TaskActor::new(
+            compute.clone(),
+            100,
+            512,
+            15,
+            20,
+            CoresDependency::Linear,
+        ))),
     );
-    sim.add_actor("compute", Rc::new(RefCell::new(Compute::new(1, 10, 1024))));
+    sim.add_actor(
+        "allocate1",
+        Rc::new(RefCell::new(AllocationActor::new(
+            compute.clone(),
+            Allocation::new(6, 100),
+            10.,
+        ))),
+    );
+    sim.add_actor(
+        "allocate2",
+        Rc::new(RefCell::new(AllocationActor::new(
+            compute.clone(),
+            Allocation::new(6, 100),
+            20.,
+        ))),
+    );
+    sim.add_actor(
+        "allocate3",
+        Rc::new(RefCell::new(AllocationActor::new(
+            compute.clone(),
+            Allocation::new(6, 100),
+            30.,
+        ))),
+    );
+    sim.add_actor("compute", compute);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 0.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task3"), 1000.);
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task4"), 2000.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate1"), 5000.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate2"), 5005.);
+    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate3"), 6000.);
     sim.step_until_no_events();
 }
