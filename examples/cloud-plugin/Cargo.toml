@@ -1,0 +1,12 @@
+[package]
+name = "cloud_plugin_example"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+core = { path = "../../core" }
+cloud-plugin = { path = "../../cloud-plugin" }
+rand = "0.8.3"
+sugars = "3.0.0"
+log = "0.4"
+env_logger = "0.8.4"
