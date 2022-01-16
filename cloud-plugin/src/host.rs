@@ -6,12 +6,13 @@ use core::cast;
 
 use crate::monitoring::HostStateUpdate;
 use crate::network::MESSAGE_DELAY;
-use crate::scheduler::VMAllocationFailed;
+use crate::placement_storage::VMAllocationFailed;
+use crate::scheduler::VMAllocationSucceeded;
 use crate::virtual_machine::VMInit;
 use crate::virtual_machine::VirtualMachine;
 
 #[derive(PartialEq)]
-enum AllocationVerdict {
+pub enum AllocationVerdict {
     NotEnoughCPU,
     NotEnoughRAM,
     Success,
@@ -97,19 +98,19 @@ impl HostManager {
     }
 
     fn place_vm(&mut self, time: f64, vm: &VirtualMachine) {
-        self.energy_manager.update_energy(time, self.get_energy_load());
-
         self.cpu_available -= vm.cpu_usage;
         self.ram_available -= vm.ram_usage;
         self.vms.insert(vm.id.clone(), vm.clone());
+
+        self.energy_manager.update_energy(time, self.get_energy_load());
     }
 
     fn remove_vm(&mut self, time: f64, vm_id: &str) {
-        self.energy_manager.update_energy(time, self.get_energy_load());
-
         self.cpu_available += self.vms[vm_id].cpu_usage;
         self.ram_available += self.vms[vm_id].ram_usage;
         self.vms.remove(vm_id);
+
+        self.energy_manager.update_energy(time, self.get_energy_load());
     }
 
     pub fn get_total_consumed(&mut self, time: f64) -> f64 {
@@ -123,6 +124,8 @@ impl HostManager {
 #[derive(Debug)]
 pub struct TryAllocateVM {
     pub vm: VirtualMachine,
+    pub requester: ActorId,
+    pub host_id: String
 }
 
 #[derive(Debug)]
@@ -136,11 +139,14 @@ pub struct ReleaseVmResources {
 impl Actor for HostManager {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            TryAllocateVM { vm } => {
+            TryAllocateVM { vm, requester, host_id } => {
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
                     info!("[time = {}] vm #{} allocated on host #{}", ctx.time(), vm.id, self.id);
-                    ctx.emit_now(VMInit { scheduler_id: from }, vm.actor_id.clone());
+
+                    ctx.emit(VMAllocationSucceeded { vm: vm.clone(), host_id: host_id.to_string() },
+                            requester.clone(), MESSAGE_DELAY);
+                    ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
                     info!(
                         "[time = {}] not enough space for vm #{} on host #{}",
@@ -148,7 +154,8 @@ impl Actor for HostManager {
                         vm.id,
                         self.id
                     );
-                    ctx.emit(VMAllocationFailed { vm: vm.clone() }, from.clone(), MESSAGE_DELAY);
+                    ctx.emit(VMAllocationFailed { vm: vm.clone(), host_id: host_id.to_string() },
+                            from.clone(), MESSAGE_DELAY);
                 }
             }
             SendHostState {} => {

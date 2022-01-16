@@ -14,14 +14,21 @@ fn main() {
 
     let host_one = cloud_sim.spawn_host("h1", 30, 30);
     let host_two = cloud_sim.spawn_host("h2", 30, 30);
-    let allocator = cloud_sim.spawn_allocator("a");
+    let scheduler_one = cloud_sim.spawn_scheduler("s1");
+    let scheduler_two = cloud_sim.spawn_scheduler("s2");
 
-    for i in 0..10 {
+    // spawn vm_0 - vm_4 on scheduler #1
+    for i in 0..5 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, allocator.clone());
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, scheduler_one.clone());
+    }
+    // spawn vm_5 - vm_9 on scheduler #2
+    for i in 5..10 {
+        let vm_name = format!("v{}", i);
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, scheduler_two.clone());
     }
 
-    cloud_sim.steps(170);
+    cloud_sim.steps(220);
     info!(
         "Total energy consumed on host one: {} watt",
         host_one.borrow_mut().get_total_consumed(cloud_sim.current_time())
