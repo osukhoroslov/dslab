@@ -14,7 +14,7 @@ pub struct Task {
     pub name: String,
     pub flops: u64,
     pub state: TaskState,
-    inputs: Vec<usize>,
+    pub inputs: Vec<usize>,
     outputs: Vec<usize>,
     ready_inputs: usize,
 }
@@ -42,27 +42,29 @@ impl Task {
 
 // DATA ITEM ///////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum DataItemState {
     Pending,
     Ready,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct DataItem {
-    name: String, // to be used in future
-    size: u64,    // to be used in future
-    consumers: Vec<usize>,
+    pub name: String, // to be used in future
+    pub size: u64,    // to be used in future
+    pub consumers: Vec<usize>,
     state: DataItemState,
+    pub id: usize,
 }
 
 impl DataItem {
-    pub fn new(name: &str, size: u64, state: DataItemState) -> Self {
+    pub fn new(name: &str, size: u64, state: DataItemState, id: usize) -> Self {
         Self {
             name: name.to_string(),
             size,
             consumers: Vec::new(),
             state,
+            id,
         }
     }
 
@@ -102,19 +104,23 @@ impl DAG {
         self.tasks.get(task_id).unwrap()
     }
 
+    pub fn get_data_item(&self, data_id: usize) -> &DataItem {
+        self.data_items.get(data_id).unwrap()
+    }
+
     pub fn get_ready_tasks(&self) -> &BTreeSet<usize> {
         &self.ready_tasks
     }
 
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Ready);
-        let data_item_id = self.data_items.len();
+        let data_item = DataItem::new(name, size, DataItemState::Ready, self.data_items.len());
+        let data_item_id = data_item.id;
         self.data_items.push(data_item);
         data_item_id
     }
 
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending);
+        let data_item = DataItem::new(name, size, DataItemState::Pending, self.data_items.len());
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
@@ -132,25 +138,38 @@ impl DAG {
         }
     }
 
-    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) {
+    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<DataItem> {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
         match task.state {
             TaskState::Scheduled => {
                 self.ready_tasks.remove(&task_id);
+                Vec::new()
             }
             TaskState::Done => {
+                let mut result = Vec::<DataItem>::new();
                 self.completed_task_count += 1;
                 for d in task.outputs.clone().iter() {
                     let data_item = self.data_items.get_mut(*d).unwrap();
-                    data_item.state = DataItemState::Ready;
-                    for t in data_item.consumers.iter() {
-                        let mut consumer = self.tasks.get_mut(*t).unwrap();
-                        consumer.ready_inputs += 1;
-                        if consumer.ready_inputs == consumer.inputs.len() {
-                            consumer.state = TaskState::Ready;
-                            self.ready_tasks.insert(*t);
-                        }
+                    result.push(data_item.clone());
+                }
+                result
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
+        let mut data_item = self.data_items.get_mut(data_id).unwrap();
+        data_item.state = state;
+        match data_item.state {
+            DataItemState::Ready => {
+                for t in data_item.consumers.iter() {
+                    let mut consumer = self.tasks.get_mut(*t).unwrap();
+                    consumer.ready_inputs += 1;
+                    if consumer.ready_inputs == consumer.inputs.len() {
+                        consumer.state = TaskState::Ready;
+                        self.ready_tasks.insert(*t);
                     }
                 }
             }
