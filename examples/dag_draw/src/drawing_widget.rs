@@ -9,8 +9,11 @@ use crate::app_data::*;
 use crate::data::*;
 
 const BLOCK_WIDTH: f64 = 300.0;
+const BLOCK_X_PADDING: f64 = 10.0;
+const BLOCK_Y_PADDING: f64 = 20.0;
 const LABEL_WIDTH: f64 = BLOCK_WIDTH / 3.0;
 const CORE_SIZE: f64 = 15.0;
+const ROW_STEP: f64 = 20.0;
 
 pub struct DrawingWidget {}
 
@@ -101,8 +104,6 @@ impl DrawingWidget {
 
         let leftx = middlex - BLOCK_WIDTH / 2.;
 
-        let step = 20.0;
-
         let is_uploading = |name: &str, actor: &str| -> bool {
             for transfer in data.transfers.borrow().iter() {
                 if transfer.name != name {
@@ -150,16 +151,16 @@ impl DrawingWidget {
         for file in active_files.into_iter().rev().take(files_limit).rev() {
             // file is downloading, uploading or neither
             if time < file.uploaded {
-                self.draw_download(ctx, Point::new(middlex + 10., *downy + step / 2. + 2.5));
+                self.draw_download(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
             } else if is_uploading(&file.name, actor) {
-                self.draw_upload(ctx, Point::new(middlex + 10., *downy + step / 2. + 2.5));
+                self.draw_upload(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
             }
 
             self.paint_text(ctx, &file.name, 15., Point::new(leftx + 5., *downy), false);
-            *downy += step;
+            *downy += ROW_STEP;
         }
 
-        *downy += step * extra_files_space as f64;
+        *downy += ROW_STEP * extra_files_space as f64;
 
         *downy += 5.;
     }
@@ -181,8 +182,6 @@ impl DrawingWidget {
 
         let leftx = middlex - BLOCK_WIDTH / 2.;
         let rightx = middlex + BLOCK_WIDTH / 2.;
-
-        let step = 20.0;
 
         // title for tasks and border around it
         self.paint_text(ctx, "Tasks", 18., Point::new(leftx + 5., *downy), false);
@@ -225,25 +224,25 @@ impl DrawingWidget {
                 width *= (time - task.started) / (task.completed - task.started);
                 ctx.fill(
                     Rect::from_points(
-                        Point::new(middlex + 5., *downy + step / 2. + 2.5 + CORE_SIZE / 2.),
-                        Point::new(middlex + 5. + width, *downy + step / 2. + 2.5 - CORE_SIZE / 2.),
+                        Point::new(middlex + 5., *downy + ROW_STEP / 2. + 2.5 + CORE_SIZE / 2.),
+                        Point::new(middlex + 5. + width, *downy + ROW_STEP / 2. + 2.5 - CORE_SIZE / 2.),
                     ),
                     &task.color,
                 );
                 ctx.stroke(
                     Rect::from_points(
-                        Point::new(middlex + 5., *downy + step / 2. + 2.5 + CORE_SIZE / 2.),
-                        Point::new(rightx - 5., *downy + step / 2. + 2.5 - CORE_SIZE / 2.),
+                        Point::new(middlex + 5., *downy + ROW_STEP / 2. + 2.5 + CORE_SIZE / 2.),
+                        Point::new(rightx - 5., *downy + ROW_STEP / 2. + 2.5 - CORE_SIZE / 2.),
                     ),
                     &Color::WHITE,
                     1.,
                 );
             }
 
-            *downy += step;
+            *downy += ROW_STEP;
         }
 
-        *downy += step * extra_tasks_space as f64;
+        *downy += ROW_STEP * extra_tasks_space as f64;
         *downy += 5.;
 
         // line below tasks
@@ -366,29 +365,55 @@ impl DrawingWidget {
             1.,
         );
     }
+
+    fn get_actor_height(&self, data: &AppData) -> f64 {
+        let actor_height = 0.
+            + 35.  // title
+            + 50.  // cores
+            + match data.tasks_limit_str.parse::<usize>() {
+                Ok(x) => x as f64 * ROW_STEP + 30.,
+                Err(_) => 0.
+            }  // tasks
+            + match data.files_limit_str.parse::<usize>() {
+                Ok(x) => x as f64 * ROW_STEP + 30.,
+                Err(_) => 0.
+            }; // files
+        actor_height
+    }
+
+    fn get_actors_per_row(&self, width: f64) -> usize {
+        ((width / (BLOCK_WIDTH + BLOCK_X_PADDING * 2.)).floor() as usize).max(1)
+    }
 }
 
 impl Widget<AppData> for DrawingWidget {
-    fn event(&mut self, ctx: &mut EventCtx, _: &Event, _: &mut AppData, _: &Env) {
-        ctx.request_focus();
-    }
+    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut AppData, _: &Env) {}
 
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &AppData, _: &Env) {}
     fn update(&mut self, ctx: &mut UpdateCtx, _: &AppData, _: &AppData, _: &Env) {
         ctx.request_paint();
     }
-    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &AppData, _: &Env) -> druid::Size {
-        bc.max()
+    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, data: &AppData, _: &Env) -> druid::Size {
+        let actor_height = self.get_actor_height(data);
+        let actors_per_row = self.get_actors_per_row(bc.max().width);
+        let rows = (data.compute.borrow().len() + actors_per_row - 1) / actors_per_row + 1;
+        Size::new(
+            bc.max().width,
+            rows as f64 * actor_height + (rows + 1) as f64 * BLOCK_Y_PADDING,
+        )
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _: &Env) {
         let size = ctx.size();
         let time = data.total_time * data.slider;
 
+        let actor_height = self.get_actor_height(data);
+        let actors_per_row = self.get_actors_per_row(size.width).min(data.compute.borrow().len());
+
         self.draw_actor(
             ctx,
             data,
-            Point::new(size.width / 2., 10.),
+            Point::new(size.width / 2., BLOCK_Y_PADDING),
             "scheduler",
             None,
             Some(&data.scheduler_files.borrow()),
@@ -397,9 +422,10 @@ impl Widget<AppData> for DrawingWidget {
         self.paint_text(ctx, &format!("time: {:.3}", time), 15., Point::new(0., 0.), false);
 
         for (i, compute) in (*data.compute.borrow()).iter().enumerate() {
+            let row = i / actors_per_row + 1;
             let position = Point::new(
-                size.width / (data.compute.borrow().len() as f64) * (i as f64 + 0.5),
-                size.height * 0.5,
+                size.width / (actors_per_row as f64) * ((i % actors_per_row) as f64 + 0.5),
+                row as f64 * (actor_height + BLOCK_Y_PADDING) + BLOCK_Y_PADDING,
             );
             self.draw_actor(ctx, data, position, &compute.name, Some(&compute), Some(&compute.files));
         }

@@ -1,6 +1,6 @@
 use std::env;
 
-use druid::widget::{CrossAxisAlignment, Flex, Label, SizedBox, Slider, TextBox, Widget};
+use druid::widget::{CrossAxisAlignment, Flex, Label, Scroll, SizedBox, Slider, TextBox, Widget};
 use druid::Color;
 use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
 
@@ -66,7 +66,14 @@ fn make_layout() -> impl Widget<AppData> {
                         .border(Color::WHITE, 1.),
                 )
                 .with_spacer(PADDING)
-                .with_flex_child(DrawingWidget {}.padding(PADDING).border(Color::WHITE, 1.), 1.)
+                .with_flex_child(
+                    Scroll::new(DrawingWidget {})
+                        .vertical()
+                        .padding(PADDING)
+                        .border(Color::WHITE, 1.)
+                        .expand_height(),
+                    1.,
+                )
                 .cross_axis_alignment(CrossAxisAlignment::Start),
             1.,
         )
