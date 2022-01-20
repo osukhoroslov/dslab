@@ -22,9 +22,10 @@ pub struct CloudSimulation {
 
 impl CloudSimulation {
     pub fn new(sim: Simulation) -> Self {
+        let monitoring = rc!(refcell!(Monitoring::new()));
         Self {
-            monitoring: rc!(refcell!(Monitoring::new())),
-            placement_storage: rc!(refcell!(PlacementStorage::new())),
+            monitoring: monitoring.clone(),
+            placement_storage: rc!(refcell!(PlacementStorage::new(monitoring.clone()))),
             simulation: sim,
         }
     }
@@ -41,7 +42,7 @@ impl CloudSimulation {
             id.to_string(),
             ActorId::from("monitoring")
         )));
-        self.placement_storage.borrow_mut().add_host(id.to_string(), cpu_capacity, ram_capacity);
+        self.monitoring.borrow_mut().add_host(id.to_string(), cpu_capacity, ram_capacity);
 
         let actor = self.simulation.add_actor(id, host.clone());
         self.simulation
@@ -53,6 +54,7 @@ impl CloudSimulation {
         let scheduler = rc!(refcell!(Scheduler::new(ActorId::from(id),
                                                     self.monitoring.clone(),
                                                     ActorId::from("placement_storage"))));
+        self.monitoring.borrow_mut().add_scheduler(id.to_string());
         self.simulation.add_actor(id, scheduler)
     }
 

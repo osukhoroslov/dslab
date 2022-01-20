@@ -1,80 +1,49 @@
 use log::info;
-use std::collections::BTreeMap;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
 use crate::host::AllocationVerdict;
 use crate::host::TryAllocateVM as TryAllocateVMOnHost;
+use crate::monitoring::Monitoring;
 use crate::network::MESSAGE_DELAY;
+use crate::scheduler::VMAllocationSucceeded;
 use crate::scheduler::VMAllocationFailed as ReportAllocationFailure;
+use crate::scheduler::VMFinished as DropVMOnScheduler;
+use crate::storage::Storage;
 use crate::virtual_machine::VirtualMachine;
 
 #[derive(Debug, Clone)]
-pub struct HostInfo {
-    pub cpu_available: u32,
-    pub ram_available: u32,
-
-    pub cpu_full: u32,
-    pub ram_full: u32,
-
-    pub vms: BTreeMap<String, VirtualMachine>,
-}
-
-impl HostInfo {
-    pub fn new(cpu_full: u32, ram_full: u32) -> Self {
-        Self {
-            cpu_available: cpu_full,
-            ram_available: ram_full,
-            cpu_full,
-            ram_full,
-            vms: BTreeMap::new(),
-        }
-    }
-}
-
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone)]
 pub struct PlacementStorage {
-    hosts: BTreeMap<String, HostInfo>,
+    storage: Storage,
+    monitoring: Rc<RefCell<Monitoring>>,
 }
 
 impl PlacementStorage {
-    pub fn new() -> Self {
+    pub fn new(monitoring: Rc<RefCell<Monitoring>>) -> Self {
         Self {
-            hosts: BTreeMap::new(),
+            storage: Storage::new(monitoring.clone()),
+            monitoring: monitoring.clone()
         }
     }
 
     pub fn add_host(&mut self, id: String, cpu_full: u32, ram_full: u32) {
-        self.hosts.insert(id, HostInfo::new(cpu_full, ram_full));
+        self.storage.add_host(id.clone(), cpu_full, ram_full);
     }
 
-    fn can_allocate(&self, vm: &VirtualMachine, host_id: &String) -> AllocationVerdict {
-        if self.hosts[host_id].cpu_available < vm.cpu_usage {
-            return AllocationVerdict::NotEnoughCPU;
-        }
-        if self.hosts[host_id].ram_available < vm.ram_usage {
-            return AllocationVerdict::NotEnoughRAM;
-        }
-        return AllocationVerdict::Success;
+    fn can_allocate(&mut self, vm: &VirtualMachine, host_id: &String) -> AllocationVerdict {
+        self.storage.can_allocate(&vm, &host_id)
     }
 
     fn place_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.hosts.get_mut(host_id).map(|host| {
-            host.cpu_available -= vm.cpu_usage;
-            host.ram_available -= vm.ram_usage;
-            host.vms.insert(vm.id.clone(), vm.clone());
-        });
+        self.storage.place_vm(&vm, &host_id);
     }
 
     fn remove_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.hosts.get_mut(host_id).map(|host| {
-            host.cpu_available += vm.cpu_usage;
-            host.ram_available += vm.ram_usage;
-            host.vms.remove(&vm.id);
-        });
+        self.storage.remove_vm(&vm, &host_id);
     }
 }
 
@@ -108,11 +77,18 @@ impl Actor for PlacementStorage {
                         ctx.time(), vm.id, host_id
                     );
                     ctx.emit(TryAllocateVMOnHost { vm: vm.clone(),
-                                                   requester: from,
                                                    host_id: host_id.to_string()
                             },
                             ActorId::from(host_id), MESSAGE_DELAY
                     );
+
+                    for host in self.monitoring.borrow().get_schedulers_list() {
+                        ctx.emit(VMAllocationSucceeded { vm: vm.clone(),
+                                                         host_id: host_id.to_string()
+                            },
+                            ActorId::from(&host), MESSAGE_DELAY
+                        );
+                    }
                 } else {
                     info!(
                         "[time = {}] not enough space for vm #{} on host #{} in placement storage",
@@ -126,11 +102,25 @@ impl Actor for PlacementStorage {
             }
             VMAllocationFailed { vm, host_id } => {
                 self.remove_vm(vm, host_id);
-                ctx.emit(ReportAllocationFailure { vm: vm.clone(), host_id: host_id.to_string() }, 
-                         from.clone(), MESSAGE_DELAY);
+
+                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                    ctx.emit(DropVMOnScheduler { vm: vm.clone(),
+                                          host_id: host_id.to_string()
+                        },
+                        ActorId::from(&scheduler), MESSAGE_DELAY
+                    );
+                }
             }
             VMFinished { vm, host_id } => {
                 self.remove_vm(vm, host_id);
+
+                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                    ctx.emit(DropVMOnScheduler { vm: vm.clone(),
+                                                 host_id: host_id.to_string()
+                        },
+                        ActorId::from(&scheduler), MESSAGE_DELAY
+                    );
+                }
             }
         })
     }

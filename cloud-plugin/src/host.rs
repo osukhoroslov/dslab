@@ -7,7 +7,7 @@ use core::cast;
 use crate::monitoring::HostStateUpdate;
 use crate::network::MESSAGE_DELAY;
 use crate::placement_storage::VMAllocationFailed;
-use crate::scheduler::VMAllocationSucceeded;
+use crate::placement_storage::VMFinished as PlacementStoreRemoveVM;
 use crate::virtual_machine::VMInit;
 use crate::virtual_machine::VirtualMachine;
 
@@ -124,12 +124,16 @@ impl HostManager {
 #[derive(Debug)]
 pub struct TryAllocateVM {
     pub vm: VirtualMachine,
-    pub requester: ActorId,
     pub host_id: String
 }
 
 #[derive(Debug)]
 pub struct SendHostState {}
+
+#[derive(Debug)]
+pub struct VMFinished {
+    pub vm: VirtualMachine
+}
 
 #[derive(Debug)]
 pub struct ReleaseVmResources {
@@ -139,13 +143,11 @@ pub struct ReleaseVmResources {
 impl Actor for HostManager {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            TryAllocateVM { vm, requester, host_id } => {
+            TryAllocateVM { vm, host_id } => {
                 if self.can_allocate(vm) == AllocationVerdict::Success {
                     self.place_vm(ctx.time(), vm);
                     info!("[time = {}] vm #{} allocated on host #{}", ctx.time(), vm.id, self.id);
 
-                    ctx.emit(VMAllocationSucceeded { vm: vm.clone(), host_id: host_id.to_string() },
-                            requester.clone(), MESSAGE_DELAY);
                     ctx.emit_now(VMInit { }, vm.actor_id.clone());
                 } else {
                     info!(
@@ -175,6 +177,10 @@ impl Actor for HostManager {
                 );
 
                 ctx.emit(SendHostState {}, ctx.id.clone(), STATS_SEND_PERIOD);
+            }
+            VMFinished { vm } => {
+                ctx.emit(PlacementStoreRemoveVM { vm: vm.clone(), host_id: self.id.clone() },
+                         ActorId::from("placement_storage"), MESSAGE_DELAY);
             }
             ReleaseVmResources { vm_id } => {
                 info!(

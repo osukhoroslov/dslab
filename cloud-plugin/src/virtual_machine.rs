@@ -3,7 +3,7 @@ use core::match_event;
 use log::info;
 
 use crate::host::ReleaseVmResources;
-use crate::placement_storage::VMFinished;
+use crate::host::VMFinished;
 use crate::network::MESSAGE_DELAY;
 
 pub static VM_INIT_TIME: f64 = 1.0;
@@ -71,14 +71,11 @@ impl Actor for VirtualMachine {
             },
             VMFinish { host_actor_id } => {
                 info!("[time = {}] vm #{} stopped due to lifecycle end", ctx.time(), self.id);
-                ctx.emit(VMFinished { host_id: host_actor_id.to_string(), vm: self.clone() },
-                    ActorId::from("placement_storage"),
-                    MESSAGE_DELAY
-                );
                 ctx.emit(ReleaseVmResources { vm_id: self.id.clone() },
                     host_actor_id.clone(),
                     VM_FINISH_TIME
                 );
+                ctx.emit(VMFinished { vm: self.clone() }, host_actor_id.clone(), MESSAGE_DELAY);
             },
         })
     }
