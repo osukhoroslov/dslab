@@ -7,28 +7,28 @@ use core::cast;
 
 #[derive(Debug, Clone)]
 pub struct Allocation {
-    pub cores: u64,
+    pub cores: u32,
     pub memory: u64,
 }
 
 impl Allocation {
-    pub fn new(cores: u64, memory: u64) -> Self {
+    pub fn new(cores: u32, memory: u64) -> Self {
         Self { cores, memory }
     }
 }
 
 // [1 .. max_cores] -> [1, +inf]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum CoresDependency {
     Linear,
     LinearWithFixed { fixed_part: f64 },
-    Custom { func: fn(u64) -> f64 },
+    Custom { func: fn(u32) -> f64 },
 }
 
 #[derive(Debug, Clone)]
 pub enum FailReason {
     NotEnoughResources {
-        available_cores: u64,
+        available_cores: u32,
         available_memory: u64,
     },
     Other {
@@ -38,13 +38,13 @@ pub enum FailReason {
 
 #[derive(Debug)]
 struct RunningComputation {
-    cores: u64,
+    cores: u32,
     memory: u64,
     actor_id: ActorId,
 }
 
 impl RunningComputation {
-    fn new(cores: u64, memory: u64, actor_id: ActorId) -> Self {
+    fn new(cores: u32, memory: u64, actor_id: ActorId) -> Self {
         RunningComputation {
             cores,
             memory,
@@ -59,8 +59,8 @@ impl RunningComputation {
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
-    pub min_cores: u64,
-    pub max_cores: u64,
+    pub min_cores: u32,
+    pub max_cores: u32,
     pub cores_dependency: CoresDependency,
     pub requester: ActorId,
 }
@@ -68,7 +68,7 @@ pub struct CompRequest {
 #[derive(Debug, Clone)]
 pub struct CompStarted {
     pub id: u64,
-    pub cores: u64,
+    pub cores: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -121,10 +121,8 @@ pub struct DeallocationFailed {
 pub struct Compute {
     id: ActorId,
     speed: u64,
-    #[allow(dead_code)]
-    cores_total: u64,
-    cores_available: u64,
-    #[allow(dead_code)]
+    cores_total: u32,
+    cores_available: u32,
     memory_total: u64,
     memory_available: u64,
     computations: HashMap<u64, RunningComputation>,
@@ -132,7 +130,7 @@ pub struct Compute {
 }
 
 impl Compute {
-    pub fn new(id: &str, speed: u64, cores: u64, memory: u64) -> Self {
+    pub fn new(id: &str, speed: u64, cores: u32, memory: u64) -> Self {
         Self {
             id: ActorId::from(id),
             speed,
@@ -145,12 +143,32 @@ impl Compute {
         }
     }
 
+    pub fn speed(&self) -> u64 {
+        self.speed
+    }
+
+    pub fn cores_total(&self) -> u32 {
+        self.cores_total
+    }
+
+    pub fn cores_avialable(&self) -> u32 {
+        self.cores_available
+    }
+
+    pub fn memory_total(&self) -> u64 {
+        self.memory_total
+    }
+
+    pub fn memory_avialable(&self) -> u64 {
+        self.memory_available
+    }
+
     pub fn run(
         &self,
         flops: u64,
         memory: u64,
-        min_cores: u64,
-        max_cores: u64,
+        min_cores: u32,
+        max_cores: u32,
         cores_dependency: CoresDependency,
         ctx: &mut ActorContext,
     ) -> u64 {
@@ -165,7 +183,7 @@ impl Compute {
         ctx.emit_now(request, self.id.clone())
     }
 
-    pub fn allocate(&self, cores: u64, memory: u64, ctx: &mut ActorContext) -> u64 {
+    pub fn allocate(&self, cores: u32, memory: u64, ctx: &mut ActorContext) -> u64 {
         let request = AllocationRequest {
             allocation: Allocation::new(cores, memory),
             requester: ctx.id.clone(),
@@ -173,7 +191,7 @@ impl Compute {
         ctx.emit_now(request, self.id.clone())
     }
 
-    pub fn deallocate(&self, cores: u64, memory: u64, ctx: &mut ActorContext) -> u64 {
+    pub fn deallocate(&self, cores: u32, memory: u64, ctx: &mut ActorContext) -> u64 {
         let request = DeallocationRequest {
             allocation: Allocation::new(cores, memory),
             requester: ctx.id.clone(),
