@@ -1,5 +1,4 @@
 mod common;
-mod compute;
 mod master;
 mod network;
 mod storage;
@@ -11,12 +10,12 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use crate::common::Start;
-use crate::compute::Compute;
 use crate::master::{Master, ReportStatus};
 use crate::network::{Network, NETWORK_ID};
 use crate::storage::Storage;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
+use compute::multicore::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
 
@@ -56,7 +55,8 @@ fn main() {
         let compute = rc!(refcell!(Compute::new(
             &compute_id,
             rand.gen_range(1..10),
-            rand.gen_range(1..4)
+            rand.gen_range(1..4),
+            rand.gen_range(1..4) * 1024,
         )));
         sim.add_actor(&compute_id, compute.clone());
         let storage_id = format!("/{}/disk", host);
@@ -86,7 +86,11 @@ fn main() {
     for i in 0..task_count {
         let task = TaskRequest {
             id: i,
-            comp_size: rand.gen_range(10..100),
+            flops: rand.gen_range(10..100),
+            memory: rand.gen_range(1..8) * 128,
+            min_cores: 1,
+            max_cores: 1,
+            cores_dependency: CoresDependency::Linear,
             input_size: rand.gen_range(100..1000),
             output_size: rand.gen_range(10..100),
         };
