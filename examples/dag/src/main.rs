@@ -59,16 +59,15 @@ fn main() {
     let mut sim = Simulation::new(123);
 
     let mut compute_actors: Vec<Resource> = Vec::new();
-    let mut add_compute = |speed: u64, cores: u64, memory: u64| {
+    let mut add_compute = |speed: u64, cores: u32, memory: u64| {
         let name = format!("compute{}", compute_actors.len() + 1);
         let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
         sim.add_actor(&name, compute.clone());
         let resource = Resource {
             compute,
             actor_id: ActorId::from(&name),
-            speed,
-            available_cores: cores,
-            available_memory: memory,
+            cores_available: cores,
+            memory_available: memory,
         };
         compute_actors.push(resource);
     };

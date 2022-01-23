@@ -50,21 +50,19 @@ pub enum DataItemState {
 
 #[derive(Clone)]
 pub struct DataItem {
-    pub name: String, // to be used in future
-    pub size: u64,    // to be used in future
+    pub name: String,
+    pub size: u64,
     pub consumers: Vec<usize>,
     state: DataItemState,
-    pub id: usize,
 }
 
 impl DataItem {
-    pub fn new(name: &str, size: u64, state: DataItemState, id: usize) -> Self {
+    pub fn new(name: &str, size: u64, state: DataItemState) -> Self {
         Self {
             name: name.to_string(),
             size,
             consumers: Vec::new(),
             state,
-            id,
         }
     }
 
@@ -113,14 +111,14 @@ impl DAG {
     }
 
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Ready, self.data_items.len());
-        let data_item_id = data_item.id;
+        let data_item = DataItem::new(name, size, DataItemState::Ready);
+        let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         data_item_id
     }
 
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending, self.data_items.len());
+        let data_item = DataItem::new(name, size, DataItemState::Pending);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
@@ -138,7 +136,7 @@ impl DAG {
         }
     }
 
-    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<DataItem> {
+    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<usize> {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
         match task.state {
@@ -147,13 +145,8 @@ impl DAG {
                 Vec::new()
             }
             TaskState::Done => {
-                let mut result = Vec::<DataItem>::new();
                 self.completed_task_count += 1;
-                for d in task.outputs.clone().iter() {
-                    let data_item = self.data_items.get_mut(*d).unwrap();
-                    result.push(data_item.clone());
-                }
-                result
+                task.outputs.clone()
             }
             _ => Vec::new(),
         }

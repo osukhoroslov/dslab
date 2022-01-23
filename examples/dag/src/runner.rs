@@ -24,9 +24,15 @@ struct TraceLog {
 pub struct Resource {
     pub compute: Rc<RefCell<Compute>>,
     pub actor_id: ActorId,
-    pub speed: u64,
-    pub available_cores: u64,
-    pub available_memory: u64,
+    pub cores_available: u32,
+    pub memory_available: u64,
+}
+
+pub struct DataTransfer {
+    pub data_id: usize,
+    pub task_id: usize,
+    pub from: ActorId,
+    pub to: ActorId,
 }
 
 pub struct DAGRunner {
@@ -34,12 +40,10 @@ pub struct DAGRunner {
     scheduled_tasks: BTreeSet<usize>,
     network: Rc<RefCell<Network>>,
     resources: Vec<Resource>,
-    task_ids: HashMap<u64, usize>,
+    computations: HashMap<u64, usize>,
     task_location: HashMap<usize, usize>,
-    data_ids: HashMap<usize, usize>,
+    data_transfers: HashMap<usize, DataTransfer>,
     task_inputs: HashMap<usize, HashSet<usize>>,
-    data_for_task: HashMap<usize, usize>,
-    data_location: HashMap<usize, String>,
     trace_log: TraceLog,
 }
 
@@ -50,12 +54,10 @@ impl DAGRunner {
             scheduled_tasks: BTreeSet::new(),
             network,
             resources,
-            task_ids: HashMap::new(),
+            computations: HashMap::new(),
             task_location: HashMap::new(),
-            data_ids: HashMap::new(),
+            data_transfers: HashMap::new(),
             task_inputs: HashMap::new(),
-            data_for_task: HashMap::new(),
-            data_location: HashMap::new(),
             trace_log: TraceLog {
                 resources: Vec::new(),
                 events: Vec::new(),
@@ -73,8 +75,8 @@ impl DAGRunner {
         for resource in self.resources.iter() {
             self.trace_log.resources.push(json!({
                 "id": resource.actor_id.to().clone(),
-                "speed": resource.speed,
-                "cores": resource.available_cores,
+                "speed": resource.compute.borrow().speed(),
+                "cores": resource.cores_available,
             }));
         }
     }
@@ -94,8 +96,10 @@ impl DAGRunner {
         let data_items = self.dag.update_task_state(task_id, TaskState::Done);
         self.scheduled_tasks.remove(&task_id);
         let location = *self.task_location.get(&task_id).unwrap();
-        self.resources[location].available_cores += 1;
-        for data_item in data_items {
+        self.task_location.remove(&task_id);
+        self.resources[location].cores_available += 1;
+        for &data_item_id in data_items.iter() {
+            let data_item = self.dag.get_data_item(data_item_id);
             let data_id = self.network.borrow_mut().transfer_data(
                 self.resources[location].actor_id.clone(),
                 ctx.id.clone(),
@@ -103,8 +107,12 @@ impl DAGRunner {
                 ctx.id.clone(),
                 ctx,
             );
-            self.data_ids.insert(data_id, data_item.id);
-            self.data_location.insert(data_item.id, ctx.id.to().clone());
+            self.data_transfers.insert(data_id, DataTransfer {
+                data_id: data_item_id,
+                task_id,
+                from: self.resources[location].actor_id.clone(),
+                to: ctx.id.clone(),
+            });
             DAGRunner::log_event(
                 &mut self.trace_log,
                 ctx,
@@ -134,9 +142,11 @@ impl DAGRunner {
     }
 
     pub fn on_data_transfered(&mut self, data_event_id: usize, ctx: &mut ActorContext) {
-        let data_id = *self.data_ids.get(&data_event_id).unwrap();
+        let data_transfer = self.data_transfers.get(&data_event_id).unwrap();
+        let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
-        if let Some(&task_id) = self.data_for_task.get(&data_id) {
+        if data_transfer.from == ctx.id {
+            let task_id = data_transfer.task_id;
             let location = *self.task_location.get(&task_id).unwrap();
             DAGRunner::log_event(
                 &mut self.trace_log,
@@ -152,7 +162,7 @@ impl DAGRunner {
             );
             let task = self.dag.get_task(task_id);
 
-            let left_inputs = self.task_inputs.entry(task_id).or_insert(HashSet::new());
+            let left_inputs = self.task_inputs.entry(task_id).or_default();
             left_inputs.remove(&data_id);
             if left_inputs.is_empty() {
                 let computation_id = self.resources[location].compute.borrow_mut().run(
@@ -163,7 +173,7 @@ impl DAGRunner {
                     CoresDependency::Linear,
                     ctx,
                 );
-                self.task_ids.insert(computation_id, task_id);
+                self.computations.insert(computation_id, task_id);
 
                 DAGRunner::log_event(
                     &mut self.trace_log,
@@ -183,7 +193,7 @@ impl DAGRunner {
                 json!({
                     "time": ctx.time(),
                     "type": "finish_uploading",
-                    "from": self.data_location.get(&data_id).unwrap(),
+                    "from": self.data_transfers.get(&data_event_id).unwrap().from.to().clone(),
                     "to": "scheduler",
                     "id": data_event_id,
                     "name": data_item.name.clone(),
@@ -212,10 +222,10 @@ impl DAGRunner {
     fn schedule_task(&mut self, task_id: usize, ctx: &mut ActorContext) -> bool {
         let task = self.dag.get_task(task_id);
         for (i, resource) in self.resources.iter_mut().enumerate() {
-            if resource.available_cores == 0 {
+            if resource.cores_available == 0 {
                 continue;
             }
-            resource.available_cores -= 1;
+            resource.cores_available -= 1;
             self.task_inputs.insert(task_id, task.inputs.iter().cloned().collect());
             for &data_id in task.inputs.iter() {
                 let data_item = self.dag.get_data_item(data_id);
@@ -226,8 +236,12 @@ impl DAGRunner {
                     ctx.id.clone(),
                     ctx,
                 );
-                self.data_ids.insert(data_event_id, data_id);
-                self.data_for_task.insert(data_id, task_id);
+                self.data_transfers.insert(data_event_id, DataTransfer {
+                    data_id: data_id,
+                    task_id,
+                    from: ctx.id.clone(),
+                    to: resource.actor_id.clone(),
+                });
                 DAGRunner::log_event(
                     &mut self.trace_log,
                     ctx,
@@ -305,7 +319,8 @@ impl Actor for DAGRunner {
             }
             CompStarted { .. } => {}
             CompFinished { id } => {
-                self.on_task_completed(*self.task_ids.get(id).unwrap(), ctx);
+                self.on_task_completed(*self.computations.get(id).unwrap(), ctx);
+                self.computations.remove(id);
             }
             DataTransferCompleted { data } => {
                 let data_id = data.id;
