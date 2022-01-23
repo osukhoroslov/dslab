@@ -21,33 +21,33 @@ fn main() {
     let data_part1 = dag.add_data_item("part1", 128);
     let data_part2 = dag.add_data_item("part2", 64);
 
-    let map1 = dag.add_task("map1", 100);
+    let map1 = dag.add_task("map1", 100, 512, 1, 2, CoresDependency::Linear);
     dag.add_data_dependency(data_part1, map1);
     let map1_out1 = dag.add_task_output(map1, "map1_out1", 10);
     let map1_out2 = dag.add_task_output(map1, "map1_out2", 10);
     let map1_out3 = dag.add_task_output(map1, "map1_out3", 10);
     let map1_out4 = dag.add_task_output(map1, "map1_out4", 10);
 
-    let map2 = dag.add_task("map2", 120);
+    let map2 = dag.add_task("map2", 120, 512, 2, 4, CoresDependency::Linear);
     dag.add_data_dependency(data_part2, map2);
     let map2_out1 = dag.add_task_output(map2, "map2_out1", 10);
     let map2_out2 = dag.add_task_output(map2, "map2_out2", 10);
     let map2_out3 = dag.add_task_output(map2, "map2_out3", 10);
     let map2_out4 = dag.add_task_output(map2, "map2_out4", 10);
 
-    let reduce1 = dag.add_task("reduce1", 60);
+    let reduce1 = dag.add_task("reduce1", 60, 128, 2, 3, CoresDependency::Linear);
     dag.add_data_dependency(map1_out1, reduce1);
     dag.add_data_dependency(map2_out1, reduce1);
 
-    let reduce2 = dag.add_task("reduce2", 50);
+    let reduce2 = dag.add_task("reduce2", 50, 128, 1, 1, CoresDependency::Linear);
     dag.add_data_dependency(map1_out2, reduce2);
     dag.add_data_dependency(map2_out2, reduce2);
 
-    let reduce3 = dag.add_task("reduce3", 100);
+    let reduce3 = dag.add_task("reduce3", 100, 128, 1, 2, CoresDependency::Linear);
     dag.add_data_dependency(map1_out3, reduce3);
     dag.add_data_dependency(map2_out3, reduce3);
 
-    let reduce4 = dag.add_task("reduce4", 110);
+    let reduce4 = dag.add_task("reduce4", 110, 128, 1, 1, CoresDependency::Linear);
     dag.add_data_dependency(map1_out4, reduce4);
     dag.add_data_dependency(map2_out4, reduce4);
 
@@ -71,8 +71,8 @@ fn main() {
         };
         compute_actors.push(resource);
     };
-    add_compute(10, 1, 1024);
-    add_compute(20, 1, 1024);
+    add_compute(10, 2, 256);
+    add_compute(20, 1, 512);
     add_compute(30, 4, 1024);
 
     let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));

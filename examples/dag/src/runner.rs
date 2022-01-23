@@ -43,6 +43,7 @@ pub struct DAGRunner {
     computations: HashMap<u64, usize>,
     task_location: HashMap<usize, usize>,
     data_transfers: HashMap<usize, DataTransfer>,
+    task_cores: HashMap<usize, u32>,
     task_inputs: HashMap<usize, HashSet<usize>>,
     trace_log: TraceLog,
 }
@@ -57,6 +58,7 @@ impl DAGRunner {
             computations: HashMap::new(),
             task_location: HashMap::new(),
             data_transfers: HashMap::new(),
+            task_cores: HashMap::new(),
             task_inputs: HashMap::new(),
             trace_log: TraceLog {
                 resources: Vec::new(),
@@ -77,12 +79,13 @@ impl DAGRunner {
                 "id": resource.actor_id.to().clone(),
                 "speed": resource.compute.borrow().speed(),
                 "cores": resource.cores_available,
+                "memory": resource.memory_available,
             }));
         }
     }
 
     pub fn on_task_completed(&mut self, task_id: usize, ctx: &mut ActorContext) {
-        let task = self.dag.get_task(task_id);
+        let task = (*self.dag.get_task(task_id)).clone();
         DAGRunner::log_event(
             &mut self.trace_log,
             ctx,
@@ -97,7 +100,8 @@ impl DAGRunner {
         self.scheduled_tasks.remove(&task_id);
         let location = *self.task_location.get(&task_id).unwrap();
         self.task_location.remove(&task_id);
-        self.resources[location].cores_available += 1;
+        self.resources[location].cores_available += self.task_cores.get(&task_id).unwrap();
+        self.resources[location].memory_available += task.memory;
         for &data_item_id in data_items.iter() {
             let data_item = self.dag.get_data_item(data_item_id);
             let data_id = self.network.borrow_mut().transfer_data(
@@ -107,12 +111,15 @@ impl DAGRunner {
                 ctx.id.clone(),
                 ctx,
             );
-            self.data_transfers.insert(data_id, DataTransfer {
-                data_id: data_item_id,
-                task_id,
-                from: self.resources[location].actor_id.clone(),
-                to: ctx.id.clone(),
-            });
+            self.data_transfers.insert(
+                data_id,
+                DataTransfer {
+                    data_id: data_item_id,
+                    task_id,
+                    from: self.resources[location].actor_id.clone(),
+                    to: ctx.id.clone(),
+                },
+            );
             DAGRunner::log_event(
                 &mut self.trace_log,
                 ctx,
@@ -165,11 +172,12 @@ impl DAGRunner {
             let left_inputs = self.task_inputs.entry(task_id).or_default();
             left_inputs.remove(&data_id);
             if left_inputs.is_empty() {
+                let cores = *self.task_cores.get(&task_id).unwrap();
                 let computation_id = self.resources[location].compute.borrow_mut().run(
                     task.flops,
-                    0,
-                    1,
-                    1,
+                    task.memory,
+                    cores,
+                    cores,
                     CoresDependency::Linear,
                     ctx,
                 );
@@ -208,10 +216,9 @@ impl DAGRunner {
         let mut scheduled = Vec::new();
         let ready_tasks = self.dag.get_ready_tasks().clone();
         for t in ready_tasks {
-            if !self.schedule_task(t, ctx) {
-                break;
+            if self.schedule_task(t, ctx) {
+                scheduled.push(t);
             }
-            scheduled.push(t);
         }
         for t in scheduled {
             self.dag.update_task_state(t, TaskState::Scheduled);
@@ -222,11 +229,14 @@ impl DAGRunner {
     fn schedule_task(&mut self, task_id: usize, ctx: &mut ActorContext) -> bool {
         let task = self.dag.get_task(task_id);
         for (i, resource) in self.resources.iter_mut().enumerate() {
-            if resource.cores_available == 0 {
+            if resource.cores_available < task.min_cores || resource.memory_available < task.memory {
                 continue;
             }
-            resource.cores_available -= 1;
+            let cores = task.max_cores.min(resource.cores_available);
+            resource.cores_available -= cores;
+            resource.memory_available -= task.memory;
             self.task_inputs.insert(task_id, task.inputs.iter().cloned().collect());
+            self.task_cores.insert(task_id, cores);
             for &data_id in task.inputs.iter() {
                 let data_item = self.dag.get_data_item(data_id);
                 let data_event_id = self.network.borrow_mut().transfer_data(
@@ -236,12 +246,15 @@ impl DAGRunner {
                     ctx.id.clone(),
                     ctx,
                 );
-                self.data_transfers.insert(data_event_id, DataTransfer {
-                    data_id: data_id,
-                    task_id,
-                    from: ctx.id.clone(),
-                    to: resource.actor_id.clone(),
-                });
+                self.data_transfers.insert(
+                    data_event_id,
+                    DataTransfer {
+                        data_id: data_id,
+                        task_id,
+                        from: ctx.id.clone(),
+                        to: resource.actor_id.clone(),
+                    },
+                );
                 DAGRunner::log_event(
                     &mut self.trace_log,
                     ctx,
@@ -265,6 +278,8 @@ impl DAGRunner {
                     "id": task_id,
                     "name": task.name.clone(),
                     "location": resource.actor_id.to().clone(),
+                    "cores": cores,
+                    "memory": task.memory,
                 }),
             );
             return true;
@@ -276,7 +291,12 @@ impl DAGRunner {
         let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
         let log_message = match event["type"].as_str().unwrap().as_ref() {
             "task_scheduled" => {
-                format!("scheduled task {} to {}", get_field("name"), get_field("location"))
+                format!(
+                    "scheduled task {} to {} on {} cores",
+                    get_field("name"),
+                    get_field("location"),
+                    event["cores"].as_u64().unwrap()
+                )
             }
             "task_started" => {
                 format!("started task {}", get_field("name"))

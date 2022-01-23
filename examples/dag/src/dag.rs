@@ -1,8 +1,9 @@
+use compute::multicore::CoresDependency;
 use std::collections::BTreeSet;
 
 // TASK ////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum TaskState {
     Pending,
     Ready,
@@ -10,9 +11,14 @@ pub enum TaskState {
     Done,
 }
 
+#[derive(Clone)]
 pub struct Task {
     pub name: String,
     pub flops: u64,
+    pub memory: u64,
+    pub min_cores: u32,
+    pub max_cores: u32,
+    pub cores_dependency: CoresDependency,
     pub state: TaskState,
     pub inputs: Vec<usize>,
     outputs: Vec<usize>,
@@ -20,10 +26,21 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(name: &str, flops: u64) -> Self {
+    pub fn new(
+        name: &str,
+        flops: u64,
+        memory: u64,
+        min_cores: u32,
+        max_cores: u32,
+        cores_dependency: CoresDependency,
+    ) -> Self {
         Self {
             name: name.to_string(),
             flops,
+            memory,
+            min_cores,
+            max_cores,
+            cores_dependency,
             state: TaskState::Ready,
             inputs: Vec::new(),
             outputs: Vec::new(),
@@ -90,8 +107,16 @@ impl DAG {
         }
     }
 
-    pub fn add_task(&mut self, name: &str, flops: u64) -> usize {
-        let task = Task::new(name, flops);
+    pub fn add_task(
+        &mut self,
+        name: &str,
+        flops: u64,
+        memory: u64,
+        min_cores: u32,
+        max_cores: u32,
+        cores_dependency: CoresDependency,
+    ) -> usize {
+        let task = Task::new(name, flops, memory, min_cores, max_cores, cores_dependency);
         let task_id = self.tasks.len();
         self.tasks.push(task);
         self.ready_tasks.insert(task_id);
