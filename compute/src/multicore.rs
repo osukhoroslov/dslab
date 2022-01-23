@@ -151,7 +151,7 @@ impl Compute {
         self.cores_total
     }
 
-    pub fn cores_avialable(&self) -> u32 {
+    pub fn cores_available(&self) -> u32 {
         self.cores_available
     }
 
@@ -159,7 +159,7 @@ impl Compute {
         self.memory_total
     }
 
-    pub fn memory_avialable(&self) -> u64 {
+    pub fn memory_available(&self) -> u64 {
         self.memory_available
     }
 
