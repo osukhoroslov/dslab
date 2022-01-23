@@ -57,7 +57,8 @@ impl AppData {
             compute.borrow_mut().push(Compute {
                 name,
                 speed: resource["speed"].as_u64().unwrap(),
-                cores: resource["cores"].as_u64().unwrap(),
+                cores: resource["cores"].as_u64().unwrap() as u32,
+                memory: resource["memory"].as_u64().unwrap(),
                 files: Vec::new(),
                 tasks: Vec::new(),
             });
@@ -189,6 +190,8 @@ impl AppData {
             let scheduled = events[0]["time"].as_f64().unwrap();
             let started = events[1]["time"].as_f64().unwrap();
             let completed = events[2]["time"].as_f64().unwrap();
+            let cores = events[0]["cores"].as_u64().unwrap() as u32;
+            let memory = events[0]["memory"].as_u64().unwrap();
             let name = events[0]["name"].as_str().unwrap().to_string();
             let actor = events[0]["location"].as_str().unwrap().to_string();
             compute.borrow_mut()[*compute_index.get(&actor).unwrap()]
@@ -197,6 +200,8 @@ impl AppData {
                     scheduled,
                     started,
                     completed,
+                    cores,
+                    memory,
                     name,
                     color: get_next_color(),
                 });

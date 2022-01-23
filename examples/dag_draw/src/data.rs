@@ -14,6 +14,8 @@ pub struct Task {
     pub scheduled: f64,
     pub started: f64,
     pub completed: f64,
+    pub cores: u32,
+    pub memory: u64,
     pub name: String,
     pub color: Color,
 }
@@ -40,7 +42,8 @@ pub struct Transfer {
 pub struct Compute {
     pub name: String,
     pub speed: u64,
-    pub cores: u64,
+    pub cores: u32,
+    pub memory: u64,
     pub files: Vec<File>,
     pub tasks: Vec<Task>,
 }

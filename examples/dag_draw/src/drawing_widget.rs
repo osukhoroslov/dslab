@@ -322,12 +322,14 @@ impl DrawingWidget {
                     continue;
                 }
 
-                // paint core
-                ctx.fill(
-                    Rect::from_center_size(Point::new(xcore, ycore), Size::new(CORE_SIZE, CORE_SIZE)),
-                    &task.color,
-                );
-                xcore += 20.;
+                // paint cores
+                for _ in 0..task.cores {
+                    ctx.fill(
+                        Rect::from_center_size(Point::new(xcore, ycore), Size::new(CORE_SIZE, CORE_SIZE)),
+                        &task.color,
+                    );
+                    xcore += 20.;
+                }
             }
 
             let xcore = leftx + 5. + CORE_SIZE / 2.;
@@ -344,6 +346,60 @@ impl DrawingWidget {
             downy += 25.;
 
             // line below cores
+            ctx.stroke(
+                Line::new(Point::new(leftx, downy), Point::new(rightx, downy)),
+                &Color::WHITE,
+                1.,
+            );
+
+            // block with memory
+            self.paint_text(
+                ctx,
+                &format!("Memory: {}", compute.memory),
+                18.,
+                Point::new(leftx + 5., downy),
+                false,
+            );
+            ctx.stroke(
+                Rect::from_points(
+                    Point::new(leftx, downy),
+                    Point::new(leftx + LABEL_WIDTH * 2., downy + 25.),
+                ),
+                &Color::WHITE,
+                1.,
+            );
+
+            downy += 25.;
+            downy += 25. / 2.;
+
+            // memory pieces
+            let mut memoryx = leftx + 5.;
+            for task in compute.tasks.iter() {
+                if time < task.scheduled || task.completed < time {
+                    continue;
+                }
+
+                let memory_width = task.memory as f64 / compute.memory as f64 * (BLOCK_WIDTH - 10.);
+                ctx.fill(
+                    Rect::from_points(
+                        Point::new(memoryx, downy - CORE_SIZE / 2.),
+                        Point::new(memoryx + memory_width, downy + CORE_SIZE / 2.),
+                    ),
+                    &task.color,
+                );
+
+                memoryx += memory_width;
+            }
+
+            ctx.stroke(
+                Rect::from_center_size(Point::new(middlex, downy), Size::new(BLOCK_WIDTH - 10., CORE_SIZE)),
+                &Color::WHITE,
+                1.,
+            );
+
+            downy += 25. / 2.;
+
+            // line below memory
             ctx.stroke(
                 Line::new(Point::new(leftx, downy), Point::new(rightx, downy)),
                 &Color::WHITE,
@@ -370,6 +426,7 @@ impl DrawingWidget {
         let actor_height = 0.
             + 35.  // title
             + 50.  // cores
+            + 50.  // memory
             + match data.tasks_limit_str.parse::<usize>() {
                 Ok(x) => x as f64 * ROW_STEP + 30.,
                 Err(_) => 0.
