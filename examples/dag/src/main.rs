@@ -1,11 +1,9 @@
-mod dag;
 mod runner;
 mod trace_log;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::dag::*;
 use crate::runner::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
@@ -15,6 +13,7 @@ use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network_actor::{Network, NETWORK_ID};
 
 use compute::multicore::*;
+use dag::dag::*;
 
 fn main() {
     let mut dag = DAG::new();
