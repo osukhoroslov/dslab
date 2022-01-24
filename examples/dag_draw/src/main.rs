@@ -1,15 +1,15 @@
-use std::env;
+mod app_data;
+mod data;
+mod drawing_widget;
+mod poly;
 
 use druid::widget::{CrossAxisAlignment, Flex, Label, Scroll, SizedBox, Slider, TextBox, Widget};
 use druid::Color;
 use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
+use std::env;
 
-mod data;
-mod poly;
-use crate::data::*;
-mod app_data;
 use crate::app_data::AppData;
-mod drawing_widget;
+use crate::data::*;
 use crate::drawing_widget::DrawingWidget;
 
 pub const PADDING: f64 = 8.0;

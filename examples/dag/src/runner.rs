@@ -1,15 +1,15 @@
+use serde_json::json;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-use serde_json::json;
-
 use crate::trace_log::TraceLog;
-use crate::{DataItemState, TaskState, DAG};
-
 use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
+use dag::dag::DAG;
+use dag::data_item::DataItemState;
+use dag::task::TaskState;
 use network::model::DataTransferCompleted;
 use network::network_actor::Network;
 
@@ -77,7 +77,7 @@ impl DAGRunner {
         &self.trace_log
     }
 
-    pub fn on_task_completed(&mut self, task_id: usize, ctx: &mut ActorContext) {
+    fn on_task_completed(&mut self, task_id: usize, ctx: &mut ActorContext) {
         let task = self.dag.get_task(task_id);
         self.trace_log.log_event(
             ctx.id.to(),
@@ -131,7 +131,7 @@ impl DAGRunner {
         }
     }
 
-    pub fn on_data_transfered(&mut self, data_event_id: usize, ctx: &mut ActorContext) {
+    fn on_data_transfered(&mut self, data_event_id: usize, ctx: &mut ActorContext) {
         let data_transfer = self.data_transfers.get(&data_event_id).unwrap();
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
@@ -277,8 +277,8 @@ impl Actor for DAGRunner {
             }
             CompStarted { .. } => {}
             CompFinished { id } => {
-                let id = self.computations.remove(id).unwrap();
-                self.on_task_completed(id, ctx);
+                let task_id = self.computations.remove(id).unwrap();
+                self.on_task_completed(task_id, ctx);
             }
             DataTransferCompleted { data } => {
                 self.on_data_transfered(data.id, ctx);

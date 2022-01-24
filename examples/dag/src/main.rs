@@ -3,17 +3,15 @@ mod trace_log;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
-use crate::runner::*;
-use core::actor::ActorId;
-use core::sim::Simulation;
 use sugars::{rc, refcell};
 
+use crate::runner::*;
+use compute::multicore::*;
+use core::actor::ActorId;
+use core::sim::Simulation;
+use dag::dag::DAG;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network_actor::{Network, NETWORK_ID};
-
-use compute::multicore::*;
-use dag::dag::*;
 
 fn main() {
     let mut dag = DAG::new();
@@ -58,9 +56,9 @@ fn main() {
 
     let mut sim = Simulation::new(123);
 
-    let mut compute_actors: Vec<Resource> = Vec::new();
-    let mut add_compute = |speed: u64, cores: u32, memory: u64| {
-        let name = format!("compute{}", compute_actors.len() + 1);
+    let mut resources: Vec<Resource> = Vec::new();
+    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
+        let name = format!("compute{}", resources.len() + 1);
         let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
         sim.add_actor(&name, compute.clone());
         let resource = Resource {
@@ -69,19 +67,19 @@ fn main() {
             cores_available: cores,
             memory_available: memory,
         };
-        compute_actors.push(resource);
+        resources.push(resource);
     };
-    add_compute(10, 2, 256);
-    add_compute(20, 1, 512);
-    add_compute(30, 4, 1024);
+    add_resource(10, 2, 256);
+    add_resource(20, 1, 512);
+    add_resource(30, 4, 1024);
 
-    let constant_network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));
-    let constant_network = Rc::new(RefCell::new(Network::new(constant_network_model)));
-    sim.add_actor(NETWORK_ID, constant_network.clone());
+    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));
+    let network = Rc::new(RefCell::new(Network::new(network_model)));
+    sim.add_actor(NETWORK_ID, network.clone());
 
-    let runner_actor = rc!(refcell!(DAGRunner::new(dag, constant_network, compute_actors)));
-    let runner = sim.add_actor("runner", runner_actor.clone());
-    sim.add_event_now(Start {}, ActorId::from("client"), runner);
+    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources)));
+    let runner_id = sim.add_actor("runner", runner.clone());
+    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner_actor.borrow().trace_log().save_to_file("trace.json").unwrap();
+    runner.borrow().trace_log().save_to_file("trace.json").unwrap();
 }

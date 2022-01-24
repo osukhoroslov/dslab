@@ -1,6 +1,5 @@
 use druid::piet::kurbo::PathEl;
 use druid::piet::kurbo::Shape;
-
 use druid::{Point, Rect};
 
 #[derive(Clone)]
