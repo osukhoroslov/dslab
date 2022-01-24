@@ -1,29 +1,21 @@
 use std::cell::RefCell;
-use std::fs::File;
-use std::io::Write;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
+use serde_json::json;
+
+use crate::trace_log::TraceLog;
 use crate::{DataItemState, TaskState, DAG};
-use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::cast;
-use std::collections::{BTreeSet, HashMap, HashSet};
 
 use compute::multicore::*;
+use core::actor::{Actor, ActorContext, ActorId, Event};
+use core::cast;
 use network::model::DataTransferCompleted;
 use network::network_actor::Network;
 
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-
-#[derive(Serialize, Deserialize)]
-struct TraceLog {
-    resources: Vec<Value>,
-    events: Vec<Value>,
-}
-
 pub struct Resource {
     pub compute: Rc<RefCell<Compute>>,
-    pub actor_id: ActorId,
+    pub id: ActorId,
     pub cores_available: u32,
     pub memory_available: u64,
 }
@@ -60,10 +52,7 @@ impl DAGRunner {
             data_transfers: HashMap::new(),
             task_cores: HashMap::new(),
             task_inputs: HashMap::new(),
-            trace_log: TraceLog {
-                resources: Vec::new(),
-                events: Vec::new(),
-            },
+            trace_log: TraceLog::new(),
         }
     }
 
@@ -76,7 +65,7 @@ impl DAGRunner {
     fn trace_config(&mut self) {
         for resource in self.resources.iter() {
             self.trace_log.resources.push(json!({
-                "id": resource.actor_id.to().clone(),
+                "id": resource.id.to().clone(),
                 "speed": resource.compute.borrow().speed(),
                 "cores": resource.cores_available,
                 "memory": resource.memory_available,
@@ -84,11 +73,14 @@ impl DAGRunner {
         }
     }
 
+    pub fn trace_log(&self) -> &TraceLog {
+        &self.trace_log
+    }
+
     pub fn on_task_completed(&mut self, task_id: usize, ctx: &mut ActorContext) {
-        let task = (*self.dag.get_task(task_id)).clone();
-        DAGRunner::log_event(
-            &mut self.trace_log,
-            ctx,
+        let task = self.dag.get_task(task_id);
+        self.trace_log.log_event(
+            ctx.id.to(),
             json!({
                 "time": ctx.time(),
                 "type": "task_completed",
@@ -96,16 +88,15 @@ impl DAGRunner {
                 "name": task.name,
             }),
         );
-        let data_items = self.dag.update_task_state(task_id, TaskState::Done);
         self.scheduled_tasks.remove(&task_id);
-        let location = *self.task_location.get(&task_id).unwrap();
-        self.task_location.remove(&task_id);
+        let location = self.task_location.remove(&task_id).unwrap();
         self.resources[location].cores_available += self.task_cores.get(&task_id).unwrap();
         self.resources[location].memory_available += task.memory;
+        let data_items = self.dag.update_task_state(task_id, TaskState::Done);
         for &data_item_id in data_items.iter() {
             let data_item = self.dag.get_data_item(data_item_id);
             let data_id = self.network.borrow_mut().transfer_data(
-                self.resources[location].actor_id.clone(),
+                self.resources[location].id.clone(),
                 ctx.id.clone(),
                 data_item.size as f64,
                 ctx.id.clone(),
@@ -116,17 +107,16 @@ impl DAGRunner {
                 DataTransfer {
                     data_id: data_item_id,
                     task_id,
-                    from: self.resources[location].actor_id.clone(),
+                    from: self.resources[location].id.clone(),
                     to: ctx.id.clone(),
                 },
             );
-            DAGRunner::log_event(
-                &mut self.trace_log,
-                ctx,
+            self.trace_log.log_event(
+                ctx.id.to(),
                 json!({
                     "time": ctx.time(),
                     "type": "start_uploading",
-                    "from": self.resources[location].actor_id.to().clone(),
+                    "from": self.resources[location].id.to().clone(),
                     "to": "scheduler",
                     "id": data_id,
                     "name": data_item.name.clone(),
@@ -141,13 +131,6 @@ impl DAGRunner {
         }
     }
 
-    pub fn save_trace(&self, filename: &str) {
-        File::create(filename)
-            .unwrap()
-            .write_all(serde_json::to_string_pretty(&self.trace_log).unwrap().as_bytes())
-            .unwrap();
-    }
-
     pub fn on_data_transfered(&mut self, data_event_id: usize, ctx: &mut ActorContext) {
         let data_transfer = self.data_transfers.get(&data_event_id).unwrap();
         let data_id = data_transfer.data_id;
@@ -155,21 +138,20 @@ impl DAGRunner {
         if data_transfer.from == ctx.id {
             let task_id = data_transfer.task_id;
             let location = *self.task_location.get(&task_id).unwrap();
-            DAGRunner::log_event(
-                &mut self.trace_log,
-                ctx,
+            self.trace_log.log_event(
+                ctx.id.to(),
                 json!({
                     "time": ctx.time(),
                     "type": "finish_uploading",
                     "from": "scheduler",
-                    "to": self.resources[location].actor_id.to().clone(),
+                    "to": self.resources[location].id.to().clone(),
                     "id": data_event_id,
                     "name": data_item.name.clone(),
                 }),
             );
             let task = self.dag.get_task(task_id);
 
-            let left_inputs = self.task_inputs.entry(task_id).or_default();
+            let left_inputs = self.task_inputs.get_mut(&task_id).unwrap();
             left_inputs.remove(&data_id);
             if left_inputs.is_empty() {
                 let cores = *self.task_cores.get(&task_id).unwrap();
@@ -183,9 +165,8 @@ impl DAGRunner {
                 );
                 self.computations.insert(computation_id, task_id);
 
-                DAGRunner::log_event(
-                    &mut self.trace_log,
-                    ctx,
+                self.trace_log.log_event(
+                    ctx.id.to(),
                     json!({
                         "time": ctx.time(),
                         "type": "task_started",
@@ -195,9 +176,8 @@ impl DAGRunner {
                 );
             }
         } else {
-            DAGRunner::log_event(
-                &mut self.trace_log,
-                ctx,
+            self.trace_log.log_event(
+                ctx.id.to(),
                 json!({
                     "time": ctx.time(),
                     "type": "finish_uploading",
@@ -241,7 +221,7 @@ impl DAGRunner {
                 let data_item = self.dag.get_data_item(data_id);
                 let data_event_id = self.network.borrow_mut().transfer_data(
                     ctx.id.clone(),
-                    resource.actor_id.clone(),
+                    resource.id.clone(),
                     data_item.size as f64,
                     ctx.id.clone(),
                     ctx,
@@ -252,32 +232,30 @@ impl DAGRunner {
                         data_id: data_id,
                         task_id,
                         from: ctx.id.clone(),
-                        to: resource.actor_id.clone(),
+                        to: resource.id.clone(),
                     },
                 );
-                DAGRunner::log_event(
-                    &mut self.trace_log,
-                    ctx,
+                self.trace_log.log_event(
+                    ctx.id.to(),
                     json!({
                         "time": ctx.time(),
                         "type": "start_uploading",
                         "from": "scheduler",
-                        "to": resource.actor_id.to().clone(),
+                        "to": resource.id.to().clone(),
                         "id": data_event_id,
                         "name": data_item.name.clone(),
                     }),
                 );
             }
             self.task_location.insert(task_id, i);
-            DAGRunner::log_event(
-                &mut self.trace_log,
-                ctx,
+            self.trace_log.log_event(
+                ctx.id.to(),
                 json!({
                     "time": ctx.time(),
                     "type": "task_scheduled",
                     "id": task_id,
                     "name": task.name.clone(),
-                    "location": resource.actor_id.to().clone(),
+                    "location": resource.id.to().clone(),
                     "cores": cores,
                     "memory": task.memory,
                 }),
@@ -285,46 +263,6 @@ impl DAGRunner {
             return true;
         }
         false
-    }
-
-    fn log_event(trace_log: &mut TraceLog, ctx: &mut ActorContext, event: Value) {
-        let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
-        let log_message = match event["type"].as_str().unwrap().as_ref() {
-            "task_scheduled" => {
-                format!(
-                    "scheduled task {} to {} on {} cores",
-                    get_field("name"),
-                    get_field("location"),
-                    event["cores"].as_u64().unwrap()
-                )
-            }
-            "task_started" => {
-                format!("started task {}", get_field("name"))
-            }
-            "task_completed" => {
-                format!("completed task {}", get_field("name"))
-            }
-            "start_uploading" => {
-                format!(
-                    "data item {} started uploading from {} to {}",
-                    get_field("name"),
-                    get_field("from"),
-                    get_field("to")
-                )
-            }
-            "finish_uploading" => {
-                format!(
-                    "data item {} finished uploading from {} to {}",
-                    get_field("name"),
-                    get_field("from"),
-                    get_field("to")
-                )
-            }
-            _ => "unknown event".to_string(),
-        };
-        let time = event["time"].as_f64().unwrap();
-        println!("{:>8.3} [{}] {}", time, ctx.id, log_message);
-        trace_log.events.push(event);
     }
 }
 
@@ -339,12 +277,11 @@ impl Actor for DAGRunner {
             }
             CompStarted { .. } => {}
             CompFinished { id } => {
-                self.on_task_completed(*self.computations.get(id).unwrap(), ctx);
-                self.computations.remove(id);
+                let id = self.computations.remove(id).unwrap();
+                self.on_task_completed(id, ctx);
             }
             DataTransferCompleted { data } => {
-                let data_id = data.id;
-                self.on_data_transfered(data_id, ctx);
+                self.on_data_transfered(data.id, ctx);
             }
         })
     }

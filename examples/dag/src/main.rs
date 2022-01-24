@@ -1,5 +1,6 @@
 mod dag;
 mod runner;
+mod trace_log;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -65,7 +66,7 @@ fn main() {
         sim.add_actor(&name, compute.clone());
         let resource = Resource {
             compute,
-            actor_id: ActorId::from(&name),
+            id: ActorId::from(&name),
             cores_available: cores,
             memory_available: memory,
         };
@@ -83,5 +84,5 @@ fn main() {
     let runner = sim.add_actor("runner", runner_actor.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner);
     sim.step_until_no_events();
-    runner_actor.borrow().save_trace("trace.json");
+    runner_actor.borrow().trace_log().save_to_file("trace.json").unwrap();
 }
