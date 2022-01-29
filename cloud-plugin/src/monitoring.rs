@@ -12,9 +12,9 @@ use core::cast;
 pub struct HostState {
     pub id: ActorId,
     pub cpu_available: u32,
-    pub ram_available: u32,
-    pub cpu_full: u32,
-    pub ram_full: u32,
+    pub memory_available: u32,
+    pub cpu_total: u32,
+    pub memory_total: u32,
 }
 
 #[derive(Debug)]
@@ -24,13 +24,13 @@ pub struct Monitoring {
 }
 
 impl HostState {
-    pub fn new(id: ActorId, cpu_full: u32, ram_full: u32) -> Self {
+    pub fn new(id: ActorId, cpu_total: u32, memory_total: u32) -> Self {
         Self {
             id,
-            cpu_available: cpu_full,
-            ram_available: ram_full,
-            cpu_full,
-            ram_full
+            cpu_available: cpu_total,
+            memory_available: memory_total,
+            cpu_total,
+            memory_total
         }
     }
 }
@@ -59,9 +59,9 @@ impl Monitoring {
         self.schedulers.insert(scheduler_actor_id.clone());
     }
 
-    pub fn add_host(&mut self, host_id: String, cpu_full: u32, ram_full: u32) {
+    pub fn add_host(&mut self, host_id: String, cpu_total: u32, memory_total: u32) {
         self.host_states.insert(host_id.clone(),
-            HostState::new(ActorId::from(&host_id), cpu_full, ram_full));
+            HostState::new(ActorId::from(&host_id), cpu_total, memory_total));
     }
 }
 
@@ -69,9 +69,9 @@ impl Monitoring {
 
 #[derive(Debug, Clone)]
 pub struct HostStateUpdate {
-    pub host_id: ActorId,
+    pub host_id: String,
     pub cpu_available: u32,
-    pub ram_available: u32,
+    pub memory_available: u32,
 }
 
 impl Actor for Monitoring {
@@ -80,19 +80,17 @@ impl Actor for Monitoring {
             HostStateUpdate {
                 host_id,
                 cpu_available,
-                ram_available,
+                memory_available,
             } => {
                 info!(
                     "[time = {}] monitoring received stats from host #{}",
                     ctx.time(),
                     host_id
                 );
-                let host_state = self
-                    .host_states
-                    .entry(host_id.to_string())
-                    .or_insert(HostState::new(host_id.clone(), 0, 0));
-                host_state.cpu_available = *cpu_available;
-                host_state.ram_available = *ram_available;
+                self.host_states.get_mut(host_id).map(|host| {
+                    host.cpu_available = *cpu_available;
+                    host.memory_available = *memory_available;
+                });
             }
         })
     }

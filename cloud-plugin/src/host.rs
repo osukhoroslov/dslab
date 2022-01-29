@@ -6,8 +6,8 @@ use core::cast;
 
 use crate::monitoring::HostStateUpdate;
 use crate::network::MESSAGE_DELAY;
-use crate::placement_storage::VMAllocationFailed;
-use crate::placement_storage::VMFinished as PlacementStoreRemoveVM;
+use crate::placement_store::VMAllocationFailed;
+use crate::placement_store::VMFinished as PlacementStoreRemoveVM;
 use crate::virtual_machine::VMInit;
 use crate::virtual_machine::VirtualMachine;
 
@@ -16,6 +16,7 @@ pub enum AllocationVerdict {
     NotEnoughCPU,
     NotEnoughRAM,
     Success,
+    HostNotFound,
 }
 
 pub static STATS_SEND_PERIOD: f64 = 0.5;
@@ -37,8 +38,8 @@ pub struct HostManager {
     cpu_available: u32,
     
     #[allow(dead_code)]
-    ram_total: u32,
-    ram_available: u32,
+    memory_total: u32,
+    memory_available: u32,
 
     vms: HashMap<String, VirtualMachine>,
     energy_manager: EnergyManager,
@@ -66,13 +67,13 @@ impl EnergyManager {
 }
 
 impl HostManager {
-    pub fn new(cpu_total: u32, ram_total: u32, id: String, monitoring: ActorId) -> Self {
+    pub fn new(cpu_total: u32, memory_total: u32, id: String, monitoring: ActorId) -> Self {
         Self {
             id,
             cpu_total,
-            ram_total,
+            memory_total,
             cpu_available: cpu_total,
-            ram_available: ram_total,
+            memory_available: memory_total,
             vms: HashMap::new(),
             energy_manager: EnergyManager::new(),
             monitoring: monitoring.clone(),
@@ -83,7 +84,7 @@ impl HostManager {
         if self.cpu_available < vm.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
-        if self.ram_available < vm.ram_usage {
+        if self.memory_available < vm.memory_usage {
             return AllocationVerdict::NotEnoughRAM;
         }
         return AllocationVerdict::Success;
@@ -99,7 +100,7 @@ impl HostManager {
 
     fn place_vm(&mut self, time: f64, vm: &VirtualMachine) {
         self.cpu_available -= vm.cpu_usage;
-        self.ram_available -= vm.ram_usage;
+        self.memory_available -= vm.memory_usage;
         self.vms.insert(vm.id.clone(), vm.clone());
 
         self.energy_manager.update_energy(time, self.get_energy_load());
@@ -107,7 +108,7 @@ impl HostManager {
 
     fn remove_vm(&mut self, time: f64, vm_id: &str) {
         self.cpu_available += self.vms[vm_id].cpu_usage;
-        self.ram_available += self.vms[vm_id].ram_usage;
+        self.memory_available += self.vms[vm_id].memory_usage;
         self.vms.remove(vm_id);
 
         self.energy_manager.update_energy(time, self.get_energy_load());
@@ -168,9 +169,9 @@ impl Actor for HostManager {
                 );
                 ctx.emit(
                     HostStateUpdate {
-                        host_id: ctx.id.clone(),
+                        host_id: ctx.id.to_string(),
                         cpu_available: self.cpu_available,
-                        ram_available: self.ram_available,
+                        memory_available: self.memory_available,
                     },
                     self.monitoring.clone(),
                     MESSAGE_DELAY,
@@ -180,7 +181,7 @@ impl Actor for HostManager {
             }
             VMFinished { vm } => {
                 ctx.emit(PlacementStoreRemoveVM { vm: vm.clone(), host_id: self.id.clone() },
-                         ActorId::from("placement_storage"), MESSAGE_DELAY);
+                         ActorId::from("placement_store"), MESSAGE_DELAY);
             }
             ReleaseVmResources { vm_id } => {
                 info!(

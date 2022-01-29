@@ -8,42 +8,50 @@ use core::cast;
 
 use crate::host::AllocationVerdict;
 use crate::host::TryAllocateVM as TryAllocateVMOnHost;
+use crate::monitoring::HostState;
 use crate::monitoring::Monitoring;
 use crate::network::MESSAGE_DELAY;
+use crate::scheduler::ReplicateNewHost;
 use crate::scheduler::VMAllocationSucceeded;
 use crate::scheduler::VMAllocationFailed as ReportAllocationFailure;
 use crate::scheduler::VMFinished as DropVMOnScheduler;
-use crate::storage::Storage;
+use crate::store::Store;
 use crate::virtual_machine::VirtualMachine;
 
 #[derive(Debug, Clone)]
-pub struct PlacementStorage {
-    storage: Storage,
+pub struct PlacementStore {
+    global_store: Store,
     monitoring: Rc<RefCell<Monitoring>>,
 }
 
-impl PlacementStorage {
+impl PlacementStore {
     pub fn new(monitoring: Rc<RefCell<Monitoring>>) -> Self {
+        let mut global_store = Store::new(monitoring.clone());
+        for host in monitoring.borrow().get_hosts_list() {
+            global_store.add_host(host.to_string(),
+                &monitoring.borrow().get_host_state(ActorId::from(host)));
+        }
+
         Self {
-            storage: Storage::new(monitoring.clone()),
+            global_store: Store::new(monitoring.clone()),
             monitoring: monitoring.clone()
         }
     }
 
-    pub fn add_host(&mut self, id: String, cpu_full: u32, ram_full: u32) {
-        self.storage.add_host(id.clone(), cpu_full, ram_full);
+    pub fn add_host(&mut self, id: String, state: &HostState) {
+        self.global_store.add_host(id.clone(), state);
     }
 
     fn can_allocate(&mut self, vm: &VirtualMachine, host_id: &String) -> AllocationVerdict {
-        self.storage.can_allocate(&vm, &host_id)
+        self.global_store.can_allocate(&vm, &host_id)
     }
 
     fn place_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.storage.place_vm(&vm, &host_id);
+        self.global_store.place_vm(&vm, &host_id);
     }
 
     fn remove_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.storage.remove_vm(&vm, &host_id);
+        self.global_store.remove_vm(&vm, &host_id);
     }
 }
 
@@ -67,13 +75,19 @@ pub struct VMFinished {
     pub host_id: String
 }
 
-impl Actor for PlacementStorage {
+#[derive(Debug)]
+pub struct OnNewHostAdded {
+    pub id: String,
+    pub host: HostState
+}
+
+impl Actor for PlacementStore {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             TryAllocateVM { vm, host_id } => {
                 if self.can_allocate(vm, host_id) == AllocationVerdict::Success {
                     self.place_vm(vm, host_id);
-                    info!("[time = {}] vm #{} commited to host #{} in placement storage",
+                    info!("[time = {}] vm #{} commited to host #{} in placement store",
                         ctx.time(), vm.id, host_id
                     );
                     ctx.emit(TryAllocateVMOnHost { vm: vm.clone(),
@@ -91,7 +105,7 @@ impl Actor for PlacementStorage {
                     }
                 } else {
                     info!(
-                        "[time = {}] not enough space for vm #{} on host #{} in placement storage",
+                        "[time = {}] not enough space for vm #{} on host #{} in placement store",
                         ctx.time(),
                         vm.id,
                         host_id
@@ -118,6 +132,16 @@ impl Actor for PlacementStorage {
                     ctx.emit(DropVMOnScheduler { vm: vm.clone(),
                                                  host_id: host_id.to_string()
                         },
+                        ActorId::from(&scheduler), MESSAGE_DELAY
+                    );
+                }
+            }
+            OnNewHostAdded { id, host } => {
+                info!("[time = {}] new host #{} added to main placement store", ctx.time(), id);
+                self.add_host(id.to_string(), host);
+
+                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                    ctx.emit(ReplicateNewHost { id: id.clone(), host: host.clone() },
                         ActorId::from(&scheduler), MESSAGE_DELAY
                     );
                 }

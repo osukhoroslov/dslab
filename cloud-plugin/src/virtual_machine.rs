@@ -15,17 +15,17 @@ pub static VM_FINISH_TIME: f64 = 0.5;
 pub struct VirtualMachine {
     pub id: String,
     pub cpu_usage: u32,
-    pub ram_usage: u32,
+    pub memory_usage: u32,
     lifetime: f64,
     pub actor_id: ActorId,
 }
 
 impl VirtualMachine {
-    pub fn new(id: &str, cpu: u32, ram: u32, lifetime: f64) -> Self {
+    pub fn new(id: &str, cpu: u32, memory: u32, lifetime: f64) -> Self {
         Self {
             id: id.to_string(),
             cpu_usage: cpu,
-            ram_usage: ram,
+            memory_usage: memory,
             lifetime,
             actor_id: ActorId::from(&id),
         }

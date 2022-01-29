@@ -28,7 +28,7 @@ fn main() {
         let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, scheduler_two.clone());
     }
 
-    cloud_sim.steps(220);
+    cloud_sim.steps(250);
     info!(
         "Total energy consumed on host one: {} watt",
         host_one.borrow_mut().get_total_consumed(cloud_sim.current_time())
