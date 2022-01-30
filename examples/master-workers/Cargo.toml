@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../core" }
-compute = { path = "../../compute" }
+core = { path = "../../crates/core" }
+compute = { path = "../../crates/compute" }
 rand = "0.8.4"
 rand_pcg = "0.3.1"
 sugars = "3.0.0"

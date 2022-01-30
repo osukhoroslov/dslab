@@ -16,8 +16,8 @@ pub struct TaskActor {
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
-    min_cores: u64,
-    max_cores: u64,
+    min_cores: u32,
+    max_cores: u32,
     cores_dependency: CoresDependency,
 }
 
@@ -26,8 +26,8 @@ impl TaskActor {
         compute: Rc<RefCell<Compute>>,
         flops: u64,
         memory: u64,
-        min_cores: u64,
-        max_cores: u64,
+        min_cores: u32,
+        max_cores: u32,
         cores_dependency: CoresDependency,
     ) -> Self {
         Self {
@@ -203,7 +203,7 @@ fn main() {
             5,
             7,
             CoresDependency::Custom {
-                func: |cores: u64| -> f64 {
+                func: |cores: u32| -> f64 {
                     if cores == 7 {
                         2.0
                     } else {

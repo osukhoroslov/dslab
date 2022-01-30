@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-core = { path = "../../core" }
-compute = { path = "../../compute" }
+core = { path = "../../crates/core" }
+compute = { path = "../../crates/compute" }
