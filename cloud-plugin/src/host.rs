@@ -14,7 +14,7 @@ use crate::virtual_machine::VirtualMachine;
 #[derive(PartialEq)]
 pub enum AllocationVerdict {
     NotEnoughCPU,
-    NotEnoughRAM,
+    NotEnoughMemory,
     Success,
     HostNotFound,
 }
@@ -34,12 +34,12 @@ pub struct EnergyManager {
 pub struct HostManager {
     pub id: String,
 
-    cpu_total: u32,
-    cpu_available: u32,
+    cpu_total: u64,
+    cpu_available: u64,
 
     #[allow(dead_code)]
-    memory_total: u32,
-    memory_available: u32,
+    memory_total: u64,
+    memory_available: u64,
 
     vms: HashMap<String, VirtualMachine>,
     energy_manager: EnergyManager,
@@ -67,7 +67,7 @@ impl EnergyManager {
 }
 
 impl HostManager {
-    pub fn new(cpu_total: u32, memory_total: u32, id: String, monitoring: ActorId) -> Self {
+    pub fn new(cpu_total: u64, memory_total: u64, id: String, monitoring: ActorId) -> Self {
         Self {
             id,
             cpu_total,
@@ -85,7 +85,7 @@ impl HostManager {
             return AllocationVerdict::NotEnoughCPU;
         }
         if self.memory_available < vm.memory_usage {
-            return AllocationVerdict::NotEnoughRAM;
+            return AllocationVerdict::NotEnoughMemory;
         }
         return AllocationVerdict::Success;
     }

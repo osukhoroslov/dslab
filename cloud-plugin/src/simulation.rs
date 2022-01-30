@@ -10,6 +10,7 @@ use crate::host::SendHostState;
 use crate::monitoring::HostState;
 use crate::monitoring::Monitoring;
 use crate::placement_store::OnNewHostAdded;
+use crate::placement_store::OnNewSchedulerAdded;
 use crate::placement_store::PlacementStore;
 use crate::scheduler::FindHostToAllocateVM;
 use crate::scheduler::Scheduler;
@@ -37,7 +38,7 @@ impl CloudSimulation {
         self.simulation.add_actor("monitoring", self.monitoring.clone());
     }
 
-    pub fn spawn_host(&mut self, id: &str, cpu_capacity: u32, memory_capacity: u32) -> Rc<RefCell<HostManager>> {
+    pub fn spawn_host(&mut self, id: &str, cpu_capacity: u64, memory_capacity: u64) -> Rc<RefCell<HostManager>> {
         let host = rc!(refcell!(HostManager::new(
             cpu_capacity,
             memory_capacity,
@@ -69,14 +70,21 @@ impl CloudSimulation {
             ActorId::from("placement_store")
         )));
         self.monitoring.borrow_mut().add_scheduler(id.to_string());
+        self.simulation.add_event_now(
+            OnNewSchedulerAdded {
+                scheduler_id: ActorId::from(id),
+            },
+            ActorId::from("placement_store"),
+            ActorId::from("placement_store"),
+        );
         self.simulation.add_actor(id, scheduler)
     }
 
     pub fn spawn_vm(
         &mut self,
         id: &str,
-        cpu_usage: u32,
-        memory_usage: u32,
+        cpu_usage: u64,
+        memory_usage: u64,
         lifetime: f64,
         scheduler: ActorId,
     ) -> ActorId {

@@ -11,6 +11,7 @@ use crate::host::TryAllocateVM as TryAllocateVMOnHost;
 use crate::monitoring::HostState;
 use crate::monitoring::Monitoring;
 use crate::network::MESSAGE_DELAY;
+use crate::scheduler::ReceiveSnapshot;
 use crate::scheduler::ReplicateNewHost;
 use crate::scheduler::VMAllocationFailed as ReportAllocationFailure;
 use crate::scheduler::VMAllocationSucceeded;
@@ -26,7 +27,7 @@ pub struct PlacementStore {
 
 impl PlacementStore {
     pub fn new(monitoring: Rc<RefCell<Monitoring>>) -> Self {
-        let mut global_store = Store::new(monitoring.clone());
+        let mut global_store = Store::new();
         for host in monitoring.borrow().get_hosts_list() {
             global_store.add_host(
                 host.to_string(),
@@ -35,25 +36,9 @@ impl PlacementStore {
         }
 
         Self {
-            global_store: Store::new(monitoring.clone()),
+            global_store,
             monitoring: monitoring.clone(),
         }
-    }
-
-    pub fn add_host(&mut self, id: String, state: &HostState) {
-        self.global_store.add_host(id.clone(), state);
-    }
-
-    fn can_allocate(&mut self, vm: &VirtualMachine, host_id: &String) -> AllocationVerdict {
-        self.global_store.can_allocate(&vm, &host_id)
-    }
-
-    fn place_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.global_store.place_vm(&vm, &host_id);
-    }
-
-    fn remove_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.global_store.remove_vm(&vm, &host_id);
     }
 }
 
@@ -83,12 +68,17 @@ pub struct OnNewHostAdded {
     pub host: HostState,
 }
 
+#[derive(Debug)]
+pub struct OnNewSchedulerAdded {
+    pub scheduler_id: ActorId,
+}
+
 impl Actor for PlacementStore {
     fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             TryAllocateVM { vm, host_id } => {
-                if self.can_allocate(vm, host_id) == AllocationVerdict::Success {
-                    self.place_vm(vm, host_id);
+                if self.global_store.can_allocate(vm, host_id) == AllocationVerdict::Success {
+                    self.global_store.place_vm(vm, host_id);
                     info!(
                         "[time = {}] vm #{} commited to host #{} in placement store",
                         ctx.time(),
@@ -132,7 +122,7 @@ impl Actor for PlacementStore {
                 }
             }
             VMAllocationFailed { vm, host_id } => {
-                self.remove_vm(vm, host_id);
+                self.global_store.remove_vm(vm, host_id);
 
                 for scheduler in self.monitoring.borrow().get_schedulers_list() {
                     ctx.emit(
@@ -146,7 +136,7 @@ impl Actor for PlacementStore {
                 }
             }
             VMFinished { vm, host_id } => {
-                self.remove_vm(vm, host_id);
+                self.global_store.remove_vm(vm, host_id);
 
                 for scheduler in self.monitoring.borrow().get_schedulers_list() {
                     ctx.emit(
@@ -161,7 +151,7 @@ impl Actor for PlacementStore {
             }
             OnNewHostAdded { id, host } => {
                 info!("[time = {}] new host #{} added to main placement store", ctx.time(), id);
-                self.add_host(id.to_string(), host);
+                self.global_store.add_host(id.to_string(), host);
 
                 for scheduler in self.monitoring.borrow().get_schedulers_list() {
                     ctx.emit(
@@ -173,6 +163,20 @@ impl Actor for PlacementStore {
                         MESSAGE_DELAY,
                     );
                 }
+            }
+            OnNewSchedulerAdded { scheduler_id } => {
+                info!(
+                    "[time = {}] new scheduler #{} added to main placement store",
+                    ctx.time(),
+                    scheduler_id
+                );
+                ctx.emit(
+                    ReceiveSnapshot {
+                        local_store: self.global_store.clone(),
+                    },
+                    scheduler_id.clone(),
+                    MESSAGE_DELAY,
+                );
             }
         })
     }
