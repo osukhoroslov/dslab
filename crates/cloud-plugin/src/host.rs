@@ -34,7 +34,7 @@ pub struct HostManager {
 
     cpu_total: u32,
     cpu_available: u32,
-    
+
     #[allow(dead_code)]
     ram_total: u32,
     ram_available: u32,

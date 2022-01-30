@@ -31,13 +31,9 @@ impl Actor for DataTransferRequester {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Start { size, receiver_id } => {
-                self.net.borrow().transfer_data(
-                    ctx.id.clone(),
-                    receiver_id.clone(),
-                    *size,
-                    receiver_id.clone(),
-                    ctx,
-                );
+                self.net
+                    .borrow()
+                    .transfer_data(ctx.id.clone(), receiver_id.clone(), *size, receiver_id.clone(), ctx);
             }
             DataTransferCompleted { data: _ } => {
                 info!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
@@ -65,13 +61,9 @@ impl Actor for DataReceiver {
         cast!(match event {
             DataTransferCompleted { data } => {
                 let new_size = 1000.0 - data.size;
-                self.net.borrow().transfer_data(
-                    ctx.id.clone(),
-                    data.src.clone(),
-                    new_size,
-                    data.src.clone(),
-                    ctx,
-                );
+                self.net
+                    .borrow()
+                    .transfer_data(ctx.id.clone(), data.src.clone(), new_size, data.src.clone(), ctx);
                 info!("System time: {}, Receiver: {} Done", ctx.time(), ctx.id.clone());
             }
         })
@@ -115,17 +107,16 @@ fn main() {
             sender.clone(),
             &mut sim,
         );
-        shared_network.borrow().transfer_data_from_sim(
-            sender.clone(),
-            receiver.clone(),
-            5.0,
-            sender.clone(),
-            &mut sim,
-        );
-
         shared_network
             .borrow()
-            .send_msg_from_sim("Hello World".to_string(), client.clone(), receiver.clone(), &mut sim);
+            .transfer_data_from_sim(sender.clone(), receiver.clone(), 5.0, sender.clone(), &mut sim);
+
+        shared_network.borrow().send_msg_from_sim(
+            "Hello World".to_string(),
+            client.clone(),
+            receiver.clone(),
+            &mut sim,
+        );
 
         sim.step_until_no_events();
     }
@@ -142,9 +133,12 @@ fn main() {
                 &mut sim,
             );
         }
-        shared_network
-            .borrow()
-            .send_msg_from_sim("Hello World".to_string(), client.clone(), receiver.clone(), &mut sim);
+        shared_network.borrow().send_msg_from_sim(
+            "Hello World".to_string(),
+            client.clone(),
+            receiver.clone(),
+            &mut sim,
+        );
 
         sim.step_until_no_events();
     }

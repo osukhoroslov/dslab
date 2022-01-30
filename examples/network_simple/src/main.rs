@@ -20,13 +20,9 @@ fn main() {
     let constant_network = Rc::new(RefCell::new(Network::new(constant_network_model)));
     sim.add_actor(NETWORK_ID, constant_network.clone());
 
-    constant_network.borrow().transfer_data_from_sim(
-        sender.clone(),
-        reciever.clone(),
-        100.0,
-        sender.clone(),
-        &mut sim,
-    );
+    constant_network
+        .borrow()
+        .transfer_data_from_sim(sender.clone(), reciever.clone(), 100.0, sender.clone(), &mut sim);
     constant_network.borrow().transfer_data_from_sim(
         sender.clone(),
         reciever.clone(),
@@ -34,13 +30,9 @@ fn main() {
         sender.clone(),
         &mut sim,
     );
-    constant_network.borrow().transfer_data_from_sim(
-        sender.clone(),
-        reciever.clone(),
-        5.0,
-        sender.clone(),
-        &mut sim,
-    );
+    constant_network
+        .borrow()
+        .transfer_data_from_sim(sender.clone(), reciever.clone(), 5.0, sender.clone(), &mut sim);
 
     constant_network
         .borrow()

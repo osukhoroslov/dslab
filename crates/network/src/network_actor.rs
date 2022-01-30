@@ -76,11 +76,7 @@ impl Network {
             data: message,
         };
 
-        sim.add_event_now(
-            MessageSend { message: msg },
-            src,
-            ActorId::from(NETWORK_ID),
-        );
+        sim.add_event_now(MessageSend { message: msg }, src, ActorId::from(NETWORK_ID));
 
         msg_id
     }
