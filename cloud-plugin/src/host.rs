@@ -36,7 +36,7 @@ pub struct HostManager {
 
     cpu_total: u32,
     cpu_available: u32,
-    
+
     #[allow(dead_code)]
     memory_total: u32,
     memory_available: u32,
@@ -125,7 +125,7 @@ impl HostManager {
 #[derive(Debug)]
 pub struct TryAllocateVM {
     pub vm: VirtualMachine,
-    pub host_id: String
+    pub host_id: String,
 }
 
 #[derive(Debug)]
@@ -133,7 +133,7 @@ pub struct SendHostState {}
 
 #[derive(Debug)]
 pub struct VMFinished {
-    pub vm: VirtualMachine
+    pub vm: VirtualMachine,
 }
 
 #[derive(Debug)]
@@ -149,7 +149,7 @@ impl Actor for HostManager {
                     self.place_vm(ctx.time(), vm);
                     info!("[time = {}] vm #{} allocated on host #{}", ctx.time(), vm.id, self.id);
 
-                    ctx.emit_now(VMInit { }, vm.actor_id.clone());
+                    ctx.emit_now(VMInit {}, vm.actor_id.clone());
                 } else {
                     info!(
                         "[time = {}] not enough space for vm #{} on host #{}",
@@ -157,8 +157,14 @@ impl Actor for HostManager {
                         vm.id,
                         self.id
                     );
-                    ctx.emit(VMAllocationFailed { vm: vm.clone(), host_id: host_id.to_string() },
-                            from.clone(), MESSAGE_DELAY);
+                    ctx.emit(
+                        VMAllocationFailed {
+                            vm: vm.clone(),
+                            host_id: host_id.to_string(),
+                        },
+                        from.clone(),
+                        MESSAGE_DELAY,
+                    );
                 }
             }
             SendHostState {} => {
@@ -180,8 +186,14 @@ impl Actor for HostManager {
                 ctx.emit(SendHostState {}, ctx.id.clone(), STATS_SEND_PERIOD);
             }
             VMFinished { vm } => {
-                ctx.emit(PlacementStoreRemoveVM { vm: vm.clone(), host_id: self.id.clone() },
-                         ActorId::from("placement_store"), MESSAGE_DELAY);
+                ctx.emit(
+                    PlacementStoreRemoveVM {
+                        vm: vm.clone(),
+                        host_id: self.id.clone(),
+                    },
+                    ActorId::from("placement_store"),
+                    MESSAGE_DELAY,
+                );
             }
             ReleaseVmResources { vm_id } => {
                 info!(

@@ -20,7 +20,7 @@ pub struct HostState {
 #[derive(Debug)]
 pub struct Monitoring {
     host_states: BTreeMap<String, HostState>,
-    schedulers: HashSet<String>
+    schedulers: HashSet<String>,
 }
 
 impl HostState {
@@ -30,7 +30,7 @@ impl HostState {
             cpu_available: cpu_total,
             memory_available: memory_total,
             cpu_total,
-            memory_total
+            memory_total,
         }
     }
 }
@@ -39,7 +39,7 @@ impl Monitoring {
     pub fn new() -> Self {
         Self {
             host_states: BTreeMap::new(),
-            schedulers: HashSet::new()
+            schedulers: HashSet::new(),
         }
     }
 
@@ -60,8 +60,10 @@ impl Monitoring {
     }
 
     pub fn add_host(&mut self, host_id: String, cpu_total: u32, memory_total: u32) {
-        self.host_states.insert(host_id.clone(),
-            HostState::new(ActorId::from(&host_id), cpu_total, memory_total));
+        self.host_states.insert(
+            host_id.clone(),
+            HostState::new(ActorId::from(&host_id), cpu_total, memory_total),
+        );
     }
 }
 

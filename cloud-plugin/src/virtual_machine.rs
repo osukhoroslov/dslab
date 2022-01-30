@@ -35,8 +35,7 @@ impl VirtualMachine {
 // VM EVENTS ///////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct VMInit {
-}
+pub struct VMInit {}
 
 #[derive(Debug)]
 pub struct VMStart {

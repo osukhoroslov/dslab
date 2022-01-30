@@ -23,23 +23,24 @@ pub struct Scheduler {
     pub id: ActorId,
     monitoring: Rc<RefCell<Monitoring>>,
     placement_store: ActorId,
-    local_store: Store
+    local_store: Store,
 }
 
 impl Scheduler {
-    pub fn new(id: ActorId, monitoring: Rc<RefCell<Monitoring>>,
-               placement_store: ActorId) -> Self {
+    pub fn new(id: ActorId, monitoring: Rc<RefCell<Monitoring>>, placement_store: ActorId) -> Self {
         let mut local_store = Store::new(monitoring.clone());
         for host in monitoring.borrow().get_hosts_list() {
-            local_store.add_host(host.to_string(),
-                &monitoring.borrow().get_host_state(ActorId::from(host)));
+            local_store.add_host(
+                host.to_string(),
+                &monitoring.borrow().get_host_state(ActorId::from(host)),
+            );
         }
 
         Self {
             id,
             monitoring: monitoring.clone(),
             placement_store,
-            local_store: Store::new(monitoring.clone())
+            local_store: Store::new(monitoring.clone()),
         }
     }
 
@@ -84,7 +85,7 @@ pub struct VMFinished {
 #[derive(Debug)]
 pub struct ReplicateNewHost {
     pub id: String,
-    pub host: HostState
+    pub host: HostState,
 }
 
 impl Actor for Scheduler {
@@ -93,7 +94,7 @@ impl Actor for Scheduler {
             FindHostToAllocateVM { vm } => {
                 // pack via First Fit policy
                 let mut found = false;
-                for host in self.local_store.clone().get_hosts_list() {   
+                for host in self.local_store.clone().get_hosts_list() {
                     if self.local_store.can_allocate(&vm, &host) == AllocationVerdict::Success {
                         info!(
                             "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
@@ -105,9 +106,14 @@ impl Actor for Scheduler {
                         found = true;
                         self.local_store.place_vm(&vm, &host);
 
-                        ctx.emit(TryAllocateVmOnStore { vm: vm.clone(),
-                                                          host_id: host.to_string() },
-                                 self.placement_store.clone(), MESSAGE_DELAY);
+                        ctx.emit(
+                            TryAllocateVmOnStore {
+                                vm: vm.clone(),
+                                host_id: host.to_string(),
+                            },
+                            self.placement_store.clone(),
+                            MESSAGE_DELAY,
+                        );
                         break;
                     }
                 }
@@ -132,8 +138,13 @@ impl Actor for Scheduler {
             VMFinished { vm, host_id } => {
                 self.remove_vm(&vm, &host_id);
             }
-            ReplicateNewHost {id, host } => {
-                info!("[time = {}] new host #{} added to scheduler #{}", ctx.time(), id, self.id);
+            ReplicateNewHost { id, host } => {
+                info!(
+                    "[time = {}] new host #{} added to scheduler #{}",
+                    ctx.time(),
+                    id,
+                    self.id
+                );
                 self.add_host(id.clone(), host.clone());
             }
         })

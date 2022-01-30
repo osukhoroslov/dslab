@@ -32,7 +32,8 @@ impl CloudSimulation {
     }
 
     pub fn init_actors(&mut self) {
-        self.simulation.add_actor("placement_store", self.placement_store.clone());
+        self.simulation
+            .add_actor("placement_store", self.placement_store.clone());
         self.simulation.add_actor("monitoring", self.monitoring.clone());
     }
 
@@ -43,27 +44,42 @@ impl CloudSimulation {
             id.to_string(),
             ActorId::from("monitoring")
         )));
-        self.monitoring.borrow_mut().add_host(id.to_string(), cpu_capacity, memory_capacity);
+        self.monitoring
+            .borrow_mut()
+            .add_host(id.to_string(), cpu_capacity, memory_capacity);
 
         let actor = self.simulation.add_actor(id, host.clone());
         self.simulation
             .add_event_now(SendHostState {}, actor.clone(), actor.clone());
-        self.simulation
-            .add_event_now(OnNewHostAdded { id: id.to_string(),
-                host: HostState::new(ActorId::from(&id), cpu_capacity, memory_capacity)}, 
-                ActorId::from("placement_store"), ActorId::from("placement_store"));
+        self.simulation.add_event_now(
+            OnNewHostAdded {
+                id: id.to_string(),
+                host: HostState::new(ActorId::from(&id), cpu_capacity, memory_capacity),
+            },
+            ActorId::from("placement_store"),
+            ActorId::from("placement_store"),
+        );
         return host;
     }
 
     pub fn spawn_scheduler(&mut self, id: &str) -> ActorId {
-        let scheduler = rc!(refcell!(Scheduler::new(ActorId::from(id),
-                                                    self.monitoring.clone(),
-                                                    ActorId::from("placement_store"))));
+        let scheduler = rc!(refcell!(Scheduler::new(
+            ActorId::from(id),
+            self.monitoring.clone(),
+            ActorId::from("placement_store")
+        )));
         self.monitoring.borrow_mut().add_scheduler(id.to_string());
         self.simulation.add_actor(id, scheduler)
     }
 
-    pub fn spawn_vm(&mut self, id: &str, cpu_usage: u32, memory_usage: u32, lifetime: f64, scheduler: ActorId) -> ActorId {
+    pub fn spawn_vm(
+        &mut self,
+        id: &str,
+        cpu_usage: u32,
+        memory_usage: u32,
+        lifetime: f64,
+        scheduler: ActorId,
+    ) -> ActorId {
         let vm = VirtualMachine::new(id, cpu_usage, memory_usage, lifetime);
         let actor = self.simulation.add_actor(id, rc!(refcell!(vm.clone())));
         self.simulation

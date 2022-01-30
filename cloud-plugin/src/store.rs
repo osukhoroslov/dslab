@@ -42,16 +42,19 @@ impl Store {
     pub fn new(monitoring: Rc<RefCell<Monitoring>>) -> Self {
         Self {
             hosts: BTreeMap::new(),
-            monitoring: monitoring.clone()
+            monitoring: monitoring.clone(),
         }
     }
 
     pub fn add_host(&mut self, id: String, state: &HostState) {
-        self.hosts.insert(id, HostInfo::new(
-            state.cpu_available,
-            state.memory_available,
-            state.cpu_total,
-            state.memory_total)
+        self.hosts.insert(
+            id,
+            HostInfo::new(
+                state.cpu_available,
+                state.memory_available,
+                state.cpu_total,
+                state.memory_total,
+            ),
         );
     }
 
