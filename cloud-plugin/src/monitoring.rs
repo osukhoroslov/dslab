@@ -1,7 +1,6 @@
 use log::info;
 use std::collections::btree_map::Keys;
 use std::collections::BTreeMap;
-use std::collections::HashSet;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
@@ -11,20 +10,19 @@ use core::cast;
 #[derive(Debug, Clone)]
 pub struct HostState {
     pub id: ActorId,
-    pub cpu_available: u64,
+    pub cpu_available: u32,
     pub memory_available: u64,
-    pub cpu_total: u64,
+    pub cpu_total: u32,
     pub memory_total: u64,
 }
 
 #[derive(Debug)]
 pub struct Monitoring {
     host_states: BTreeMap<String, HostState>,
-    schedulers: HashSet<String>,
 }
 
 impl HostState {
-    pub fn new(id: ActorId, cpu_total: u64, memory_total: u64) -> Self {
+    pub fn new(id: ActorId, cpu_total: u32, memory_total: u64) -> Self {
         Self {
             id,
             cpu_available: cpu_total,
@@ -39,7 +37,6 @@ impl Monitoring {
     pub fn new() -> Self {
         Self {
             host_states: BTreeMap::new(),
-            schedulers: HashSet::new(),
         }
     }
 
@@ -51,15 +48,7 @@ impl Monitoring {
         self.host_states.keys()
     }
 
-    pub fn get_schedulers_list(&self) -> Vec<String> {
-        self.schedulers.clone().into_iter().collect::<Vec<String>>()
-    }
-
-    pub fn add_scheduler(&mut self, scheduler_actor_id: String) {
-        self.schedulers.insert(scheduler_actor_id.clone());
-    }
-
-    pub fn add_host(&mut self, host_id: String, cpu_total: u64, memory_total: u64) {
+    pub fn add_host(&mut self, host_id: String, cpu_total: u32, memory_total: u64) {
         self.host_states.insert(
             host_id.clone(),
             HostState::new(ActorId::from(&host_id), cpu_total, memory_total),
@@ -72,7 +61,7 @@ impl Monitoring {
 #[derive(Debug, Clone)]
 pub struct HostStateUpdate {
     pub host_id: String,
-    pub cpu_available: u64,
+    pub cpu_available: u32,
     pub memory_available: u64,
 }
 

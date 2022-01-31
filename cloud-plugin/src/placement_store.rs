@@ -1,6 +1,7 @@
 use log::info;
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
@@ -22,7 +23,7 @@ use crate::virtual_machine::VirtualMachine;
 #[derive(Debug, Clone)]
 pub struct PlacementStore {
     global_store: Store,
-    monitoring: Rc<RefCell<Monitoring>>,
+    schedulers: HashSet<String>,
 }
 
 impl PlacementStore {
@@ -37,7 +38,7 @@ impl PlacementStore {
 
         Self {
             global_store,
-            monitoring: monitoring.clone(),
+            schedulers: HashSet::new(),
         }
     }
 }
@@ -94,7 +95,7 @@ impl Actor for PlacementStore {
                         MESSAGE_DELAY,
                     );
 
-                    for host in self.monitoring.borrow().get_schedulers_list() {
+                    for host in self.schedulers.iter() {
                         ctx.emit(
                             VMAllocationSucceeded {
                                 vm: vm.clone(),
@@ -124,7 +125,7 @@ impl Actor for PlacementStore {
             VMAllocationFailed { vm, host_id } => {
                 self.global_store.remove_vm(vm, host_id);
 
-                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                for scheduler in self.schedulers.iter() {
                     ctx.emit(
                         DropVMOnScheduler {
                             vm: vm.clone(),
@@ -138,7 +139,7 @@ impl Actor for PlacementStore {
             VMFinished { vm, host_id } => {
                 self.global_store.remove_vm(vm, host_id);
 
-                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                for scheduler in self.schedulers.iter() {
                     ctx.emit(
                         DropVMOnScheduler {
                             vm: vm.clone(),
@@ -153,7 +154,7 @@ impl Actor for PlacementStore {
                 info!("[time = {}] new host #{} added to main placement store", ctx.time(), id);
                 self.global_store.add_host(id.to_string(), host);
 
-                for scheduler in self.monitoring.borrow().get_schedulers_list() {
+                for scheduler in self.schedulers.iter() {
                     ctx.emit(
                         ReplicateNewHost {
                             id: id.clone(),
@@ -170,6 +171,7 @@ impl Actor for PlacementStore {
                     ctx.time(),
                     scheduler_id
                 );
+                self.schedulers.insert(scheduler_id.to_string());
                 ctx.emit(
                     ReceiveSnapshot {
                         local_store: self.global_store.clone(),

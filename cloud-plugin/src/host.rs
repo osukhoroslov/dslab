@@ -34,8 +34,8 @@ pub struct EnergyManager {
 pub struct HostManager {
     pub id: String,
 
-    cpu_total: u64,
-    cpu_available: u64,
+    cpu_total: u32,
+    cpu_available: u32,
 
     #[allow(dead_code)]
     memory_total: u64,
@@ -67,7 +67,7 @@ impl EnergyManager {
 }
 
 impl HostManager {
-    pub fn new(cpu_total: u64, memory_total: u64, id: String, monitoring: ActorId) -> Self {
+    pub fn new(cpu_total: u32, memory_total: u64, id: String, monitoring: ActorId) -> Self {
         Self {
             id,
             cpu_total,

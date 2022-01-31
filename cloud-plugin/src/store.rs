@@ -6,20 +6,20 @@ use crate::virtual_machine::VirtualMachine;
 
 #[derive(Debug, Clone)]
 pub struct HostInfo {
-    pub cpu_available: u64,
+    pub cpu_available: u32,
     pub memory_available: u64,
 
-    pub cpu_total: u64,
+    pub cpu_total: u32,
     pub memory_total: u64,
 
-    pub cpu_overcommit: u64,
+    pub cpu_overcommit: u32,
     pub memory_overcommit: u64,
 
     pub vms: BTreeMap<String, VirtualMachine>,
 }
 
 impl HostInfo {
-    pub fn new(cpu_available: u64, memory_available: u64, cpu_total: u64, memory_total: u64) -> Self {
+    pub fn new(cpu_available: u32, memory_available: u64, cpu_total: u32, memory_total: u64) -> Self {
         Self {
             cpu_available: cpu_available,
             memory_available: memory_available,
