@@ -28,13 +28,13 @@ pub struct Scheduler {
 impl Scheduler {
     pub fn new(
         id: ActorId,
-        state: ResourcePoolState,
+        snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
         placement_store: ActorId,
     ) -> Self {
         Self {
             id,
-            state,
+            state: snapshot,
             placement_store,
             monitoring,
         }
