@@ -1,11 +1,10 @@
 [package]
-name = "cloud_plugin_example"
+name = "cloud-plugin"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../crates/core" }
-cloud-plugin = { path = "../../crates/cloud-plugin" }
+core = { path = "../core" }
 rand = "0.8.3"
 sugars = "3.0.0"
 log = "0.4"
