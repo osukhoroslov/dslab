@@ -5,11 +5,10 @@ use std::collections::BTreeMap;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
+use crate::events::HostStateUpdate;
 
 #[derive(Debug, Clone)]
 pub struct HostState {
-    pub id: ActorId,
     pub cpu_available: u32,
     pub memory_available: u64,
     pub cpu_total: u32,
@@ -22,9 +21,8 @@ pub struct Monitoring {
 }
 
 impl HostState {
-    pub fn new(id: ActorId, cpu_total: u32, memory_total: u64) -> Self {
+    pub fn new(cpu_total: u32, memory_total: u64) -> Self {
         Self {
-            id,
             cpu_available: cpu_total,
             memory_available: memory_total,
             cpu_total,
@@ -49,20 +47,27 @@ impl Monitoring {
     }
 
     pub fn add_host(&mut self, host_id: String, cpu_total: u32, memory_total: u64) {
-        self.host_states.insert(
-            host_id.clone(),
-            HostState::new(ActorId::from(&host_id), cpu_total, memory_total),
-        );
+        self.host_states
+            .insert(host_id.clone(), HostState::new(cpu_total, memory_total));
     }
-}
 
-// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone)]
-pub struct HostStateUpdate {
-    pub host_id: String,
-    pub cpu_available: u32,
-    pub memory_available: u64,
+    fn update_host_state(
+        &mut self,
+        host_id: &String,
+        cpu_available: u32,
+        memory_available: u64,
+        ctx: &mut ActorContext,
+    ) {
+        info!(
+            "[time = {}] monitoring received stats from host #{}",
+            ctx.time(),
+            host_id
+        );
+        self.host_states.get_mut(host_id).map(|host| {
+            host.cpu_available = cpu_available;
+            host.memory_available = memory_available;
+        });
+    }
 }
 
 impl Actor for Monitoring {
@@ -73,15 +78,7 @@ impl Actor for Monitoring {
                 cpu_available,
                 memory_available,
             } => {
-                info!(
-                    "[time = {}] monitoring received stats from host #{}",
-                    ctx.time(),
-                    host_id
-                );
-                self.host_states.get_mut(host_id).map(|host| {
-                    host.cpu_available = *cpu_available;
-                    host.memory_available = *memory_available;
-                });
+                self.update_host_state(host_id, *cpu_available, *memory_available, ctx);
             }
         })
     }

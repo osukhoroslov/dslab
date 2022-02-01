@@ -1,8 +1,11 @@
-pub mod host;
+pub mod common;
+pub mod energy_manager;
+pub mod events;
+pub mod host_manager;
 pub mod monitoring;
 pub mod network;
 pub mod placement_store;
+pub mod resource_pool;
 pub mod scheduler;
 pub mod simulation;
-pub mod store;
-pub mod virtual_machine;
+pub mod vm;

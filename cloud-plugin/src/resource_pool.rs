@@ -1,16 +1,15 @@
 use std::collections::BTreeMap;
 
-use crate::host::AllocationVerdict;
-use crate::monitoring::HostState;
-use crate::virtual_machine::VirtualMachine;
+use crate::common::AllocationVerdict;
+use crate::vm::VirtualMachine;
 
 #[derive(Debug, Clone)]
 pub struct HostInfo {
-    pub cpu_available: u32,
-    pub memory_available: u64,
-
     pub cpu_total: u32,
     pub memory_total: u64,
+
+    pub cpu_available: u32,
+    pub memory_available: u64,
 
     pub cpu_overcommit: u32,
     pub memory_overcommit: u64,
@@ -19,12 +18,12 @@ pub struct HostInfo {
 }
 
 impl HostInfo {
-    pub fn new(cpu_available: u32, memory_available: u64, cpu_total: u32, memory_total: u64) -> Self {
+    pub fn new(cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) -> Self {
         Self {
-            cpu_available: cpu_available,
-            memory_available: memory_available,
             cpu_total,
             memory_total,
+            cpu_available,
+            memory_available,
             cpu_overcommit: 0,
             memory_overcommit: 0,
             vms: BTreeMap::new(),
@@ -33,24 +32,19 @@ impl HostInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct Store {
+pub struct ResourcePoolState {
     hosts: BTreeMap<String, HostInfo>,
 }
 
-impl Store {
+impl ResourcePoolState {
     pub fn new() -> Self {
         Self { hosts: BTreeMap::new() }
     }
 
-    pub fn add_host(&mut self, id: String, state: &HostState) {
+    pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
         self.hosts.insert(
-            id,
-            HostInfo::new(
-                state.cpu_available,
-                state.memory_available,
-                state.cpu_total,
-                state.memory_total,
-            ),
+            id.to_string(),
+            HostInfo::new(cpu_total, memory_total, cpu_available, memory_available),
         );
     }
 
