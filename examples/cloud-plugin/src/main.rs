@@ -39,7 +39,6 @@ fn main() {
         let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, "s2");
     }
 
-    //cloud_sim.steps(10);
     cloud_sim.steps(380);
 
     let end_time = cloud_sim.current_time();
