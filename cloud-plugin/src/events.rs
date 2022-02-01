@@ -1,5 +1,7 @@
 use crate::vm::VirtualMachine;
 
+// VM ALLOCATION EVENTS ////////////////////////////////////////////////////////////////////////////
+
 #[derive(Debug, Clone)]
 pub struct AllocationRequest {
     pub vm: VirtualMachine,
@@ -40,6 +42,8 @@ pub struct AllocationReleaseRequest {
     pub vm: VirtualMachine,
 }
 
+// VM LIFECYCLE EVENTS /////////////////////////////////////////////////////////////////////////////
+
 #[derive(Debug)]
 pub struct VMStartRequest {
     pub host_id: String,
@@ -57,6 +61,8 @@ pub struct VMDeleteRequest {}
 pub struct VMDeleted {
     pub vm_id: String,
 }
+
+// MONITORING EVENTS ///////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct HostStateUpdate {
