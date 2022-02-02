@@ -3,14 +3,14 @@ use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
+use crate::dag::DAG;
+use crate::data_item::DataItemState;
 use crate::scheduler::{Action, Scheduler};
+use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
-use dag::dag::DAG;
-use dag::data_item::DataItemState;
-use dag::task::TaskState;
 use network::model::DataTransferCompleted;
 use network::network_actor::Network;
 

@@ -1,17 +1,16 @@
-mod runner;
-mod scheduler;
-mod trace_log;
+mod simple_scheduler;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use sugars::{rc, refcell};
 
-use crate::runner::*;
-use crate::scheduler::SimpleScheduler;
+use crate::simple_scheduler::SimpleScheduler;
 use compute::multicore::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
 use dag::dag::DAG;
+use dag::runner::*;
+use dag::scheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network_actor::{Network, NETWORK_ID};
 
