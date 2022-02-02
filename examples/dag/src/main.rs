@@ -1,4 +1,5 @@
 mod runner;
+mod scheduler;
 mod trace_log;
 
 use std::cell::RefCell;
@@ -6,6 +7,7 @@ use std::rc::Rc;
 use sugars::{rc, refcell};
 
 use crate::runner::*;
+use crate::scheduler::SimpleScheduler;
 use compute::multicore::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
@@ -77,7 +79,18 @@ fn main() {
     let network = Rc::new(RefCell::new(Network::new(network_model)));
     sim.add_actor(NETWORK_ID, network.clone());
 
-    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources)));
+    let scheduler = SimpleScheduler::new(
+        dag.clone(),
+        resources
+            .iter()
+            .map(|x| scheduler::Resource {
+                speed: x.compute.borrow().speed(),
+                cores_available: x.cores_available,
+                memory_available: x.memory_available,
+            })
+            .collect::<Vec<_>>(),
+    );
+    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();

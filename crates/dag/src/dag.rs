@@ -4,6 +4,7 @@ use crate::data_item::*;
 use crate::task::*;
 use compute::multicore::CoresDependency;
 
+#[derive(Clone)]
 pub struct DAG {
     tasks: Vec<Task>,
     data_items: Vec<DataItem>,
