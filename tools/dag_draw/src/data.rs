@@ -8,7 +8,7 @@ pub struct TraceLog {
     pub events: Vec<Value>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Task {
     pub scheduled: f64,
     pub started: f64,
@@ -32,9 +32,9 @@ pub struct Transfer {
     pub start: f64,
     pub end: f64,
     pub from: String,
-    #[allow(dead_code)]
     pub to: String,
     pub name: String,
+    pub task: String,
 }
 
 #[derive(Debug)]
