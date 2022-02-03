@@ -75,10 +75,10 @@ impl CloudSimulation {
 
     pub fn add_scheduler(&mut self, id: &str) {
         // create scheduler actor using current state from placement store
-        let state = self.placement_store.borrow_mut().get_state();
+        let pool_state = self.placement_store.borrow_mut().get_pool_state();
         let scheduler = rc!(refcell!(Scheduler::new(
             ActorId::from(id),
-            state,
+            pool_state,
             self.monitoring.clone(),
             self.placement_store_id.clone()
         )));

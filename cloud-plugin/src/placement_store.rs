@@ -36,7 +36,7 @@ impl PlacementStore {
         self.schedulers.insert(id.to_string());
     }
 
-    pub fn get_state(&self) -> ResourcePoolState {
+    pub fn get_pool_state(&self) -> ResourcePoolState {
         self.pool_state.clone()
     }
 
