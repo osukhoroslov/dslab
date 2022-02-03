@@ -104,6 +104,10 @@ impl CloudSimulation {
         return self.simulation.steps(step_count);
     }
 
+    pub fn step_for_duration(&mut self, duration: f64) {
+        self.simulation.step_for_duration(duration);
+    }
+
     pub fn current_time(&mut self) -> f64 {
         return self.simulation.time();
     }
