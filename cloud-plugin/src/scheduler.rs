@@ -6,7 +6,7 @@ use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
 use crate::common::AllocationVerdict;
-use crate::events::{
+use crate::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationReleased, AllocationRequest,
 };
 use crate::monitoring::Monitoring;

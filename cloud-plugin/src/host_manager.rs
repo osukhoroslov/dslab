@@ -6,10 +6,9 @@ use core::cast;
 
 use crate::common::AllocationVerdict;
 use crate::energy_manager::EnergyManager;
-use crate::events::{
-    AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest, HostStateUpdate,
-    VMDeleteRequest, VMDeleted, VMStartRequest, VMStarted,
-};
+use crate::events::allocation::{AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest};
+use crate::events::monitoring::HostStateUpdate;
+use crate::events::vm::{VMDeleteRequest, VMDeleted, VMStartRequest, VMStarted};
 use crate::network::MESSAGE_DELAY;
 use crate::vm::VirtualMachine;
 

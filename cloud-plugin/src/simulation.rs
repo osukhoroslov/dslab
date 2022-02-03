@@ -6,7 +6,7 @@ use sugars::{rc, refcell};
 use core::actor::ActorId;
 use core::sim::Simulation;
 
-use crate::events::AllocationRequest;
+use crate::events::allocation::AllocationRequest;
 use crate::host_manager::HostManager;
 use crate::host_manager::SendHostState;
 use crate::monitoring::Monitoring;

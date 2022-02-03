@@ -1,7 +1,8 @@
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
-use crate::events::{AllocationReleaseRequest, VMDeleteRequest, VMDeleted, VMStartRequest, VMStarted};
+use crate::events::allocation::AllocationReleaseRequest;
+use crate::events::vm::{VMDeleteRequest, VMDeleted, VMStartRequest, VMStarted};
 
 pub static VM_START_TIME: f64 = 1.0;
 pub static VM_DELETE_TIME: f64 = 0.5;

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
-use crate::events::HostStateUpdate;
+use crate::events::monitoring::HostStateUpdate;
 
 #[derive(Debug, Clone)]
 pub struct HostState {
