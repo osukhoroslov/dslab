@@ -19,7 +19,7 @@ pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 #[derive(Debug, Clone)]
 pub struct Scheduler {
     pub id: ActorId,
-    state: ResourcePoolState,
+    pool_state: ResourcePoolState,
     placement_store: ActorId,
     #[allow(dead_code)]
     monitoring: Rc<RefCell<Monitoring>>,
@@ -34,22 +34,22 @@ impl Scheduler {
     ) -> Self {
         Self {
             id,
-            state: snapshot,
+            pool_state: snapshot,
             placement_store,
             monitoring,
         }
     }
 
     pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64) {
-        self.state
+        self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
     fn on_allocation_request(&mut self, vm: &VirtualMachine, ctx: &mut ActorContext) {
         // pack via First Fit policy
         let mut found = false;
-        for host in self.state.get_hosts_list() {
-            if self.state.can_allocate(&vm, &host) == AllocationVerdict::Success {
+        for host in self.pool_state.get_hosts_list() {
+            if self.pool_state.can_allocate(&vm, &host) == AllocationVerdict::Success {
                 info!(
                     "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
                     ctx.time(),
@@ -58,7 +58,7 @@ impl Scheduler {
                     host
                 );
                 found = true;
-                self.state.place_vm(&vm, &host);
+                self.pool_state.place_vm(&vm, &host);
 
                 ctx.emit(
                     AllocationCommitRequest {
@@ -84,16 +84,16 @@ impl Scheduler {
     }
 
     fn on_allocation_commit_succeeded(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.state.place_vm(vm, host_id);
+        self.pool_state.place_vm(vm, host_id);
     }
 
     fn on_allocation_commit_failed(&mut self, vm: &VirtualMachine, host_id: &String, ctx: &mut ActorContext) {
-        self.state.remove_vm(vm, host_id);
+        self.pool_state.remove_vm(vm, host_id);
         ctx.emit_now(AllocationRequest { vm: vm.clone() }, ctx.id.clone());
     }
 
     fn on_allocation_released(&mut self, vm: &VirtualMachine, host_id: &String) {
-        self.state.remove_vm(vm, host_id);
+        self.pool_state.remove_vm(vm, host_id);
     }
 }
 

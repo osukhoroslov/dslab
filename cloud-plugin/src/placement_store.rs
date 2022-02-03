@@ -15,20 +15,20 @@ use crate::vm::VirtualMachine;
 
 #[derive(Debug, Clone)]
 pub struct PlacementStore {
-    state: ResourcePoolState,
+    pool_state: ResourcePoolState,
     schedulers: HashSet<String>,
 }
 
 impl PlacementStore {
     pub fn new() -> Self {
         Self {
-            state: ResourcePoolState::new(),
+            pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
         }
     }
 
     pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64) {
-        self.state
+        self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
@@ -37,7 +37,7 @@ impl PlacementStore {
     }
 
     pub fn get_state(&self) -> ResourcePoolState {
-        self.state.clone()
+        self.pool_state.clone()
     }
 
     fn on_allocation_commit_request(
@@ -47,8 +47,8 @@ impl PlacementStore {
         scheduler: ActorId,
         ctx: &mut ActorContext,
     ) {
-        if self.state.can_allocate(vm, host_id) == AllocationVerdict::Success {
-            self.state.place_vm(vm, host_id);
+        if self.pool_state.can_allocate(vm, host_id) == AllocationVerdict::Success {
+            self.pool_state.place_vm(vm, host_id);
             info!(
                 "[time = {}] vm #{} commited to host #{} in placement store",
                 ctx.time(),
@@ -90,7 +90,7 @@ impl PlacementStore {
     }
 
     fn on_allocation_failed(&mut self, vm: &VirtualMachine, host_id: &String, ctx: &mut ActorContext) {
-        self.state.remove_vm(vm, host_id);
+        self.pool_state.remove_vm(vm, host_id);
 
         for scheduler in self.schedulers.iter() {
             ctx.emit(
@@ -105,7 +105,7 @@ impl PlacementStore {
     }
 
     fn on_allocation_released(&mut self, vm: &VirtualMachine, host_id: &String, ctx: &mut ActorContext) {
-        self.state.remove_vm(vm, host_id);
+        self.pool_state.remove_vm(vm, host_id);
 
         for scheduler in self.schedulers.iter() {
             ctx.emit(
