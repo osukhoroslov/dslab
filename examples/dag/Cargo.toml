@@ -1,0 +1,13 @@
+[package]
+name = "dag_example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core = { path = "../../crates/core" }
+compute = { path = "../../crates/compute" }
+network = { path = "../../crates/network" }
+dag = { path = "../../crates/dag" }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+sugars = "3.0.0"

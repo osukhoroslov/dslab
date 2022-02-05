@@ -3,17 +3,18 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::common::Start;
-use crate::compute::*;
 use crate::network::*;
 use crate::storage::*;
 use crate::task::*;
+use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
 #[derive(Debug)]
 pub struct WorkerRegister {
     pub(crate) speed: u64,
-    pub(crate) total_cpus: u32,
+    pub(crate) cpus_total: u32,
+    pub(crate) memory_total: u64,
 }
 
 #[derive(Debug)]
@@ -26,8 +27,6 @@ pub struct Worker {
     storage: Rc<RefCell<Storage>>,
     net: Rc<RefCell<Network>>,
     master: ActorId,
-    total_cpus: u32,
-    used_cpus: u32,
     tasks: HashMap<u64, TaskInfo>,
     computations: HashMap<u64, u64>,
     reads: HashMap<u64, u64>,
@@ -43,14 +42,11 @@ impl Worker {
         net: Rc<RefCell<Network>>,
         master: ActorId,
     ) -> Self {
-        let total_cpus = compute.borrow().cpus();
         Self {
             compute,
             storage,
             net,
             master,
-            total_cpus,
-            used_cpus: 0,
             tasks: HashMap::new(),
             computations: HashMap::new(),
             reads: HashMap::new(),
@@ -69,14 +65,19 @@ impl Actor for Worker {
                 ctx.emit_now(
                     WorkerRegister {
                         speed: self.compute.borrow().speed(),
-                        total_cpus: self.total_cpus,
+                        cpus_total: self.compute.borrow().cores_total(),
+                        memory_total: self.compute.borrow().memory_total(),
                     },
                     self.master.clone(),
                 );
             }
             TaskRequest {
                 id,
-                comp_size: _,
+                flops: _,
+                memory: _,
+                min_cores: _,
+                max_cores: _,
+                cores_dependency: _,
                 input_size,
                 output_size: _,
             } => {
@@ -124,13 +125,21 @@ impl Actor for Worker {
                 println!("{} [{}] read input data for task: {}", ctx.time(), ctx.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Running;
-                let comp_id = self.compute.borrow().run(task.req.comp_size, ctx);
+                let comp_id = self.compute.borrow().run(
+                    task.req.flops,
+                    task.req.memory,
+                    task.req.min_cores,
+                    task.req.max_cores,
+                    task.req.cores_dependency,
+                    ctx,
+                );
                 self.computations.insert(comp_id, task_id);
-                self.used_cpus += 1;
+            }
+            CompStarted { id, cores: _ } => {
+                println!("{} [{}] started execution of task: {}", ctx.time(), ctx.id, id);
             }
             CompFinished { id } => {
                 let task_id = self.computations.remove(id).unwrap();
-                self.used_cpus -= 1;
                 println!("{} [{}] completed execution of task: {}", ctx.time(), ctx.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Writing;

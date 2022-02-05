@@ -1,7 +1,13 @@
+use compute::multicore::CoresDependency;
+
 #[derive(Debug, Clone, Copy)]
 pub struct TaskRequest {
     pub id: u64,
-    pub comp_size: u64,
+    pub flops: u64,
+    pub memory: u64,
+    pub min_cores: u32,
+    pub max_cores: u32,
+    pub cores_dependency: CoresDependency,
     pub input_size: u64,
     pub output_size: u64,
 }
