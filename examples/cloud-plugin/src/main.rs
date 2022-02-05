@@ -10,24 +10,44 @@ fn main() {
 
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim);
-    cloud_sim.init_actors();
 
-    let host_one = cloud_sim.spawn_host("h1", 30, 30);
-    let host_two = cloud_sim.spawn_host("h2", 30, 30);
-    let allocator = cloud_sim.spawn_allocator("a");
+    cloud_sim.add_host("h1", 30, 30);
+    cloud_sim.add_host("h2", 30, 30);
+    cloud_sim.add_scheduler("s1");
+    cloud_sim.add_scheduler("s2");
 
-    for i in 0..10 {
+    // spawn vm_0 - vm_4 on scheduler #1
+    for i in 0..5 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, allocator.clone());
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, "s1");
+    }
+    // spawn vm_5 - vm_9 on scheduler #2
+    for i in 5..10 {
+        let vm_name = format!("v{}", i);
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, "s2");
     }
 
-    cloud_sim.steps(170);
+    cloud_sim.steps(150);
+    // spawn vm_10 - vm_14 on scheduler #1
+    for i in 10..15 {
+        let vm_name = format!("v{}", i);
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, "s1");
+    }
+    // spawn vm_15 - vm_19 on scheduler #2
+    for i in 15..20 {
+        let vm_name = format!("v{}", i);
+        let _vm = cloud_sim.spawn_vm(&vm_name, 10, 10, 2.0, "s2");
+    }
+
+    cloud_sim.steps(380);
+
+    let end_time = cloud_sim.current_time();
     info!(
         "Total energy consumed on host one: {} watt",
-        host_one.borrow_mut().get_total_consumed(cloud_sim.current_time())
+        cloud_sim.host("h1").borrow_mut().get_total_consumed(end_time)
     );
     info!(
         "Total energy consumed on host two: {} watt",
-        host_two.borrow_mut().get_total_consumed(cloud_sim.current_time())
+        cloud_sim.host("h2").borrow_mut().get_total_consumed(end_time)
     );
 }

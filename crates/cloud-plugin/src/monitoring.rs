@@ -5,13 +5,14 @@ use std::collections::BTreeMap;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
+use crate::events::monitoring::HostStateUpdate;
 
 #[derive(Debug, Clone)]
 pub struct HostState {
-    pub id: ActorId,
     pub cpu_available: u32,
-    pub ram_available: u32,
+    pub memory_available: u64,
+    pub cpu_total: u32,
+    pub memory_total: u64,
 }
 
 #[derive(Debug)]
@@ -20,11 +21,12 @@ pub struct Monitoring {
 }
 
 impl HostState {
-    pub fn new(id: ActorId) -> Self {
+    pub fn new(cpu_total: u32, memory_total: u64) -> Self {
         Self {
-            id,
-            cpu_available: 0,
-            ram_available: 0,
+            cpu_available: cpu_total,
+            memory_available: memory_total,
+            cpu_total,
+            memory_total,
         }
     }
 }
@@ -43,15 +45,29 @@ impl Monitoring {
     pub fn get_hosts_list(&self) -> Keys<String, HostState> {
         self.host_states.keys()
     }
-}
 
-// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
+    pub fn add_host(&mut self, host_id: String, cpu_total: u32, memory_total: u64) {
+        self.host_states
+            .insert(host_id.clone(), HostState::new(cpu_total, memory_total));
+    }
 
-#[derive(Debug, Clone)]
-pub struct HostStateUpdate {
-    pub host_id: ActorId,
-    pub cpu_available: u32,
-    pub ram_available: u32,
+    fn update_host_state(
+        &mut self,
+        host_id: &String,
+        cpu_available: u32,
+        memory_available: u64,
+        ctx: &mut ActorContext,
+    ) {
+        info!(
+            "[time = {}] monitoring received stats from host #{}",
+            ctx.time(),
+            host_id
+        );
+        self.host_states.get_mut(host_id).map(|host| {
+            host.cpu_available = cpu_available;
+            host.memory_available = memory_available;
+        });
+    }
 }
 
 impl Actor for Monitoring {
@@ -60,19 +76,9 @@ impl Actor for Monitoring {
             HostStateUpdate {
                 host_id,
                 cpu_available,
-                ram_available,
+                memory_available,
             } => {
-                info!(
-                    "[time = {}] monitoring received stats from host #{}",
-                    ctx.time(),
-                    host_id
-                );
-                let host_state = self
-                    .host_states
-                    .entry(host_id.to_string())
-                    .or_insert(HostState::new(host_id.clone()));
-                host_state.cpu_available = *cpu_available;
-                host_state.ram_available = *ram_available;
+                self.update_host_state(host_id, *cpu_available, *memory_available, ctx);
             }
         })
     }
