@@ -67,6 +67,21 @@ impl Network {
         msg_id
     }
 
+    pub fn send_event<T: Event>(&self, event: T, dest: ActorId, ctx: &mut ActorContext) {
+        info!(
+            "System time: {}, {} send Event to {}",
+            ctx.time(),
+            ctx.id.clone(),
+            dest.clone()
+        );
+
+        if !self.check_same_host(&ctx.id, &dest) {
+            ctx.emit(event, dest, self.network_model.borrow().latency());
+        } else {
+            ctx.emit(event, dest, 0.);
+        }
+    }
+
     pub fn send_msg_from_sim(&self, message: String, src: ActorId, dest: ActorId, sim: &mut Simulation) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
