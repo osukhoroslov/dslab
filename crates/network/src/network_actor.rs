@@ -9,10 +9,13 @@ use core::cast;
 use core::sim::Simulation;
 
 use crate::model::*;
+use crate::shared_bandwidth_model::SharedBandwidthNetwork;
 
 pub const NETWORK_ID: &str = "net";
 
-struct HostInfo {}
+struct HostInfo {
+    internal_network: Rc<RefCell<dyn NetworkModel>>,
+}
 
 pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
@@ -32,8 +35,17 @@ impl Network {
         }
     }
 
-    pub fn add_host(&mut self, host_id: &str) {
-        self.hosts.insert(host_id.to_string(), HostInfo {});
+    pub fn add_host(&mut self, host_id: &str, local_bandwidth: f64, local_latency: f64) {
+        let local_network = Rc::new(RefCell::new(SharedBandwidthNetwork::new(
+            local_bandwidth,
+            local_latency,
+        )));
+        self.hosts.insert(
+            host_id.to_string(),
+            HostInfo {
+                internal_network: local_network,
+            },
+        );
     }
 
     pub fn set_actor_host(&mut self, actor_id: ActorId, host_id: &str) {
@@ -78,7 +90,9 @@ impl Network {
         if !self.check_same_host(&ctx.id, &dest) {
             ctx.emit(event, dest, self.network_model.borrow().latency());
         } else {
-            ctx.emit(event, dest, 0.);
+            let hostname = self.get_actor_host(&dest).unwrap();
+            let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+            ctx.emit(event, dest, local_latency);
         }
     }
 
@@ -158,13 +172,20 @@ impl Actor for Network {
                     message.data,
                     message.dest.clone()
                 );
-                ctx.emit(
-                    MessageReceive {
-                        message: message.clone(),
-                    },
-                    ActorId::from(NETWORK_ID),
-                    self.network_model.borrow().latency(),
-                );
+                let message_recieve_event = MessageReceive {
+                    message: message.clone(),
+                };
+                if !self.check_same_host(&message.src, &message.dest) {
+                    ctx.emit(
+                        message_recieve_event,
+                        ActorId::from(NETWORK_ID),
+                        self.network_model.borrow().latency(),
+                    );
+                } else {
+                    let hostname = self.get_actor_host(&message.dest).unwrap();
+                    let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+                    ctx.emit(message_recieve_event, ActorId::from(NETWORK_ID), local_latency);
+                }
             }
             MessageReceive { message } => {
                 info!(
@@ -190,14 +211,34 @@ impl Actor for Network {
                     data.dest,
                     data.size
                 );
-                ctx.emit(
-                    StartDataTransfer { data: data.clone() },
-                    ActorId::from(NETWORK_ID),
-                    self.network_model.borrow().latency(),
-                );
+                if !self.check_same_host(&data.src, &data.dest) {
+                    ctx.emit(
+                        StartDataTransfer { data: data.clone() },
+                        ActorId::from(NETWORK_ID),
+                        self.network_model.borrow().latency(),
+                    );
+                } else {
+                    let hostname = self.get_actor_host(&data.dest).unwrap();
+                    let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+                    ctx.emit(
+                        StartDataTransfer { data: data.clone() },
+                        ActorId::from(NETWORK_ID),
+                        local_latency,
+                    );
+                }
             }
             StartDataTransfer { data } => {
-                self.network_model.borrow_mut().send_data(data.clone(), ctx);
+                if !self.check_same_host(&data.src, &data.dest) {
+                    self.network_model.borrow_mut().send_data(data.clone(), ctx);
+                } else {
+                    let hostname = self.get_actor_host(&data.dest).unwrap();
+                    self.hosts
+                        .get(hostname)
+                        .unwrap()
+                        .internal_network
+                        .borrow_mut()
+                        .send_data(data.clone(), ctx);
+                }
             }
             DataReceive { data } => {
                 info!(
@@ -208,7 +249,17 @@ impl Actor for Network {
                     data.dest,
                     data.size
                 );
-                self.network_model.borrow_mut().receive_data(data.clone(), ctx);
+                if !self.check_same_host(&data.src, &data.dest) {
+                    self.network_model.borrow_mut().receive_data(data.clone(), ctx);
+                } else {
+                    let hostname = self.get_actor_host(&data.dest).unwrap();
+                    self.hosts
+                        .get(hostname)
+                        .unwrap()
+                        .internal_network
+                        .borrow_mut()
+                        .receive_data(data.clone(), ctx);
+                }
                 ctx.emit_now(
                     DataTransferCompleted { data: data.clone() },
                     data.notification_dest.clone(),

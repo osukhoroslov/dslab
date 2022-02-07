@@ -36,7 +36,11 @@ impl Actor for DataTransferRequester {
                     .transfer_data(ctx.id.clone(), receiver_id.clone(), *size, receiver_id.clone(), ctx);
             }
             DataTransferCompleted { data: _ } => {
-                info!("System time: {}, Sender: {} Done", ctx.time(), ctx.id.clone());
+                info!(
+                    "System time: {}, Sender: {} recieved response",
+                    ctx.time(),
+                    ctx.id.clone()
+                );
             }
         })
     }
@@ -79,7 +83,8 @@ fn main() {
 
     let process_simple_send_1 = false;
     let process_check_order = false;
-    let process_with_actors = true;
+    let process_with_actors = false;
+    let self_messages = true;
 
     let mut sim = Simulation::new(123);
     let client = ActorId::from("client");
@@ -169,6 +174,63 @@ fn main() {
                 },
                 client.clone(),
                 senders[i - 1].clone(),
+                0.0,
+            );
+        }
+
+        sim.step_until_no_events();
+    }
+
+    if self_messages {
+        info!("Self Messages");
+        let mut distant_receivers = Vec::new();
+        let mut local_receivers = Vec::new();
+
+        shared_network.borrow_mut().add_host("localhost", 1000.0, 0.0);
+
+        for i in 1..10 {
+            let receiver_id = "receiver_".to_string() + &i.to_string();
+            let receiver = Rc::new(RefCell::new(DataReceiver::new(shared_network.clone())));
+            let receiver = sim.add_actor(&receiver_id, receiver);
+            let receiver_host_id = "host_".to_string() + &receiver_id;
+            shared_network.borrow_mut().add_host(&receiver_host_id, 1000.0, 0.0);
+            shared_network
+                .borrow_mut()
+                .set_actor_host(receiver.clone(), &receiver_host_id);
+            distant_receivers.push(receiver);
+
+            let local_receiver_id = "local_receiver_".to_string() + &i.to_string();
+            let local_receiver = Rc::new(RefCell::new(DataReceiver::new(shared_network.clone())));
+            let local_receiver = sim.add_actor(&local_receiver_id, local_receiver);
+            shared_network
+                .borrow_mut()
+                .set_actor_host(local_receiver.clone(), "localhost");
+            local_receivers.push(local_receiver);
+        }
+
+        let sender_id = "sender".to_string();
+        let sender = Rc::new(RefCell::new(DataTransferRequester::new(shared_network.clone())));
+        let sender = sim.add_actor(&sender_id, sender);
+        shared_network.borrow_mut().set_actor_host(sender.clone(), "localhost");
+
+        let client = ActorId::from("app");
+        for i in 1..10 {
+            sim.add_event(
+                Start {
+                    size: 100.0,
+                    receiver_id: distant_receivers[i - 1].clone(),
+                },
+                client.clone(),
+                sender.clone(),
+                0.0,
+            );
+            sim.add_event(
+                Start {
+                    size: 100.0,
+                    receiver_id: local_receivers[i - 1].clone(),
+                },
+                client.clone(),
+                sender.clone(),
                 0.0,
             );
         }
