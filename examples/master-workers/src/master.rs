@@ -3,11 +3,11 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use crate::common::Start;
-use crate::network::*;
 use crate::task::*;
 use crate::worker::{TaskCompleted, WorkerRegister};
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
+use network::network_actor::Network;
 
 #[derive(Debug)]
 pub struct ReportStatus {}
@@ -68,7 +68,7 @@ impl Master {
                         task.state = TaskState::Assigned;
                         worker.cpus_available -= task.req.min_cores;
                         worker.memory_available -= task.req.memory;
-                        self.net.borrow().send(task.req, worker_id.clone(), ctx);
+                        self.net.borrow().send_event(task.req, worker_id.clone(), ctx);
                         break;
                     }
                 }

@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::common::Start;
-use crate::network::*;
 use crate::storage::*;
 use crate::task::*;
 use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
+use network::model::DataTransferCompleted;
+use network::network_actor::Network;
 
 #[derive(Debug)]
 pub struct WorkerRegister {
@@ -31,8 +32,8 @@ pub struct Worker {
     computations: HashMap<u64, u64>,
     reads: HashMap<u64, u64>,
     writes: HashMap<u64, u64>,
-    downloads: HashMap<u64, u64>,
-    uploads: HashMap<u64, u64>,
+    downloads: HashMap<usize, u64>,
+    uploads: HashMap<usize, u64>,
 }
 
 impl Worker {
@@ -88,16 +89,20 @@ impl Actor for Worker {
                 };
                 self.tasks.insert(*id, task);
 
-                let transfer_id = self
-                    .net
-                    .borrow()
-                    .transfer(self.master.clone(), ctx.id.clone(), *input_size, ctx);
+                let transfer_id = self.net.borrow().transfer_data(
+                    self.master.clone(),
+                    ctx.id.clone(),
+                    *input_size as f64,
+                    ctx.id.clone(),
+                    ctx,
+                );
                 self.downloads.insert(transfer_id, *id);
             }
-            DataTransferCompleted { id } => {
+            DataTransferCompleted { data } => {
                 // data transfer corresponds to input download
-                if self.downloads.contains_key(id) {
-                    let task_id = self.downloads.remove(id).unwrap();
+                let transfer_id = data.id;
+                if self.downloads.contains_key(&transfer_id) {
+                    let task_id = self.downloads.remove(&transfer_id).unwrap();
                     let task = self.tasks.get_mut(&task_id).unwrap();
                     println!(
                         "{} [{}] downloaded input data for task: {}",
@@ -109,15 +114,14 @@ impl Actor for Worker {
                     let read_id = self.storage.borrow().read(task.req.input_size, ctx);
                     self.reads.insert(read_id, task_id);
                 // data transfer corresponds to output upload
-                } else if self.uploads.contains_key(id) {
-                    let task_id = self.uploads.remove(id).unwrap();
-                    let task = self.tasks.get_mut(&task_id).unwrap();
+                } else if self.uploads.contains_key(&transfer_id) {
+                    let task_id = self.uploads.remove(&transfer_id).unwrap();
+                    let mut task = self.tasks.remove(&task_id).unwrap();
                     println!("{} [{}] uploaded output data for task: {}", ctx.time(), ctx.id, task_id);
                     task.state = TaskState::Completed;
-                    self.tasks.remove(id);
                     self.net
                         .borrow()
-                        .send(TaskCompleted { id: task_id }, self.master.clone(), ctx);
+                        .send_event(TaskCompleted { id: task_id }, self.master.clone(), ctx);
                 }
             }
             DataReadCompleted { id } => {
@@ -151,10 +155,13 @@ impl Actor for Worker {
                 println!("{} [{}] wrote output data for task: {}", ctx.time(), ctx.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Uploading;
-                let transfer_id =
-                    self.net
-                        .borrow()
-                        .transfer(ctx.id.clone(), self.master.clone(), task.req.output_size, ctx);
+                let transfer_id = self.net.borrow().transfer_data(
+                    ctx.id.clone(),
+                    self.master.clone(),
+                    task.req.output_size as f64,
+                    ctx.id.clone(),
+                    ctx,
+                );
                 self.uploads.insert(transfer_id, task_id);
             }
         })

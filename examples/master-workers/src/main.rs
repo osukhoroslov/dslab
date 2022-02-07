@@ -1,6 +1,5 @@
 mod common;
 mod master;
-mod network;
 mod storage;
 mod task;
 mod worker;
@@ -11,13 +10,14 @@ use sugars::{rc, refcell};
 
 use crate::common::Start;
 use crate::master::{Master, ReportStatus};
-use crate::network::{Network, NETWORK_ID};
 use crate::storage::Storage;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
 use compute::multicore::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
+use network::constant_bandwidth_model::ConstantBandwidthNetwork;
+use network::network_actor::{Network, NETWORK_ID};
 
 fn main() {
     // params
@@ -34,18 +34,22 @@ fn main() {
     let client = ActorId::from("client");
 
     // create network and add hosts
-    let net = rc!(refcell!(Network::new(latency, network_bandwidth)));
-    sim.add_actor(NETWORK_ID, net.clone());
+    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(
+        network_bandwidth as f64,
+        latency
+    )));
+    let network = rc!(refcell!(Network::new(network_model)));
+    sim.add_actor(NETWORK_ID, network.clone());
     for i in 0..host_count {
-        net.borrow_mut().add_host(&format!("host{}", i));
+        network.borrow_mut().add_host(&format!("host{}", i));
     }
-    let hosts = net.borrow().get_hosts();
+    let hosts = network.borrow().get_hosts();
 
     // create and start master on host0
     let host = &hosts[0];
     let master_id = format!("/{}/master", host);
-    let master = sim.add_actor(&master_id, rc!(refcell!(Master::new(net.clone()))));
-    net.borrow_mut().set_actor_host(master.clone(), host);
+    let master = sim.add_actor(&master_id, rc!(refcell!(Master::new(network.clone()))));
+    network.borrow_mut().set_actor_host(master.clone(), host);
     sim.add_event_now(Start {}, admin.clone(), master.clone());
 
     // create and start workers
@@ -71,11 +75,11 @@ fn main() {
             rc!(refcell!(Worker::new(
                 compute.clone(),
                 storage.clone(),
-                net.clone(),
+                network.clone(),
                 master.clone()
             ))),
         );
-        net.borrow_mut().set_actor_host(worker.clone(), host);
+        network.borrow_mut().set_actor_host(worker.clone(), host);
         sim.add_event_now(Start {}, admin.clone(), worker.clone());
     }
 
