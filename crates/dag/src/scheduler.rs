@@ -1,14 +1,18 @@
-pub struct Resource {
-    pub speed: u64,
-    pub cores_available: u32,
-    pub memory_available: u64,
-}
+use crate::dag::DAG;
+use crate::runner::Resource;
+use crate::task::TaskState;
 
 pub enum Action {
     Schedule { task: usize, resource: usize, cores: u32 },
 }
 
 pub trait Scheduler {
-    fn start(&mut self) -> Vec<Action>;
-    fn on_task_completed(&mut self, task: usize) -> Vec<Action>;
+    fn start(&mut self, dag: &DAG, resources: &Vec<Resource>) -> Vec<Action>;
+    fn on_task_state_changed(
+        &mut self,
+        task: usize,
+        task_state: TaskState,
+        dag: &DAG,
+        resources: &Vec<Resource>,
+    ) -> Vec<Action>;
 }

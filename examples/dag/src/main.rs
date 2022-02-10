@@ -10,7 +10,6 @@ use core::actor::ActorId;
 use core::sim::Simulation;
 use dag::dag::DAG;
 use dag::runner::*;
-use dag::scheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network_actor::{Network, NETWORK_ID};
 
@@ -65,6 +64,7 @@ fn main() {
         let resource = Resource {
             compute,
             id: ActorId::from(&name),
+            speed,
             cores_available: cores,
             memory_available: memory,
         };
@@ -78,17 +78,7 @@ fn main() {
     let network = Rc::new(RefCell::new(Network::new(network_model)));
     sim.add_actor(NETWORK_ID, network.clone());
 
-    let scheduler = SimpleScheduler::new(
-        dag.clone(),
-        resources
-            .iter()
-            .map(|x| scheduler::Resource {
-                speed: x.compute.borrow().speed(),
-                cores_available: x.cores_available,
-                memory_available: x.memory_available,
-            })
-            .collect::<Vec<_>>(),
-    );
+    let scheduler = SimpleScheduler::new();
     let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);

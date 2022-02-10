@@ -92,22 +92,26 @@ impl DAG {
         }
     }
 
-    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
+    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) -> Vec<usize> {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         match data_item.state {
             DataItemState::Ready => {
+                let mut result = Vec::new();
                 for t in data_item.consumers.iter() {
                     let mut consumer = self.tasks.get_mut(*t).unwrap();
                     consumer.ready_inputs += 1;
                     if consumer.ready_inputs == consumer.inputs.len() {
                         consumer.state = TaskState::Ready;
                         self.ready_tasks.insert(*t);
+                        result.push(*t);
                     }
                 }
+                return result;
             }
             _ => {}
-        }
+        };
+        Vec::new()
     }
 
     pub fn is_completed(&self) -> bool {

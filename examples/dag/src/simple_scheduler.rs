@@ -1,33 +1,32 @@
-use std::collections::HashMap;
-
 use dag::dag::DAG;
-use dag::data_item::*;
-use dag::scheduler::{Action, Resource, Scheduler};
+use dag::scheduler::{Action, Scheduler};
 use dag::task::*;
 
-pub struct SimpleScheduler {
-    dag: DAG,
-    resources: Vec<Resource>,
-    task_location: HashMap<usize, usize>,
-    task_cores: HashMap<usize, u32>,
+struct Resource {
+    cores_available: u32,
+    memory_available: u64,
 }
 
+pub struct SimpleScheduler {}
+
 impl SimpleScheduler {
-    pub fn new(dag: DAG, resources: Vec<Resource>) -> Self {
-        SimpleScheduler {
-            dag,
-            resources,
-            task_location: HashMap::new(),
-            task_cores: HashMap::new(),
-        }
+    pub fn new() -> Self {
+        SimpleScheduler {}
     }
 
-    fn schedule(&mut self) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &Vec<dag::runner::Resource>) -> Vec<Action> {
+        let mut resources: Vec<Resource> = resources
+            .iter()
+            .map(|resource| Resource {
+                cores_available: resource.cores_available,
+                memory_available: resource.memory_available,
+            })
+            .collect();
         let mut result: Vec<Action> = Vec::new();
-        let ready_tasks = self.dag.get_ready_tasks().clone();
+        let ready_tasks = dag.get_ready_tasks().clone();
         for task_id in ready_tasks {
-            let task = self.dag.get_task(task_id);
-            for (i, resource) in self.resources.iter_mut().enumerate() {
+            let task = dag.get_task(task_id);
+            for (i, resource) in resources.iter_mut().enumerate() {
                 if resource.cores_available < task.min_cores || resource.memory_available < task.memory {
                     continue;
                 }
@@ -39,9 +38,6 @@ impl SimpleScheduler {
                     resource: i,
                     cores,
                 });
-                self.dag.update_task_state(task_id, TaskState::Scheduled);
-                self.task_location.insert(task_id, i);
-                self.task_cores.insert(task_id, cores);
                 break;
             }
         }
@@ -50,17 +46,17 @@ impl SimpleScheduler {
 }
 
 impl Scheduler for SimpleScheduler {
-    fn start(&mut self) -> Vec<Action> {
-        self.schedule()
+    fn start(&mut self, dag: &DAG, resources: &Vec<dag::runner::Resource>) -> Vec<Action> {
+        self.schedule(dag, resources)
     }
 
-    fn on_task_completed(&mut self, task: usize) -> Vec<Action> {
-        for &data_item in self.dag.update_task_state(task, TaskState::Done).iter() {
-            self.dag.update_data_item_state(data_item, DataItemState::Ready);
-        }
-        let resource = self.task_location.remove(&task).unwrap();
-        self.resources[resource].cores_available += self.task_cores.remove(&task).unwrap();
-        self.resources[resource].memory_available += self.dag.get_task(task).memory;
-        self.schedule()
+    fn on_task_state_changed(
+        &mut self,
+        _task: usize,
+        _task_state: TaskState,
+        dag: &DAG,
+        resources: &Vec<dag::runner::Resource>,
+    ) -> Vec<Action> {
+        self.schedule(dag, resources)
     }
 }

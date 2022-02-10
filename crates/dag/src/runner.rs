@@ -17,6 +17,7 @@ use network::network_actor::Network;
 pub struct Resource {
     pub compute: Rc<RefCell<Compute>>,
     pub id: ActorId,
+    pub speed: u64,
     pub cores_available: u32,
     pub memory_available: u64,
 }
@@ -78,7 +79,7 @@ impl DAGRunner {
     pub fn start(&mut self, ctx: &mut ActorContext) {
         println!("{:>8.3} [{}] started DAG execution", ctx.time(), ctx.id);
         self.trace_config();
-        self.actions.extend(self.scheduler.start());
+        self.actions.extend(self.scheduler.start(&self.dag, &self.resources));
         self.process_actions(ctx);
     }
 
@@ -188,20 +189,20 @@ impl DAGRunner {
     }
 
     fn on_task_completed(&mut self, task_id: usize, ctx: &mut ActorContext) {
-        let task = self.dag.get_task(task_id).clone();
+        let task_name = self.dag.get_task(task_id).name.clone();
         self.trace_log.log_event(
             ctx.id.to(),
             json!({
                 "time": ctx.time(),
                 "type": "task_completed",
                 "id": task_id,
-                "name": task.name,
+                "name": task_name,
             }),
         );
         self.scheduled_tasks.remove(&task_id);
         let location = self.task_location.remove(&task_id).unwrap();
         self.resources[location].cores_available += self.task_cores.get(&task_id).unwrap();
-        self.resources[location].memory_available += task.memory;
+        self.resources[location].memory_available += self.dag.get_task(task_id).memory;
         let data_items = self.dag.update_task_state(task_id, TaskState::Done);
         for &data_item_id in data_items.iter() {
             let data_item = self.dag.get_data_item(data_item_id);
@@ -230,12 +231,15 @@ impl DAGRunner {
                     "to": "scheduler",
                     "id": data_id,
                     "name": data_item.name.clone(),
-                    "task": task.name.clone(),
+                    "task": task_name,
                 }),
             );
         }
 
-        self.actions.extend(self.scheduler.on_task_completed(task_id));
+        self.actions.extend(
+            self.scheduler
+                .on_task_state_changed(task_id, TaskState::Done, &self.dag, &self.resources),
+        );
         self.process_actions(ctx);
 
         if self.dag.is_completed() {
@@ -301,7 +305,14 @@ impl DAGRunner {
                     "task": task.name.clone(),
                 }),
             );
-            self.dag.update_data_item_state(data_id, DataItemState::Ready);
+            for &task in self.dag.update_data_item_state(data_id, DataItemState::Ready).iter() {
+                self.actions.extend(self.scheduler.on_task_state_changed(
+                    task,
+                    TaskState::Ready,
+                    &self.dag,
+                    &self.resources,
+                ));
+            }
         }
         self.process_actions(ctx);
     }
