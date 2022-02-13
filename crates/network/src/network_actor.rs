@@ -14,7 +14,7 @@ use crate::shared_bandwidth_model::SharedBandwidthNetwork;
 pub const NETWORK_ID: &str = "net";
 
 struct HostInfo {
-    internal_network: Rc<RefCell<dyn NetworkModel>>,
+    local_network: Box<dyn NetworkModel>,
 }
 
 pub struct Network {
@@ -36,14 +36,11 @@ impl Network {
     }
 
     pub fn add_host(&mut self, host_id: &str, local_bandwidth: f64, local_latency: f64) {
-        let local_network = Rc::new(RefCell::new(SharedBandwidthNetwork::new(
-            local_bandwidth,
-            local_latency,
-        )));
+        let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
         self.hosts.insert(
             host_id.to_string(),
             HostInfo {
-                internal_network: local_network,
+                local_network: Box::new(local_network),
             },
         );
     }
@@ -91,7 +88,7 @@ impl Network {
             ctx.emit(event, dest, self.network_model.borrow().latency());
         } else {
             let hostname = self.get_actor_host(&dest).unwrap();
-            let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+            let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
             ctx.emit(event, dest, local_latency);
         }
     }
@@ -183,7 +180,7 @@ impl Actor for Network {
                     );
                 } else {
                     let hostname = self.get_actor_host(&message.dest).unwrap();
-                    let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+                    let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
                     ctx.emit(message_recieve_event, ActorId::from(NETWORK_ID), local_latency);
                 }
             }
@@ -219,7 +216,7 @@ impl Actor for Network {
                     );
                 } else {
                     let hostname = self.get_actor_host(&data.dest).unwrap();
-                    let local_latency = self.hosts.get(hostname).unwrap().internal_network.borrow().latency();
+                    let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
                     ctx.emit(
                         StartDataTransfer { data: data.clone() },
                         ActorId::from(NETWORK_ID),
@@ -231,12 +228,11 @@ impl Actor for Network {
                 if !self.check_same_host(&data.src, &data.dest) {
                     self.network_model.borrow_mut().send_data(data.clone(), ctx);
                 } else {
-                    let hostname = self.get_actor_host(&data.dest).unwrap();
+                    let hostname = self.get_actor_host(&data.dest).unwrap().clone();
                     self.hosts
-                        .get(hostname)
+                        .get_mut(&hostname)
                         .unwrap()
-                        .internal_network
-                        .borrow_mut()
+                        .local_network
                         .send_data(data.clone(), ctx);
                 }
             }
@@ -252,12 +248,11 @@ impl Actor for Network {
                 if !self.check_same_host(&data.src, &data.dest) {
                     self.network_model.borrow_mut().receive_data(data.clone(), ctx);
                 } else {
-                    let hostname = self.get_actor_host(&data.dest).unwrap();
+                    let hostname = self.get_actor_host(&data.dest).unwrap().clone();
                     self.hosts
-                        .get(hostname)
+                        .get_mut(&hostname)
                         .unwrap()
-                        .internal_network
-                        .borrow_mut()
+                        .local_network
                         .receive_data(data.clone(), ctx);
                 }
                 ctx.emit_now(
