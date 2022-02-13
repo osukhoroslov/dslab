@@ -22,9 +22,11 @@ use network::network_actor::{Network, NETWORK_ID};
 fn main() {
     // params
     let host_count = 5;
-    let latency = 0.5;
-    let storage_bandwidth = 2000;
+    let local_latency = 0.0;
+    let local_bandwidth = 10000;
+    let network_latency = 0.5;
     let network_bandwidth = 1000;
+    let storage_bandwidth = 2000;
     let task_count = 20;
     let seed = 123;
 
@@ -36,12 +38,14 @@ fn main() {
     // create network and add hosts
     let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(
         network_bandwidth as f64,
-        latency
+        network_latency
     )));
     let network = rc!(refcell!(Network::new(network_model)));
     sim.add_actor(NETWORK_ID, network.clone());
     for i in 0..host_count {
-        network.borrow_mut().add_host(&format!("host{}", i));
+        network
+            .borrow_mut()
+            .add_host(&format!("host{}", i), local_bandwidth as f64, local_latency);
     }
     let hosts = network.borrow().get_hosts();
 
