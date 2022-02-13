@@ -61,28 +61,46 @@ impl HostManager {
         self.memory_available -= vm.memory_usage;
         self.vms.insert(vm.id.clone(), vm.clone());
 
-        self.energy_manager.update_energy(time, self.get_energy_load());
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
     fn remove_vm(&mut self, time: f64, vm_id: &str) -> VirtualMachine {
         self.cpu_available += self.vms[vm_id].cpu_usage;
         self.memory_available += self.vms[vm_id].memory_usage;
+        let result = self.vms.remove(vm_id).unwrap();
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
 
-        self.energy_manager.update_energy(time, self.get_energy_load());
-
-        self.vms.remove(vm_id).unwrap()
+        result
     }
 
-    fn get_energy_load(&self) -> f64 {
-        let cpu_used = (self.cpu_total - self.cpu_available) as f64;
-        if cpu_used == 0. {
+    fn get_cpu_load(&self, time: f64) -> f64 {
+        let mut cpu_used = 0.;
+        for (_vm_id, vm) in &self.vms {
+            cpu_used += f64::from(vm.cpu_usage) * vm.get_current_cpu_load(time);
+        }
+
+        return cpu_used as f64 / (self.cpu_total as f64);
+    }
+
+    fn get_memory_load(&self, time: f64) -> f64 {
+        let mut memory_used = 0.;
+        for (_vm_id, vm) in &self.vms {
+            memory_used += vm.memory_usage as f64 * vm.get_current_memory_load(time);
+        }
+
+        return memory_used as f64 / (self.memory_total as f64);
+    }
+
+    fn get_energy_load(&self, time: f64) -> f64 {
+        let cpu_load = self.get_cpu_load(time);
+        if cpu_load == 0. {
             return 0.;
         }
-        return 0.4 + 0.6 * cpu_used / (self.cpu_total as f64);
+        return 0.4 + 0.6 * cpu_load;
     }
 
     pub fn get_total_consumed(&mut self, time: f64) -> f64 {
-        self.energy_manager.update_energy(time, self.get_energy_load());
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
         return self.energy_manager.get_total_consumed();
     }
 
@@ -151,8 +169,8 @@ impl HostManager {
         ctx.emit(
             HostStateUpdate {
                 host_id: ctx.id.to_string(),
-                cpu_available: self.cpu_available,
-                memory_available: self.memory_available,
+                cpu_load: self.get_cpu_load(ctx.time()),
+                memory_load: self.get_memory_load(ctx.time()),
             },
             self.monitoring.clone(),
             MESSAGE_DELAY,

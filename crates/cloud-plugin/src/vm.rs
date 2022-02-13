@@ -15,10 +15,19 @@ pub struct VirtualMachine {
     pub memory_usage: u64,
     lifetime: f64,
     host: Option<ActorId>,
+    cpu_load_function: fn(f64) -> f64,
+    memory_load_function: fn(f64) -> f64,
 }
 
 impl VirtualMachine {
-    pub fn new(id: &str, cpu: u32, memory: u64, lifetime: f64) -> Self {
+    pub fn new(
+        id: &str,
+        cpu: u32,
+        memory: u64,
+        lifetime: f64,
+        cpu_load_function: fn(f64) -> f64,
+        memory_load_function: fn(f64) -> f64,
+    ) -> Self {
         Self {
             id: id.to_string(),
             actor_id: ActorId::from(&id),
@@ -26,7 +35,17 @@ impl VirtualMachine {
             memory_usage: memory,
             lifetime,
             host: None,
+            cpu_load_function,
+            memory_load_function,
         }
+    }
+
+    pub fn get_current_cpu_load(&self, timestamp: f64) -> f64 {
+        return (self.cpu_load_function)(timestamp);
+    }
+
+    pub fn get_current_memory_load(&self, timestamp: f64) -> f64 {
+        return (self.memory_load_function)(timestamp);
     }
 }
 
