@@ -79,11 +79,10 @@ impl DAG {
     pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<usize> {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
+        if task.state != TaskState::Ready {
+            self.ready_tasks.remove(&task_id);
+        }
         match task.state {
-            TaskState::Scheduled => {
-                self.ready_tasks.remove(&task_id);
-                Vec::new()
-            }
             TaskState::Done => {
                 self.completed_task_count += 1;
                 task.outputs.clone()
@@ -92,7 +91,7 @@ impl DAG {
         }
     }
 
-    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) -> Vec<usize> {
+    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) -> Vec<(usize, TaskState)> {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         match data_item.state {
@@ -102,9 +101,15 @@ impl DAG {
                     let mut consumer = self.tasks.get_mut(*t).unwrap();
                     consumer.ready_inputs += 1;
                     if consumer.ready_inputs == consumer.inputs.len() {
-                        consumer.state = TaskState::Ready;
-                        self.ready_tasks.insert(*t);
-                        result.push(*t);
+                        if consumer.state == TaskState::Pending {
+                            consumer.state = TaskState::Ready;
+                            self.ready_tasks.insert(*t);
+                        } else if consumer.state == TaskState::Scheduled {
+                            consumer.state = TaskState::Runnable;
+                        } else {
+                            panic!();
+                        }
+                        result.push((*t, consumer.state));
                     }
                 }
                 return result;

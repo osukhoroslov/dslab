@@ -111,8 +111,20 @@ impl DAGRunner {
                     }
                     let task_id = task;
                     let task = self.dag.get_task(task_id);
+                    if task.memory > self.resources[resource].compute.borrow().memory_total() {
+                        println!("Wrong action, resource {} doesn't have enough memory", resource);
+                        return;
+                    }
                     if cores < task.min_cores || task.max_cores < cores {
                         println!("Wrong action, task {} doesn't support {} cores", task_id, cores);
+                        return;
+                    }
+                    if task.state == TaskState::Ready {
+                        self.dag.update_task_state(task_id, TaskState::Runnable);
+                    } else if task.state == TaskState::Pending {
+                        self.dag.update_task_state(task_id, TaskState::Scheduled);
+                    } else {
+                        println!("Can't schedule task with state {:?}", task.state);
                         return;
                     }
                     self.resource_queue[resource].push_back(QueuedTask { task_id, cores });
@@ -132,7 +144,7 @@ impl DAGRunner {
             if task.memory > self.resources[resource_id].memory_available {
                 break;
             }
-            if task.state != TaskState::Ready {
+            if task.state != TaskState::Runnable {
                 break;
             }
             let queued_task = self.resource_queue[resource_id].pop_front().unwrap();
@@ -186,7 +198,7 @@ impl DAGRunner {
                     "memory": task.memory,
                 }),
             );
-            self.dag.update_task_state(task_id, TaskState::Scheduled);
+            self.dag.update_task_state(task_id, TaskState::Running);
             self.scheduled_tasks.insert(task_id);
         }
     }
@@ -280,7 +292,7 @@ impl DAGRunner {
                     task.memory,
                     cores,
                     cores,
-                    CoresDependency::Linear,
+                    task.cores_dependency,
                     ctx,
                 );
                 self.computations.insert(computation_id, task_id);
@@ -308,13 +320,15 @@ impl DAGRunner {
                     "task": task.name.clone(),
                 }),
             );
-            for &task in self.dag.update_data_item_state(data_id, DataItemState::Ready).iter() {
-                self.actions.extend(self.scheduler.on_task_state_changed(
-                    task,
-                    TaskState::Ready,
-                    &self.dag,
-                    &self.resources,
-                ));
+            for (task, state) in self
+                .dag
+                .update_data_item_state(data_id, DataItemState::Ready)
+                .into_iter()
+            {
+                self.actions.extend(
+                    self.scheduler
+                        .on_task_state_changed(task, state, &self.dag, &self.resources),
+                );
             }
         }
         self.process_actions(ctx);
