@@ -1,5 +1,6 @@
 use log::info;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
@@ -46,6 +47,36 @@ impl Scheduler {
     pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64) {
         self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
+    }
+
+    pub fn on_allocation_host_found(&mut self, vm: &VirtualMachine, host: &String, ctx: &mut ActorContext) {
+        info!(
+            "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
+            ctx.time(),
+            self.id,
+            vm.id,
+            host
+        );
+        self.pool_state.place_vm(&vm, &host);
+        ctx.emit(
+            AllocationCommitRequest {
+                vm: vm.clone(),
+                host_id: host.to_string(),
+            },
+            self.placement_store.clone(),
+            MESSAGE_DELAY,
+        );
+    }
+
+    pub fn on_not_enough_space_available(&self, vm: &VirtualMachine, ctx: &mut ActorContext) {
+        info!(
+            "[time = {}] scheduler #{} failed to pack vm #{}",
+            ctx.time(),
+            self.id,
+            vm.id
+        );
+
+        ctx.emit_self(AllocationRequest { vm: vm.clone() }, ALLOCATION_RETRY_PERIOD);
     }
 
     fn on_allocation_request(&mut self, vm: &VirtualMachine, ctx: &mut ActorContext) {

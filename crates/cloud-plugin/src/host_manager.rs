@@ -76,10 +76,17 @@ impl HostManager {
     fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for (_vm_id, vm) in &self.vms {
+<<<<<<< HEAD
             cpu_used += vm.cpu_usage as f64 * vm.get_current_cpu_load(time);
         }
 
         return cpu_used as f64 / self.cpu_total as f64;
+=======
+            cpu_used += f64::from(vm.cpu_usage) * vm.get_current_cpu_load(time);
+        }
+
+        return cpu_used as f64 / (self.cpu_total as f64);
+>>>>>>> Custom schedulers and custom load function
     }
 
     fn get_memory_load(&self, time: f64) -> f64 {
@@ -88,7 +95,11 @@ impl HostManager {
             memory_used += vm.memory_usage as f64 * vm.get_current_memory_load(time);
         }
 
+<<<<<<< HEAD
         return memory_used as f64 / self.memory_total as f64;
+=======
+        return memory_used as f64 / (self.memory_total as f64);
+>>>>>>> Custom schedulers and custom load function
     }
 
     fn get_energy_load(&self, time: f64) -> f64 {
