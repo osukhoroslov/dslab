@@ -4,6 +4,7 @@ use crate::data_item::*;
 use crate::task::*;
 use compute::multicore::CoresDependency;
 
+#[derive(Clone)]
 pub struct DAG {
     tasks: Vec<Task>,
     data_items: Vec<DataItem>,
@@ -78,11 +79,10 @@ impl DAG {
     pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<usize> {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
+        if task.state != TaskState::Ready {
+            self.ready_tasks.remove(&task_id);
+        }
         match task.state {
-            TaskState::Scheduled => {
-                self.ready_tasks.remove(&task_id);
-                Vec::new()
-            }
             TaskState::Done => {
                 self.completed_task_count += 1;
                 task.outputs.clone()
@@ -91,22 +91,35 @@ impl DAG {
         }
     }
 
-    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
+    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) -> Vec<(usize, TaskState)> {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         match data_item.state {
             DataItemState::Ready => {
+                let mut result = Vec::new();
                 for t in data_item.consumers.iter() {
                     let mut consumer = self.tasks.get_mut(*t).unwrap();
                     consumer.ready_inputs += 1;
                     if consumer.ready_inputs == consumer.inputs.len() {
-                        consumer.state = TaskState::Ready;
-                        self.ready_tasks.insert(*t);
+                        if consumer.state == TaskState::Pending {
+                            consumer.state = TaskState::Ready;
+                            self.ready_tasks.insert(*t);
+                        } else if consumer.state == TaskState::Scheduled {
+                            consumer.state = TaskState::Runnable;
+                        } else {
+                            panic!(
+                                "Error: task reached needed number of ready inputs in state {:?}",
+                                consumer.state
+                            );
+                        }
+                        result.push((*t, consumer.state));
                     }
                 }
+                return result;
             }
             _ => {}
-        }
+        };
+        Vec::new()
     }
 
     pub fn is_completed(&self) -> bool {

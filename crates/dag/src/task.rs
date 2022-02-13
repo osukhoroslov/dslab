@@ -1,10 +1,12 @@
 use compute::multicore::CoresDependency;
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub enum TaskState {
     Pending,
     Ready,
     Scheduled,
+    Runnable,
+    Running,
     Done,
 }
 
