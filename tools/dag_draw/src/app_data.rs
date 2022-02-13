@@ -15,6 +15,11 @@ pub struct AppData {
     pub transfers: Rc<RefCell<Vec<Transfer>>>,
     pub files_limit_str: String,
     pub tasks_limit_str: String,
+    pub timeline_downloading: bool,
+    pub timeline_uploading: bool,
+    pub timeline_cores: bool,
+    pub timeline_memory: bool,
+    pub selected_task_info: String,
 }
 
 impl AppData {
@@ -124,6 +129,7 @@ impl AppData {
             let name = events[0]["name"].as_str().unwrap().to_string();
             let start_time = events[0]["time"].as_f64().unwrap();
             let finish_time = events[1]["time"].as_f64().unwrap();
+            let task = events[0]["task"].as_str().unwrap().to_string();
 
             transfers.borrow_mut().push(Transfer {
                 start: start_time,
@@ -131,6 +137,7 @@ impl AppData {
                 from: source.clone(),
                 to: destination.clone(),
                 name: name.clone(),
+                task,
             });
 
             if source == "scheduler" {
@@ -213,6 +220,11 @@ impl AppData {
             transfers,
             files_limit_str: "10".to_string(),
             tasks_limit_str: "2".to_string(),
+            timeline_downloading: true,
+            timeline_uploading: true,
+            timeline_cores: true,
+            timeline_memory: true,
+            selected_task_info: "".to_string(),
         }
     }
 }

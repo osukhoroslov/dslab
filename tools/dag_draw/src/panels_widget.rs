@@ -1,5 +1,4 @@
 use druid::kurbo::Line;
-use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
 use druid::widget::prelude::*;
 use druid::widget::Widget;
 use druid::{Color, Rect};
@@ -7,6 +6,7 @@ use druid::{Point, Size};
 
 use crate::app_data::*;
 use crate::data::*;
+use crate::draw_utils::*;
 
 const BLOCK_WIDTH: f64 = 300.0;
 const BLOCK_X_PADDING: f64 = 10.0;
@@ -15,77 +15,9 @@ const LABEL_WIDTH: f64 = BLOCK_WIDTH / 3.0;
 const CORE_SIZE: f64 = 15.0;
 const ROW_STEP: f64 = 20.0;
 
-pub struct DrawingWidget {}
+pub struct PanelsWidget {}
 
-impl DrawingWidget {
-    fn paint_colored_text(
-        &mut self,
-        ctx: &mut PaintCtx,
-        text: &str,
-        font: f64,
-        mut pos: Point,
-        centerx: bool,
-        color: Color,
-    ) {
-        let layout = ctx
-            .text()
-            .new_text_layout(text.to_string())
-            .font(FontFamily::SYSTEM_UI, font)
-            .text_color(color)
-            .build()
-            .unwrap();
-        let text_size = layout.size();
-        if centerx {
-            pos.x -= text_size.width / 2.;
-        }
-        ctx.draw_text(&layout, pos);
-    }
-
-    fn paint_text(&mut self, ctx: &mut PaintCtx, text: &str, font: f64, pos: Point, centerx: bool) {
-        self.paint_colored_text(ctx, text, font, pos, centerx, Color::WHITE);
-    }
-
-    fn draw_arrow(&mut self, ctx: &mut PaintCtx, pos: Point, is_download: bool) {
-        let w1 = 4.;
-        let w2 = 7.;
-        let mut h1 = -7.;
-        let h0 = 0.;
-        let mut h2 = 7.;
-        if !is_download {
-            std::mem::swap(&mut h1, &mut h2);
-        }
-        let mut arrow = vec![
-            Point::new(w1, h0),
-            Point::new(w1, h1),
-            Point::new(-w1, h1),
-            Point::new(-w1, h0),
-            Point::new(-w2, h0),
-            Point::new(0., h2),
-            Point::new(w2, h0),
-        ];
-        for point in arrow.iter_mut() {
-            point.x += pos.x;
-            point.y += pos.y;
-        }
-        let poly = crate::poly::Poly::from_vec(arrow);
-        ctx.fill(
-            poly,
-            &(if is_download {
-                Color::rgb8(0, 200, 0)
-            } else {
-                Color::rgb8(0, 210, 210)
-            }),
-        );
-    }
-
-    fn draw_download(&mut self, ctx: &mut PaintCtx, pos: Point) {
-        self.draw_arrow(ctx, pos, true);
-    }
-
-    fn draw_upload(&mut self, ctx: &mut PaintCtx, pos: Point) {
-        self.draw_arrow(ctx, pos, false);
-    }
-
+impl PanelsWidget {
     fn draw_actor_files_block(
         &mut self,
         ctx: &mut PaintCtx,
@@ -117,7 +49,7 @@ impl DrawingWidget {
         };
 
         // files title and border around it
-        self.paint_text(ctx, "Files", 18., Point::new(leftx + 5., *downy), false);
+        paint_text(ctx, "Files", 18., Point::new(leftx + 5., *downy), false);
         ctx.stroke(
             Rect::from_points(Point::new(leftx, *downy), Point::new(leftx + LABEL_WIDTH, *downy + 25.)),
             &Color::WHITE,
@@ -139,7 +71,7 @@ impl DrawingWidget {
         let extra_files = active_files.len().max(files_limit) - files_limit;
         let extra_files_space = files_limit - active_files.len().min(files_limit);
         if extra_files > 0 {
-            self.paint_text(
+            paint_text(
                 ctx,
                 &format!("+{}", extra_files),
                 18.,
@@ -151,12 +83,12 @@ impl DrawingWidget {
         for file in active_files.into_iter().rev().take(files_limit).rev() {
             // file is downloading, uploading or neither
             if time < file.uploaded {
-                self.draw_download(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
+                draw_download(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
             } else if is_uploading(&file.name, actor) {
-                self.draw_upload(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
+                draw_upload(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
             }
 
-            self.paint_text(ctx, &file.name, 15., Point::new(leftx + 5., *downy), false);
+            paint_text(ctx, &file.name, 15., Point::new(leftx + 5., *downy), false);
             *downy += ROW_STEP;
         }
 
@@ -184,7 +116,7 @@ impl DrawingWidget {
         let rightx = middlex + BLOCK_WIDTH / 2.;
 
         // title for tasks and border around it
-        self.paint_text(ctx, "Tasks", 18., Point::new(leftx + 5., *downy), false);
+        paint_text(ctx, "Tasks", 18., Point::new(leftx + 5., *downy), false);
         ctx.stroke(
             Rect::from_points(Point::new(leftx, *downy), Point::new(leftx + LABEL_WIDTH, *downy + 25.)),
             &Color::WHITE,
@@ -207,11 +139,11 @@ impl DrawingWidget {
 
         for task in active_tasks.into_iter().rev().take(tasks_limit).rev() {
             // task name
-            self.paint_text(ctx, &task.name, 15., Point::new(leftx + 5., *downy), false);
+            paint_text(ctx, &task.name, 15., Point::new(leftx + 5., *downy), false);
 
             // task status, either pending or progress bar
             if time < task.started {
-                self.paint_colored_text(
+                paint_colored_text(
                     ctx,
                     "pending...",
                     15.,
@@ -269,7 +201,7 @@ impl DrawingWidget {
 
         let time = data.slider * data.total_time;
 
-        self.paint_text(ctx, name, 25., Point::new(middlex, upy), true);
+        paint_text(ctx, name, 25., Point::new(middlex, upy), true);
 
         // line below title
         ctx.stroke(
@@ -284,14 +216,14 @@ impl DrawingWidget {
         // block with cores and tasks
         if let Some(compute) = compute {
             // two titles and two borders for them
-            self.paint_text(
+            paint_text(
                 ctx,
                 &format!("Cores: {}", compute.cores),
                 18.,
                 Point::new(leftx + 5., downy),
                 false,
             );
-            self.paint_text(
+            paint_text(
                 ctx,
                 &format!("Speed: {}", compute.speed),
                 18.,
@@ -353,7 +285,7 @@ impl DrawingWidget {
             );
 
             // block with memory
-            self.paint_text(
+            paint_text(
                 ctx,
                 &format!("Memory: {}", compute.memory),
                 18.,
@@ -443,7 +375,7 @@ impl DrawingWidget {
     }
 }
 
-impl Widget<AppData> for DrawingWidget {
+impl Widget<AppData> for PanelsWidget {
     fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut AppData, _: &Env) {}
 
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &AppData, _: &Env) {}
@@ -462,7 +394,6 @@ impl Widget<AppData> for DrawingWidget {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _: &Env) {
         let size = ctx.size();
-        let time = data.total_time * data.slider;
 
         let actor_height = self.get_actor_height(data);
         let actors_per_row = self.get_actors_per_row(size.width).min(data.compute.borrow().len());
@@ -475,8 +406,6 @@ impl Widget<AppData> for DrawingWidget {
             None,
             Some(&data.scheduler_files.borrow()),
         );
-
-        self.paint_text(ctx, &format!("time: {:.3}", time), 15., Point::new(0., 0.), false);
 
         for (i, compute) in (*data.compute.borrow()).iter().enumerate() {
             let row = i / actors_per_row + 1;
