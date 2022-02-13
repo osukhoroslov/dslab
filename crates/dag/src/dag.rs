@@ -107,7 +107,10 @@ impl DAG {
                         } else if consumer.state == TaskState::Scheduled {
                             consumer.state = TaskState::Runnable;
                         } else {
-                            panic!();
+                            panic!(
+                                "Error: task reached needed number of ready inputs in state {:?}",
+                                consumer.state
+                            );
                         }
                         result.push((*t, consumer.state));
                     }

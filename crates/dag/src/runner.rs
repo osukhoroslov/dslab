@@ -1,6 +1,6 @@
 use serde_json::json;
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
 use crate::dag::DAG;
@@ -37,7 +37,6 @@ pub struct QueuedTask {
 
 pub struct DAGRunner {
     dag: DAG,
-    scheduled_tasks: BTreeSet<usize>,
     network: Rc<RefCell<Network>>,
     resources: Vec<Resource>,
     computations: HashMap<u64, usize>,
@@ -61,7 +60,6 @@ impl DAGRunner {
         let resource_count = resources.len();
         Self {
             dag,
-            scheduled_tasks: BTreeSet::new(),
             network,
             resources,
             computations: HashMap::new(),
@@ -199,7 +197,6 @@ impl DAGRunner {
                 }),
             );
             self.dag.update_task_state(task_id, TaskState::Running);
-            self.scheduled_tasks.insert(task_id);
         }
     }
 
@@ -214,7 +211,6 @@ impl DAGRunner {
                 "name": task_name,
             }),
         );
-        self.scheduled_tasks.remove(&task_id);
         let location = self.task_location.remove(&task_id).unwrap();
         self.resources[location].cores_available += self.task_cores.get(&task_id).unwrap();
         self.resources[location].memory_available += self.dag.get_task(task_id).memory;
