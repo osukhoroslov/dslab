@@ -127,12 +127,15 @@ impl DAGRunner {
             if self.resource_queue[resource_id][0].cores > self.resources[resource_id].cores_available {
                 break;
             }
-            if self.dag.get_task(self.resource_queue[resource_id][0].task_id).state != TaskState::Ready {
+            let task_id = self.resource_queue[resource_id][0].task_id;
+            let task = self.dag.get_task(task_id);
+            if task.memory > self.resources[resource_id].memory_available {
+                break;
+            }
+            if task.state != TaskState::Ready {
                 break;
             }
             let queued_task = self.resource_queue[resource_id].pop_front().unwrap();
-            let task_id = queued_task.task_id;
-            let task = self.dag.get_task(task_id);
             let cores = queued_task.cores;
             let mut resource = &mut self.resources[resource_id];
             resource.cores_available -= cores;
