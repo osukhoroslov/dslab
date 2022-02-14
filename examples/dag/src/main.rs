@@ -98,12 +98,12 @@ fn map_reduce() {
     runner
         .borrow()
         .trace_log()
-        .save_to_file("trace_map_reduce.json")
+        .save_to_file("traces/trace_map_reduce.json")
         .unwrap();
 }
 
 fn epigenomics() {
-    let dag = DAG::from_dax("Epigenomics_100.xml");
+    let dag = DAG::from_dax("graphs/Epigenomics_100.xml");
 
     let mut sim = Simulation::new(123);
 
@@ -137,12 +137,12 @@ fn epigenomics() {
     runner
         .borrow()
         .trace_log()
-        .save_to_file("trace_epigenomics.json")
+        .save_to_file("traces/trace_epigenomics.json")
         .unwrap();
 }
 
 fn montage() {
-    let dag = DAG::from_dot("Montage.dot");
+    let dag = DAG::from_dot("graphs/Montage.dot");
 
     let mut sim = Simulation::new(123);
 
@@ -173,11 +173,11 @@ fn montage() {
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("trace_montage.json").unwrap();
+    runner.borrow().trace_log().save_to_file("traces/trace_montage.json").unwrap();
 }
 
 fn diamond() {
-    let dag = DAG::from_yaml("diamond.yaml");
+    let dag = DAG::from_yaml("graphs/diamond.yaml");
 
     let mut sim = Simulation::new(123);
 
@@ -207,7 +207,7 @@ fn diamond() {
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("trace_diamond.json").unwrap();
+    runner.borrow().trace_log().save_to_file("traces/trace_diamond.json").unwrap();
 }
 
 fn main() {
