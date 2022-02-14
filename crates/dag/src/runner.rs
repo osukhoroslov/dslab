@@ -34,7 +34,7 @@ pub struct DataTransfer {
     pub to: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct QueuedTask {
     pub task_id: usize,
     pub cores: u32,
@@ -87,8 +87,17 @@ impl DAGRunner {
     pub fn start(&mut self) {
         println!("{:>8.3} [{}] started DAG execution", self.ctx.time(), self.id);
         self.trace_config();
+        self.init_inputs();
         self.actions.extend(self.scheduler.start(&self.dag, &self.resources));
         self.process_actions();
+    }
+
+    fn init_inputs(&mut self) {
+        for data_item_id in 0..self.dag.get_data_items().len() {
+            if self.dag.get_data_item(data_item_id).is_input {
+                self.dag.update_data_item_state(data_item_id, DataItemState::Ready);
+            }
+        }
     }
 
     fn trace_config(&mut self) {

@@ -77,24 +77,27 @@ pub fn draw_upload(ctx: &mut PaintCtx, pos: Point) {
 }
 
 pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
-    let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
+    let task_info = &data.task_info.borrow()[task_id];
     let task = &data.graph.borrow().tasks[task_id];
 
     let mut result = String::new();
     result += &format!("Task: {}\n\n", task.name);
-    result += &format!("Total time: {:.3}\n\n", task_info.completed - task_info.scheduled);
-    let mut inputs: Vec<String> = Vec::new();
-    let mut outputs: Vec<String> = Vec::new();
-    for transfer in data.transfers.borrow().iter() {
-        if transfer.task != task_id {
-            continue;
-        }
-        if transfer.end <= task_info.started {
-            inputs.push(transfer.name.clone());
-        } else {
-            outputs.push(transfer.name.clone());
-        }
+    if task_info.is_some() {
+        result += &format!(
+            "Total time: {:.3}\n\n",
+            task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
+        );
     }
+    let inputs: Vec<String> = task
+        .inputs
+        .iter()
+        .map(|&i| data.graph.borrow().data_items[i].name.clone())
+        .collect();
+    let outputs: Vec<String> = task
+        .outputs
+        .iter()
+        .map(|&i| data.graph.borrow().data_items[i].name.clone())
+        .collect();
     result += &format!("Inputs: {}\n\n", inputs.join(", "));
     result += &format!("Outputs: {}\n\n", outputs.join(", "));
     result

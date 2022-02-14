@@ -209,7 +209,7 @@ impl Widget<AppData> for GraphWidget {
                 Circle::new(self.nodes[task_id], NODE_RADIUS),
                 &Color::WHITE,
                 if data.selected_task.is_some() && data.selected_task.unwrap() == task_id {
-                    3.
+                    5.
                 } else {
                     1.
                 },

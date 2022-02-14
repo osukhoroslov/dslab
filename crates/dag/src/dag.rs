@@ -59,14 +59,14 @@ impl DAG {
     }
 
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Ready);
+        let data_item = DataItem::new(name, size, DataItemState::Pending, true);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         data_item_id
     }
 
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending);
+        let data_item = DataItem::new(name, size, DataItemState::Pending, false);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
