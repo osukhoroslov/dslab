@@ -1,0 +1,38 @@
+tasks:
+  - name: A
+    flops: 10
+    memory: 128
+    outputs:
+      - name: A-output-0
+        size: 150
+      - name: A-output-1
+        size: 200
+  - name: B
+    flops: 20
+    memory: 256
+    max_cores: 2
+    inputs:
+      - A-output-0
+    outputs:
+      - name: B-output-0
+        size: 250
+  - name: C
+    flops: 25
+    memory: 256
+    max_cores: 2
+    inputs:
+      - A-output-1
+    outputs:
+      - name: C-output-0
+        size: 250
+  - name: D
+    flops: 40
+    memory: 256
+    max_cores: 10
+    cores_dependency: 0.1
+    inputs:
+      - B-output-0
+      - C-output-0
+    outputs:
+      - name: result
+        size: 500
