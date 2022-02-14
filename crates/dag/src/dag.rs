@@ -42,8 +42,16 @@ impl DAG {
         self.tasks.get(task_id).unwrap()
     }
 
+    pub fn get_tasks(&self) -> &Vec<Task> {
+        &self.tasks
+    }
+
     pub fn get_data_item(&self, data_id: usize) -> &DataItem {
         self.data_items.get(data_id).unwrap()
+    }
+
+    pub fn get_data_items(&self) -> &Vec<DataItem> {
+        &self.data_items
     }
 
     pub fn get_ready_tasks(&self) -> &BTreeSet<usize> {

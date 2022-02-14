@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use druid::{Color, Data, Lens};
 use serde_json::Value;
+use dag::trace_log::{Graph, TraceLog};
 
 use crate::data::*;
 
@@ -14,13 +15,16 @@ pub struct AppData {
     pub scheduler_files: Rc<RefCell<Vec<File>>>,
     pub compute: Rc<RefCell<Vec<Compute>>>,
     pub transfers: Rc<RefCell<Vec<Transfer>>>,
+    pub task_info: Rc<RefCell<Vec<Option<TaskInfo>>>>,
     pub files_limit_str: String,
     pub tasks_limit_str: String,
     pub timeline_downloading: bool,
     pub timeline_uploading: bool,
     pub timeline_cores: bool,
     pub timeline_memory: bool,
+    pub selected_task: Option<usize>,
     pub selected_task_info: String,
+    pub graph: Rc<RefCell<Graph>>,
 }
 
 impl AppData {
@@ -50,6 +54,7 @@ impl AppData {
         let scheduler_files = Rc::new(RefCell::new(Vec::<File>::new()));
         let compute = Rc::new(RefCell::new(Vec::<Compute>::new()));
         let transfers = Rc::new(RefCell::new(Vec::<Transfer>::new()));
+        let tasks_info = Rc::new(RefCell::new(vec![None; trace_log.graph.tasks.len()]));
         let mut total_time = 0.;
 
         let mut compute_index: HashMap<String, usize> = HashMap::new();
@@ -130,7 +135,7 @@ impl AppData {
             let name = events[0]["name"].as_str().unwrap().to_string();
             let start_time = events[0]["time"].as_f64().unwrap();
             let finish_time = events[1]["time"].as_f64().unwrap();
-            let task = events[0]["task"].as_str().unwrap().to_string();
+            let task = events[0]["task"].as_u64().unwrap() as usize;
 
             transfers.borrow_mut().push(Transfer {
                 start: start_time,
@@ -197,20 +202,19 @@ impl AppData {
             let started = events[1]["time"].as_f64().unwrap();
             let completed = events[2]["time"].as_f64().unwrap();
             let cores = events[0]["cores"].as_u64().unwrap() as u32;
-            let memory = events[0]["memory"].as_u64().unwrap();
-            let name = events[0]["name"].as_str().unwrap().to_string();
+            let id = events[0]["id"].as_u64().unwrap() as usize;
             let actor = events[0]["location"].as_str().unwrap().to_string();
-            compute.borrow_mut()[*compute_index.get(&actor).unwrap()]
-                .tasks
-                .push(Task {
-                    scheduled,
-                    started,
-                    completed,
-                    cores,
-                    memory,
-                    name,
-                    color: get_next_color(),
-                });
+
+            tasks_info.borrow_mut()[id] = Some(TaskInfo {
+                scheduled,
+                started,
+                completed,
+                cores,
+                id,
+                color: get_next_color(),
+            });
+
+            compute.borrow_mut()[*compute_index.get(&actor).unwrap()].tasks.push(id);
         }
 
         Self {
@@ -219,13 +223,16 @@ impl AppData {
             scheduler_files,
             compute,
             transfers,
+            task_info: tasks_info,
             files_limit_str: "10".to_string(),
             tasks_limit_str: "2".to_string(),
             timeline_downloading: true,
             timeline_uploading: true,
             timeline_cores: true,
             timeline_memory: true,
+            selected_task: None,
             selected_task_info: "".to_string(),
+            graph: Rc::new(RefCell::new(trace_log.graph)),
         }
     }
 }

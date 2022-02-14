@@ -4,9 +4,34 @@ use std::io::Write;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Task {
+    pub name: String,
+    pub flops: u64,
+    pub memory: u64,
+    pub min_cores: u32,
+    pub max_cores: u32,
+    pub inputs: Vec<usize>,
+    pub outputs: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DataItem {
+    pub name: String,
+    pub size: u64,
+    pub consumers: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Graph {
+    pub tasks: Vec<Task>,
+    pub data_items: Vec<DataItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TraceLog {
     pub resources: Vec<Value>,
+    pub graph: Graph,
     pub events: Vec<Value>,
 }
 
@@ -15,6 +40,10 @@ impl TraceLog {
         TraceLog {
             resources: Vec::new(),
             events: Vec::new(),
+            graph: Graph {
+                tasks: Vec::new(),
+                data_items: Vec::new(),
+            },
         }
     }
 

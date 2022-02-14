@@ -1,21 +1,12 @@
 use druid::Color;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-#[derive(Serialize, Deserialize)]
-pub struct TraceLog {
-    pub resources: Vec<Value>,
-    pub events: Vec<Value>,
-}
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Task {
+pub struct TaskInfo {
     pub scheduled: f64,
     pub started: f64,
     pub completed: f64,
     pub cores: u32,
-    pub memory: u64,
-    pub name: String,
+    pub id: usize,
     pub color: Color,
 }
 
@@ -34,7 +25,7 @@ pub struct Transfer {
     pub from: String,
     pub to: String,
     pub name: String,
-    pub task: String,
+    pub task: usize,
 }
 
 #[derive(Debug)]
@@ -44,5 +35,5 @@ pub struct Compute {
     pub cores: u32,
     pub memory: u64,
     pub files: Vec<File>,
-    pub tasks: Vec<Task>,
+    pub tasks: Vec<usize>,
 }

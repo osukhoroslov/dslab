@@ -5,7 +5,6 @@ use druid::{Color, Rect};
 use druid::{Point, Size};
 
 use crate::app_data::*;
-use crate::data::*;
 use crate::draw_utils::*;
 
 const X_PADDING: f64 = 30.0;
@@ -18,11 +17,11 @@ struct TimelineResourceBlock {
     height: f64, // in [0, 1]
     color: Color,
     selected: bool,
-    task: Task,
+    task: usize,
 }
 
 impl TimelineResourceBlock {
-    fn new(start: f64, end: f64, height: f64, color: Color, selected: bool, task: Task) -> Self {
+    fn new(start: f64, end: f64, height: f64, color: Color, selected: bool, task: usize) -> Self {
         TimelineResourceBlock {
             start,
             end,
@@ -39,8 +38,7 @@ pub struct TimelineWidget {
     timeline_right: f64,
     total_time: f64,
     size: Size,
-    clickable_rectangles: Vec<(Rect, Task)>,
-    selected_task: Option<Task>,
+    clickable_rectangles: Vec<(Rect, usize)>,
 }
 
 impl TimelineWidget {
@@ -51,7 +49,6 @@ impl TimelineWidget {
             total_time: 0.,
             size: Size::new(0., 0.),
             clickable_rectangles: Vec::new(),
-            selected_task: None,
         }
     }
 
@@ -80,7 +77,7 @@ impl TimelineWidget {
                     Point::new(self.get_time_x(right), cury + usage.height * height),
                 );
                 ctx.fill(rect.clone(), &usage.color);
-                self.clickable_rectangles.push((rect, usage.task.clone()));
+                self.clickable_rectangles.push((rect, usage.task));
                 cury += usage.height * height;
             }
         }
@@ -106,42 +103,21 @@ impl TimelineWidget {
             }
         }
     }
-
-    fn get_text_task_info(&self, data: &AppData, task: &Task) -> String {
-        let mut result = String::new();
-        result += &format!("Task: {}\n\n", task.name);
-        result += &format!("Total time: {:.3}\n\n", task.completed - task.scheduled);
-        let mut inputs: Vec<String> = Vec::new();
-        let mut outputs: Vec<String> = Vec::new();
-        for transfer in data.transfers.borrow().iter() {
-            if transfer.task != task.name {
-                continue;
-            }
-            if transfer.end <= task.started {
-                inputs.push(transfer.name.clone());
-            } else {
-                outputs.push(transfer.name.clone());
-            }
-        }
-        result += &format!("Inputs: {}\n\n", inputs.join(", "));
-        result += &format!("Outputs: {}\n\n", outputs.join(", "));
-        result
-    }
 }
 
 impl Widget<AppData> for TimelineWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _: &Env) {
         match event {
             Event::MouseDown(e) => {
-                self.selected_task = None;
+                data.selected_task = None;
                 for (rect, task) in self.clickable_rectangles.iter() {
                     if rect.contains(e.pos) {
-                        self.selected_task = Some(task.clone());
+                        data.selected_task = Some(task.clone());
                         break;
                     }
                 }
-                if let Some(task) = &self.selected_task {
-                    data.selected_task_info = self.get_text_task_info(data, &task);
+                if let Some(task_id) = data.selected_task {
+                    data.selected_task_info = get_text_task_info(data, task_id);
                 } else {
                     data.selected_task_info = String::new();
                 }
@@ -174,7 +150,7 @@ impl Widget<AppData> for TimelineWidget {
         let mut y = 20.;
         for compute in data.compute.borrow().iter() {
             let y0 = y;
-            paint_text(ctx, &compute.name, 25., Point::new(X_PADDING + 5., y), false);
+            paint_text(ctx, &compute.name, 25., Point::new(X_PADDING + 5., y), false, false);
 
             y += 35.;
 
@@ -187,7 +163,7 @@ impl Widget<AppData> for TimelineWidget {
                 );
                 for transfer in data.transfers.borrow().iter() {
                     if transfer.to == compute.name {
-                        paint_text(ctx, &transfer.name, 15., Point::new(X_PADDING + 15., y), false);
+                        paint_text(ctx, &transfer.name, 15., Point::new(X_PADDING + 15., y), false, false);
 
                         ctx.stroke(
                             Rect::from_points(
@@ -204,9 +180,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if self.selected_task.is_some()
-                                && *self.selected_task.as_ref().unwrap().name == transfer.task
-                            {
+                            if data.selected_task.is_some() && data.selected_task.unwrap() == transfer.task {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY
@@ -221,14 +195,15 @@ impl Widget<AppData> for TimelineWidget {
             // cores
             if data.timeline_cores {
                 let mut cores = Vec::new();
-                for task in compute.tasks.iter() {
+                for &task_id in compute.tasks.iter() {
+                    let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
                     cores.push(TimelineResourceBlock::new(
-                        task.scheduled,
-                        task.completed,
-                        task.cores as f64 / compute.cores as f64,
-                        task.color.clone(),
-                        self.selected_task.is_some() && *self.selected_task.as_ref().unwrap().name == task.name,
-                        task.clone(),
+                        task_info.scheduled,
+                        task_info.completed,
+                        task_info.cores as f64 / compute.cores as f64,
+                        task_info.color.clone(),
+                        data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
+                        task_id,
                     ));
                 }
                 self.draw_resource_usage(ctx, y, compute.cores as f64 * ROW_STEP, cores);
@@ -242,6 +217,7 @@ impl Widget<AppData> for TimelineWidget {
                     &format!("Cores: {}", compute.cores),
                     15.,
                     Point::new(X_PADDING + 5., y + compute.cores as f64 * ROW_STEP / 2. - 10.),
+                    false,
                     false,
                 );
                 for _i in 0..compute.cores {
@@ -257,14 +233,15 @@ impl Widget<AppData> for TimelineWidget {
             // memory
             if data.timeline_memory {
                 let mut memory = Vec::new();
-                for task in compute.tasks.iter() {
+                for &task_id in compute.tasks.iter() {
+                    let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
                     memory.push(TimelineResourceBlock::new(
-                        task.scheduled,
-                        task.completed,
-                        task.memory as f64 / compute.memory as f64,
-                        task.color.clone(),
-                        self.selected_task.is_some() && *self.selected_task.as_ref().unwrap().name == task.name,
-                        task.clone(),
+                        task_info.scheduled,
+                        task_info.completed,
+                        data.graph.borrow().tasks[task_id].memory as f64 / compute.memory as f64,
+                        task_info.color.clone(),
+                        data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
+                        task_id,
                     ));
                 }
                 self.draw_resource_usage(ctx, y, MEMORY_HEIGHT, memory);
@@ -278,6 +255,7 @@ impl Widget<AppData> for TimelineWidget {
                     &format!("Memory: {}", compute.memory),
                     15.,
                     Point::new(X_PADDING + 5., y + MEMORY_HEIGHT / 2. - 10.),
+                    false,
                     false,
                 );
                 y += MEMORY_HEIGHT;
@@ -293,7 +271,7 @@ impl Widget<AppData> for TimelineWidget {
                 // upload
                 for transfer in data.transfers.borrow().iter() {
                     if transfer.from == compute.name {
-                        paint_text(ctx, &transfer.name, 15., Point::new(X_PADDING + 15., y), false);
+                        paint_text(ctx, &transfer.name, 15., Point::new(X_PADDING + 15., y), false, false);
 
                         ctx.stroke(
                             Rect::from_points(
@@ -310,9 +288,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if self.selected_task.is_some()
-                                && *self.selected_task.as_ref().unwrap().name == transfer.task
-                            {
+                            if data.selected_task.is_some() && data.selected_task.unwrap() == transfer.task {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY

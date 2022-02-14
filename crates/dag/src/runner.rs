@@ -16,6 +16,7 @@ use crate::dag::DAG;
 use crate::data_item::DataItemState;
 use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
+use crate::trace_log;
 use crate::trace_log::TraceLog;
 
 pub struct Resource {
@@ -99,6 +100,30 @@ impl DAGRunner {
                 "memory": resource.memory_available,
             }));
         }
+        self.trace_log.graph.tasks = self
+            .dag
+            .get_tasks()
+            .iter()
+            .map(|task| trace_log::Task {
+                name: task.name.clone(),
+                flops: task.flops,
+                memory: task.memory,
+                min_cores: task.min_cores,
+                max_cores: task.max_cores,
+                inputs: task.inputs.clone(),
+                outputs: task.outputs.clone(),
+            })
+            .collect();
+        self.trace_log.graph.data_items = self
+            .dag
+            .get_data_items()
+            .iter()
+            .map(|data_item| trace_log::DataItem {
+                name: data_item.name.clone(),
+                size: data_item.size,
+                consumers: data_item.consumers.clone(),
+            })
+            .collect();
     }
 
     pub fn trace_log(&self) -> &TraceLog {
@@ -185,7 +210,7 @@ impl DAGRunner {
                         "to": resource.id.clone(),
                         "id": data_event_id,
                         "name": data_item.name.clone(),
-                        "task": task.name.clone(),
+                        "task": task_id,
                     }),
                 );
             }
@@ -247,7 +272,7 @@ impl DAGRunner {
                     "to": "scheduler",
                     "id": data_id,
                     "name": data_item.name.clone(),
-                    "task": task_name,
+                    "task": task_id,
                 }),
             );
         }
@@ -280,7 +305,7 @@ impl DAGRunner {
                     "to": self.resources[location].id.clone(),
                     "id": data_event_id,
                     "name": data_item.name.clone(),
-                    "task": task.name.clone(),
+                    "task": task_id,
                 }),
             );
 
@@ -318,7 +343,7 @@ impl DAGRunner {
                     "to": "scheduler",
                     "id": data_event_id,
                     "name": data_item.name.clone(),
-                    "task": task.name.clone(),
+                    "task": task_id,
                 }),
             );
             for (task, state) in self
