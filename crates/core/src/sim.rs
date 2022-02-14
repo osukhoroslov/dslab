@@ -159,4 +159,8 @@ impl Simulation {
         let end_time = self.time() + duration;
         while self.step() && self.time() < end_time {}
     }
+
+    pub fn event_count(&self) -> u64 {
+        self.event_count
+    }
 }

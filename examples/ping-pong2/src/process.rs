@@ -62,15 +62,15 @@ impl EventHandler for Process {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start { other } => {
-                debug!("{} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
+                debug!("{:.2} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
                 self.on_start(other);
             }
             Ping {} => {
-                debug!("{} [{}] received Ping from {}", self.ctx.time(), self.id, event.src);
+                debug!("{:.2} [{}] received Ping from {}", self.ctx.time(), self.id, event.src);
                 self.on_ping(event.src);
             }
             Pong {} => {
-                debug!("{} [{}] received Pong from {}", self.ctx.time(), self.id, event.src);
+                debug!("{:.2} [{}] received Pong from {}", self.ctx.time(), self.id, event.src);
                 self.on_pong(event.src);
             }
         })
