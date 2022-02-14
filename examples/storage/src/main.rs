@@ -1,15 +1,14 @@
 use log::info;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use storage::api::{IOReadCompleted, IOReadRequest, IOWriteCompleted, IOWriteRequest};
-use storage::block_device::BlockDevice;
-use storage::scheduler::{NoOpIOScheduler, ScanIOScheduler};
+use sugars::{rc, refcell};
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 use core::sim::Simulation;
+
+use storage::api::{DataReadCompleted, DataReadRequest, DataWriteCompleted, DataWriteRequest};
+use storage::disk::Disk;
+use storage::file::{File, FileSystem};
 
 extern crate env_logger;
 
@@ -17,14 +16,12 @@ extern crate env_logger;
 pub struct Start {}
 
 pub struct IOUserActor {
-    io_driver: ActorId,
+    disk_actor_id: ActorId,
 }
 
 impl IOUserActor {
-    pub fn new(io_driver: &str) -> Self {
-        Self {
-            io_driver: ActorId::from(io_driver),
-        }
+    pub fn new(disk_actor_id: ActorId) -> Self {
+        Self { disk_actor_id }
     }
 }
 
@@ -33,16 +30,10 @@ impl Actor for IOUserActor {
         cast!(match event {
             Start {} => {
                 info!("Starting...");
-                ctx.emit_now(IOReadRequest { start: 0, count: 100 }, self.io_driver.clone());
-                ctx.emit_now(
-                    IOWriteRequest {
-                        start: 123456,
-                        count: 789,
-                    },
-                    self.io_driver.clone(),
-                );
+                ctx.emit_now(DataReadRequest { size: 100 }, self.disk_actor_id.clone());
+                ctx.emit_now(DataWriteRequest { size: 100 }, self.disk_actor_id.clone());
             }
-            IOReadCompleted { src_event_id } => {
+            DataReadCompleted { src_event_id } => {
                 info!(
                     "{} [{}] received IOReadCompleted for request {} from {}",
                     ctx.time(),
@@ -51,7 +42,7 @@ impl Actor for IOUserActor {
                     from
                 );
             }
-            IOWriteCompleted { src_event_id } => {
+            DataWriteCompleted { src_event_id } => {
                 info!(
                     "{} [{}] received IOWriteCompleted for request {} from {}",
                     ctx.time(),
@@ -73,20 +64,20 @@ fn main() {
 
     let mut sim = Simulation::new(16);
 
-    // create disk and driver for it
+    // create disk, fs and get file from it
+    let disk = rc!(refcell!(Disk::new("disk1", 1234, 4321)));
+    let mut fs = FileSystem::new(ActorId::from("disk1"));
+    let file = fs.open("file1");
 
-    let disk = Rc::new(RefCell::new(BlockDevice::new("hdd_disk".to_string(), 1.0, 1.0, 1)));
-
-    // sim.add_actor("io_driver", Rc::new(RefCell::new(ScanIOScheduler::new(ActorId::from("io_driver"), disk, 1.0))));
-    sim.add_actor("io_driver", Rc::new(RefCell::new(NoOpIOScheduler::new(disk))));
+    file.seek(1);
 
     // create disk user
-
-    sim.add_actor("user", Rc::new(RefCell::new(IOUserActor::new("io_driver"))));
+    sim.add_actor("user", rc!(refcell!(IOUserActor::new(ActorId::from("disk1")))));
 
     // start the simulation
-
     sim.add_event(Start {}, ActorId::from("0"), ActorId::from("user"), 0.);
+
+    file.close();
 
     sim.step_until_no_events();
 
