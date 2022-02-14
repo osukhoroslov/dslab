@@ -95,7 +95,11 @@ fn map_reduce() {
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("trace_map_reduce.json").unwrap();
+    runner
+        .borrow()
+        .trace_log()
+        .save_to_file("trace_map_reduce.json")
+        .unwrap();
 }
 
 fn epigenomics() {
@@ -130,10 +134,50 @@ fn epigenomics() {
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("trace_epigenomics.json").unwrap();
+    runner
+        .borrow()
+        .trace_log()
+        .save_to_file("trace_epigenomics.json")
+        .unwrap();
+}
+
+fn montage() {
+    let dag = DAG::from_dot("Montage.dot");
+
+    let mut sim = Simulation::new(123);
+
+    let mut resources: Vec<Resource> = Vec::new();
+    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
+        let name = format!("compute{}", resources.len() + 1);
+        let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
+        sim.add_actor(&name, compute.clone());
+        let resource = Resource {
+            compute,
+            id: ActorId::from(&name),
+            speed,
+            cores_available: cores,
+            memory_available: memory,
+        };
+        resources.push(resource);
+    };
+    add_resource(10, 8, 256);
+    add_resource(20, 2, 512);
+    add_resource(30, 4, 1024);
+
+    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(0.01, 1.)));
+    let network = Rc::new(RefCell::new(Network::new(network_model)));
+    sim.add_actor(NETWORK_ID, network.clone());
+
+    let scheduler = SimpleScheduler::new();
+    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
+    let runner_id = sim.add_actor("runner", runner.clone());
+    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
+    sim.step_until_no_events();
+    runner.borrow().trace_log().save_to_file("trace_montage.json").unwrap();
 }
 
 fn main() {
     map_reduce();
     epigenomics();
+    montage();
 }

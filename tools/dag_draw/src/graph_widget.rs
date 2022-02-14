@@ -16,6 +16,8 @@ pub struct GraphWidget {
     nodes: Vec<Point>,
     edges: Vec<(usize, usize)>,
     last_mouse_position: Option<Point>,
+    has_input: bool,
+    has_output: bool,
 }
 
 impl GraphWidget {
@@ -24,6 +26,8 @@ impl GraphWidget {
             nodes: Vec::new(),
             edges: Vec::new(),
             last_mouse_position: None,
+            has_input: false,
+            has_output: false,
         }
     }
 
@@ -55,6 +59,17 @@ impl GraphWidget {
             }
         }
 
+        self.has_input = false;
+        self.has_output = false;
+        for &(from, to) in self.edges.iter() {
+            if from == self.nodes.len() - 2 {
+                self.has_input = true;
+            }
+            if to == self.nodes.len() - 1 {
+                self.has_output = true;
+            }
+        }
+
         self.init_nodes(size);
     }
 
@@ -70,6 +85,12 @@ impl GraphWidget {
         let mut by_level: HashMap<i32, Vec<usize>> = HashMap::new();
 
         for v in 0..self.nodes.len() {
+            if v == self.nodes.len() - 2 && !self.has_input {
+                continue;
+            }
+            if v == self.nodes.len() - 1 && !self.has_output {
+                continue;
+            }
             if !used[v] {
                 self.dfs(v, &g, &mut level, &mut used, &mut by_level)
             }
@@ -216,21 +237,27 @@ impl Widget<AppData> for GraphWidget {
             );
             paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id], true, true);
         }
+
         // input
-        ctx.fill(Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS), &BACKGROUND);
-        ctx.stroke(
-            Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS),
-            &Color::WHITE,
-            1.,
-        );
-        paint_text(ctx, "input", 18., self.nodes[self.nodes.len() - 2], true, true);
+        if self.has_input {
+            ctx.fill(Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS), &BACKGROUND);
+            ctx.stroke(
+                Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS),
+                &Color::WHITE,
+                1.,
+            );
+            paint_text(ctx, "input", 18., self.nodes[self.nodes.len() - 2], true, true);
+        }
+
         // output
-        ctx.fill(Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS), &BACKGROUND);
-        ctx.stroke(
-            Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS),
-            &Color::WHITE,
-            1.,
-        );
-        paint_text(ctx, "output", 18., self.nodes[self.nodes.len() - 1], true, true);
+        if self.has_output {
+            ctx.fill(Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS), &BACKGROUND);
+            ctx.stroke(
+                Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS),
+                &Color::WHITE,
+                1.,
+            );
+            paint_text(ctx, "output", 18., self.nodes[self.nodes.len() - 1], true, true);
+        }
     }
 }

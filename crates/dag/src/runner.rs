@@ -181,7 +181,7 @@ impl DAGRunner {
                 break;
             }
             let task_id = self.resource_queue[resource_id][0].task_id;
-            let task = self.dag.get_task(task_id);
+            let task = self.dag.get_task(task_id).clone();
             if task.memory > self.resources[resource_id].memory_available {
                 break;
             }
@@ -237,6 +237,10 @@ impl DAGRunner {
                 }),
             );
             self.dag.update_task_state(task_id, TaskState::Running);
+
+            if task.inputs.is_empty() {
+                self.start_task(task_id);
+            }
         }
     }
 
@@ -297,6 +301,31 @@ impl DAGRunner {
         }
     }
 
+    fn start_task(&mut self, task_id: usize) {
+        let task = self.dag.get_task(task_id);
+        let location = *self.task_location.get(&task_id).unwrap();
+        let cores = *self.task_cores.get(&task_id).unwrap();
+        let computation_id = self.resources[location].compute.borrow_mut().run(
+            task.flops,
+            task.memory,
+            cores,
+            cores,
+            task.cores_dependency,
+            &self.id,
+        );
+        self.computations.insert(computation_id, task_id);
+
+        self.trace_log.log_event(
+            &self.id,
+            json!({
+                "time": self.ctx.time(),
+                "type": "task_started",
+                "id": task_id,
+                "name": task.name.clone(),
+            }),
+        );
+    }
+
     fn on_data_transfered(&mut self, data_event_id: usize) {
         let data_transfer = self.data_transfers.get(&data_event_id).unwrap();
         let data_id = data_transfer.data_id;
@@ -321,26 +350,7 @@ impl DAGRunner {
             let left_inputs = self.task_inputs.get_mut(&task_id).unwrap();
             left_inputs.remove(&data_id);
             if left_inputs.is_empty() {
-                let cores = *self.task_cores.get(&task_id).unwrap();
-                let computation_id = self.resources[location].compute.borrow_mut().run(
-                    task.flops,
-                    task.memory,
-                    cores,
-                    cores,
-                    task.cores_dependency,
-                    &self.id,
-                );
-                self.computations.insert(computation_id, task_id);
-
-                self.trace_log.log_event(
-                    &self.id,
-                    json!({
-                        "time": self.ctx.time(),
-                        "type": "task_started",
-                        "id": task_id,
-                        "name": task.name.clone(),
-                    }),
-                );
+                self.start_task(task_id);
             }
         } else {
             self.trace_log.log_event(
