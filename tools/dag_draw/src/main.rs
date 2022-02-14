@@ -55,17 +55,24 @@ fn main() {
 
 fn make_layout() -> impl Widget<AppData> {
     let get_task_info_label = || {
-        Label::new(|data: &AppData, _env: &_| match data.selected_task {
-            Some(x) => {
-                if x < data.graph.borrow().tasks.len() {
-                    get_text_task_info(data, x)
-                } else {
-                    String::new()
+        Scroll::new(
+            Label::new(|data: &AppData, _env: &_| match data.selected_task {
+                Some(x) => {
+                    if x < data.graph.borrow().tasks.len() {
+                        get_text_task_info(data, x)
+                    } else {
+                        String::new()
+                    }
                 }
-            }
-            None => String::new(),
-        })
-        .with_line_break_mode(LineBreaking::WordWrap)
+                None => String::new(),
+            })
+            .with_line_break_mode(LineBreaking::WordWrap),
+        )
+        .vertical()
+        .expand_height()
+        .expand_width()
+        .padding(PADDING)
+        .border(Color::WHITE, 1.)
     };
 
     Flex::column()
@@ -101,16 +108,7 @@ fn make_layout() -> impl Widget<AppData> {
                                     1.,
                                 )
                                 .with_spacer(PADDING)
-                                .with_flex_child(
-                                    Flex::column()
-                                        .with_child(get_task_info_label())
-                                        .cross_axis_alignment(CrossAxisAlignment::Start)
-                                        .expand_width()
-                                        .expand_height()
-                                        .padding(PADDING)
-                                        .border(Color::WHITE, 1.),
-                                    1.,
-                                )
+                                .with_flex_child(get_task_info_label(), 1.)
                                 .fix_width(200.),
                         )
                         .with_spacer(PADDING)
@@ -146,16 +144,7 @@ fn make_layout() -> impl Widget<AppData> {
                                     1.,
                                 )
                                 .with_spacer(PADDING)
-                                .with_flex_child(
-                                    Flex::column()
-                                        .with_child(get_task_info_label())
-                                        .cross_axis_alignment(CrossAxisAlignment::Start)
-                                        .expand_width()
-                                        .expand_height()
-                                        .padding(PADDING)
-                                        .border(Color::WHITE, 1.),
-                                    1.,
-                                )
+                                .with_flex_child(get_task_info_label(), 1.)
                                 .fix_width(200.),
                         )
                         .with_spacer(PADDING)
@@ -184,16 +173,7 @@ fn make_layout() -> impl Widget<AppData> {
                                     1.,
                                 )
                                 .with_spacer(PADDING)
-                                .with_flex_child(
-                                    Flex::column()
-                                        .with_child(get_task_info_label())
-                                        .cross_axis_alignment(CrossAxisAlignment::Start)
-                                        .expand_width()
-                                        .expand_height()
-                                        .padding(PADDING)
-                                        .border(Color::WHITE, 1.),
-                                    1.,
-                                )
+                                .with_flex_child(get_task_info_label(), 1.)
                                 .fix_width(200.),
                         )
                         .with_spacer(PADDING)
