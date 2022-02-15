@@ -62,6 +62,10 @@ impl Simulation {
         }
     }
 
+    pub fn peek_event(&self) -> Option<&Event> {
+        self.events.peek()
+    }
+
     pub fn cancel_event(&mut self, event_id: u64) {
         self.canceled_events.insert(event_id);
     }

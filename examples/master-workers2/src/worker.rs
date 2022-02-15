@@ -70,13 +70,14 @@ impl EventHandler for Worker {
         cast!(match event.data {
             Start {} => {
                 debug!("{} [{}] started", event.time, self.id);
-                self.ctx.emit_now(
+                self.ctx.emit(
                     WorkerRegister {
                         speed: self.compute.speed(),
                         cpus_total: self.compute.cpus_total(),
                         memory_total: self.compute.memory_total(),
                     },
                     &self.master,
+                    0.5,
                 );
             }
             TaskRequest {

@@ -50,7 +50,7 @@ impl Simulator {
         }
     }
 
-    pub fn steps(&mut self, step_count: u32) -> bool {
+    pub fn steps(&mut self, step_count: u64) -> bool {
         for _i in 0..step_count {
             if !self.step() {
                 return false;
@@ -65,7 +65,16 @@ impl Simulator {
 
     pub fn step_for_duration(&mut self, duration: f64) {
         let end_time = self.sim.borrow().time() + duration;
-        while self.step() && self.sim.borrow().time() < end_time {}
+        loop {
+            if let Some(event) = self.sim.borrow().peek_event() {
+                if event.time > end_time {
+                    break;
+                }
+            } else {
+                break;
+            }
+            self.step();
+        }
     }
 
     pub fn event_count(&self) -> u64 {

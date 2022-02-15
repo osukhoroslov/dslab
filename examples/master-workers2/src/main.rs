@@ -24,11 +24,11 @@ fn main() {
     env_logger::init();
 
     // params
-    let host_count = 1000;
+    let host_count = 10;
     let latency = 0.5;
     let storage_bandwidth = 2000;
     let network_bandwidth = 1000;
-    let task_count = 10000;
+    let task_count = 10;
     let seed = 123;
 
     let mut sim = Simulator::new(seed);
