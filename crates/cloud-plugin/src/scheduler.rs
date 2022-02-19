@@ -1,6 +1,5 @@
 use log::info;
 use std::cell::RefCell;
-use std::fmt;
 use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
@@ -13,23 +12,18 @@ use crate::monitoring::Monitoring;
 use crate::network::MESSAGE_DELAY;
 use crate::resource_pool::ResourcePoolState;
 use crate::vm::VirtualMachine;
+use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 
-impl fmt::Debug for Scheduler {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("").finish()
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Scheduler {
     pub id: ActorId,
     pool_state: ResourcePoolState,
     placement_store: ActorId,
     #[allow(dead_code)]
     monitoring: Rc<RefCell<Monitoring>>,
-    allocation_policy: fn(&VirtualMachine, &ResourcePoolState) -> Option<String>,
+    vm_placement_policy: Box<dyn VMPlacementAlgorithm>,
 }
 
 impl Scheduler {
@@ -38,14 +32,14 @@ impl Scheduler {
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
         placement_store: ActorId,
-        allocation_policy: fn(&VirtualMachine, &ResourcePoolState) -> Option<String>,
+        vm_placement_policy: Box<dyn VMPlacementAlgorithm>,
     ) -> Self {
         Self {
             id,
             pool_state: snapshot,
             placement_store,
             monitoring,
-            allocation_policy,
+            vm_placement_policy,
         }
     }
 
@@ -54,42 +48,33 @@ impl Scheduler {
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
-    pub fn on_allocation_host_found(&mut self, vm: &VirtualMachine, host: &String, ctx: &mut ActorContext) {
-        info!(
-            "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
-            ctx.time(),
-            self.id,
-            vm.id,
-            host
-        );
-        self.pool_state.place_vm(&vm, &host);
-        ctx.emit(
-            AllocationCommitRequest {
-                vm: vm.clone(),
-                host_id: host.to_string(),
-            },
-            self.placement_store.clone(),
-            MESSAGE_DELAY,
-        );
-    }
-
-    pub fn on_not_enough_space_available(&self, vm: &VirtualMachine, ctx: &mut ActorContext) {
-        info!(
-            "[time = {}] scheduler #{} failed to pack vm #{}",
-            ctx.time(),
-            self.id,
-            vm.id
-        );
-
-        ctx.emit_self(AllocationRequest { vm: vm.clone() }, ALLOCATION_RETRY_PERIOD);
-    }
-
     fn on_allocation_request(&mut self, vm: &VirtualMachine, ctx: &mut ActorContext) {
-        let selected_host = (self.allocation_policy)(vm, &self.pool_state);
-        if selected_host.is_none() {
-            self.on_not_enough_space_available(vm, ctx);
+        if let Some(host) = self.vm_placement_policy.select_host(vm, &self.pool_state) {
+            info!(
+                "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
+                ctx.time(),
+                self.id,
+                vm.id,
+                host
+            );
+            self.pool_state.place_vm(&vm, &host);
+            ctx.emit(
+                AllocationCommitRequest {
+                    vm: vm.clone(),
+                    host_id: host.to_string(),
+                },
+                self.placement_store.clone(),
+                MESSAGE_DELAY,
+            );
         } else {
-            self.on_allocation_host_found(vm, &selected_host.unwrap(), ctx);
+            info!(
+                "[time = {}] scheduler #{} failed to pack vm #{}",
+                ctx.time(),
+                self.id,
+                vm.id
+            );
+
+            ctx.emit_self(AllocationRequest { vm: vm.clone() }, ALLOCATION_RETRY_PERIOD);
         }
     }
 

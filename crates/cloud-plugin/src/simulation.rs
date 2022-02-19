@@ -8,11 +8,12 @@ use sugars::{rc, refcell};
 use crate::events::allocation::AllocationRequest;
 use crate::host_manager::HostManager;
 use crate::host_manager::SendHostState;
+use crate::load_model::LoadModel;
 use crate::monitoring::Monitoring;
 use crate::placement_store::PlacementStore;
-use crate::resource_pool::ResourcePoolState;
 use crate::scheduler::Scheduler;
 use crate::vm::VirtualMachine;
+use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
@@ -69,11 +70,7 @@ impl CloudSimulation {
             .add_event_now(SendHostState {}, self.simulation_id.clone(), actor_id.clone());
     }
 
-    pub fn add_scheduler(
-        &mut self,
-        id: &str,
-        allocation_policy: fn(&VirtualMachine, &ResourcePoolState) -> Option<String>,
-    ) {
+    pub fn add_scheduler(&mut self, id: &str, vm_placement_policy: Box<dyn VMPlacementAlgorithm>) {
         // create scheduler actor using current state from placement store
         let pool_state = self.placement_store.borrow_mut().get_pool_state();
         let scheduler = rc!(refcell!(Scheduler::new(
@@ -81,7 +78,7 @@ impl CloudSimulation {
             pool_state,
             self.monitoring.clone(),
             self.placement_store_id.clone(),
-            allocation_policy
+            vm_placement_policy
         )));
         self.simulation.add_actor(id, scheduler.clone());
         self.schedulers.insert(id.to_string(), scheduler);
@@ -96,17 +93,10 @@ impl CloudSimulation {
         memory_usage: u64,
         lifetime: f64,
         scheduler: &str,
-        cpu_load_function: fn(f64) -> f64,
-        memory_load_function: fn(f64) -> f64,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
     ) -> ActorId {
-        let vm = VirtualMachine::new(
-            id,
-            cpu_usage,
-            memory_usage,
-            lifetime,
-            cpu_load_function,
-            memory_load_function,
-        );
+        let vm = VirtualMachine::new(id, cpu_usage, memory_usage, lifetime, cpu_load_model, memory_load_model);
         let actor = self.simulation.add_actor(id, rc!(refcell!(vm.clone())));
         self.simulation.add_event_now(
             AllocationRequest { vm },

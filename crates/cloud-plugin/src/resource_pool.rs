@@ -74,7 +74,7 @@ impl ResourcePoolState {
     }
 
     pub fn get_cpu_load(&self, host_id: &String) -> f64 {
-        return 1. - f64::from(self.hosts[host_id].cpu_available) / f64::from(self.hosts[host_id].cpu_total);
+        return 1. - self.hosts[host_id].cpu_available as f64 / self.hosts[host_id].cpu_total as f64;
     }
 
     pub fn get_memory_load(&self, host_id: &String) -> f64 {
