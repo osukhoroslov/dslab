@@ -11,7 +11,6 @@ use crate::host_manager::SendHostState;
 use crate::load_model::LoadModel;
 use crate::monitoring::Monitoring;
 use crate::placement_store::PlacementStore;
-use crate::resource_pool::ResourcePoolState;
 use crate::scheduler::Scheduler;
 use crate::vm::VirtualMachine;
 use crate::vm_placement_algorithm::VMPlacementAlgorithm;

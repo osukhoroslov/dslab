@@ -1,6 +1,5 @@
 use log::info;
 use std::cell::RefCell;
-use std::fmt;
 use std::rc::Rc;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
