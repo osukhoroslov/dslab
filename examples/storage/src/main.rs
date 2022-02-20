@@ -1,54 +1,40 @@
-use log::info;
-
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+use std::borrow::BorrowMut;
 use sugars::{rc, refcell};
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 use core::sim::Simulation;
 
-use storage::api::{DataReadCompleted, DataReadRequest, DataWriteCompleted, DataWriteRequest};
+use storage::api::{FileReadCompleted, FileWriteCompleted};
 use storage::disk::Disk;
-use storage::file::{File, FileSystem};
+use storage::file::{FileSystem, FS_ID};
 
-extern crate env_logger;
+pub const ITER_COUNT : u64 = 10;
+pub const MAX_SIZE: u64 = 1000;
 
-#[derive(Debug, Clone)]
-pub struct Start {}
+pub struct UserActor {}
 
-pub struct IOUserActor {
-    disk_actor_id: ActorId,
-}
-
-impl IOUserActor {
-    pub fn new(disk_actor_id: ActorId) -> Self {
-        Self { disk_actor_id }
+impl UserActor {
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
-impl Actor for IOUserActor {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+impl Actor for UserActor {
+    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            Start {} => {
-                info!("Starting...");
-                ctx.emit_now(DataReadRequest { size: 100 }, self.disk_actor_id.clone());
-                ctx.emit_now(DataWriteRequest { size: 100 }, self.disk_actor_id.clone());
+            FileReadCompleted { fd } => {
+                println!("{} [{}] completed READ from file {}", ctx.time(), ctx.id, fd,);
             }
-            DataReadCompleted { src_event_id } => {
-                info!(
-                    "{} [{}] received IOReadCompleted for request {} from {}",
+            FileWriteCompleted { fd, new_size } => {
+                println!(
+                    "{} [{}] completed WRITE to file {}, new_size {}",
                     ctx.time(),
                     ctx.id,
-                    src_event_id,
-                    from
-                );
-            }
-            DataWriteCompleted { src_event_id } => {
-                info!(
-                    "{} [{}] received IOWriteCompleted for request {} from {}",
-                    ctx.time(),
-                    ctx.id,
-                    src_event_id,
-                    from
+                    fd,
+                    new_size
                 );
             }
         })
@@ -60,26 +46,51 @@ impl Actor for IOUserActor {
 }
 
 fn main() {
-    env_logger::init();
+    println!("Starting...");
 
-    let mut sim = Simulation::new(16);
+    let seed = 16;
 
-    // create disk, fs and get file from it
-    let disk = rc!(refcell!(Disk::new("disk1", 1234, 4321)));
-    let mut fs = FileSystem::new(ActorId::from("disk1"));
-    let file = fs.open("file1");
+    let mut sim = Simulation::new(seed);
 
-    file.seek(1);
+    let disk_name = "disk-1";
 
-    // create disk user
-    sim.add_actor("user", rc!(refcell!(IOUserActor::new(ActorId::from("disk1")))));
+    let disk = rc!(refcell!(Disk::new(disk_name, 1234, 4321)));
+    let disk_actor_id = sim.add_actor("disk-1", disk);
 
-    // start the simulation
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("user"), 0.);
+    let fs = rc!(refcell!(FileSystem::new(disk_actor_id)));
+    sim.add_actor(FS_ID, fs.clone());
 
-    file.close();
+    let user = rc!(refcell!(UserActor::new()));
+    let user_actor_id = sim.add_actor("user", user);
+
+    let fd0 = (*fs).borrow_mut().open("/home/file0");
+    let fd1 = (*fs).borrow_mut().open("/home/file1");
+
+    let mut rand = Pcg64::seed_from_u64(seed);
+
+    for _ in 1..ITER_COUNT {
+        let mut size = rand.gen_range(1..MAX_SIZE);
+        (*fs)
+            .borrow_mut()
+            .read_async(fd0, size, sim.borrow_mut(), user_actor_id.clone());
+
+        size = rand.gen_range(1..MAX_SIZE);
+        (*fs)
+            .borrow_mut()
+            .write_async(fd0, size, sim.borrow_mut(), user_actor_id.clone());
+
+        size = rand.gen_range(1..MAX_SIZE);
+        (*fs)
+            .borrow_mut()
+            .read_async(fd1, size, sim.borrow_mut(), user_actor_id.clone());
+
+        size = rand.gen_range(1..MAX_SIZE);
+        (*fs)
+            .borrow_mut()
+            .write_async(fd1, size, sim.borrow_mut(), user_actor_id.clone());
+    }
 
     sim.step_until_no_events();
 
-    info!("Finish");
+    println!("Finish");
 }
