@@ -1,42 +1,31 @@
-use core::actor::{ActorId};
+use std::{borrow::Borrow, collections::HashMap};
 
-use std::collections::HashMap;
+use core::{
+    actor::{Actor, ActorContext, ActorId, Event},
+    match_event,
+    sim::Simulation,
+};
 
-extern crate env_logger;
+use crate::api::*;
+
+pub const FS_ID: &str = "fs";
 
 pub struct File {
-    disk_actor_id: ActorId,
     size: u64,
-    position: u64,
-    opened: bool,
 }
 
 impl File {
-    pub fn new(disk_actor_id: ActorId, size: u64) -> File {
-        File {
-            disk_actor_id,
-            size,
-            position: 0,
-            opened: false,
-        }
-    }
-
-    pub fn seek(&mut self, position: u64) -> Option<u64> {
-        if position > self.size {
-            return None;
-        }
-        self.position = position;
-        Some(self.position)
-    }
-
-    pub fn close(&mut self) {
-        self.opened = false;
+    pub fn new(size: u64) -> File {
+        File { size }
     }
 }
 
 pub struct FileSystem {
     files: HashMap<String, File>,
     disk_actor_id: ActorId,
+    opened_files: HashMap<FD, String>,
+    requests: HashMap<u64, (ActorId, FD)>,
+    max_used_fd: u64,
 }
 
 impl FileSystem {
@@ -44,15 +33,93 @@ impl FileSystem {
         Self {
             files: HashMap::new(),
             disk_actor_id,
+            opened_files: HashMap::new(),
+            requests: HashMap::new(),
+            max_used_fd: 0,
         }
     }
 
-    pub fn open(&mut self, name: &str) -> &mut File {
-        let file = self
-            .files
-            .entry(name.to_string())
-            .or_insert(File::new(self.disk_actor_id.clone(), 0));
-        file.opened = true;
-        file
+    pub fn open(&mut self, name: &str) -> FD {
+        self.files.entry(name.to_string()).or_insert(File::new(0));
+        self.max_used_fd += 1;
+        self.opened_files.insert(self.max_used_fd, name.to_string());
+        self.max_used_fd
+    }
+
+    pub fn read_async(&mut self, fd: FD, size: u64, sim: &mut Simulation, actor_to_notify: ActorId) {
+        sim.add_event_now(FileReadRequest { fd, size }, actor_to_notify, ActorId::from(FS_ID));
+    }
+
+    pub fn write_async(&mut self, fd: FD, size: u64, sim: &mut Simulation, actor_to_notify: ActorId) {
+        sim.add_event_now(FileWriteRequest { fd, size }, actor_to_notify, ActorId::from(FS_ID));
+    }
+
+    pub fn close(&mut self, fd: FD) {
+        self.opened_files.remove(fd.borrow());
+    }
+}
+
+impl Actor for FileSystem {
+    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
+        match_event!( event {
+            &FileReadRequest { fd, size } => {
+                let event_id = ctx.emit_now(DataReadRequest { size }, self.disk_actor_id.clone());
+                self.requests.insert(
+                    event_id,
+                    (from.clone(), fd)
+                );
+
+                let path = self.opened_files[&fd].clone();
+                println!("{} [{}] requested READ {} bytes from file {} (fd {})", ctx.time(), ctx.id, size, path, fd);
+            },
+            &FileWriteRequest { fd, size } => {
+                let event_id = ctx.emit_now(DataWriteRequest { size }, self.disk_actor_id.clone());
+                self.requests.insert(
+                    event_id,
+                    (from.clone(), fd)
+                );
+
+                let path = self.opened_files[&fd].clone();
+                println!("{} [{}] requested WRITE {} bytes to file {} (fd {})", ctx.time(), ctx.id, size, path, fd);
+            },
+            &DataReadCompleted { src_event_id, size } => {
+                match self.requests.get(&src_event_id) {
+                    Some((actor_to_notify, fd)) => {
+                        let path = self.opened_files[&fd].clone();
+
+                        println!("{} [{}] completed READ {} bytes from {} (fd {})", ctx.time(), ctx.id, size, path, fd);
+
+                        ctx.emit_now(FileReadCompleted { fd: fd.clone() }, actor_to_notify.clone());
+
+                        self.requests.remove(&src_event_id);
+                    },
+                    None => {
+                        panic!("request not found, unexpected");
+                    }
+                }
+            },
+            &DataWriteCompleted { src_event_id, size } => {
+                match self.requests.get(&src_event_id) {
+                    Some((actor_to_notify, fd)) => {
+                        let file = &self.files[&self.opened_files[&fd]];
+                        let path = self.opened_files[&fd].clone();
+
+                        println!("{} [{}] completed WRITE {} bytes to {} (fd {})", ctx.time(), ctx.id, size, path, fd);
+
+                        ctx.emit_now(FileWriteCompleted { fd: fd.clone(), new_size: file.size }, actor_to_notify.clone());
+
+                        self.files.entry(path).and_modify(|file| { file.size += size });
+                        self.requests.remove(&src_event_id);
+                    },
+                    None => {
+                        panic!("request not found, unexpected");
+                    }
+                }
+            }
+        })
+    }
+
+    fn is_active(&self) -> bool {
+        true
     }
 }
