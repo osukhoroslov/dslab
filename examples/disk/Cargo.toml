@@ -1,0 +1,11 @@
+[package]
+name = "disk-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core = { path = "../../crates/core" }
+storage = { path = "../../crates/storage" }
+sugars = "3.0.0"
+rand = "0.8.4"
+rand_pcg = "0.3.1"
