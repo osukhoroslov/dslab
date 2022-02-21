@@ -2,16 +2,16 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::event::EventData;
-use crate::simulation::Simulation;
+use crate::state::SimulationState;
 
 pub struct SimulationContext {
     id: String,
-    sim: Rc<RefCell<Simulation>>,
+    sim_state: Rc<RefCell<SimulationState>>,
 }
 
 impl SimulationContext {
-    pub fn new(id: String, sim: Rc<RefCell<Simulation>>) -> Self {
-        Self { id, sim }
+    pub fn new(id: String, sim_state: Rc<RefCell<SimulationState>>) -> Self {
+        Self { id, sim_state }
     }
 
     pub fn id(&self) -> &str {
@@ -19,11 +19,11 @@ impl SimulationContext {
     }
 
     pub fn time(&self) -> f64 {
-        self.sim.borrow().time()
+        self.sim_state.borrow().time()
     }
 
     pub fn rand(&mut self) -> f64 {
-        self.sim.borrow_mut().rand()
+        self.sim_state.borrow_mut().rand()
     }
 
     pub fn emit<T, S>(&mut self, data: T, dest: S, delay: f64) -> u64
@@ -31,7 +31,7 @@ impl SimulationContext {
         T: EventData,
         S: Into<String>,
     {
-        self.sim
+        self.sim_state
             .borrow_mut()
             .add_event(data, self.id.clone(), dest.into(), delay)
     }
@@ -41,14 +41,16 @@ impl SimulationContext {
         T: EventData,
         S: Into<String>,
     {
-        self.sim.borrow_mut().add_event(data, self.id.clone(), dest.into(), 0.)
+        self.sim_state
+            .borrow_mut()
+            .add_event(data, self.id.clone(), dest.into(), 0.)
     }
 
     pub fn emit_self<T>(&mut self, data: T, delay: f64) -> u64
     where
         T: EventData,
     {
-        self.sim
+        self.sim_state
             .borrow_mut()
             .add_event(data, self.id.clone(), self.id.clone(), delay)
     }
@@ -58,10 +60,12 @@ impl SimulationContext {
         T: EventData,
         S: Into<String>,
     {
-        self.sim.borrow_mut().add_event(data, src.into(), dest.into(), delay)
+        self.sim_state
+            .borrow_mut()
+            .add_event(data, src.into(), dest.into(), delay)
     }
 
     pub fn cancel_event(&mut self, event_id: u64) {
-        self.sim.borrow_mut().cancel_event(event_id);
+        self.sim_state.borrow_mut().cancel_event(event_id);
     }
 }

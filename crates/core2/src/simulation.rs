@@ -1,76 +1,83 @@
-use decorum::R64;
-use rand::prelude::*;
-use rand_pcg::Pcg64;
-use std::collections::{BinaryHeap, HashSet};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-use crate::event::{Event, EventData};
+use crate::context::SimulationContext;
+use crate::event::Event;
+use crate::handler::EventHandler;
+use crate::state::SimulationState;
 
 pub struct Simulation {
-    clock: R64,
-    rand: Pcg64,
-    events: BinaryHeap<Event>,
-    canceled_events: HashSet<u64>,
-    event_count: u64,
+    sim_state: Rc<RefCell<SimulationState>>,
+    handlers: HashMap<String, Rc<RefCell<dyn EventHandler>>>,
+    undelivered_events: Vec<Event>,
 }
 
 impl Simulation {
     pub fn new(seed: u64) -> Self {
         Self {
-            clock: R64::from_inner(0.0),
-            rand: Pcg64::seed_from_u64(seed),
-            events: BinaryHeap::new(),
-            canceled_events: HashSet::new(),
-            event_count: 0,
+            sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
+            handlers: HashMap::new(),
+            undelivered_events: Vec::new(),
         }
     }
 
-    pub fn time(&self) -> f64 {
-        self.clock.into_inner()
-    }
-
-    pub fn rand(&mut self) -> f64 {
-        self.rand.gen_range(0.0..1.0)
-    }
-
-    pub fn add_event<T>(&mut self, data: T, src: String, dest: String, delay: f64) -> u64
+    pub fn create_context<S>(&mut self, id: S) -> SimulationContext
     where
-        T: EventData,
+        S: Into<String>,
     {
-        let event_id = self.event_count;
-        let event = Event {
-            id: event_id,
-            time: self.clock + delay,
-            src,
-            dest,
-            data: Box::new(data),
-        };
-        self.events.push(event);
-        self.event_count += 1;
-        event_id
+        SimulationContext::new(id.into(), self.sim_state.clone())
     }
 
-    pub fn next_event(&mut self) -> Option<Event> {
-        loop {
-            if let Some(event) = self.events.pop() {
-                self.clock = event.time;
-                if !self.canceled_events.remove(&event.id) {
-                    return Some(event);
-                }
+    pub fn add_handler<S>(&mut self, id: S, handler: Rc<RefCell<dyn EventHandler>>)
+    where
+        S: Into<String>,
+    {
+        self.handlers.insert(id.into(), handler);
+    }
+
+    pub fn step(&mut self) -> bool {
+        let next = self.sim_state.borrow_mut().next_event();
+        if let Some(event) = next {
+            if let Some(handler) = self.handlers.get(&event.dest) {
+                handler.borrow_mut().on(event);
             } else {
-                return None;
+                self.undelivered_events.push(event);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn steps(&mut self, step_count: u64) -> bool {
+        for _i in 0..step_count {
+            if !self.step() {
+                return false;
             }
         }
+        true
     }
 
-    pub fn peek_event(&self) -> Option<&Event> {
-        self.events.peek()
+    pub fn step_until_no_events(&mut self) {
+        while self.step() {}
     }
 
-    pub fn cancel_event(&mut self, event_id: u64) {
-        self.canceled_events.insert(event_id);
+    pub fn step_for_duration(&mut self, duration: f64) {
+        let end_time = self.sim_state.borrow().time() + duration;
+        loop {
+            if let Some(event) = self.sim_state.borrow().peek_event() {
+                if event.time > end_time {
+                    break;
+                }
+            } else {
+                break;
+            }
+            self.step();
+        }
     }
 
     pub fn event_count(&self) -> u64 {
-        self.event_count
+        self.sim_state.borrow().event_count()
     }
 }

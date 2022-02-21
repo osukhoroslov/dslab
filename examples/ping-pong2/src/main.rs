@@ -4,8 +4,9 @@ use clap::{app_from_crate, arg};
 use std::time::Instant;
 use sugars::{rc, refcell};
 
+use core2::simulation::Simulation;
+
 use crate::process::{Process, Start};
-use core2::simulator::Simulator;
 
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -21,7 +22,7 @@ fn main() {
     let iterations = matches.value_of_t("ITERATIONS").unwrap();
     env_logger::init();
 
-    let mut sim = Simulator::new(123);
+    let mut sim = Simulation::new(123);
 
     let proc1 = Process::new(iterations, sim.create_context("proc1"));
     let proc2 = Process::new(iterations, sim.create_context("proc2"));

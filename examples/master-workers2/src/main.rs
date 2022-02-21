@@ -6,11 +6,12 @@ mod storage;
 mod task;
 mod worker;
 
-use core2::simulator::Simulator;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use std::time::Instant;
 use sugars::{rc, refcell};
+
+use core2::simulation::Simulation;
 
 use crate::common::Start;
 use crate::compute::Compute;
@@ -31,7 +32,7 @@ fn main() {
     let task_count = 10;
     let seed = 123;
 
-    let mut sim = Simulator::new(seed);
+    let mut sim = Simulation::new(seed);
     let mut rand = Pcg64::seed_from_u64(seed);
     // admin context for starting master and workers
     let mut admin = sim.create_context("admin");
