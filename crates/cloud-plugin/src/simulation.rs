@@ -70,7 +70,7 @@ impl CloudSimulation {
             .add_event_now(SendHostState {}, self.simulation_id.clone(), actor_id.clone());
     }
 
-    pub fn add_scheduler(&mut self, id: &str, vm_placement_policy: Box<dyn VMPlacementAlgorithm>) {
+    pub fn add_scheduler(&mut self, id: &str, vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>) {
         // create scheduler actor using current state from placement store
         let pool_state = self.placement_store.borrow_mut().get_pool_state();
         let scheduler = rc!(refcell!(Scheduler::new(
@@ -78,7 +78,7 @@ impl CloudSimulation {
             pool_state,
             self.monitoring.clone(),
             self.placement_store_id.clone(),
-            vm_placement_policy
+            vm_placement_algorithm
         )));
         self.simulation.add_actor(id, scheduler.clone());
         self.schedulers.insert(id.to_string(), scheduler);

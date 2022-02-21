@@ -15,7 +15,7 @@ pub struct VirtualMachine {
     pub actor_id: ActorId,
     pub cpu_usage: u32,
     pub memory_usage: u64,
-    start_timestamp: f64,
+    start_time: f64,
     lifetime: f64,
     host: Option<ActorId>,
     cpu_load_model: Box<dyn LoadModel>,
@@ -36,7 +36,7 @@ impl VirtualMachine {
             actor_id: ActorId::from(&id),
             cpu_usage: cpu,
             memory_usage: memory,
-            start_timestamp: 0.,
+            start_time: 0.,
             lifetime,
             host: None,
             cpu_load_model,
@@ -44,20 +44,16 @@ impl VirtualMachine {
         }
     }
 
-    fn set_start_timestamp(&mut self, timestamp: f64) {
-        self.start_timestamp = timestamp;
+    fn set_start_time(&mut self, time: f64) {
+        self.start_time = time;
     }
 
-    pub fn get_current_cpu_load(&self, timestamp: f64) -> f64 {
-        return self
-            .cpu_load_model
-            .get_resource_load(timestamp, timestamp - self.start_timestamp);
+    pub fn get_current_cpu_load(&self, time: f64) -> f64 {
+        return self.cpu_load_model.get_resource_load(time, time - self.start_time);
     }
 
-    pub fn get_current_memory_load(&self, timestamp: f64) -> f64 {
-        return self
-            .memory_load_model
-            .get_resource_load(timestamp, timestamp - self.start_timestamp);
+    pub fn get_current_memory_load(&self, time: f64) -> f64 {
+        return self.memory_load_model.get_resource_load(time, time - self.start_time);
     }
 }
 
@@ -66,7 +62,7 @@ impl Actor for VirtualMachine {
         cast!(match event {
             VMStartRequest { host_id } => {
                 self.host = Some(ActorId::from(host_id));
-                self.set_start_timestamp(ctx.time());
+                self.set_start_time(ctx.time());
 
                 // emit started event after startup delay
                 ctx.emit(

@@ -78,8 +78,7 @@ impl HostManager {
         for (_vm_id, vm) in &self.vms {
             cpu_used += vm.cpu_usage as f64 * vm.get_current_cpu_load(time);
         }
-
-        return cpu_used as f64 / self.cpu_total as f64;
+        return cpu_used / self.cpu_total as f64;
     }
 
     fn get_memory_load(&self, time: f64) -> f64 {
@@ -87,8 +86,7 @@ impl HostManager {
         for (_vm_id, vm) in &self.vms {
             memory_used += vm.memory_usage as f64 * vm.get_current_memory_load(time);
         }
-
-        return memory_used as f64 / self.memory_total as f64;
+        return memory_used / self.memory_total as f64;
     }
 
     fn get_energy_load(&self, time: f64) -> f64 {

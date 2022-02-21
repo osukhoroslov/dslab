@@ -16,14 +16,13 @@ use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 
-#[derive(Clone, Debug)]
 pub struct Scheduler {
     pub id: ActorId,
     pool_state: ResourcePoolState,
     placement_store: ActorId,
     #[allow(dead_code)]
     monitoring: Rc<RefCell<Monitoring>>,
-    vm_placement_policy: Box<dyn VMPlacementAlgorithm>,
+    vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
 }
 
 impl Scheduler {
@@ -32,14 +31,14 @@ impl Scheduler {
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
         placement_store: ActorId,
-        vm_placement_policy: Box<dyn VMPlacementAlgorithm>,
+        vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ) -> Self {
         Self {
             id,
             pool_state: snapshot,
             placement_store,
             monitoring,
-            vm_placement_policy,
+            vm_placement_algorithm,
         }
     }
 
@@ -49,7 +48,7 @@ impl Scheduler {
     }
 
     fn on_allocation_request(&mut self, vm: &VirtualMachine, ctx: &mut ActorContext) {
-        if let Some(host) = self.vm_placement_policy.select_host(vm, &self.pool_state) {
+        if let Some(host) = self.vm_placement_algorithm.select_host(vm, &self.pool_state) {
             info!(
                 "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
                 ctx.time(),

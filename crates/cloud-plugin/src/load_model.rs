@@ -4,8 +4,7 @@ use dyn_clone::DynClone;
 use std::fmt::Debug;
 
 pub trait LoadModel: DynClone {
-    fn init(&mut self);
-    fn get_resource_load(&self, sim_timestamp: f64, vm_age: f64) -> f64;
+    fn get_resource_load(&self, time: f64, time_from_start: f64) -> f64;
 }
 
 impl fmt::Debug for dyn LoadModel {
@@ -26,9 +25,7 @@ impl DefaultLoadModel {
 }
 
 impl LoadModel for DefaultLoadModel {
-    fn init(&mut self) {}
-
-    fn get_resource_load(&self, _sim_timestamp: f64, _vm_age: f64) -> f64 {
+    fn get_resource_load(&self, _time: f64, _time_from_start: f64) -> f64 {
         1.
     }
 }

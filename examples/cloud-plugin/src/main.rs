@@ -2,7 +2,7 @@ use log::info;
 
 use cloud_plugin::load_model::DefaultLoadModel;
 use cloud_plugin::simulation::CloudSimulation;
-use cloud_plugin::vm_placement_algorithm::BestFitVMPlacement;
+use cloud_plugin::vm_placement_algorithm::BestFit;
 use core::sim::Simulation;
 
 extern crate env_logger;
@@ -15,8 +15,8 @@ fn main() {
 
     cloud_sim.add_host("h1", 30, 30);
     cloud_sim.add_host("h2", 30, 30);
-    cloud_sim.add_scheduler("s1", Box::new(BestFitVMPlacement::new()));
-    cloud_sim.add_scheduler("s2", Box::new(BestFitVMPlacement::new()));
+    cloud_sim.add_scheduler("s1", Box::new(BestFit::new()));
+    cloud_sim.add_scheduler("s2", Box::new(BestFit::new()));
 
     // spawn vm_0 - vm_4 on scheduler #1
     for i in 0..5 {
