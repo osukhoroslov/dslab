@@ -3,14 +3,15 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use network::network::Network;
+
 use crate::common::Start;
-use crate::network::*;
 use crate::task::*;
 use crate::worker::{TaskCompleted, WorkerRegister};
-use core2::cast;
-use core2::context::SimulationContext;
-use core2::event::Event;
-use core2::handler::EventHandler;
 
 #[derive(Debug)]
 pub struct ReportStatus {}
@@ -68,11 +69,11 @@ impl Master {
         for (task_id, task) in self.tasks.iter_mut() {
             if matches!(task.state, TaskState::New) {
                 let mut assigned = false;
-                if self.cpus_available >= task.req.cpus && self.memory_available >= task.req.memory {
+                if self.cpus_available >= task.req.min_cores && self.memory_available >= task.req.memory {
                     for (worker_id, _) in &self.worker_speed {
                         let worker = self.workers.get_mut(worker_id).unwrap();
                         if worker.state == WorkerState::Online
-                            && worker.cpus_available >= task.req.cpus
+                            && worker.cpus_available >= task.req.min_cores
                             && worker.memory_available >= task.req.memory
                         {
                             debug!(
@@ -83,11 +84,11 @@ impl Master {
                                 worker_id
                             );
                             task.state = TaskState::Assigned;
-                            worker.cpus_available -= task.req.cpus;
+                            worker.cpus_available -= task.req.min_cores;
                             worker.memory_available -= task.req.memory;
-                            self.cpus_available -= task.req.cpus;
+                            self.cpus_available -= task.req.min_cores;
                             self.memory_available -= task.req.memory;
-                            self.net.borrow_mut().send(task.req, &self.id, &worker_id);
+                            self.net.borrow_mut().send_event(task.req.clone(), &self.id, &worker_id);
                             assigned = true;
                             break;
                         }
@@ -122,11 +123,11 @@ impl EventHandler for Master {
                 let worker = WorkerInfo {
                     id: event.src,
                     state: WorkerState::Online,
-                    speed: *speed,
-                    cpus_total: *cpus_total,
-                    cpus_available: *cpus_total,
-                    memory_total: *memory_total,
-                    memory_available: *memory_total,
+                    speed,
+                    cpus_total,
+                    cpus_available: cpus_total,
+                    memory_total,
+                    memory_available: memory_total,
                 };
                 debug!("{} [{}] registered worker: {:?}", event.time, self.id, worker);
                 self.cpus_available += worker.cpus_available;
@@ -137,22 +138,40 @@ impl EventHandler for Master {
                 self.worker_speed
                     .sort_by(|(id1, s1), (id2, s2)| s1.cmp(s2).reverse().then(id1.cmp(&id2)));
             }
-            TaskRequest { .. } => {
-                debug!("{} [{}] task request: {:?}", event.time, self.id, event);
+            TaskRequest {
+                id,
+                flops,
+                memory,
+                min_cores,
+                max_cores,
+                cores_dependency,
+                input_size,
+                output_size,
+            } => {
                 let task = TaskInfo {
-                    req: *event.data.downcast::<TaskRequest>().unwrap(),
+                    req: TaskRequest {
+                        id,
+                        flops,
+                        memory,
+                        min_cores,
+                        max_cores,
+                        cores_dependency,
+                        input_size,
+                        output_size,
+                    },
                     state: TaskState::New,
                 };
+                debug!("{} [{}] task request: {:?}", event.time, self.id, task.req);
                 self.tasks.insert(task.req.id, task);
             }
             TaskCompleted { id } => {
                 debug!("{} [{}] completed task: {:?}", event.time, self.id, id);
-                let task = self.tasks.get_mut(id).unwrap();
+                let task = self.tasks.get_mut(&id).unwrap();
                 task.state = TaskState::Completed;
                 let worker = self.workers.get_mut(&event.src).unwrap();
-                worker.cpus_available += task.req.cpus;
+                worker.cpus_available += task.req.min_cores;
                 worker.memory_available += task.req.memory;
-                self.cpus_available += task.req.cpus;
+                self.cpus_available += task.req.min_cores;
                 self.memory_available += task.req.memory;
                 self.schedule_tasks();
             }

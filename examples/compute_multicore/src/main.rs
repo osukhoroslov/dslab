@@ -1,27 +1,33 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use compute::multicore::*;
-use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::cast;
-use core::sim::Simulation;
+use sugars::{rc, refcell};
 
-#[derive(Debug, Clone)]
+use compute::multicore::*;
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use core::simulation::Simulation;
+
+#[derive(Debug)]
 pub struct Start {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Deallocate {}
 
-pub struct TaskActor {
+pub struct Task {
+    id: String,
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
     min_cores: u32,
     max_cores: u32,
     cores_dependency: CoresDependency,
+    ctx: SimulationContext,
 }
 
-impl TaskActor {
+impl Task {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
         flops: u64,
@@ -29,38 +35,41 @@ impl TaskActor {
         min_cores: u32,
         max_cores: u32,
         cores_dependency: CoresDependency,
+        ctx: SimulationContext,
     ) -> Self {
         Self {
+            id: ctx.id().to_string(),
             compute,
             flops,
             memory,
             min_cores,
             max_cores,
             cores_dependency,
+            ctx,
         }
     }
 }
 
-impl Actor for TaskActor {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        cast!(match event {
+impl EventHandler for Task {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
             Start {} => {
-                println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                self.compute.borrow().run(
+                println!("{} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
+                self.compute.borrow_mut().run(
                     self.flops,
                     self.memory,
                     self.min_cores,
                     self.max_cores,
                     self.cores_dependency.clone(),
-                    ctx,
+                    &self.id,
                 );
             }
             CompStarted { id, cores } => {
                 println!(
                     "{} [{}] received CompStarted from {} for {:?} on {} cores",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id,
                     cores
                 );
@@ -68,67 +77,67 @@ impl Actor for TaskActor {
             CompFinished { id } => {
                 println!(
                     "{} [{}] received CompFinished from {} for {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id
                 );
             }
             CompFailed { id, reason } => {
                 println!(
                     "{} [{}] received CompFailed from {} for {:?} with reason {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id,
                     reason
                 );
             }
         })
     }
-
-    fn is_active(&self) -> bool {
-        true
-    }
 }
 
-pub struct AllocationActor {
+pub struct Allocator {
+    id: String,
     compute: Rc<RefCell<Compute>>,
     allocation: Allocation,
     time: f64,
+    ctx: SimulationContext,
 }
 
-impl AllocationActor {
-    pub fn new(compute: Rc<RefCell<Compute>>, allocation: Allocation, time: f64) -> Self {
+impl Allocator {
+    pub fn new(compute: Rc<RefCell<Compute>>, allocation: Allocation, time: f64, ctx: SimulationContext) -> Self {
         Self {
+            id: ctx.id().to_string(),
             compute,
             allocation,
             time,
+            ctx,
         }
     }
 }
 
-impl Actor for AllocationActor {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        cast!(match event {
+impl EventHandler for Allocator {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
             Start {} => {
-                println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
+                println!("{} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
                 self.compute
-                    .borrow()
-                    .allocate(self.allocation.cores, self.allocation.memory, ctx);
-                ctx.emit(Deallocate {}, ctx.id.clone(), self.time);
+                    .borrow_mut()
+                    .allocate(self.allocation.cores, self.allocation.memory, &self.id);
+                self.ctx.emit_self(Deallocate {}, self.time);
             }
             Deallocate {} => {
                 self.compute
-                    .borrow()
-                    .deallocate(self.allocation.cores, self.allocation.memory, ctx);
+                    .borrow_mut()
+                    .deallocate(self.allocation.cores, self.allocation.memory, &self.id);
             }
             AllocationFailed { id, reason } => {
                 println!(
                     "{} [{}] received AllocationFailed from {} for {:?} with reason {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id,
                     reason
                 );
@@ -136,9 +145,9 @@ impl Actor for AllocationActor {
             DeallocationFailed { id, reason } => {
                 println!(
                     "{} [{}] received DeallocationFailed from {} for {:?} with reason {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id,
                     reason
                 );
@@ -146,115 +155,110 @@ impl Actor for AllocationActor {
             AllocationSuccess { id } => {
                 println!(
                     "{} [{}] received AllocationSuccess from {} for {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id
                 );
             }
             DeallocationSuccess { id } => {
                 println!(
                     "{} [{}] received DeallocationSuccess from {} for {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id
                 );
             }
         })
     }
-
-    fn is_active(&self) -> bool {
-        true
-    }
 }
 
 fn main() {
     let mut sim = Simulation::new(123);
-    let compute = Rc::new(RefCell::new(Compute::new("compute", 1, 10, 1024)));
-    sim.add_actor(
-        "task1",
-        Rc::new(RefCell::new(TaskActor::new(
-            compute.clone(),
-            100,
-            512,
-            2,
-            6,
-            CoresDependency::Linear,
-        ))),
+
+    let compute = rc!(refcell!(Compute::new(1, 10, 1024, sim.create_context("compute"))));
+    sim.add_handler("compute", compute.clone());
+
+    let task1 = Task::new(
+        compute.clone(),
+        100,
+        512,
+        2,
+        6,
+        CoresDependency::Linear,
+        sim.create_context("task1"),
     );
-    sim.add_actor(
-        "task2",
-        Rc::new(RefCell::new(TaskActor::new(
-            compute.clone(),
-            100,
-            512,
-            4,
-            10,
-            CoresDependency::LinearWithFixed { fixed_part: 0.4 },
-        ))),
+    let task2 = Task::new(
+        compute.clone(),
+        100,
+        512,
+        4,
+        10,
+        CoresDependency::LinearWithFixed { fixed_part: 0.4 },
+        sim.create_context("task2"),
     );
-    sim.add_actor(
-        "task3",
-        Rc::new(RefCell::new(TaskActor::new(
-            compute.clone(),
-            100,
-            512,
-            5,
-            7,
-            CoresDependency::Custom {
-                func: |cores: u32| -> f64 {
-                    if cores == 7 {
-                        2.0
-                    } else {
-                        1.0
-                    }
-                },
+    let task3 = Task::new(
+        compute.clone(),
+        100,
+        512,
+        5,
+        7,
+        CoresDependency::Custom {
+            func: |cores: u32| -> f64 {
+                if cores == 7 {
+                    2.0
+                } else {
+                    1.0
+                }
             },
-        ))),
+        },
+        sim.create_context("task3"),
     );
-    sim.add_actor(
-        "task4",
-        Rc::new(RefCell::new(TaskActor::new(
-            compute.clone(),
-            100,
-            512,
-            15,
-            20,
-            CoresDependency::Linear,
-        ))),
+    let task4 = Task::new(
+        compute.clone(),
+        100,
+        512,
+        15,
+        20,
+        CoresDependency::Linear,
+        sim.create_context("task4"),
     );
-    sim.add_actor(
-        "allocate1",
-        Rc::new(RefCell::new(AllocationActor::new(
-            compute.clone(),
-            Allocation::new(6, 100),
-            10.,
-        ))),
+    sim.add_handler("task1", rc!(refcell!(task1)));
+    sim.add_handler("task2", rc!(refcell!(task2)));
+    sim.add_handler("task3", rc!(refcell!(task3)));
+    sim.add_handler("task4", rc!(refcell!(task4)));
+
+    let allocator1 = Allocator::new(
+        compute.clone(),
+        Allocation::new(6, 100),
+        10.,
+        sim.create_context("allocator1"),
     );
-    sim.add_actor(
-        "allocate2",
-        Rc::new(RefCell::new(AllocationActor::new(
-            compute.clone(),
-            Allocation::new(6, 100),
-            20.,
-        ))),
+    let allocator2 = Allocator::new(
+        compute.clone(),
+        Allocation::new(6, 100),
+        20.,
+        sim.create_context("allocator2"),
     );
-    sim.add_actor(
-        "allocate3",
-        Rc::new(RefCell::new(AllocationActor::new(
-            compute.clone(),
-            Allocation::new(6, 100),
-            30.,
-        ))),
+    let allocator3 = Allocator::new(
+        compute.clone(),
+        Allocation::new(6, 100),
+        30.,
+        sim.create_context("allocator3"),
     );
-    sim.add_actor("compute", compute);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 0.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task3"), 1000.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task4"), 2000.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate1"), 5000.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate2"), 5005.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("allocate3"), 6000.);
+    sim.add_handler("allocator1", rc!(refcell!(allocator1)));
+    sim.add_handler("allocator2", rc!(refcell!(allocator2)));
+    sim.add_handler("allocator3", rc!(refcell!(allocator3)));
+
+    let mut ctx = sim.create_context("root");
+    ctx.emit(Start {}, "task1", 0.);
+    ctx.emit(Start {}, "task2", 0.);
+    ctx.emit(Start {}, "task3", 1000.);
+    ctx.emit(Start {}, "task4", 2000.);
+    ctx.emit(Start {}, "allocator1", 5000.);
+    ctx.emit(Start {}, "allocator2", 5005.);
+    ctx.emit(Start {}, "allocator3", 6000.);
+
     sim.step_until_no_events();
 }

@@ -1,11 +1,12 @@
-use log::debug;
 use std::collections::BTreeMap;
 
-use core::actor::ActorContext;
+use log::trace;
+
+use core::context::SimulationContext;
 
 use crate::model::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct DataTransfer {
     size_left: f64,
     last_speed: f64,
@@ -29,7 +30,7 @@ impl SharedBandwidthNetwork {
         };
     }
 
-    fn recalculate_receive_time(&mut self, ctx: &mut ActorContext) {
+    fn recalculate_receive_time(&mut self, ctx: &mut SimulationContext) {
         let cur_time = ctx.time();
         for (_, send_elem) in self.transfers.iter_mut() {
             let delivery_time = cur_time - send_elem.last_time;
@@ -43,14 +44,13 @@ impl SharedBandwidthNetwork {
             send_elem.last_speed = new_bandwidth;
             send_elem.last_time = cur_time;
             let data_delivery_time = send_elem.size_left / new_bandwidth;
-            send_elem.receive_event = ctx.emit(
+            send_elem.receive_event = ctx.emit_self(
                 DataReceive {
                     data: send_elem.data.clone(),
                 },
-                ctx.id.clone(),
                 data_delivery_time,
             );
-            debug!(
+            trace!(
                 "System time: {}, Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
                 ctx.time(),
                 send_elem.data.id,
@@ -71,7 +71,7 @@ impl NetworkConfiguration for SharedBandwidthNetwork {
 }
 
 impl DataOperation for SharedBandwidthNetwork {
-    fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
+    fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         let new_send_data_progres = DataTransfer {
             size_left: data.size,
             last_speed: 0.,
@@ -88,7 +88,7 @@ impl DataOperation for SharedBandwidthNetwork {
         self.recalculate_receive_time(ctx);
     }
 
-    fn receive_data(&mut self, data: Data, ctx: &mut ActorContext) {
+    fn receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         self.transfers.remove(&data.id);
         self.recalculate_receive_time(ctx);
     }

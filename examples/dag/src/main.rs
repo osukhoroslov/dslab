@@ -11,7 +11,7 @@ use core::sim::Simulation;
 use dag::dag::DAG;
 use dag::runner::*;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network_actor::{Network, NETWORK_ID};
+use network::network::{Network, NETWORK_ID};
 
 fn main() {
     let mut dag = DAG::new();

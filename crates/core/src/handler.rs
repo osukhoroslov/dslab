@@ -6,10 +6,11 @@ pub trait EventHandler {
 
 #[macro_export]
 macro_rules! cast {
-    ( match $event:ident.data { $( $pattern:pat => $arm:block )+ } ) => {
+    ( match $event:ident.data { $( $type:ident { $($tt:tt)* } => { $($expr:tt)* } )+ } ) => {
         $(
-            if let Some($pattern) = $event.data.downcast_ref() {
-                $arm
+            if $event.data.is::<$type>() {
+                let $type { $($tt)* } = *$event.data.downcast::<$type>().unwrap();
+                $($expr)*
             } else
         )*
         {

@@ -9,7 +9,7 @@ use compute::multicore::*;
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
 use network::model::DataTransferCompleted;
-use network::network_actor::Network;
+use network::network::Network;
 
 #[derive(Debug)]
 pub struct WorkerRegister {

@@ -17,7 +17,7 @@ use compute::multicore::*;
 use core::actor::ActorId;
 use core::sim::Simulation;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network_actor::{Network, NETWORK_ID};
+use network::network::{Network, NETWORK_ID};
 
 fn main() {
     // params
@@ -53,7 +53,7 @@ fn main() {
     let host = &hosts[0];
     let master_id = format!("/{}/master", host);
     let master = sim.add_actor(&master_id, rc!(refcell!(Master::new(network.clone()))));
-    network.borrow_mut().set_actor_host(master.clone(), host);
+    network.borrow_mut().set_location(master.clone(), host);
     sim.add_event_now(Start {}, admin.clone(), master.clone());
 
     // create and start workers
@@ -83,7 +83,7 @@ fn main() {
                 master.clone()
             ))),
         );
-        network.borrow_mut().set_actor_host(worker.clone(), host);
+        network.borrow_mut().set_location(worker.clone(), host);
         sim.add_event_now(Start {}, admin.clone(), worker.clone());
     }
 

@@ -55,6 +55,15 @@ impl SimulationContext {
             .add_event(data, self.id.clone(), self.id.clone(), delay)
     }
 
+    pub fn emit_self_now<T>(&mut self, data: T) -> u64
+    where
+        T: EventData,
+    {
+        self.sim_state
+            .borrow_mut()
+            .add_event(data, self.id.clone(), self.id.clone(), 0.)
+    }
+
     pub fn emit_as<T, S>(&mut self, data: T, src: S, dest: S, delay: f64) -> u64
     where
         T: EventData,

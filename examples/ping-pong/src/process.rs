@@ -1,9 +1,9 @@
 use log::debug;
 
-use core2::cast;
-use core2::context::SimulationContext;
-use core2::event::Event;
-use core2::handler::EventHandler;
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
 
 #[derive(Debug)]
 pub struct Start {
@@ -63,7 +63,7 @@ impl EventHandler for Process {
         cast!(match event.data {
             Start { other } => {
                 debug!("{:.2} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
-                self.on_start(other);
+                self.on_start(&other);
             }
             Ping {} => {
                 debug!("{:.2} [{}] received Ping from {}", self.ctx.time(), self.id, event.src);

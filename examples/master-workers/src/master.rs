@@ -7,7 +7,7 @@ use crate::task::*;
 use crate::worker::{TaskCompleted, WorkerRegister};
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
-use network::network_actor::Network;
+use network::network::Network;
 
 #[derive(Debug)]
 pub struct ReportStatus {}
@@ -110,7 +110,7 @@ impl Actor for Master {
                 self.schedule_tasks(ctx);
             }
             TaskCompleted { id } => {
-                println!("{} [{}] completed task: {:?}", ctx.time(), ctx.id, id);
+                println!("{} [{}] completed task: {:?}", ctx.time(), ctx.id, id);t
                 let task = self.tasks.get_mut(id).unwrap();
                 task.state = TaskState::Completed;
                 let worker = self.workers.get_mut(&from).unwrap();

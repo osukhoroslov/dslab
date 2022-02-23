@@ -3,15 +3,17 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use compute::multicore::*;
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use network::model::*;
+use network::network::Network;
+
 use crate::common::Start;
-use crate::compute::*;
-use crate::network::*;
 use crate::storage::*;
 use crate::task::*;
-use core2::cast;
-use core2::context::SimulationContext;
-use core2::event::Event;
-use core2::handler::EventHandler;
 
 #[derive(Debug)]
 pub struct WorkerRegister {
@@ -27,7 +29,7 @@ pub struct TaskCompleted {
 
 pub struct Worker {
     id: String,
-    compute: Compute,
+    compute: Rc<RefCell<Compute>>,
     storage: Storage,
     net: Rc<RefCell<Network>>,
     master: String,
@@ -35,14 +37,14 @@ pub struct Worker {
     computations: HashMap<u64, u64>,
     reads: HashMap<u64, u64>,
     writes: HashMap<u64, u64>,
-    downloads: HashMap<u64, u64>,
-    uploads: HashMap<u64, u64>,
+    downloads: HashMap<usize, u64>,
+    uploads: HashMap<usize, u64>,
     ctx: SimulationContext,
 }
 
 impl Worker {
     pub fn new(
-        compute: Compute,
+        compute: Rc<RefCell<Compute>>,
         storage: Storage,
         net: Rc<RefCell<Network>>,
         master: String,
@@ -72,9 +74,9 @@ impl EventHandler for Worker {
                 debug!("{} [{}] started", event.time, self.id);
                 self.ctx.emit(
                     WorkerRegister {
-                        speed: self.compute.speed(),
-                        cpus_total: self.compute.cpus_total(),
-                        memory_total: self.compute.memory_total(),
+                        speed: self.compute.borrow().speed(),
+                        cpus_total: self.compute.borrow().cores_total(),
+                        memory_total: self.compute.borrow().memory_total(),
                     },
                     &self.master,
                     0.5,
@@ -82,29 +84,41 @@ impl EventHandler for Worker {
             }
             TaskRequest {
                 id,
-                flops: _,
-                cpus: _,
-                memory: _,
+                flops,
+                memory,
+                min_cores,
+                max_cores,
+                cores_dependency,
                 input_size,
-                output_size: _,
+                output_size,
             } => {
-                debug!("{} [{}] task request: {:?}", event.time, self.id, event.data);
                 let task = TaskInfo {
-                    req: *event.data.downcast_ref::<TaskRequest>().unwrap(),
+                    req: TaskRequest {
+                        id,
+                        flops,
+                        memory,
+                        min_cores,
+                        max_cores,
+                        cores_dependency,
+                        input_size,
+                        output_size,
+                    },
                     state: TaskState::Downloading,
                 };
-                self.tasks.insert(*id, task);
+                debug!("{} [{}] task request: {:?}", event.time, self.id, task.req);
+                self.tasks.insert(id, task);
 
-                let transfer_id = self
-                    .net
-                    .borrow_mut()
-                    .transfer(&self.master, &self.id, *input_size, &self.id);
-                self.downloads.insert(transfer_id, *id);
+                let transfer_id =
+                    self.net
+                        .borrow_mut()
+                        .transfer_data(&self.master, &self.id, input_size as f64, &self.id);
+                self.downloads.insert(transfer_id, id);
             }
-            DataTransferCompleted { id } => {
+            DataTransferCompleted { data } => {
                 // data transfer corresponds to input download
-                if self.downloads.contains_key(id) {
-                    let task_id = self.downloads.remove(id).unwrap();
+                let transfer_id = data.id;
+                if self.downloads.contains_key(&transfer_id) {
+                    let task_id = self.downloads.remove(&transfer_id).unwrap();
                     let task = self.tasks.get_mut(&task_id).unwrap();
                     debug!(
                         "{} [{}] downloaded input data for task: {}",
@@ -114,30 +128,41 @@ impl EventHandler for Worker {
                     let read_id = self.storage.read(task.req.input_size, &self.id);
                     self.reads.insert(read_id, task_id);
                 // data transfer corresponds to output upload
-                } else if self.uploads.contains_key(id) {
-                    let task_id = self.uploads.remove(id).unwrap();
-                    let task = self.tasks.get_mut(&task_id).unwrap();
+                } else if self.uploads.contains_key(&transfer_id) {
+                    let task_id = self.uploads.remove(&transfer_id).unwrap();
+                    let mut task = self.tasks.remove(&task_id).unwrap();
                     debug!(
                         "{} [{}] uploaded output data for task: {}",
-                        event.time, self.id, task_id
+                        self.ctx.time(),
+                        self.id,
+                        task_id
                     );
                     task.state = TaskState::Completed;
-                    self.tasks.remove(id);
                     self.net
                         .borrow_mut()
-                        .send(TaskCompleted { id: task_id }, &self.id, &self.master);
+                        .send_event(TaskCompleted { id: task_id }, &self.id, &self.master);
                 }
             }
             DataReadCompleted { id } => {
-                let task_id = self.reads.remove(id).unwrap();
+                let task_id = self.reads.remove(&id).unwrap();
                 debug!("{} [{}] read input data for task: {}", event.time, self.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Running;
-                let comp_id = self.compute.run(task.req.flops, &self.id);
+                let comp_id = self.compute.borrow_mut().run(
+                    task.req.flops,
+                    task.req.memory,
+                    task.req.min_cores,
+                    task.req.max_cores,
+                    task.req.cores_dependency,
+                    &self.id,
+                );
                 self.computations.insert(comp_id, task_id);
             }
+            CompStarted { id, cores: _ } => {
+                debug!("{} [{}] started execution of task: {}", self.ctx.time(), self.id, id);
+            }
             CompFinished { id } => {
-                let task_id = self.computations.remove(id).unwrap();
+                let task_id = self.computations.remove(&id).unwrap();
                 debug!("{} [{}] completed execution of task: {}", event.time, self.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Writing;
@@ -145,14 +170,14 @@ impl EventHandler for Worker {
                 self.writes.insert(write_id, task_id);
             }
             DataWriteCompleted { id } => {
-                let task_id = self.writes.remove(id).unwrap();
+                let task_id = self.writes.remove(&id).unwrap();
                 debug!("{} [{}] wrote output data for task: {}", event.time, self.id, task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Uploading;
                 let transfer_id =
                     self.net
                         .borrow_mut()
-                        .transfer(&self.id, &self.master, task.req.output_size, &self.id);
+                        .transfer_data(&self.id, &self.master, task.req.output_size as f64, &self.id);
                 self.uploads.insert(transfer_id, task_id);
             }
         })
