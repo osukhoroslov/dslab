@@ -7,6 +7,8 @@ edition = "2021"
 core = { path = "../../crates/core" }
 compute = { path = "../../crates/compute" }
 network = { path = "../../crates/network" }
+log = "0.4.14"
+env_logger = "0.9.0"
 rand = "0.8.4"
 rand_pcg = "0.3.1"
 sugars = "3.0.0"
