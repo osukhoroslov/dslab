@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs::File;
 use std::io::Write;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct TraceLog {
     pub resources: Vec<Value>,
     pub events: Vec<Value>,
@@ -17,7 +17,7 @@ impl TraceLog {
         }
     }
 
-    pub fn log_event(&mut self, actor_id: String, event: Value) {
+    pub fn log_event<S: AsRef<str>>(&mut self, proc_id: S, event: Value) {
         let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
         let log_message = match event["type"].as_str().unwrap().as_ref() {
             "task_scheduled" => {
@@ -53,7 +53,7 @@ impl TraceLog {
             _ => "unknown event".to_string(),
         };
         let time = event["time"].as_f64().unwrap();
-        println!("{:>8.3} [{}] {}", time, actor_id, log_message);
+        println!("{:>8.3} [{}] {}", time, proc_id.as_ref(), log_message);
         self.events.push(event);
     }
 

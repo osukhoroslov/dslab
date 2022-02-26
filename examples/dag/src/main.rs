@@ -1,17 +1,15 @@
 mod simple_scheduler;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use sugars::{rc, refcell};
 
-use crate::simple_scheduler::SimpleScheduler;
 use compute::multicore::*;
-use core::actor::ActorId;
-use core::sim::Simulation;
+use core::simulation::Simulation;
 use dag::dag::DAG;
 use dag::runner::*;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network::{Network, NETWORK_ID};
+use network::network::Network;
+
+use crate::simple_scheduler::SimpleScheduler;
 
 fn main() {
     let mut dag = DAG::new();
@@ -58,12 +56,17 @@ fn main() {
 
     let mut resources: Vec<Resource> = Vec::new();
     let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let name = format!("compute{}", resources.len() + 1);
-        let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
-        sim.add_actor(&name, compute.clone());
+        let compute_id = format!("compute{}", resources.len() + 1);
+        let compute = rc!(refcell!(Compute::new(
+            speed,
+            cores,
+            memory,
+            sim.create_context(&compute_id)
+        )));
+        sim.add_handler(&compute_id, compute.clone());
         let resource = Resource {
+            id: compute_id,
             compute,
-            id: ActorId::from(&name),
             speed,
             cores_available: cores,
             memory_available: memory,
@@ -74,14 +77,23 @@ fn main() {
     add_resource(20, 1, 512);
     add_resource(30, 4, 1024);
 
-    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1)));
-    let network = Rc::new(RefCell::new(Network::new(network_model)));
-    sim.add_actor(NETWORK_ID, network.clone());
+    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(10.0, 0.1)));
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+    sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
-    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
-    let runner_id = sim.add_actor("runner", runner.clone());
-    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
+    let runner_id = "runner";
+    let runner = rc!(refcell!(DAGRunner::new(
+        dag,
+        network,
+        resources,
+        scheduler,
+        sim.create_context(runner_id)
+    )));
+    sim.add_handler(runner_id, runner.clone());
+
+    let mut client = sim.create_context("client");
+    client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
     runner.borrow().trace_log().save_to_file("trace.json").unwrap();
 }
