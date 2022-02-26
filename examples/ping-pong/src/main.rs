@@ -1,6 +1,6 @@
 mod process;
 
-use clap::{app_from_crate, arg};
+use clap::{arg, command};
 use std::time::Instant;
 use sugars::{rc, refcell};
 
@@ -11,7 +11,7 @@ use crate::process::{Process, Start};
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    let matches = app_from_crate!()
+    let matches = command!()
         .arg(
             arg!([ITERATIONS])
                 .help("Number of iterations")
