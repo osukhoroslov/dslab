@@ -1,7 +1,13 @@
 use std::collections::BTreeMap;
 
 use crate::common::AllocationVerdict;
-use crate::vm::VirtualMachine;
+
+#[derive(Debug, Clone)]
+pub struct Allocation {
+    pub id: String,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+}
 
 #[derive(Debug, Clone)]
 pub struct HostInfo {
@@ -14,7 +20,7 @@ pub struct HostInfo {
     pub cpu_overcommit: u32,
     pub memory_overcommit: u64,
 
-    pub vms: BTreeMap<String, VirtualMachine>,
+    pub allocations: BTreeMap<String, Allocation>,
 }
 
 impl HostInfo {
@@ -26,12 +32,12 @@ impl HostInfo {
             memory_available,
             cpu_overcommit: 0,
             memory_overcommit: 0,
-            vms: BTreeMap::new(),
+            allocations: BTreeMap::new(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ResourcePoolState {
     hosts: BTreeMap<String, HostInfo>,
 }
@@ -52,60 +58,60 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
-    pub fn can_allocate(&mut self, vm: &VirtualMachine, host_id: &String) -> AllocationVerdict {
+    pub fn can_allocate(&mut self, alloc: &Allocation, host_id: &String) -> AllocationVerdict {
         if !self.hosts.contains_key(host_id) {
             return AllocationVerdict::HostNotFound;
         }
-        if self.hosts[host_id].cpu_available < vm.cpu_usage {
+        if self.hosts[host_id].cpu_available < alloc.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
-        if self.hosts[host_id].memory_available < vm.memory_usage {
+        if self.hosts[host_id].memory_available < alloc.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
         return AllocationVerdict::Success;
     }
 
-    pub fn place_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
+    pub fn allocate(&mut self, alloc: &Allocation, host_id: &String) {
         self.hosts.get_mut(host_id).map(|host| {
-            if host.vms.contains_key(&vm.id) {
+            if host.allocations.contains_key(&alloc.id) {
                 return;
             }
 
-            if host.cpu_available < vm.cpu_usage {
-                host.cpu_overcommit += vm.cpu_usage - host.cpu_available;
+            if host.cpu_available < alloc.cpu_usage {
+                host.cpu_overcommit += alloc.cpu_usage - host.cpu_available;
                 host.cpu_available = 0;
             } else {
-                host.cpu_available -= vm.cpu_usage;
+                host.cpu_available -= alloc.cpu_usage;
             }
 
-            if host.memory_available < vm.memory_usage {
-                host.memory_overcommit += vm.memory_usage - host.memory_available;
+            if host.memory_available < alloc.memory_usage {
+                host.memory_overcommit += alloc.memory_usage - host.memory_available;
                 host.memory_available = 0;
             } else {
-                host.memory_available -= vm.memory_usage;
+                host.memory_available -= alloc.memory_usage;
             }
 
-            host.vms.insert(vm.id.clone(), vm.clone());
+            host.allocations.insert(alloc.id.clone(), alloc.clone());
         });
     }
 
-    pub fn remove_vm(&mut self, vm: &VirtualMachine, host_id: &String) {
+    pub fn release(&mut self, alloc: &Allocation, host_id: &String) {
         self.hosts.get_mut(host_id).map(|host| {
-            if host.cpu_overcommit >= vm.cpu_usage {
-                host.cpu_overcommit -= vm.cpu_usage;
+            if host.cpu_overcommit >= alloc.cpu_usage {
+                host.cpu_overcommit -= alloc.cpu_usage;
             } else {
-                host.cpu_available += vm.cpu_usage - host.cpu_overcommit;
+                host.cpu_available += alloc.cpu_usage - host.cpu_overcommit;
                 host.cpu_overcommit = 0;
             }
 
-            if host.memory_overcommit >= vm.memory_usage {
-                host.memory_overcommit -= vm.memory_usage;
+            if host.memory_overcommit >= alloc.memory_usage {
+                host.memory_overcommit -= alloc.memory_usage;
             } else {
-                host.memory_available += vm.memory_usage - host.memory_overcommit;
+                host.memory_available += alloc.memory_usage - host.memory_overcommit;
                 host.memory_overcommit = 0;
             }
 
-            host.vms.remove(&vm.id);
+            host.allocations.remove(&alloc.id);
         });
     }
 }

@@ -1,75 +1,72 @@
 // VM ALLOCATION EVENTS ////////////////////////////////////////////////////////////////////////////
 
 pub mod allocation {
+    use crate::resource_pool::Allocation;
     use crate::vm::VirtualMachine;
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct AllocationRequest {
+        pub alloc: Allocation,
         pub vm: VirtualMachine,
     }
 
     #[derive(Debug)]
     pub struct AllocationCommitRequest {
+        pub alloc: Allocation,
         pub vm: VirtualMachine,
         pub host_id: String,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct AllocationCommitSucceeded {
-        pub vm: VirtualMachine,
+        pub alloc: Allocation,
         pub host_id: String,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct AllocationCommitFailed {
-        pub vm: VirtualMachine,
+        pub alloc: Allocation,
         pub host_id: String,
     }
 
     #[derive(Debug)]
     pub struct AllocationFailed {
-        pub vm: VirtualMachine,
+        pub alloc: Allocation,
         pub host_id: String,
     }
 
     #[derive(Debug)]
     pub struct AllocationReleased {
-        pub vm: VirtualMachine,
+        pub alloc: Allocation,
         pub host_id: String,
     }
 
     #[derive(Debug, Clone)]
     pub struct AllocationReleaseRequest {
-        pub vm: VirtualMachine,
+        pub alloc: Allocation,
     }
 }
 
 // VM LIFECYCLE EVENTS /////////////////////////////////////////////////////////////////////////////
 
 pub mod vm {
-    #[derive(Debug)]
-    pub struct VMStartRequest {
-        pub host_id: String,
-    }
+    use crate::resource_pool::Allocation;
 
     #[derive(Debug)]
     pub struct VMStarted {
-        pub vm_id: String,
+        pub alloc: Allocation,
     }
 
     #[derive(Debug)]
-    pub struct VMDeleteRequest {}
-
-    #[derive(Debug)]
     pub struct VMDeleted {
-        pub vm_id: String,
+        pub alloc: Allocation,
     }
 }
 
 // MONITORING EVENTS ///////////////////////////////////////////////////////////////////////////////
 
 pub mod monitoring {
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct HostStateUpdate {
         pub host_id: String,
         pub cpu_available: u32,

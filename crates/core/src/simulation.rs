@@ -36,6 +36,10 @@ impl Simulation {
         self.handlers.insert(id.into(), handler);
     }
 
+    pub fn time(&self) -> f64 {
+        self.sim_state.borrow().time()
+    }
+
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
