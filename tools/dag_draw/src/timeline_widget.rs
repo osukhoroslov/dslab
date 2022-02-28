@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use druid::kurbo::Line;
 use druid::widget::prelude::*;
 use druid::widget::Widget;
@@ -14,14 +16,14 @@ const MEMORY_HEIGHT: f64 = 100.0;
 struct TimelineResourceBlock {
     start: f64,
     end: f64,
-    height: f64, // in [0, 1]
+    height: u64,
     color: Color,
     selected: bool,
     task: usize,
 }
 
 impl TimelineResourceBlock {
-    fn new(start: f64, end: f64, height: f64, color: Color, selected: bool, task: usize) -> Self {
+    fn new(start: f64, end: f64, height: u64, color: Color, selected: bool, task: usize) -> Self {
         TimelineResourceBlock {
             start,
             end,
@@ -56,7 +58,77 @@ impl TimelineWidget {
         time / self.total_time * (self.timeline_right - self.timeline_left) + self.timeline_left
     }
 
-    fn draw_resource_usage(&mut self, ctx: &mut PaintCtx, y: f64, height: f64, usages: Vec<TimelineResourceBlock>) {
+    fn draw_cores_usage(
+        &mut self,
+        ctx: &mut PaintCtx,
+        y: f64,
+        height: f64,
+        usages: Vec<TimelineResourceBlock>,
+        cores: u32,
+    ) {
+        // (time; some number for ordering events with same time; 0 for start and 1 for end; id)
+        let mut events: Vec<(f64, i32, i32, usize)> = Vec::new();
+        for (i, item) in usages.iter().enumerate() {
+            // first all ends, then all empty tasks consecutively, then all starts
+            if item.start == item.end {
+                events.push((item.start, 0, 0, i));
+                events.push((item.end, 0, 1, i));
+            } else {
+                events.push((item.start, 1, 0, i));
+                events.push((item.end, -1, 1, i));
+            }
+        }
+        events.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0).unwrap().then(a.1.cmp(&b.1)).then(
+                // for non-empty tasks order doesn't matter at this point
+                // for empty tasks:
+                // if these are different tasks, then order them by id, otherwise start comes before end
+                a.3.cmp(&b.3).then(a.2.cmp(&b.2)),
+            )
+        });
+        let mut available_cores: BTreeSet<u32> = (0..cores).collect();
+        let mut usage_cores: Vec<Vec<u32>> = vec![Vec::new(); usages.len()];
+        let mut highlighted_borders: Vec<Rect> = Vec::new();
+        for &(_, _, event_type, usage_id) in events.iter() {
+            if event_type == 1 {
+                for &core in usage_cores[usage_id].iter() {
+                    available_cores.insert(core);
+                }
+            } else {
+                let mut cores_segments: Vec<(u32, u32)> = Vec::new();
+                let usage = &usages[usage_id];
+                for _ in 0..usage.height {
+                    let core = *available_cores.iter().next().unwrap();
+                    available_cores.remove(&core);
+                    usage_cores[usage_id].push(core);
+                    if !cores_segments.is_empty() && cores_segments.last().unwrap().1 + 1 == core {
+                        cores_segments.last_mut().unwrap().1 += 1;
+                    } else {
+                        cores_segments.push((core, core));
+                    }
+                }
+
+                for &(first_core, last_core) in cores_segments.iter() {
+                    let cury = y + first_core as f64 * height;
+                    let current_height = (last_core - first_core + 1) as f64 * height;
+                    let rect = Rect::from_points(
+                        Point::new(self.get_time_x(usage.start), cury),
+                        Point::new(self.get_time_x(usage.end), cury + current_height),
+                    );
+                    ctx.fill(rect.clone(), &usage.color);
+                    self.clickable_rectangles.push((rect.clone(), usage.task));
+                    if usage.selected {
+                        highlighted_borders.push(rect);
+                    }
+                }
+            }
+        }
+        for rect in highlighted_borders.iter() {
+            ctx.stroke(rect, &Color::WHITE, 5.);
+        }
+    }
+
+    fn draw_memory_usage(&mut self, ctx: &mut PaintCtx, y: f64, height: f64, usages: Vec<TimelineResourceBlock>) {
         let mut events: Vec<f64> = Vec::new();
         for item in usages.iter() {
             events.push(item.start);
@@ -72,13 +144,14 @@ impl TimelineWidget {
                 if usage.end <= left || usage.start >= right {
                     continue;
                 }
+                let current_height = usage.height as f64 * height;
                 let rect = Rect::from_points(
                     Point::new(self.get_time_x(left), cury),
-                    Point::new(self.get_time_x(right), cury + usage.height * height),
+                    Point::new(self.get_time_x(right), cury + current_height),
                 );
                 ctx.fill(rect.clone(), &usage.color);
                 self.clickable_rectangles.push((rect, usage.task));
-                cury += usage.height * height;
+                cury += current_height;
             }
         }
         for i in 0..events.len() - 1 {
@@ -89,17 +162,18 @@ impl TimelineWidget {
                 if usage.end <= left || usage.start >= right {
                     continue;
                 }
+                let current_height = usage.height as f64 * height;
                 if usage.selected {
                     ctx.stroke(
                         Rect::from_points(
                             Point::new(self.get_time_x(left), cury),
-                            Point::new(self.get_time_x(right), cury + usage.height * height),
+                            Point::new(self.get_time_x(right), cury + current_height),
                         ),
                         &Color::WHITE,
                         5.,
                     );
                 }
-                cury += usage.height * height;
+                cury += current_height;
             }
         }
     }
@@ -200,13 +274,13 @@ impl Widget<AppData> for TimelineWidget {
                     cores.push(TimelineResourceBlock::new(
                         task_info.scheduled,
                         task_info.completed,
-                        task_info.cores as f64 / compute.cores as f64,
+                        task_info.cores as u64,
                         task_info.color.clone(),
                         data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
                         task_id,
                     ));
                 }
-                self.draw_resource_usage(ctx, y, compute.cores as f64 * ROW_STEP, cores);
+                self.draw_cores_usage(ctx, y, ROW_STEP, cores, compute.cores);
                 ctx.stroke(
                     Line::new(Point::new(X_PADDING, y), Point::new(size.width - X_PADDING, y)),
                     &Color::WHITE,
@@ -238,13 +312,13 @@ impl Widget<AppData> for TimelineWidget {
                     memory.push(TimelineResourceBlock::new(
                         task_info.scheduled,
                         task_info.completed,
-                        data.graph.borrow().tasks[task_id].memory as f64 / compute.memory as f64,
+                        data.graph.borrow().tasks[task_id].memory,
                         task_info.color.clone(),
                         data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
                         task_id,
                     ));
                 }
-                self.draw_resource_usage(ctx, y, MEMORY_HEIGHT, memory);
+                self.draw_memory_usage(ctx, y, MEMORY_HEIGHT / compute.memory as f64, memory);
                 ctx.stroke(
                     Line::new(Point::new(X_PADDING, y), Point::new(size.width - X_PADDING, y)),
                     &Color::WHITE,
