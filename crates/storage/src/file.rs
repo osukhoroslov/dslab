@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use core::{
     actor::{Actor, ActorContext, ActorId, Event},
     match_event,
 };
 
-use crate::api::*;
+use crate::{api::*, disk::Disk};
 
 struct File {
     size: u64,
@@ -20,7 +20,7 @@ impl File {
 pub struct FileSystem {
     name: String,
     files: HashMap<String, File>,
-    disks: HashMap<String, ActorId>,
+    disks: HashMap<String, Rc<RefCell<Disk>>>,
     requests: HashMap<u64, (ActorId, String)>,
 }
 
@@ -34,16 +34,15 @@ impl FileSystem {
         }
     }
 
-    pub fn mount(&mut self, mount_point: &str, disk: ActorId) -> Option<ActorId> {
-        if let Some(actor_id) = self.disks.get(mount_point) {
-            Some(actor_id.clone())
-        } else {
-            self.disks.insert(mount_point.to_string(), disk.clone());
-            None
-        }
+    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> bool {
+        self.disks.insert(mount_point.to_string(), disk).is_some()
     }
 
-    fn resolve_disk(&mut self, file_name: &str) -> Option<ActorId> {
+    pub fn unmount_disk(&mut self, mount_point: &str) -> bool {
+        self.disks.remove(mount_point).is_some()
+    }
+
+    fn resolve_disk(&self, file_name: &str) -> Option<Rc<RefCell<Disk>>> {
         for (mount_point, disk) in &self.disks {
             if file_name.starts_with(mount_point) {
                 return Some(disk.clone());
@@ -52,23 +51,22 @@ impl FileSystem {
         None
     }
 
-    pub fn create(&mut self, file_name: &str) -> bool {
-        if let Some(_) = self.files.get(file_name) {
-            false
-        } else if let Some(_) = self.resolve_disk(file_name) {
+    pub fn create_file(&mut self, file_name: &str) -> bool {
+        if self.files.contains_key(file_name) {
+            return false;
+        } else if self.resolve_disk(file_name).is_some() {
             self.files.insert(file_name.to_string(), File::new(0));
-            true
-        } else {
-            false
+            return true;
         }
+        false
     }
 
-    pub fn get_size(&mut self, file_name: &str) -> Option<u64> {
-        if let Some(file) = self.files.get(file_name) {
-            Some(file.size)
-        } else {
-            None
-        }
+    pub fn get_file_size(&self, file_name: &str) -> Option<u64> {
+        self.files.get(file_name).map(|f| f.size)
+    }
+
+    pub fn get_used_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
     pub fn read(&mut self, file_name: &str, size: u64, ctx: &mut ActorContext) -> u64 {
@@ -95,13 +93,13 @@ impl FileSystem {
         ctx.emit_now(
             FileWriteRequest {
                 file_name: file_name.to_string(),
-                size: size,
+                size,
             },
             ActorId::from(&self.name),
         )
     }
 
-    pub fn delete(&mut self, name: &str) {
+    pub fn delete_file(&mut self, name: &str) {
         self.files.remove(name);
     }
 }
@@ -118,7 +116,7 @@ impl Actor for FileSystem {
                     };
 
                     if let Some(disk) = self.resolve_disk(file_name) {
-                        let event_id = ctx.emit_now(DataReadRequest { size: size_to_read }, disk);
+                        let event_id = disk.borrow_mut().read(size_to_read, ctx);
 
                         self.requests.insert(
                             event_id,
@@ -134,10 +132,9 @@ impl Actor for FileSystem {
                 }
             },
             FileWriteRequest { file_name, size } => {
-                if let Some(_) = self.files.get(file_name) {
-
+                if self.files.contains_key(file_name) {
                     if let Some(disk) = self.resolve_disk(file_name) {
-                        let event_id = ctx.emit_now(DataWriteRequest { size: *size }, disk);
+                        let event_id = disk.borrow_mut().write(*size, ctx);
 
                         self.requests.insert(
                             event_id,
@@ -154,7 +151,7 @@ impl Actor for FileSystem {
             },
             &DataReadCompleted { src_event_id, size } => {
                 if let Some((requester, file_name)) = self.requests.get(&src_event_id) {
-                    if let Some(_) = self.files.get(file_name) {
+                    if self.files.contains_key(file_name) {
                         println!("{} [{}] completed READ {} bytes from {}", ctx.time(), ctx.id, size, file_name);
                         ctx.emit_now(FileReadCompleted { file_name: file_name.clone(), read_size: size }, requester.clone());
                         self.requests.remove(&src_event_id);

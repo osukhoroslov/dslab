@@ -25,12 +25,16 @@ impl Disk {
         }
     }
 
-    pub fn read(&self, size: u64, ctx: &mut ActorContext) -> u64 {
+    pub fn read(&mut self, size: u64, ctx: &mut ActorContext) -> u64 {
         ctx.emit_now(DataReadRequest { size }, ActorId::from(&self.name))
     }
 
-    pub fn write(&self, size: u64, ctx: &mut ActorContext) -> u64 {
+    pub fn write(&mut self, size: u64, ctx: &mut ActorContext) -> u64 {
         ctx.emit_now(DataWriteRequest { size }, ActorId::from(&self.name))
+    }
+
+    pub fn get_used_space(&self) -> u64 {
+        self.used
     }
 }
 

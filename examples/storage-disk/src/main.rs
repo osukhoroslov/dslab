@@ -1,11 +1,7 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use sugars::{rc, refcell};
-
-use rand::prelude::*;
-use rand_pcg::Pcg64;
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
@@ -42,14 +38,12 @@ impl Actor for UserActor {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Start {} => {
-                let mut rand = Pcg64::seed_from_u64(SEED);
-
                 for _ in 1..ITER_COUNT {
-                    let mut size = rand.gen_range(1..MAX_SIZE);
-                    (*self.disk).borrow_mut().read(size, ctx.borrow_mut());
+                    let size = (ctx.rand() * MAX_SIZE as f64) as u64;
+                    self.disk.borrow_mut().read(size, ctx);
 
-                    size = rand.gen_range(1..MAX_SIZE);
-                    (*self.disk).borrow_mut().write(size, ctx.borrow_mut());
+                    let size = (ctx.rand() * MAX_SIZE as f64) as u64;
+                    self.disk.borrow_mut().write(size, ctx);
                 }
             }
             &DataReadCompleted { src_event_id: _, size } => {
