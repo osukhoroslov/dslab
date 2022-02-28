@@ -1,6 +1,6 @@
 use compute::multicore::CoresDependency;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TaskRequest {
     pub id: u64,
     pub flops: u64,

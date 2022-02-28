@@ -1,8 +1,11 @@
-use log::info;
 use std::collections::HashSet;
 
-use core::actor::{Actor, ActorContext, ActorId, Event};
+use log::info;
+
 use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
 
 use crate::common::AllocationVerdict;
 use crate::events::allocation::{
@@ -10,20 +13,22 @@ use crate::events::allocation::{
     AllocationRequest,
 };
 use crate::network::MESSAGE_DELAY;
-use crate::resource_pool::ResourcePoolState;
+use crate::resource_pool::{Allocation, ResourcePoolState};
+use crate::scheduler::ALLOCATION_RETRY_PERIOD;
 use crate::vm::VirtualMachine;
 
-#[derive(Debug, Clone)]
 pub struct PlacementStore {
     pool_state: ResourcePoolState,
     schedulers: HashSet<String>,
+    ctx: SimulationContext,
 }
 
 impl PlacementStore {
-    pub fn new() -> Self {
+    pub fn new(ctx: SimulationContext) -> Self {
         Self {
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
+            ctx,
         }
     }
 
@@ -42,100 +47,104 @@ impl PlacementStore {
 
     fn on_allocation_commit_request(
         &mut self,
-        vm: &VirtualMachine,
-        host_id: &String,
-        scheduler: ActorId,
-        ctx: &mut ActorContext,
+        alloc: Allocation,
+        vm: VirtualMachine,
+        host_id: String,
+        from_scheduler: String,
     ) {
-        if self.pool_state.can_allocate(vm, host_id) == AllocationVerdict::Success {
-            self.pool_state.place_vm(vm, host_id);
+        if self.pool_state.can_allocate(&alloc, &host_id) == AllocationVerdict::Success {
+            self.pool_state.allocate(&alloc, &host_id);
             info!(
                 "[time = {}] vm #{} commited to host #{} in placement store",
-                ctx.time(),
-                vm.id,
+                self.ctx.time(),
+                alloc.id,
                 host_id
             );
-            ctx.emit(
-                AllocationRequest { vm: vm.clone() },
-                ActorId::from(host_id),
+            self.ctx.emit(
+                AllocationRequest {
+                    alloc: alloc.clone(),
+                    vm,
+                },
+                &host_id,
                 MESSAGE_DELAY,
             );
 
-            for host in self.schedulers.iter() {
-                ctx.emit(
+            for scheduler in self.schedulers.iter() {
+                self.ctx.emit(
                     AllocationCommitSucceeded {
-                        vm: vm.clone(),
-                        host_id: host_id.to_string(),
+                        alloc: alloc.clone(),
+                        host_id: host_id.clone(),
                     },
-                    ActorId::from(&host),
+                    scheduler,
                     MESSAGE_DELAY,
                 );
             }
         } else {
             info!(
                 "[time = {}] not enough space for vm #{} on host #{} in placement store",
-                ctx.time(),
-                vm.id,
+                self.ctx.time(),
+                alloc.id,
                 host_id
             );
-            ctx.emit(
+            self.ctx.emit(
                 AllocationCommitFailed {
-                    vm: vm.clone(),
-                    host_id: host_id.to_string(),
+                    alloc: alloc.clone(),
+                    host_id: host_id.clone(),
                 },
-                scheduler.clone(),
+                &from_scheduler,
+                MESSAGE_DELAY,
+            );
+            self.ctx.emit(
+                AllocationRequest { alloc, vm },
+                &from_scheduler,
+                MESSAGE_DELAY + ALLOCATION_RETRY_PERIOD,
+            );
+        }
+    }
+
+    fn on_allocation_failed(&mut self, alloc: Allocation, host_id: String) {
+        self.pool_state.release(&alloc, &host_id);
+
+        for scheduler in self.schedulers.iter() {
+            self.ctx.emit(
+                AllocationFailed {
+                    alloc: alloc.clone(),
+                    host_id: host_id.clone(),
+                },
+                scheduler,
                 MESSAGE_DELAY,
             );
         }
     }
 
-    fn on_allocation_failed(&mut self, vm: &VirtualMachine, host_id: &String, ctx: &mut ActorContext) {
-        self.pool_state.remove_vm(vm, host_id);
+    fn on_allocation_released(&mut self, alloc: Allocation, host_id: String) {
+        self.pool_state.release(&alloc, &host_id);
 
         for scheduler in self.schedulers.iter() {
-            ctx.emit(
+            self.ctx.emit(
                 AllocationReleased {
-                    vm: vm.clone(),
-                    host_id: host_id.to_string(),
+                    alloc: alloc.clone(),
+                    host_id: host_id.clone(),
                 },
-                ActorId::from(&scheduler),
-                MESSAGE_DELAY,
-            );
-        }
-    }
-
-    fn on_allocation_released(&mut self, vm: &VirtualMachine, host_id: &String, ctx: &mut ActorContext) {
-        self.pool_state.remove_vm(vm, host_id);
-
-        for scheduler in self.schedulers.iter() {
-            ctx.emit(
-                AllocationReleased {
-                    vm: vm.clone(),
-                    host_id: host_id.to_string(),
-                },
-                ActorId::from(&scheduler),
+                scheduler,
                 MESSAGE_DELAY,
             );
         }
     }
 }
 
-impl Actor for PlacementStore {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        cast!(match event {
-            AllocationCommitRequest { vm, host_id } => {
-                self.on_allocation_commit_request(vm, host_id, from, ctx)
+impl EventHandler for PlacementStore {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
+            AllocationCommitRequest { alloc, vm, host_id } => {
+                self.on_allocation_commit_request(alloc, vm, host_id, event.src)
             }
-            AllocationFailed { vm, host_id } => {
-                self.on_allocation_failed(vm, host_id, ctx)
+            AllocationFailed { alloc, host_id } => {
+                self.on_allocation_failed(alloc, host_id)
             }
-            AllocationReleased { vm, host_id } => {
-                self.on_allocation_released(vm, host_id, ctx)
+            AllocationReleased { alloc, host_id } => {
+                self.on_allocation_released(alloc, host_id)
             }
         })
-    }
-
-    fn is_active(&self) -> bool {
-        true
     }
 }

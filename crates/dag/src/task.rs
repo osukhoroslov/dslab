@@ -1,6 +1,6 @@
 use compute::multicore::CoresDependency;
 
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum TaskState {
     Pending,
     Ready,
@@ -10,7 +10,6 @@ pub enum TaskState {
     Done,
 }
 
-#[derive(Clone)]
 pub struct Task {
     pub name: String,
     pub flops: u64,

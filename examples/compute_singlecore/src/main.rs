@@ -1,82 +1,91 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use compute::singlecore::*;
-use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::cast;
-use core::sim::Simulation;
+use sugars::{rc, refcell};
 
-#[derive(Debug, Clone)]
+use compute::singlecore::*;
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use core::simulation::Simulation;
+
+#[derive(Debug)]
 pub struct Start {}
 
-pub struct TaskActor {
+pub struct Task {
+    id: String,
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
+    ctx: SimulationContext,
 }
 
-impl TaskActor {
-    pub fn new(compute: Rc<RefCell<Compute>>, flops: u64, memory: u64) -> Self {
-        Self { compute, flops, memory }
+impl Task {
+    pub fn new(compute: Rc<RefCell<Compute>>, flops: u64, memory: u64, ctx: SimulationContext) -> Self {
+        Self {
+            id: ctx.id().to_string(),
+            compute,
+            flops,
+            memory,
+            ctx,
+        }
     }
 }
 
-impl Actor for TaskActor {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        cast!(match event {
+impl EventHandler for Task {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
             Start {} => {
-                println!("{} [{}] received Start from {}", ctx.time(), ctx.id, from);
-                self.compute.borrow().run(self.flops, self.memory, ctx);
+                println!("{} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
+                self.compute.borrow_mut().run(self.flops, self.memory, &self.id);
             }
             CompStarted { id } => {
                 println!(
                     "{} [{}] received CompStarted from {} for {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id
                 );
             }
             CompFinished { id } => {
                 println!(
                     "{} [{}] received CompFinished from {} for {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id
                 );
             }
             CompFailed { id, reason } => {
                 println!(
                     "{} [{}] received CompFailed from {} for {:?}, because of {:?}",
-                    ctx.time(),
-                    ctx.id,
-                    from,
+                    self.ctx.time(),
+                    self.id,
+                    event.src,
                     id,
                     reason
                 );
             }
         })
     }
-
-    fn is_active(&self) -> bool {
-        true
-    }
 }
 
 fn main() {
     let mut sim = Simulation::new(123);
-    let compute = Rc::new(RefCell::new(Compute::new("compute", 10, 1024)));
-    sim.add_actor(
-        "task1",
-        Rc::new(RefCell::new(TaskActor::new(compute.clone(), 100, 512))),
-    );
-    sim.add_actor(
-        "task2",
-        Rc::new(RefCell::new(TaskActor::new(compute.clone(), 200, 512))),
-    );
-    sim.add_actor("compute", compute);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task1"), 0.);
-    sim.add_event(Start {}, ActorId::from("0"), ActorId::from("task2"), 5.);
+
+    let compute = rc!(refcell!(Compute::new(10, 1024, sim.create_context("compute"))));
+    sim.add_handler("compute", compute.clone());
+
+    let task1 = Task::new(compute.clone(), 100, 512, sim.create_context("task1"));
+    sim.add_handler("task1", rc!(refcell!(task1)));
+    let task2 = Task::new(compute.clone(), 200, 512, sim.create_context("task2"));
+    sim.add_handler("task2", rc!(refcell!(task2)));
+
+    let mut ctx = sim.create_context("root");
+    ctx.emit(Start {}, "task1", 0.);
+    ctx.emit(Start {}, "task2", 5.);
+
     sim.step_until_no_events();
 }

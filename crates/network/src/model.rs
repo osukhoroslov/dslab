@@ -1,30 +1,25 @@
-use core::actor::{ActorContext, ActorId, Event};
+use core::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct Data {
     pub id: usize,
-    pub src: ActorId,
-    pub dest: ActorId,
+    pub src: String,
+    pub dest: String,
     pub size: f64,
-    pub notification_dest: ActorId,
+    pub notification_dest: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Message {
     pub id: usize,
-    pub src: ActorId,
-    pub dest: ActorId,
+    pub src: String,
+    pub dest: String,
     pub data: String,
 }
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-pub struct EventLatency {
-    pub event: Box<dyn Event>,
-}
 
 #[derive(Debug)]
 pub struct MessageSend {
@@ -64,8 +59,8 @@ pub struct DataTransferCompleted {
 // NETWORK MODEL TEMPLATE ///////////////////////////////////////////////////////////////////////////////////
 
 pub trait DataOperation {
-    fn send_data(&mut self, data: Data, ctx: &mut ActorContext);
-    fn receive_data(&mut self, data: Data, ctx: &mut ActorContext);
+    fn send_data(&mut self, data: Data, ctx: &mut SimulationContext);
+    fn receive_data(&mut self, data: Data, ctx: &mut SimulationContext);
 }
 
 pub trait NetworkConfiguration {

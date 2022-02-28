@@ -1,4 +1,4 @@
-use core::actor::ActorContext;
+use core::context::SimulationContext;
 
 use crate::model::*;
 
@@ -20,12 +20,12 @@ impl NetworkConfiguration for ConstantBandwidthNetwork {
 }
 
 impl DataOperation for ConstantBandwidthNetwork {
-    fn send_data(&mut self, data: Data, ctx: &mut ActorContext) {
+    fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         let data_transfer_time = data.size / self.bandwidth;
-        ctx.emit(DataReceive { data }, ctx.id.clone(), data_transfer_time);
+        ctx.emit_self(DataReceive { data }, data_transfer_time);
     }
 
-    fn receive_data(&mut self, _data: Data, _ctx: &mut ActorContext) {}
+    fn receive_data(&mut self, _data: Data, _ctx: &mut SimulationContext) {}
 }
 
 impl NetworkModel for ConstantBandwidthNetwork {}

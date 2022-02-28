@@ -1,9 +1,9 @@
+extern crate env_logger;
+
 use log::info;
 
 use cloud_plugin::simulation::CloudSimulation;
-use core::sim::Simulation;
-
-extern crate env_logger;
+use core::simulation::Simulation;
 
 fn main() {
     env_logger::init();

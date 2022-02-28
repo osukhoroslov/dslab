@@ -1,62 +1,45 @@
+mod process;
+
+use std::time::Instant;
+
+use clap::{arg, command};
 use sugars::{rc, refcell};
 
-use core::actor::{Actor, ActorContext, ActorId, Event};
-use core::match_event;
-use core::sim::Simulation;
+use core::simulation::Simulation;
 
-// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-pub struct Start {
-    other: ActorId,
-}
-
-#[derive(Debug)]
-pub struct Ping {}
-
-#[derive(Debug)]
-pub struct Pong {}
-
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
-
-pub struct SimpleActor {}
-
-impl SimpleActor {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Actor for SimpleActor {
-    fn on(&mut self, event: Box<dyn Event>, from: ActorId, ctx: &mut ActorContext) {
-        match_event!( event {
-            Start { other } => {
-                println!("[{}] received Start from {}", ctx.id, from);
-                ctx.emit(Ping {}, other.clone(), 0.);
-            },
-            Ping {} => {
-                println!("[{}] received Ping from {}", ctx.id, from);
-                ctx.emit(Pong {}, from, 0.);
-            },
-            Pong {} => {
-                println!("[{}] received Pong from {}", ctx.id, from);
-            },
-        })
-    }
-
-    fn is_active(&self) -> bool {
-        true
-    }
-}
+use crate::process::{Process, Start};
 
 // MAIN ////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
+    let matches = command!()
+        .arg(
+            arg!([ITERATIONS])
+                .help("Number of iterations")
+                .validator(|s| s.parse::<u64>())
+                .default_value("1"),
+        )
+        .get_matches();
+    let iterations = matches.value_of_t("ITERATIONS").unwrap();
+    env_logger::init();
+
     let mut sim = Simulation::new(123);
-    let app = ActorId::from("app");
-    let actor1 = sim.add_actor("1", rc!(refcell!(SimpleActor::new())));
-    let actor2 = sim.add_actor("2", rc!(refcell!(SimpleActor::new())));
-    sim.add_event(Start { other: actor2.clone() }, app.clone(), actor1.clone(), 0.);
-    sim.add_event(Start { other: actor1.clone() }, app.clone(), actor2.clone(), 0.);
+
+    let proc1 = Process::new(iterations, sim.create_context("proc1"));
+    let proc2 = Process::new(iterations, sim.create_context("proc2"));
+    sim.add_handler("proc1", rc!(refcell!(proc1)));
+    sim.add_handler("proc2", rc!(refcell!(proc2)));
+
+    let mut root = sim.create_context("root");
+    root.emit(Start::new("proc2"), "proc1", 0.);
+    root.emit(Start::new("proc1"), "proc2", 0.);
+
+    let t = Instant::now();
     sim.step_until_no_events();
+    println!(
+        "Processed {} events in {:.2?} ({:.0} events/sec)",
+        sim.event_count(),
+        t.elapsed(),
+        sim.event_count() as f64 / t.elapsed().as_secs_f64()
+    );
 }
