@@ -109,12 +109,17 @@ fn epigenomics() {
 
     let mut resources: Vec<Resource> = Vec::new();
     let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let name = format!("compute{}", resources.len() + 1);
-        let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
-        sim.add_actor(&name, compute.clone());
+        let compute_id = format!("compute{}", resources.len() + 1);
+        let compute = rc!(refcell!(Compute::new(
+            speed,
+            cores,
+            memory,
+            sim.create_context(&compute_id)
+        )));
+        sim.add_handler(&compute_id, compute.clone());
         let resource = Resource {
+            id: compute_id,
             compute,
-            id: ActorId::from(&name),
             speed,
             cores_available: cores,
             memory_available: memory,
@@ -125,14 +130,23 @@ fn epigenomics() {
     add_resource(20, 2, 512);
     add_resource(30, 4, 1024);
 
-    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(100000.0, 10.)));
-    let network = Rc::new(RefCell::new(Network::new(network_model)));
-    sim.add_actor(NETWORK_ID, network.clone());
+    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(100000.0, 10.)));
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+    sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
-    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
-    let runner_id = sim.add_actor("runner", runner.clone());
-    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
+    let runner_id = "runner";
+    let runner = rc!(refcell!(DAGRunner::new(
+        dag,
+        network,
+        resources,
+        scheduler,
+        sim.create_context(runner_id)
+    )));
+    sim.add_handler(runner_id, runner.clone());
+
+    let mut client = sim.create_context("client");
+    client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
     runner
         .borrow()
@@ -148,12 +162,17 @@ fn montage() {
 
     let mut resources: Vec<Resource> = Vec::new();
     let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let name = format!("compute{}", resources.len() + 1);
-        let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
-        sim.add_actor(&name, compute.clone());
+        let compute_id = format!("compute{}", resources.len() + 1);
+        let compute = rc!(refcell!(Compute::new(
+            speed,
+            cores,
+            memory,
+            sim.create_context(&compute_id)
+        )));
+        sim.add_handler(&compute_id, compute.clone());
         let resource = Resource {
+            id: compute_id,
             compute,
-            id: ActorId::from(&name),
             speed,
             cores_available: cores,
             memory_available: memory,
@@ -164,14 +183,23 @@ fn montage() {
     add_resource(20, 2, 512);
     add_resource(30, 4, 1024);
 
-    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(0.01, 1.)));
-    let network = Rc::new(RefCell::new(Network::new(network_model)));
-    sim.add_actor(NETWORK_ID, network.clone());
+    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(0.01, 1.)));
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+    sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
-    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
-    let runner_id = sim.add_actor("runner", runner.clone());
-    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
+    let runner_id = "runner";
+    let runner = rc!(refcell!(DAGRunner::new(
+        dag,
+        network,
+        resources,
+        scheduler,
+        sim.create_context(runner_id)
+    )));
+    sim.add_handler(runner_id, runner.clone());
+
+    let mut client = sim.create_context("client");
+    client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
     runner
         .borrow()
@@ -187,12 +215,17 @@ fn diamond() {
 
     let mut resources: Vec<Resource> = Vec::new();
     let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let name = format!("compute{}", resources.len() + 1);
-        let compute = Rc::new(RefCell::new(Compute::new(&name, speed, cores, memory)));
-        sim.add_actor(&name, compute.clone());
+        let compute_id = format!("compute{}", resources.len() + 1);
+        let compute = rc!(refcell!(Compute::new(
+            speed,
+            cores,
+            memory,
+            sim.create_context(&compute_id)
+        )));
+        sim.add_handler(&compute_id, compute.clone());
         let resource = Resource {
+            id: compute_id,
             compute,
-            id: ActorId::from(&name),
             speed,
             cores_available: cores,
             memory_available: memory,
@@ -202,14 +235,23 @@ fn diamond() {
     add_resource(10, 1, 256);
     add_resource(20, 3, 512);
 
-    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(100., 0.1)));
-    let network = Rc::new(RefCell::new(Network::new(network_model)));
-    sim.add_actor(NETWORK_ID, network.clone());
+    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(100., 0.1)));
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+    sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
-    let runner = rc!(refcell!(DAGRunner::new(dag, network, resources, scheduler)));
-    let runner_id = sim.add_actor("runner", runner.clone());
-    sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
+    let runner_id = "runner";
+    let runner = rc!(refcell!(DAGRunner::new(
+        dag,
+        network,
+        resources,
+        scheduler,
+        sim.create_context(runner_id)
+    )));
+    sim.add_handler(runner_id, runner.clone());
+
+    let mut client = sim.create_context("client");
+    client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
     runner
         .borrow()

@@ -298,7 +298,6 @@ impl DAGRunner {
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
         let task_id = data_transfer.task_id;
-        let task = self.dag.get_task(task_id);
         if data_transfer.from == self.id {
             let location = *self.task_location.get(&task_id).unwrap();
             self.trace_log.log_event(
