@@ -33,6 +33,8 @@ struct Task {
     cores_dependency: Option<Value>,
     #[serde(default = "Vec::new")]
     inputs: Vec<String>,
+    #[serde(default = "Vec::new")]
+    global_inputs: Vec<DataItem>,
     outputs: Vec<DataItem>,
 }
 
@@ -70,6 +72,10 @@ impl DAG {
                     output.name.clone(),
                     dag.add_task_output(task_id, &output.name, output.size),
                 );
+            }
+            for input in task.global_inputs.iter() {
+                let data_item_id = dag.add_data_item(&input.name, input.size);
+                dag.add_data_dependency(data_item_id, task_id);
             }
         }
         for (task_id, task) in yaml.tasks.iter().enumerate() {
