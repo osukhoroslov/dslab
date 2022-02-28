@@ -8,8 +8,8 @@ use crate::dag::*;
 
 impl DAG {
     pub fn from_dot(file: &str) -> Self {
-        let raw = std::fs::read_to_string(file).unwrap();
-        let dot = Graph::read_dot(&raw).unwrap();
+        let raw = std::fs::read_to_string(file).expect(&format!("Can't read file {}", file));
+        let dot = Graph::read_dot(&raw).expect(&format!("Can't parse DOT from file {}", file));
         let mut dag = DAG::new();
 
         let mut task_ids: HashMap<String, usize> = HashMap::new();

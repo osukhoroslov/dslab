@@ -43,7 +43,9 @@ struct Yaml {
 
 impl DAG {
     pub fn from_yaml(file: &str) -> Self {
-        let yaml: Yaml = serde_yaml::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+        let yaml: Yaml =
+            serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
+                .expect(&format!("Can't parse YAML from file {}", file));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for task in yaml.tasks.iter() {

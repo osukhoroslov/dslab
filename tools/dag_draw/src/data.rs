@@ -2,11 +2,11 @@ use druid::Color;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TaskInfo {
+    pub id: usize,
     pub scheduled: f64,
     pub started: f64,
     pub completed: f64,
     pub cores: u32,
-    pub id: usize,
     pub color: Color,
 }
 

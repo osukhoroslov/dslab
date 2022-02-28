@@ -103,7 +103,7 @@ fn map_reduce() {
 }
 
 fn epigenomics() {
-    let dag = DAG::from_dax("graphs/Epigenomics_100.xml");
+    let dag = DAG::from_dax("graphs/Epigenomics_100.xml", 1000.);
 
     let mut sim = Simulation::new(123);
 
@@ -173,7 +173,11 @@ fn montage() {
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("traces/trace_montage.json").unwrap();
+    runner
+        .borrow()
+        .trace_log()
+        .save_to_file("traces/trace_montage.json")
+        .unwrap();
 }
 
 fn diamond() {
@@ -207,12 +211,16 @@ fn diamond() {
     let runner_id = sim.add_actor("runner", runner.clone());
     sim.add_event_now(Start {}, ActorId::from("client"), runner_id);
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file("traces/trace_diamond.json").unwrap();
+    runner
+        .borrow()
+        .trace_log()
+        .save_to_file("traces/trace_diamond.json")
+        .unwrap();
 }
 
 fn main() {
     map_reduce();
-    epigenomics();  // dax
-    montage();  // dot
+    epigenomics(); // dax
+    montage(); // dot
     diamond(); // yaml
 }

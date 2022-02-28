@@ -59,7 +59,7 @@ impl DAG {
     }
 
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending, true);
+        let data_item = DataItem::new(name, size, DataItemState::Ready, true);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         data_item_id
@@ -81,6 +81,8 @@ impl DAG {
         if data_item.state == DataItemState::Pending && consumer.state == TaskState::Ready {
             consumer.state = TaskState::Pending;
             self.ready_tasks.remove(&consumer_id);
+        } else if data_item.state == DataItemState::Ready {
+            consumer.ready_inputs += 1;
         }
     }
 

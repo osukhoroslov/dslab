@@ -84,34 +84,34 @@ impl AppData {
             match event["type"].as_str().unwrap().as_ref() {
                 "start_uploading" => {
                     uploads
-                        .entry(event["id"].as_u64().unwrap())
+                        .entry(event["data_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
                     if event["from"].as_str().unwrap() == "scheduler" {
-                        present_scheduler_files.insert(event["name"].as_str().unwrap().to_string());
+                        present_scheduler_files.insert(event["data_name"].as_str().unwrap().to_string());
                     }
                 }
                 "finish_uploading" => {
                     uploads
-                        .entry(event["id"].as_u64().unwrap())
+                        .entry(event["data_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
                 }
                 "task_scheduled" => {
                     tasks
-                        .entry(event["id"].as_u64().unwrap())
+                        .entry(event["task_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
                 }
                 "task_started" => {
                     tasks
-                        .entry(event["id"].as_u64().unwrap())
+                        .entry(event["task_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
                 }
                 "task_completed" => {
                     tasks
-                        .entry(event["id"].as_u64().unwrap())
+                        .entry(event["task_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
                 }
@@ -132,10 +132,10 @@ impl AppData {
 
             let source = events[0]["from"].as_str().unwrap().to_string();
             let destination = events[0]["to"].as_str().unwrap().to_string();
-            let name = events[0]["name"].as_str().unwrap().to_string();
+            let name = events[0]["data_name"].as_str().unwrap().to_string();
             let start_time = events[0]["time"].as_f64().unwrap();
             let finish_time = events[1]["time"].as_f64().unwrap();
-            let task = events[0]["task"].as_u64().unwrap() as usize;
+            let task = events[0]["task_id"].as_u64().unwrap() as usize;
 
             transfers.borrow_mut().push(Transfer {
                 start: start_time,
@@ -202,7 +202,7 @@ impl AppData {
             let started = events[1]["time"].as_f64().unwrap();
             let completed = events[2]["time"].as_f64().unwrap();
             let cores = events[0]["cores"].as_u64().unwrap() as u32;
-            let id = events[0]["id"].as_u64().unwrap() as usize;
+            let id = events[0]["task_id"].as_u64().unwrap() as usize;
             let actor = events[0]["location"].as_str().unwrap().to_string();
 
             tasks_info.borrow_mut()[id] = Some(TaskInfo {

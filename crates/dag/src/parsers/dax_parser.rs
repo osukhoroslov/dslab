@@ -32,14 +32,15 @@ struct DAX {
 }
 
 impl DAG {
-    pub fn from_dax(file: &str) -> Self {
-        let dax: DAX = from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+    pub fn from_dax(file: &str, flops_coefficient: f64) -> Self {
+        let dax: DAX = from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
+            .expect(&format!("Can't parse DAX from file {}", file));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for job in dax.jobs.iter() {
             let task_id = dag.add_task(
                 &job.name,
-                (job.runtime * 1000.) as u64,
+                (job.runtime * flops_coefficient) as u64,
                 0,
                 1,
                 1,

@@ -16,7 +16,6 @@ use crate::dag::DAG;
 use crate::data_item::DataItemState;
 use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
-use crate::trace_log;
 use crate::trace_log::TraceLog;
 
 pub struct Resource {
@@ -87,17 +86,8 @@ impl DAGRunner {
     pub fn start(&mut self) {
         println!("{:>8.3} [{}] started DAG execution", self.ctx.time(), self.id);
         self.trace_config();
-        self.init_inputs();
         self.actions.extend(self.scheduler.start(&self.dag, &self.resources));
         self.process_actions();
-    }
-
-    fn init_inputs(&mut self) {
-        for data_item_id in 0..self.dag.get_data_items().len() {
-            if self.dag.get_data_item(data_item_id).is_input {
-                self.dag.update_data_item_state(data_item_id, DataItemState::Ready);
-            }
-        }
     }
 
     fn trace_config(&mut self) {
@@ -109,30 +99,7 @@ impl DAGRunner {
                 "memory": resource.memory_available,
             }));
         }
-        self.trace_log.graph.tasks = self
-            .dag
-            .get_tasks()
-            .iter()
-            .map(|task| trace_log::Task {
-                name: task.name.clone(),
-                flops: task.flops,
-                memory: task.memory,
-                min_cores: task.min_cores,
-                max_cores: task.max_cores,
-                inputs: task.inputs.clone(),
-                outputs: task.outputs.clone(),
-            })
-            .collect();
-        self.trace_log.graph.data_items = self
-            .dag
-            .get_data_items()
-            .iter()
-            .map(|data_item| trace_log::DataItem {
-                name: data_item.name.clone(),
-                size: data_item.size,
-                consumers: data_item.consumers.clone(),
-            })
-            .collect();
+        self.trace_log.log_dag(&self.dag);
     }
 
     pub fn trace_log(&self) -> &TraceLog {
@@ -181,7 +148,7 @@ impl DAGRunner {
                 break;
             }
             let task_id = self.resource_queue[resource_id][0].task_id;
-            let task = self.dag.get_task(task_id).clone();
+            let task = self.dag.get_task(task_id);
             if task.memory > self.resources[resource_id].memory_available {
                 break;
             }
@@ -217,9 +184,9 @@ impl DAGRunner {
                         "type": "start_uploading",
                         "from": "scheduler",
                         "to": resource.id.clone(),
-                        "id": data_event_id,
-                        "name": data_item.name.clone(),
-                        "task": task_id,
+                        "data_id": data_event_id,
+                        "data_name": data_item.name.clone(),
+                        "task_id": task_id,
                     }),
                 );
             }
@@ -229,8 +196,8 @@ impl DAGRunner {
                 json!({
                     "time": self.ctx.time(),
                     "type": "task_scheduled",
-                    "id": task_id,
-                    "name": task.name.clone(),
+                    "task_id": task_id,
+                    "task_name": task.name.clone(),
                     "location": resource.id.clone(),
                     "cores": cores,
                     "memory": task.memory,
@@ -238,7 +205,7 @@ impl DAGRunner {
             );
             self.dag.update_task_state(task_id, TaskState::Running);
 
-            if task.inputs.is_empty() {
+            if self.task_inputs.get(&task_id).unwrap().is_empty() {
                 self.start_task(task_id);
             }
         }
@@ -251,8 +218,8 @@ impl DAGRunner {
             json!({
                 "time": self.ctx.time(),
                 "type": "task_completed",
-                "id": task_id,
-                "name": task_name,
+                "task_id": task_id,
+                "task_name": task_name,
             }),
         );
         let location = self.task_location.remove(&task_id).unwrap();
@@ -283,9 +250,9 @@ impl DAGRunner {
                     "type": "start_uploading",
                     "from": self.resources[location].id.clone(),
                     "to": "scheduler",
-                    "id": data_id,
-                    "name": data_item.name.clone(),
-                    "task": task_id,
+                    "data_id": data_id,
+                    "data_name": data_item.name.clone(),
+                    "task_id": task_id,
                 }),
             );
         }
@@ -320,8 +287,8 @@ impl DAGRunner {
             json!({
                 "time": self.ctx.time(),
                 "type": "task_started",
-                "id": task_id,
-                "name": task.name.clone(),
+                "task_id": task_id,
+                "task_name": task.name.clone(),
             }),
         );
     }
@@ -341,9 +308,9 @@ impl DAGRunner {
                     "type": "finish_uploading",
                     "from": "scheduler",
                     "to": self.resources[location].id.clone(),
-                    "id": data_event_id,
-                    "name": data_item.name.clone(),
-                    "task": task_id,
+                    "data_id": data_event_id,
+                    "data_name": data_item.name.clone(),
+                    "task_id": task_id,
                 }),
             );
 
@@ -360,9 +327,9 @@ impl DAGRunner {
                     "type": "finish_uploading",
                     "from": self.data_transfers.get(&data_event_id).unwrap().from.clone(),
                     "to": "scheduler",
-                    "id": data_event_id,
-                    "name": data_item.name.clone(),
-                    "task": task_id,
+                    "data_id": data_event_id,
+                    "data_name": data_item.name.clone(),
+                    "task_id": task_id,
                 }),
             );
             for (task, state) in self
