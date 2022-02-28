@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -60,8 +59,8 @@ impl Actor for UserActor {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
             Init {} => {
-                (*self.file_system).borrow_mut().create(FILE_1_NAME);
-                (*self.file_system).borrow_mut().create(FILE_2_NAME);
+                self.file_system.borrow_mut().create(FILE_1_NAME);
+                self.file_system.borrow_mut().create(FILE_2_NAME);
 
                 ctx.emit_now(Start {}, ActorId::from(USER_NAME));
             }
@@ -70,21 +69,15 @@ impl Actor for UserActor {
 
                 for _ in 1..ITER_COUNT {
                     let mut size = rand.gen_range(1..MAX_SIZE);
-                    (*self.file_system)
-                        .borrow_mut()
-                        .read(FILE_1_NAME, size, ctx.borrow_mut());
+                    self.file_system.borrow_mut().read(FILE_1_NAME, size, ctx);
 
                     size = rand.gen_range(1..MAX_SIZE);
-                    (*self.file_system)
-                        .borrow_mut()
-                        .write(FILE_1_NAME, size, ctx.borrow_mut());
+                    self.file_system.borrow_mut().write(FILE_1_NAME, size, ctx);
 
-                    (*self.file_system).borrow_mut().read_all(FILE_2_NAME, ctx.borrow_mut());
+                    self.file_system.borrow_mut().read_all(FILE_2_NAME, ctx);
 
                     size = rand.gen_range(1..MAX_SIZE);
-                    (*self.file_system)
-                        .borrow_mut()
-                        .write(FILE_2_NAME, size, ctx.borrow_mut());
+                    self.file_system.borrow_mut().write(FILE_2_NAME, size, ctx);
                 }
             }
             FileReadCompleted { file_name, read_size } => {
@@ -137,10 +130,10 @@ fn main() {
     let file_system = rc!(refcell!(FileSystem::new(FILESYSTEM_NAME)));
     sim.add_actor(FILESYSTEM_NAME, file_system.clone());
 
-    (*file_system)
+    file_system
         .borrow_mut()
         .mount(DISK_1_MOUNT_POINT, ActorId::from(DISK_1_NAME));
-    (*file_system)
+    file_system
         .borrow_mut()
         .mount(DISK_2_MOUNT_POINT, ActorId::from(DISK_2_NAME));
 
