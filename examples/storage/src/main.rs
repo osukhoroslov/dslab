@@ -1,7 +1,11 @@
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use sugars::{rc, refcell};
+
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use std::borrow::BorrowMut;
-use sugars::{rc, refcell};
 
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
@@ -9,31 +13,77 @@ use core::sim::Simulation;
 
 use storage::api::{FileReadCompleted, FileWriteCompleted};
 use storage::disk::Disk;
-use storage::file::{FileSystem, FS_ID};
+use storage::file::FileSystem;
 
-pub const ITER_COUNT : u64 = 10;
-pub const MAX_SIZE: u64 = 1000;
+const SEED: u64 = 16;
+const ITER_COUNT: u64 = 1000;
+const MAX_SIZE: u64 = 1000;
 
-pub struct UserActor {}
+const FILESYSTEM_NAME: &str = "FileSystem-1";
+const DISK_1_NAME: &str = "Disk-1";
+const USER_NAME: &str = "User";
+const FILE_1_NAME: &str = "/disk-1/file-1";
+
+struct UserActor {
+    file_system: Rc<RefCell<FileSystem>>,
+}
+
+#[derive(Debug)]
+struct Start {}
+
+#[derive(Debug)]
+struct Init {}
 
 impl UserActor {
-    pub fn new() -> Self {
-        Self {}
+    fn new(file_system: Rc<RefCell<FileSystem>>) -> Self {
+        Self { file_system }
     }
 }
 
 impl Actor for UserActor {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
-            FileReadCompleted { fd } => {
-                println!("{} [{}] completed READ from file {}", ctx.time(), ctx.id, fd,);
+            Init {} => {
+                (*self.file_system).borrow_mut().create(FILE_1_NAME);
+                ctx.emit_now(Start {}, ActorId::from(USER_NAME));
             }
-            FileWriteCompleted { fd, new_size } => {
+            Start {} => {
+                let mut rand = Pcg64::seed_from_u64(SEED);
+
+                for _ in 1..ITER_COUNT {
+                    let mut size = rand.gen_range(1..MAX_SIZE);
+                    (*self.file_system)
+                        .borrow_mut()
+                        .read(FILE_1_NAME, size, ctx.borrow_mut());
+
+                    size = rand.gen_range(1..MAX_SIZE);
+                    (*self.file_system)
+                        .borrow_mut()
+                        .write(FILE_1_NAME, size, ctx.borrow_mut());
+
+                    (*self.file_system).borrow_mut().read_all(FILE_1_NAME, ctx.borrow_mut());
+
+                    size = rand.gen_range(1..MAX_SIZE);
+                    (*self.file_system)
+                        .borrow_mut()
+                        .write(FILE_1_NAME, size, ctx.borrow_mut());
+                }
+            }
+            FileReadCompleted { file_name, read_size } => {
+                println!(
+                    "{} [{}] completed READ {} bytes from file {}",
+                    ctx.time(),
+                    ctx.id,
+                    read_size,
+                    file_name
+                );
+            }
+            FileWriteCompleted { file_name, new_size } => {
                 println!(
                     "{} [{}] completed WRITE to file {}, new_size {}",
                     ctx.time(),
                     ctx.id,
-                    fd,
+                    file_name,
                     new_size
                 );
             }
@@ -48,47 +98,18 @@ impl Actor for UserActor {
 fn main() {
     println!("Starting...");
 
-    let seed = 16;
+    let mut sim = Simulation::new(SEED);
 
-    let mut sim = Simulation::new(seed);
+    let disk_1 = rc!(refcell!(Disk::new(DISK_1_NAME, 100000, 1234, 4321)));
+    let disk_1_actor_id = sim.add_actor(DISK_1_NAME, disk_1);
 
-    let disk_name = "disk-1";
+    let fs = rc!(refcell!(FileSystem::new(FILESYSTEM_NAME, disk_1_actor_id)));
+    sim.add_actor(FILESYSTEM_NAME, fs.clone());
 
-    let disk = rc!(refcell!(Disk::new(disk_name, 1234, 4321)));
-    let disk_actor_id = sim.add_actor("disk-1", disk);
+    let user = rc!(refcell!(UserActor::new(fs)));
+    sim.add_actor(USER_NAME, user);
 
-    let fs = rc!(refcell!(FileSystem::new(disk_actor_id)));
-    sim.add_actor(FS_ID, fs.clone());
-
-    let user = rc!(refcell!(UserActor::new()));
-    let user_actor_id = sim.add_actor("user", user);
-
-    let fd0 = (*fs).borrow_mut().open("/home/file0");
-    let fd1 = (*fs).borrow_mut().open("/home/file1");
-
-    let mut rand = Pcg64::seed_from_u64(seed);
-
-    for _ in 1..ITER_COUNT {
-        let mut size = rand.gen_range(1..MAX_SIZE);
-        (*fs)
-            .borrow_mut()
-            .read_async(fd0, size, sim.borrow_mut(), user_actor_id.clone());
-
-        size = rand.gen_range(1..MAX_SIZE);
-        (*fs)
-            .borrow_mut()
-            .write_async(fd0, size, sim.borrow_mut(), user_actor_id.clone());
-
-        size = rand.gen_range(1..MAX_SIZE);
-        (*fs)
-            .borrow_mut()
-            .read_async(fd1, size, sim.borrow_mut(), user_actor_id.clone());
-
-        size = rand.gen_range(1..MAX_SIZE);
-        (*fs)
-            .borrow_mut()
-            .write_async(fd1, size, sim.borrow_mut(), user_actor_id.clone());
-    }
+    sim.add_event_now(Init {}, ActorId::from(USER_NAME), ActorId::from(USER_NAME));
 
     sim.step_until_no_events();
 

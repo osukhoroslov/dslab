@@ -1,32 +1,36 @@
 use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::match_event;
-use core::sim::Simulation;
 
 use crate::api::{DataReadCompleted, DataReadRequest, DataWriteCompleted, DataWriteRequest};
 
+#[derive(Debug)]
 pub struct Disk {
+    name: String,
+    capacity: u64,
+    used: u64,
     read_bandwidth: u64,
     write_bandwidth: u64,
     ready_time: f64,
-    actor_name: String,
 }
 
 impl Disk {
-    pub fn new(actor_id: &str, read_bandwidth: u64, write_bandwidth: u64) -> Self {
+    pub fn new(name: &str, capacity: u64, read_bandwidth: u64, write_bandwidth: u64) -> Self {
         Self {
+            name: name.to_string(),
+            capacity,
+            used: 0,
             read_bandwidth,
             write_bandwidth,
             ready_time: 0.,
-            actor_name: actor_id.to_string(),
         }
     }
 
-    pub fn read_async(&self, size: u64, sim: &mut Simulation, actor_to_notify: ActorId) {
-        sim.add_event_now(DataReadRequest { size }, actor_to_notify, ActorId::from(&self.actor_name));
+    pub fn read(&self, size: u64, ctx: &mut ActorContext) -> u64 {
+        ctx.emit_now(DataReadRequest { size }, ActorId::from(&self.name))
     }
 
-    pub fn write_async(&self, size: u64, sim: &mut Simulation, actor_to_notify: ActorId) {
-        sim.add_event_now(DataWriteRequest { size }, actor_to_notify, ActorId::from(&self.actor_name));
+    pub fn write(&self, size: u64, ctx: &mut ActorContext) -> u64 {
+        ctx.emit_now(DataWriteRequest { size }, ActorId::from(&self.name))
     }
 }
 
@@ -35,15 +39,27 @@ impl Actor for Disk {
         match_event!( event {
             DataReadRequest { size } => {
                 println!("{} [{}] disk READ {} bytes request from {}", ctx.time(), ctx.id, size, from);
+
                 let read_time = *size as f64 / self.read_bandwidth as f64;
                 self.ready_time = self.ready_time.max(ctx.time()) + read_time;
+
                 ctx.emit(DataReadCompleted { src_event_id: ctx.event_id, size: *size }, from, self.ready_time - ctx.time());
             },
             DataWriteRequest { size } => {
                 println!("{} [{}] disk WRITE {} bytes request from {}", ctx.time(), ctx.id, size, from);
-                let write_time = *size as f64 / self.write_bandwidth as f64;
+
+                let remaining = self.capacity - self.used;
+                let size_to_write = if remaining < *size {
+                    remaining
+                } else {
+                    *size
+                };
+                self.used += size_to_write;
+
+                let write_time = size_to_write as f64 / self.write_bandwidth as f64;
                 self.ready_time = self.ready_time.max(ctx.time()) + write_time;
-                ctx.emit(DataWriteCompleted { src_event_id: ctx.event_id, size: *size }, from, self.ready_time - ctx.time());
+
+                ctx.emit(DataWriteCompleted { src_event_id: ctx.event_id, size: size_to_write }, from, self.ready_time - ctx.time());
             }
         })
     }

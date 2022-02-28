@@ -1,4 +1,6 @@
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use sugars::{rc, refcell};
 
@@ -12,20 +14,40 @@ use core::sim::Simulation;
 use storage::api::{DataReadCompleted, DataWriteCompleted};
 use storage::disk::Disk;
 
-pub const ITER_COUNT: u64 = 10;
-pub const MAX_SIZE: u64 = 1000;
+const SEED: u64 = 16;
+const ITER_COUNT: u64 = 1000;
+const MAX_SIZE: u64 = 1000;
 
-pub struct UserActor {}
+const DISK_NAME: &str = "Disk";
+const USER_NAME: &str = "User";
+
+struct UserActor {
+    disk: Rc<RefCell<Disk>>,
+}
+
+#[derive(Debug)]
+struct Start {}
 
 impl UserActor {
-    pub fn new() -> Self {
-        Self {}
+    fn new(disk: Rc<RefCell<Disk>>) -> Self {
+        Self { disk }
     }
 }
 
 impl Actor for UserActor {
     fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
         cast!(match event {
+            Start {} => {
+                let mut rand = Pcg64::seed_from_u64(SEED);
+
+                for _ in 1..ITER_COUNT {
+                    let mut size = rand.gen_range(1..MAX_SIZE);
+                    (*self.disk).borrow_mut().read(size, ctx.borrow_mut());
+
+                    size = rand.gen_range(1..MAX_SIZE);
+                    (*self.disk).borrow_mut().write(size, ctx.borrow_mut());
+                }
+            }
             &DataReadCompleted { src_event_id: _, size } => {
                 println!("{} [{}] completed READ {} bytes from disk", ctx.time(), ctx.id, size);
             }
@@ -43,30 +65,15 @@ impl Actor for UserActor {
 fn main() {
     println!("Starting...");
 
-    let seed = 16;
-    let disk_name = "disk-1";
+    let mut sim = Simulation::new(SEED);
 
-    let mut sim = Simulation::new(seed);
+    let disk = rc!(refcell!(Disk::new(DISK_NAME, 10000, 1234, 4321)));
+    sim.add_actor(DISK_NAME, disk.clone());
 
-    let disk = rc!(refcell!(Disk::new(disk_name, 1234, 4321)));
-    sim.add_actor(disk_name, disk.clone());
+    let user = rc!(refcell!(UserActor::new(disk)));
+    sim.add_actor(USER_NAME, user);
 
-    let user = rc!(refcell!(UserActor::new()));
-    let user_actor_id = sim.add_actor("user", user);
-
-    let mut rand = Pcg64::seed_from_u64(seed);
-
-    for _ in 1..ITER_COUNT {
-        let mut size = rand.gen_range(1..MAX_SIZE);
-        (*disk)
-            .borrow_mut()
-            .read_async(size, sim.borrow_mut(), user_actor_id.clone());
-
-        size = rand.gen_range(1..MAX_SIZE);
-        (*disk)
-            .borrow_mut()
-            .write_async(size, sim.borrow_mut(), user_actor_id.clone());
-    }
+    sim.add_event_now(Start {}, ActorId::from(USER_NAME), ActorId::from(USER_NAME));
 
     sim.step_until_no_events();
 
