@@ -57,13 +57,7 @@ fn make_layout() -> impl Widget<AppData> {
     let get_task_info_label = || {
         Scroll::new(
             Label::new(|data: &AppData, _env: &_| match data.selected_task {
-                Some(x) => {
-                    if x < data.graph.borrow().tasks.len() {
-                        get_text_task_info(data, x)
-                    } else {
-                        String::new()
-                    }
-                }
+                Some(x) => get_text_task_info(data, x),
                 None => String::new(),
             })
             .with_line_break_mode(LineBreaking::WordWrap),

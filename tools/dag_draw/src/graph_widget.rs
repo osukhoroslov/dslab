@@ -146,9 +146,7 @@ impl Widget<AppData> for GraphWidget {
                     }
                 }
                 if let Some(task_id) = data.selected_task {
-                    if task_id < data.graph.borrow().tasks.len() {
-                        data.selected_task_info = get_text_task_info(data, task_id);
-                    }
+                    data.selected_task_info = get_text_task_info(data, task_id);
                     self.last_mouse_position = Some(e.pos);
                 } else {
                     data.selected_task_info = String::new();
