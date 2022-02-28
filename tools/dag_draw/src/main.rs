@@ -5,6 +5,8 @@ mod panels_widget;
 mod poly;
 mod timeline_widget;
 
+use std::env;
+
 use druid::kurbo::Insets;
 use druid::widget::{
     Axis, Checkbox, CrossAxisAlignment, Flex, Label, LineBreaking, Scroll, Slider, Tabs, TabsEdge, TabsTransition,
@@ -12,7 +14,6 @@ use druid::widget::{
 };
 use druid::Color;
 use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
-use std::env;
 
 use crate::app_data::AppData;
 use crate::data::*;

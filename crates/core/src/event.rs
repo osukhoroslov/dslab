@@ -1,7 +1,8 @@
-use decorum::R64;
-use downcast_rs::{impl_downcast, Downcast};
 use std::cmp::Ordering;
 use std::fmt::Debug;
+
+use decorum::R64;
+use downcast_rs::{impl_downcast, Downcast};
 
 pub trait EventData: Downcast + Debug {}
 

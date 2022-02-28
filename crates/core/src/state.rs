@@ -1,7 +1,9 @@
+use std::collections::{BinaryHeap, HashSet};
+
 use decorum::R64;
+use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use std::collections::{BinaryHeap, HashSet};
 
 use crate::event::{Event, EventData};
 
@@ -30,6 +32,14 @@ impl SimulationState {
 
     pub fn rand(&mut self) -> f64 {
         self.rand.gen_range(0.0..1.0)
+    }
+
+    pub fn gen_range<T, R>(&mut self, range: R) -> T
+    where
+        T: SampleUniform,
+        R: SampleRange<T>,
+    {
+        self.rand.gen_range(range)
     }
 
     pub fn add_event<T>(&mut self, data: T, src: String, dest: String, delay: f64) -> u64

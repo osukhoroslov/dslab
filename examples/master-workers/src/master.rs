@@ -1,7 +1,8 @@
-use log::{debug, info, trace};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
+
+use log::{debug, info, trace};
 
 use core::cast;
 use core::context::SimulationContext;

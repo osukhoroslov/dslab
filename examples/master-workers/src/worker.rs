@@ -1,7 +1,8 @@
-use log::debug;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+use log::debug;
 
 use compute::multicore::*;
 use core::cast;

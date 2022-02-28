@@ -1,7 +1,8 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fs::File;
 use std::io::Write;
+
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize)]
 pub struct TraceLog {

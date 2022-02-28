@@ -1,8 +1,9 @@
-use druid::{Color, Data, Lens};
-use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::rc::Rc;
+
+use druid::{Color, Data, Lens};
+use serde_json::Value;
 
 use crate::data::*;
 

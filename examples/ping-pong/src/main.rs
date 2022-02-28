@@ -1,7 +1,8 @@
 mod process;
 
-use clap::{arg, command};
 use std::time::Instant;
+
+use clap::{arg, command};
 use sugars::{rc, refcell};
 
 use core::simulation::Simulation;
