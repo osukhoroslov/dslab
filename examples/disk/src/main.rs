@@ -21,6 +21,10 @@ const MAX_SIZE: u64 = 1000;
 const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
+const DISK_CAPACITY: u64 = 1000000000;
+const DISK_READ_BW: u64 = 100;
+const DISK_WRITE_BW: u64 = 100;
+
 struct UserActor {
     disk: Rc<RefCell<Disk>>,
 }
@@ -67,7 +71,12 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(Disk::new(DISK_NAME, 10000, 1234, 4321)));
+    let disk = rc!(refcell!(Disk::new(
+        DISK_NAME,
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW
+    )));
     sim.add_actor(DISK_NAME, disk.clone());
 
     let user = rc!(refcell!(UserActor::new(disk)));

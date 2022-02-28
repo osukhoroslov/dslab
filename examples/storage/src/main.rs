@@ -21,8 +21,24 @@ const MAX_SIZE: u64 = 1000;
 
 const FILESYSTEM_NAME: &str = "FileSystem-1";
 const DISK_1_NAME: &str = "Disk-1";
+const DISK_2_NAME: &str = "Disk-2";
+
 const USER_NAME: &str = "User";
-const FILE_1_NAME: &str = "/disk-1/file-1";
+
+const FILE_1_NAME: &str = "/disk1/file1";
+const FILE_2_NAME: &str = "/disk2/file2";
+
+const DISK_1_CAPACITY: u64 = 1000000000;
+const DISK_2_CAPACITY: u64 = 10000000;
+
+const DISK_1_MOUNT_POINT: &str = "/disk1/";
+const DISK_2_MOUNT_POINT: &str = "/disk2/";
+
+const DISK_1_READ_BW: u64 = 100;
+const DISK_2_READ_BW: u64 = 100000;
+
+const DISK_1_WRITE_BW: u64 = 100;
+const DISK_2_WRITE_BW: u64 = 1000;
 
 struct UserActor {
     file_system: Rc<RefCell<FileSystem>>,
@@ -45,6 +61,8 @@ impl Actor for UserActor {
         cast!(match event {
             Init {} => {
                 (*self.file_system).borrow_mut().create(FILE_1_NAME);
+                (*self.file_system).borrow_mut().create(FILE_2_NAME);
+
                 ctx.emit_now(Start {}, ActorId::from(USER_NAME));
             }
             Start {} => {
@@ -61,12 +79,12 @@ impl Actor for UserActor {
                         .borrow_mut()
                         .write(FILE_1_NAME, size, ctx.borrow_mut());
 
-                    (*self.file_system).borrow_mut().read_all(FILE_1_NAME, ctx.borrow_mut());
+                    (*self.file_system).borrow_mut().read_all(FILE_2_NAME, ctx.borrow_mut());
 
                     size = rand.gen_range(1..MAX_SIZE);
                     (*self.file_system)
                         .borrow_mut()
-                        .write(FILE_1_NAME, size, ctx.borrow_mut());
+                        .write(FILE_2_NAME, size, ctx.borrow_mut());
                 }
             }
             FileReadCompleted { file_name, read_size } => {
@@ -100,13 +118,33 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk_1 = rc!(refcell!(Disk::new(DISK_1_NAME, 100000, 1234, 4321)));
-    let disk_1_actor_id = sim.add_actor(DISK_1_NAME, disk_1);
+    let disk1 = rc!(refcell!(Disk::new(
+        DISK_1_NAME,
+        DISK_1_CAPACITY,
+        DISK_1_READ_BW,
+        DISK_1_WRITE_BW,
+    )));
+    sim.add_actor(DISK_1_NAME, disk1);
 
-    let fs = rc!(refcell!(FileSystem::new(FILESYSTEM_NAME, disk_1_actor_id)));
-    sim.add_actor(FILESYSTEM_NAME, fs.clone());
+    let disk2 = rc!(refcell!(Disk::new(
+        DISK_2_NAME,
+        DISK_2_CAPACITY,
+        DISK_2_READ_BW,
+        DISK_2_WRITE_BW,
+    )));
+    sim.add_actor(DISK_1_NAME, disk2);
 
-    let user = rc!(refcell!(UserActor::new(fs)));
+    let file_system = rc!(refcell!(FileSystem::new(FILESYSTEM_NAME)));
+    sim.add_actor(FILESYSTEM_NAME, file_system.clone());
+
+    (*file_system)
+        .borrow_mut()
+        .mount(DISK_1_MOUNT_POINT, ActorId::from(DISK_1_NAME));
+    (*file_system)
+        .borrow_mut()
+        .mount(DISK_2_MOUNT_POINT, ActorId::from(DISK_2_NAME));
+
+    let user = rc!(refcell!(UserActor::new(file_system)));
     sim.add_actor(USER_NAME, user);
 
     sim.add_event_now(Init {}, ActorId::from(USER_NAME), ActorId::from(USER_NAME));

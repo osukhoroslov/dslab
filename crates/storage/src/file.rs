@@ -20,31 +20,51 @@ impl File {
 pub struct FileSystem {
     name: String,
     files: HashMap<String, File>,
-    disk_actor_id: ActorId,
+    disks: HashMap<String, ActorId>,
     requests: HashMap<u64, (ActorId, String)>,
 }
 
 impl FileSystem {
-    pub fn new(name: &str, disk_actor_id: ActorId) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             files: HashMap::new(),
-            disk_actor_id,
+            disks: HashMap::new(),
             requests: HashMap::new(),
         }
     }
 
-    pub fn create(&mut self, name: &str) -> bool {
-        if let Some(_) = self.files.get(name) {
-            false
+    pub fn mount(&mut self, mount_point: &str, disk: ActorId) -> Option<ActorId> {
+        if let Some(actor_id) = self.disks.get(mount_point) {
+            Some(actor_id.clone())
         } else {
-            self.files.insert(name.to_string(), File::new(0));
-            true
+            self.disks.insert(mount_point.to_string(), disk.clone());
+            None
         }
     }
 
-    pub fn get_size(&mut self, name: &str) -> Option<u64> {
-        if let Some(file) = self.files.get(name) {
+    fn resolve_disk(&mut self, file_name: &str) -> Option<ActorId> {
+        for (mount_point, disk) in &self.disks {
+            if file_name.starts_with(mount_point) {
+                return Some(disk.clone());
+            }
+        }
+        None
+    }
+
+    pub fn create(&mut self, file_name: &str) -> bool {
+        if let Some(_) = self.files.get(file_name) {
+            false
+        } else if let Some(_) = self.resolve_disk(file_name) {
+            self.files.insert(file_name.to_string(), File::new(0));
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get_size(&mut self, file_name: &str) -> Option<u64> {
+        if let Some(file) = self.files.get(file_name) {
             Some(file.size)
         } else {
             None
@@ -97,28 +117,37 @@ impl Actor for FileSystem {
                         file.size
                     };
 
-                    let event_id = ctx.emit_now(DataReadRequest { size: size_to_read }, self.disk_actor_id.clone());
+                    if let Some(disk) = self.resolve_disk(file_name) {
+                        let event_id = ctx.emit_now(DataReadRequest { size: size_to_read }, disk);
 
-                    self.requests.insert(
-                        event_id,
-                        (from.clone(), file_name.clone())
-                    );
+                        self.requests.insert(
+                            event_id,
+                            (from.clone(), file_name.clone())
+                        );
 
-                    println!("{} [{}] requested READ {} bytes from file {}", ctx.time(), ctx.id, size_to_read, file_name);
+                        println!("{} [{}] requested READ {} bytes from file {}", ctx.time(), ctx.id, size_to_read, file_name);
+                    } else {
+                        panic!("Cannot resolve disk");
+                    }
                 } else {
                     panic!("File not created!");
                 }
             },
             FileWriteRequest { file_name, size } => {
                 if let Some(_) = self.files.get(file_name) {
-                    let event_id = ctx.emit_now(DataWriteRequest { size: *size }, self.disk_actor_id.clone());
 
-                    self.requests.insert(
-                        event_id,
-                        (from.clone(), file_name.clone())
-                    );
+                    if let Some(disk) = self.resolve_disk(file_name) {
+                        let event_id = ctx.emit_now(DataWriteRequest { size: *size }, disk);
 
-                    println!("{} [{}] requested WRITE {} bytes to file {}", ctx.time(), ctx.id, size, file_name);
+                        self.requests.insert(
+                            event_id,
+                            (from.clone(), file_name.clone())
+                        );
+
+                        println!("{} [{}] requested WRITE {} bytes to file {}", ctx.time(), ctx.id, size, file_name);
+                    } else {
+                        panic!("Cannot resolve disk");
+                    }
                 } else {
                     panic!("File not created!");
                 }
