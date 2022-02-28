@@ -9,3 +9,6 @@ compute = { path = "../compute" }
 network = { path = "../network" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+serde-xml-rs = "0.5.1"
+dot-parser = "0.1.0"
+serde_yaml = "0.8"

@@ -1,6 +1,7 @@
 mod app_data;
 mod data;
 mod draw_utils;
+mod graph_widget;
 mod panels_widget;
 mod poly;
 mod timeline_widget;
@@ -15,8 +16,11 @@ use druid::widget::{
 use druid::Color;
 use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
 
+use dag::trace_log::TraceLog;
+
 use crate::app_data::AppData;
-use crate::data::*;
+use crate::draw_utils::*;
+use crate::graph_widget::GraphWidget;
 use crate::panels_widget::PanelsWidget;
 use crate::timeline_widget::TimelineWidget;
 
@@ -50,6 +54,21 @@ fn main() {
 }
 
 fn make_layout() -> impl Widget<AppData> {
+    let get_task_info_label = || {
+        Scroll::new(
+            Label::new(|data: &AppData, _env: &_| match data.selected_task {
+                Some(x) => get_text_task_info(data, x),
+                None => String::new(),
+            })
+            .with_line_break_mode(LineBreaking::WordWrap),
+        )
+        .vertical()
+        .expand_height()
+        .expand_width()
+        .padding(PADDING)
+        .border(Color::WHITE, 1.)
+    };
+
     Flex::column()
         .with_flex_child(
             Tabs::new()
@@ -61,23 +80,29 @@ fn make_layout() -> impl Widget<AppData> {
                     Flex::row()
                         .with_child(
                             Flex::column()
-                                .with_child(
-                                    Flex::row()
-                                        .with_child(Label::new("Files limit: "))
+                                .with_flex_child(
+                                    Flex::column()
+                                        .with_child(
+                                            Flex::row()
+                                                .with_child(Label::new("Files limit: "))
+                                                .with_spacer(PADDING)
+                                                .with_child(TextBox::new().lens(AppData::files_limit_str)),
+                                        )
                                         .with_spacer(PADDING)
-                                        .with_child(TextBox::new().lens(AppData::files_limit_str)),
+                                        .with_child(
+                                            Flex::row()
+                                                .with_child(Label::new("Tasks limit: "))
+                                                .with_spacer(PADDING)
+                                                .with_child(TextBox::new().lens(AppData::tasks_limit_str)),
+                                        )
+                                        .cross_axis_alignment(CrossAxisAlignment::End)
+                                        .expand_height()
+                                        .padding(PADDING)
+                                        .border(Color::WHITE, 1.),
+                                    1.,
                                 )
                                 .with_spacer(PADDING)
-                                .with_child(
-                                    Flex::row()
-                                        .with_child(Label::new("Tasks limit: "))
-                                        .with_spacer(PADDING)
-                                        .with_child(TextBox::new().lens(AppData::tasks_limit_str)),
-                                )
-                                .cross_axis_alignment(CrossAxisAlignment::End)
-                                .expand_height()
-                                .padding(PADDING)
-                                .border(Color::WHITE, 1.)
+                                .with_flex_child(get_task_info_label(), 1.)
                                 .fix_width(200.),
                         )
                         .with_spacer(PADDING)
@@ -113,19 +138,7 @@ fn make_layout() -> impl Widget<AppData> {
                                     1.,
                                 )
                                 .with_spacer(PADDING)
-                                .with_flex_child(
-                                    Flex::column()
-                                        .with_child(
-                                            Label::new(|data: &AppData, _env: &_| data.selected_task_info.clone())
-                                                .with_line_break_mode(LineBreaking::WordWrap),
-                                        )
-                                        .cross_axis_alignment(CrossAxisAlignment::Start)
-                                        .expand_width()
-                                        .expand_height()
-                                        .padding(PADDING)
-                                        .border(Color::WHITE, 1.),
-                                    1.,
-                                )
+                                .with_flex_child(get_task_info_label(), 1.)
                                 .fix_width(200.),
                         )
                         .with_spacer(PADDING)
@@ -137,6 +150,28 @@ fn make_layout() -> impl Widget<AppData> {
                                 .expand_height(),
                             1.,
                         )
+                        .cross_axis_alignment(CrossAxisAlignment::Start),
+                )
+                .with_tab(
+                    "Graph",
+                    Flex::row()
+                        .with_child(
+                            Flex::column()
+                                .with_flex_child(
+                                    Flex::column()
+                                        .cross_axis_alignment(CrossAxisAlignment::Start)
+                                        .expand_width()
+                                        .expand_height()
+                                        .padding(PADDING)
+                                        .border(Color::WHITE, 1.),
+                                    1.,
+                                )
+                                .with_spacer(PADDING)
+                                .with_flex_child(get_task_info_label(), 1.)
+                                .fix_width(200.),
+                        )
+                        .with_spacer(PADDING)
+                        .with_flex_child(GraphWidget::new().padding(PADDING).border(Color::WHITE, 1.), 1.)
                         .cross_axis_alignment(CrossAxisAlignment::Start),
                 ),
             1.,

@@ -49,7 +49,7 @@ impl PanelsWidget {
         };
 
         // files title and border around it
-        paint_text(ctx, "Files", 18., Point::new(leftx + 5., *downy), false);
+        paint_text(ctx, "Files", 18., Point::new(leftx + 5., *downy), false, false);
         ctx.stroke(
             Rect::from_points(Point::new(leftx, *downy), Point::new(leftx + LABEL_WIDTH, *downy + 25.)),
             &Color::WHITE,
@@ -77,6 +77,7 @@ impl PanelsWidget {
                 18.,
                 Point::new(leftx + LABEL_WIDTH + 5., *downy - 25.),
                 false,
+                false,
             );
         }
 
@@ -88,7 +89,7 @@ impl PanelsWidget {
                 draw_upload(ctx, Point::new(middlex + 10., *downy + ROW_STEP / 2. + 2.5));
             }
 
-            paint_text(ctx, &file.name, 15., Point::new(leftx + 5., *downy), false);
+            paint_text(ctx, &file.name, 15., Point::new(leftx + 5., *downy), false, false);
             *downy += ROW_STEP;
         }
 
@@ -103,7 +104,7 @@ impl PanelsWidget {
         data: &AppData,
         middlex: f64,
         downy: &mut f64,
-        tasks: &Vec<Task>,
+        tasks: &Vec<usize>,
     ) {
         let time = data.slider * data.total_time;
 
@@ -116,7 +117,7 @@ impl PanelsWidget {
         let rightx = middlex + BLOCK_WIDTH / 2.;
 
         // title for tasks and border around it
-        paint_text(ctx, "Tasks", 18., Point::new(leftx + 5., *downy), false);
+        paint_text(ctx, "Tasks", 18., Point::new(leftx + 5., *downy), false, false);
         ctx.stroke(
             Rect::from_points(Point::new(leftx, *downy), Point::new(leftx + LABEL_WIDTH, *downy + 25.)),
             &Color::WHITE,
@@ -125,41 +126,47 @@ impl PanelsWidget {
 
         *downy += 25.;
 
-        let mut active_tasks: Vec<&Task> = Vec::new();
+        let mut active_tasks: Vec<usize> = Vec::new();
 
-        for task in tasks.iter() {
-            if time < task.scheduled || task.completed < time {
-                continue;
+        for &task_id in tasks.iter() {
+            if let Some(task_info) = &data.task_info.borrow()[task_id] {
+                if time < task_info.scheduled || task_info.completed < time {
+                    continue;
+                }
+
+                active_tasks.push(task_id);
             }
-
-            active_tasks.push(task);
         }
 
         let extra_tasks_space = tasks_limit - active_tasks.len().min(tasks_limit);
 
-        for task in active_tasks.into_iter().rev().take(tasks_limit).rev() {
+        for task_id in active_tasks.into_iter().rev().take(tasks_limit).rev() {
+            let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
+            let task = &data.graph.borrow().tasks[task_id];
+
             // task name
-            paint_text(ctx, &task.name, 15., Point::new(leftx + 5., *downy), false);
+            paint_text(ctx, &task.name, 15., Point::new(leftx + 5., *downy), false, false);
 
             // task status, either pending or progress bar
-            if time < task.started {
+            if time < task_info.started {
                 paint_colored_text(
                     ctx,
                     "pending...",
                     15.,
                     Point::new(middlex + 5., *downy),
                     false,
-                    task.color.clone(),
+                    false,
+                    task_info.color.clone(),
                 );
             } else {
                 let mut width = BLOCK_WIDTH / 2. - 10.;
-                width *= (time - task.started) / (task.completed - task.started);
+                width *= (time - task_info.started) / (task_info.completed - task_info.started);
                 ctx.fill(
                     Rect::from_points(
                         Point::new(middlex + 5., *downy + ROW_STEP / 2. + 2.5 + CORE_SIZE / 2.),
                         Point::new(middlex + 5. + width, *downy + ROW_STEP / 2. + 2.5 - CORE_SIZE / 2.),
                     ),
-                    &task.color,
+                    &task_info.color,
                 );
                 ctx.stroke(
                     Rect::from_points(
@@ -201,7 +208,7 @@ impl PanelsWidget {
 
         let time = data.slider * data.total_time;
 
-        paint_text(ctx, name, 25., Point::new(middlex, upy), true);
+        paint_text(ctx, name, 25., Point::new(middlex, upy), true, false);
 
         // line below title
         ctx.stroke(
@@ -222,12 +229,14 @@ impl PanelsWidget {
                 18.,
                 Point::new(leftx + 5., downy),
                 false,
+                false,
             );
             paint_text(
                 ctx,
                 &format!("Speed: {}", compute.speed),
                 18.,
                 Point::new(leftx + 5. + LABEL_WIDTH, downy),
+                false,
                 false,
             );
             ctx.stroke(
@@ -249,16 +258,20 @@ impl PanelsWidget {
             let mut xcore = leftx + 5. + CORE_SIZE / 2.;
             let ycore = downy + 25. / 2.;
 
-            for task in compute.tasks.iter() {
-                if time < task.scheduled || task.completed < time {
+            for &task_id in compute.tasks.iter() {
+                if data.task_info.borrow()[task_id].is_none() {
+                    continue;
+                }
+                let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
+                if time < task_info.scheduled || task_info.completed < time {
                     continue;
                 }
 
                 // paint cores
-                for _ in 0..task.cores {
+                for _ in 0..task_info.cores {
                     ctx.fill(
                         Rect::from_center_size(Point::new(xcore, ycore), Size::new(CORE_SIZE, CORE_SIZE)),
-                        &task.color,
+                        &task_info.color,
                     );
                     xcore += 20.;
                 }
@@ -291,6 +304,7 @@ impl PanelsWidget {
                 18.,
                 Point::new(leftx + 5., downy),
                 false,
+                false,
             );
             ctx.stroke(
                 Rect::from_points(
@@ -306,18 +320,23 @@ impl PanelsWidget {
 
             // memory pieces
             let mut memoryx = leftx + 5.;
-            for task in compute.tasks.iter() {
-                if time < task.scheduled || task.completed < time {
+            for &task_id in compute.tasks.iter() {
+                if data.task_info.borrow()[task_id].is_none() {
+                    continue;
+                }
+                let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
+                if time < task_info.scheduled || task_info.completed < time {
                     continue;
                 }
 
-                let memory_width = task.memory as f64 / compute.memory as f64 * (BLOCK_WIDTH - 10.);
+                let memory_width =
+                    data.graph.borrow().tasks[task_id].memory as f64 / compute.memory as f64 * (BLOCK_WIDTH - 10.);
                 ctx.fill(
                     Rect::from_points(
                         Point::new(memoryx, downy - CORE_SIZE / 2.),
                         Point::new(memoryx + memory_width, downy + CORE_SIZE / 2.),
                     ),
-                    &task.color,
+                    &task_info.color,
                 );
 
                 memoryx += memory_width;

@@ -42,8 +42,16 @@ impl DAG {
         self.tasks.get(task_id).unwrap()
     }
 
+    pub fn get_tasks(&self) -> &Vec<Task> {
+        &self.tasks
+    }
+
     pub fn get_data_item(&self, data_id: usize) -> &DataItem {
         self.data_items.get(data_id).unwrap()
+    }
+
+    pub fn get_data_items(&self) -> &Vec<DataItem> {
+        &self.data_items
     }
 
     pub fn get_ready_tasks(&self) -> &BTreeSet<usize> {
@@ -51,14 +59,14 @@ impl DAG {
     }
 
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Ready);
+        let data_item = DataItem::new(name, size, DataItemState::Ready, true);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         data_item_id
     }
 
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending);
+        let data_item = DataItem::new(name, size, DataItemState::Pending, false);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
@@ -73,6 +81,8 @@ impl DAG {
         if data_item.state == DataItemState::Pending && consumer.state == TaskState::Ready {
             consumer.state = TaskState::Pending;
             self.ready_tasks.remove(&consumer_id);
+        } else if data_item.state == DataItemState::Ready {
+            consumer.ready_inputs += 1;
         }
     }
 

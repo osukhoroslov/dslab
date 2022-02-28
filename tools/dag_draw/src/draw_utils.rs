@@ -1,9 +1,21 @@
+use std::collections::BTreeSet;
+
 use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
 use druid::widget::prelude::*;
 use druid::Color;
 use druid::Point;
 
-pub fn paint_colored_text(ctx: &mut PaintCtx, text: &str, font: f64, mut pos: Point, centerx: bool, color: Color) {
+use crate::app_data::AppData;
+
+pub fn paint_colored_text(
+    ctx: &mut PaintCtx,
+    text: &str,
+    font: f64,
+    mut pos: Point,
+    centerx: bool,
+    centery: bool,
+    color: Color,
+) {
     let layout = ctx
         .text()
         .new_text_layout(text.to_string())
@@ -15,11 +27,14 @@ pub fn paint_colored_text(ctx: &mut PaintCtx, text: &str, font: f64, mut pos: Po
     if centerx {
         pos.x -= text_size.width / 2.;
     }
+    if centery {
+        pos.y -= text_size.height / 2.;
+    }
     ctx.draw_text(&layout, pos);
 }
 
-pub fn paint_text(ctx: &mut PaintCtx, text: &str, font: f64, pos: Point, centerx: bool) {
-    paint_colored_text(ctx, text, font, pos, centerx, Color::WHITE);
+pub fn paint_text(ctx: &mut PaintCtx, text: &str, font: f64, pos: Point, centerx: bool, centery: bool) {
+    paint_colored_text(ctx, text, font, pos, centerx, centery, Color::WHITE);
 }
 
 pub fn draw_arrow(ctx: &mut PaintCtx, pos: Point, is_download: bool) {
@@ -61,4 +76,75 @@ pub fn draw_download(ctx: &mut PaintCtx, pos: Point) {
 
 pub fn draw_upload(ctx: &mut PaintCtx, pos: Point) {
     draw_arrow(ctx, pos, false);
+}
+
+pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
+    if task_id == data.graph.borrow().tasks.len() {
+        // input
+        let mut inputs: BTreeSet<usize> = BTreeSet::new();
+        for task in data.graph.borrow().tasks.iter() {
+            for &data_item in task.inputs.iter() {
+                inputs.insert(data_item);
+            }
+        }
+        for task in data.graph.borrow().tasks.iter() {
+            for data_item in task.outputs.iter() {
+                inputs.remove(&data_item);
+            }
+        }
+        return format!(
+            "Inputs: {}\n\n",
+            inputs
+                .iter()
+                .map(|&i| data.graph.borrow().data_items[i].name.clone())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    } else if task_id == data.graph.borrow().tasks.len() + 1 {
+        // output
+        let mut outputs: BTreeSet<usize> = BTreeSet::new();
+        for task in data.graph.borrow().tasks.iter() {
+            for &data_item in task.outputs.iter() {
+                outputs.insert(data_item);
+            }
+        }
+        for task in data.graph.borrow().tasks.iter() {
+            for data_item in task.inputs.iter() {
+                outputs.remove(&data_item);
+            }
+        }
+        return format!(
+            "Outputs: {}\n\n",
+            outputs
+                .iter()
+                .map(|&i| data.graph.borrow().data_items[i].name.clone())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+
+    let task_info = &data.task_info.borrow()[task_id];
+    let task = &data.graph.borrow().tasks[task_id];
+
+    let mut result = String::new();
+    result += &format!("Task: {}\n\n", task.name);
+    if task_info.is_some() {
+        result += &format!(
+            "Total time: {:.3}\n\n",
+            task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
+        );
+    }
+    let inputs: Vec<String> = task
+        .inputs
+        .iter()
+        .map(|&i| data.graph.borrow().data_items[i].name.clone())
+        .collect();
+    let outputs: Vec<String> = task
+        .outputs
+        .iter()
+        .map(|&i| data.graph.borrow().data_items[i].name.clone())
+        .collect();
+    result += &format!("Inputs: {}\n\n", inputs.join(", "));
+    result += &format!("Outputs: {}\n\n", outputs.join(", "));
+    result
 }

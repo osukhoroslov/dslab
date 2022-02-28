@@ -10,6 +10,7 @@ pub enum TaskState {
     Done,
 }
 
+#[derive(Clone, Debug)]
 pub struct Task {
     pub name: String,
     pub flops: u64,
