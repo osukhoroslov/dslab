@@ -1,10 +1,12 @@
+inputs:
+  - name: A-input
+    size: 500
 tasks:
   - name: A
     flops: 10
     memory: 128
-    global_inputs:
-      - name: A-input
-        size: 500
+    inputs:
+      - A-input
     outputs:
       - name: A-output-0
         size: 150

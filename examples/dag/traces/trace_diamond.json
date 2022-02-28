@@ -22,11 +22,11 @@
         "min_cores": 1,
         "max_cores": 1,
         "inputs": [
-          2
+          0
         ],
         "outputs": [
-          0,
-          1
+          1,
+          2
         ]
       },
       {
@@ -36,7 +36,7 @@
         "min_cores": 1,
         "max_cores": 2,
         "inputs": [
-          0
+          1
         ],
         "outputs": [
           3
@@ -49,7 +49,7 @@
         "min_cores": 1,
         "max_cores": 2,
         "inputs": [
-          1
+          2
         ],
         "outputs": [
           4
@@ -72,6 +72,13 @@
     ],
     "data_items": [
       {
+        "name": "A-input",
+        "size": 500,
+        "consumers": [
+          0
+        ]
+      },
+      {
         "name": "A-output-0",
         "size": 150,
         "consumers": [
@@ -83,13 +90,6 @@
         "size": 200,
         "consumers": [
           2
-        ]
-      },
-      {
-        "name": "A-input",
-        "size": 500,
-        "consumers": [
-          0
         ]
       },
       {
