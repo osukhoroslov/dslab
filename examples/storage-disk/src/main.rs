@@ -1,13 +1,12 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use sugars::{rc, refcell};
 
-use core::actor::{Actor, ActorContext, ActorId, Event};
 use core::cast;
-use core::sim::Simulation;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use core::simulation::Simulation;
 
-use storage::api::{DataReadCompleted, DataWriteCompleted};
+use storage::api::{DataReadCompleted, DataReadRequest, DataWriteCompleted, DataWriteRequest};
 use storage::disk::Disk;
 
 const SEED: u64 = 16;
@@ -21,42 +20,48 @@ const DISK_CAPACITY: u64 = 1000000000;
 const DISK_READ_BW: u64 = 100;
 const DISK_WRITE_BW: u64 = 100;
 
-struct UserActor {
-    disk: Rc<RefCell<Disk>>,
+struct User {
+    ctx: SimulationContext,
 }
 
 #[derive(Debug)]
 struct Start {}
 
-impl UserActor {
-    fn new(disk: Rc<RefCell<Disk>>) -> Self {
-        Self { disk }
+impl User {
+    fn new(ctx: SimulationContext) -> Self {
+        Self { ctx }
     }
 }
 
-impl Actor for UserActor {
-    fn on(&mut self, event: Box<dyn Event>, _from: ActorId, ctx: &mut ActorContext) {
-        cast!(match event {
+impl EventHandler for User {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
             Start {} => {
-                for _ in 1..ITER_COUNT {
-                    let size = (ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.disk.borrow_mut().read(size, ctx);
+                for _ in 0..ITER_COUNT {
+                    let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
+                    self.ctx.emit_now(DataReadRequest { size }, DISK_NAME);
 
-                    let size = (ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.disk.borrow_mut().write(size, ctx);
+                    let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
+                    self.ctx.emit_now(DataWriteRequest { size }, DISK_NAME);
                 }
             }
-            &DataReadCompleted { src_event_id: _, size } => {
-                println!("{} [{}] completed READ {} bytes from disk", ctx.time(), ctx.id, size);
+            DataReadCompleted { src_event_id: _, size } => {
+                println!(
+                    "{} [{}] completed READ {} bytes from disk",
+                    self.ctx.time(),
+                    self.ctx.id(),
+                    size
+                );
             }
-            &DataWriteCompleted { src_event_id: _, size } => {
-                println!("{} [{}] completed WRITE {} bytes from disk", ctx.time(), ctx.id, size);
+            DataWriteCompleted { src_event_id: _, size } => {
+                println!(
+                    "{} [{}] completed WRITE {} bytes from disk",
+                    self.ctx.time(),
+                    self.ctx.id(),
+                    size
+                );
             }
         })
-    }
-
-    fn is_active(&self) -> bool {
-        true
     }
 }
 
@@ -65,18 +70,17 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(Disk::new(
-        DISK_NAME,
+    let disk = Disk::new(
+        sim.create_context(DISK_NAME),
         DISK_CAPACITY,
         DISK_READ_BW,
-        DISK_WRITE_BW
-    )));
-    sim.add_actor(DISK_NAME, disk.clone());
+        DISK_WRITE_BW,
+    );
+    sim.add_handler(DISK_NAME, rc!(refcell!(disk)));
 
-    let user = rc!(refcell!(UserActor::new(disk)));
-    sim.add_actor(USER_NAME, user);
-
-    sim.add_event_now(Start {}, ActorId::from(USER_NAME), ActorId::from(USER_NAME));
+    let mut user_ctx = sim.create_context(USER_NAME);
+    user_ctx.emit_now(Start {}, USER_NAME);
+    sim.add_handler(USER_NAME, rc!(refcell!(User::new(user_ctx))));
 
     sim.step_until_no_events();
 
