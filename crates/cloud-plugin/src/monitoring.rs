@@ -11,8 +11,8 @@ use crate::events::monitoring::HostStateUpdate;
 
 #[derive(Debug)]
 pub struct HostState {
-    pub cpu_available: u32,
-    pub memory_available: u64,
+    pub cpu_load: f64,
+    pub memory_load: f64,
     pub cpu_total: u32,
     pub memory_total: u64,
 }
@@ -25,8 +25,8 @@ pub struct Monitoring {
 impl HostState {
     pub fn new(cpu_total: u32, memory_total: u64) -> Self {
         Self {
-            cpu_available: cpu_total,
-            memory_available: memory_total,
+            cpu_load: 0.,
+            memory_load: 0.,
             cpu_total,
             memory_total,
         }
@@ -53,11 +53,11 @@ impl Monitoring {
             .insert(host_id.to_string(), HostState::new(cpu_total, memory_total));
     }
 
-    fn update_host_state(&mut self, host_id: String, cpu_available: u32, memory_available: u64, time: f64) {
+    fn update_host_state(&mut self, host_id: String, cpu_load: f64, memory_load: f64, time: f64) {
         info!("[time = {}] monitoring received stats from host #{}", time, host_id);
         self.host_states.get_mut(&host_id).map(|host| {
-            host.cpu_available = cpu_available;
-            host.memory_available = memory_available;
+            host.cpu_load = cpu_load;
+            host.memory_load = memory_load;
         });
     }
 }
@@ -67,10 +67,10 @@ impl EventHandler for Monitoring {
         cast!(match event.data {
             HostStateUpdate {
                 host_id,
-                cpu_available,
-                memory_available,
+                cpu_load,
+                memory_load,
             } => {
-                self.update_host_state(host_id, cpu_available, memory_available, event.time.into_inner());
+                self.update_host_state(host_id, cpu_load, memory_load, event.time.into_inner());
             }
         })
     }

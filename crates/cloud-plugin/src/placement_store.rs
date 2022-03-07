@@ -18,14 +18,16 @@ use crate::scheduler::ALLOCATION_RETRY_PERIOD;
 use crate::vm::VirtualMachine;
 
 pub struct PlacementStore {
+    allow_vm_overcommit: bool,
     pool_state: ResourcePoolState,
     schedulers: HashSet<String>,
     ctx: SimulationContext,
 }
 
 impl PlacementStore {
-    pub fn new(ctx: SimulationContext) -> Self {
+    pub fn new(ctx: SimulationContext, allow_vm_overcommit: bool) -> Self {
         Self {
+            allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
             ctx,
@@ -52,7 +54,7 @@ impl PlacementStore {
         host_id: String,
         from_scheduler: String,
     ) {
-        if self.pool_state.can_allocate(&alloc, &host_id) == AllocationVerdict::Success {
+        if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, &host_id) == AllocationVerdict::Success {
             self.pool_state.allocate(&alloc, &host_id);
             info!(
                 "[time = {}] vm #{} commited to host #{} in placement store",

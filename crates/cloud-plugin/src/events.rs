@@ -69,7 +69,7 @@ pub mod monitoring {
     #[derive(Debug)]
     pub struct HostStateUpdate {
         pub host_id: String,
-        pub cpu_available: u32,
-        pub memory_available: u64,
+        pub cpu_load: f64,
+        pub memory_load: f64,
     }
 }
