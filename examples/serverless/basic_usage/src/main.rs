@@ -7,7 +7,7 @@ use serverless::simulation::ServerlessSimulation;
 fn main() {
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim);
-    for i in 0..2 {
+    for _ in 0..2 {
         serverless.new_host();
     }
     let fast = serverless.new_function(Function::new(1.));
@@ -15,4 +15,5 @@ fn main() {
     serverless.send_invocation_request(0., InvocationRequest { id: fast, duration: 1.0 });
     serverless.send_invocation_request(0., InvocationRequest { id: fast, duration: 1.0 });
     serverless.send_invocation_request(0., InvocationRequest { id: slow, duration: 1.0 });
+    serverless.step_until_no_events();
 }

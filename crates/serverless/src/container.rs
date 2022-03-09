@@ -16,6 +16,16 @@ pub struct Container {
     pub deployment_time: f64,
     pub func_id: u64,
     pub invocation: Option<u64>,
+    pub finished_invocations: Counter,
+    pub host_id: u64,
+}
+
+impl Container {
+    pub fn end_invocation(&mut self) -> u64 {
+        self.invocation = None;
+        self.status = ContainerStatus::Idle;
+        self.finished_invocations.next()
+    }
 }
 
 impl Hash for Container {
@@ -47,10 +57,10 @@ impl ContainerManager {
         self.containers.get_mut(&id)
     }
 
-    pub fn new_container(&mut self, func_id: u64, deployment_time: f64, status: ContainerStatus) -> u64 {
+    pub fn new_container(&mut self, func_id: u64, deployment_time: f64, host_id: u64, status: ContainerStatus) -> u64 {
         let id = self.container_ctr.next();
         if !self.containers_by_func.contains_key(&func_id) {
-            self.containers_by_func.insert(id, HashSet::new());
+            self.containers_by_func.insert(func_id, HashSet::new());
         }
         self.containers_by_func.get_mut(&func_id).unwrap().insert(id);
         let container = Container {
@@ -59,6 +69,8 @@ impl ContainerManager {
             deployment_time,
             func_id,
             invocation: None,
+            finished_invocations: Default::default(),
+            host_id,
         };
         self.containers.insert(id, container);
         id

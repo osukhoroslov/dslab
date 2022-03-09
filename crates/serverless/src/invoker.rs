@@ -1,13 +1,13 @@
-use core::cast;
 use core::event::Event;
 use core::handler::EventHandler;
 
-use crate::deployer::DeploymentStatus;
-use crate::simulation::{CorePtr, ServerlessHandler};
+use crate::deployer::{Deployer, DeploymentStatus};
+use crate::simulation::{Backend, ServerlessContext};
 use crate::util::Counter;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Weak;
+use std::rc::Rc;
 
 #[derive(Eq, PartialEq)]
 pub enum InvocationStatus {
@@ -54,19 +54,25 @@ impl InvocationManager {
  * Invoker invokes an existing function instance
  * or calls Deployer in case there is none
  */
-pub trait Invoker: ServerlessHandler {
+pub trait Invoker {
     fn invoke(&mut self, request: InvocationRequest) -> InvocationStatus;
 }
 
 // BasicInvoker tries to invoke the function
 // inside the first container that fits
 pub struct BasicInvoker {
-    sim: CorePtr,
+    backend: Rc<RefCell<Backend>>,
+    ctx: Rc<RefCell<ServerlessContext>>,
+    deployer: Rc<RefCell<dyn Deployer>>,
 }
 
 impl BasicInvoker {
-    pub fn new(sim: CorePtr) -> Self {
-        Self { sim }
+    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>, deployer: Rc<RefCell<dyn Deployer>>) -> Self {
+        Self {
+            backend,
+            ctx,
+            deployer,
+        }
     }
 }
 
@@ -81,26 +87,20 @@ impl EventHandler for BasicInvoker {
 
 impl Invoker for BasicInvoker {
     fn invoke(&mut self, request: InvocationRequest) -> InvocationStatus {
-        let rc = Weak::upgrade(&self.sim).unwrap();
-        let mut sim = rc.borrow_mut();
-        let mut it = sim.container_mgr.get_possible_containers(request.id);
+        let backend = self.backend.borrow_mut();
+        let mut it = backend.container_mgr.get_possible_containers(request.id);
         if let Some(c) = it.next() {
             let id = c.id;
-            sim.new_invocation_start_event(request, id, 0.);
+            self.ctx.borrow_mut().new_invocation_start_event(request, id, 0.);
             InvocationStatus::Instant
         } else {
-            let d = sim.deployer.borrow_mut().deploy(request.id);
+            drop(backend);
+            let d = self.deployer.borrow_mut().deploy(request.id);
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
-            sim.new_invocation_start_event(request, d.container_id, d.deployment_time);
+            self.ctx.borrow_mut().new_invocation_start_event(request, d.container_id, d.deployment_time);
             InvocationStatus::Delayed
         }
-    }
-}
-
-impl ServerlessHandler for BasicInvoker {
-    fn register(&mut self, sim: CorePtr) {
-        self.sim = sim;
     }
 }

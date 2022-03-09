@@ -1,4 +1,3 @@
-use crate::container::Container;
 use crate::util::Counter;
 
 use std::collections::{HashMap, HashSet};
@@ -63,7 +62,7 @@ pub struct HostIterator<'a> {
 impl<'a> Iterator for HostIterator<'a> {
     type Item = &'a Host;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((k, v)) = self.inner.next() {
+        if let Some((_, v)) = self.inner.next() {
             Some(v)
         } else {
             None
@@ -78,7 +77,7 @@ pub struct HostIteratorMut<'a> {
 impl<'a> Iterator for HostIteratorMut<'a> {
     type Item = &'a mut Host;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((k, v)) = self.inner.next() {
+        if let Some((_, v)) = self.inner.next() {
             Some(v)
         } else {
             None
