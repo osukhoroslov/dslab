@@ -40,11 +40,15 @@ impl HostManager {
     }
 
     pub fn get_hosts(&self) -> HostIterator<'_> {
-        HostIterator { inner: self.hosts.iter() }
+        HostIterator {
+            inner: self.hosts.iter(),
+        }
     }
 
     pub fn get_hosts_mut(&mut self) -> HostIteratorMut<'_> {
-        HostIteratorMut { inner: self.hosts.iter_mut() }
+        HostIteratorMut {
+            inner: self.hosts.iter_mut(),
+        }
     }
 
     pub fn new_host(&mut self) -> u64 {

@@ -39,15 +39,12 @@ impl EventHandler for ContainerStartHandler {
 }
 
 struct ContainerEndHandler {
-    backend: Rc<RefCell<Backend>>
+    backend: Rc<RefCell<Backend>>,
 }
-
 
 impl ContainerEndHandler {
     pub fn new(backend: Rc<RefCell<Backend>>) -> Self {
-        Self {
-            backend,
-        }
+        Self { backend }
     }
 }
 
@@ -60,7 +57,11 @@ impl EventHandler for ContainerEndHandler {
             if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr + 1 {
                 let host_id = cont.host_id;
                 backend.container_mgr.destroy_container(cont_id);
-                backend.host_mgr.get_host_mut(host_id).unwrap().delete_container(cont_id);
+                backend
+                    .host_mgr
+                    .get_host_mut(host_id)
+                    .unwrap()
+                    .delete_container(cont_id);
             }
         }
     }
@@ -73,10 +74,7 @@ struct InvocationStartHandler {
 
 impl InvocationStartHandler {
     pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>) -> Self {
-        Self {
-            backend,
-            ctx,
-        }
+        Self { backend, ctx }
     }
 }
 
@@ -103,10 +101,7 @@ struct InvocationEndHandler {
 
 impl InvocationEndHandler {
     pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>) -> Self {
-        Self {
-            backend,
-            ctx,
-        }
+        Self { backend, ctx }
     }
 }
 
@@ -177,15 +172,21 @@ pub struct ServerlessSimulation {
 impl ServerlessSimulation {
     pub fn new(mut sim: Simulation) -> Self {
         let backend = Rc::new(RefCell::new(Backend {
-                container_mgr: Default::default(),
-                function_mgr: Default::default(),
-                host_mgr: Default::default(),
-                invocation_mgr: Default::default(),
-                keepalive: Rc::new(RefCell::new(FixedKeepalivePolicy::new(2.0))),
-            }));
-        let ctx = Rc::new(RefCell::new(ServerlessContext::new(sim.create_context("serverless simulation"))));
+            container_mgr: Default::default(),
+            function_mgr: Default::default(),
+            host_mgr: Default::default(),
+            invocation_mgr: Default::default(),
+            keepalive: Rc::new(RefCell::new(FixedKeepalivePolicy::new(2.0))),
+        }));
+        let ctx = Rc::new(RefCell::new(ServerlessContext::new(
+            sim.create_context("serverless simulation"),
+        )));
         let deployer = Rc::new(RefCell::new(BasicDeployer::new(backend.clone(), ctx.clone())));
-        let invoker = Rc::new(RefCell::new(BasicInvoker::new(backend.clone(), ctx.clone(), deployer.clone())));
+        let invoker = Rc::new(RefCell::new(BasicInvoker::new(
+            backend.clone(),
+            ctx.clone(),
+            deployer.clone(),
+        )));
         sim.add_handler("invocation_request", invoker.clone());
         let mut extra_handlers = Vec::<Rc<RefCell<dyn EventHandler>>>::new();
         let container_start_handler = Rc::new(RefCell::new(ContainerStartHandler::new(backend.clone())));

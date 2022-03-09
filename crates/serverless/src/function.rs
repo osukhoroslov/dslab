@@ -8,7 +8,9 @@ pub struct Function {
 
 impl Function {
     pub fn new(container_deployment_time: f64) -> Self {
-        Self { container_deployment_time }
+        Self {
+            container_deployment_time,
+        }
     }
 
     pub fn get_deployment_time(&self) -> f64 {

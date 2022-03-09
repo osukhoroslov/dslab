@@ -91,11 +91,11 @@ pub struct PossibleContainerIterator<'a> {
 }
 
 impl<'a> PossibleContainerIterator<'a> {
-    pub fn new(inner: Option<std::collections::hash_set::Iter<'a, u64>>, containers: &'a HashMap<u64, Container>) -> Self {
-        Self {
-            inner,
-            containers,
-        }
+    pub fn new(
+        inner: Option<std::collections::hash_set::Iter<'a, u64>>,
+        containers: &'a HashMap<u64, Container>,
+    ) -> Self {
+        Self { inner, containers }
     }
 }
 

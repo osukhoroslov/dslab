@@ -37,10 +37,7 @@ pub struct InvocationManager {
 impl InvocationManager {
     pub fn new_invocation(&mut self, request: InvocationRequest, container_id: u64) -> u64 {
         let id = self.invocation_ctr.next();
-        let invocation = Invocation {
-            request,
-            container_id,
-        };
+        let invocation = Invocation { request, container_id };
         self.invocations.insert(id, invocation);
         id
     }
@@ -67,12 +64,12 @@ pub struct BasicInvoker {
 }
 
 impl BasicInvoker {
-    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>, deployer: Rc<RefCell<dyn Deployer>>) -> Self {
-        Self {
-            backend,
-            ctx,
-            deployer,
-        }
+    pub fn new(
+        backend: Rc<RefCell<Backend>>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+        deployer: Rc<RefCell<dyn Deployer>>,
+    ) -> Self {
+        Self { backend, ctx, deployer }
     }
 }
 
@@ -99,7 +96,9 @@ impl Invoker for BasicInvoker {
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
-            self.ctx.borrow_mut().new_invocation_start_event(request, d.container_id, d.deployment_time);
+            self.ctx
+                .borrow_mut()
+                .new_invocation_start_event(request, d.container_id, d.deployment_time);
             InvocationStatus::Delayed
         }
     }
