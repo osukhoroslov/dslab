@@ -1,0 +1,8 @@
+[package]
+name = "serverless_basic_usage"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+core = { path = "../../crates/core" }
+serverless = { path = "../../crates/serverless" }

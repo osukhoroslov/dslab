@@ -165,16 +165,16 @@ impl ServerlessContext {
     }
 }
 
-pub struct ServerlessSimulationCore {
-    pub backend: Rc<RefCell<Backend>>,
-    pub deployer: Rc<RefCell<dyn Deployer>>,
-    pub extra_handlers: Vec<Rc<RefCell<dyn EventHandler>>>,
-    pub invoker: Rc<RefCell<dyn Invoker>>,
-    pub sim: Simulation,
-    pub ctx: Rc<RefCell<ServerlessContext>>,
+pub struct ServerlessSimulation {
+    backend: Rc<RefCell<Backend>>,
+    deployer: Rc<RefCell<dyn Deployer>>,
+    extra_handlers: Vec<Rc<RefCell<dyn EventHandler>>>,
+    invoker: Rc<RefCell<dyn Invoker>>,
+    sim: Simulation,
+    ctx: Rc<RefCell<ServerlessContext>>,
 }
 
-impl ServerlessSimulationCore {
+impl ServerlessSimulation {
     pub fn new(mut sim: Simulation) -> Self {
         let backend = Rc::new(RefCell::new(Backend {
                 container_mgr: Default::default(),
@@ -209,43 +209,32 @@ impl ServerlessSimulationCore {
             ctx,
         }
     }
-}
-
-pub struct ServerlessSimulation {
-    core: Rc<RefCell<ServerlessSimulationCore>>,
-}
-
-impl ServerlessSimulation {
-    pub fn new(sim: Simulation) -> Self {
-        let core = Rc::new(RefCell::new(ServerlessSimulationCore::new(sim)));
-        Self { core }
-    }
 
     pub fn new_host(&mut self) -> u64 {
-        self.core.borrow_mut().backend.borrow_mut().host_mgr.new_host()
+        self.backend.borrow_mut().host_mgr.new_host()
     }
 
     pub fn new_function(&mut self, f: Function) -> u64 {
-        self.core.borrow_mut().backend.borrow_mut().function_mgr.new_function(f)
+        self.backend.borrow_mut().function_mgr.new_function(f)
     }
 
     pub fn send_invocation_request(&mut self, time: f64, request: InvocationRequest) {
-        self.core.borrow_mut().ctx.borrow_mut().sim_ctx.emit(request, "invocation_request", time);
+        self.ctx.borrow_mut().sim_ctx.emit(request, "invocation_request", time);
     }
 
     pub fn step(&mut self) -> bool {
-        self.core.borrow_mut().sim.step()
+        self.sim.step()
     }
 
     pub fn steps(&mut self, step_count: u64) -> bool {
-        self.core.borrow_mut().sim.steps(step_count)
+        self.sim.steps(step_count)
     }
 
     pub fn step_for_duration(&mut self, duration: f64) {
-        self.core.borrow_mut().sim.step_for_duration(duration);
+        self.sim.step_for_duration(duration);
     }
 
     pub fn step_until_no_events(&mut self) {
-        self.core.borrow_mut().sim.step_until_no_events();
+        self.sim.step_until_no_events();
     }
 }
