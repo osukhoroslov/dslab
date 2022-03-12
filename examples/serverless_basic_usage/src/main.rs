@@ -57,4 +57,8 @@ fn main() {
         "invocations = {}, cold starts = {}, cold starts time = {}",
         stats.invocations, stats.cold_starts, stats.cold_starts_total_time
     );
+    println!(
+        "wasted memory time = {}",
+        *stats.wasted_resource_time.get("mem").unwrap()
+    );
 }

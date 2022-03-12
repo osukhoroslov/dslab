@@ -21,10 +21,12 @@ pub struct Container {
     pub finished_invocations: Counter,
     pub host_id: u64,
     pub resources: ResourceConsumer,
+    pub last_change: f64,
 }
 
 impl Container {
-    pub fn end_invocation(&mut self) -> u64 {
+    pub fn end_invocation(&mut self, curr_time: f64) -> u64 {
+        self.last_change = curr_time;
         self.invocation = None;
         self.status = ContainerStatus::Idle;
         self.finished_invocations.next()
@@ -68,6 +70,7 @@ impl ContainerManager {
         host_id: u64,
         status: ContainerStatus,
         resources: ResourceConsumer,
+        curr_time: f64,
     ) -> &Container {
         let id = self.container_ctr.next();
         if !self.containers_by_func.contains_key(&func_id) {
@@ -83,6 +86,7 @@ impl ContainerManager {
             finished_invocations: Default::default(),
             host_id,
             resources,
+            last_change: curr_time,
         };
         self.containers.insert(id, container);
         let cont_ref = self.containers.get(&id).unwrap();

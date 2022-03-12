@@ -1,5 +1,6 @@
 use crate::container::ContainerStatus;
 use crate::simulation::{Backend, ServerlessContext};
+use crate::stats::Stats;
 
 use std::boxed::Box;
 use std::cell::RefCell;
@@ -27,6 +28,7 @@ pub trait DeployerCore {
         id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
+        curr_time: f64,
     ) -> DeploymentResult;
 }
 
@@ -34,6 +36,7 @@ pub struct Deployer {
     backend: Rc<RefCell<Backend>>,
     core: Box<dyn DeployerCore>,
     ctx: Rc<RefCell<ServerlessContext>>,
+    stats: Rc<RefCell<Stats>>,
 }
 
 impl Deployer {
@@ -41,12 +44,18 @@ impl Deployer {
         backend: Rc<RefCell<Backend>>,
         core: Box<dyn DeployerCore>,
         ctx: Rc<RefCell<ServerlessContext>>,
+        stats: Rc<RefCell<Stats>>,
     ) -> Self {
-        Self { backend, core, ctx }
+        Self {
+            backend,
+            core,
+            ctx,
+            stats,
+        }
     }
 
-    pub fn deploy(&mut self, id: u64) -> DeploymentResult {
-        self.core.deploy(id, self.backend.clone(), self.ctx.clone())
+    pub fn deploy(&mut self, id: u64, curr_time: f64) -> DeploymentResult {
+        self.core.deploy(id, self.backend.clone(), self.ctx.clone(), curr_time)
     }
 }
 
@@ -60,6 +69,7 @@ impl DeployerCore for BasicDeployer {
         id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
+        curr_time: f64,
     ) -> DeploymentResult {
         let mut backend_ = backend.borrow_mut();
         let resources = backend_.function_mgr.get_function(id).unwrap().get_resources().clone();
@@ -67,7 +77,7 @@ impl DeployerCore for BasicDeployer {
         if let Some(h) = it.next() {
             let host_id = h.id;
             let delay = backend_.function_mgr.get_function(id).unwrap().get_deployment_time();
-            let cont = backend_.new_container(id, delay, host_id, ContainerStatus::Deploying, resources);
+            let cont = backend_.new_container(id, delay, host_id, ContainerStatus::Deploying, resources, curr_time);
             ctx.borrow_mut().new_deploy_event(cont.id, delay);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,

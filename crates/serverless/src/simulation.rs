@@ -42,11 +42,12 @@ impl EventHandler for ContainerStartHandler {
 
 struct ContainerEndHandler {
     backend: Rc<RefCell<Backend>>,
+    stats: Rc<RefCell<Stats>>,
 }
 
 impl ContainerEndHandler {
-    pub fn new(backend: Rc<RefCell<Backend>>) -> Self {
-        Self { backend }
+    pub fn new(backend: Rc<RefCell<Backend>>, stats: Rc<RefCell<Stats>>) -> Self {
+        Self { backend, stats }
     }
 }
 
@@ -57,6 +58,8 @@ impl EventHandler for ContainerEndHandler {
             let mut backend = self.backend.borrow_mut();
             let cont = backend.container_mgr.get_container(cont_id).unwrap();
             if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr + 1 {
+                let delta = event.time.into_inner() - cont.last_change;
+                self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
                 backend.delete_container(cont_id);
             }
         }
@@ -66,11 +69,12 @@ impl EventHandler for ContainerEndHandler {
 struct InvocationStartHandler {
     backend: Rc<RefCell<Backend>>,
     ctx: Rc<RefCell<ServerlessContext>>,
+    stats: Rc<RefCell<Stats>>,
 }
 
 impl InvocationStartHandler {
-    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>) -> Self {
-        Self { backend, ctx }
+    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>, stats: Rc<RefCell<Stats>>) -> Self {
+        Self { backend, ctx, stats }
     }
 }
 
@@ -82,6 +86,13 @@ impl EventHandler for InvocationStartHandler {
             let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
             let container = backend.container_mgr.get_container_mut(cont_id);
             if let Some(container) = container {
+                if container.status == ContainerStatus::Idle {
+                    let delta = event.time.into_inner() - container.last_change;
+                    self.stats
+                        .borrow_mut()
+                        .update_wasted_resources(delta, &container.resources);
+                }
+                container.last_change = event.time.into_inner();
                 container.status = ContainerStatus::Running;
                 container.invocation = Some(inv_id);
                 self.ctx.borrow_mut().new_invocation_end_event(inv_id, request.duration);
@@ -111,7 +122,7 @@ impl EventHandler for InvocationEndHandler {
                 let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
                 if let Some(id0) = container.invocation {
                     if id0 == id {
-                        let fin = container.end_invocation();
+                        let fin = container.end_invocation(event.time.into_inner());
                         let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
                         let keepalive = backend.keepalive.borrow_mut().keepalive_period(immut_container);
                         self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
@@ -128,7 +139,7 @@ pub struct Backend {
     pub host_mgr: HostManager,
     pub invocation_mgr: InvocationManager,
     pub keepalive: Rc<RefCell<dyn KeepalivePolicy>>,
-    pub stats: Stats,
+    pub stats: Rc<RefCell<Stats>>,
 }
 
 impl Backend {
@@ -139,9 +150,17 @@ impl Backend {
         host_id: u64,
         status: ContainerStatus,
         resources: ResourceConsumer,
+        curr_time: f64,
     ) -> &Container {
-        self.container_mgr
-            .new_container(&mut self.host_mgr, func_id, deployment_time, host_id, status, resources)
+        self.container_mgr.new_container(
+            &mut self.host_mgr,
+            func_id,
+            deployment_time,
+            host_id,
+            status,
+            resources,
+            curr_time,
+        )
     }
 
     pub fn delete_container(&mut self, cont_id: u64) {
@@ -179,11 +198,12 @@ impl ServerlessContext {
 
 pub struct ServerlessSimulation {
     backend: Rc<RefCell<Backend>>,
+    ctx: Rc<RefCell<ServerlessContext>>,
     deployer: Rc<RefCell<Deployer>>,
     extra_handlers: Vec<Rc<RefCell<dyn EventHandler>>>,
     invoker: Rc<RefCell<Invoker>>,
     sim: Simulation,
-    ctx: Rc<RefCell<ServerlessContext>>,
+    stats: Rc<RefCell<Stats>>,
 }
 
 impl ServerlessSimulation {
@@ -198,30 +218,32 @@ impl ServerlessSimulation {
         } else {
             Rc::new(RefCell::new(FixedKeepalivePolicy::new(0.0)))
         };
+        let stats = Rc::new(RefCell::new(Default::default()));
         let backend = Rc::new(RefCell::new(Backend {
             container_mgr: Default::default(),
             function_mgr: Default::default(),
             host_mgr: Default::default(),
             invocation_mgr: Default::default(),
             keepalive,
-            stats: Default::default(),
+            stats: stats.clone(),
         }));
         let ctx = Rc::new(RefCell::new(ServerlessContext::new(
             sim.create_context("serverless simulation"),
         )));
         let deployer = Rc::new(RefCell::new(if let Some(dc) = deployer_core {
-            Deployer::new(backend.clone(), dc, ctx.clone())
+            Deployer::new(backend.clone(), dc, ctx.clone(), stats.clone())
         } else {
-            Deployer::new(backend.clone(), Box::new(BasicDeployer {}), ctx.clone())
+            Deployer::new(backend.clone(), Box::new(BasicDeployer {}), ctx.clone(), stats.clone())
         }));
         let invoker = Rc::new(RefCell::new(if let Some(inc) = invoker_core {
-            Invoker::new(backend.clone(), inc, ctx.clone(), deployer.clone())
+            Invoker::new(backend.clone(), inc, ctx.clone(), deployer.clone(), stats.clone())
         } else {
             Invoker::new(
                 backend.clone(),
                 Box::new(BasicInvoker {}),
                 ctx.clone(),
                 deployer.clone(),
+                stats.clone(),
             )
         }));
         sim.add_handler("invocation_request", invoker.clone());
@@ -229,10 +251,14 @@ impl ServerlessSimulation {
         let container_start_handler = Rc::new(RefCell::new(ContainerStartHandler::new(backend.clone())));
         sim.add_handler("container_started", container_start_handler.clone());
         extra_handlers.push(container_start_handler);
-        let container_end_handler = Rc::new(RefCell::new(ContainerEndHandler::new(backend.clone())));
+        let container_end_handler = Rc::new(RefCell::new(ContainerEndHandler::new(backend.clone(), stats.clone())));
         sim.add_handler("container_ended", container_end_handler.clone());
         extra_handlers.push(container_end_handler);
-        let invocation_start_handler = Rc::new(RefCell::new(InvocationStartHandler::new(backend.clone(), ctx.clone())));
+        let invocation_start_handler = Rc::new(RefCell::new(InvocationStartHandler::new(
+            backend.clone(),
+            ctx.clone(),
+            stats.clone(),
+        )));
         sim.add_handler("invocation_started", invocation_start_handler.clone());
         extra_handlers.push(invocation_start_handler);
         let invocation_end_handler = Rc::new(RefCell::new(InvocationEndHandler::new(backend.clone(), ctx.clone())));
@@ -245,11 +271,12 @@ impl ServerlessSimulation {
             invoker,
             sim,
             ctx,
+            stats,
         }
     }
 
     pub fn get_stats(&self) -> Stats {
-        self.backend.borrow().stats
+        self.stats.borrow().clone()
     }
 
     pub fn new_host(&mut self, resources: ResourceProvider) -> u64 {
