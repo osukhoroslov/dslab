@@ -1,4 +1,5 @@
 use crate::container::ContainerStatus;
+use crate::invoker::InvocationRequest;
 use crate::simulation::{Backend, ServerlessContext};
 use crate::stats::Stats;
 
@@ -28,6 +29,7 @@ pub trait DeployerCore {
         id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
+        invocation: Option<InvocationRequest>,
         curr_time: f64,
     ) -> DeploymentResult;
 }
@@ -54,8 +56,9 @@ impl Deployer {
         }
     }
 
-    pub fn deploy(&mut self, id: u64, curr_time: f64) -> DeploymentResult {
-        self.core.deploy(id, self.backend.clone(), self.ctx.clone(), curr_time)
+    pub fn deploy(&mut self, id: u64, invocation: Option<InvocationRequest>, curr_time: f64) -> DeploymentResult {
+        self.core
+            .deploy(id, self.backend.clone(), self.ctx.clone(), invocation, curr_time)
     }
 }
 
@@ -69,6 +72,7 @@ impl DeployerCore for BasicDeployer {
         id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
+        invocation: Option<InvocationRequest>,
         curr_time: f64,
     ) -> DeploymentResult {
         let mut backend_ = backend.borrow_mut();
@@ -78,7 +82,7 @@ impl DeployerCore for BasicDeployer {
             let host_id = h.id;
             let delay = backend_.function_mgr.get_function(id).unwrap().get_deployment_time();
             let cont = backend_.new_container(id, delay, host_id, ContainerStatus::Deploying, resources, curr_time);
-            ctx.borrow_mut().new_deploy_event(cont.id, delay);
+            ctx.borrow_mut().new_deploy_event(cont.id, delay, invocation);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,
                 container_id: cont.id,

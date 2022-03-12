@@ -3,12 +3,13 @@ use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
 
+use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::container::{Container, ContainerManager, ContainerStatus};
 use crate::deployer::{BasicDeployer, Deployer, DeployerCore};
 use crate::function::{Function, FunctionManager};
 use crate::host::HostManager;
 use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker, InvokerCore};
-use crate::keepalive::{FixedKeepalivePolicy, KeepalivePolicy};
+//use crate::keepalive::{FixedKeepalivePolicy, KeepalivePolicy};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::stats::Stats;
 
@@ -17,24 +18,37 @@ use std::rc::Rc;
 
 struct ContainerStartHandler {
     backend: Rc<RefCell<Backend>>,
+    ctx: Rc<RefCell<ServerlessContext>>,
+    invoker: Rc<RefCell<Invoker>>,
 }
 
 impl ContainerStartHandler {
-    pub fn new(backend: Rc<RefCell<Backend>>) -> Self {
-        Self { backend }
+    pub fn new(
+        backend: Rc<RefCell<Backend>>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+        invoker: Rc<RefCell<Invoker>>,
+    ) -> Self {
+        Self { backend, ctx, invoker }
     }
 }
 
 impl EventHandler for ContainerStartHandler {
     fn on(&mut self, event: Event) {
-        if event.data.is::<u64>() {
-            let id = *event.data.downcast::<u64>().unwrap();
+        if event.data.is::<(u64, Option<InvocationRequest>)>() {
+            let (id, invocation) = *event.data.downcast::<(u64, Option<InvocationRequest>)>().unwrap();
             let mut backend = self.backend.borrow_mut();
-            let container = backend.container_mgr.get_container_mut(id);
-            if let Some(container) = container {
-                if container.status == ContainerStatus::Deploying {
-                    container.status = ContainerStatus::Idle;
-                }
+            let container = backend.container_mgr.get_container_mut(id).unwrap();
+            if let Some(invocation) = invocation {
+                let cont_id = container.id;
+                drop(backend);
+                self.invoker
+                    .borrow_mut()
+                    .start_invocation(cont_id, invocation, event.time.into_inner());
+            } else {
+                container.status = ContainerStatus::Idle;
+                let immut_container = backend.container_mgr.get_container(id).unwrap();
+                let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
+                self.ctx.borrow_mut().new_container_end_event(id, 0, keepalive);
             }
         }
     }
@@ -57,45 +71,10 @@ impl EventHandler for ContainerEndHandler {
             let (cont_id, ctr) = *event.data.downcast::<(u64, u64)>().unwrap();
             let mut backend = self.backend.borrow_mut();
             let cont = backend.container_mgr.get_container(cont_id).unwrap();
-            if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr + 1 {
+            if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr {
                 let delta = event.time.into_inner() - cont.last_change;
                 self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
                 backend.delete_container(cont_id);
-            }
-        }
-    }
-}
-
-struct InvocationStartHandler {
-    backend: Rc<RefCell<Backend>>,
-    ctx: Rc<RefCell<ServerlessContext>>,
-    stats: Rc<RefCell<Stats>>,
-}
-
-impl InvocationStartHandler {
-    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>, stats: Rc<RefCell<Stats>>) -> Self {
-        Self { backend, ctx, stats }
-    }
-}
-
-impl EventHandler for InvocationStartHandler {
-    fn on(&mut self, event: Event) {
-        if event.data.is::<(InvocationRequest, u64)>() {
-            let (request, cont_id) = *event.data.downcast::<(InvocationRequest, u64)>().unwrap();
-            let mut backend = self.backend.borrow_mut();
-            let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
-            let container = backend.container_mgr.get_container_mut(cont_id);
-            if let Some(container) = container {
-                if container.status == ContainerStatus::Idle {
-                    let delta = event.time.into_inner() - container.last_change;
-                    self.stats
-                        .borrow_mut()
-                        .update_wasted_resources(delta, &container.resources);
-                }
-                container.last_change = event.time.into_inner();
-                container.status = ContainerStatus::Running;
-                container.invocation = Some(inv_id);
-                self.ctx.borrow_mut().new_invocation_end_event(inv_id, request.duration);
             }
         }
     }
@@ -122,13 +101,40 @@ impl EventHandler for InvocationEndHandler {
                 let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
                 if let Some(id0) = container.invocation {
                     if id0 == id {
-                        let fin = container.end_invocation(event.time.into_inner());
-                        let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
-                        let keepalive = backend.keepalive.borrow_mut().keepalive_period(immut_container);
-                        self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
+                        let fin = 1 + container.end_invocation(event.time.into_inner());
+                        let func_id = backend.invocation_mgr.get_invocation(id).unwrap().request.id;
+                        let func = backend.function_mgr.get_function(func_id).unwrap();
+                        let prewarm = backend.coldstart.borrow_mut().prewarm_window(func);
+                        if prewarm != Some(0.) {
+                            if let Some(prewarm) = prewarm {
+                                self.ctx.borrow_mut().new_idle_deploy_event(func_id, prewarm);
+                            }
+                            let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
+                            let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
+                            self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+struct IdleDeployHandler {
+    deployer: Rc<RefCell<Deployer>>,
+}
+
+impl IdleDeployHandler {
+    pub fn new(deployer: Rc<RefCell<Deployer>>) -> Self {
+        Self { deployer }
+    }
+}
+
+impl EventHandler for IdleDeployHandler {
+    fn on(&mut self, event: Event) {
+        if event.data.is::<u64>() {
+            let id = *event.data.downcast::<u64>().unwrap();
+            self.deployer.borrow_mut().deploy(id, None, event.time.into_inner());
         }
     }
 }
@@ -138,7 +144,7 @@ pub struct Backend {
     pub function_mgr: FunctionManager,
     pub host_mgr: HostManager,
     pub invocation_mgr: InvocationManager,
-    pub keepalive: Rc<RefCell<dyn KeepalivePolicy>>,
+    pub coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     pub stats: Rc<RefCell<Stats>>,
 }
 
@@ -179,12 +185,16 @@ impl ServerlessContext {
         Self { sim_ctx }
     }
 
-    pub fn new_deploy_event(&mut self, id: u64, delay: f64) {
-        self.sim_ctx.emit(id, "container_started", delay);
+    pub fn new_deploy_event(&mut self, id: u64, delay: f64, invocation: Option<InvocationRequest>) {
+        self.sim_ctx.emit((id, invocation), "container_started", delay);
     }
 
     pub fn new_container_end_event(&mut self, id: u64, ctr: u64, delay: f64) {
         self.sim_ctx.emit((id, ctr), "container_ended", delay);
+    }
+
+    pub fn new_idle_deploy_event(&mut self, id: u64, delay: f64) {
+        self.sim_ctx.emit(id, "idle_deploy", delay);
     }
 
     pub fn new_invocation_start_event(&mut self, request: InvocationRequest, cont_id: u64, delay: f64) {
@@ -211,12 +221,12 @@ impl ServerlessSimulation {
         mut sim: Simulation,
         deployer_core: Option<Box<dyn DeployerCore>>,
         invoker_core: Option<Box<dyn InvokerCore>>,
-        keepalive_policy: Option<Rc<RefCell<dyn KeepalivePolicy>>>,
+        coldstart_policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>,
     ) -> Self {
-        let keepalive = if let Some(keep) = keepalive_policy {
-            keep
+        let coldstart = if let Some(cs) = coldstart_policy {
+            cs
         } else {
-            Rc::new(RefCell::new(FixedKeepalivePolicy::new(0.0)))
+            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, None)))
         };
         let stats = Rc::new(RefCell::new(Default::default()));
         let backend = Rc::new(RefCell::new(Backend {
@@ -224,7 +234,7 @@ impl ServerlessSimulation {
             function_mgr: Default::default(),
             host_mgr: Default::default(),
             invocation_mgr: Default::default(),
-            keepalive,
+            coldstart,
             stats: stats.clone(),
         }));
         let ctx = Rc::new(RefCell::new(ServerlessContext::new(
@@ -248,22 +258,22 @@ impl ServerlessSimulation {
         }));
         sim.add_handler("invocation_request", invoker.clone());
         let mut extra_handlers = Vec::<Rc<RefCell<dyn EventHandler>>>::new();
-        let container_start_handler = Rc::new(RefCell::new(ContainerStartHandler::new(backend.clone())));
+        let container_start_handler = Rc::new(RefCell::new(ContainerStartHandler::new(
+            backend.clone(),
+            ctx.clone(),
+            invoker.clone(),
+        )));
         sim.add_handler("container_started", container_start_handler.clone());
         extra_handlers.push(container_start_handler);
         let container_end_handler = Rc::new(RefCell::new(ContainerEndHandler::new(backend.clone(), stats.clone())));
         sim.add_handler("container_ended", container_end_handler.clone());
         extra_handlers.push(container_end_handler);
-        let invocation_start_handler = Rc::new(RefCell::new(InvocationStartHandler::new(
-            backend.clone(),
-            ctx.clone(),
-            stats.clone(),
-        )));
-        sim.add_handler("invocation_started", invocation_start_handler.clone());
-        extra_handlers.push(invocation_start_handler);
         let invocation_end_handler = Rc::new(RefCell::new(InvocationEndHandler::new(backend.clone(), ctx.clone())));
         sim.add_handler("invocation_ended", invocation_end_handler.clone());
         extra_handlers.push(invocation_end_handler);
+        let idle_deploy_handler = Rc::new(RefCell::new(IdleDeployHandler::new(deployer.clone())));
+        sim.add_handler("idle_deploy", idle_deploy_handler.clone());
+        extra_handlers.push(idle_deploy_handler);
         Self {
             backend,
             deployer,

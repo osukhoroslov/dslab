@@ -1,6 +1,7 @@
 use core::event::Event;
 use core::handler::EventHandler;
 
+use crate::container::ContainerStatus;
 use crate::deployer::{Deployer, DeploymentStatus};
 use crate::simulation::{Backend, ServerlessContext};
 use crate::stats::Stats;
@@ -12,7 +13,7 @@ use std::rc::Rc;
 
 #[derive(PartialEq)]
 pub enum InvocationStatus {
-    Instant,
+    Instant(u64),
     Delayed(f64),
     Rejected,
 }
@@ -87,6 +88,20 @@ impl Invoker {
             stats,
         }
     }
+
+    pub fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
+        let mut backend = self.backend.borrow_mut();
+        let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
+        let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
+        let delta = time - container.last_change;
+        self.stats
+            .borrow_mut()
+            .update_wasted_resources(delta, &container.resources);
+        container.last_change = time;
+        container.status = ContainerStatus::Running;
+        container.invocation = Some(inv_id);
+        self.ctx.borrow_mut().new_invocation_end_event(inv_id, request.duration);
+    }
 }
 
 impl EventHandler for Invoker {
@@ -106,6 +121,9 @@ impl EventHandler for Invoker {
                 if let InvocationStatus::Delayed(delay) = status {
                     stats.cold_starts_total_time += delay;
                     stats.cold_starts += 1;
+                } else if let InvocationStatus::Instant(cont_id) = status {
+                    drop(stats);
+                    self.start_invocation(cont_id, request, event.time.into_inner());
                 }
             }
         }
@@ -128,17 +146,15 @@ impl InvokerCore for BasicInvoker {
         let backend_ = backend.borrow();
         let mut it = backend_.container_mgr.get_possible_containers(request.id);
         if let Some(c) = it.next() {
-            let id = c.id;
-            ctx.borrow_mut().new_invocation_start_event(request, id, 0.);
-            InvocationStatus::Instant
+            InvocationStatus::Instant(c.id)
         } else {
             drop(backend_);
-            let d = deployer.borrow_mut().deploy(request.id, curr_time);
+            let d = deployer.borrow_mut().deploy(request.id, Some(request), curr_time);
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
-            ctx.borrow_mut()
-                .new_invocation_start_event(request, d.container_id, d.deployment_time);
+            //ctx.borrow_mut()
+            //    .new_invocation_start_event(request, d.container_id, d.deployment_time);
             InvocationStatus::Delayed(d.deployment_time)
         }
     }
