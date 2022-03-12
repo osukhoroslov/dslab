@@ -1,26 +1,32 @@
+use crate::container::Container;
+use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::util::Counter;
 
 use std::collections::{HashMap, HashSet};
 
 pub struct Host {
     pub id: u64,
-    containers: HashSet<u64>,
+    pub containers: HashSet<u64>,
+    pub resources: ResourceProvider,
 }
 
 impl Host {
-    pub fn new(id: u64) -> Self {
+    pub fn new(id: u64, resources: ResourceProvider) -> Self {
         Self {
             id,
             containers: Default::default(),
+            resources,
         }
     }
 
-    pub fn new_container(&mut self, id: u64) {
-        self.containers.insert(id);
+    pub fn new_container(&mut self, container: &Container) {
+        self.containers.insert(container.id);
+        self.resources.acquire(&container.resources);
     }
 
-    pub fn delete_container(&mut self, id: u64) {
-        self.containers.remove(&id);
+    pub fn delete_container(&mut self, container: &Container) {
+        self.containers.remove(&container.id);
+        self.resources.release(&container.resources);
     }
 }
 
@@ -51,9 +57,16 @@ impl HostManager {
         }
     }
 
-    pub fn new_host(&mut self) -> u64 {
+    pub fn get_possible_hosts<'a>(&'a self, consumer: &'a ResourceConsumer) -> PossibleHostIterator<'a> {
+        PossibleHostIterator {
+            inner: self.hosts.iter(),
+            consumer,
+        }
+    }
+
+    pub fn new_host(&mut self, resources: ResourceProvider) -> u64 {
         let id = self.host_ctr.next();
-        let host = Host::new(id);
+        let host = Host::new(id, resources);
         self.hosts.insert(id, host);
         id
     }
@@ -86,5 +99,22 @@ impl<'a> Iterator for HostIteratorMut<'a> {
         } else {
             None
         }
+    }
+}
+
+pub struct PossibleHostIterator<'a> {
+    inner: std::collections::hash_map::Iter<'a, u64, Host>,
+    consumer: &'a ResourceConsumer,
+}
+
+impl<'a> Iterator for PossibleHostIterator<'a> {
+    type Item = &'a Host;
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((_, v)) = self.inner.next() {
+            if v.resources.can_acquire(self.consumer) {
+                return Some(v);
+            }
+        }
+        None
     }
 }

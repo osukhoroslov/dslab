@@ -1,20 +1,27 @@
+use crate::resource::ResourceConsumer;
 use crate::util::Counter;
 
 use std::collections::HashMap;
 
 pub struct Function {
     container_deployment_time: f64,
+    container_resources: ResourceConsumer,
 }
 
 impl Function {
-    pub fn new(container_deployment_time: f64) -> Self {
+    pub fn new(container_deployment_time: f64, container_resources: ResourceConsumer) -> Self {
         Self {
             container_deployment_time,
+            container_resources,
         }
     }
 
     pub fn get_deployment_time(&self) -> f64 {
         self.container_deployment_time
+    }
+
+    pub fn get_resources(&self) -> &ResourceConsumer {
+        &self.container_resources
     }
 }
 

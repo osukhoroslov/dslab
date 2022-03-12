@@ -38,18 +38,17 @@ impl BasicDeployer {
 impl Deployer for BasicDeployer {
     fn deploy(&mut self, id: u64) -> DeploymentResult {
         let mut backend = self.backend.borrow_mut();
-        let mut it = backend.host_mgr.get_hosts();
+        let resources = backend.function_mgr.get_function(id).unwrap().get_resources().clone();
+        let mut it = backend.host_mgr.get_possible_hosts(&resources);
         if let Some(h) = it.next() {
             let host_id = h.id;
             let delay = backend.function_mgr.get_function(id).unwrap().get_deployment_time();
-            let id = backend
-                .container_mgr
-                .new_container(id, delay, host_id, ContainerStatus::Deploying);
-            backend.host_mgr.get_host_mut(host_id).unwrap().new_container(id);
-            self.ctx.borrow_mut().new_deploy_event(id, delay);
+            let cont = backend.new_container(id, delay, host_id, ContainerStatus::Deploying, resources);
+            //backend.host_mgr.get_host_mut(host_id).unwrap().new_container(cont);
+            self.ctx.borrow_mut().new_deploy_event(cont.id, delay);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,
-                container_id: id,
+                container_id: cont.id,
                 deployment_time: delay,
             }
         } else {

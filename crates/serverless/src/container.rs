@@ -1,3 +1,5 @@
+use crate::host::HostManager;
+use crate::resource::ResourceConsumer;
 use crate::util::Counter;
 
 use std::collections::{HashMap, HashSet};
@@ -18,6 +20,7 @@ pub struct Container {
     pub invocation: Option<u64>,
     pub finished_invocations: Counter,
     pub host_id: u64,
+    pub resources: ResourceConsumer,
 }
 
 impl Container {
@@ -57,7 +60,15 @@ impl ContainerManager {
         self.containers.get_mut(&id)
     }
 
-    pub fn new_container(&mut self, func_id: u64, deployment_time: f64, host_id: u64, status: ContainerStatus) -> u64 {
+    pub fn new_container(
+        &mut self,
+        host_mgr: &mut HostManager,
+        func_id: u64,
+        deployment_time: f64,
+        host_id: u64,
+        status: ContainerStatus,
+        resources: ResourceConsumer,
+    ) -> &Container {
         let id = self.container_ctr.next();
         if !self.containers_by_func.contains_key(&func_id) {
             self.containers_by_func.insert(func_id, HashSet::new());
@@ -71,9 +82,12 @@ impl ContainerManager {
             invocation: None,
             finished_invocations: Default::default(),
             host_id,
+            resources,
         };
         self.containers.insert(id, container);
-        id
+        let cont_ref = self.containers.get(&id).unwrap();
+        host_mgr.get_host_mut(host_id).unwrap().new_container(cont_ref);
+        cont_ref
     }
 
     pub fn destroy_container(&mut self, id: u64) {

@@ -77,14 +77,21 @@ impl EventHandler for BasicInvoker {
     fn on(&mut self, event: Event) {
         if event.data.is::<InvocationRequest>() {
             let request = *event.data.downcast::<InvocationRequest>().unwrap();
-            self.invoke(request);
+            let status = self.invoke(request);
+            if status != InvocationStatus::Rejected {
+                let mut backend = self.backend.borrow_mut();
+                backend.stats.invocations += 1;
+                if status == InvocationStatus::Delayed {
+                    backend.stats.cold_starts += 1;
+                }
+            }
         }
     }
 }
 
 impl Invoker for BasicInvoker {
     fn invoke(&mut self, request: InvocationRequest) -> InvocationStatus {
-        let backend = self.backend.borrow_mut();
+        let mut backend = self.backend.borrow_mut();
         let mut it = backend.container_mgr.get_possible_containers(request.id);
         if let Some(c) = it.next() {
             let id = c.id;
@@ -96,6 +103,8 @@ impl Invoker for BasicInvoker {
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
+            backend = self.backend.borrow_mut();
+            backend.stats.cold_starts_total_time += d.deployment_time;
             self.ctx
                 .borrow_mut()
                 .new_invocation_start_event(request, d.container_id, d.deployment_time);

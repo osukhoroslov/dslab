@@ -3,12 +3,14 @@ use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
 
-use crate::container::{ContainerManager, ContainerStatus};
+use crate::container::{Container, ContainerManager, ContainerStatus};
 use crate::deployer::{BasicDeployer, Deployer};
 use crate::function::{Function, FunctionManager};
 use crate::host::HostManager;
 use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker};
 use crate::keepalive::{FixedKeepalivePolicy, KeepalivePolicy};
+use crate::resource::{ResourceConsumer, ResourceProvider};
+use crate::stats::Stats;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -56,12 +58,7 @@ impl EventHandler for ContainerEndHandler {
             let cont = backend.container_mgr.get_container(cont_id).unwrap();
             if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr + 1 {
                 let host_id = cont.host_id;
-                backend.container_mgr.destroy_container(cont_id);
-                backend
-                    .host_mgr
-                    .get_host_mut(host_id)
-                    .unwrap()
-                    .delete_container(cont_id);
+                backend.delete_container(cont_id);
             }
         }
     }
@@ -132,6 +129,27 @@ pub struct Backend {
     pub host_mgr: HostManager,
     pub invocation_mgr: InvocationManager,
     pub keepalive: Rc<RefCell<dyn KeepalivePolicy>>,
+    pub stats: Stats,
+}
+
+impl Backend {
+    pub fn new_container(
+        &mut self,
+        func_id: u64,
+        deployment_time: f64,
+        host_id: u64,
+        status: ContainerStatus,
+        resources: ResourceConsumer,
+    ) -> &Container {
+        self.container_mgr
+            .new_container(&mut self.host_mgr, func_id, deployment_time, host_id, status, resources)
+    }
+
+    pub fn delete_container(&mut self, cont_id: u64) {
+        let cont = self.container_mgr.get_container(cont_id).unwrap();
+        self.host_mgr.get_host_mut(cont.host_id).unwrap().delete_container(cont);
+        self.container_mgr.destroy_container(cont_id);
+    }
 }
 
 pub struct ServerlessContext {
@@ -177,6 +195,7 @@ impl ServerlessSimulation {
             host_mgr: Default::default(),
             invocation_mgr: Default::default(),
             keepalive: Rc::new(RefCell::new(FixedKeepalivePolicy::new(2.0))),
+            stats: Default::default(),
         }));
         let ctx = Rc::new(RefCell::new(ServerlessContext::new(
             sim.create_context("serverless simulation"),
@@ -211,8 +230,12 @@ impl ServerlessSimulation {
         }
     }
 
-    pub fn new_host(&mut self) -> u64 {
-        self.backend.borrow_mut().host_mgr.new_host()
+    pub fn get_stats(&self) -> Stats {
+        self.backend.borrow().stats
+    }
+
+    pub fn new_host(&mut self, resources: ResourceProvider) -> u64 {
+        self.backend.borrow_mut().host_mgr.new_host(resources)
     }
 
     pub fn new_function(&mut self, f: Function) -> u64 {
