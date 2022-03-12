@@ -1,6 +1,7 @@
 use crate::container::ContainerStatus;
 use crate::simulation::{Backend, ServerlessContext};
 
+use std::boxed::Box;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -17,35 +18,57 @@ pub struct DeploymentResult {
 }
 
 /*
- * Deployer chooses a host to deploy container on
+ * DeployerCore chooses a host to deploy container on
  * and triggers deployment event
  */
-pub trait Deployer {
-    fn deploy(&mut self, id: u64) -> DeploymentResult;
+pub trait DeployerCore {
+    fn deploy(
+        &mut self,
+        id: u64,
+        backend: Rc<RefCell<Backend>>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+    ) -> DeploymentResult;
 }
 
-pub struct BasicDeployer {
+pub struct Deployer {
     backend: Rc<RefCell<Backend>>,
+    core: Box<dyn DeployerCore>,
     ctx: Rc<RefCell<ServerlessContext>>,
 }
 
-impl BasicDeployer {
-    pub fn new(backend: Rc<RefCell<Backend>>, ctx: Rc<RefCell<ServerlessContext>>) -> Self {
-        Self { backend, ctx }
+impl Deployer {
+    pub fn new(
+        backend: Rc<RefCell<Backend>>,
+        core: Box<dyn DeployerCore>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+    ) -> Self {
+        Self { backend, core, ctx }
+    }
+
+    pub fn deploy(&mut self, id: u64) -> DeploymentResult {
+        self.core.deploy(id, self.backend.clone(), self.ctx.clone())
     }
 }
 
-impl Deployer for BasicDeployer {
-    fn deploy(&mut self, id: u64) -> DeploymentResult {
-        let mut backend = self.backend.borrow_mut();
-        let resources = backend.function_mgr.get_function(id).unwrap().get_resources().clone();
-        let mut it = backend.host_mgr.get_possible_hosts(&resources);
+// BasicDeployer deploys the container on
+// the first host with enough resources
+pub struct BasicDeployer {}
+
+impl DeployerCore for BasicDeployer {
+    fn deploy(
+        &mut self,
+        id: u64,
+        backend: Rc<RefCell<Backend>>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+    ) -> DeploymentResult {
+        let mut backend_ = backend.borrow_mut();
+        let resources = backend_.function_mgr.get_function(id).unwrap().get_resources().clone();
+        let mut it = backend_.host_mgr.get_possible_hosts(&resources);
         if let Some(h) = it.next() {
             let host_id = h.id;
-            let delay = backend.function_mgr.get_function(id).unwrap().get_deployment_time();
-            let cont = backend.new_container(id, delay, host_id, ContainerStatus::Deploying, resources);
-            //backend.host_mgr.get_host_mut(host_id).unwrap().new_container(cont);
-            self.ctx.borrow_mut().new_deploy_event(cont.id, delay);
+            let delay = backend_.function_mgr.get_function(id).unwrap().get_deployment_time();
+            let cont = backend_.new_container(id, delay, host_id, ContainerStatus::Deploying, resources);
+            ctx.borrow_mut().new_deploy_event(cont.id, delay);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,
                 container_id: cont.id,

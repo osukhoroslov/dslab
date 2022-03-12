@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 fn main() {
     let sim = Simulation::new(1);
-    let mut serverless = ServerlessSimulation::new(sim);
+    let mut serverless = ServerlessSimulation::new(sim, None, None, None);
     for _ in 0..2 {
         serverless.new_host(ResourceProvider::new(HashMap::<String, Resource>::from([(
             "mem".to_string(),

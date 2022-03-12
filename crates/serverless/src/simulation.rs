@@ -4,10 +4,10 @@ use core::handler::EventHandler;
 use core::simulation::Simulation;
 
 use crate::container::{Container, ContainerManager, ContainerStatus};
-use crate::deployer::{BasicDeployer, Deployer};
+use crate::deployer::{BasicDeployer, Deployer, DeployerCore};
 use crate::function::{Function, FunctionManager};
 use crate::host::HostManager;
-use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker};
+use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker, InvokerCore};
 use crate::keepalive::{FixedKeepalivePolicy, KeepalivePolicy};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::stats::Stats;
@@ -57,7 +57,6 @@ impl EventHandler for ContainerEndHandler {
             let mut backend = self.backend.borrow_mut();
             let cont = backend.container_mgr.get_container(cont_id).unwrap();
             if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr + 1 {
-                let host_id = cont.host_id;
                 backend.delete_container(cont_id);
             }
         }
@@ -180,32 +179,51 @@ impl ServerlessContext {
 
 pub struct ServerlessSimulation {
     backend: Rc<RefCell<Backend>>,
-    deployer: Rc<RefCell<dyn Deployer>>,
+    deployer: Rc<RefCell<Deployer>>,
     extra_handlers: Vec<Rc<RefCell<dyn EventHandler>>>,
-    invoker: Rc<RefCell<dyn Invoker>>,
+    invoker: Rc<RefCell<Invoker>>,
     sim: Simulation,
     ctx: Rc<RefCell<ServerlessContext>>,
 }
 
 impl ServerlessSimulation {
-    pub fn new(mut sim: Simulation) -> Self {
+    pub fn new(
+        mut sim: Simulation,
+        deployer_core: Option<Box<dyn DeployerCore>>,
+        invoker_core: Option<Box<dyn InvokerCore>>,
+        keepalive_policy: Option<Rc<RefCell<dyn KeepalivePolicy>>>,
+    ) -> Self {
+        let keepalive = if let Some(keep) = keepalive_policy {
+            keep
+        } else {
+            Rc::new(RefCell::new(FixedKeepalivePolicy::new(0.0)))
+        };
         let backend = Rc::new(RefCell::new(Backend {
             container_mgr: Default::default(),
             function_mgr: Default::default(),
             host_mgr: Default::default(),
             invocation_mgr: Default::default(),
-            keepalive: Rc::new(RefCell::new(FixedKeepalivePolicy::new(2.0))),
+            keepalive,
             stats: Default::default(),
         }));
         let ctx = Rc::new(RefCell::new(ServerlessContext::new(
             sim.create_context("serverless simulation"),
         )));
-        let deployer = Rc::new(RefCell::new(BasicDeployer::new(backend.clone(), ctx.clone())));
-        let invoker = Rc::new(RefCell::new(BasicInvoker::new(
-            backend.clone(),
-            ctx.clone(),
-            deployer.clone(),
-        )));
+        let deployer = Rc::new(RefCell::new(if let Some(dc) = deployer_core {
+            Deployer::new(backend.clone(), dc, ctx.clone())
+        } else {
+            Deployer::new(backend.clone(), Box::new(BasicDeployer {}), ctx.clone())
+        }));
+        let invoker = Rc::new(RefCell::new(if let Some(inc) = invoker_core {
+            Invoker::new(backend.clone(), inc, ctx.clone(), deployer.clone())
+        } else {
+            Invoker::new(
+                backend.clone(),
+                Box::new(BasicInvoker {}),
+                ctx.clone(),
+                deployer.clone(),
+            )
+        }));
         sim.add_handler("invocation_request", invoker.clone());
         let mut extra_handlers = Vec::<Rc<RefCell<dyn EventHandler>>>::new();
         let container_start_handler = Rc::new(RefCell::new(ContainerStartHandler::new(backend.clone())));

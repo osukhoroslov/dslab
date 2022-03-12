@@ -48,36 +48,49 @@ impl InvocationManager {
 }
 
 /*
- * Invoker invokes an existing function instance
+ * InvokerCore invokes an existing function instance
  * or calls Deployer in case there is none
  */
-pub trait Invoker {
-    fn invoke(&mut self, request: InvocationRequest) -> InvocationStatus;
-}
-
-// BasicInvoker tries to invoke the function
-// inside the first container that fits
-pub struct BasicInvoker {
-    backend: Rc<RefCell<Backend>>,
-    ctx: Rc<RefCell<ServerlessContext>>,
-    deployer: Rc<RefCell<dyn Deployer>>,
-}
-
-impl BasicInvoker {
-    pub fn new(
+pub trait InvokerCore {
+    fn invoke(
+        &mut self,
+        request: InvocationRequest,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
-        deployer: Rc<RefCell<dyn Deployer>>,
+        deployer: Rc<RefCell<Deployer>>,
+    ) -> InvocationStatus;
+}
+
+pub struct Invoker {
+    backend: Rc<RefCell<Backend>>,
+    core: Box<dyn InvokerCore>,
+    ctx: Rc<RefCell<ServerlessContext>>,
+    deployer: Rc<RefCell<Deployer>>,
+}
+
+impl Invoker {
+    pub fn new(
+        backend: Rc<RefCell<Backend>>,
+        core: Box<dyn InvokerCore>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+        deployer: Rc<RefCell<Deployer>>,
     ) -> Self {
-        Self { backend, ctx, deployer }
+        Self {
+            backend,
+            core,
+            ctx,
+            deployer,
+        }
     }
 }
 
-impl EventHandler for BasicInvoker {
+impl EventHandler for Invoker {
     fn on(&mut self, event: Event) {
         if event.data.is::<InvocationRequest>() {
             let request = *event.data.downcast::<InvocationRequest>().unwrap();
-            let status = self.invoke(request);
+            let status = self
+                .core
+                .invoke(request, self.backend.clone(), self.ctx.clone(), self.deployer.clone());
             if status != InvocationStatus::Rejected {
                 let mut backend = self.backend.borrow_mut();
                 backend.stats.invocations += 1;
@@ -89,24 +102,33 @@ impl EventHandler for BasicInvoker {
     }
 }
 
-impl Invoker for BasicInvoker {
-    fn invoke(&mut self, request: InvocationRequest) -> InvocationStatus {
-        let mut backend = self.backend.borrow_mut();
-        let mut it = backend.container_mgr.get_possible_containers(request.id);
+// BasicInvoker tries to invoke the function
+// inside the first container that fits
+pub struct BasicInvoker {}
+
+impl InvokerCore for BasicInvoker {
+    fn invoke(
+        &mut self,
+        request: InvocationRequest,
+        backend: Rc<RefCell<Backend>>,
+        ctx: Rc<RefCell<ServerlessContext>>,
+        deployer: Rc<RefCell<Deployer>>,
+    ) -> InvocationStatus {
+        let mut backend_ = backend.borrow_mut();
+        let mut it = backend_.container_mgr.get_possible_containers(request.id);
         if let Some(c) = it.next() {
             let id = c.id;
-            self.ctx.borrow_mut().new_invocation_start_event(request, id, 0.);
+            ctx.borrow_mut().new_invocation_start_event(request, id, 0.);
             InvocationStatus::Instant
         } else {
-            drop(backend);
-            let d = self.deployer.borrow_mut().deploy(request.id);
+            drop(backend_);
+            let d = deployer.borrow_mut().deploy(request.id);
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
-            backend = self.backend.borrow_mut();
-            backend.stats.cold_starts_total_time += d.deployment_time;
-            self.ctx
-                .borrow_mut()
+            backend_ = backend.borrow_mut();
+            backend_.stats.cold_starts_total_time += d.deployment_time;
+            ctx.borrow_mut()
                 .new_invocation_start_event(request, d.container_id, d.deployment_time);
             InvocationStatus::Delayed
         }
