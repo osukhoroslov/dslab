@@ -25,7 +25,7 @@ pub struct PlacementStore {
 }
 
 impl PlacementStore {
-    pub fn new(ctx: SimulationContext, allow_vm_overcommit: bool) -> Self {
+    pub fn new(allow_vm_overcommit: bool, ctx: SimulationContext) -> Self {
         Self {
             allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),

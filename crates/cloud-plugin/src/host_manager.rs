@@ -123,7 +123,7 @@ impl HostManager {
     fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for (vm_id, alloc) in &self.allocs {
-            cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_current_cpu_load(time);
+            cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_cpu_load(time);
         }
         return cpu_used / self.cpu_total as f64;
     }
@@ -131,7 +131,7 @@ impl HostManager {
     fn get_memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for (vm_id, alloc) in &self.allocs {
-            memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_current_cpu_load(time);
+            memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_cpu_load(time);
         }
         return memory_used / self.memory_total as f64;
     }

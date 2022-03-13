@@ -14,7 +14,9 @@ pub struct VirtualMachine {
 
 impl fmt::Debug for VirtualMachine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("").finish()
+        f.debug_struct("VirtualMachine")
+            .field("lifetime", &self.lifetime)
+            .finish()
     }
 }
 
@@ -44,11 +46,11 @@ impl VirtualMachine {
         self.start_time = time;
     }
 
-    pub fn get_current_cpu_load(&self, time: f64) -> f64 {
+    pub fn get_cpu_load(&self, time: f64) -> f64 {
         return self.cpu_load_model.get_resource_load(time, time - self.start_time);
     }
 
-    pub fn get_current_memory_load(&self, time: f64) -> f64 {
+    pub fn get_memory_load(&self, time: f64) -> f64 {
         return self.memory_load_model.get_resource_load(time, time - self.start_time);
     }
 }

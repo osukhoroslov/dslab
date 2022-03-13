@@ -37,8 +37,8 @@ impl CloudSimulation {
         sim.add_handler(monitoring_id, monitoring.clone());
         let placement_store_id = "placement_store";
         let placement_store = rc!(refcell!(PlacementStore::new(
-            sim.create_context(placement_store_id),
             allow_vm_overcommit,
+            sim.create_context(placement_store_id)
         )));
         sim.add_handler(placement_store_id, placement_store.clone());
         let ctx = sim.create_context("simulation");
@@ -95,7 +95,7 @@ impl CloudSimulation {
         self.placement_store.borrow_mut().add_scheduler(id);
     }
 
-    pub fn spawn_vm(
+    pub fn spawn_vm_now(
         &mut self,
         id: &str,
         cpu_usage: u32,
@@ -118,6 +118,31 @@ impl CloudSimulation {
         );
     }
 
+    pub fn spawn_vm_with_delay(
+        &mut self,
+        id: &str,
+        cpu_usage: u32,
+        memory_usage: u64,
+        lifetime: f64,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
+        scheduler: &str,
+        delay: f64,
+    ) {
+        self.ctx.emit(
+            AllocationRequest {
+                alloc: Allocation {
+                    id: id.to_string(),
+                    cpu_usage,
+                    memory_usage,
+                },
+                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model),
+            },
+            scheduler,
+            delay,
+        );
+    }
+
     pub fn steps(&mut self, step_count: u64) -> bool {
         return self.sim.steps(step_count);
     }
@@ -127,10 +152,7 @@ impl CloudSimulation {
     }
 
     pub fn sleep_for(&mut self, time: f64) {
-        let sleep_start = self.sim.time();
-        while self.sim.time() < sleep_start + time {
-            self.sim.step();
-        }
+        self.sim.step_for_duration(time);
     }
 
     pub fn host(&mut self, host_id: &str) -> Rc<RefCell<HostManager>> {

@@ -104,17 +104,17 @@ impl VMPlacementAlgorithm for WorstFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-pub struct BestFitThreshhold {
-    threshhold: f64,
+pub struct BestFitThreshold {
+    threshold: f64,
 }
 
-impl BestFitThreshhold {
-    pub fn new(threshhold: f64) -> Self {
-        Self { threshhold }
+impl BestFitThreshold {
+    pub fn new(threshold: f64) -> Self {
+        Self { threshold }
     }
 }
 
-impl VMPlacementAlgorithm for BestFitThreshhold {
+impl VMPlacementAlgorithm for BestFitThreshold {
     fn select_host(
         &self,
         alloc: &Allocation,
@@ -132,7 +132,7 @@ impl VMPlacementAlgorithm for BestFitThreshhold {
             let memory_load_new = (memory_used + alloc.memory_usage as f64) / state.memory_total as f64;
 
             if result.is_none() || best_cpu_load < cpu_load_new {
-                if cpu_load_new < self.threshhold && memory_load_new < self.threshhold {
+                if cpu_load_new < self.threshold && memory_load_new < self.threshold {
                     best_cpu_load = cpu_load_new;
                     result = Some(host.to_string());
                 }
