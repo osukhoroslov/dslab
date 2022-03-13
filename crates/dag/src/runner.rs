@@ -340,6 +340,7 @@ impl DAGRunner {
                     self.scheduler
                         .on_task_state_changed(task, state, &self.dag, &self.resources),
                 );
+                self.process_actions();
             }
         }
         self.process_actions();

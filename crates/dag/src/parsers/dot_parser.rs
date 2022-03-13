@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
 
 use dot_parser::ast::*;
@@ -45,6 +46,8 @@ impl DAG {
             }
         }
 
+        let mut data_items: HashMap<String, usize> = HashMap::new();
+
         // then all edges
         for stmt in dot.stmts.stmts.iter() {
             match stmt {
@@ -68,7 +71,11 @@ impl DAG {
                         }
                     }
 
-                    let data_item_id = dag.add_task_output(from, &label, size.round() as u64);
+                    let entry = data_items.entry(label.clone());
+                    let data_item_id: usize = match entry {
+                        Occupied(x) => *x.get(),
+                        Vacant(entry) => *entry.insert(dag.add_task_output(from, &label, size.round() as u64)),
+                    };
                     dag.add_data_dependency(data_item_id, to);
                 }
                 _ => {}

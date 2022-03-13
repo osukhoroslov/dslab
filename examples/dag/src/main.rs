@@ -2,6 +2,9 @@ mod simple_scheduler;
 
 use sugars::{rc, refcell};
 
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
 use compute::multicore::*;
 use core::simulation::Simulation;
 use dag::dag::DAG;
@@ -114,9 +117,46 @@ fn diamond() {
     );
 }
 
+fn reuse_files() {
+    let mut dag = DAG::new();
+
+    let input = dag.add_data_item("input", 128);
+
+    let mut rng = Pcg64::seed_from_u64(456);
+
+    let a_cnt = 10;
+    let b_cnt = 10;
+    let deps_cnt = 3;
+
+    for i in 0..a_cnt {
+        let task = dag.add_task(&format!("a{}", i), 100, 128, 1, 2, CoresDependency::Linear);
+        dag.add_data_dependency(input, task);
+        dag.add_task_output(task, &format!("a{}_out", i), 10);
+    }
+
+    for i in 0..b_cnt {
+        let task = dag.add_task(&format!("b{}", i), 100, 128, 1, 2, CoresDependency::Linear);
+        let mut deps = (0..deps_cnt).map(|_| rng.gen_range(0..a_cnt) + 1).collect::<Vec<_>>();
+        deps.sort();
+        deps.dedup();
+        for dep in deps.into_iter() {
+            dag.add_data_dependency(dep, task);
+        }
+        dag.add_task_output(task, &format!("b{}_out", i), 10);
+    }
+
+    run_simulation(
+        dag,
+        "resources/map_reduce.yaml",
+        ConstantBandwidthNetwork::new(10.0, 0.1),
+        "traces/trace_reuse_files.json",
+    );
+}
+
 fn main() {
     map_reduce();
     epigenomics(); // dax
     montage(); // dot
     diamond(); // yaml
+    reuse_files();
 }
