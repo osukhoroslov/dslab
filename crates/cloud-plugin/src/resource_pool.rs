@@ -58,7 +58,7 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
-    pub fn can_allocate(&mut self, alloc: &Allocation, host_id: &String) -> AllocationVerdict {
+    pub fn can_allocate(&self, alloc: &Allocation, host_id: &String) -> AllocationVerdict {
         if !self.hosts.contains_key(host_id) {
             return AllocationVerdict::HostNotFound;
         }
@@ -113,5 +113,21 @@ impl ResourcePoolState {
 
             host.allocations.remove(&alloc.id);
         });
+    }
+
+    pub fn get_available_cpu(&self, host_id: &String) -> u32 {
+        return self.hosts[host_id].cpu_available;
+    }
+
+    pub fn get_available_memory(&self, host_id: &String) -> u64 {
+        return self.hosts[host_id].memory_available;
+    }
+
+    pub fn get_cpu_load(&self, host_id: &String) -> f64 {
+        return 1. - self.hosts[host_id].cpu_available as f64 / self.hosts[host_id].cpu_total as f64;
+    }
+
+    pub fn get_memory_load(&self, host_id: &String) -> f64 {
+        return 1. - self.hosts[host_id].memory_available as f64 / self.hosts[host_id].memory_total as f64;
     }
 }

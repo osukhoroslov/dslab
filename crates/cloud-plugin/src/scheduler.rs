@@ -8,7 +8,6 @@ use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
 
-use crate::common::AllocationVerdict;
 use crate::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
@@ -17,6 +16,7 @@ use crate::monitoring::Monitoring;
 use crate::network::MESSAGE_DELAY;
 use crate::resource_pool::{Allocation, ResourcePoolState};
 use crate::vm::VirtualMachine;
+use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 
@@ -26,6 +26,7 @@ pub struct Scheduler {
     placement_store_id: String,
     #[allow(dead_code)]
     monitoring: Rc<RefCell<Monitoring>>,
+    vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
 }
 
@@ -34,6 +35,7 @@ impl Scheduler {
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
         placement_store_id: String,
+        vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
     ) -> Self {
         Self {
@@ -41,6 +43,7 @@ impl Scheduler {
             pool_state: snapshot,
             placement_store_id,
             monitoring,
+            vm_placement_algorithm,
             ctx,
         }
     }
@@ -51,34 +54,38 @@ impl Scheduler {
     }
 
     fn on_allocation_request(&mut self, alloc: Allocation, vm: VirtualMachine) {
-        // pack via First Fit policy
-        for host_id in self.pool_state.get_hosts_list() {
-            if self.pool_state.can_allocate(&alloc, &host_id) == AllocationVerdict::Success {
-                info!(
-                    "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
-                    self.ctx.time(),
-                    self.id,
-                    alloc.id,
-                    host_id
-                );
-                self.pool_state.allocate(&alloc, &host_id);
+        if let Some(host) = self
+            .vm_placement_algorithm
+            .select_host(&alloc, &self.pool_state, &self.monitoring.borrow())
+        {
+            info!(
+                "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
+                self.ctx.time(),
+                self.id,
+                alloc.id,
+                host
+            );
+            self.pool_state.allocate(&alloc, &host);
 
-                self.ctx.emit(
-                    AllocationCommitRequest { alloc, vm, host_id },
-                    &self.placement_store_id,
-                    MESSAGE_DELAY,
-                );
-                return;
-            }
+            self.ctx.emit(
+                AllocationCommitRequest {
+                    alloc,
+                    vm,
+                    host_id: host,
+                },
+                &self.placement_store_id,
+                MESSAGE_DELAY,
+            );
+        } else {
+            info!(
+                "[time = {}] scheduler #{} failed to pack vm #{}",
+                self.ctx.time(),
+                self.id,
+                alloc.id,
+            );
+            self.ctx
+                .emit_self(AllocationRequest { alloc, vm }, ALLOCATION_RETRY_PERIOD);
         }
-        info!(
-            "[time = {}] scheduler #{} failed to pack vm #{}",
-            self.ctx.time(),
-            self.id,
-            alloc.id,
-        );
-        self.ctx
-            .emit_self(AllocationRequest { alloc, vm }, ALLOCATION_RETRY_PERIOD);
     }
 
     fn on_allocation_commit_succeeded(&mut self, alloc: Allocation, host_id: String) {

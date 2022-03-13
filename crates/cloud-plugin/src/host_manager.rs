@@ -28,6 +28,11 @@ pub struct HostManager {
     memory_total: u64,
     memory_available: u64,
 
+    cpu_overcommit: u32,
+    memory_overcommit: u64,
+
+    allow_vm_overcommit: bool,
+    allocs: HashMap<String, Allocation>,
     vms: HashMap<String, VirtualMachine>,
     energy_manager: EnergyManager,
     monitoring_id: String,
@@ -42,6 +47,7 @@ impl HostManager {
         memory_total: u64,
         monitoring_id: String,
         placement_store_id: String,
+        allow_vm_overcommit: bool,
         ctx: SimulationContext,
     ) -> Self {
         Self {
@@ -50,6 +56,10 @@ impl HostManager {
             memory_total,
             cpu_available: cpu_total,
             memory_available: memory_total,
+            cpu_overcommit: 0,
+            memory_overcommit: 0,
+            allow_vm_overcommit,
+            allocs: HashMap::new(),
             vms: HashMap::new(),
             energy_manager: EnergyManager::new(),
             monitoring_id,
@@ -59,6 +69,9 @@ impl HostManager {
     }
 
     fn can_allocate(&self, alloc: &Allocation) -> AllocationVerdict {
+        if self.allow_vm_overcommit {
+            return AllocationVerdict::Success;
+        }
         if self.cpu_available < alloc.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
@@ -68,30 +81,71 @@ impl HostManager {
         return AllocationVerdict::Success;
     }
 
-    fn allocate(&mut self, time: f64, alloc: &Allocation, vm: VirtualMachine) {
-        self.cpu_available -= alloc.cpu_usage;
-        self.memory_available -= alloc.memory_usage;
+    fn allocate(&mut self, time: f64, alloc: &Allocation, mut vm: VirtualMachine) {
+        vm.set_start_time(time);
+        if self.cpu_available < alloc.cpu_usage {
+            self.cpu_overcommit += alloc.cpu_usage - self.cpu_available;
+            self.cpu_available = 0;
+        } else {
+            self.cpu_available -= alloc.cpu_usage;
+        }
+        if self.memory_available < alloc.memory_usage {
+            self.memory_overcommit += alloc.memory_usage - self.memory_available;
+            self.memory_available = 0;
+        } else {
+            self.memory_available -= alloc.memory_usage;
+        }
+
+        self.allocs.insert(alloc.id.clone(), alloc.clone());
         self.vms.insert(alloc.id.clone(), vm);
-        self.energy_manager.update_energy(time, self.get_energy_load());
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
     fn release(&mut self, time: f64, alloc: &Allocation) {
-        self.cpu_available += alloc.cpu_usage;
-        self.memory_available += alloc.memory_usage;
-        self.energy_manager.update_energy(time, self.get_energy_load());
+        if self.cpu_overcommit >= alloc.cpu_usage {
+            self.cpu_overcommit -= alloc.cpu_usage;
+        } else {
+            self.cpu_available += alloc.cpu_usage - self.cpu_overcommit;
+            self.cpu_overcommit = 0;
+        }
+
+        if self.memory_overcommit >= alloc.memory_usage {
+            self.memory_overcommit -= alloc.memory_usage;
+        } else {
+            self.memory_available += alloc.memory_usage - self.memory_overcommit;
+            self.memory_overcommit = 0;
+        }
+        self.allocs.remove(&alloc.id);
         self.vms.remove(&alloc.id);
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
-    fn get_energy_load(&self) -> f64 {
-        let cpu_used = (self.cpu_total - self.cpu_available) as f64;
-        if cpu_used == 0. {
+    fn get_cpu_load(&self, time: f64) -> f64 {
+        let mut cpu_used = 0.;
+        for (vm_id, alloc) in &self.allocs {
+            cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_cpu_load(time);
+        }
+        return cpu_used / self.cpu_total as f64;
+    }
+
+    fn get_memory_load(&self, time: f64) -> f64 {
+        let mut memory_used = 0.;
+        for (vm_id, alloc) in &self.allocs {
+            memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_cpu_load(time);
+        }
+        return memory_used / self.memory_total as f64;
+    }
+
+    fn get_energy_load(&self, time: f64) -> f64 {
+        let cpu_load = self.get_cpu_load(time);
+        if cpu_load == 0. {
             return 0.;
         }
-        return 0.4 + 0.6 * cpu_used / (self.cpu_total as f64);
+        return 0.4 + 0.6 * cpu_load;
     }
 
     pub fn get_total_consumed(&mut self, time: f64) -> f64 {
-        self.energy_manager.update_energy(time, self.get_energy_load());
+        self.energy_manager.update_energy(time, self.get_energy_load(time));
         return self.energy_manager.get_total_consumed();
     }
 
@@ -163,8 +217,8 @@ impl HostManager {
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id.clone(),
-                cpu_available: self.cpu_available,
-                memory_available: self.memory_available,
+                cpu_load: self.get_cpu_load(self.ctx.time()),
+                memory_load: self.get_memory_load(self.ctx.time()),
             },
             &self.monitoring_id,
             MESSAGE_DELAY,
