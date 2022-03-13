@@ -5,6 +5,7 @@ use sugars::{rc, refcell};
 use compute::multicore::*;
 use core::simulation::Simulation;
 use dag::dag::DAG;
+use dag::parsers::yaml_parser::*;
 use dag::runner::*;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
@@ -213,27 +214,7 @@ fn diamond() {
 
     let mut sim = Simulation::new(123);
 
-    let mut resources: Vec<Resource> = Vec::new();
-    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let compute_id = format!("compute{}", resources.len() + 1);
-        let compute = rc!(refcell!(Compute::new(
-            speed,
-            cores,
-            memory,
-            sim.create_context(&compute_id)
-        )));
-        sim.add_handler(&compute_id, compute.clone());
-        let resource = Resource {
-            id: compute_id,
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
-        };
-        resources.push(resource);
-    };
-    add_resource(10, 1, 256);
-    add_resource(20, 3, 512);
+    let resources = load_resources("resources/diamond.yaml", &mut sim);
 
     let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(100., 0.1)));
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
