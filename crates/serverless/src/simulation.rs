@@ -9,7 +9,6 @@ use crate::deployer::{BasicDeployer, Deployer, DeployerCore};
 use crate::function::{Function, FunctionManager};
 use crate::host::HostManager;
 use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker, InvokerCore};
-//use crate::keepalive::{FixedKeepalivePolicy, KeepalivePolicy};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::stats::Stats;
 

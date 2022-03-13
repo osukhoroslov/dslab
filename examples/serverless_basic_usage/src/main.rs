@@ -2,7 +2,6 @@ use core::simulation::Simulation;
 
 use serverless::function::Function;
 use serverless::invoker::InvocationRequest;
-//use serverless::keepalive::FixedKeepalivePolicy;
 use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
 use serverless::simulation::ServerlessSimulation;
 

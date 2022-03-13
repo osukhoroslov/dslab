@@ -153,8 +153,6 @@ impl InvokerCore for BasicInvoker {
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }
-            //ctx.borrow_mut()
-            //    .new_invocation_start_event(request, d.container_id, d.deployment_time);
             InvocationStatus::Delayed(d.deployment_time)
         }
     }

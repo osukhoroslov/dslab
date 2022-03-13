@@ -6,7 +6,7 @@ pub trait ColdStartPolicy {
     fn keepalive_window(&mut self, container: &Container) -> f64;
     // prewarm = None => do not prewarm function
     // prewarm = Some(x > 0) => deploy new container after x time units since execution
-    // prewarm = Some(x == 0) => do not destroy container after execution
+    // prewarm = Some(0) => do not destroy container after execution
     fn prewarm_window(&mut self, function: &Function) -> Option<f64>;
 }
 

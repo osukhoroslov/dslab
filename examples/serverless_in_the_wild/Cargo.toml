@@ -1,0 +1,10 @@
+[package]
+name = "serverless_in_the_wild"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+core = { path = "../../crates/core" }
+csv = "1.1"
+rand = "0.8.4"
+serverless = { path = "../../crates/serverless" }

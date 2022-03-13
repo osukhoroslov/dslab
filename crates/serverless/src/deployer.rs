@@ -62,7 +62,7 @@ impl Deployer {
     }
 }
 
-// BasicDeployer deploys the container on
+// BasicDeployer deploys new container on
 // the first host with enough resources
 pub struct BasicDeployer {}
 
