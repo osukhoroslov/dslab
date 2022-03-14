@@ -81,7 +81,15 @@ impl DeployerCore for BasicDeployer {
         if let Some(h) = it.next() {
             let host_id = h.id;
             let delay = backend_.function_mgr.get_function(id).unwrap().get_deployment_time();
-            let cont = backend_.new_container(id, delay, host_id, ContainerStatus::Deploying, resources, curr_time);
+            let cont = backend_.new_container(
+                id,
+                delay,
+                host_id,
+                ContainerStatus::Deploying,
+                resources,
+                curr_time,
+                invocation.is_none(),
+            );
             ctx.borrow_mut().new_deploy_event(cont.id, delay, invocation);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,

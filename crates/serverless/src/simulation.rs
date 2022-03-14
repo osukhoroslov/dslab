@@ -34,8 +34,11 @@ impl ContainerStartHandler {
 impl EventHandler for ContainerStartHandler {
     fn on(&mut self, event: Event) {
         if event.data.is::<(u64, Option<InvocationRequest>)>() {
-            let (id, invocation) = *event.data.downcast::<(u64, Option<InvocationRequest>)>().unwrap();
+            let (id, mut invocation) = *event.data.downcast::<(u64, Option<InvocationRequest>)>().unwrap();
             let mut backend = self.backend.borrow_mut();
+            if let Some(stolen) = backend.container_mgr.get_stolen_prewarm(id) {
+                invocation = Some(stolen);
+            }
             let container = backend.container_mgr.get_container_mut(id).unwrap();
             if let Some(invocation) = invocation {
                 let cont_id = container.id;
@@ -138,6 +141,29 @@ impl EventHandler for IdleDeployHandler {
     }
 }
 
+struct SimulationEndHandler {
+    backend: Rc<RefCell<Backend>>,
+}
+
+impl SimulationEndHandler {
+    pub fn new(backend: Rc<RefCell<Backend>>) -> Self {
+        Self { backend }
+    }
+}
+
+impl EventHandler for SimulationEndHandler {
+    fn on(&mut self, event: Event) {
+        let backend = self.backend.borrow();
+        let mut stats = backend.stats.borrow_mut();
+        for container in backend.container_mgr.get_containers() {
+            if container.status == ContainerStatus::Idle {
+                let delta = event.time.into_inner() - container.last_change;
+                stats.update_wasted_resources(delta, &container.resources);
+            }
+        }
+    }
+}
+
 pub struct Backend {
     pub container_mgr: ContainerManager,
     pub function_mgr: FunctionManager,
@@ -156,6 +182,7 @@ impl Backend {
         status: ContainerStatus,
         resources: ResourceConsumer,
         curr_time: f64,
+        prewarmed: bool,
     ) -> &Container {
         self.container_mgr.new_container(
             &mut self.host_mgr,
@@ -165,6 +192,7 @@ impl Backend {
             status,
             resources,
             curr_time,
+            prewarmed,
         )
     }
 
@@ -273,6 +301,9 @@ impl ServerlessSimulation {
         let idle_deploy_handler = Rc::new(RefCell::new(IdleDeployHandler::new(deployer.clone())));
         sim.add_handler("idle_deploy", idle_deploy_handler.clone());
         extra_handlers.push(idle_deploy_handler);
+        let simulation_end_handler = Rc::new(RefCell::new(SimulationEndHandler::new(backend.clone())));
+        sim.add_handler("simulation_end", simulation_end_handler.clone());
+        extra_handlers.push(simulation_end_handler);
         Self {
             backend,
             deployer,
@@ -298,6 +329,16 @@ impl ServerlessSimulation {
 
     pub fn send_invocation_request(&mut self, time: f64, request: InvocationRequest) {
         self.ctx.borrow_mut().sim_ctx.emit(request, "invocation_request", time);
+    }
+
+    // Simulation end event is useful in case
+    // you have a no-unloading policy and you
+    // want metrics like wasted resource time
+    // to be correct at the end of simulation
+    // (of course, you have to provide correct
+    // time)
+    pub fn set_simulation_end(&mut self, time: f64) {
+        self.ctx.borrow_mut().sim_ctx.emit((), "simulation_end", time);
     }
 
     pub fn step(&mut self) -> bool {

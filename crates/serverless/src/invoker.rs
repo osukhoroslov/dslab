@@ -93,10 +93,12 @@ impl Invoker {
         let mut backend = self.backend.borrow_mut();
         let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
         let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
-        let delta = time - container.last_change;
-        self.stats
-            .borrow_mut()
-            .update_wasted_resources(delta, &container.resources);
+        if container.status != ContainerStatus::Deploying {
+            let delta = time - container.last_change;
+            self.stats
+                .borrow_mut()
+                .update_wasted_resources(delta, &container.resources);
+        }
         container.last_change = time;
         container.status = ContainerStatus::Running;
         container.invocation = Some(inv_id);
@@ -143,10 +145,28 @@ impl InvokerCore for BasicInvoker {
         deployer: Rc<RefCell<Deployer>>,
         curr_time: f64,
     ) -> InvocationStatus {
-        let backend_ = backend.borrow();
-        let mut it = backend_.container_mgr.get_possible_containers(request.id);
-        if let Some(c) = it.next() {
-            InvocationStatus::Instant(c.id)
+        let mut backend_ = backend.borrow_mut();
+        let it = backend_.container_mgr.get_possible_containers(request.id);
+        let mut nearest: Option<u64> = None;
+        let mut wait = 0.0;
+        for c in it {
+            let delay = if c.status == ContainerStatus::Deploying {
+                c.deployment_time + c.last_change - curr_time
+            } else {
+                0.0
+            };
+            if nearest.is_none() || wait > delay {
+                wait = delay;
+                nearest = Some(c.id);
+            }
+        }
+        if let Some(id) = nearest {
+            if backend_.container_mgr.get_container(id).unwrap().status == ContainerStatus::Idle {
+                InvocationStatus::Instant(id)
+            } else {
+                backend_.container_mgr.steal_prewarm(id, request);
+                InvocationStatus::Delayed(wait)
+            }
         } else {
             drop(backend_);
             let d = deployer.borrow_mut().deploy(request.id, Some(request), curr_time);
