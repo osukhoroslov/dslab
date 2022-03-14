@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use serde::Serialize;
 use sugars::{rc, refcell};
 
 use compute::singlecore::*;
@@ -10,7 +11,7 @@ use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Start {}
 
 pub struct Task {

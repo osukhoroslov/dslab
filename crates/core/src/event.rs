@@ -1,16 +1,18 @@
 use std::cmp::Ordering;
-use std::fmt::Debug;
 
 use decorum::R64;
 use downcast_rs::{impl_downcast, Downcast};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde_type_name::type_name;
 
-pub trait EventData: Downcast + Debug {}
+pub trait EventData: Downcast + erased_serde::Serialize {}
 
 impl_downcast!(EventData);
 
-impl<T: Debug + 'static> EventData for T {}
+erased_serde::serialize_trait_object!(EventData);
 
-#[derive(Debug)]
+impl<T: Serialize + 'static> EventData for T {}
+
 pub struct Event {
     pub id: u64,
     pub time: R64,
@@ -36,5 +38,18 @@ impl Ord for Event {
 impl PartialOrd for Event {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Serialize for Event {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Event", 3)?;
+        state.serialize_field("type", type_name(&self.data).unwrap())?;
+        state.serialize_field("data", &self.data)?;
+        state.serialize_field("src", &self.src)?;
+        state.end()
     }
 }

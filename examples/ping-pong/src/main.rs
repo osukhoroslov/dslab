@@ -1,8 +1,10 @@
 mod process;
 
+use std::io::Write;
 use std::time::Instant;
 
 use clap::{arg, command};
+use env_logger::Builder;
 use sugars::{rc, refcell};
 
 use core::simulation::Simulation;
@@ -21,7 +23,10 @@ fn main() {
         )
         .get_matches();
     let iterations = matches.value_of_t("ITERATIONS").unwrap();
-    env_logger::init();
+
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 
     let mut sim = Simulation::new(123);
 

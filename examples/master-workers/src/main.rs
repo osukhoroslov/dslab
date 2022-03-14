@@ -4,9 +4,13 @@ mod storage;
 mod task;
 mod worker;
 
+use std::io::Write;
+use std::time::Instant;
+
+use clap::{arg, command};
+use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use std::time::Instant;
 use sugars::{rc, refcell};
 
 use compute::multicore::{Compute, CoresDependency};
@@ -21,16 +25,35 @@ use crate::task::TaskRequest;
 use crate::worker::Worker;
 
 fn main() {
-    env_logger::init();
+    // logger
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+
+    // CLI
+    let matches = command!()
+        .arg(
+            arg!([HOST_COUNT])
+                .help("Number of hosts")
+                .validator(|s| s.parse::<u64>())
+                .default_value("10"),
+        )
+        .arg(
+            arg!([TASK_COUNT])
+                .help("Number of tasks")
+                .validator(|s| s.parse::<u64>())
+                .default_value("100"),
+        )
+        .get_matches();
 
     // params
-    let host_count = 1000;
+    let host_count = matches.value_of_t("HOST_COUNT").unwrap();
     let local_latency = 0.0;
     let local_bandwidth = 10000;
     let network_latency = 0.5;
     let network_bandwidth = 1000;
     let storage_bandwidth = 2000;
-    let task_count = 10000;
+    let task_count = matches.value_of_t("TASK_COUNT").unwrap();
     let seed = 123;
 
     let mut sim = Simulation::new(seed);
@@ -56,7 +79,7 @@ fn main() {
 
     // create and start master on host0
     let host = &hosts[0];
-    let master_id = &format!("/{}/master", host);
+    let master_id = &format!("{}::master", host);
     let master = Master::new(network.clone(), sim.create_context(master_id));
     sim.add_handler(master_id, rc!(refcell!(master)));
     network.borrow_mut().set_location(master_id, host);
@@ -65,7 +88,7 @@ fn main() {
     // create and start workers
     for i in 0..host_count {
         let host = &hosts[i];
-        let compute_id = format!("/{}/compute", host);
+        let compute_id = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
             rand.gen_range(1..10),
             rand.gen_range(1..4),
@@ -73,9 +96,9 @@ fn main() {
             sim.create_context(&compute_id),
         )));
         sim.add_handler(compute_id, compute.clone());
-        let storage_id = format!("/{}/disk", host);
+        let storage_id = format!("{}::disk", host);
         let storage = Storage::new(storage_bandwidth, storage_bandwidth, sim.create_context(&storage_id));
-        let worker_id = &format!("/{}/worker", host);
+        let worker_id = &format!("{}::worker", host);
         let worker = Worker::new(
             compute,
             storage,

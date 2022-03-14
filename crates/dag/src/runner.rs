@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
+use serde::Serialize;
 use serde_json::json;
 
 use compute::multicore::*;
@@ -346,7 +347,7 @@ impl DAGRunner {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Start {}
 
 impl EventHandler for DAGRunner {

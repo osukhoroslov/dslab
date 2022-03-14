@@ -1,11 +1,13 @@
+use serde::Serialize;
+
 use core::context::SimulationContext;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DataReadCompleted {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DataWriteCompleted {
     pub id: u64,
 }

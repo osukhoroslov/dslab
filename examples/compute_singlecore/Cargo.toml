@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 core = { path = "../../crates/core" }
 compute = { path = "../../crates/compute" }
+serde = { version = "1.0", features = ["derive"] }
 sugars = "3.0.0"

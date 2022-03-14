@@ -2,6 +2,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use log::Level::Trace;
+use log::{log_enabled, trace};
+
 use crate::context::SimulationContext;
 use crate::event::Event;
 use crate::handler::EventHandler;
@@ -44,6 +47,15 @@ impl Simulation {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
             if let Some(handler) = self.handlers.get(&event.dest) {
+                if log_enabled!(Trace) {
+                    trace!(
+                        target: &event.dest,
+                        "[{:.3} EVENT {}] {}",
+                        self.sim_state.borrow().time(),
+                        event.dest,
+                        serde_json::to_string(&event).unwrap()
+                    );
+                }
                 handler.borrow_mut().on(event);
             } else {
                 self.undelivered_events.push(event);

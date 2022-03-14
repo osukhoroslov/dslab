@@ -3,12 +3,10 @@ use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use log::debug;
-
-use core::cast;
 use core::context::SimulationContext;
 use core::event::{Event, EventData};
 use core::handler::EventHandler;
+use core::{cast, log_debug};
 
 use crate::model::*;
 use crate::shared_bandwidth_model::SharedBandwidthNetwork;
@@ -79,12 +77,7 @@ impl Network {
     }
 
     pub fn send_event<T: EventData, S: AsRef<str>>(&mut self, data: T, src: S, dest: S) {
-        debug!(
-            "System time: {}, {} send Event to {}",
-            self.ctx.time(),
-            src.as_ref(),
-            dest.as_ref()
-        );
+        log_debug!(self.ctx, "{} sent event to {}", src.as_ref(), dest.as_ref());
 
         if !self.check_same_host(src.as_ref(), dest.as_ref()) {
             self.ctx
@@ -114,9 +107,9 @@ impl EventHandler for Network {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             MessageSend { message } => {
-                debug!(
-                    "System time: {}, {} send Message '{}' to {}",
-                    self.ctx.time(),
+                log_debug!(
+                    self.ctx,
+                    "{} sent message '{}' to {}",
                     message.src,
                     message.data,
                     message.dest.clone()
@@ -133,9 +126,9 @@ impl EventHandler for Network {
                 }
             }
             MessageReceive { message } => {
-                debug!(
-                    "System time: {}, {} received Message '{}' from {}",
-                    self.ctx.time(),
+                log_debug!(
+                    self.ctx,
+                    "{} received message '{}' from {}",
                     message.dest,
                     message.data,
                     message.src
@@ -148,9 +141,9 @@ impl EventHandler for Network {
                 );
             }
             DataTransferRequest { data } => {
-                debug!(
-                    "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
-                    self.ctx.time(),
+                log_debug!(
+                    self.ctx,
+                    "new data transfer {} from {} to {} of size {}",
                     data.id,
                     data.src,
                     data.dest,
@@ -178,9 +171,9 @@ impl EventHandler for Network {
                 }
             }
             DataReceive { data } => {
-                debug!(
-                    "System time: {}, Data ID: {}, From: {}, To {}, Size: {}",
-                    self.ctx.time(),
+                log_debug!(
+                    self.ctx,
+                    "completed data transfer {} from {} to {} of size {}",
                     data.id,
                     data.src,
                     data.dest,

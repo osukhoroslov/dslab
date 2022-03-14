@@ -1,6 +1,8 @@
+use serde::Serialize;
+
 use compute::multicore::CoresDependency;
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct TaskRequest {
     pub id: u64,
     pub flops: u64,
