@@ -17,7 +17,7 @@ pub struct Container {
     pub status: ContainerStatus,
     pub id: u64,
     pub deployment_time: f64,
-    pub func_id: u64,
+    pub group_id: u64,
     pub invocation: Option<u64>,
     pub finished_invocations: Counter,
     pub host_id: u64,
@@ -44,14 +44,14 @@ impl Hash for Container {
 #[derive(Default)]
 pub struct ContainerManager {
     container_ctr: Counter,
-    containers_by_func: HashMap<u64, HashSet<u64>>,
+    containers_by_group: HashMap<u64, HashSet<u64>>,
     containers: HashMap<u64, Container>,
     prewarm_stolen: HashMap<u64, InvocationRequest>,
 }
 
 impl ContainerManager {
     pub fn get_possible_containers(&self, id: u64) -> PossibleContainerIterator<'_> {
-        if let Some(set) = self.containers_by_func.get(&id) {
+        if let Some(set) = self.containers_by_group.get(&id) {
             return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.prewarm_stolen);
         }
         PossibleContainerIterator::new(None, &self.containers, &self.prewarm_stolen)
@@ -72,7 +72,7 @@ impl ContainerManager {
     pub fn new_container(
         &mut self,
         host_mgr: &mut HostManager,
-        func_id: u64,
+        group_id: u64,
         deployment_time: f64,
         host_id: u64,
         status: ContainerStatus,
@@ -81,15 +81,15 @@ impl ContainerManager {
         prewarmed: bool,
     ) -> &Container {
         let id = self.container_ctr.next();
-        if !self.containers_by_func.contains_key(&func_id) {
-            self.containers_by_func.insert(func_id, HashSet::new());
+        if !self.containers_by_group.contains_key(&group_id) {
+            self.containers_by_group.insert(group_id, HashSet::new());
         }
-        self.containers_by_func.get_mut(&func_id).unwrap().insert(id);
+        self.containers_by_group.get_mut(&group_id).unwrap().insert(id);
         let container = Container {
             status,
             id,
             deployment_time,
-            func_id,
+            group_id,
             invocation: None,
             finished_invocations: Default::default(),
             host_id,
@@ -105,8 +105,8 @@ impl ContainerManager {
 
     pub fn destroy_container(&mut self, id: u64) {
         if self.containers.contains_key(&id) {
-            let func_id = self.get_container(id).unwrap().func_id;
-            self.containers_by_func.get_mut(&func_id).unwrap().remove(&id);
+            let group_id = self.get_container(id).unwrap().group_id;
+            self.containers_by_group.get_mut(&group_id).unwrap().remove(&id);
             self.containers.remove(&id);
         }
     }

@@ -26,7 +26,7 @@ pub struct DeploymentResult {
 pub trait DeployerCore {
     fn deploy(
         &mut self,
-        id: u64,
+        group_id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
         invocation: Option<InvocationRequest>,
@@ -56,9 +56,9 @@ impl Deployer {
         }
     }
 
-    pub fn deploy(&mut self, id: u64, invocation: Option<InvocationRequest>, curr_time: f64) -> DeploymentResult {
+    pub fn deploy(&mut self, group_id: u64, invocation: Option<InvocationRequest>, curr_time: f64) -> DeploymentResult {
         self.core
-            .deploy(id, self.backend.clone(), self.ctx.clone(), invocation, curr_time)
+            .deploy(group_id, self.backend.clone(), self.ctx.clone(), invocation, curr_time)
     }
 }
 
@@ -69,20 +69,25 @@ pub struct BasicDeployer {}
 impl DeployerCore for BasicDeployer {
     fn deploy(
         &mut self,
-        id: u64,
+        group_id: u64,
         backend: Rc<RefCell<Backend>>,
         ctx: Rc<RefCell<ServerlessContext>>,
         invocation: Option<InvocationRequest>,
         curr_time: f64,
     ) -> DeploymentResult {
         let mut backend_ = backend.borrow_mut();
-        let resources = backend_.function_mgr.get_function(id).unwrap().get_resources().clone();
+        let resources = backend_
+            .function_mgr
+            .get_group(group_id)
+            .unwrap()
+            .get_resources()
+            .clone();
         let mut it = backend_.host_mgr.get_possible_hosts(&resources);
         if let Some(h) = it.next() {
             let host_id = h.id;
-            let delay = backend_.function_mgr.get_function(id).unwrap().get_deployment_time();
+            let delay = backend_.function_mgr.get_group(group_id).unwrap().get_deployment_time();
             let cont = backend_.new_container(
-                id,
+                group_id,
                 delay,
                 host_id,
                 ContainerStatus::Deploying,

@@ -6,7 +6,7 @@ use core::simulation::Simulation;
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::container::{Container, ContainerManager, ContainerStatus};
 use crate::deployer::{BasicDeployer, Deployer, DeployerCore};
-use crate::function::{Function, FunctionManager};
+use crate::function::{Function, FunctionManager, Group};
 use crate::host::HostManager;
 use crate::invoker::{BasicInvoker, InvocationManager, InvocationRequest, Invoker, InvokerCore};
 use crate::resource::{ResourceConsumer, ResourceProvider};
@@ -105,11 +105,12 @@ impl EventHandler for InvocationEndHandler {
                     if id0 == id {
                         let fin = 1 + container.end_invocation(event.time.into_inner());
                         let func_id = backend.invocation_mgr.get_invocation(id).unwrap().request.id;
-                        let func = backend.function_mgr.get_function(func_id).unwrap();
-                        let prewarm = backend.coldstart.borrow_mut().prewarm_window(func);
+                        let group_id = backend.function_mgr.get_function(func_id).unwrap().group_id;
+                        let group = backend.function_mgr.get_group(group_id).unwrap();
+                        let prewarm = backend.coldstart.borrow_mut().prewarm_window(group);
                         if prewarm != Some(0.) {
                             if let Some(prewarm) = prewarm {
-                                self.ctx.borrow_mut().new_idle_deploy_event(func_id, prewarm);
+                                self.ctx.borrow_mut().new_idle_deploy_event(group_id, prewarm);
                             }
                             let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
                             let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
@@ -176,7 +177,7 @@ pub struct Backend {
 impl Backend {
     pub fn new_container(
         &mut self,
-        func_id: u64,
+        group_id: u64,
         deployment_time: f64,
         host_id: u64,
         status: ContainerStatus,
@@ -186,7 +187,7 @@ impl Backend {
     ) -> &Container {
         self.container_mgr.new_container(
             &mut self.host_mgr,
-            func_id,
+            group_id,
             deployment_time,
             host_id,
             status,
@@ -325,6 +326,14 @@ impl ServerlessSimulation {
 
     pub fn new_function(&mut self, f: Function) -> u64 {
         self.backend.borrow_mut().function_mgr.new_function(f)
+    }
+
+    pub fn new_function_with_group(&mut self, g: Group) -> u64 {
+        self.backend.borrow_mut().function_mgr.new_function_with_group(g)
+    }
+
+    pub fn new_group(&mut self, g: Group) -> u64 {
+        self.backend.borrow_mut().function_mgr.new_group(g)
     }
 
     pub fn send_invocation_request(&mut self, time: f64, request: InvocationRequest) {

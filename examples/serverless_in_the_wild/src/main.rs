@@ -6,7 +6,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 
 use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use serverless::function::Function;
+use serverless::function::{Function, Group};
 use serverless::invoker::InvocationRequest;
 use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
 use serverless::simulation::ServerlessSimulation;
@@ -28,11 +28,16 @@ struct TraceRecord {
 
 #[derive(Default, Clone, Copy)]
 struct FunctionRecord {
+    pub group_id: u64,
+}
+
+#[derive(Default, Clone, Copy)]
+struct GroupRecord {
     pub mem: u64,
     pub cold_start: f64,
 }
 
-type Trace = (Vec<TraceRecord>, Vec<FunctionRecord>);
+type Trace = (Vec<TraceRecord>, Vec<FunctionRecord>, Vec<GroupRecord>);
 
 fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
     let p = gen.gen_range(0.0..1.0);
@@ -45,6 +50,24 @@ fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
         }
     }
     vals[vals.len() - 1]
+}
+
+fn app_id(id: &str) -> String {
+    let mut id0 = String::new();
+    let mut und = false;
+    for c in id.chars() {
+        if c == '_' {
+            if und {
+                break;
+            } else {
+                id0.push(c);
+                und = true;
+            }
+        } else {
+            id0.push(c);
+        }
+    }
+    id0
 }
 
 fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
@@ -80,7 +103,8 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             panic!("error while reading trace dir: {}", e);
         }
     }
-    let mut fn_data = HashMap::<String, (usize, f64, u64)>::new();
+    let mut app_data = HashMap::<String, (usize, f64, u64)>::new();
+    let mut fn_id = HashMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mem_percent = vec![0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99, 1.];
     let limit = invocations_limit / parts.len();
@@ -95,6 +119,8 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
         let mut dur_file = ReaderBuilder::new()
             .from_path(dur.get(part).unwrap().as_path())
             .unwrap();
+        let mut app_funcs = HashMap::<String, HashSet<String>>::new();
+        let mut app_popularity = HashMap::<String, u64>::new();
         let mut dur_dist = HashMap::<String, Vec<f64>>::new();
         for dur_rec in dur_file.records() {
             let record = dur_rec.unwrap();
@@ -118,10 +144,17 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             id.push_str(&record[1]);
             id.push('_');
             id.push_str(&record[2]);
+            let app = app_id(&id);
+            if !app_funcs.contains_key(&app) {
+                app_funcs.insert(app.clone(), HashSet::new());
+                app_popularity.insert(app.clone(), 0);
+            }
+            app_funcs.get_mut(&app).unwrap().insert(id.clone());
             let mut cnt = Vec::with_capacity(1440);
             for i in 0..1440 {
                 cnt.push(usize::from_str(&record[4 + i]).unwrap());
             }
+            *app_popularity.get_mut(&app).unwrap() += cnt.iter().sum::<usize>() as u64;
             inv_cnt.insert(id, cnt);
         }
         let mut mem_dist = HashMap::<String, Vec<usize>>::new();
@@ -137,64 +170,62 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             }
             mem_dist.insert(id, perc);
         }
+        let mut apps = Vec::<(String, u64)>::from_iter(app_popularity.iter().map(|x| (x.0.to_string(), *x.1)));
+        apps.sort_by_key(|x: &(String, u64)| -> u64 { x.1 });
+        apps.reverse();
         let day = usize::from_str(&part[1..]).unwrap() - 1;
-        for (id, dur_vec) in dur_dist.iter() {
+        for (app, _) in apps.drain(..) {
             if now == limit {
                 break;
             }
-            if let Some(inv_vec) = inv_cnt.get(id) {
-                let mut id0 = String::new();
-                let mut und = false;
-                for c in id.chars() {
-                    if c == '_' {
-                        if und {
-                            break;
-                        } else {
-                            id0.push(c);
-                            und = true;
-                        }
-                    } else {
-                        id0.push(c);
-                    }
+            let mem_vec = mem_dist.get(&app).unwrap();
+            let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
+            app_data.insert(app.clone(), (app_data.len(), 10.0, mem as u64));
+            for func in app_funcs.get_mut(&app).unwrap().drain() {
+                if now == limit {
+                    break;
                 }
-                if let Some(mem_vec) = mem_dist.get(&id0) {
-                    if !fn_data.contains_key(id) {
-                        let idx = fn_data.len();
-                        let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
-                        fn_data.insert(id.clone(), (idx, 10.0, mem as u64));
-                    }
-                    let idx = fn_data.get(id).unwrap().0;
-                    for i in 0..1440 {
-                        for inv in 0..inv_vec[i] {
-                            let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
-                            let record = TraceRecord {
-                                id: idx,
-                                time: second,
-                                dur: gen_sample(&mut gen, &dur_percent, dur_vec),
-                            };
-                            now += 1;
-                            trace.push(record);
-                            if now == limit {
-                                break;
-                            }
-                        }
+                let curr_id = fn_id.len();
+                fn_id.insert(func.clone(), curr_id);
+                let dur_vec = dur_dist.get(&func).unwrap();
+                let inv_vec = inv_cnt.get(&func).unwrap();
+                for i in 0..1440 {
+                    for inv in 0..inv_vec[i] {
+                        let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
+                        let record = TraceRecord {
+                            id: curr_id,
+                            time: second,
+                            dur: gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001,
+                        };
+                        now += 1;
+                        trace.push(record);
                         if now == limit {
                             break;
                         }
                     }
+                    if now == limit {
+                        break;
+                    }
                 }
             }
         }
     }
-    let mut funcs: Vec<FunctionRecord> = vec![Default::default(); fn_data.len()];
-    for (_, data) in fn_data.iter() {
-        funcs[data.0] = FunctionRecord {
+    let mut groups: Vec<GroupRecord> = vec![Default::default(); app_data.len()];
+    let mut funcs: Vec<FunctionRecord> = vec![Default::default(); fn_id.len()];
+    for (_, data) in app_data.iter() {
+        groups[data.0] = GroupRecord {
             mem: data.2,
             cold_start: data.1,
-        }
+        };
+    }
+    for (name, id) in fn_id.iter() {
+        let app = app_id(name);
+        funcs[*id] = FunctionRecord {
+            group_id: app_data.get(&app).unwrap().0 as u64,
+        };
     }
     trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.partial_cmp(&y.time).unwrap());
-    (trace, funcs)
+    (trace, funcs, groups)
 }
 
 fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) -> Stats {
@@ -202,22 +233,26 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     for req in trace.0.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
+    let group = HashMap::<String, u64>::new();
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim, None, None, policy);
-    for i in 0..600 {
+    for _ in 0..1000 {
         serverless.new_host(ResourceProvider::new(HashMap::<String, Resource>::from([(
             "mem".to_string(),
-            Resource::new("mem".to_string(), 4096),
+            Resource::new("mem".to_string(), 4096 * 4),
         )])));
     }
-    for func in trace.1.iter() {
-        serverless.new_function(Function::new(
-            func.cold_start,
+    for group in trace.2.iter() {
+        serverless.new_group(Group::new(
+            group.cold_start,
             ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
                 "mem".to_string(),
-                ResourceRequirement::new("mem".to_string(), func.mem),
+                ResourceRequirement::new("mem".to_string(), group.mem),
             )])),
         ));
+    }
+    for func in trace.1.iter() {
+        serverless.new_function(Function::new(func.group_id));
     }
     for req in trace.0.iter() {
         serverless.send_invocation_request(
@@ -249,7 +284,7 @@ fn describe(stats: Stats, name: &str) {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let trace = process_azure_trace(Path::new(&args[1]), 100000);
-    println!("trace processed successfully!");
+    println!("trace processed successfully, {} invocations", trace.0.len());
     describe(test_policy(None, &trace), "No cold start policy");
     describe(
         test_policy(

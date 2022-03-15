@@ -146,7 +146,8 @@ impl InvokerCore for BasicInvoker {
         curr_time: f64,
     ) -> InvocationStatus {
         let mut backend_ = backend.borrow_mut();
-        let it = backend_.container_mgr.get_possible_containers(request.id);
+        let group_id = backend_.function_mgr.get_function(request.id).unwrap().group_id;
+        let it = backend_.container_mgr.get_possible_containers(group_id);
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
         for c in it {
@@ -169,7 +170,7 @@ impl InvokerCore for BasicInvoker {
             }
         } else {
             drop(backend_);
-            let d = deployer.borrow_mut().deploy(request.id, Some(request), curr_time);
+            let d = deployer.borrow_mut().deploy(group_id, Some(request), curr_time);
             if d.status == DeploymentStatus::Rejected {
                 return InvocationStatus::Rejected;
             }

@@ -1,6 +1,6 @@
 use core::simulation::Simulation;
 
-use serverless::function::Function;
+use serverless::function::Group;
 use serverless::invoker::InvocationRequest;
 use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
 use serverless::simulation::ServerlessSimulation;
@@ -18,14 +18,14 @@ fn main() {
             Resource::new("mem".to_string(), 2),
         )])));
     }
-    let fast = serverless.new_function(Function::new(
+    let fast = serverless.new_function_with_group(Group::new(
         1.,
         ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
             "mem".to_string(),
             ResourceRequirement::new("mem".to_string(), 1),
         )])),
     ));
-    let slow = serverless.new_function(Function::new(
+    let slow = serverless.new_function_with_group(Group::new(
         2.,
         ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
             "mem".to_string(),
