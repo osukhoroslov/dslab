@@ -33,24 +33,24 @@ fn main() {
         )])),
     ));
     serverless.send_invocation_request(
-        0.,
         InvocationRequest {
             id: fast,
             duration: 1.0,
+            time: 0.,
         },
     );
     serverless.send_invocation_request(
-        0.,
         InvocationRequest {
             id: slow,
             duration: 1.0,
+            time: 0.,
         },
     );
     serverless.send_invocation_request(
-        3.1,
         InvocationRequest {
             id: slow,
             duration: 1.0,
+            time: 3.1,
         },
     );
     serverless.step_until_no_events();

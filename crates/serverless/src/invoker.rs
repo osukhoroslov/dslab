@@ -22,12 +22,14 @@ pub enum InvocationStatus {
 pub struct InvocationRequest {
     pub id: u64,
     pub duration: f64,
+    pub time: f64,
 }
 
 #[derive(Copy, Clone)]
 pub struct Invocation {
     pub request: InvocationRequest,
     pub container_id: u64,
+    pub finished: Option<f64>,
 }
 
 #[derive(Default)]
@@ -39,13 +41,21 @@ pub struct InvocationManager {
 impl InvocationManager {
     pub fn new_invocation(&mut self, request: InvocationRequest, container_id: u64) -> u64 {
         let id = self.invocation_ctr.next();
-        let invocation = Invocation { request, container_id };
+        let invocation = Invocation {
+            request,
+            container_id,
+            finished: None,
+        };
         self.invocations.insert(id, invocation);
         id
     }
 
     pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {
         self.invocations.get(&id)
+    }
+
+    pub fn get_invocation_mut(&mut self, id: u64) -> Option<&mut Invocation> {
+        self.invocations.get_mut(&id)
     }
 }
 

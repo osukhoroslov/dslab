@@ -7,6 +7,7 @@ use std::collections::HashMap;
 // Functions from the same group can be executed
 // on the same container (sequentially).
 pub struct Group {
+    pub id: u64,
     container_deployment_time: f64,
     container_resources: ResourceConsumer,
 }
@@ -14,6 +15,7 @@ pub struct Group {
 impl Group {
     pub fn new(container_deployment_time: f64, container_resources: ResourceConsumer) -> Self {
         Self {
+            id: u64::MAX,
             container_deployment_time,
             container_resources,
         }
@@ -66,8 +68,9 @@ impl FunctionManager {
         self.new_function(Function::new(group_id))
     }
 
-    pub fn new_group(&mut self, g: Group) -> u64 {
+    pub fn new_group(&mut self, mut g: Group) -> u64 {
         let id = self.group_ctr.next();
+        g.id = id;
         self.groups.insert(id, g);
         id
     }

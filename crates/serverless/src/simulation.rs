@@ -98,24 +98,28 @@ impl EventHandler for InvocationEndHandler {
         if event.data.is::<u64>() {
             let id = *event.data.downcast::<u64>().unwrap();
             let mut backend = self.backend.borrow_mut();
-            if let Some(invocation) = backend.invocation_mgr.get_invocation(id) {
-                let cont_id = invocation.container_id;
-                let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
-                if let Some(id0) = container.invocation {
-                    if id0 == id {
-                        let fin = 1 + container.end_invocation(event.time.into_inner());
-                        let func_id = backend.invocation_mgr.get_invocation(id).unwrap().request.id;
-                        let group_id = backend.function_mgr.get_function(func_id).unwrap().group_id;
-                        let group = backend.function_mgr.get_group(group_id).unwrap();
-                        let prewarm = backend.coldstart.borrow_mut().prewarm_window(group);
-                        if prewarm != Some(0.) {
-                            if let Some(prewarm) = prewarm {
-                                self.ctx.borrow_mut().new_idle_deploy_event(group_id, prewarm);
-                            }
-                            let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
-                            let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
-                            self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
+            backend.invocation_mgr.get_invocation_mut(id).unwrap().finished = Some(event.time.into_inner());
+            let invocation = backend.invocation_mgr.get_invocation(id).unwrap();
+            let func_id = invocation.request.id;
+            let group_id = backend.function_mgr.get_function(func_id).unwrap().group_id;
+            backend
+                .coldstart
+                .borrow_mut()
+                .update(invocation, backend.function_mgr.get_group(group_id).unwrap());
+            let cont_id = invocation.container_id;
+            let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
+            if let Some(id0) = container.invocation {
+                if id0 == id {
+                    let fin = 1 + container.end_invocation(event.time.into_inner());
+                    let group = backend.function_mgr.get_group(group_id).unwrap();
+                    let prewarm = backend.coldstart.borrow_mut().prewarm_window(group);
+                    if prewarm != Some(0.) {
+                        if let Some(prewarm) = prewarm {
+                            self.ctx.borrow_mut().new_idle_deploy_event(group_id, prewarm);
                         }
+                        let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
+                        let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
+                        self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
                     }
                 }
             }
@@ -336,7 +340,8 @@ impl ServerlessSimulation {
         self.backend.borrow_mut().function_mgr.new_group(g)
     }
 
-    pub fn send_invocation_request(&mut self, time: f64, request: InvocationRequest) {
+    pub fn send_invocation_request(&mut self, request: InvocationRequest) {
+        let time = request.time;
         self.ctx.borrow_mut().sim_ctx.emit(request, "invocation_request", time);
     }
 

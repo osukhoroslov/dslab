@@ -12,6 +12,8 @@ use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, Resourc
 use serverless::simulation::ServerlessSimulation;
 use serverless::stats::Stats;
 
+use serverless_extra::hybrid_histogram::HybridHistogramPolicy;
+
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{read_dir, File};
@@ -255,13 +257,11 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
         serverless.new_function(Function::new(func.group_id));
     }
     for req in trace.0.iter() {
-        serverless.send_invocation_request(
-            req.time,
-            InvocationRequest {
-                id: req.id as u64,
-                duration: req.dur,
-            },
-        );
+        serverless.send_invocation_request(InvocationRequest {
+            id: req.id as u64,
+            duration: req.dur,
+            time: req.time,
+        });
     }
     serverless.set_simulation_end(time_range);
     serverless.step_until_no_events();
@@ -285,7 +285,6 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let trace = process_azure_trace(Path::new(&args[1]), 100000);
     println!("trace processed successfully, {} invocations", trace.0.len());
-    describe(test_policy(None, &trace), "No cold start policy");
     describe(
         test_policy(
             Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, None)))),
@@ -299,5 +298,14 @@ fn main() {
             &trace,
         ),
         "No unloading",
+    );
+    describe(
+        test_policy(
+            Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
+                3600.0, 60.0, 0.5, 0.5, 0.15, 0.1,
+            )))),
+            &trace,
+        ),
+        "Hybrid Histogram policy",
     );
 }
