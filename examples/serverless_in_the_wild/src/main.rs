@@ -175,20 +175,27 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
         let mut apps = Vec::<(String, u64)>::from_iter(app_popularity.iter().map(|x| (x.0.to_string(), *x.1)));
         apps.sort_by_key(|x: &(String, u64)| -> u64 { x.1 });
         apps.reverse();
+        let mid = apps.len() / 2 - 40;
         let day = usize::from_str(&part[1..]).unwrap() - 1;
-        for (app, _) in apps.drain(..) {
+        for (app, _) in apps.drain(mid..) {
             if now == limit {
                 break;
             }
+            if !mem_dist.contains_key(&app) {
+                continue;
+            }
             let mem_vec = mem_dist.get(&app).unwrap();
             let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
-            app_data.insert(app.clone(), (app_data.len(), 10.0, mem as u64));
+            app_data.insert(app.clone(), (app_data.len(), 0.0, mem as u64));
             for func in app_funcs.get_mut(&app).unwrap().drain() {
                 if now == limit {
                     break;
                 }
                 let curr_id = fn_id.len();
                 fn_id.insert(func.clone(), curr_id);
+                if !dur_dist.contains_key(&func) {
+                    continue;
+                }
                 let dur_vec = dur_dist.get(&func).unwrap();
                 let inv_vec = inv_cnt.get(&func).unwrap();
                 for i in 0..1440 {
@@ -246,6 +253,7 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     }
     for group in trace.2.iter() {
         serverless.new_group(Group::new(
+            16,
             group.cold_start,
             ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
                 "mem".to_string(),
@@ -283,18 +291,25 @@ fn describe(stats: Stats, name: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let trace = process_azure_trace(Path::new(&args[1]), 100000);
+    let trace = process_azure_trace(Path::new(&args[1]), 200000);
     println!("trace processed successfully, {} invocations", trace.0.len());
     describe(
         test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, None)))),
+            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)))),
             &trace,
         ),
         "20-minute keepalive",
     );
     describe(
         test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, Some(0.0))))),
+            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)))),
+            &trace,
+        ),
+        "120-minute keepalive",
+    );
+    describe(
+        test_policy(
+            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(1000000000.0, 0.0)))),
             &trace,
         ),
         "No unloading",
@@ -302,7 +317,12 @@ fn main() {
     describe(
         test_policy(
             Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
-                3600.0, 60.0, 0.5, 0.5, 0.15, 0.1,
+                3600.0 * 4.0,
+                60.0,
+                2.0,
+                0.5,
+                0.15,
+                0.1,
             )))),
             &trace,
         ),

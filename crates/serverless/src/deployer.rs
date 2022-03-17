@@ -95,10 +95,14 @@ impl DeployerCore for BasicDeployer {
                 curr_time,
                 invocation.is_none(),
             );
-            ctx.borrow_mut().new_deploy_event(cont.id, delay, invocation);
+            let cont_id = cont.id;
+            if let Some(request) = invocation {
+                backend_.container_mgr.steal_prewarm(cont_id, request);
+            }
+            ctx.borrow_mut().new_deploy_event(cont_id, delay);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,
-                container_id: cont.id,
+                container_id: cont_id,
                 deployment_time: delay,
             }
         } else {

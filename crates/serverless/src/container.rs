@@ -1,3 +1,4 @@
+use crate::function::Group;
 use crate::host::HostManager;
 use crate::invoker::InvocationRequest;
 use crate::resource::ResourceConsumer;
@@ -18,7 +19,7 @@ pub struct Container {
     pub id: u64,
     pub deployment_time: f64,
     pub group_id: u64,
-    pub invocation: Option<u64>,
+    pub invocations: HashSet<u64>,
     pub finished_invocations: Counter,
     pub host_id: u64,
     pub resources: ResourceConsumer,
@@ -27,10 +28,12 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn end_invocation(&mut self, curr_time: f64) -> u64 {
+    pub fn end_invocation(&mut self, id: u64, curr_time: f64) -> u64 {
         self.last_change = curr_time;
-        self.invocation = None;
-        self.status = ContainerStatus::Idle;
+        self.invocations.remove(&id);
+        if self.invocations.is_empty() {
+            self.status = ContainerStatus::Idle;
+        }
         self.finished_invocations.next()
     }
 }
@@ -46,15 +49,17 @@ pub struct ContainerManager {
     container_ctr: Counter,
     containers_by_group: HashMap<u64, HashSet<u64>>,
     containers: HashMap<u64, Container>,
-    prewarm_stolen: HashMap<u64, InvocationRequest>,
+    prewarm_stolen: HashMap<u64, Vec<InvocationRequest>>,
 }
 
 impl ContainerManager {
-    pub fn get_possible_containers(&self, id: u64) -> PossibleContainerIterator<'_> {
+    pub fn get_possible_containers(&self, group: &Group) -> PossibleContainerIterator<'_> {
+        let id = group.id;
+        let limit = group.get_concurrent_invocations();
         if let Some(set) = self.containers_by_group.get(&id) {
-            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.prewarm_stolen);
+            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.prewarm_stolen, limit);
         }
-        PossibleContainerIterator::new(None, &self.containers, &self.prewarm_stolen)
+        PossibleContainerIterator::new(None, &self.containers, &self.prewarm_stolen, limit)
     }
 
     pub fn get_container(&self, id: u64) -> Option<&Container> {
@@ -90,7 +95,7 @@ impl ContainerManager {
             id,
             deployment_time,
             group_id,
-            invocation: None,
+            invocations: Default::default(),
             finished_invocations: Default::default(),
             host_id,
             resources,
@@ -111,31 +116,38 @@ impl ContainerManager {
         }
     }
 
-    pub fn get_stolen_prewarm(&self, id: u64) -> Option<InvocationRequest> {
-        self.prewarm_stolen.get(&id).cloned()
+    pub fn get_stolen_prewarm(&self, id: u64) -> Option<&Vec<InvocationRequest>> {
+        self.prewarm_stolen.get(&id)
     }
 
     pub fn steal_prewarm(&mut self, id: u64, request: InvocationRequest) {
-        self.prewarm_stolen.insert(id, request);
+        if let Some(stolen) = self.prewarm_stolen.get_mut(&id) {
+            stolen.push(request);
+        } else {
+            self.prewarm_stolen.insert(id, vec![request]);
+        }
     }
 }
 
 pub struct PossibleContainerIterator<'a> {
     inner: Option<std::collections::hash_set::Iter<'a, u64>>,
     containers: &'a HashMap<u64, Container>,
-    stolen: &'a HashMap<u64, InvocationRequest>,
+    stolen: &'a HashMap<u64, Vec<InvocationRequest>>,
+    limit: usize,
 }
 
 impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
         inner: Option<std::collections::hash_set::Iter<'a, u64>>,
         containers: &'a HashMap<u64, Container>,
-        stolen: &'a HashMap<u64, InvocationRequest>,
+        stolen: &'a HashMap<u64, Vec<InvocationRequest>>,
+        limit: usize,
     ) -> Self {
         Self {
             inner,
             containers,
             stolen,
+            limit,
         }
     }
 }
@@ -146,10 +158,13 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
         if let Some(inner) = self.inner.as_mut() {
             while let Some(id) = inner.next() {
                 let c = self.containers.get(&id).unwrap();
-                if c.status == ContainerStatus::Idle {
+                if c.status != ContainerStatus::Deploying && c.invocations.len() < self.limit {
                     return Some(c);
                 }
-                if c.status == ContainerStatus::Deploying && c.prewarmed && !self.stolen.contains_key(&id) {
+                if c.status == ContainerStatus::Deploying
+                    && c.prewarmed
+                    && (!self.stolen.contains_key(&id) || self.stolen.get(&id).unwrap().len() < self.limit)
+                {
                     return Some(c);
                 }
             }

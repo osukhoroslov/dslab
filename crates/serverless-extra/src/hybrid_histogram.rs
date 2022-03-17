@@ -1,4 +1,4 @@
-use crate::arima_extra::arima_forecast;
+use crate::arima_extra::{arima_forecast, autofit};
 
 use rand::prelude::*;
 
@@ -36,13 +36,19 @@ impl GroupData {
     }
 
     pub fn arima(&self) -> f64 {
-        let coeff = arima::estimate::fit(&self.raw, 5, 1, 5).unwrap();
+        if self.raw.len() == 1 {
+            return self.raw[0];
+        }
+        //println!("called arima with {} samples", self.raw.len());
+        //arima sucks
+        //pray it doesn't crash (it can and it will)
+        let (coeff, ar_order, _) = autofit(&self.raw, 1).unwrap();
         let mut ar = Vec::new();
         let mut ma = Vec::new();
-        for i in 1..6 {
+        for i in 1..ar_order + 1 {
             ar.push(coeff[i]);
         }
-        for i in 6..coeff.len() {
+        for i in ar_order + 1..coeff.len() {
             ma.push(coeff[i]);
         }
         arima_forecast(
@@ -140,12 +146,12 @@ impl HybridHistogramPolicy {
         let cv_thr = self.cv_thr;
         let oob_thr = self.oob_thr;
         let data = self.get_group(group_id);
-        if data.cv < cv_thr {
-            Pattern::Uncertain
-        } else if data.oob_rate() < oob_thr {
-            Pattern::Certain
-        } else {
+        if data.oob_rate() >= oob_thr {
             Pattern::OOB
+        } else if data.cv < cv_thr {
+            Pattern::Uncertain
+        } else {
+            Pattern::Certain
         }
     }
 
@@ -169,21 +175,21 @@ impl ColdStartPolicy for HybridHistogramPolicy {
         match self.describe_pattern(container.group_id) {
             Pattern::Uncertain => self.range,
             Pattern::Certain => {
-                let tail = self.get_group(container.group_id).get_tail();
+                let tail = 1 + self.get_group(container.group_id).get_tail();
                 (tail as f64) * self.bin_len * (1. + self.hist_margin)
             }
             Pattern::OOB => self.get_group(container.group_id).arima() * self.arima_margin * 2.,
         }
     }
 
-    fn prewarm_window(&mut self, group: &Group) -> Option<f64> {
+    fn prewarm_window(&mut self, group: &Group) -> f64 {
         match self.describe_pattern(group.id) {
-            Pattern::Uncertain => None,
+            Pattern::Uncertain => 0.0,
             Pattern::Certain => {
                 let head = self.get_group(group.id).get_head();
-                Some((head as f64) * self.bin_len * (1. - self.hist_margin))
+                (head as f64) * self.bin_len * (1. - self.hist_margin)
             }
-            Pattern::OOB => Some(self.get_group(group.id).arima() * (1. - self.arima_margin)),
+            Pattern::OOB => self.get_group(group.id).arima() * (1. - self.arima_margin),
         }
     }
 

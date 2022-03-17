@@ -33,19 +33,22 @@ impl ContainerStartHandler {
 
 impl EventHandler for ContainerStartHandler {
     fn on(&mut self, event: Event) {
-        if event.data.is::<(u64, Option<InvocationRequest>)>() {
-            let (id, mut invocation) = *event.data.downcast::<(u64, Option<InvocationRequest>)>().unwrap();
+        if event.data.is::<u64>() {
+            let id = *event.data.downcast::<u64>().unwrap();
+            let mut invocations = Vec::new();
             let mut backend = self.backend.borrow_mut();
             if let Some(stolen) = backend.container_mgr.get_stolen_prewarm(id) {
-                invocation = Some(stolen);
+                invocations = stolen.clone();
             }
             let container = backend.container_mgr.get_container_mut(id).unwrap();
-            if let Some(invocation) = invocation {
+            if !invocations.is_empty() {
                 let cont_id = container.id;
                 drop(backend);
-                self.invoker
-                    .borrow_mut()
-                    .start_invocation(cont_id, invocation, event.time.into_inner());
+                for invocation in invocations {
+                    self.invoker
+                        .borrow_mut()
+                        .start_invocation(cont_id, invocation, event.time.into_inner());
+                }
             } else {
                 container.status = ContainerStatus::Idle;
                 let immut_container = backend.container_mgr.get_container(id).unwrap();
@@ -72,11 +75,12 @@ impl EventHandler for ContainerEndHandler {
         if event.data.is::<(u64, u64)>() {
             let (cont_id, ctr) = *event.data.downcast::<(u64, u64)>().unwrap();
             let mut backend = self.backend.borrow_mut();
-            let cont = backend.container_mgr.get_container(cont_id).unwrap();
-            if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr {
-                let delta = event.time.into_inner() - cont.last_change;
-                self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
-                backend.delete_container(cont_id);
+            if let Some(cont) = backend.container_mgr.get_container(cont_id) {
+                if cont.status == ContainerStatus::Idle && cont.finished_invocations.curr() == ctr {
+                    let delta = event.time.into_inner() - cont.last_change;
+                    self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
+                    backend.delete_container(cont_id);
+                }
             }
         }
     }
@@ -108,20 +112,16 @@ impl EventHandler for InvocationEndHandler {
                 .update(invocation, backend.function_mgr.get_group(group_id).unwrap());
             let cont_id = invocation.container_id;
             let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
-            if let Some(id0) = container.invocation {
-                if id0 == id {
-                    let fin = 1 + container.end_invocation(event.time.into_inner());
-                    let group = backend.function_mgr.get_group(group_id).unwrap();
-                    let prewarm = backend.coldstart.borrow_mut().prewarm_window(group);
-                    if prewarm != Some(0.) {
-                        if let Some(prewarm) = prewarm {
-                            self.ctx.borrow_mut().new_idle_deploy_event(group_id, prewarm);
-                        }
-                        let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
-                        let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
-                        self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
-                    }
-                }
+            let fin = 1 + container.end_invocation(id, event.time.into_inner());
+            let group = backend.function_mgr.get_group(group_id).unwrap();
+            let prewarm = backend.coldstart.borrow_mut().prewarm_window(group);
+            if prewarm != 0. {
+                self.ctx.borrow_mut().new_idle_deploy_event(group_id, prewarm);
+                self.ctx.borrow_mut().new_container_end_event(cont_id, fin, 0.0);
+            } else {
+                let immut_container = backend.container_mgr.get_container(cont_id).unwrap();
+                let keepalive = backend.coldstart.borrow_mut().keepalive_window(immut_container);
+                self.ctx.borrow_mut().new_container_end_event(cont_id, fin, keepalive);
             }
         }
     }
@@ -217,8 +217,8 @@ impl ServerlessContext {
         Self { sim_ctx }
     }
 
-    pub fn new_deploy_event(&mut self, id: u64, delay: f64, invocation: Option<InvocationRequest>) {
-        self.sim_ctx.emit((id, invocation), "container_started", delay);
+    pub fn new_deploy_event(&mut self, id: u64, delay: f64) {
+        self.sim_ctx.emit(id, "container_started", delay);
     }
 
     pub fn new_container_end_event(&mut self, id: u64, ctr: u64, delay: f64) {
@@ -258,7 +258,7 @@ impl ServerlessSimulation {
         let coldstart = if let Some(cs) = coldstart_policy {
             cs
         } else {
-            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, None)))
+            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, 0.0)))
         };
         let stats = Rc::new(RefCell::new(Default::default()));
         let backend = Rc::new(RefCell::new(Backend {

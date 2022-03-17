@@ -103,7 +103,7 @@ impl Invoker {
         let mut backend = self.backend.borrow_mut();
         let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
         let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
-        if container.status != ContainerStatus::Deploying {
+        if container.status == ContainerStatus::Idle {
             let delta = time - container.last_change;
             self.stats
                 .borrow_mut()
@@ -111,7 +111,7 @@ impl Invoker {
         }
         container.last_change = time;
         container.status = ContainerStatus::Running;
-        container.invocation = Some(inv_id);
+        container.invocations.insert(inv_id);
         self.ctx.borrow_mut().new_invocation_end_event(inv_id, request.duration);
     }
 }
@@ -157,7 +157,8 @@ impl InvokerCore for BasicInvoker {
     ) -> InvocationStatus {
         let mut backend_ = backend.borrow_mut();
         let group_id = backend_.function_mgr.get_function(request.id).unwrap().group_id;
-        let it = backend_.container_mgr.get_possible_containers(group_id);
+        let group = backend_.function_mgr.get_group(group_id).unwrap();
+        let it = backend_.container_mgr.get_possible_containers(group);
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
         for c in it {

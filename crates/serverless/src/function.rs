@@ -5,20 +5,31 @@ use std::collections::HashMap;
 
 // A group shares a common container image.
 // Functions from the same group can be executed
-// on the same container (sequentially).
+// on the same container (limited by concurrent_invocations
+// field).
 pub struct Group {
     pub id: u64,
+    concurrent_invocations: usize,
     container_deployment_time: f64,
     container_resources: ResourceConsumer,
 }
 
 impl Group {
-    pub fn new(container_deployment_time: f64, container_resources: ResourceConsumer) -> Self {
+    pub fn new(
+        concurrent_invocations: usize,
+        container_deployment_time: f64,
+        container_resources: ResourceConsumer,
+    ) -> Self {
         Self {
             id: u64::MAX,
+            concurrent_invocations,
             container_deployment_time,
             container_resources,
         }
+    }
+
+    pub fn get_concurrent_invocations(&self) -> usize {
+        self.concurrent_invocations
     }
 
     pub fn get_deployment_time(&self) -> f64 {

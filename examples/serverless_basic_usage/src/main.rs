@@ -19,6 +19,7 @@ fn main() {
         )])));
     }
     let fast = serverless.new_function_with_group(Group::new(
+        1,
         1.,
         ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
             "mem".to_string(),
@@ -26,33 +27,28 @@ fn main() {
         )])),
     ));
     let slow = serverless.new_function_with_group(Group::new(
+        1,
         2.,
         ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
             "mem".to_string(),
             ResourceRequirement::new("mem".to_string(), 2),
         )])),
     ));
-    serverless.send_invocation_request(
-        InvocationRequest {
-            id: fast,
-            duration: 1.0,
-            time: 0.,
-        },
-    );
-    serverless.send_invocation_request(
-        InvocationRequest {
-            id: slow,
-            duration: 1.0,
-            time: 0.,
-        },
-    );
-    serverless.send_invocation_request(
-        InvocationRequest {
-            id: slow,
-            duration: 1.0,
-            time: 3.1,
-        },
-    );
+    serverless.send_invocation_request(InvocationRequest {
+        id: fast,
+        duration: 1.0,
+        time: 0.,
+    });
+    serverless.send_invocation_request(InvocationRequest {
+        id: slow,
+        duration: 1.0,
+        time: 0.,
+    });
+    serverless.send_invocation_request(InvocationRequest {
+        id: slow,
+        duration: 1.0,
+        time: 3.1,
+    });
     serverless.step_until_no_events();
     let stats = serverless.get_stats();
     println!(
