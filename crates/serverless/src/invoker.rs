@@ -176,7 +176,7 @@ impl InvokerCore for BasicInvoker {
             if backend_.container_mgr.get_container(id).unwrap().status == ContainerStatus::Idle {
                 InvocationStatus::Instant(id)
             } else {
-                backend_.container_mgr.steal_prewarm(id, request);
+                backend_.container_mgr.reserve_container(id, request);
                 InvocationStatus::Delayed(wait)
             }
         } else {

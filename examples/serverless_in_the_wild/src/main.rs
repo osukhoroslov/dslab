@@ -295,37 +295,34 @@ fn main() {
     println!("trace processed successfully, {} invocations", trace.0.len());
     describe(
         test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)))),
-            &trace,
-        ),
-        "20-minute keepalive",
-    );
-    describe(
-        test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)))),
-            &trace,
-        ),
-        "120-minute keepalive",
-    );
-    describe(
-        test_policy(
             Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(1000000000.0, 0.0)))),
             &trace,
         ),
         "No unloading",
     );
-    describe(
-        test_policy(
-            Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
-                3600.0 * 4.0,
-                60.0,
-                2.0,
-                0.5,
-                0.15,
-                0.1,
-            )))),
-            &trace,
-        ),
-        "Hybrid Histogram policy",
-    );
+    for len in vec![20.0, 45.0, 60.0, 90.0, 120.0] {
+        describe(
+            test_policy(
+                Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)))),
+                &trace,
+            ),
+            &format!("{}-minute keepalive", len),
+        );
+    }
+    for len in vec![2.0, 3.0, 4.0] {
+        describe(
+            test_policy(
+                Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
+                    3600.0 * len,
+                    60.0,
+                    2.0,
+                    0.5,
+                    0.15,
+                    0.1,
+                )))),
+                &trace,
+            ),
+            &format!("Hybrid Histogram policy, {} hours bound", len),
+        );
+    }
 }

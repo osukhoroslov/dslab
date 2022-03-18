@@ -24,7 +24,6 @@ pub struct Container {
     pub host_id: u64,
     pub resources: ResourceConsumer,
     pub last_change: f64,
-    pub prewarmed: bool,
 }
 
 impl Container {
@@ -49,7 +48,7 @@ pub struct ContainerManager {
     container_ctr: Counter,
     containers_by_group: HashMap<u64, HashSet<u64>>,
     containers: HashMap<u64, Container>,
-    prewarm_stolen: HashMap<u64, Vec<InvocationRequest>>,
+    reservations: HashMap<u64, Vec<InvocationRequest>>,
 }
 
 impl ContainerManager {
@@ -57,9 +56,9 @@ impl ContainerManager {
         let id = group.id;
         let limit = group.get_concurrent_invocations();
         if let Some(set) = self.containers_by_group.get(&id) {
-            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.prewarm_stolen, limit);
+            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.reservations, limit);
         }
-        PossibleContainerIterator::new(None, &self.containers, &self.prewarm_stolen, limit)
+        PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit)
     }
 
     pub fn get_container(&self, id: u64) -> Option<&Container> {
@@ -87,7 +86,6 @@ impl ContainerManager {
         status: ContainerStatus,
         resources: ResourceConsumer,
         curr_time: f64,
-        prewarmed: bool,
     ) -> &Container {
         let id = self.container_ctr.next();
         if !self.containers_by_group.contains_key(&group_id) {
@@ -104,7 +102,6 @@ impl ContainerManager {
             host_id,
             resources,
             last_change: curr_time,
-            prewarmed,
         };
         self.containers.insert(id, container);
         let cont_ref = self.containers.get(&id).unwrap();
@@ -120,15 +117,15 @@ impl ContainerManager {
         }
     }
 
-    pub fn get_stolen_prewarm(&self, id: u64) -> Option<&Vec<InvocationRequest>> {
-        self.prewarm_stolen.get(&id)
+    pub fn take_reservations(&mut self, id: u64) -> Option<Vec<InvocationRequest>> {
+        self.reservations.remove(&id)
     }
 
-    pub fn steal_prewarm(&mut self, id: u64, request: InvocationRequest) {
-        if let Some(stolen) = self.prewarm_stolen.get_mut(&id) {
-            stolen.push(request);
+    pub fn reserve_container(&mut self, id: u64, request: InvocationRequest) {
+        if let Some(reserve) = self.reservations.get_mut(&id) {
+            reserve.push(request);
         } else {
-            self.prewarm_stolen.insert(id, vec![request]);
+            self.reservations.insert(id, vec![request]);
         }
     }
 }
@@ -136,7 +133,7 @@ impl ContainerManager {
 pub struct PossibleContainerIterator<'a> {
     inner: Option<std::collections::hash_set::Iter<'a, u64>>,
     containers: &'a HashMap<u64, Container>,
-    stolen: &'a HashMap<u64, Vec<InvocationRequest>>,
+    reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
     limit: usize,
 }
 
@@ -144,13 +141,13 @@ impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
         inner: Option<std::collections::hash_set::Iter<'a, u64>>,
         containers: &'a HashMap<u64, Container>,
-        stolen: &'a HashMap<u64, Vec<InvocationRequest>>,
+        reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
         limit: usize,
     ) -> Self {
         Self {
             inner,
             containers,
-            stolen,
+            reserve,
             limit,
         }
     }
@@ -166,8 +163,7 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
                     return Some(c);
                 }
                 if c.status == ContainerStatus::Deploying
-                    && c.prewarmed
-                    && (!self.stolen.contains_key(&id) || self.stolen.get(&id).unwrap().len() < self.limit)
+                    && (!self.reserve.contains_key(&id) || self.reserve.get(&id).unwrap().len() < self.limit)
                 {
                     return Some(c);
                 }

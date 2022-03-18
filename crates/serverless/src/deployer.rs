@@ -93,11 +93,10 @@ impl DeployerCore for BasicDeployer {
                 ContainerStatus::Deploying,
                 resources,
                 curr_time,
-                invocation.is_none(),
             );
             let cont_id = cont.id;
             if let Some(request) = invocation {
-                backend_.container_mgr.steal_prewarm(cont_id, request);
+                backend_.container_mgr.reserve_container(cont_id, request);
             }
             ctx.borrow_mut().new_deploy_event(cont_id, delay);
             DeploymentResult {

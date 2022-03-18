@@ -37,8 +37,8 @@ impl EventHandler for ContainerStartHandler {
             let id = *event.data.downcast::<u64>().unwrap();
             let mut invocations = Vec::new();
             let mut backend = self.backend.borrow_mut();
-            if let Some(stolen) = backend.container_mgr.get_stolen_prewarm(id) {
-                invocations = stolen.clone();
+            if let Some(reserve) = backend.container_mgr.take_reservations(id) {
+                invocations = reserve;
             }
             let container = backend.container_mgr.get_container_mut(id).unwrap();
             if !invocations.is_empty() {
@@ -193,7 +193,6 @@ impl Backend {
         status: ContainerStatus,
         resources: ResourceConsumer,
         curr_time: f64,
-        prewarmed: bool,
     ) -> &Container {
         self.container_mgr.new_container(
             &mut self.host_mgr,
@@ -203,7 +202,6 @@ impl Backend {
             status,
             resources,
             curr_time,
-            prewarmed,
         )
     }
 
