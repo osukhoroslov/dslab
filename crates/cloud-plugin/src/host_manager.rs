@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
+use serde::Serialize;
 
 use core::cast;
 use core::context::SimulationContext;
@@ -228,7 +229,7 @@ impl HostManager {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct SendHostState {}
 
 impl EventHandler for HostManager {

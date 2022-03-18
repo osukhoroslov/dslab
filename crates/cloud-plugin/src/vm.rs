@@ -1,4 +1,4 @@
-use std::fmt;
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::load_model::LoadModel;
 
@@ -12,11 +12,14 @@ pub struct VirtualMachine {
     memory_load_model: Box<dyn LoadModel>,
 }
 
-impl fmt::Debug for VirtualMachine {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("VirtualMachine")
-            .field("lifetime", &self.lifetime)
-            .finish()
+impl Serialize for VirtualMachine {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("VirtualMachine", 1)?;
+        state.serialize_field("lifetime", &self.lifetime)?;
+        state.end()
     }
 }
 

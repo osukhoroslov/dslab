@@ -1,11 +1,12 @@
-use log::debug;
+use serde::Serialize;
 
 use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
+use core::log_debug;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Start {
     other: String,
 }
@@ -18,25 +19,20 @@ impl Start {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Ping {}
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Pong {}
 
 pub struct Process {
-    id: String,
     iterations: u32,
     ctx: SimulationContext,
 }
 
 impl Process {
     pub fn new(iterations: u32, ctx: SimulationContext) -> Self {
-        Self {
-            id: ctx.id().to_string(),
-            iterations,
-            ctx,
-        }
+        Self { iterations, ctx }
     }
 
     fn on_start(&mut self, other: &str) {
@@ -62,15 +58,15 @@ impl EventHandler for Process {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start { other } => {
-                debug!("{:.2} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
+                log_debug!(self.ctx, "received Start from {}", event.src);
                 self.on_start(&other);
             }
             Ping {} => {
-                debug!("{:.2} [{}] received Ping from {}", self.ctx.time(), self.id, event.src);
+                log_debug!(self.ctx, "received Ping from {}", event.src);
                 self.on_ping(event.src);
             }
             Pong {} => {
-                debug!("{:.2} [{}] received Pong from {}", self.ctx.time(), self.id, event.src);
+                log_debug!(self.ctx, "received Pong from {}", event.src);
                 self.on_pong(event.src);
             }
         })

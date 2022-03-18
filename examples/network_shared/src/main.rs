@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use log::info;
+use serde::Serialize;
 use sugars::{rc, refcell};
 
 use core::cast;
@@ -16,7 +17,7 @@ use network::model::DataTransferCompleted;
 use network::network::Network;
 use network::shared_bandwidth_model::SharedBandwidthNetwork;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Start {
     size: f64,
     receiver_id: String,

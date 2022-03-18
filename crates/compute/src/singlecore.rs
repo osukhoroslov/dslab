@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use serde::Serialize;
+
 use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
@@ -7,30 +9,30 @@ use core::handler::EventHandler;
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub enum FailReason {
     NotEnoughResources { available_memory: u64 },
     Other { reason: String },
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
     pub requester: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompStarted {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,

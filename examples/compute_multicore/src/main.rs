@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use serde::Serialize;
 use sugars::{rc, refcell};
 
 use compute::multicore::*;
@@ -10,10 +11,10 @@ use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Start {}
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Deallocate {}
 
 pub struct Task {

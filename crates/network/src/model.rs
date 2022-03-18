@@ -1,8 +1,10 @@
+use serde::Serialize;
+
 use core::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Data {
     pub id: usize,
     pub src: String,
@@ -11,7 +13,7 @@ pub struct Data {
     pub notification_dest: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Clone)]
 pub struct Message {
     pub id: usize,
     pub src: String,
@@ -21,37 +23,37 @@ pub struct Message {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct MessageSend {
     pub message: Message,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct MessageReceive {
     pub message: Message,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct MessageDelivery {
     pub message: Message,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DataTransferRequest {
     pub data: Data,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct StartDataTransfer {
     pub data: Data,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DataReceive {
     pub data: Data,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DataTransferCompleted {
     pub data: Data,
 }

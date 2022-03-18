@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serde::Serialize;
+
 use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
@@ -7,7 +9,7 @@ use core::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct Allocation {
     pub cores: u32,
     pub memory: u64,
@@ -20,14 +22,19 @@ impl Allocation {
 }
 
 // [1 .. max_cores] -> [1, +inf]
-#[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Debug, Clone, Copy)]
 pub enum CoresDependency {
     Linear,
-    LinearWithFixed { fixed_part: f64 },
-    Custom { func: fn(u32) -> f64 },
+    LinearWithFixed {
+        fixed_part: f64,
+    },
+    Custom {
+        #[serde(skip_serializing)]
+        func: fn(u32) -> f64,
+    },
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
@@ -57,7 +64,7 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
@@ -67,52 +74,52 @@ pub struct CompRequest {
     pub requester: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompStarted {
     pub id: u64,
     pub cores: u32,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
     pub requester: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct AllocationSuccess {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct AllocationFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
     pub requester: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DeallocationSuccess {
     pub id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct DeallocationFailed {
     pub id: u64,
     pub reason: FailReason,

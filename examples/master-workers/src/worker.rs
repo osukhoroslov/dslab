@@ -2,13 +2,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use log::debug;
+use serde::Serialize;
 
 use compute::multicore::*;
-use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
+use core::{cast, log_debug};
 use network::model::*;
 use network::network::Network;
 
@@ -16,14 +16,14 @@ use crate::common::Start;
 use crate::storage::*;
 use crate::task::*;
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct WorkerRegister {
     pub(crate) speed: u64,
     pub(crate) cpus_total: u32,
     pub(crate) memory_total: u64,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct TaskCompleted {
     pub(crate) id: u64,
 }
@@ -72,7 +72,7 @@ impl EventHandler for Worker {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                debug!("{} [{}] started", event.time, self.id);
+                log_debug!(self.ctx, "started");
                 self.ctx.emit(
                     WorkerRegister {
                         speed: self.compute.borrow().speed(),
@@ -106,7 +106,7 @@ impl EventHandler for Worker {
                     },
                     state: TaskState::Downloading,
                 };
-                debug!("{} [{}] task request: {:?}", event.time, self.id, task.req);
+                log_debug!(self.ctx, "task request: {:?}", task.req);
                 self.tasks.insert(id, task);
 
                 let transfer_id =
@@ -121,10 +121,7 @@ impl EventHandler for Worker {
                 if self.downloads.contains_key(&transfer_id) {
                     let task_id = self.downloads.remove(&transfer_id).unwrap();
                     let task = self.tasks.get_mut(&task_id).unwrap();
-                    debug!(
-                        "{} [{}] downloaded input data for task: {}",
-                        event.time, self.id, task_id
-                    );
+                    log_debug!(self.ctx, "downloaded input data for task: {}", task_id);
                     task.state = TaskState::Reading;
                     let read_id = self.storage.read(task.req.input_size, &self.id);
                     self.reads.insert(read_id, task_id);
@@ -132,12 +129,7 @@ impl EventHandler for Worker {
                 } else if self.uploads.contains_key(&transfer_id) {
                     let task_id = self.uploads.remove(&transfer_id).unwrap();
                     let mut task = self.tasks.remove(&task_id).unwrap();
-                    debug!(
-                        "{} [{}] uploaded output data for task: {}",
-                        self.ctx.time(),
-                        self.id,
-                        task_id
-                    );
+                    log_debug!(self.ctx, "uploaded output data for task: {}", task_id);
                     task.state = TaskState::Completed;
                     self.net
                         .borrow_mut()
@@ -146,7 +138,7 @@ impl EventHandler for Worker {
             }
             DataReadCompleted { id } => {
                 let task_id = self.reads.remove(&id).unwrap();
-                debug!("{} [{}] read input data for task: {}", event.time, self.id, task_id);
+                log_debug!(self.ctx, "read input data for task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Running;
                 let comp_id = self.compute.borrow_mut().run(
@@ -160,11 +152,11 @@ impl EventHandler for Worker {
                 self.computations.insert(comp_id, task_id);
             }
             CompStarted { id, cores: _ } => {
-                debug!("{} [{}] started execution of task: {}", self.ctx.time(), self.id, id);
+                log_debug!(self.ctx, "started execution of task: {}", id);
             }
             CompFinished { id } => {
                 let task_id = self.computations.remove(&id).unwrap();
-                debug!("{} [{}] completed execution of task: {}", event.time, self.id, task_id);
+                log_debug!(self.ctx, "completed execution of task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Writing;
                 let write_id = self.storage.write(task.req.output_size, &self.id);
@@ -172,7 +164,7 @@ impl EventHandler for Worker {
             }
             DataWriteCompleted { id } => {
                 let task_id = self.writes.remove(&id).unwrap();
-                debug!("{} [{}] wrote output data for task: {}", event.time, self.id, task_id);
+                log_debug!(self.ctx, "wrote output data for task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Uploading;
                 let transfer_id =

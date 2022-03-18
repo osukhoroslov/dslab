@@ -2,22 +2,22 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use log::{debug, info, trace};
+use serde::Serialize;
 
-use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
+use core::{cast, log_debug, log_info, log_trace};
 use network::network::Network;
 
 use crate::common::Start;
 use crate::task::*;
 use crate::worker::{TaskCompleted, WorkerRegister};
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct ReportStatus {}
 
-#[derive(Debug)]
+#[derive(Serialize)]
 pub struct ScheduleTasks {}
 
 #[derive(Debug, PartialEq)]
@@ -66,7 +66,7 @@ impl Master {
     }
 
     pub fn schedule_tasks(&mut self) {
-        trace!("{} [{}] scheduling tasks", self.ctx.time(), self.id);
+        log_trace!(self.ctx, "scheduling tasks");
         for (task_id, task) in self.tasks.iter_mut() {
             if matches!(task.state, TaskState::New) {
                 let mut assigned = false;
@@ -77,13 +77,7 @@ impl Master {
                             && worker.cpus_available >= task.req.min_cores
                             && worker.memory_available >= task.req.memory
                         {
-                            debug!(
-                                "{} [{}] - assigned task {} to worker {}",
-                                self.ctx.time(),
-                                self.id,
-                                task_id,
-                                worker_id
-                            );
+                            log_debug!(self.ctx, "assigned task {} to worker {}", task_id, worker_id);
                             task.state = TaskState::Assigned;
                             worker.cpus_available -= task.req.min_cores;
                             worker.memory_available -= task.req.memory;
@@ -107,7 +101,7 @@ impl EventHandler for Master {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                debug!("{} [{}] started", event.time, self.id);
+                log_debug!(self.ctx, "started");
                 self.ctx.emit_self(ScheduleTasks {}, 5.);
             }
             ScheduleTasks {} => {
@@ -130,7 +124,7 @@ impl EventHandler for Master {
                     memory_total,
                     memory_available: memory_total,
                 };
-                debug!("{} [{}] registered worker: {:?}", event.time, self.id, worker);
+                log_debug!(self.ctx, "registered worker: {:?}", worker);
                 self.cpus_available += worker.cpus_available;
                 self.memory_available += worker.memory_available;
                 self.workers.insert(worker.id.clone(), worker);
@@ -162,11 +156,11 @@ impl EventHandler for Master {
                     },
                     state: TaskState::New,
                 };
-                debug!("{} [{}] task request: {:?}", event.time, self.id, task.req);
+                log_debug!(self.ctx, "task request: {:?}", task.req);
                 self.tasks.insert(task.req.id, task);
             }
             TaskCompleted { id } => {
-                debug!("{} [{}] completed task: {:?}", event.time, self.id, id);
+                log_debug!(self.ctx, "completed task: {:?}", id);
                 let task = self.tasks.get_mut(&id).unwrap();
                 task.state = TaskState::Completed;
                 let worker = self.workers.get_mut(&event.src).unwrap();
@@ -177,14 +171,18 @@ impl EventHandler for Master {
                 self.schedule_tasks();
             }
             ReportStatus {} => {
-                info!("{} [{}] workers: {}", event.time, self.id, self.workers.len());
+                log_info!(self.ctx, "workers: {}", self.workers.len());
                 let total_cpus: u64 = self.workers.values().map(|w| w.cpus_total as u64).sum();
                 let available_cpus: u64 = self.workers.values().map(|w| w.cpus_available as u64).sum();
                 let total_memory: u64 = self.workers.values().map(|w| w.memory_total as u64).sum();
                 let available_memory: u64 = self.workers.values().map(|w| w.memory_available as u64).sum();
-                info!(
-                    "{} [{}] --- cpus: {} / {}, memory: {} / {}",
-                    event.time, self.id, available_cpus, total_cpus, available_memory, total_memory,
+                log_info!(
+                    self.ctx,
+                    "--- cpus: {} / {}, memory: {} / {}",
+                    available_cpus,
+                    total_cpus,
+                    available_memory,
+                    total_memory,
                 );
                 let task_count = self.tasks.len();
                 let completed_count = self
@@ -192,10 +190,7 @@ impl EventHandler for Master {
                     .values()
                     .filter(|t| matches!(t.state, TaskState::Completed))
                     .count();
-                info!(
-                    "{} [{}] --- tasks: {} / {}",
-                    event.time, self.id, completed_count, task_count
-                );
+                log_info!(self.ctx, "--- tasks: {} / {}", completed_count, task_count);
                 if task_count == 0 || completed_count != task_count {
                     self.ctx.emit_self(ReportStatus {}, 10.);
                 } else {
