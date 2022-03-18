@@ -158,12 +158,18 @@ impl SimulationEndHandler {
 
 impl EventHandler for SimulationEndHandler {
     fn on(&mut self, event: Event) {
-        let backend = self.backend.borrow();
+        let mut backend = self.backend.borrow_mut();
         let mut stats = backend.stats.borrow_mut();
         for container in backend.container_mgr.get_containers() {
             if container.status == ContainerStatus::Idle {
                 let delta = event.time.into_inner() - container.last_change;
                 stats.update_wasted_resources(delta, &container.resources);
+            }
+        }
+        drop(stats);
+        for container in backend.container_mgr.get_containers_mut() {
+            if container.status == ContainerStatus::Idle {
+                container.status = ContainerStatus::Deploying;
             }
         }
     }

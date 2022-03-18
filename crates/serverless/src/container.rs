@@ -74,6 +74,10 @@ impl ContainerManager {
         self.containers.get_mut(&id)
     }
 
+    pub fn get_containers_mut(&mut self) -> ContainerIteratorMut<'_> {
+        ContainerIteratorMut::new(self.containers.iter_mut())
+    }
+
     pub fn new_container(
         &mut self,
         host_mgr: &mut HostManager,
@@ -186,6 +190,27 @@ impl<'a> ContainerIterator<'a> {
 
 impl<'a> Iterator for ContainerIterator<'a> {
     type Item = &'a Container;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((_, v)) = self.inner.next() {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct ContainerIteratorMut<'a> {
+    inner: std::collections::hash_map::IterMut<'a, u64, Container>,
+}
+
+impl<'a> ContainerIteratorMut<'a> {
+    pub fn new(inner: std::collections::hash_map::IterMut<'a, u64, Container>) -> Self {
+        Self { inner }
+    }
+}
+
+impl<'a> Iterator for ContainerIteratorMut<'a> {
+    type Item = &'a mut Container;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((_, v)) = self.inner.next() {
             Some(v)

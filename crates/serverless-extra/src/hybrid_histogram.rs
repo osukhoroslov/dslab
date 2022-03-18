@@ -41,7 +41,7 @@ impl GroupData {
         }
         //println!("called arima with {} samples", self.raw.len());
         //arima sucks
-        //pray it doesn't crash (it can and it will)
+        //pray that it doesn't crash (it can and it will)
         let (coeff, ar_order, _) = autofit(&self.raw, 1).unwrap();
         let mut ar = Vec::new();
         let mut ma = Vec::new();
