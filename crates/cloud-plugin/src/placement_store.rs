@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use log::info;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use simcore::cast;
 use simcore::context::SimulationContext;
@@ -8,13 +9,12 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 
 use crate::common::AllocationVerdict;
+use crate::config::SimulationConfig;
 use crate::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
-use crate::network::MESSAGE_DELAY;
 use crate::resource_pool::{Allocation, ResourcePoolState};
-use crate::scheduler::ALLOCATION_RETRY_PERIOD;
 use crate::vm::VirtualMachine;
 
 pub struct PlacementStore {
@@ -22,15 +22,17 @@ pub struct PlacementStore {
     pool_state: ResourcePoolState,
     schedulers: HashSet<String>,
     ctx: SimulationContext,
+    sim_config: Rc<RefCell<SimulationConfig>>,
 }
 
 impl PlacementStore {
-    pub fn new(allow_vm_overcommit: bool, ctx: SimulationContext) -> Self {
+    pub fn new(allow_vm_overcommit: bool, ctx: SimulationContext, sim_config: Rc<RefCell<SimulationConfig>>) -> Self {
         Self {
             allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
             ctx,
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -56,11 +58,9 @@ impl PlacementStore {
     ) {
         if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, &host_id) == AllocationVerdict::Success {
             self.pool_state.allocate(&alloc, &host_id);
-            info!(
-                "[time = {}] vm #{} commited to host #{} in placement store",
-                self.ctx.time(),
-                alloc.id,
-                host_id
+            log_debug!(
+                self.ctx,
+                format!("vm #{} commited to host #{} in placement store", alloc.id, host_id)
             );
             self.ctx.emit(
                 AllocationRequest {
@@ -68,7 +68,7 @@ impl PlacementStore {
                     vm,
                 },
                 &host_id,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
 
             for scheduler in self.schedulers.iter() {
@@ -78,15 +78,16 @@ impl PlacementStore {
                         host_id: host_id.clone(),
                     },
                     scheduler,
-                    MESSAGE_DELAY,
+                    self.sim_config.borrow().data.message_delay,
                 );
             }
         } else {
-            info!(
-                "[time = {}] not enough space for vm #{} on host #{} in placement store",
-                self.ctx.time(),
-                alloc.id,
-                host_id
+            log_debug!(
+                self.ctx,
+                format!(
+                    "not enough space for vm #{} on host #{} in placement store",
+                    alloc.id, host_id
+                )
             );
             self.ctx.emit(
                 AllocationCommitFailed {
@@ -94,12 +95,12 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 &from_scheduler,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
             self.ctx.emit(
                 AllocationRequest { alloc, vm },
                 &from_scheduler,
-                MESSAGE_DELAY + ALLOCATION_RETRY_PERIOD,
+                self.sim_config.borrow().data.message_delay + self.sim_config.borrow().data.allocation_retry_period,
             );
         }
     }
@@ -114,7 +115,7 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 scheduler,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
         }
     }
@@ -129,7 +130,7 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 scheduler,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
         }
     }

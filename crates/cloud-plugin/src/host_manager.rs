@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use log::info;
 use serde::Serialize;
 
 use simcore::cast;
@@ -9,15 +8,13 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 
 use crate::common::AllocationVerdict;
+use crate::config::SimulationConfig;
 use crate::energy_manager::EnergyManager;
 use crate::events::allocation::{AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest};
 use crate::events::monitoring::HostStateUpdate;
 use crate::events::vm::{VMDeleted, VMStarted};
-use crate::network::MESSAGE_DELAY;
 use crate::resource_pool::Allocation;
 use crate::vm::VirtualMachine;
-
-static STATS_SEND_PERIOD: f64 = 0.5;
 
 pub struct HostManager {
     pub id: String,
@@ -40,6 +37,7 @@ pub struct HostManager {
     placement_store_id: String,
 
     ctx: SimulationContext,
+    sim_config: Rc<RefCell<SimulationConfig>>,
 }
 
 impl HostManager {
@@ -50,6 +48,7 @@ impl HostManager {
         placement_store_id: String,
         allow_vm_overcommit: bool,
         ctx: SimulationContext,
+        sim_config: Rc<RefCell<SimulationConfig>>,
     ) -> Self {
         Self {
             id: ctx.id().to_string(),
@@ -66,6 +65,7 @@ impl HostManager {
             monitoring_id,
             placement_store_id,
             ctx,
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -121,7 +121,7 @@ impl HostManager {
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
-    fn get_cpu_load(&self, time: f64) -> f64 {
+    pub fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for (vm_id, alloc) in &self.allocs {
             cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_cpu_load(time);
@@ -129,7 +129,7 @@ impl HostManager {
         return cpu_used / self.cpu_total as f64;
     }
 
-    fn get_memory_load(&self, time: f64) -> f64 {
+    pub fn get_memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for (vm_id, alloc) in &self.allocs {
             memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_cpu_load(time);
@@ -137,7 +137,7 @@ impl HostManager {
         return memory_used / self.memory_total as f64;
     }
 
-    fn get_energy_load(&self, time: f64) -> f64 {
+    pub fn get_energy_load(&self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
         if cpu_load == 0. {
             return 0.;
@@ -154,19 +154,12 @@ impl HostManager {
         if self.can_allocate(&alloc) == AllocationVerdict::Success {
             let start_duration = vm.start_duration();
             self.allocate(self.ctx.time(), &alloc, vm);
-            info!(
-                "[time = {}] vm #{} allocated on host #{}",
-                self.ctx.time(),
-                alloc.id,
-                self.id
-            );
+            log_debug!(self.ctx, format!("vm #{} allocated on host #{}", alloc.id, self.id,));
             self.ctx.emit_self(VMStarted { alloc }, start_duration);
         } else {
-            info!(
-                "[time = {}] not enough space for vm #{} on host #{}",
-                self.ctx.time(),
-                alloc.id,
-                self.id
+            log_debug!(
+                self.ctx,
+                format!("not enough space for vm #{} on host #{}", alloc.id, self.id)
             );
             self.ctx.emit(
                 AllocationFailed {
@@ -174,30 +167,28 @@ impl HostManager {
                     host_id: self.id.clone(),
                 },
                 &self.placement_store_id,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
         }
     }
 
     fn on_allocation_release_request(&mut self, alloc: Allocation) {
-        info!(
-            "[time = {}] release resources from vm #{} on host #{}",
-            self.ctx.time(),
-            alloc.id,
-            self.id
+        log_debug!(
+            self.ctx,
+            format!("release resources from vm #{} on host #{}", alloc.id, self.id)
         );
         let vm = self.vms.get(&alloc.id).unwrap();
         self.ctx.emit_self(VMDeleted { alloc }, vm.stop_duration());
     }
 
     fn on_vm_started(&mut self, alloc: Allocation) {
-        info!("[time = {}] vm #{} started and running", self.ctx.time(), alloc.id);
+        log_debug!(self.ctx, format!("vm #{} started and running", alloc.id));
         let vm = self.vms.get(&alloc.id).unwrap();
         self.ctx.emit_self(AllocationReleaseRequest { alloc }, vm.lifetime());
     }
 
     fn on_vm_deleted(&mut self, alloc: Allocation) {
-        info!("[time = {}] vm #{} deleted", self.ctx.time(), alloc.id);
+        log_debug!(self.ctx, format!("vm #{} deleted", alloc.id));
         self.release(self.ctx.time(), &alloc);
         self.ctx.emit(
             AllocationReleased {
@@ -205,16 +196,12 @@ impl HostManager {
                 host_id: self.id.clone(),
             },
             &self.placement_store_id,
-            MESSAGE_DELAY,
+            self.sim_config.borrow().data.message_delay,
         );
     }
 
     fn send_host_state(&mut self) {
-        info!(
-            "[time = {}] host #{} sends it`s data to monitoring",
-            self.ctx.time(),
-            self.id
-        );
+        log_debug!(self.ctx, format!("host #{} sends it`s data to monitoring", self.id));
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id.clone(),
@@ -222,10 +209,11 @@ impl HostManager {
                 memory_load: self.get_memory_load(self.ctx.time()),
             },
             &self.monitoring_id,
-            MESSAGE_DELAY,
+            self.sim_config.borrow().data.message_delay,
         );
 
-        self.ctx.emit_self(SendHostState {}, STATS_SEND_PERIOD);
+        self.ctx
+            .emit_self(SendHostState {}, self.sim_config.borrow().data.send_stats_period);
     }
 }
 

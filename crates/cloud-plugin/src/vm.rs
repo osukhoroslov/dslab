@@ -1,15 +1,17 @@
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::load_model::LoadModel;
+use std::cell::RefCell;
+use std::rc::Rc;
 
-static VM_START_DURATION: f64 = 1.0;
-static VM_STOP_DURATION: f64 = 0.5;
+use crate::config::SimulationConfig;
+use crate::load_model::LoadModel;
 
 pub struct VirtualMachine {
     lifetime: f64,
     start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
+    sim_config: Rc<RefCell<SimulationConfig>>,
 }
 
 impl Serialize for VirtualMachine {
@@ -24,12 +26,18 @@ impl Serialize for VirtualMachine {
 }
 
 impl VirtualMachine {
-    pub fn new(lifetime: f64, cpu_load_model: Box<dyn LoadModel>, memory_load_model: Box<dyn LoadModel>) -> Self {
+    pub fn new(
+        lifetime: f64,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
+        sim_config: Rc<RefCell<SimulationConfig>>,
+    ) -> Self {
         Self {
             lifetime,
             start_time: 0.,
             cpu_load_model,
             memory_load_model,
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -38,11 +46,11 @@ impl VirtualMachine {
     }
 
     pub fn start_duration(&self) -> f64 {
-        VM_START_DURATION
+        self.sim_config.borrow().data.vm_start_duration
     }
 
     pub fn stop_duration(&self) -> f64 {
-        VM_STOP_DURATION
+        self.sim_config.borrow().data.vm_stop_duration
     }
 
     pub fn set_start_time(&mut self, time: f64) {

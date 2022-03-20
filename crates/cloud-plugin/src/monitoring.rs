@@ -17,9 +17,9 @@ pub struct HostState {
     pub memory_total: u64,
 }
 
-#[derive(Debug)]
 pub struct Monitoring {
     host_states: BTreeMap<String, HostState>,
+    ctx: SimulationContext,
 }
 
 impl HostState {
@@ -34,9 +34,10 @@ impl HostState {
 }
 
 impl Monitoring {
-    pub fn new() -> Self {
+    pub fn new(ctx: SimulationContext) -> Self {
         Self {
             host_states: BTreeMap::new(),
+            ctx,
         }
     }
 
@@ -53,8 +54,8 @@ impl Monitoring {
             .insert(host_id.to_string(), HostState::new(cpu_total, memory_total));
     }
 
-    fn update_host_state(&mut self, host_id: String, cpu_load: f64, memory_load: f64, time: f64) {
-        info!("[time = {}] monitoring received stats from host #{}", time, host_id);
+    fn update_host_state(&mut self, host_id: String, cpu_load: f64, memory_load: f64) {
+        log_debug!(self.ctx, format!("monitoring received stats from host #{}", host_id));
         self.host_states.get_mut(&host_id).map(|host| {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;
@@ -70,7 +71,7 @@ impl EventHandler for Monitoring {
                 cpu_load,
                 memory_load,
             } => {
-                self.update_host_state(host_id, cpu_load, memory_load, event.time.into_inner());
+                self.update_host_state(host_id, cpu_load, memory_load);
             }
         })
     }

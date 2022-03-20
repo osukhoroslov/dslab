@@ -7,6 +7,7 @@ use sugars::{rc, refcell};
 use simcore::context::SimulationContext;
 use simcore::simulation::Simulation;
 
+use crate::config::SimulationConfig;
 use crate::events::allocation::AllocationRequest;
 use crate::host_manager::HostManager;
 use crate::host_manager::SendHostState;
@@ -19,7 +20,6 @@ use crate::vm::VirtualMachine;
 use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct CloudSimulation {
-    allow_vm_overcommit: bool,
     monitoring: Rc<RefCell<Monitoring>>,
     monitoring_id: String,
     placement_store: Rc<RefCell<PlacementStore>>,
@@ -28,22 +28,23 @@ pub struct CloudSimulation {
     schedulers: BTreeMap<String, Rc<RefCell<Scheduler>>>,
     sim: Simulation,
     ctx: SimulationContext,
+    sim_config: Rc<RefCell<SimulationConfig>>,
 }
 
 impl CloudSimulation {
-    pub fn new(mut sim: Simulation, allow_vm_overcommit: bool) -> Self {
+    pub fn new(mut sim: Simulation, sim_config: Rc<RefCell<SimulationConfig>>) -> Self {
         let monitoring_id = "monitoring";
-        let monitoring = rc!(refcell!(Monitoring::new()));
+        let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         sim.add_handler(monitoring_id, monitoring.clone());
         let placement_store_id = "placement_store";
         let placement_store = rc!(refcell!(PlacementStore::new(
-            allow_vm_overcommit,
-            sim.create_context(placement_store_id)
+            sim_config.borrow().data.allow_vm_overcommit,
+            sim.create_context(placement_store_id),
+            sim_config.clone(),
         )));
         sim.add_handler(placement_store_id, placement_store.clone());
         let ctx = sim.create_context("simulation");
         Self {
-            allow_vm_overcommit,
             monitoring,
             monitoring_id: monitoring_id.to_string(),
             placement_store,
@@ -52,6 +53,7 @@ impl CloudSimulation {
             schedulers: BTreeMap::new(),
             sim,
             ctx,
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -62,8 +64,9 @@ impl CloudSimulation {
             memory_total,
             self.monitoring_id.clone(),
             self.placement_store_id.clone(),
-            self.allow_vm_overcommit,
+            self.sim_config.borrow().data.allow_vm_overcommit,
             self.sim.create_context(id),
+            self.sim_config.clone(),
         )));
         self.sim.add_handler(id, host.clone());
         self.hosts.insert(id.to_string(), host);
@@ -88,6 +91,7 @@ impl CloudSimulation {
             self.placement_store_id.clone(),
             vm_placement_algorithm,
             self.sim.create_context(id),
+            self.sim_config.clone(),
         )));
         self.sim.add_handler(id, scheduler.clone());
         self.schedulers.insert(id.to_string(), scheduler);
@@ -112,7 +116,7 @@ impl CloudSimulation {
                     cpu_usage,
                     memory_usage,
                 },
-                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model),
+                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone()),
             },
             scheduler,
         );
@@ -136,11 +140,15 @@ impl CloudSimulation {
                     cpu_usage,
                     memory_usage,
                 },
-                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model),
+                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone()),
             },
             scheduler,
             delay,
         );
+    }
+
+    pub fn get_context(&self) -> &SimulationContext {
+        return &self.ctx;
     }
 
     pub fn steps(&mut self, step_count: u64) -> bool {
@@ -155,7 +163,7 @@ impl CloudSimulation {
         self.sim.step_for_duration(time);
     }
 
-    pub fn host(&mut self, host_id: &str) -> Rc<RefCell<HostManager>> {
+    pub fn host(&self, host_id: &str) -> Rc<RefCell<HostManager>> {
         self.hosts.get(host_id).unwrap().clone()
     }
 }

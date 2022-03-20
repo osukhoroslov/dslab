@@ -7,3 +7,7 @@ Cargo.lock
 
 # Idea
 .idea/
+
+# Traces
+examples/cloud-plugin-traces/vm_instances.csv
+examples/cloud-plugin-traces/vm_types.csv

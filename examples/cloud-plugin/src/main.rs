@@ -1,18 +1,23 @@
 extern crate env_logger;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+use sugars::{rc, refcell};
+
 use log::info;
 
+use cloud_plugin::config::SimulationConfig;
 use cloud_plugin::load_model::ConstLoadModel;
 use cloud_plugin::simulation::CloudSimulation;
 use cloud_plugin::vm_placement_algorithm::BestFit;
 use cloud_plugin::vm_placement_algorithm::BestFitThreshold;
 use simcore::simulation::Simulation;
 
-fn simulation_two_best_fit_schedulers() {
+fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>) {
     env_logger::init();
 
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, false);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     cloud_sim.add_host("h1", 30, 30);
     cloud_sim.add_host("h2", 30, 30);
@@ -86,9 +91,9 @@ fn simulation_two_best_fit_schedulers() {
     );
 }
 
-fn simulation_one_thresholded_scheduler() {
+fn simulation_one_thresholded_scheduler(sim_config: Rc<RefCell<SimulationConfig>>) {
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, true);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     cloud_sim.add_host("h1", 30, 30);
     cloud_sim.add_host("h2", 30, 30);
@@ -122,6 +127,7 @@ fn simulation_one_thresholded_scheduler() {
 }
 
 fn main() {
-    simulation_two_best_fit_schedulers();
-    simulation_one_thresholded_scheduler();
+    let config = rc!(refcell!(SimulationConfig::from_file("config.yaml")));
+    simulation_two_best_fit_schedulers(config.clone());
+    simulation_one_thresholded_scheduler(config.clone());
 }

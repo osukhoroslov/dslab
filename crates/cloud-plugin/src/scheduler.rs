@@ -8,26 +8,24 @@ use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
 
+use crate::config::SimulationConfig;
 use crate::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
 use crate::monitoring::Monitoring;
-use crate::network::MESSAGE_DELAY;
 use crate::resource_pool::{Allocation, ResourcePoolState};
 use crate::vm::VirtualMachine;
 use crate::vm_placement_algorithm::VMPlacementAlgorithm;
-
-pub static ALLOCATION_RETRY_PERIOD: f64 = 1.0;
 
 pub struct Scheduler {
     pub id: String,
     pool_state: ResourcePoolState,
     placement_store_id: String,
-    #[allow(dead_code)]
     monitoring: Rc<RefCell<Monitoring>>,
     vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
+    sim_config: Rc<RefCell<SimulationConfig>>,
 }
 
 impl Scheduler {
@@ -37,6 +35,7 @@ impl Scheduler {
         placement_store_id: String,
         vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
+        sim_config: Rc<RefCell<SimulationConfig>>,
     ) -> Self {
         Self {
             id: ctx.id().to_string(),
@@ -45,6 +44,7 @@ impl Scheduler {
             monitoring,
             vm_placement_algorithm,
             ctx,
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -58,12 +58,12 @@ impl Scheduler {
             .vm_placement_algorithm
             .select_host(&alloc, &self.pool_state, &self.monitoring.borrow())
         {
-            info!(
-                "[time = {}] scheduler #{} decided to pack vm #{} on host #{}",
-                self.ctx.time(),
-                self.id,
-                alloc.id,
-                host
+            log_debug!(
+                self.ctx,
+                format!(
+                    "scheduler #{} decided to pack vm #{} on host #{}",
+                    self.id, alloc.id, host
+                )
             );
             self.pool_state.allocate(&alloc, &host);
 
@@ -74,17 +74,17 @@ impl Scheduler {
                     host_id: host,
                 },
                 &self.placement_store_id,
-                MESSAGE_DELAY,
+                self.sim_config.borrow().data.message_delay,
             );
         } else {
-            info!(
-                "[time = {}] scheduler #{} failed to pack vm #{}",
-                self.ctx.time(),
-                self.id,
-                alloc.id,
+            log_debug!(
+                self.ctx,
+                format!("scheduler #{} failed to pack vm #{}", self.id, alloc.id,)
             );
-            self.ctx
-                .emit_self(AllocationRequest { alloc, vm }, ALLOCATION_RETRY_PERIOD);
+            self.ctx.emit_self(
+                AllocationRequest { alloc, vm },
+                self.sim_config.borrow().data.allocation_retry_period,
+            );
         }
     }
 
