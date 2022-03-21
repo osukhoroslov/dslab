@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -9,18 +8,13 @@ use core::handler::EventHandler;
 use core::{cast, log_debug};
 
 use crate::model::*;
-use crate::shared_bandwidth_model::SharedBandwidthNetwork;
+use crate::topology::Topology;
 
 // pub const NETWORK_ID: &str = "net";
 
-struct HostInfo {
-    local_network: Box<dyn NetworkModel>,
-}
-
 pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
-    hosts: BTreeMap<String, HostInfo>,
-    actor_hosts: HashMap<String, String>,
+    topology: Topology,
     id_counter: AtomicUsize,
     ctx: SimulationContext,
 }
@@ -29,39 +23,30 @@ impl Network {
     pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>, ctx: SimulationContext) -> Self {
         Self {
             network_model,
-            hosts: BTreeMap::new(),
-            actor_hosts: HashMap::new(),
+            topology: Topology::new(),
             id_counter: AtomicUsize::new(1),
             ctx,
         }
     }
 
     pub fn add_host(&mut self, host_id: &str, local_bandwidth: f64, local_latency: f64) {
-        let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
-        self.hosts.insert(
-            host_id.to_string(),
-            HostInfo {
-                local_network: Box::new(local_network),
-            },
-        );
+        self.topology.add_host(host_id, local_bandwidth, local_latency)
     }
 
     pub fn set_location(&mut self, id: &str, host_id: &str) {
-        self.actor_hosts.insert(id.to_string(), host_id.to_string());
+        self.topology.set_location(id, host_id)
     }
 
     pub fn get_location(&self, id: &str) -> Option<&String> {
-        self.actor_hosts.get(id)
+        self.topology.get_location(id)
     }
 
     pub fn check_same_host(&self, id1: &str, id2: &str) -> bool {
-        let host1 = self.get_location(id1);
-        let host2 = self.get_location(id2);
-        host1.is_some() && host2.is_some() && host1.unwrap() == host2.unwrap()
+        self.topology.check_same_host(id1, id2)
     }
 
-    pub fn get_hosts(&self) -> Vec<String> {
-        self.hosts.keys().cloned().collect()
+    pub fn get_nodes(&self) -> Vec<String> {
+        self.topology.get_nodes()
     }
 
     pub fn send_msg<S: Into<String>>(&mut self, message: String, src: S, dest: S) -> usize {
@@ -84,7 +69,7 @@ impl Network {
                 .emit_as(data, src.as_ref(), dest.as_ref(), self.network_model.borrow().latency());
         } else {
             let hostname = self.get_location(src.as_ref()).unwrap();
-            let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
+            let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
             self.ctx.emit_as(data, src.as_ref(), dest.as_ref(), local_latency);
         }
     }
@@ -120,7 +105,7 @@ impl EventHandler for Network {
                         .emit_self(message_recieve_event, self.network_model.borrow().latency());
                 } else {
                     let hostname = self.get_location(&message.dest).unwrap();
-                    let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
+                    let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
                     let message_recieve_event = MessageReceive { message };
                     self.ctx.emit_self(message_recieve_event, local_latency);
                 }
@@ -154,7 +139,7 @@ impl EventHandler for Network {
                         .emit_self(StartDataTransfer { data }, self.network_model.borrow().latency());
                 } else {
                     let hostname = self.get_location(&data.dest).unwrap();
-                    let local_latency = self.hosts.get(hostname).unwrap().local_network.latency();
+                    let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
                     self.ctx.emit_self(StartDataTransfer { data }, local_latency);
                 }
             }
@@ -162,12 +147,7 @@ impl EventHandler for Network {
                 if !self.check_same_host(&data.src, &data.dest) {
                     self.network_model.borrow_mut().send_data(data, &mut self.ctx);
                 } else {
-                    let hostname = self.get_location(&data.dest).unwrap().clone();
-                    self.hosts
-                        .get_mut(&hostname)
-                        .unwrap()
-                        .local_network
-                        .send_data(data, &mut self.ctx);
+                    self.topology.local_send_data(data, &mut self.ctx)
                 }
             }
             DataReceive { data } => {
@@ -184,12 +164,7 @@ impl EventHandler for Network {
                         .borrow_mut()
                         .receive_data(data.clone(), &mut self.ctx);
                 } else {
-                    let hostname = self.get_location(&data.dest).unwrap().clone();
-                    self.hosts
-                        .get_mut(&hostname)
-                        .unwrap()
-                        .local_network
-                        .receive_data(data.clone(), &mut self.ctx);
+                    self.topology.local_receive_data(data.clone(), &mut self.ctx)
                 }
                 self.ctx
                     .emit_now(DataTransferCompleted { data: data.clone() }, data.notification_dest);
