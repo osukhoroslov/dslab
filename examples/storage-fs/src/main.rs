@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use sugars::{rc, refcell};
+use serde::Serialize;
 
 use core::cast;
 use core::context::SimulationContext;
@@ -43,10 +44,10 @@ struct User {
     file_system: Rc<RefCell<FileSystem>>,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 struct Start {}
 
-#[derive(Debug)]
+#[derive(Serialize)]
 struct Init {}
 
 impl User {

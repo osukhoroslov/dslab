@@ -8,4 +8,4 @@ core = { path = "../../crates/core" }
 storage = { path = "../../crates/storage" }
 log = "0.4"
 sugars = "3.0.0"
-
+serde = { version = "1.0", features = ["derive"] }

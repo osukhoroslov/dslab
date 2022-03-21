@@ -1,4 +1,5 @@
 use sugars::{rc, refcell};
+use serde::Serialize;
 
 use core::cast;
 use core::context::SimulationContext;
@@ -24,7 +25,7 @@ struct User {
     ctx: SimulationContext,
 }
 
-#[derive(Debug)]
+#[derive(Serialize)]
 struct Start {}
 
 impl User {

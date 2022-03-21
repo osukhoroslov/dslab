@@ -7,3 +7,4 @@ edition = "2021"
 core = { path = "../../crates/core" }
 storage = { path = "../../crates/storage" }
 sugars = "3.0.0"
+serde = { version = "1.0", features = ["derive"] }
