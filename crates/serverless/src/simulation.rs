@@ -221,7 +221,7 @@ impl ServerlessContext {
         Self { sim_ctx }
     }
 
-    pub fn new_deploy_event(&mut self, id: u64, delay: f64) {
+    pub fn new_container_start_event(&mut self, id: u64, delay: f64) {
         self.sim_ctx.emit(id, "container_started", delay);
     }
 

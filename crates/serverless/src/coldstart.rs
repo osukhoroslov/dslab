@@ -25,13 +25,13 @@ impl FixedTimeColdStartPolicy {
 }
 
 impl ColdStartPolicy for FixedTimeColdStartPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> f64 {
+    fn keepalive_window(&mut self, _container: &Container) -> f64 {
         self.keepalive
     }
 
-    fn prewarm_window(&mut self, group: &Group) -> f64 {
+    fn prewarm_window(&mut self, _group: &Group) -> f64 {
         self.prewarm
     }
 
-    fn update(&mut self, invocation: &Invocation, group: &Group) {}
+    fn update(&mut self, _invocation: &Invocation, _group: &Group) {}
 }

@@ -16,7 +16,7 @@ use serverless_extra::hybrid_histogram::HybridHistogramPolicy;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::fs::{read_dir, File};
+use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -199,7 +199,7 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
                 let dur_vec = dur_dist.get(&func).unwrap();
                 let inv_vec = inv_cnt.get(&func).unwrap();
                 for i in 0..1440 {
-                    for inv in 0..inv_vec[i] {
+                    for _ in 0..inv_vec[i] {
                         let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
                         let record = TraceRecord {
                             id: curr_id,
@@ -242,7 +242,6 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     for req in trace.0.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
-    let group = HashMap::<String, u64>::new();
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim, None, None, policy);
     for _ in 0..1000 {

@@ -98,7 +98,7 @@ impl DeployerCore for BasicDeployer {
             if let Some(request) = invocation {
                 backend_.container_mgr.reserve_container(cont_id, request);
             }
-            ctx.borrow_mut().new_deploy_event(cont_id, delay);
+            ctx.borrow_mut().new_container_start_event(cont_id, delay);
             DeploymentResult {
                 status: DeploymentStatus::Succeeded,
                 container_id: cont_id,

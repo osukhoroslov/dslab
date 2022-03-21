@@ -151,7 +151,7 @@ impl InvokerCore for BasicInvoker {
         &mut self,
         request: InvocationRequest,
         backend: Rc<RefCell<Backend>>,
-        ctx: Rc<RefCell<ServerlessContext>>,
+        _ctx: Rc<RefCell<ServerlessContext>>,
         deployer: Rc<RefCell<Deployer>>,
         curr_time: f64,
     ) -> InvocationStatus {

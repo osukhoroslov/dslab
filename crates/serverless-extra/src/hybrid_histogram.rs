@@ -57,7 +57,7 @@ impl GroupData {
             Some(ar.as_slice()),
             Some(ma.as_slice()),
             1,
-            &|x, y| 0.0,
+            &|_x, _y| 0.0,
             &mut thread_rng(),
         )
         .unwrap()[0]
