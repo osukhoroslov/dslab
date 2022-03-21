@@ -1,5 +1,8 @@
-use sugars::{rc, refcell};
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use serde::Serialize;
+use sugars::{rc, refcell};
 
 use core::cast;
 use core::context::SimulationContext;
@@ -7,7 +10,7 @@ use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
 
-use storage::api::{DataReadCompleted, DataReadRequest, DataWriteCompleted, DataWriteRequest};
+use storage::api::{DataReadCompleted, DataWriteCompleted};
 use storage::disk::Disk;
 
 const SEED: u64 = 16;
@@ -22,6 +25,7 @@ const DISK_READ_BW: u64 = 100;
 const DISK_WRITE_BW: u64 = 100;
 
 struct User {
+    disk: Rc<RefCell<Disk>>,
     ctx: SimulationContext,
 }
 
@@ -29,8 +33,8 @@ struct User {
 struct Start {}
 
 impl User {
-    fn new(ctx: SimulationContext) -> Self {
-        Self { ctx }
+    fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
+        Self { disk, ctx }
     }
 }
 
@@ -40,13 +44,13 @@ impl EventHandler for User {
             Start {} => {
                 for _ in 0..ITER_COUNT {
                     let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.ctx.emit_now(DataReadRequest { size }, DISK_NAME);
+                    self.disk.borrow_mut().read(size, self.ctx.id());
 
                     let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.ctx.emit_now(DataWriteRequest { size }, DISK_NAME);
+                    self.disk.borrow_mut().write(size, self.ctx.id());
                 }
             }
-            DataReadCompleted { src_event_id: _, size } => {
+            DataReadCompleted { request_id: _, size } => {
                 println!(
                     "{} [{}] completed READ {} bytes from disk",
                     self.ctx.time(),
@@ -54,7 +58,7 @@ impl EventHandler for User {
                     size
                 );
             }
-            DataWriteCompleted { src_event_id: _, size } => {
+            DataWriteCompleted { request_id: _, size } => {
                 println!(
                     "{} [{}] completed WRITE {} bytes from disk",
                     self.ctx.time(),
@@ -71,17 +75,18 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = Disk::new(
-        sim.create_context(DISK_NAME),
+    let disk = rc!(refcell!(Disk::new(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,
-    );
-    sim.add_handler(DISK_NAME, rc!(refcell!(disk)));
+        sim.create_context(DISK_NAME),
+    )));
 
-    let mut user_ctx = sim.create_context(USER_NAME);
-    user_ctx.emit_now(Start {}, USER_NAME);
-    sim.add_handler(USER_NAME, rc!(refcell!(User::new(user_ctx))));
+    let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
+    sim.add_handler(USER_NAME, user);
+
+    let mut root = sim.create_context("root");
+    root.emit_now(Start {}, USER_NAME);
 
     sim.step_until_no_events();
 

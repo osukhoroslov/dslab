@@ -15,19 +15,21 @@ impl File {
 }
 
 pub struct FileSystem {
-    ctx: SimulationContext,
     files: HashMap<String, File>,
     disks: HashMap<String, Rc<RefCell<Disk>>>,
     requests: HashMap<u64, (String, String)>, // event_id -> (component_id, file_name)
+    next_request_id: u64,
+    ctx: SimulationContext,
 }
 
 impl FileSystem {
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
-            ctx,
             files: HashMap::new(),
             disks: HashMap::new(),
             requests: HashMap::new(),
+            next_request_id: 0,
+            ctx,
         }
     }
 
@@ -46,6 +48,74 @@ impl FileSystem {
             }
         }
         None
+    }
+
+    pub fn read<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
+        self.read_impl(file_name, Some(size), requester)
+    }
+
+    pub fn read_all<S: Into<String>>(&mut self, file_name: &str, requester: S) -> u64 {
+        self.read_impl(file_name, None, requester)
+    }
+
+    fn read_impl<S: Into<String>>(&mut self, file_name: &str, size: Option<u64>, requester: S) -> u64 {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        if let Some(file) = self.files.get(file_name) {
+            let size_to_read = if let Some(value) = size {
+                file.size.min(value)
+            } else {
+                file.size
+            };
+
+            if let Some(disk) = self.resolve_disk(&file_name) {
+                let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
+                self.requests
+                    .insert(disk_request_id, (requester.into(), file_name.into()));
+
+                println!(
+                    "{} [{}] requested READ {} bytes from file {}",
+                    self.ctx.time(),
+                    self.ctx.id(),
+                    size_to_read,
+                    file_name
+                );
+            } else {
+                panic!("Cannot resolve disk");
+            }
+        } else {
+            panic!("File not created!");
+        }
+
+        request_id
+    }
+
+    pub fn write<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        if self.files.contains_key(file_name) {
+            if let Some(disk) = self.resolve_disk(file_name) {
+                let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
+                self.requests
+                    .insert(disk_request_id, (requester.into(), file_name.into()));
+
+                println!(
+                    "{} [{}] requested WRITE {} bytes to file {}",
+                    self.ctx.time(),
+                    self.ctx.id(),
+                    size,
+                    file_name
+                );
+            } else {
+                panic!("Cannot resolve disk");
+            }
+        } else {
+            panic!("File not created!");
+        }
+
+        request_id
     }
 
     pub fn create_file(&mut self, file_name: &str) -> bool {
@@ -74,58 +144,8 @@ impl FileSystem {
 impl EventHandler for FileSystem {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            FileReadRequest { file_name, size } => {
-                if let Some(file) = self.files.get(&file_name) {
-                    let size_to_read = if let Some(value) = size {
-                        file.size.min(value)
-                    } else {
-                        file.size
-                    };
-
-                    if let Some(disk) = self.resolve_disk(&file_name) {
-                        let event_id = self
-                            .ctx
-                            .emit_now(DataReadRequest { size: size_to_read }, disk.borrow().id());
-
-                        self.requests.insert(event_id, (event.src.clone(), file_name.clone()));
-
-                        println!(
-                            "{} [{}] requested READ {} bytes from file {}",
-                            self.ctx.time(),
-                            self.ctx.id(),
-                            size_to_read,
-                            file_name
-                        );
-                    } else {
-                        panic!("Cannot resolve disk");
-                    }
-                } else {
-                    panic!("File not created!");
-                }
-            }
-            FileWriteRequest { file_name, size } => {
-                if self.files.contains_key(&file_name) {
-                    if let Some(disk) = self.resolve_disk(&file_name) {
-                        let event_id = self.ctx.emit_now(DataWriteRequest { size }, disk.borrow().id());
-
-                        self.requests.insert(event_id, (event.src.clone(), file_name.clone()));
-
-                        println!(
-                            "{} [{}] requested WRITE {} bytes to file {}",
-                            self.ctx.time(),
-                            self.ctx.id(),
-                            size,
-                            file_name
-                        );
-                    } else {
-                        panic!("Cannot resolve disk");
-                    }
-                } else {
-                    panic!("File not created!");
-                }
-            }
-            DataReadCompleted { src_event_id, size } => {
-                if let Some((requester, file_name)) = self.requests.get(&src_event_id) {
+            DataReadCompleted { request_id, size } => {
+                if let Some((requester, file_name)) = self.requests.get(&request_id) {
                     if self.files.contains_key(file_name) {
                         println!(
                             "{} [{}] completed READ {} bytes from {}",
@@ -141,14 +161,14 @@ impl EventHandler for FileSystem {
                             },
                             requester.clone(),
                         );
-                        self.requests.remove(&src_event_id);
+                        self.requests.remove(&request_id);
                     } else {
                         panic!("Request not found!");
                     }
                 }
             }
-            DataWriteCompleted { src_event_id, size } => {
-                if let Some((requester, file_name)) = self.requests.get(&src_event_id) {
+            DataWriteCompleted { request_id, size } => {
+                if let Some((requester, file_name)) = self.requests.get(&request_id) {
                     if let Some(file) = self.files.get_mut(file_name) {
                         file.size += size;
                         println!(
@@ -166,7 +186,7 @@ impl EventHandler for FileSystem {
                             },
                             requester.clone(),
                         );
-                        self.requests.remove(&src_event_id);
+                        self.requests.remove(&request_id);
                     } else {
                         panic!("Request not found!");
                     }
