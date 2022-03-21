@@ -52,7 +52,7 @@ impl Simulation {
                         target: &event.dest,
                         "[{:.3} {} {}] {}",
                         self.sim_state.borrow().time(),
-                        crate::log::get_colored("EVENT", "cyan"),
+                        crate::log::get_colored("EVENT", colored::Color::BrightBlack),
                         event.dest,
                         serde_json::to_string(&event).unwrap()
                     );
