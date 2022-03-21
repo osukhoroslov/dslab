@@ -66,7 +66,7 @@ pub trait DataOperation {
 }
 
 pub trait NetworkConfiguration {
-    fn latency(&self) -> f64;
+    fn latency(&self, src: &str, dst: &str) -> f64;
 }
 
 pub trait NetworkModel: DataOperation + NetworkConfiguration {}

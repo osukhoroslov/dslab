@@ -65,7 +65,7 @@ impl SharedBandwidthNetwork {
 }
 
 impl NetworkConfiguration for SharedBandwidthNetwork {
-    fn latency(&self) -> f64 {
+    fn latency(&self, _src: &str, _dest: &str) -> f64 {
         self.latency
     }
 }

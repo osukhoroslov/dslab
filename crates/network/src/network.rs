@@ -65,11 +65,14 @@ impl Network {
         log_debug!(self.ctx, "{} sent event to {}", src.as_ref(), dest.as_ref());
 
         if !self.check_same_host(src.as_ref(), dest.as_ref()) {
-            self.ctx
-                .emit_as(data, src.as_ref(), dest.as_ref(), self.network_model.borrow().latency());
+            self.ctx.emit_as(
+                data,
+                src.as_ref(),
+                dest.as_ref(),
+                self.network_model.borrow().latency(src.as_ref(), dest.as_ref()),
+            );
         } else {
-            let hostname = self.get_location(src.as_ref()).unwrap();
-            let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
+            let local_latency = self.topology.get_local_latency(src.as_ref(), dest.as_ref());
             self.ctx.emit_as(data, src.as_ref(), dest.as_ref(), local_latency);
         }
     }
@@ -100,12 +103,15 @@ impl EventHandler for Network {
                     message.dest.clone()
                 );
                 if !self.check_same_host(&message.src, &message.dest) {
-                    let message_recieve_event = MessageReceive { message };
-                    self.ctx
-                        .emit_self(message_recieve_event, self.network_model.borrow().latency());
+                    let message_recieve_event = MessageReceive {
+                        message: message.clone(),
+                    };
+                    self.ctx.emit_self(
+                        message_recieve_event,
+                        self.network_model.borrow().latency(&message.src, &message.dest),
+                    );
                 } else {
-                    let hostname = self.get_location(&message.dest).unwrap();
-                    let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
+                    let local_latency = self.topology.get_local_latency(&message.src, &message.dest);
                     let message_recieve_event = MessageReceive { message };
                     self.ctx.emit_self(message_recieve_event, local_latency);
                 }
@@ -135,11 +141,12 @@ impl EventHandler for Network {
                     data.size
                 );
                 if !self.check_same_host(&data.src, &data.dest) {
-                    self.ctx
-                        .emit_self(StartDataTransfer { data }, self.network_model.borrow().latency());
+                    self.ctx.emit_self(
+                        StartDataTransfer { data: data.clone() },
+                        self.network_model.borrow().latency(&data.src, &data.dest),
+                    );
                 } else {
-                    let hostname = self.get_location(&data.dest).unwrap();
-                    let local_latency = self.topology.get_node_info(hostname).unwrap().local_network.latency();
+                    let local_latency = self.topology.get_local_latency(&data.src, &data.dest);
                     self.ctx.emit_self(StartDataTransfer { data }, local_latency);
                 }
             }

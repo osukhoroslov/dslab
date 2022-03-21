@@ -71,4 +71,12 @@ impl Topology {
             .local_network
             .send_data(data, ctx)
     }
+
+    pub fn get_local_latency(&mut self, src: &str, dst: &str) -> f64 {
+        let hostname = self.get_location(src).unwrap();
+        self.get_node_info(hostname)
+        .unwrap()
+        .local_network
+        .latency(src, dst)
+    }
 }
