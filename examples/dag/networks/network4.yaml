@@ -1,0 +1,4 @@
+network:
+  model: ConstantBandwidthNetwork
+  bandwidth: 100
+  latency: 0.1

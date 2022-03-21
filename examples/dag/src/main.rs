@@ -8,20 +8,22 @@ use rand_pcg::Pcg64;
 use compute::multicore::*;
 use core::simulation::Simulation;
 use dag::dag::DAG;
+use dag::network::load_network;
 use dag::resource::load_resources;
 use dag::runner::*;
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
 
 use crate::simple_scheduler::SimpleScheduler;
 
-fn run_simulation(dag: DAG, resources_file: &str, network_model: ConstantBandwidthNetwork, trace_file: &str) {
+fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let mut sim = Simulation::new(123);
 
     let resources = load_resources(resources_file, &mut sim);
 
-    let network_model = rc!(refcell!(network_model));
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+    let network = rc!(refcell!(Network::new(
+        load_network(network_file),
+        sim.create_context("net")
+    )));
     sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
@@ -85,7 +87,7 @@ fn map_reduce() {
     run_simulation(
         dag,
         "resources/cluster1.yaml",
-        ConstantBandwidthNetwork::new(10.0, 0.1),
+        "networks/network1.yaml",
         "traces/trace_map_reduce.json",
     );
 }
@@ -94,7 +96,7 @@ fn epigenomics() {
     run_simulation(
         DAG::from_dax("graphs/Epigenomics_100.xml", 1000.),
         "resources/cluster2.yaml",
-        ConstantBandwidthNetwork::new(100000.0, 10.),
+        "networks/network2.yaml",
         "traces/trace_epigenomics.json",
     );
 }
@@ -103,7 +105,7 @@ fn montage() {
     run_simulation(
         DAG::from_dot("graphs/Montage.dot"),
         "resources/cluster2.yaml",
-        ConstantBandwidthNetwork::new(0.01, 1.),
+        "networks/network3.yaml",
         "traces/trace_montage.json",
     );
 }
@@ -112,7 +114,7 @@ fn diamond() {
     run_simulation(
         DAG::from_yaml("graphs/diamond.yaml"),
         "resources/cluster3.yaml",
-        ConstantBandwidthNetwork::new(100., 0.1),
+        "networks/network4.yaml",
         "traces/trace_diamond.json",
     );
 }
@@ -148,7 +150,7 @@ fn reuse_files() {
     run_simulation(
         dag,
         "resources/cluster1.yaml",
-        ConstantBandwidthNetwork::new(10.0, 0.1),
+        "networks/network1.yaml",
         "traces/trace_reuse_files.json",
     );
 }
