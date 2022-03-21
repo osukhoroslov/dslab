@@ -84,7 +84,7 @@ fn map_reduce() {
 
     run_simulation(
         dag,
-        "resources/map_reduce.yaml",
+        "resources/cluster1.yaml",
         ConstantBandwidthNetwork::new(10.0, 0.1),
         "traces/trace_map_reduce.json",
     );
@@ -93,7 +93,7 @@ fn map_reduce() {
 fn epigenomics() {
     run_simulation(
         DAG::from_dax("graphs/Epigenomics_100.xml", 1000.),
-        "resources/montage.yaml",
+        "resources/cluster2.yaml",
         ConstantBandwidthNetwork::new(100000.0, 10.),
         "traces/trace_epigenomics.json",
     );
@@ -102,7 +102,7 @@ fn epigenomics() {
 fn montage() {
     run_simulation(
         DAG::from_dot("graphs/Montage.dot"),
-        "resources/montage.yaml",
+        "resources/cluster2.yaml",
         ConstantBandwidthNetwork::new(0.01, 1.),
         "traces/trace_montage.json",
     );
@@ -111,7 +111,7 @@ fn montage() {
 fn diamond() {
     run_simulation(
         DAG::from_yaml("graphs/diamond.yaml"),
-        "resources/diamond.yaml",
+        "resources/cluster3.yaml",
         ConstantBandwidthNetwork::new(100., 0.1),
         "traces/trace_diamond.json",
     );
@@ -147,7 +147,7 @@ fn reuse_files() {
 
     run_simulation(
         dag,
-        "resources/map_reduce.yaml",
+        "resources/cluster1.yaml",
         ConstantBandwidthNetwork::new(10.0, 0.1),
         "traces/trace_reuse_files.json",
     );

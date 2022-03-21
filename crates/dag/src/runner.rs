@@ -336,7 +336,6 @@ impl DAGRunner {
                 self.process_actions();
             }
         }
-        self.process_actions();
     }
 }
 
