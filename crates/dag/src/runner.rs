@@ -14,17 +14,10 @@ use network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::DataItemState;
+use crate::resource::Resource;
 use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
-
-pub struct Resource {
-    pub id: String,
-    pub compute: Rc<RefCell<Compute>>,
-    pub speed: u64,
-    pub cores_available: u32,
-    pub memory_available: u64,
-}
 
 pub struct DataTransfer {
     pub data_id: usize,

@@ -1,16 +1,11 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
-use core::simulation::Simulation;
-
-use compute::multicore::{Compute, CoresDependency};
+use compute::multicore::CoresDependency;
 
 use crate::dag::DAG;
-use crate::runner::Resource;
 
 fn one() -> u32 {
     1
@@ -46,19 +41,6 @@ struct Yaml {
     tasks: Vec<Task>,
     #[serde(default = "Vec::new")]
     inputs: Vec<DataItem>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct YamlResource {
-    name: String,
-    speed: u64,
-    cores: u32,
-    memory: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Resources {
-    resources: Vec<YamlResource>,
 }
 
 impl DAG {
@@ -105,28 +87,4 @@ impl DAG {
         }
         dag
     }
-}
-
-pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
-    let resources: Resources =
-        serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
-            .expect(&format!("Can't parse YAML from file {}", file));
-    let mut result: Vec<Resource> = Vec::new();
-    for resource in resources.resources.into_iter() {
-        let compute = Rc::new(RefCell::new(Compute::new(
-            resource.speed,
-            resource.cores,
-            resource.memory,
-            sim.create_context(&resource.name),
-        )));
-        sim.add_handler(&resource.name, compute.clone());
-        result.push(Resource {
-            id: resource.name,
-            compute,
-            speed: resource.speed,
-            cores_available: resource.cores,
-            memory_available: resource.memory,
-        });
-    }
-    result
 }

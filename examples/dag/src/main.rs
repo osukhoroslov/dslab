@@ -8,7 +8,7 @@ use rand_pcg::Pcg64;
 use compute::multicore::*;
 use core::simulation::Simulation;
 use dag::dag::DAG;
-use dag::parsers::yaml_parser::*;
+use dag::resource::load_resources;
 use dag::runner::*;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
