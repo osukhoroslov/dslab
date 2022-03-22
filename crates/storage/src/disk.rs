@@ -1,7 +1,7 @@
 use core::context::SimulationContext;
 use core::log_debug;
 
-use crate::api::{DataReadCompleted, DataWriteCompleted, DataWriteFailed};
+use crate::api::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 pub struct Disk {
     capacity: u64,
@@ -34,29 +34,30 @@ impl Disk {
 
         log_debug!(self.ctx, "Requested read {} bytes request from {}", size, &requester);
 
-        let size_to_read = if size <= self.capacity {
-            size
-        } else {
+        if size > self.capacity {
             log_debug!(
                 self.ctx,
-                "Size {} is more than capacity, only {} bytes are going to be read",
+                "Size {} is more than capacity {}, failing",
                 size,
-                self.capacity
+                self.capacity,
             );
-            self.capacity
-        };
+            self.ctx.emit_now(
+                DataReadFailed {
+                    request_id,
+                    error: "requested size > capacity".to_string(),
+                },
+                requester,
+            );
+        } else {
+            let read_time = size as f64 / self.read_bandwidth as f64;
+            self.ready_time = self.ready_time.max(self.ctx.time()) + read_time;
 
-        let read_time = size_to_read as f64 / self.read_bandwidth as f64;
-        self.ready_time = self.ready_time.max(self.ctx.time()) + read_time;
-
-        self.ctx.emit(
-            DataReadCompleted {
-                request_id: request_id,
-                size: size_to_read,
-            },
-            requester,
-            self.ready_time - self.ctx.time(),
-        );
+            self.ctx.emit(
+                DataReadCompleted { request_id, size },
+                requester,
+                self.ready_time - self.ctx.time(),
+            );
+        }
 
         request_id
     }
@@ -72,9 +73,9 @@ impl Disk {
         if self.capacity - self.used < size {
             log_debug!(
                 self.ctx,
-                "Not enough space to write {} bytes, only {} available. Failing",
+                "Not enough space to write {} bytes, only {} available, failing",
                 size,
-                self.capacity - self.used
+                self.capacity - self.used,
             );
 
             self.ctx.emit_now(

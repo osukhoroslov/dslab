@@ -15,7 +15,7 @@ use core::handler::EventHandler;
 use core::log_debug;
 use core::simulation::Simulation;
 
-use storage::api::{DataReadCompleted, DataWriteCompleted, DataWriteFailed};
+use storage::api::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use storage::disk::Disk;
 
 const SEED: u64 = 16;
@@ -55,7 +55,7 @@ impl EventHandler for User {
 
                 log_debug!(
                     self.ctx,
-                    "Test #1: Then trying to read 6 bytes... only 5 should be read"
+                    "Test #1: Then trying to read 6 bytes... should fail"
                 );
                 self.requests.insert(self.disk.borrow_mut().read(6, self.ctx.id()), 1);
 
@@ -79,6 +79,14 @@ impl EventHandler for User {
                     size
                 );
             }
+            DataReadFailed { request_id, error } => {
+                log_debug!(
+                    self.ctx,
+                    "Test #{}: Reading failed. Error: {}",
+                    self.requests[&request_id],
+                    error
+                );
+            }
             DataWriteCompleted { request_id, size } => {
                 log_debug!(
                     self.ctx,
@@ -90,7 +98,7 @@ impl EventHandler for User {
             DataWriteFailed { request_id, error } => {
                 log_debug!(
                     self.ctx,
-                    "Test #{}: Writing failed. Error: [{}]",
+                    "Test #{}: Writing failed. Error: {}",
                     self.requests[&request_id],
                     error
                 );
