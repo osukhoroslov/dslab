@@ -191,13 +191,16 @@ impl FileSystem {
     }
 
     pub fn delete_file(&mut self, file_name: &str) -> bool {
-        if let Some(file) = self.files.get(file_name) {
-            if file.cnt_actions == 0 {
-                log_debug!(self.ctx, "Removing file [{}]", file_name);
-                self.files.remove(file_name);
-                return true;
+        if let Some(disk) = self.resolve_disk(file_name) {
+            if let Some(file) = self.files.get(file_name) {
+                if file.cnt_actions == 0 {
+                    log_debug!(self.ctx, "Removing file [{}]", file_name);
+                    disk.borrow_mut().mark_free(file.size);
+                    self.files.remove(file_name);
+                    return true;
+                }
+                log_debug!(self.ctx, "File [{}] is busy and cannot be removed", file_name);
             }
-            log_debug!(self.ctx, "File [{}] is busy and cannot be removed", file_name);
         }
         false
     }

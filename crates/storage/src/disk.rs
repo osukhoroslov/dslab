@@ -103,6 +103,14 @@ impl Disk {
         request_id
     }
 
+    pub fn mark_free(&mut self, size: u64) -> bool {
+        if size <= self.used {
+            self.used -= size;
+            return true;
+        }
+        false
+    }
+
     pub fn get_used_space(&self) -> u64 {
         self.used
     }
