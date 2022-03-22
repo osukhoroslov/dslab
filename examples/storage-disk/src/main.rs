@@ -1,31 +1,35 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::io::Write;
 use std::rc::Rc;
 
 use serde::Serialize;
 use sugars::{rc, refcell};
 
+use env_logger::Builder;
+
 use core::cast;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
+use core::log_debug;
 use core::simulation::Simulation;
 
-use storage::api::{DataReadCompleted, DataWriteCompleted};
+use storage::api::{DataReadCompleted, DataWriteCompleted, DataWriteFailed};
 use storage::disk::Disk;
 
 const SEED: u64 = 16;
-const ITER_COUNT: u64 = 1000;
-const MAX_SIZE: u64 = 1000;
 
 const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
-const DISK_CAPACITY: u64 = 1000000000;
+const DISK_CAPACITY: u64 = 5;
 const DISK_READ_BW: u64 = 100;
 const DISK_WRITE_BW: u64 = 100;
 
 struct User {
     disk: Rc<RefCell<Disk>>,
+    requests: HashMap<u64, u64>, // request_id -> test case
     ctx: SimulationContext,
 }
 
@@ -34,7 +38,11 @@ struct Start {}
 
 impl User {
     fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
-        Self { disk, ctx }
+        Self {
+            disk,
+            requests: HashMap::new(),
+            ctx,
+        }
     }
 }
 
@@ -42,28 +50,49 @@ impl EventHandler for User {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                for _ in 0..ITER_COUNT {
-                    let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.disk.borrow_mut().read(size, self.ctx.id());
+                log_debug!(self.ctx, "Test #0: Reading 3 bytes... should be OK");
+                self.requests.insert(self.disk.borrow_mut().read(3, self.ctx.id()), 0);
 
-                    let size = (self.ctx.rand() * MAX_SIZE as f64) as u64;
-                    self.disk.borrow_mut().write(size, self.ctx.id());
-                }
+                log_debug!(
+                    self.ctx,
+                    "Test #1: Then trying to read 6 bytes... only 5 should be read"
+                );
+                self.requests.insert(self.disk.borrow_mut().read(6, self.ctx.id()), 1);
+
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow_mut().get_used_space());
+
+                log_debug!(self.ctx, "Test #2: Writing 4 bytes... should be OK");
+                self.requests.insert(self.disk.borrow_mut().write(4, self.ctx.id()), 2);
+
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow_mut().get_used_space());
+
+                log_debug!(self.ctx, "Test #3: Writing 2 more bytes... should fail");
+                self.requests.insert(self.disk.borrow_mut().write(2, self.ctx.id()), 3);
+
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow_mut().get_used_space());
             }
-            DataReadCompleted { request_id: _, size } => {
-                println!(
-                    "{} [{}] completed READ {} bytes from disk",
-                    self.ctx.time(),
-                    self.ctx.id(),
+            DataReadCompleted { request_id, size } => {
+                log_debug!(
+                    self.ctx,
+                    "Test #{}: Completed reading {} bytes from disk",
+                    self.requests[&request_id],
                     size
                 );
             }
-            DataWriteCompleted { request_id: _, size } => {
-                println!(
-                    "{} [{}] completed WRITE {} bytes from disk",
-                    self.ctx.time(),
-                    self.ctx.id(),
+            DataWriteCompleted { request_id, size } => {
+                log_debug!(
+                    self.ctx,
+                    "Test #{}: Completed writing {} bytes to disk",
+                    self.requests[&request_id],
                     size
+                );
+            }
+            DataWriteFailed { request_id, error } => {
+                log_debug!(
+                    self.ctx,
+                    "Test #{}: Writing failed. Error: [{}]",
+                    self.requests[&request_id],
+                    error
                 );
             }
         })
@@ -72,6 +101,10 @@ impl EventHandler for User {
 
 fn main() {
     println!("Starting...");
+
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 
     let mut sim = Simulation::new(SEED);
 
