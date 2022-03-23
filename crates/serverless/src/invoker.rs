@@ -7,6 +7,8 @@ use crate::simulation::{Backend, ServerlessContext};
 use crate::stats::Stats;
 use crate::util::Counter;
 
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -23,6 +25,19 @@ pub struct InvocationRequest {
     pub id: u64,
     pub duration: f64,
     pub time: f64,
+}
+
+impl Serialize for InvocationRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("InvocationRequest", 3)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("duration", &self.duration)?;
+        state.serialize_field("time", &self.time)?;
+        state.end()
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -119,23 +134,25 @@ impl Invoker {
 impl EventHandler for Invoker {
     fn on(&mut self, event: Event) {
         if event.data.is::<InvocationRequest>() {
-            let request = *event.data.downcast::<InvocationRequest>().unwrap();
-            let status = self.core.invoke(
-                request,
-                self.backend.clone(),
-                self.ctx.clone(),
-                self.deployer.clone(),
-                event.time.into_inner(),
-            );
-            if status != InvocationStatus::Rejected {
-                let mut stats = self.stats.borrow_mut();
-                stats.invocations += 1;
-                if let InvocationStatus::Delayed(delay) = status {
-                    stats.cold_starts_total_time += delay;
-                    stats.cold_starts += 1;
-                } else if let InvocationStatus::Instant(cont_id) = status {
-                    drop(stats);
-                    self.start_invocation(cont_id, request, event.time.into_inner());
+            if let Ok(_request) = event.data.downcast::<InvocationRequest>() {
+                let request = *_request;
+                let status = self.core.invoke(
+                    request,
+                    self.backend.clone(),
+                    self.ctx.clone(),
+                    self.deployer.clone(),
+                    event.time.into_inner(),
+                );
+                if status != InvocationStatus::Rejected {
+                    let mut stats = self.stats.borrow_mut();
+                    stats.invocations += 1;
+                    if let InvocationStatus::Delayed(delay) = status {
+                        stats.cold_starts_total_time += delay;
+                        stats.cold_starts += 1;
+                    } else if let InvocationStatus::Instant(cont_id) = status {
+                        drop(stats);
+                        self.start_invocation(cont_id, request, event.time.into_inner());
+                    }
                 }
             }
         }
