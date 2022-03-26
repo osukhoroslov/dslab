@@ -20,7 +20,7 @@ use storage::disk::Disk;
 use storage::file::FileSystem;
 
 const SEED: u64 = 16;
-const TEST_CASES_COUNT: u64 = 6;
+const CASES_COUNT: u64 = 6;
 
 const FILESYSTEM_NAME: &str = "FileSystem-1";
 const DISK_1_NAME: &str = "Disk-1";
@@ -50,7 +50,7 @@ struct User {
 
 #[derive(Serialize)]
 struct Run {
-    test_case: u64,
+    case: u64,
 }
 
 #[derive(Serialize)]
@@ -66,11 +66,11 @@ impl EventHandler for User {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Init {} => {}
-            Run { test_case } => {
-                match test_case {
+            Run { case } => {
+                match case {
                     0 => {
-                        self.fs.borrow_mut().create_file(FILE_1_NAME);
-                        assert!(self.fs.borrow_mut().get_file_size(FILE_1_NAME).unwrap() == 0);
+                        self.fs.borrow_mut().create_file(FILE_1_NAME).unwrap();
+                        self.fs.borrow_mut().get_file_size(FILE_1_NAME).unwrap();
                         log_debug!(self.ctx, "Trying to read 3 bytes from empty file... should fail");
                         self.fs.borrow_mut().read(FILE_1_NAME, 3, self.ctx.id());
                     }
@@ -84,12 +84,12 @@ impl EventHandler for User {
                     }
                     3 => {
                         log_debug!(self.ctx, "Testing another disk for file [{}]", FILE_2_NAME);
-                        self.fs.borrow_mut().create_file(FILE_2_NAME);
+                        self.fs.borrow_mut().create_file(FILE_2_NAME).unwrap();
                         self.fs.borrow_mut().write(FILE_2_NAME, 5, self.ctx.id());
                     }
                     4 => {
                         log_debug!(self.ctx, "Deleting file [{}] and then trying to access", FILE_1_NAME);
-                        assert!(self.fs.borrow_mut().delete_file(FILE_1_NAME));
+                        self.fs.borrow_mut().delete_file(FILE_1_NAME).unwrap();
                         self.fs.borrow_mut().write(FILE_1_NAME, 1, self.ctx.id());
                         self.fs.borrow_mut().read_all(FILE_1_NAME, self.ctx.id());
                     }
@@ -101,7 +101,11 @@ impl EventHandler for User {
                         );
                         self.fs.borrow_mut().write(FILE_2_NAME, 1, self.ctx.id());
                         self.fs.borrow_mut().read_all(FILE_2_NAME, self.ctx.id());
-                        assert!(!self.fs.borrow_mut().delete_file(FILE_2_NAME));
+                        log_debug!(
+                            self.ctx,
+                            "Received error: {}",
+                            self.fs.borrow_mut().delete_file(FILE_2_NAME).err().unwrap()
+                        )
                     }
                     _ => {
                         panic!("Wrong test case number");
@@ -176,8 +180,8 @@ fn main() {
     let fs = rc!(refcell!(FileSystem::new(sim.create_context(FILESYSTEM_NAME))));
     sim.add_handler(FILESYSTEM_NAME, fs.clone());
 
-    assert!(!fs.borrow_mut().mount_disk(DISK_1_MOUNT_POINT, disk1));
-    assert!(!fs.borrow_mut().mount_disk(DISK_2_MOUNT_POINT, disk2));
+    fs.borrow_mut().mount_disk(DISK_1_MOUNT_POINT, disk1).unwrap();
+    fs.borrow_mut().mount_disk(DISK_2_MOUNT_POINT, disk2).unwrap();
 
     let user = rc!(refcell!(User::new(fs.clone(), sim.create_context(USER_NAME))));
     sim.add_handler(USER_NAME, user);
@@ -187,17 +191,20 @@ fn main() {
     root.emit_now(Init {}, USER_NAME);
     sim.step_until_no_events();
 
-    for test_case in 0..TEST_CASES_COUNT {
-        println!("Running test case {}", test_case);
-        root.emit_now(Run { test_case }, USER_NAME);
+    for case in 0..CASES_COUNT {
+        println!("Running case {}", case);
+        root.emit_now(Run { case }, USER_NAME);
         sim.step_until_no_events();
         println!(
-            "Total FS used space after test case {} is {} bytes",
-            test_case,
+            "Total FS used space after case {} is {} bytes",
+            case,
             fs.borrow().get_used_space()
         );
-        println!("############################")
+        println!("########################################################")
     }
+
+    fs.borrow_mut().unmount_disk(DISK_1_MOUNT_POINT).unwrap();
+    fs.borrow_mut().unmount_disk(DISK_2_MOUNT_POINT).unwrap();
 
     println!("Finish");
 }

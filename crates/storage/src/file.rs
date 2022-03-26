@@ -34,12 +34,19 @@ impl FileSystem {
         }
     }
 
-    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> bool {
-        self.disks.insert(mount_point.to_string(), disk).is_some()
+    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), &str> {
+        if let Some(_) = self.disks.get(mount_point) {
+            return Err("disk already mounted");
+        }
+        self.disks.insert(mount_point.to_string(), disk);
+        Ok(())
     }
 
-    pub fn unmount_disk(&mut self, mount_point: &str) -> bool {
-        self.disks.remove(mount_point).is_some()
+    pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), &str> {
+        if let None = self.disks.remove(mount_point) {
+            return Err("unknown mount point");
+        }
+        Ok(())
     }
 
     fn resolve_disk(&self, file_name: &str) -> Option<Rc<RefCell<Disk>>> {
@@ -98,7 +105,7 @@ impl FileSystem {
                 file.cnt_actions += 1;
                 let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
                 self.requests.insert(
-                    (disk.borrow_mut().id().to_string(), disk_request_id),
+                    (disk.borrow().id().to_string(), disk_request_id),
                     (request_id, requester.into(), file_name.into()),
                 );
             } else {
@@ -135,7 +142,7 @@ impl FileSystem {
                 file.cnt_actions += 1;
                 let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
                 self.requests.insert(
-                    (disk.borrow_mut().id().to_string(), disk_request_id),
+                    (disk.borrow().id().to_string(), disk_request_id),
                     (request_id, requester.into(), file_name.into()),
                 );
             } else {
@@ -162,47 +169,40 @@ impl FileSystem {
         request_id
     }
 
-    pub fn create_file(&mut self, file_name: &str) -> bool {
+    pub fn create_file(&mut self, file_name: &str) -> Result<(), &str> {
         log_debug!(self.ctx, "Requested to create file [{}]", file_name);
-        if self.files.contains_key(file_name) {
-            log_debug!(self.ctx, "File already exists");
-            return false;
-        } else if let Some(disk) = self.resolve_disk(file_name) {
-            log_debug!(
-                self.ctx,
-                "File [{}] created on disk [{}]",
-                file_name,
-                disk.borrow_mut().id()
-            );
-
-            self.files.insert(file_name.to_string(), File::new(0));
-            return true;
+        if let Some(_) = self.files.get(file_name) {
+            return Err("file already exists");
         }
-        log_debug!(self.ctx, "Cannot resolve mount point for path [{}]", file_name);
-        false
+        let disk = self.resolve_disk(file_name).ok_or("cannot resolve disk")?;
+        log_debug!(
+            self.ctx,
+            "File [{}] created on disk [{}]",
+            file_name,
+            disk.borrow().id()
+        );
+        self.files.insert(file_name.to_string(), File::new(0));
+        Ok(())
     }
 
-    pub fn get_file_size(&self, file_name: &str) -> Option<u64> {
-        self.files.get(file_name).map(|f| f.size)
+    pub fn get_file_size(&self, file_name: &str) -> Result<u64, &str> {
+        self.files.get(file_name).ok_or("file does not exist").map(|f| f.size)
     }
 
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
-    pub fn delete_file(&mut self, file_name: &str) -> bool {
-        if let Some(disk) = self.resolve_disk(file_name) {
-            if let Some(file) = self.files.get(file_name) {
-                if file.cnt_actions == 0 {
-                    log_debug!(self.ctx, "Removing file [{}]", file_name);
-                    disk.borrow_mut().mark_free(file.size);
-                    self.files.remove(file_name);
-                    return true;
-                }
-                log_debug!(self.ctx, "File [{}] is busy and cannot be removed", file_name);
-            }
+    pub fn delete_file(&mut self, file_name: &str) -> Result<(), &str> {
+        let disk = self.resolve_disk(file_name).ok_or("cannot resolve disk")?;
+        let file = self.files.get(file_name).ok_or("file does not exist")?;
+        if file.cnt_actions > 0 {
+            return Err("file is busy and cannot be removed");
         }
-        false
+        log_debug!(self.ctx, "Removing file [{}]", file_name);
+        disk.borrow_mut().mark_free(file.size).unwrap();
+        self.files.remove(file_name);
+        Ok(())
     }
 }
 
