@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use rand::distributions::uniform::{SampleRange, SampleUniform};
+
 use crate::event::EventData;
 use crate::state::SimulationState;
 
@@ -24,6 +26,14 @@ impl SimulationContext {
 
     pub fn rand(&mut self) -> f64 {
         self.sim_state.borrow_mut().rand()
+    }
+
+    pub fn gen_range<T, R>(&mut self, range: R) -> T
+    where
+        T: SampleUniform,
+        R: SampleRange<T>,
+    {
+        self.sim_state.borrow_mut().gen_range(range)
     }
 
     pub fn emit<T, S>(&mut self, data: T, dest: S, delay: f64) -> u64
