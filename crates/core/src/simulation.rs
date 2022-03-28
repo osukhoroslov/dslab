@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use log::Level::Trace;
-use log::{log_enabled, trace};
+use log::{debug, log_enabled, trace};
+use serde_json::json;
+use serde_type_name::type_name;
 
 use crate::context::SimulationContext;
 use crate::event::Event;
@@ -12,7 +14,9 @@ use crate::state::SimulationState;
 
 pub struct Simulation {
     sim_state: Rc<RefCell<SimulationState>>,
-    handlers: HashMap<String, Rc<RefCell<dyn EventHandler>>>,
+    name_to_id: HashMap<String, u32>,
+    names: Rc<RefCell<Vec<String>>>,
+    handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
     undelivered_events: Vec<Event>,
 }
 
@@ -20,23 +24,62 @@ impl Simulation {
     pub fn new(seed: u64) -> Self {
         Self {
             sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
-            handlers: HashMap::new(),
+            name_to_id: HashMap::new(),
+            names: Rc::new(RefCell::new(Vec::new())),
+            handlers: Vec::new(),
             undelivered_events: Vec::new(),
         }
     }
 
-    pub fn create_context<S>(&mut self, id: S) -> SimulationContext
-    where
-        S: Into<String>,
-    {
-        SimulationContext::new(id.into(), self.sim_state.clone())
+    fn register(&mut self, name: &str) -> u32 {
+        if let Some(&id) = self.name_to_id.get(name) {
+            return id;
+        }
+        let id = self.name_to_id.len() as u32;
+        self.name_to_id.insert(name.to_owned(), id);
+        self.names.borrow_mut().push(name.to_owned());
+        self.handlers.push(None);
+        id
     }
 
-    pub fn add_handler<S>(&mut self, id: S, handler: Rc<RefCell<dyn EventHandler>>)
+    pub fn lookup_id(&self, name: &str) -> u32 {
+        *self.name_to_id.get(name).unwrap()
+    }
+
+    pub fn lookup_name(&self, id: u32) -> String {
+        self.names.borrow().get(id as usize).unwrap().clone()
+    }
+
+    pub fn create_context<S>(&mut self, name: S) -> SimulationContext
     where
-        S: Into<String>,
+        S: AsRef<str>,
     {
-        self.handlers.insert(id.into(), handler);
+        let ctx = SimulationContext::new(
+            self.register(name.as_ref()),
+            name.as_ref(),
+            self.sim_state.clone(),
+            self.names.clone(),
+        );
+        debug!(
+            target: "simulation",
+            "[{:.3} DEBUG simulation] Created context: {}",
+            self.time(), json!({"name": ctx.name(), "id": ctx.id()})
+        );
+        ctx
+    }
+
+    pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> u32
+    where
+        S: AsRef<str>,
+    {
+        let id = self.register(name.as_ref());
+        self.handlers[id as usize] = Some(handler);
+        debug!(
+            target: "simulation",
+            "[{:.3} DEBUG simulation] Added handler: {}",
+            self.time(), json!({"name": name.as_ref(), "id": id})
+        );
+        id
     }
 
     pub fn time(&self) -> f64 {
@@ -46,15 +89,17 @@ impl Simulation {
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
-            if let Some(handler) = self.handlers.get(&event.dest) {
+            if let Some(handler) = self.handlers.get(event.dest as usize).unwrap() {
                 if log_enabled!(Trace) {
+                    let src_name = self.lookup_name(event.src);
+                    let dest_name = self.lookup_name(event.dest);
                     trace!(
-                        target: &event.dest,
+                        target: &dest_name,
                         "[{:.3} {} {}] {}",
-                        self.sim_state.borrow().time(),
+                        event.time.into_inner(),
                         crate::log::get_colored("EVENT", colored::Color::BrightBlack),
-                        event.dest,
-                        serde_json::to_string(&event).unwrap()
+                        dest_name,
+                        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
                     );
                 }
                 handler.borrow_mut().on(event);

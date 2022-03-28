@@ -42,7 +42,7 @@ impl SimulationState {
         self.rand.gen_range(range)
     }
 
-    pub fn add_event<T>(&mut self, data: T, src: String, dest: String, delay: f64) -> u64
+    pub fn add_event<T>(&mut self, data: T, src: u32, dest: u32, delay: f64) -> u64
     where
         T: EventData,
     {

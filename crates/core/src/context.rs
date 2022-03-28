@@ -7,17 +7,28 @@ use crate::event::EventData;
 use crate::state::SimulationState;
 
 pub struct SimulationContext {
-    id: String,
+    id: u32,
+    name: String,
     sim_state: Rc<RefCell<SimulationState>>,
+    names: Rc<RefCell<Vec<String>>>,
 }
 
 impl SimulationContext {
-    pub fn new(id: String, sim_state: Rc<RefCell<SimulationState>>) -> Self {
-        Self { id, sim_state }
+    pub fn new(id: u32, name: &str, sim_state: Rc<RefCell<SimulationState>>, names: Rc<RefCell<Vec<String>>>) -> Self {
+        Self {
+            id,
+            name: name.to_owned(),
+            sim_state,
+            names,
+        }
     }
 
-    pub fn id(&self) -> &str {
-        self.id.as_ref()
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn time(&self) -> f64 {
@@ -36,55 +47,46 @@ impl SimulationContext {
         self.sim_state.borrow_mut().gen_range(range)
     }
 
-    pub fn emit<T, S>(&mut self, data: T, dest: S, delay: f64) -> u64
+    pub fn emit<T>(&mut self, data: T, dest: u32, delay: f64) -> u64
     where
         T: EventData,
-        S: Into<String>,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_event(data, self.id.clone(), dest.into(), delay)
+        self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
     }
 
-    pub fn emit_now<T, S>(&mut self, data: T, dest: S) -> u64
+    pub fn emit_now<T>(&mut self, data: T, dest: u32) -> u64
     where
         T: EventData,
-        S: Into<String>,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_event(data, self.id.clone(), dest.into(), 0.)
+        self.sim_state.borrow_mut().add_event(data, self.id.clone(), dest, 0.)
     }
 
     pub fn emit_self<T>(&mut self, data: T, delay: f64) -> u64
     where
         T: EventData,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_event(data, self.id.clone(), self.id.clone(), delay)
+        self.sim_state.borrow_mut().add_event(data, self.id, self.id, delay)
     }
 
     pub fn emit_self_now<T>(&mut self, data: T) -> u64
     where
         T: EventData,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_event(data, self.id.clone(), self.id.clone(), 0.)
+        self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
     }
 
-    pub fn emit_as<T, S>(&mut self, data: T, src: S, dest: S, delay: f64) -> u64
+    pub fn emit_as<T>(&mut self, data: T, src: u32, dest: u32, delay: f64) -> u64
     where
         T: EventData,
-        S: Into<String>,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_event(data, src.into(), dest.into(), delay)
+        self.sim_state.borrow_mut().add_event(data, src, dest, delay)
     }
 
     pub fn cancel_event(&mut self, event_id: u64) {
         self.sim_state.borrow_mut().cancel_event(event_id);
+    }
+
+    pub fn lookup_name(&self, id: u32) -> String {
+        self.names.borrow().get(id as usize).unwrap().clone()
     }
 }

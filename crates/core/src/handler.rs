@@ -1,4 +1,6 @@
 use log::error;
+use serde_json::json;
+use serde_type_name::type_name;
 
 use crate::event::Event;
 
@@ -8,10 +10,11 @@ pub trait EventHandler {
 
 pub fn _log_unhandled_event(event: Event) {
     error!(
+        target: "simulation",
         "[{:.3} {} simulation] Unhandled event: {}",
         event.time.into_inner(),
         crate::log::get_colored("ERROR", colored::Color::Red),
-        serde_json::to_string(&event).unwrap()
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
     );
 }
 
