@@ -1,7 +1,5 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
-use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug};
-
+use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 use crate::{api::*, disk::Disk};
 
 struct File {
@@ -34,28 +32,34 @@ impl FileSystem {
         }
     }
 
-    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), &str> {
+    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
+        log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
         if let Some(_) = self.disks.get(mount_point) {
-            return Err("disk already mounted");
+            return Err(format!("mount point [{}] is already is use", mount_point));
         }
         self.disks.insert(mount_point.to_string(), disk);
         Ok(())
     }
 
-    pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), &str> {
+    pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), String> {
+        log_debug!(
+            self.ctx,
+            "Received unmount disk request, mount_point: [{}]",
+            mount_point
+        );
         if let None = self.disks.remove(mount_point) {
-            return Err("unknown mount point");
+            return Err(format!("unknown mount point [{}]", mount_point));
         }
         Ok(())
     }
 
-    fn resolve_disk(&self, file_name: &str) -> Option<Rc<RefCell<Disk>>> {
+    fn resolve_disk(&self, file_name: &str) -> Result<Rc<RefCell<Disk>>, String> {
         for (mount_point, disk) in &self.disks {
             if file_name.starts_with(mount_point) {
-                return Some(disk.clone());
+                return Ok(disk.clone());
             }
         }
-        None
+        Err(format!("cannot resolve on which disk file [{}] is located", file_name))
     }
 
     fn get_unique_request_id(&mut self) -> u64 {
@@ -65,142 +69,166 @@ impl FileSystem {
     }
 
     pub fn read<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
+        let requester = requester.into();
+        log_debug!(
+            self.ctx,
+            "Received read request, size: {}, file: [{}], requester: {}",
+            size,
+            file_name,
+            requester
+        );
         self.read_impl(file_name, Some(size), requester)
     }
 
     pub fn read_all<S: Into<String>>(&mut self, file_name: &str, requester: S) -> u64 {
+        let requester = requester.into();
+        log_debug!(
+            self.ctx,
+            "Received read request, size: all, file: [{}], requester: {}",
+            file_name,
+            requester
+        );
         self.read_impl(file_name, None, requester)
     }
 
     fn read_impl<S: Into<String>>(&mut self, file_name: &str, size: Option<u64>, requester: S) -> u64 {
         let request_id = self.get_unique_request_id();
+        match self.resolve_disk(&file_name) {
+            Ok(disk) => {
+                if let Some(file) = self.files.get_mut(file_name) {
+                    let size_to_read = if let Some(value) = size {
+                        if file.size < value {
+                            let error = format!("requested read size {} is more than file size {}", value, file.size);
+                            log_error!(self.ctx, "Failed reading: {}", error,);
+                            self.ctx.emit_now(
+                                FileReadFailed {
+                                    request_id,
+                                    file_name: file_name.to_string(),
+                                    error,
+                                },
+                                requester,
+                            );
 
-        if let Some(disk) = self.resolve_disk(&file_name) {
-            if let Some(file) = self.files.get_mut(file_name) {
-                let size_to_read = if let Some(value) = size {
-                    if file.size < value {
-                        self.ctx.emit_now(
-                            FileReadFailed {
-                                request_id,
-                                file_name: file_name.to_string(),
-                                error: "too large size requested".to_string(),
-                            },
-                            requester,
-                        );
+                            return request_id;
+                        }
+                        value
+                    } else {
+                        file.size
+                    };
 
-                        return request_id;
-                    }
-                    value
+                    file.cnt_actions += 1;
+                    let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
+                    self.requests.insert(
+                        (disk.borrow().id().to_string(), disk_request_id),
+                        (request_id, requester.into(), file_name.into()),
+                    );
                 } else {
-                    file.size
-                };
-
-                log_debug!(
-                    self.ctx,
-                    "Requested read {} bytes from file [{}]",
-                    size_to_read,
-                    file_name,
-                );
-
-                file.cnt_actions += 1;
-                let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
-                self.requests.insert(
-                    (disk.borrow().id().to_string(), disk_request_id),
-                    (request_id, requester.into(), file_name.into()),
-                );
-            } else {
+                    let error = format!("file [{}] does not exist", file_name);
+                    log_error!(self.ctx, "Failed reading: {}", error,);
+                    self.ctx.emit_now(
+                        FileReadFailed {
+                            request_id,
+                            file_name: file_name.to_string(),
+                            error,
+                        },
+                        requester,
+                    );
+                }
+            }
+            Err(error) => {
+                log_error!(self.ctx, "Failed reading: {}", error,);
                 self.ctx.emit_now(
                     FileReadFailed {
                         request_id,
                         file_name: file_name.to_string(),
-                        error: "file does not exist".to_string(),
+                        error,
                     },
                     requester,
                 );
             }
-        } else {
-            self.ctx.emit_now(
-                FileReadFailed {
-                    request_id,
-                    file_name: file_name.to_string(),
-                    error: "cannot resolve disk".to_string(),
-                },
-                requester,
-            );
         }
-
         request_id
     }
 
     pub fn write<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
+        let requester = requester.into();
+        log_debug!(
+            self.ctx,
+            "Received write request, size: {}, file: [{}], requester: {}",
+            size,
+            file_name,
+            requester,
+        );
         let request_id = self.get_unique_request_id();
-
-        if let Some(disk) = self.resolve_disk(file_name) {
-            if let Some(file) = self.files.get_mut(file_name) {
-                log_debug!(self.ctx, "Requested write {} bytes to file [{}]", size, file_name,);
-
-                file.cnt_actions += 1;
-                let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
-                self.requests.insert(
-                    (disk.borrow().id().to_string(), disk_request_id),
-                    (request_id, requester.into(), file_name.into()),
-                );
-            } else {
+        match self.resolve_disk(&file_name) {
+            Ok(disk) => {
+                if let Some(file) = self.files.get_mut(file_name) {
+                    file.cnt_actions += 1;
+                    let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
+                    self.requests.insert(
+                        (disk.borrow().id().to_string(), disk_request_id),
+                        (request_id, requester.into(), file_name.into()),
+                    );
+                } else {
+                    let error = format!("file [{}] does not exist", file_name);
+                    log_error!(self.ctx, "Failed writing: {}", error,);
+                    self.ctx.emit_now(
+                        FileWriteFailed {
+                            request_id,
+                            file_name: file_name.to_string(),
+                            error,
+                        },
+                        requester,
+                    );
+                }
+            }
+            Err(error) => {
+                log_error!(self.ctx, "Failed writing: {}", error,);
                 self.ctx.emit_now(
                     FileWriteFailed {
                         request_id,
                         file_name: file_name.to_string(),
-                        error: "file does not exist".to_string(),
+                        error,
                     },
                     requester,
                 );
             }
-        } else {
-            self.ctx.emit_now(
-                FileWriteFailed {
-                    request_id,
-                    file_name: file_name.to_string(),
-                    error: "cannot resolve disk".to_string(),
-                },
-                requester,
-            );
         }
-
         request_id
     }
 
-    pub fn create_file(&mut self, file_name: &str) -> Result<(), &str> {
-        log_debug!(self.ctx, "Requested to create file [{}]", file_name);
+    pub fn create_file(&mut self, file_name: &str) -> Result<(), String> {
+        log_debug!(self.ctx, "Received create file request, file_name: [{}]", file_name);
         if let Some(_) = self.files.get(file_name) {
-            return Err("file already exists");
+            return Err(format!("file [{}] already exists", file_name));
         }
-        let disk = self.resolve_disk(file_name).ok_or("cannot resolve disk")?;
-        log_debug!(
-            self.ctx,
-            "File [{}] created on disk [{}]",
-            file_name,
-            disk.borrow().id()
-        );
+        self.resolve_disk(file_name)?;
         self.files.insert(file_name.to_string(), File::new(0));
         Ok(())
     }
 
-    pub fn get_file_size(&self, file_name: &str) -> Result<u64, &str> {
-        self.files.get(file_name).ok_or("file does not exist").map(|f| f.size)
+    pub fn get_file_size(&self, file_name: &str) -> Result<u64, String> {
+        self.files
+            .get(file_name)
+            .ok_or(format!("file [{}] does not exist", file_name))
+            .map(|f| f.size)
     }
 
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
-    pub fn delete_file(&mut self, file_name: &str) -> Result<(), &str> {
-        let disk = self.resolve_disk(file_name).ok_or("cannot resolve disk")?;
-        let file = self.files.get(file_name).ok_or("file does not exist")?;
+    pub fn delete_file(&mut self, file_name: &str) -> Result<(), String> {
+        log_debug!(self.ctx, "Received delete file request, file_name: [{}]", file_name);
+        let disk = self.resolve_disk(file_name)?;
+        let file = self
+            .files
+            .get(file_name)
+            .ok_or(format!("file [{}] does not exist", file_name))?;
         if file.cnt_actions > 0 {
-            return Err("file is busy and cannot be removed");
+            return Err(format!("file [{}] is busy and cannot be removed", file_name));
         }
-        log_debug!(self.ctx, "Removing file [{}]", file_name);
-        disk.borrow_mut().mark_free(file.size).unwrap();
+        disk.borrow_mut().mark_free(file.size)?;
         self.files.remove(file_name);
         Ok(())
     }
@@ -216,7 +244,12 @@ impl EventHandler for FileSystem {
                 let key = (event.src, disk_request_id);
                 if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
                     if let Some(file) = self.files.get_mut(file_name) {
-                        log_debug!(self.ctx, "Completed reading {} bytes from file [{}]", size, file_name);
+                        log_debug!(
+                            self.ctx,
+                            "Completed reading from file [{}], read size: {}",
+                            file_name,
+                            size,
+                        );
                         file.cnt_actions -= 1;
                         self.ctx.emit_now(
                             FileReadCompleted {
@@ -231,7 +264,7 @@ impl EventHandler for FileSystem {
                         panic!("File [{}] was lost while reading", file_name);
                     }
                 } else {
-                    panic!("Request not found");
+                    panic!("Request ({},{}) not found", key.0, key.1);
                 }
             }
             DataReadFailed {
@@ -241,7 +274,12 @@ impl EventHandler for FileSystem {
                 let key = (event.src, disk_request_id);
                 if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
                     if let Some(file) = self.files.get_mut(file_name) {
-                        log_debug!(self.ctx, "Failed reading from file [{}], error: {}", file_name, error);
+                        log_error!(
+                            self.ctx,
+                            "Disk failed reading from file [{}], error: {}",
+                            file_name,
+                            error
+                        );
                         file.cnt_actions -= 1;
                         self.ctx.emit_now(
                             FileReadFailed {
@@ -256,7 +294,7 @@ impl EventHandler for FileSystem {
                         panic!("File [{}] was lost while reading", file_name);
                     }
                 } else {
-                    panic!("Request not found");
+                    panic!("Request ({},{}) not found", key.0, key.1);
                 }
             }
             DataWriteCompleted {
@@ -270,9 +308,9 @@ impl EventHandler for FileSystem {
                         file.cnt_actions -= 1;
                         log_debug!(
                             self.ctx,
-                            "Completed writing {} bytes to file [{}], new size {}",
-                            size,
+                            "Completed writing to file [{}], written size: {}, new size: {}",
                             file_name,
+                            size,
                             file.size,
                         );
                         self.ctx.emit_now(
@@ -288,7 +326,7 @@ impl EventHandler for FileSystem {
                         panic!("File [{}] was lost while writing", file_name);
                     }
                 } else {
-                    panic!("Request not found");
+                    panic!("Request ({},{}) not found", key.0, key.1);
                 }
             }
             DataWriteFailed {
@@ -299,7 +337,12 @@ impl EventHandler for FileSystem {
                 if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
                     if let Some(file) = self.files.get_mut(file_name) {
                         file.cnt_actions -= 1;
-                        log_debug!(self.ctx, "Failed writing to file [{}], error: {}", file_name, error,);
+                        log_error!(
+                            self.ctx,
+                            "Disk failed writing to file [{}], error: {}",
+                            file_name,
+                            error,
+                        );
                         self.ctx.emit_now(
                             FileWriteFailed {
                                 request_id: *request_id,
@@ -313,7 +356,7 @@ impl EventHandler for FileSystem {
                         panic!("File [{}] was lost while writing", file_name);
                     }
                 } else {
-                    panic!("Request not found");
+                    panic!("Request ({},{}) not found", key.0, key.1);
                 }
             }
         })

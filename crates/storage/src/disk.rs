@@ -1,7 +1,5 @@
-use core::context::SimulationContext;
-use core::log_debug;
-
 use crate::api::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use core::{context::SimulationContext, log_debug, log_error};
 
 pub struct Disk {
     capacity: u64,
@@ -26,70 +24,58 @@ impl Disk {
         }
     }
 
-    pub fn read<S: Into<String>>(&mut self, size: u64, requester: S) -> u64 {
-        let requester = requester.into();
-
+    fn get_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
+        request_id
+    }
 
-        log_debug!(self.ctx, "Requested read {} bytes request from {}", size, &requester);
-
+    pub fn read<S: Into<String>>(&mut self, size: u64, requester: S) -> u64 {
+        let requester = requester.into();
+        log_debug!(
+            self.ctx,
+            "Received read request, size: {}, requester: {}",
+            size,
+            requester
+        );
+        let request_id = self.get_unique_request_id();
         if size > self.capacity {
-            log_debug!(
-                self.ctx,
-                "Size {} is more than capacity {}, failing",
-                size,
-                self.capacity,
+            let error = format!(
+                "requested read size is {} but only {} is available",
+                size, self.capacity
             );
-            self.ctx.emit_now(
-                DataReadFailed {
-                    request_id,
-                    error: "requested size > capacity".to_string(),
-                },
-                requester,
-            );
+            log_error!(self.ctx, "Failed reading: {}", error,);
+            self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
             let read_time = size as f64 / self.read_bandwidth as f64;
             self.ready_time = self.ready_time.max(self.ctx.time()) + read_time;
-
             self.ctx.emit(
                 DataReadCompleted { request_id, size },
                 requester,
                 self.ready_time - self.ctx.time(),
             );
         }
-
         request_id
     }
 
     pub fn write<S: Into<String>>(&mut self, size: u64, requester: S) -> u64 {
         let requester = requester.into();
-
-        let request_id = self.next_request_id;
-        self.next_request_id += 1;
-
-        log_debug!(self.ctx, "Requested write {} bytes request from {}", size, requester);
-
-        if self.capacity - self.used < size {
-            log_debug!(
-                self.ctx,
-                "Not enough space to write {} bytes, only {} available, failing",
-                size,
-                self.capacity - self.used,
-            );
-
-            self.ctx.emit_now(
-                DataWriteFailed {
-                    request_id,
-                    error: "requested size > free space".to_string(),
-                },
-                requester,
-            );
+        let request_id = self.get_unique_request_id();
+        log_debug!(
+            self.ctx,
+            "Received write request, size: {}, requester: {}",
+            size,
+            requester
+        );
+        let available = self.capacity - self.used;
+        if available < size {
+            let error = format!("requested write size is {} but only {} is available", size, available);
+            log_error!(self.ctx, "Failed writing: {}", error,);
+            self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
             let write_time = size as f64 / self.write_bandwidth as f64;
             self.ready_time = self.ready_time.max(self.ctx.time()) + write_time;
-
             self.ctx.emit(
                 DataWriteCompleted {
                     request_id: request_id,
@@ -99,16 +85,15 @@ impl Disk {
                 self.ready_time - self.ctx.time(),
             );
         }
-
         request_id
     }
 
-    pub fn mark_free(&mut self, size: u64) -> Result<(), &str> {
+    pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
-            return Ok(())
+            return Ok(());
         }
-        Err("invalid size")
+        Err(format!("invalid size: {}", size))
     }
 
     pub fn get_used_space(&self) -> u64 {
