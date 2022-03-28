@@ -14,7 +14,7 @@ impl SimpleScheduler {
         SimpleScheduler {}
     }
 
-    fn schedule(&mut self, dag: &DAG, resources: &Vec<dag::runner::Resource>) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>) -> Vec<Action> {
         let mut resources: Vec<Resource> = resources
             .iter()
             .map(|resource| Resource {
@@ -46,7 +46,7 @@ impl SimpleScheduler {
 }
 
 impl Scheduler for SimpleScheduler {
-    fn start(&mut self, dag: &DAG, resources: &Vec<dag::runner::Resource>) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>) -> Vec<Action> {
         self.schedule(dag, resources)
     }
 
@@ -55,7 +55,7 @@ impl Scheduler for SimpleScheduler {
         _task: usize,
         _task_state: TaskState,
         dag: &DAG,
-        resources: &Vec<dag::runner::Resource>,
+        resources: &Vec<dag::resource::Resource>,
     ) -> Vec<Action> {
         self.schedule(dag, resources)
     }

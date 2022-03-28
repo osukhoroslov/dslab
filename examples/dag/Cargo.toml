@@ -9,3 +9,5 @@ compute = { path = "../../crates/compute" }
 network = { path = "../../crates/network" }
 dag = { path = "../../crates/dag" }
 sugars = "3.0.0"
+rand = "0.8.4"
+rand_pcg = "0.3.1"
