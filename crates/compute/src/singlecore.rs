@@ -19,7 +19,7 @@ pub enum FailReason {
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
-    pub requester: String,
+    pub requester: u32,
 }
 
 #[derive(Serialize)]
@@ -44,13 +44,13 @@ pub struct CompFailed {
 struct RunningComputation {
     memory: u64,
     finish_event_id: u64,
-    requester: String,
+    requester: u32,
     last_update_time: f64,
     left_time: f64,
 }
 
 impl RunningComputation {
-    pub fn new(memory: u64, finish_event_id: u64, requester: String, last_update_time: f64, left_time: f64) -> Self {
+    pub fn new(memory: u64, finish_event_id: u64, requester: u32, last_update_time: f64, left_time: f64) -> Self {
         Self {
             memory,
             finish_event_id,
@@ -96,11 +96,11 @@ impl Compute {
         }
     }
 
-    pub fn run<S: Into<String>>(&mut self, flops: u64, memory: u64, requester: S) -> u64 {
+    pub fn run(&mut self, flops: u64, memory: u64, requester: u32) -> u64 {
         let request = CompRequest {
             flops,
             memory,
-            requester: requester.into(),
+            requester,
         };
         self.ctx.emit_self_now(request)
     }
@@ -122,11 +122,11 @@ impl EventHandler for Compute {
                                 available_memory: self.memory_available,
                             },
                         },
-                        &requester,
+                        requester,
                     );
                 } else {
                     self.memory_available -= memory;
-                    self.ctx.emit(CompStarted { id: event.id }, &requester, 0.);
+                    self.ctx.emit(CompStarted { id: event.id }, requester, 0.);
                     let compute_time = flops as f64 / self.speed as f64 * (self.computations.len() + 1) as f64;
                     let finish_event_id = self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
 
@@ -143,7 +143,7 @@ impl EventHandler for Compute {
                     .computations
                     .get(&id)
                     .expect("Unexpected CompFinished event in Compute");
-                self.ctx.emit_now(CompFinished { id }, &running_computation.requester);
+                self.ctx.emit_now(CompFinished { id }, running_computation.requester);
                 self.memory_available += running_computation.memory;
 
                 self.computations.remove(&id).unwrap();
