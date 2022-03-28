@@ -7,17 +7,17 @@ use core::context::SimulationContext;
 #[derive(Serialize, Debug, Clone)]
 pub struct Data {
     pub id: usize,
-    pub src: String,
-    pub dest: String,
+    pub src: u32,
+    pub dest: u32,
     pub size: f64,
-    pub notification_dest: String,
+    pub notification_dest: u32,
 }
 
 #[derive(Serialize, Clone)]
 pub struct Message {
     pub id: usize,
-    pub src: String,
-    pub dest: String,
+    pub src: u32,
+    pub dest: u32,
     pub data: String,
 }
 
