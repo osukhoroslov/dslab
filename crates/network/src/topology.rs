@@ -10,7 +10,7 @@ pub struct Node {
 
 pub struct Topology {
     nodes: BTreeMap<String, Node>,
-    actor_nodes: HashMap<String, String>,
+    actor_nodes: HashMap<u32, String>,
 }
 
 impl Topology {
@@ -31,15 +31,15 @@ impl Topology {
         );
     }
 
-    pub fn set_location(&mut self, id: &str, node_id: &str) {
-        self.actor_nodes.insert(id.to_string(), node_id.to_string());
+    pub fn set_location(&mut self, id: u32, node_id: &str) {
+        self.actor_nodes.insert(id, node_id.to_string());
     }
 
-    pub fn get_location(&self, id: &str) -> Option<&String> {
-        self.actor_nodes.get(id)
+    pub fn get_location(&self, id: u32) -> Option<&String> {
+        self.actor_nodes.get(&id)
     }
 
-    pub fn check_same_node(&self, id1: &str, id2: &str) -> bool {
+    pub fn check_same_node(&self, id1: u32, id2: u32) -> bool {
         let node1 = self.get_location(id1);
         let node2 = self.get_location(id2);
         node1.is_some() && node2.is_some() && node1.unwrap() == node2.unwrap()
@@ -58,7 +58,7 @@ impl Topology {
     }
 
     pub fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = self.get_location(&data.dest.clone()).unwrap().clone();
+        let node = self.get_location(data.dest).unwrap().clone();
         self.get_node_info_mut(&node)
             .unwrap()
             .local_network
@@ -66,14 +66,14 @@ impl Topology {
     }
 
     pub fn local_send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = self.get_location(&data.dest.clone()).unwrap().clone();
+        let node = self.get_location(data.dest).unwrap().clone();
         self.get_node_info_mut(&node)
             .unwrap()
             .local_network
             .send_data(data, ctx)
     }
 
-    pub fn get_local_latency(&mut self, src: &str, dst: &str) -> f64 {
+    pub fn get_local_latency(&mut self, src: u32, dst: u32) -> f64 {
         let node = self.get_location(src).unwrap();
         self.get_node_info(node).unwrap().local_network.latency(src, dst)
     }

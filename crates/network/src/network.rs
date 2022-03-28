@@ -33,15 +33,15 @@ impl Network {
         self.topology.add_node(node_id, local_bandwidth, local_latency)
     }
 
-    pub fn set_location(&mut self, id: &str, node_id: &str) {
+    pub fn set_location(&mut self, id: u32, node_id: &str) {
         self.topology.set_location(id, node_id)
     }
 
-    pub fn get_location(&self, id: &str) -> Option<&String> {
+    pub fn get_location(&self, id: u32) -> Option<&String> {
         self.topology.get_location(id)
     }
 
-    pub fn check_same_node(&self, id1: &str, id2: &str) -> bool {
+    pub fn check_same_node(&self, id1: u32, id2: u32) -> bool {
         self.topology.check_same_node(id1, id2)
     }
 
@@ -49,7 +49,7 @@ impl Network {
         self.topology.get_nodes()
     }
 
-    pub fn send_msg<S: Into<String>>(&mut self, message: String, src: S, dest: S) -> usize {
+    pub fn send_msg(&mut self, message: String, src: u32, dest: u32) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
@@ -61,25 +61,25 @@ impl Network {
         msg_id
     }
 
-    pub fn send_event<T: EventData, S: AsRef<str>>(&mut self, data: T, src: S, dest: S) {
-        log_debug!(self.ctx, "{} sent event to {}", src.as_ref(), dest.as_ref());
+    pub fn send_event<T: EventData>(&mut self, data: T, src: u32, dest: u32) {
+        log_debug!(self.ctx, "{} sent event to {}", src, dest);
 
-        let latency = if self.check_same_node(src.as_ref(), dest.as_ref()) {
-            self.topology.get_local_latency(src.as_ref(), dest.as_ref())
+        let latency = if self.check_same_node(src, dest) {
+            self.topology.get_local_latency(src, dest)
         } else {
-            self.network_model.borrow().latency(src.as_ref(), dest.as_ref())
+            self.network_model.borrow().latency(src, dest)
         };
-        self.ctx.emit_as(data, src.as_ref(), dest.as_ref(), latency);
+        self.ctx.emit_as(data, src, dest, latency);
     }
 
-    pub fn transfer_data<S: Into<String>>(&mut self, src: S, dest: S, size: f64, notification_dest: S) -> usize {
+    pub fn transfer_data(&mut self, src: u32, dest: u32, size: f64, notification_dest: u32) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
             id: data_id,
-            src: src.into(),
-            dest: dest.into(),
+            src,
+            dest,
             size,
-            notification_dest: notification_dest.into(),
+            notification_dest,
         };
         self.ctx.emit_self_now(DataTransferRequest { data });
         data_id
@@ -98,10 +98,10 @@ impl EventHandler for Network {
                     message.dest.clone()
                 );
 
-                let latency = if self.check_same_node(&message.src, &message.dest) {
-                    self.topology.get_local_latency(&message.src, &message.dest)
+                let latency = if self.check_same_node(message.src, message.dest) {
+                    self.topology.get_local_latency(message.src, message.dest)
                 } else {
-                    self.network_model.borrow().latency(&message.src, &message.dest)
+                    self.network_model.borrow().latency(message.src, message.dest)
                 };
                 let message_recieve_event = MessageReceive { message };
                 self.ctx.emit_self(message_recieve_event, latency);
@@ -130,15 +130,15 @@ impl EventHandler for Network {
                     data.dest,
                     data.size
                 );
-                let latency = if self.check_same_node(&data.src, &data.dest) {
-                    self.topology.get_local_latency(&data.src, &data.dest)
+                let latency = if self.check_same_node(data.src, data.dest) {
+                    self.topology.get_local_latency(data.src, data.dest)
                 } else {
-                    self.network_model.borrow().latency(&data.src, &data.dest)
+                    self.network_model.borrow().latency(data.src, data.dest)
                 };
                 self.ctx.emit_self(StartDataTransfer { data }, latency);
             }
             StartDataTransfer { data } => {
-                if !self.check_same_node(&data.src, &data.dest) {
+                if !self.check_same_node(data.src, data.dest) {
                     self.network_model.borrow_mut().send_data(data, &mut self.ctx);
                 } else {
                     self.topology.local_send_data(data, &mut self.ctx)
@@ -153,7 +153,7 @@ impl EventHandler for Network {
                     data.dest,
                     data.size
                 );
-                if !self.check_same_node(&data.src, &data.dest) {
+                if !self.check_same_node(data.src, data.dest) {
                     self.network_model
                         .borrow_mut()
                         .receive_data(data.clone(), &mut self.ctx);
