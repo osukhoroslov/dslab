@@ -164,14 +164,14 @@ fn main() {
         let mut distant_receivers = Vec::new();
         let mut local_receivers = Vec::new();
 
-        shared_network.borrow_mut().add_host("localhost", 1000.0, 0.0);
+        shared_network.borrow_mut().add_node("localhost", 1000.0, 0.0);
 
         for i in 1..10 {
             let receiver_id = "receiver_".to_string() + &i.to_string();
             let receiver = DataReceiver::new(shared_network.clone(), sim.create_context(&receiver_id));
             sim.add_handler(&receiver_id, rc!(refcell!(receiver)));
             let receiver_host_id = "host_".to_string() + &receiver_id;
-            shared_network.borrow_mut().add_host(&receiver_host_id, 1000.0, 0.0);
+            shared_network.borrow_mut().add_node(&receiver_host_id, 1000.0, 0.0);
             shared_network
                 .borrow_mut()
                 .set_location(&receiver_id, &receiver_host_id);

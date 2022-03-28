@@ -73,9 +73,9 @@ fn main() {
     for i in 0..host_count {
         network
             .borrow_mut()
-            .add_host(&format!("host{}", i), local_bandwidth as f64, local_latency);
+            .add_node(&format!("host{}", i), local_bandwidth as f64, local_latency);
     }
-    let hosts = network.borrow().get_hosts();
+    let hosts = network.borrow().get_nodes();
 
     // create and start master on host0
     let host = &hosts[0];
