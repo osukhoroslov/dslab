@@ -46,18 +46,18 @@ fn main() {
     let mut sim = Simulation::new(123);
     let mut root = sim.create_context("root");
 
-    for i in 0..proc_count {
-        let proc_id = format!("proc{}", i);
+    for proc_id in 1..=proc_count {
+        let proc_name = format!("proc{}", proc_id);
         let mut peers = HashSet::new();
         while peers.len() < peer_count {
-            let peer = root.gen_range(0..proc_count);
-            if peer != i {
-                peers.insert(format!("proc{}", peer));
+            let peer_id = root.gen_range(1..=proc_count);
+            if peer_id != proc_id {
+                peers.insert(peer_id);
             }
         }
-        let proc = Process::new(Vec::from_iter(peers), iterations, sim.create_context(&proc_id));
-        sim.add_handler(&proc_id, rc!(refcell!(proc)));
-        root.emit(Start {}, &proc_id, 0.);
+        let proc = Process::new(Vec::from_iter(peers), iterations, sim.create_context(&proc_name));
+        sim.add_handler(&proc_name, rc!(refcell!(proc)));
+        root.emit(Start {}, proc_id, 0.);
     }
 
     let t = Instant::now();
