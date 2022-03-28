@@ -31,7 +31,7 @@ impl Storage {
         }
     }
 
-    pub fn read<S: Into<String>>(&mut self, size: u64, requester: S) -> u64 {
+    pub fn read(&mut self, size: u64, requester: u32) -> u64 {
         let req_id = self.next_id;
         self.next_id += 1;
         let read_time = size as f64 / self.read_bandwidth as f64;
@@ -41,7 +41,7 @@ impl Storage {
         req_id
     }
 
-    pub fn write<S: Into<String>>(&mut self, size: u64, requester: S) -> u64 {
+    pub fn write(&mut self, size: u64, requester: u32) -> u64 {
         let req_id = self.next_id;
         self.next_id += 1;
         let write_time = size as f64 / self.write_bandwidth as f64;

@@ -29,11 +29,11 @@ pub struct TaskCompleted {
 }
 
 pub struct Worker {
-    id: String,
+    id: u32,
     compute: Rc<RefCell<Compute>>,
     storage: Storage,
     net: Rc<RefCell<Network>>,
-    master: String,
+    master_id: u32,
     tasks: HashMap<u64, TaskInfo>,
     computations: HashMap<u64, u64>,
     reads: HashMap<u64, u64>,
@@ -48,15 +48,15 @@ impl Worker {
         compute: Rc<RefCell<Compute>>,
         storage: Storage,
         net: Rc<RefCell<Network>>,
-        master: String,
+        master_id: u32,
         ctx: SimulationContext,
     ) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             compute,
             storage,
             net,
-            master,
+            master_id,
             tasks: HashMap::new(),
             computations: HashMap::new(),
             reads: HashMap::new(),
@@ -79,7 +79,7 @@ impl EventHandler for Worker {
                         cpus_total: self.compute.borrow().cores_total(),
                         memory_total: self.compute.borrow().memory_total(),
                     },
-                    &self.master,
+                    self.master_id,
                     0.5,
                 );
             }
@@ -112,7 +112,7 @@ impl EventHandler for Worker {
                 let transfer_id =
                     self.net
                         .borrow_mut()
-                        .transfer_data(&self.master, &self.id, input_size as f64, &self.id);
+                        .transfer_data(self.master_id, self.id, input_size as f64, self.id);
                 self.downloads.insert(transfer_id, id);
             }
             DataTransferCompleted { data } => {
@@ -123,7 +123,7 @@ impl EventHandler for Worker {
                     let task = self.tasks.get_mut(&task_id).unwrap();
                     log_debug!(self.ctx, "downloaded input data for task: {}", task_id);
                     task.state = TaskState::Reading;
-                    let read_id = self.storage.read(task.req.input_size, &self.id);
+                    let read_id = self.storage.read(task.req.input_size, self.id);
                     self.reads.insert(read_id, task_id);
                 // data transfer corresponds to output upload
                 } else if self.uploads.contains_key(&transfer_id) {
@@ -133,7 +133,7 @@ impl EventHandler for Worker {
                     task.state = TaskState::Completed;
                     self.net
                         .borrow_mut()
-                        .send_event(TaskCompleted { id: task_id }, &self.id, &self.master);
+                        .send_event(TaskCompleted { id: task_id }, self.id, self.master_id);
                 }
             }
             DataReadCompleted { id } => {
@@ -147,7 +147,7 @@ impl EventHandler for Worker {
                     task.req.min_cores,
                     task.req.max_cores,
                     task.req.cores_dependency,
-                    &self.id,
+                    self.id,
                 );
                 self.computations.insert(comp_id, task_id);
             }
@@ -159,7 +159,7 @@ impl EventHandler for Worker {
                 log_debug!(self.ctx, "completed execution of task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Writing;
-                let write_id = self.storage.write(task.req.output_size, &self.id);
+                let write_id = self.storage.write(task.req.output_size, self.id);
                 self.writes.insert(write_id, task_id);
             }
             DataWriteCompleted { id } => {
@@ -170,7 +170,7 @@ impl EventHandler for Worker {
                 let transfer_id =
                     self.net
                         .borrow_mut()
-                        .transfer_data(&self.id, &self.master, task.req.output_size as f64, &self.id);
+                        .transfer_data(self.id, self.master_id, task.req.output_size as f64, self.id);
                 self.uploads.insert(transfer_id, task_id);
             }
         })

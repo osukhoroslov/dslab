@@ -79,34 +79,34 @@ fn main() {
 
     // create and start master on host0
     let host = &hosts[0];
-    let master_id = &format!("{}::master", host);
-    let master = Master::new(network.clone(), sim.create_context(master_id));
-    sim.add_handler(master_id, rc!(refcell!(master)));
+    let master_name = &format!("{}::master", host);
+    let master = Master::new(network.clone(), sim.create_context(master_name));
+    let master_id = sim.add_handler(master_name, rc!(refcell!(master)));
     network.borrow_mut().set_location(master_id, host);
     admin.emit_now(Start {}, master_id);
 
     // create and start workers
     for i in 0..host_count {
         let host = &hosts[i];
-        let compute_id = format!("{}::compute", host);
+        let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
             rand.gen_range(1..10),
             rand.gen_range(1..4),
             rand.gen_range(1..4) * 1024,
-            sim.create_context(&compute_id),
+            sim.create_context(&compute_name),
         )));
-        sim.add_handler(compute_id, compute.clone());
-        let storage_id = format!("{}::disk", host);
-        let storage = Storage::new(storage_bandwidth, storage_bandwidth, sim.create_context(&storage_id));
-        let worker_id = &format!("{}::worker", host);
+        sim.add_handler(compute_name, compute.clone());
+        let storage_name = format!("{}::disk", host);
+        let storage = Storage::new(storage_bandwidth, storage_bandwidth, sim.create_context(&storage_name));
+        let worker_name = &format!("{}::worker", host);
         let worker = Worker::new(
             compute,
             storage,
             network.clone(),
-            master_id.to_string(),
-            sim.create_context(worker_id),
+            master_id,
+            sim.create_context(worker_name),
         );
-        sim.add_handler(worker_id, rc!(refcell!(worker)));
+        let worker_id = sim.add_handler(worker_name, rc!(refcell!(worker)));
         network.borrow_mut().set_location(worker_id, host);
         admin.emit_now(Start {}, worker_id);
     }
@@ -136,9 +136,16 @@ fn main() {
     let t = Instant::now();
     sim.step_until_no_events();
     println!(
+        "Processed {} tasks in {:.2}s ({:.0} task/sec)",
+        task_count,
+        sim.time(),
+        task_count as f64 / sim.time()
+    );
+    println!(
         "Processed {} events in {:.2?} ({:.0} events/sec)",
         sim.event_count(),
         t.elapsed(),
         sim.event_count() as f64 / t.elapsed().as_secs_f64()
     );
+    println!("Time compression: {:.2}", sim.time() / t.elapsed().as_secs_f64());
 }
