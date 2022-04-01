@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use crate::{disk::Disk, events::*};
 use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
-use crate::{api::*, disk::Disk};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 struct File {
     size: u64,
@@ -16,7 +16,7 @@ impl File {
 pub struct FileSystem {
     files: HashMap<String, File>,
     disks: HashMap<String, Rc<RefCell<Disk>>>,
-    requests: HashMap<(String, u64), (u64, String, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
+    requests: HashMap<(u32, u64), (u64, u32, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
     next_request_id: u64,
     ctx: SimulationContext,
 }
@@ -68,8 +68,7 @@ impl FileSystem {
         request_id
     }
 
-    pub fn read<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
-        let requester = requester.into();
+    pub fn read(&mut self, file_name: &str, size: u64, requester: u32) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: {}, file: [{}], requester: {}",
@@ -80,8 +79,7 @@ impl FileSystem {
         self.read_impl(file_name, Some(size), requester)
     }
 
-    pub fn read_all<S: Into<String>>(&mut self, file_name: &str, requester: S) -> u64 {
-        let requester = requester.into();
+    pub fn read_all(&mut self, file_name: &str, requester: u32) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: all, file: [{}], requester: {}",
@@ -91,7 +89,7 @@ impl FileSystem {
         self.read_impl(file_name, None, requester)
     }
 
-    fn read_impl<S: Into<String>>(&mut self, file_name: &str, size: Option<u64>, requester: S) -> u64 {
+    fn read_impl(&mut self, file_name: &str, size: Option<u64>, requester: u32) -> u64 {
         let request_id = self.get_unique_request_id();
         match self.resolve_disk(&file_name) {
             Ok(disk) => {
@@ -119,8 +117,8 @@ impl FileSystem {
                     file.cnt_actions += 1;
                     let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
                     self.requests.insert(
-                        (disk.borrow().id().to_string(), disk_request_id),
-                        (request_id, requester.into(), file_name.into()),
+                        (disk.borrow().id(), disk_request_id),
+                        (request_id, requester, file_name.into()),
                     );
                 } else {
                     let error = format!("file [{}] does not exist", file_name);
@@ -150,8 +148,7 @@ impl FileSystem {
         request_id
     }
 
-    pub fn write<S: Into<String>>(&mut self, file_name: &str, size: u64, requester: S) -> u64 {
-        let requester = requester.into();
+    pub fn write(&mut self, file_name: &str, size: u64, requester: u32) -> u64 {
         log_debug!(
             self.ctx,
             "Received write request, size: {}, file: [{}], requester: {}",
@@ -166,7 +163,7 @@ impl FileSystem {
                     file.cnt_actions += 1;
                     let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
                     self.requests.insert(
-                        (disk.borrow().id().to_string(), disk_request_id),
+                        (disk.borrow().id(), disk_request_id),
                         (request_id, requester.into(), file_name.into()),
                     );
                 } else {
@@ -257,7 +254,7 @@ impl EventHandler for FileSystem {
                                 file_name: file_name.clone(),
                                 read_size: size,
                             },
-                            requester.clone(),
+                            *requester,
                         );
                         self.requests.remove(&key);
                     } else {
@@ -287,7 +284,7 @@ impl EventHandler for FileSystem {
                                 file_name: file_name.clone(),
                                 error,
                             },
-                            requester.clone(),
+                            *requester,
                         );
                         self.requests.remove(&key);
                     } else {
@@ -319,7 +316,7 @@ impl EventHandler for FileSystem {
                                 file_name: file_name.clone(),
                                 new_size: file.size,
                             },
-                            requester.clone(),
+                            *requester,
                         );
                         self.requests.remove(&key);
                     } else {
@@ -349,7 +346,7 @@ impl EventHandler for FileSystem {
                                 file_name: file_name.clone(),
                                 error,
                             },
-                            requester.clone(),
+                            *requester,
                         );
                         self.requests.remove(&key);
                     } else {

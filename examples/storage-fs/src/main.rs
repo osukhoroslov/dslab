@@ -2,10 +2,9 @@ use std::cell::RefCell;
 use std::io::Write;
 use std::rc::Rc;
 
+use env_logger::Builder;
 use serde::Serialize;
 use sugars::{rc, refcell};
-
-use env_logger::Builder;
 
 use core::cast;
 use core::context::SimulationContext;
@@ -14,9 +13,9 @@ use core::handler::EventHandler;
 use core::log_debug;
 use core::simulation::Simulation;
 
-use storage::api::{FileReadCompleted, FileReadFailed, FileWriteCompleted, FileWriteFailed};
 use storage::disk::Disk;
-use storage::file::FileSystem;
+use storage::events::{FileReadCompleted, FileReadFailed, FileWriteCompleted, FileWriteFailed};
+use storage::fs::FileSystem;
 
 const SEED: u64 = 16;
 const CASES_COUNT: u64 = 6;
@@ -183,16 +182,16 @@ fn main() {
     fs.borrow_mut().mount_disk(DISK_2_MOUNT_POINT, disk2).unwrap();
 
     let user = rc!(refcell!(User::new(fs.clone(), sim.create_context(USER_NAME))));
-    sim.add_handler(USER_NAME, user);
+    let user_id = sim.add_handler(USER_NAME, user);
 
     let mut root = sim.create_context("root");
 
-    root.emit_now(Init {}, USER_NAME);
+    root.emit_now(Init {}, user_id);
     sim.step_until_no_events();
 
     for case in 0..CASES_COUNT {
         println!("Running case {}", case);
-        root.emit_now(Run { case }, USER_NAME);
+        root.emit_now(Run { case }, user_id);
         sim.step_until_no_events();
         println!(
             "Total FS used space after case {} is {} bytes",
