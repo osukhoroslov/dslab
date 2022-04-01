@@ -8,8 +8,9 @@ pub trait EventHandler {
 
 pub fn _log_unhandled_event(event: Event) {
     error!(
-        "[{:.3} ERROR simulation] Unhandled event: {}",
+        "[{:.3} {} simulation] Unhandled event: {}",
         event.time.into_inner(),
+        crate::log::get_colored("ERROR", colored::Color::Red),
         serde_json::to_string(&event).unwrap()
     );
 }

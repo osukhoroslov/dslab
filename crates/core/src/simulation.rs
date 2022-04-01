@@ -50,8 +50,9 @@ impl Simulation {
                 if log_enabled!(Trace) {
                     trace!(
                         target: &event.dest,
-                        "[{:.3} EVENT {}] {}",
+                        "[{:.3} {} {}] {}",
                         self.sim_state.borrow().time(),
+                        crate::log::get_colored("EVENT", colored::Color::BrightBlack),
                         event.dest,
                         serde_json::to_string(&event).unwrap()
                     );
