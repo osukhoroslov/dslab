@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
@@ -87,6 +87,6 @@ impl SimulationContext {
     }
 
     pub fn lookup_name(&self, id: u32) -> String {
-        self.names.borrow().get(id as usize).unwrap().clone()
+        self.names.borrow()[id as usize].clone()
     }
 }

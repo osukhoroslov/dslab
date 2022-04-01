@@ -45,7 +45,7 @@ impl Simulation {
     }
 
     pub fn lookup_name(&self, id: u32) -> String {
-        self.names.borrow().get(id as usize).unwrap().clone()
+        self.names.borrow()[id as usize].clone()
     }
 
     pub fn create_context<S>(&mut self, name: S) -> SimulationContext
