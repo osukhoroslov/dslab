@@ -11,9 +11,10 @@ use core::handler::EventHandler;
 use core::{cast, log_debug};
 use network::model::*;
 use network::network::Network;
+use storage::disk::Disk;
+use storage::events::{DataReadCompleted, DataWriteCompleted};
 
 use crate::common::Start;
-use crate::storage::*;
 use crate::task::*;
 
 #[derive(Serialize)]
@@ -31,7 +32,7 @@ pub struct TaskCompleted {
 pub struct Worker {
     id: u32,
     compute: Rc<RefCell<Compute>>,
-    storage: Storage,
+    disk: Disk,
     net: Rc<RefCell<Network>>,
     master_id: u32,
     tasks: HashMap<u64, TaskInfo>,
@@ -46,7 +47,7 @@ pub struct Worker {
 impl Worker {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
-        storage: Storage,
+        disk: Disk,
         net: Rc<RefCell<Network>>,
         master_id: u32,
         ctx: SimulationContext,
@@ -54,7 +55,7 @@ impl Worker {
         Self {
             id: ctx.id(),
             compute,
-            storage,
+            disk,
             net,
             master_id,
             tasks: HashMap::new(),
@@ -123,7 +124,7 @@ impl EventHandler for Worker {
                     let task = self.tasks.get_mut(&task_id).unwrap();
                     log_debug!(self.ctx, "downloaded input data for task: {}", task_id);
                     task.state = TaskState::Reading;
-                    let read_id = self.storage.read(task.req.input_size, self.id);
+                    let read_id = self.disk.read(task.req.input_size, self.id);
                     self.reads.insert(read_id, task_id);
                 // data transfer corresponds to output upload
                 } else if self.uploads.contains_key(&transfer_id) {
@@ -131,13 +132,16 @@ impl EventHandler for Worker {
                     let mut task = self.tasks.remove(&task_id).unwrap();
                     log_debug!(self.ctx, "uploaded output data for task: {}", task_id);
                     task.state = TaskState::Completed;
+                    self.disk
+                        .mark_free(task.req.output_size)
+                        .expect("Failed to free disk space");
                     self.net
                         .borrow_mut()
                         .send_event(TaskCompleted { id: task_id }, self.id, self.master_id);
                 }
             }
-            DataReadCompleted { id } => {
-                let task_id = self.reads.remove(&id).unwrap();
+            DataReadCompleted { request_id, size: _ } => {
+                let task_id = self.reads.remove(&request_id).unwrap();
                 log_debug!(self.ctx, "read input data for task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Running;
@@ -159,11 +163,11 @@ impl EventHandler for Worker {
                 log_debug!(self.ctx, "completed execution of task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Writing;
-                let write_id = self.storage.write(task.req.output_size, self.id);
+                let write_id = self.disk.write(task.req.output_size, self.id);
                 self.writes.insert(write_id, task_id);
             }
-            DataWriteCompleted { id } => {
-                let task_id = self.writes.remove(&id).unwrap();
+            DataWriteCompleted { request_id, size: _ } => {
+                let task_id = self.writes.remove(&request_id).unwrap();
                 log_debug!(self.ctx, "wrote output data for task: {}", task_id);
                 let task = self.tasks.get_mut(&task_id).unwrap();
                 task.state = TaskState::Uploading;

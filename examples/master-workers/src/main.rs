@@ -1,6 +1,5 @@
 mod common;
 mod master;
-mod storage;
 mod task;
 mod worker;
 
@@ -17,10 +16,10 @@ use compute::multicore::{Compute, CoresDependency};
 use core::simulation::Simulation;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
+use storage::disk::Disk;
 
 use crate::common::Start;
 use crate::master::{Master, ReportStatus};
-use crate::storage::Storage;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
 
@@ -52,7 +51,9 @@ fn main() {
     let local_bandwidth = 10000;
     let network_latency = 0.5;
     let network_bandwidth = 1000;
-    let storage_bandwidth = 2000;
+    let disk_capacity = 1000;
+    let disk_read_bandwidth = 2000;
+    let disk_write_bandwidth = 2000;
     let task_count = matches.value_of_t("TASK_COUNT").unwrap();
     let seed = 123;
 
@@ -88,6 +89,7 @@ fn main() {
     // create and start workers
     for i in 0..host_count {
         let host = &hosts[i];
+        // compute
         let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
             rand.gen_range(1..10),
@@ -96,12 +98,18 @@ fn main() {
             sim.create_context(&compute_name),
         )));
         sim.add_handler(compute_name, compute.clone());
-        let storage_name = format!("{}::disk", host);
-        let storage = Storage::new(storage_bandwidth, storage_bandwidth, sim.create_context(&storage_name));
+        // disk
+        let disk_name = format!("{}::disk", host);
+        let disk = Disk::new(
+            disk_capacity,
+            disk_read_bandwidth,
+            disk_write_bandwidth,
+            sim.create_context(&disk_name),
+        );
         let worker_name = &format!("{}::worker", host);
         let worker = Worker::new(
             compute,
-            storage,
+            disk,
             network.clone(),
             master_id,
             sim.create_context(worker_name),
