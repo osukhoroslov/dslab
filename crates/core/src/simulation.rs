@@ -8,8 +8,8 @@ use serde_json::json;
 use serde_type_name::type_name;
 
 use crate::context::SimulationContext;
-use crate::event::Event;
 use crate::handler::EventHandler;
+use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 
 pub struct Simulation {
@@ -17,7 +17,6 @@ pub struct Simulation {
     name_to_id: HashMap<String, u32>,
     names: Rc<RefCell<Vec<String>>>,
     handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
-    undelivered_events: Vec<Event>,
 }
 
 impl Simulation {
@@ -27,7 +26,6 @@ impl Simulation {
             name_to_id: HashMap::new(),
             names: Rc::new(RefCell::new(Vec::new())),
             handlers: Vec::new(),
-            undelivered_events: Vec::new(),
         }
     }
 
@@ -89,7 +87,7 @@ impl Simulation {
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
-            if let Some(handler) = self.handlers.get(event.dest as usize).unwrap() {
+            if let Some(handler_opt) = self.handlers.get(event.dest as usize) {
                 if log_enabled!(Trace) {
                     let src_name = self.lookup_name(event.src);
                     let dest_name = self.lookup_name(event.dest);
@@ -102,9 +100,13 @@ impl Simulation {
                         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
                     );
                 }
-                handler.borrow_mut().on(event);
+                if let Some(handler) = handler_opt {
+                    handler.borrow_mut().on(event);
+                } else {
+                    log_undelivered_event(event);
+                }
             } else {
-                self.undelivered_events.push(event);
+                log_undelivered_event(event);
             }
             true
         } else {

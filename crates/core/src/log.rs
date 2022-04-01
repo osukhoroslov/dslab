@@ -1,5 +1,10 @@
 use atty::Stream;
 use colored::{Color, ColoredString, Colorize};
+use log::error;
+use serde_json::json;
+use serde_type_name::type_name;
+
+use crate::event::Event;
 
 pub fn get_colored(s: &str, color: Color) -> ColoredString {
     if atty::is(Stream::Stderr) {
@@ -96,5 +101,25 @@ macro_rules! log_warn {
             concat!("[{:.3} {}  {}] ", $format),
             $ctx.time(), $crate::log::get_colored("WARN", $crate::colored::Color::Yellow), $ctx.name(), $($arg)+
         )
+    );
+}
+
+pub fn log_unhandled_event(event: Event) {
+    error!(
+        target: "simulation",
+        "[{:.3} {} simulation] Unhandled event: {}",
+        event.time,
+        crate::log::get_colored("ERROR", colored::Color::Red),
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+    );
+}
+
+pub(crate) fn log_undelivered_event(event: Event) {
+    error!(
+        target: "simulation",
+        "[{:.3} {} simulation] Undelivered event: {}",
+        event.time,
+        crate::log::get_colored("ERROR", colored::Color::Red),
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
     );
 }
