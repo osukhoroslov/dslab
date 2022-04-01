@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use decorum::R64;
 use downcast_rs::{impl_downcast, Downcast};
 use serde::ser::Serialize;
 
@@ -14,7 +13,7 @@ impl<T: Serialize + 'static> EventData for T {}
 
 pub struct Event {
     pub id: u64,
-    pub time: R64,
+    pub time: f64,
     pub src: u32,
     pub dest: u32,
     pub data: Box<dyn EventData>,
@@ -30,7 +29,11 @@ impl PartialEq for Event {
 
 impl Ord for Event {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.time.cmp(&self.time).then_with(|| other.id.cmp(&self.id))
+        other
+            .time
+            .partial_cmp(&self.time)
+            .unwrap()
+            .then_with(|| other.id.cmp(&self.id))
     }
 }
 

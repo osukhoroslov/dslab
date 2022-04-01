@@ -1,6 +1,5 @@
 use std::collections::{BinaryHeap, HashSet};
 
-use decorum::R64;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -8,7 +7,7 @@ use rand_pcg::Pcg64;
 use crate::event::{Event, EventData};
 
 pub struct SimulationState {
-    clock: R64,
+    clock: f64,
     rand: Pcg64,
     events: BinaryHeap<Event>,
     canceled_events: HashSet<u64>,
@@ -18,7 +17,7 @@ pub struct SimulationState {
 impl SimulationState {
     pub fn new(seed: u64) -> Self {
         Self {
-            clock: R64::from_inner(0.0),
+            clock: 0.0,
             rand: Pcg64::seed_from_u64(seed),
             events: BinaryHeap::new(),
             canceled_events: HashSet::new(),
@@ -27,7 +26,7 @@ impl SimulationState {
     }
 
     pub fn time(&self) -> f64 {
-        self.clock.into_inner()
+        self.clock
     }
 
     pub fn rand(&mut self) -> f64 {

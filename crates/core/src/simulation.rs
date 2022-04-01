@@ -96,7 +96,7 @@ impl Simulation {
                     trace!(
                         target: &dest_name,
                         "[{:.3} {} {}] {}",
-                        event.time.into_inner(),
+                        event.time,
                         crate::log::get_colored("EVENT", colored::Color::BrightBlack),
                         dest_name,
                         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})

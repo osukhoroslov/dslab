@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-decorum = "0.3.1"
 downcast-rs = "1.2.0"
 log = "0.4"
 rand = "0.8.4"

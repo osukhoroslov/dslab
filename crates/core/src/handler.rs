@@ -12,7 +12,7 @@ pub fn _log_unhandled_event(event: Event) {
     error!(
         target: "simulation",
         "[{:.3} {} simulation] Unhandled event: {}",
-        event.time.into_inner(),
+        event.time,
         crate::log::get_colored("ERROR", colored::Color::Red),
         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
     );
