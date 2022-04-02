@@ -19,7 +19,7 @@ use network::network::Network;
 use storage::disk::Disk;
 
 use crate::common::Start;
-use crate::master::{Master, ReportStatus};
+use crate::master::Master;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
 
@@ -35,13 +35,13 @@ fn main() {
             arg!([HOST_COUNT])
                 .help("Number of hosts")
                 .validator(|s| s.parse::<u64>())
-                .default_value("10"),
+                .default_value("100"),
         )
         .arg(
             arg!([TASK_COUNT])
                 .help("Number of tasks")
                 .validator(|s| s.parse::<u64>())
-                .default_value("100"),
+                .default_value("100000"),
         )
         .get_matches();
 
@@ -93,7 +93,7 @@ fn main() {
         let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
             rand.gen_range(1..10),
-            rand.gen_range(1..4),
+            rand.gen_range(1..8),
             rand.gen_range(1..4) * 1024,
             sim.create_context(&compute_name),
         )));
@@ -119,14 +119,11 @@ fn main() {
         admin.emit_now(Start {}, worker_id);
     }
 
-    // let workers to register on master
-    sim.step_for_duration(1.);
-
     // submit tasks
     for i in 0..task_count {
         let task = TaskRequest {
             id: i,
-            flops: rand.gen_range(10..100),
+            flops: rand.gen_range(100..1000),
             memory: rand.gen_range(1..8) * 128,
             min_cores: 1,
             max_cores: 1,
@@ -136,9 +133,6 @@ fn main() {
         };
         client.emit_now(task, master_id);
     }
-
-    // enable status reporting
-    admin.emit_now(ReportStatus {}, master_id);
 
     // run until completion
     let t = Instant::now();
