@@ -192,7 +192,9 @@ impl Master {
     fn report_status(&mut self) {
         log_info!(
             self.ctx,
-            "UNASSIGNED: {} / ASSIGNED: {} / COMPLETED: {}",
+            "CPU: {:.2} / MEMORY: {:.2} / UNASSIGNED: {} / ASSIGNED: {} / COMPLETED: {}",
+            (self.cpus_total - self.cpus_available) as f64 / self.cpus_total as f64,
+            (self.memory_total - self.memory_available) as f64 / self.memory_total as f64,
             self.unassigned_tasks.len(),
             self.assigned_tasks.len(),
             self.completed_tasks.len()
