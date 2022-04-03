@@ -1,9 +1,5 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 extern crate env_logger;
 use log::info;
-use sugars::{rc, refcell};
 
 use cloud_plugin::config::SimulationConfig;
 use cloud_plugin::load_model::ConstLoadModel;
@@ -20,9 +16,7 @@ fn init_logger() {
         .init();
 }
 
-fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>) {
-    env_logger::init();
-
+fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
@@ -98,7 +92,7 @@ fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>)
     );
 }
 
-fn simulation_one_thresholded_scheduler(sim_config: Rc<RefCell<SimulationConfig>>) {
+fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 

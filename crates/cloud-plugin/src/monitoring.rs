@@ -1,5 +1,6 @@
 use std::collections::btree_map::Keys;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use log::info;
 
@@ -19,6 +20,7 @@ pub struct HostState {
 
 pub struct Monitoring {
     host_states: BTreeMap<String, HostState>,
+    _vm_locations: HashMap<String, HostState>,
     ctx: SimulationContext,
 }
 
@@ -37,6 +39,7 @@ impl Monitoring {
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
             host_states: BTreeMap::new(),
+            _vm_locations: HashMap::new(),
             ctx,
         }
     }
