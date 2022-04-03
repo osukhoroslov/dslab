@@ -4,7 +4,7 @@ Steps to reproduce:
 1) Donwload sqlite dataset from https://github.com/Azure/AzurePublicDataset/blob/master/AzureTracesForPacking2020.md
 2) Convert vm table using following:
 ```
-$ sqlite3 sqlite3 packing_trace_zone_a_v1.sqlite
+$ sqlite3 packing_trace_zone_a_v1.sqlite
 sqlite> .headers on
 sqlite> .mode csv
 sqlite> .output vm_instances.csv
@@ -13,7 +13,7 @@ sqlite> .quit
 ````
 3) Convert vmType table:
 ```
-$ sqlite3 sqlite3 packing_trace_zone_a_v1.sqlite
+$ sqlite3 packing_trace_zone_a_v1.sqlite
 sqlite> .headers on
 sqlite> .mode csv
 sqlite> .output vm_types.csv

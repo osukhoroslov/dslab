@@ -1,10 +1,9 @@
-extern crate env_logger;
-
 use std::cell::RefCell;
 use std::rc::Rc;
-use sugars::{rc, refcell};
 
+extern crate env_logger;
 use log::info;
+use sugars::{rc, refcell};
 
 use cloud_plugin::config::SimulationConfig;
 use cloud_plugin::load_model::ConstLoadModel;
@@ -12,6 +11,14 @@ use cloud_plugin::simulation::CloudSimulation;
 use cloud_plugin::vm_placement_algorithm::BestFit;
 use cloud_plugin::vm_placement_algorithm::BestFitThreshold;
 use simcore::simulation::Simulation;
+
+fn init_logger() {
+    use std::io::Write;
+    use env_logger::Builder;
+    Builder::from_default_env()
+          .format(|buf, record| writeln!(buf, "{}", record.args()))
+          .init();
+}
 
 fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>) {
     env_logger::init();
@@ -127,7 +134,8 @@ fn simulation_one_thresholded_scheduler(sim_config: Rc<RefCell<SimulationConfig>
 }
 
 fn main() {
-    let config = rc!(refcell!(SimulationConfig::from_file("config.yaml")));
+    init_logger();
+    let config = SimulationConfig::from_file("config.yaml");
     simulation_two_best_fit_schedulers(config.clone());
     simulation_one_thresholded_scheduler(config.clone());
 }

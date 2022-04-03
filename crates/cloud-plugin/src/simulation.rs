@@ -28,17 +28,17 @@ pub struct CloudSimulation {
     schedulers: BTreeMap<String, Rc<RefCell<Scheduler>>>,
     sim: Simulation,
     ctx: SimulationContext,
-    sim_config: Rc<RefCell<SimulationConfig>>,
+    sim_config: SimulationConfig,
 }
 
 impl CloudSimulation {
-    pub fn new(mut sim: Simulation, sim_config: Rc<RefCell<SimulationConfig>>) -> Self {
+    pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
         let monitoring_id = "monitoring";
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         sim.add_handler(monitoring_id, monitoring.clone());
         let placement_store_id = "placement_store";
         let placement_store = rc!(refcell!(PlacementStore::new(
-            sim_config.borrow().data.allow_vm_overcommit,
+            sim_config.allow_vm_overcommit,
             sim.create_context(placement_store_id),
             sim_config.clone(),
         )));
@@ -64,7 +64,7 @@ impl CloudSimulation {
             memory_total,
             self.monitoring_id.clone(),
             self.placement_store_id.clone(),
-            self.sim_config.borrow().data.allow_vm_overcommit,
+            self.sim_config.allow_vm_overcommit,
             self.sim.create_context(id),
             self.sim_config.clone(),
         )));
@@ -153,6 +153,10 @@ impl CloudSimulation {
 
     pub fn steps(&mut self, step_count: u64) -> bool {
         return self.sim.steps(step_count);
+    }
+
+    pub fn event_count(&self) -> u64 {
+        return self.sim.event_count();
     }
 
     pub fn current_time(&mut self) -> f64 {

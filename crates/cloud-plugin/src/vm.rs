@@ -1,8 +1,5 @@
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::config::SimulationConfig;
 use crate::load_model::LoadModel;
 
@@ -11,7 +8,7 @@ pub struct VirtualMachine {
     start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
-    sim_config: Rc<RefCell<SimulationConfig>>,
+    sim_config: SimulationConfig,
 }
 
 impl Serialize for VirtualMachine {
@@ -30,7 +27,7 @@ impl VirtualMachine {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
-        sim_config: Rc<RefCell<SimulationConfig>>,
+        sim_config: SimulationConfig,
     ) -> Self {
         Self {
             lifetime,
@@ -46,11 +43,11 @@ impl VirtualMachine {
     }
 
     pub fn start_duration(&self) -> f64 {
-        self.sim_config.borrow().data.vm_start_duration
+        self.sim_config.vm_start_duration
     }
 
     pub fn stop_duration(&self) -> f64 {
-        self.sim_config.borrow().data.vm_stop_duration
+        self.sim_config.vm_stop_duration
     }
 
     pub fn set_start_time(&mut self, time: f64) {

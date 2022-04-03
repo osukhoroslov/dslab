@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+<<<<<<< HEAD
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,6 +8,13 @@ use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
+=======
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use core::log_debug;
+>>>>>>> Review fixes
 
 use crate::common::AllocationVerdict;
 use crate::config::SimulationConfig;
@@ -22,11 +30,11 @@ pub struct PlacementStore {
     pool_state: ResourcePoolState,
     schedulers: HashSet<String>,
     ctx: SimulationContext,
-    sim_config: Rc<RefCell<SimulationConfig>>,
+    sim_config: SimulationConfig,
 }
 
 impl PlacementStore {
-    pub fn new(allow_vm_overcommit: bool, ctx: SimulationContext, sim_config: Rc<RefCell<SimulationConfig>>) -> Self {
+    pub fn new(allow_vm_overcommit: bool, ctx: SimulationContext, sim_config: SimulationConfig) -> Self {
         Self {
             allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),
@@ -60,7 +68,7 @@ impl PlacementStore {
             self.pool_state.allocate(&alloc, &host_id);
             log_debug!(
                 self.ctx,
-                format!("vm #{} commited to host #{} in placement store", alloc.id, host_id)
+                "vm #{} commited to host #{} in placement store", alloc.id, host_id
             );
             self.ctx.emit(
                 AllocationRequest {
@@ -68,7 +76,7 @@ impl PlacementStore {
                     vm,
                 },
                 &host_id,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
 
             for scheduler in self.schedulers.iter() {
@@ -78,16 +86,14 @@ impl PlacementStore {
                         host_id: host_id.clone(),
                     },
                     scheduler,
-                    self.sim_config.borrow().data.message_delay,
+                    self.sim_config.message_delay,
                 );
             }
         } else {
             log_debug!(
                 self.ctx,
-                format!(
-                    "not enough space for vm #{} on host #{} in placement store",
-                    alloc.id, host_id
-                )
+                "not enough space for vm #{} on host #{} in placement store",
+                alloc.id, host_id
             );
             self.ctx.emit(
                 AllocationCommitFailed {
@@ -95,12 +101,12 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 &from_scheduler,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
             self.ctx.emit(
                 AllocationRequest { alloc, vm },
                 &from_scheduler,
-                self.sim_config.borrow().data.message_delay + self.sim_config.borrow().data.allocation_retry_period,
+                self.sim_config.message_delay + self.sim_config.allocation_retry_period,
             );
         }
     }
@@ -115,7 +121,7 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 scheduler,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }
@@ -130,7 +136,7 @@ impl PlacementStore {
                     host_id: host_id.clone(),
                 },
                 scheduler,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }

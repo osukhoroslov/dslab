@@ -2,10 +2,18 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
+<<<<<<< HEAD
 use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
+=======
+use core::cast;
+use core::context::SimulationContext;
+use core::event::Event;
+use core::handler::EventHandler;
+use core::log_debug;
+>>>>>>> Review fixes
 
 use crate::common::AllocationVerdict;
 use crate::config::SimulationConfig;
@@ -37,7 +45,7 @@ pub struct HostManager {
     placement_store_id: String,
 
     ctx: SimulationContext,
-    sim_config: Rc<RefCell<SimulationConfig>>,
+    sim_config: SimulationConfig,
 }
 
 impl HostManager {
@@ -48,7 +56,7 @@ impl HostManager {
         placement_store_id: String,
         allow_vm_overcommit: bool,
         ctx: SimulationContext,
-        sim_config: Rc<RefCell<SimulationConfig>>,
+        sim_config: SimulationConfig,
     ) -> Self {
         Self {
             id: ctx.id().to_string(),
@@ -154,12 +162,12 @@ impl HostManager {
         if self.can_allocate(&alloc) == AllocationVerdict::Success {
             let start_duration = vm.start_duration();
             self.allocate(self.ctx.time(), &alloc, vm);
-            log_debug!(self.ctx, format!("vm #{} allocated on host #{}", alloc.id, self.id,));
+            log_debug!(self.ctx, "vm #{} allocated on host #{}", alloc.id, self.id);
             self.ctx.emit_self(VMStarted { alloc }, start_duration);
         } else {
             log_debug!(
                 self.ctx,
-                format!("not enough space for vm #{} on host #{}", alloc.id, self.id)
+                "not enough space for vm #{} on host #{}", alloc.id, self.id
             );
             self.ctx.emit(
                 AllocationFailed {
@@ -167,7 +175,7 @@ impl HostManager {
                     host_id: self.id.clone(),
                 },
                 &self.placement_store_id,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }
@@ -175,20 +183,20 @@ impl HostManager {
     fn on_allocation_release_request(&mut self, alloc: Allocation) {
         log_debug!(
             self.ctx,
-            format!("release resources from vm #{} on host #{}", alloc.id, self.id)
+            "release resources from vm #{} on host #{}", alloc.id, self.id
         );
         let vm = self.vms.get(&alloc.id).unwrap();
         self.ctx.emit_self(VMDeleted { alloc }, vm.stop_duration());
     }
 
     fn on_vm_started(&mut self, alloc: Allocation) {
-        log_debug!(self.ctx, format!("vm #{} started and running", alloc.id));
+        log_debug!(self.ctx, "vm #{} started and running", alloc.id);
         let vm = self.vms.get(&alloc.id).unwrap();
         self.ctx.emit_self(AllocationReleaseRequest { alloc }, vm.lifetime());
     }
 
     fn on_vm_deleted(&mut self, alloc: Allocation) {
-        log_debug!(self.ctx, format!("vm #{} deleted", alloc.id));
+        log_debug!(self.ctx, "vm #{} deleted", alloc.id);
         self.release(self.ctx.time(), &alloc);
         self.ctx.emit(
             AllocationReleased {
@@ -196,12 +204,12 @@ impl HostManager {
                 host_id: self.id.clone(),
             },
             &self.placement_store_id,
-            self.sim_config.borrow().data.message_delay,
+            self.sim_config.message_delay,
         );
     }
 
     fn send_host_state(&mut self) {
-        log_debug!(self.ctx, format!("host #{} sends it`s data to monitoring", self.id));
+        log_debug!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id.clone(),
@@ -209,11 +217,10 @@ impl HostManager {
                 memory_load: self.get_memory_load(self.ctx.time()),
             },
             &self.monitoring_id,
-            self.sim_config.borrow().data.message_delay,
+            self.sim_config.message_delay,
         );
 
-        self.ctx
-            .emit_self(SendHostState {}, self.sim_config.borrow().data.send_stats_period);
+        self.ctx.emit_self(SendHostState {}, self.sim_config.send_stats_period);
     }
 }
 

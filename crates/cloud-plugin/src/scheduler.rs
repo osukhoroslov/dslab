@@ -25,7 +25,7 @@ pub struct Scheduler {
     monitoring: Rc<RefCell<Monitoring>>,
     vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
-    sim_config: Rc<RefCell<SimulationConfig>>,
+    sim_config: SimulationConfig,
 }
 
 impl Scheduler {
@@ -35,7 +35,7 @@ impl Scheduler {
         placement_store_id: String,
         vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
-        sim_config: Rc<RefCell<SimulationConfig>>,
+        sim_config: SimulationConfig,
     ) -> Self {
         Self {
             id: ctx.id().to_string(),
@@ -60,10 +60,8 @@ impl Scheduler {
         {
             log_debug!(
                 self.ctx,
-                format!(
-                    "scheduler #{} decided to pack vm #{} on host #{}",
-                    self.id, alloc.id, host
-                )
+                "scheduler #{} decided to pack vm #{} on host #{}",
+                self.id, alloc.id, host
             );
             self.pool_state.allocate(&alloc, &host);
 
@@ -74,16 +72,16 @@ impl Scheduler {
                     host_id: host,
                 },
                 &self.placement_store_id,
-                self.sim_config.borrow().data.message_delay,
+                self.sim_config.message_delay,
             );
         } else {
             log_debug!(
                 self.ctx,
-                format!("scheduler #{} failed to pack vm #{}", self.id, alloc.id,)
+                "scheduler #{} failed to pack vm #{}", self.id, alloc.id,
             );
             self.ctx.emit_self(
                 AllocationRequest { alloc, vm },
-                self.sim_config.borrow().data.allocation_retry_period,
+                self.sim_config.allocation_retry_period,
             );
         }
     }

@@ -55,7 +55,7 @@ impl Monitoring {
     }
 
     fn update_host_state(&mut self, host_id: String, cpu_load: f64, memory_load: f64) {
-        log_debug!(self.ctx, format!("monitoring received stats from host #{}", host_id));
+        log_debug!(self.ctx, "monitoring received stats from host #{}", host_id);
         self.host_states.get_mut(&host_id).map(|host| {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;
