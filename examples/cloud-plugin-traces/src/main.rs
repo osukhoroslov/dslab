@@ -181,7 +181,7 @@ fn simulation_with_traces(
         }
         let request = request_opt.unwrap();
 
-        let _vm = cloud_sim.spawn_vm_with_delay(
+        cloud_sim.spawn_vm_with_delay(
             &request.alloc.id,
             request.alloc.cpu_usage,
             request.alloc.memory_usage,

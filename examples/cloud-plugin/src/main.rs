@@ -34,7 +34,7 @@ fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>)
     // spawn vm_0 - vm_4 on scheduler #1
     for i in 0..5 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm_now(
+        cloud_sim.spawn_vm_now(
             &vm_name,
             10,
             10,
@@ -47,7 +47,7 @@ fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>)
     // spawn vm_5 - vm_9 on scheduler #2
     for i in 5..10 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm_now(
+        cloud_sim.spawn_vm_now(
             &vm_name,
             10,
             10,
@@ -61,7 +61,7 @@ fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>)
     // spawn vm_10 - vm_14 on scheduler #1
     for i in 10..15 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm_now(
+        cloud_sim.spawn_vm_now(
             &vm_name,
             10,
             10,
@@ -74,7 +74,7 @@ fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>)
     // spawn vm_15 - vm_19 on scheduler #2
     for i in 15..20 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm_now(
+        cloud_sim.spawn_vm_now(
             &vm_name,
             10,
             10,
@@ -108,7 +108,7 @@ fn simulation_one_thresholded_scheduler(sim_config: Rc<RefCell<SimulationConfig>
 
     for i in 0..10 {
         let vm_name = format!("v{}", i);
-        let _vm = cloud_sim.spawn_vm_with_delay(
+        cloud_sim.spawn_vm_with_delay(
             &vm_name,
             10,
             10,
