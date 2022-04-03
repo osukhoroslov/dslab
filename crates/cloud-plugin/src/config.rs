@@ -8,6 +8,7 @@ pub struct SimulationConfig {
     pub vm_start_duration: f64,       // vm initialization duration
     pub vm_stop_duration: f64,        // vm deallocation duration
     pub allow_vm_overcommit: bool,    // pack VM by real resource consumption, not SLA
+    pub network_throughput: u64,      // to define VM migration duration
 }
 
 impl SimulationConfig {
@@ -19,6 +20,7 @@ impl SimulationConfig {
             vm_start_duration: 1.,
             vm_stop_duration: 0.5,
             allow_vm_overcommit: false,
+            network_throughput: 1,
         }
     }
 
@@ -33,6 +35,7 @@ impl SimulationConfig {
             vm_start_duration: data.vm_start_duration,
             vm_stop_duration: data.vm_stop_duration,
             allow_vm_overcommit: data.allow_vm_overcommit,
+            network_throughput: data.network_throughput,
         }
     }
 }

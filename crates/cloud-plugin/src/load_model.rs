@@ -1,7 +1,12 @@
-pub trait LoadModel {
+use dyn_clone::{clone_trait_object, DynClone};
+
+pub trait LoadModel: DynClone {
     fn get_resource_load(&self, time: f64, time_from_start: f64) -> f64;
 }
 
+clone_trait_object!(LoadModel);
+
+#[derive(Clone)]
 pub struct ConstLoadModel {
     load: f64,
 }

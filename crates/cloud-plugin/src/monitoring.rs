@@ -20,7 +20,7 @@ pub struct HostState {
 
 pub struct Monitoring {
     host_states: BTreeMap<String, HostState>,
-    _vm_locations: HashMap<String, HostState>,
+    vm_locations: HashMap<String, String>,
     ctx: SimulationContext,
 }
 
@@ -39,7 +39,7 @@ impl Monitoring {
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
             host_states: BTreeMap::new(),
-            _vm_locations: HashMap::new(),
+            vm_locations: HashMap::new(),
             ctx,
         }
     }
@@ -57,12 +57,30 @@ impl Monitoring {
             .insert(host_id.to_string(), HostState::new(cpu_total, memory_total));
     }
 
-    fn update_host_state(&mut self, host_id: String, cpu_load: f64, memory_load: f64) {
+    pub fn find_host_by_vm(&mut self, vm_id: &str) -> String {
+        return self.vm_locations.get(vm_id).unwrap().to_string();
+    }
+
+    fn update_host_state(
+        &mut self,
+        host_id: String,
+        cpu_load: f64,
+        memory_load: f64,
+        previously_added_vms: Vec<String>,
+        previously_removed_vms: Vec<String>,
+    ) {
         log_debug!(self.ctx, "monitoring received stats from host #{}", host_id);
         self.host_states.get_mut(&host_id).map(|host| {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;
         });
+
+        for vm_id in previously_added_vms {
+            self.vm_locations.insert(vm_id, host_id.clone());
+        }
+        for vm_id in previously_removed_vms {
+            self.vm_locations.remove(&vm_id);
+        }
     }
 }
 
@@ -73,8 +91,16 @@ impl EventHandler for Monitoring {
                 host_id,
                 cpu_load,
                 memory_load,
+                previously_added_vms,
+                previously_removed_vms,
             } => {
-                self.update_host_state(host_id, cpu_load, memory_load);
+                self.update_host_state(
+                    host_id,
+                    cpu_load,
+                    memory_load,
+                    previously_added_vms,
+                    previously_removed_vms,
+                );
             }
         })
     }

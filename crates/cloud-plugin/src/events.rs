@@ -13,6 +13,13 @@ pub mod allocation {
     }
 
     #[derive(Serialize)]
+    pub struct MigrationRequest {
+        pub source_host: String,
+        pub alloc: Allocation,
+        pub vm: VirtualMachine,
+    }
+
+    #[derive(Serialize)]
     pub struct AllocationCommitRequest {
         pub alloc: Allocation,
         pub vm: VirtualMachine,
@@ -77,5 +84,7 @@ pub mod monitoring {
         pub host_id: String,
         pub cpu_load: f64,
         pub memory_load: f64,
+        pub previously_added_vms: Vec<String>,
+        pub previously_removed_vms: Vec<String>,
     }
 }

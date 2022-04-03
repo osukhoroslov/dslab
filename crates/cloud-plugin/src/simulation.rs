@@ -8,7 +8,7 @@ use simcore::context::SimulationContext;
 use simcore::simulation::Simulation;
 
 use crate::config::SimulationConfig;
-use crate::events::allocation::AllocationRequest;
+use crate::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::host_manager::HostManager;
 use crate::host_manager::SendHostState;
 use crate::load_model::LoadModel;
@@ -25,6 +25,8 @@ pub struct CloudSimulation {
     placement_store: Rc<RefCell<PlacementStore>>,
     placement_store_id: String,
     hosts: BTreeMap<String, Rc<RefCell<HostManager>>>,
+    vms: BTreeMap<String, VirtualMachine>,
+    allocations: BTreeMap<String, Allocation>,
     schedulers: BTreeMap<String, Rc<RefCell<Scheduler>>>,
     sim: Simulation,
     ctx: SimulationContext,
@@ -50,6 +52,8 @@ impl CloudSimulation {
             placement_store,
             placement_store_id: placement_store_id.to_string(),
             hosts: BTreeMap::new(),
+            vms: BTreeMap::new(),
+            allocations: BTreeMap::new(),
             schedulers: BTreeMap::new(),
             sim,
             ctx,
@@ -109,19 +113,25 @@ impl CloudSimulation {
         memory_load_model: Box<dyn LoadModel>,
         scheduler: &str,
     ) {
+        let alloc = Allocation {
+            id: id.to_string(),
+            cpu_usage,
+            memory_usage,
+        };
+        let vm = VirtualMachine::new(
+            lifetime,
+            cpu_load_model,
+            memory_load_model,
+            rc!(self.sim_config.clone()),
+        );
+
+        self.vms.insert(id.to_string(), vm.clone());
+        self.allocations.insert(id.to_string(), alloc.clone());
+
         self.ctx.emit_now(
             AllocationRequest {
-                alloc: Allocation {
-                    id: id.to_string(),
-                    cpu_usage,
-                    memory_usage,
-                },
-                vm: VirtualMachine::new(
-                    lifetime,
-                    cpu_load_model,
-                    memory_load_model,
-                    rc!(self.sim_config.clone()),
-                ),
+                alloc: alloc.clone(),
+                vm: vm.clone(),
             },
             scheduler,
         );
@@ -154,6 +164,23 @@ impl CloudSimulation {
             },
             scheduler,
             delay,
+        );
+    }
+
+    pub fn migrate_vm_to_host(&mut self, vm_id: &str, destination_host_id: &str) {
+        let alloc = self.allocations.get(vm_id).unwrap();
+        let mut vm = self.vms.get_mut(vm_id).unwrap();
+        vm.lifetime -= self.ctx.time() - vm.start_time;
+        let source_host = self.monitoring.borrow_mut().find_host_by_vm(vm_id);
+
+        self.ctx.emit(
+            MigrationRequest {
+                source_host: source_host.clone(),
+                alloc: alloc.clone(),
+                vm: vm.clone(),
+            },
+            destination_host_id,
+            self.sim_config.message_delay,
         );
     }
 

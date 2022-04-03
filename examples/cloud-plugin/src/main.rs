@@ -127,9 +127,45 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     );
 }
 
+fn simulation_migration_simple(sim_config: SimulationConfig) {
+    let sim = Simulation::new(123);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+
+    cloud_sim.add_host("h1", 30, 30);
+    cloud_sim.add_host("h2", 30, 30);
+    cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+
+    let vm_name = "vm";
+    cloud_sim.spawn_vm_now(
+        &vm_name,
+        10,
+        10,
+        20.0,
+        Box::new(ConstLoadModel::new(0.5)),
+        Box::new(ConstLoadModel::new(0.5)),
+        "s",
+    );
+
+    cloud_sim.sleep_for(10.);
+    cloud_sim.migrate_vm_to_host(vm_name, "h2");
+
+    cloud_sim.steps(300);
+
+    let end_time = cloud_sim.current_time();
+    info!(
+        "Total energy consumed on host one: {} watt",
+        cloud_sim.host("h1").borrow_mut().get_total_consumed(end_time)
+    );
+    info!(
+        "Total energy consumed on host two: {} watt",
+        cloud_sim.host("h2").borrow_mut().get_total_consumed(end_time)
+    );
+}
+
 fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
     simulation_two_best_fit_schedulers(config.clone());
     simulation_one_thresholded_scheduler(config.clone());
+    simulation_migration_simple(config.clone());
 }

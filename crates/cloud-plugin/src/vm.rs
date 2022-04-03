@@ -5,9 +5,10 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use crate::config::SimulationConfig;
 use crate::load_model::LoadModel;
 
+#[derive(Clone)]
 pub struct VirtualMachine {
-    lifetime: f64,
-    start_time: f64,
+    pub lifetime: f64,
+    pub start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
     sim_config: Rc<SimulationConfig>,
