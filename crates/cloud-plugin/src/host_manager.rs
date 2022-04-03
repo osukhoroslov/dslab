@@ -165,10 +165,7 @@ impl HostManager {
             log_debug!(self.ctx, "vm #{} allocated on host #{}", alloc.id, self.id);
             self.ctx.emit_self(VMStarted { alloc }, start_duration);
         } else {
-            log_debug!(
-                self.ctx,
-                "not enough space for vm #{} on host #{}", alloc.id, self.id
-            );
+            log_debug!(self.ctx, "not enough space for vm #{} on host #{}", alloc.id, self.id);
             self.ctx.emit(
                 AllocationFailed {
                     alloc,
@@ -181,10 +178,7 @@ impl HostManager {
     }
 
     fn on_allocation_release_request(&mut self, alloc: Allocation) {
-        log_debug!(
-            self.ctx,
-            "release resources from vm #{} on host #{}", alloc.id, self.id
-        );
+        log_debug!(self.ctx, "release resources from vm #{} on host #{}", alloc.id, self.id);
         let vm = self.vms.get(&alloc.id).unwrap();
         self.ctx.emit_self(VMDeleted { alloc }, vm.stop_duration());
     }

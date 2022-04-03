@@ -61,7 +61,9 @@ impl Scheduler {
             log_debug!(
                 self.ctx,
                 "scheduler #{} decided to pack vm #{} on host #{}",
-                self.id, alloc.id, host
+                self.id,
+                alloc.id,
+                host
             );
             self.pool_state.allocate(&alloc, &host);
 
@@ -75,14 +77,9 @@ impl Scheduler {
                 self.sim_config.message_delay,
             );
         } else {
-            log_debug!(
-                self.ctx,
-                "scheduler #{} failed to pack vm #{}", self.id, alloc.id,
-            );
-            self.ctx.emit_self(
-                AllocationRequest { alloc, vm },
-                self.sim_config.allocation_retry_period,
-            );
+            log_debug!(self.ctx, "scheduler #{} failed to pack vm #{}", self.id, alloc.id,);
+            self.ctx
+                .emit_self(AllocationRequest { alloc, vm }, self.sim_config.allocation_retry_period);
         }
     }
 

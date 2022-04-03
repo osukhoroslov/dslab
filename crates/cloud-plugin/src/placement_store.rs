@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-<<<<<<< HEAD
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -8,13 +6,6 @@ use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-=======
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::log_debug;
->>>>>>> Review fixes
 
 use crate::common::AllocationVerdict;
 use crate::config::SimulationConfig;
@@ -68,7 +59,9 @@ impl PlacementStore {
             self.pool_state.allocate(&alloc, &host_id);
             log_debug!(
                 self.ctx,
-                "vm #{} commited to host #{} in placement store", alloc.id, host_id
+                "vm #{} commited to host #{} in placement store",
+                alloc.id,
+                host_id
             );
             self.ctx.emit(
                 AllocationRequest {
@@ -93,7 +86,8 @@ impl PlacementStore {
             log_debug!(
                 self.ctx,
                 "not enough space for vm #{} on host #{} in placement store",
-                alloc.id, host_id
+                alloc.id,
+                host_id
             );
             self.ctx.emit(
                 AllocationCommitFailed {

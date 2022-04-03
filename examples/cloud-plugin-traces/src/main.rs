@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::process;
-use std::time::Instant;
 use std::rc::Rc;
-use sugars::{rc};
+use std::time::Instant;
+use sugars::rc;
 
 extern crate env_logger;
 use serde::{Deserialize, Serialize};
@@ -27,11 +27,11 @@ pub static TIME_MARGIN: f64 = 7200.; // due to simulation begins ~7200 hours bef
 pub static BLOCK_STEPS: u64 = 10000;
 
 fn init_logger() {
-    use std::io::Write;
     use env_logger::Builder;
+    use std::io::Write;
     Builder::from_default_env()
-          .format(|buf, record| writeln!(buf, "{}", record.args()))
-          .init();
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 }
 
 #[allow(non_snake_case)]
@@ -62,7 +62,7 @@ struct SimulationDatacet {
 struct VMRequest {
     alloc: Allocation,
     vm: VirtualMachine,
-    start_time: f64
+    start_time: f64,
 }
 
 impl SimulationDatacet {
@@ -71,7 +71,7 @@ impl SimulationDatacet {
             vm_types: HashMap::new(),
             vm_instances: Vec::new(),
             current_vm: 0,
-            sim_config: sim_config.clone()
+            sim_config: sim_config.clone(),
         }
     }
 
@@ -133,10 +133,10 @@ fn parse_vm_instances(file_name: &str, instances_count: u32) -> Result<Vec<VMIns
 }
 
 fn parse_dataset(
-        sim_config: SimulationConfig,
-        vm_types_file_name: &str,
-        vm_instances_file_name: &str,
-        instnces_count: u32
+    sim_config: SimulationConfig,
+    vm_types_file_name: &str,
+    vm_instances_file_name: &str,
+    instnces_count: u32,
 ) -> SimulationDatacet {
     let mut result = SimulationDatacet::new(rc!(sim_config));
 
@@ -166,7 +166,12 @@ fn simulation_with_traces(
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
-    let mut dataset = parse_dataset(sim_config.clone(), vm_types_file_name, vm_instances_file_name, instnces_count);
+    let mut dataset = parse_dataset(
+        sim_config.clone(),
+        vm_types_file_name,
+        vm_instances_file_name,
+        instnces_count,
+    );
 
     for i in 1..NUMBER_OF_HOSTS {
         let host_name = &format!("h{}", i);
@@ -193,7 +198,11 @@ fn simulation_with_traces(
         );
     }
 
-    log_info!(cloud_sim.get_context(), "Simulation init time: {:.2?}", initialization_start.elapsed());
+    log_info!(
+        cloud_sim.get_context(),
+        "Simulation init time: {:.2?}",
+        initialization_start.elapsed()
+    );
     let mut current_block = 0;
     let simulation_start = Instant::now();
 
@@ -212,18 +221,30 @@ fn simulation_with_traces(
 
         log_info!(
             ctx,
-            "CPU allocation rate: {}, memory allocation rate: {}", sum_cpu_load, sum_memory_load
+            "CPU allocation rate: {}, memory allocation rate: {}",
+            sum_cpu_load,
+            sum_memory_load
         );
         if sum_cpu_load == 0. && current_block > 5 {
             break;
         }
     }
 
-    log_info!(cloud_sim.get_context(), "Simulation process time {:.2?}", simulation_start.elapsed());
-    log_info!(cloud_sim.get_context(), "Total events processed {}", cloud_sim.event_count());
-    log_info!(cloud_sim.get_context(), 
-              "Events per second {}",
-              cloud_sim.event_count() as u128 / simulation_start.elapsed().as_millis() * 1000);
+    log_info!(
+        cloud_sim.get_context(),
+        "Simulation process time {:.2?}",
+        simulation_start.elapsed()
+    );
+    log_info!(
+        cloud_sim.get_context(),
+        "Total events processed {}",
+        cloud_sim.event_count()
+    );
+    log_info!(
+        cloud_sim.get_context(),
+        "Events per second {}",
+        cloud_sim.event_count() as u128 / simulation_start.elapsed().as_millis() * 1000
+    );
 }
 
 fn main() {

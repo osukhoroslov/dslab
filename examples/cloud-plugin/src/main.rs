@@ -13,11 +13,11 @@ use cloud_plugin::vm_placement_algorithm::BestFitThreshold;
 use simcore::simulation::Simulation;
 
 fn init_logger() {
-    use std::io::Write;
     use env_logger::Builder;
+    use std::io::Write;
     Builder::from_default_env()
-          .format(|buf, record| writeln!(buf, "{}", record.args()))
-          .init();
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 }
 
 fn simulation_two_best_fit_schedulers(sim_config: Rc<RefCell<SimulationConfig>>) {
