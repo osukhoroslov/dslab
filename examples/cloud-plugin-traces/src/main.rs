@@ -3,6 +3,8 @@ use std::error::Error;
 use std::fs::File;
 use std::process;
 use std::time::Instant;
+use std::rc::Rc;
+use sugars::{rc};
 
 extern crate env_logger;
 use serde::{Deserialize, Serialize};
@@ -19,10 +21,10 @@ use core::simulation::Simulation;
 pub static HOST_CPU_CAPACITY: f64 = 1000.;
 pub static HOST_MEMORY_CAPACITY: f64 = 1000.;
 pub static SIMULATION_LENGTH: f64 = 100.;
-pub static NUMBER_OF_HOSTS: u32 = 1000;
-pub static MAX_VMS_IN_SIMULATION: u32 = 5000;
+pub static NUMBER_OF_HOSTS: u32 = 10000;
+pub static MAX_VMS_IN_SIMULATION: u32 = 50000;
 pub static TIME_MARGIN: f64 = 7200.; // due to simulation begins ~7200 hours before the two weeks period
-pub static BLOCK_STEPS: u64 = 1000;
+pub static BLOCK_STEPS: u64 = 10000;
 
 fn init_logger() {
     use std::io::Write;
@@ -54,7 +56,7 @@ struct SimulationDatacet {
     vm_types: HashMap<String, VMType>,
     vm_instances: Vec<VMInstance>,
     current_vm: usize,
-    sim_config: SimulationConfig,
+    sim_config: Rc<SimulationConfig>,
 }
 
 struct VMRequest {
@@ -64,7 +66,7 @@ struct VMRequest {
 }
 
 impl SimulationDatacet {
-    pub fn new(sim_config: SimulationConfig) -> Self {
+    pub fn new(sim_config: Rc<SimulationConfig>) -> Self {
         Self {
             vm_types: HashMap::new(),
             vm_instances: Vec::new(),
@@ -136,7 +138,7 @@ fn parse_dataset(
         vm_instances_file_name: &str,
         instnces_count: u32
 ) -> SimulationDatacet {
-    let mut result = SimulationDatacet::new(sim_config);
+    let mut result = SimulationDatacet::new(rc!(sim_config));
 
     let vm_types_or_error = parse_vm_types(vm_types_file_name);
     if vm_types_or_error.is_err() {

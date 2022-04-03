@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::config::SimulationConfig;
@@ -8,7 +10,7 @@ pub struct VirtualMachine {
     start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
-    sim_config: SimulationConfig,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl Serialize for VirtualMachine {
@@ -27,7 +29,7 @@ impl VirtualMachine {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
-        sim_config: SimulationConfig,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
             lifetime,

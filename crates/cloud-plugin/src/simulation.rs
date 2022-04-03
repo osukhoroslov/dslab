@@ -116,7 +116,7 @@ impl CloudSimulation {
                     cpu_usage,
                     memory_usage,
                 },
-                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone()),
+                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, rc!(self.sim_config.clone())),
             },
             scheduler,
         );
@@ -140,7 +140,7 @@ impl CloudSimulation {
                     cpu_usage,
                     memory_usage,
                 },
-                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone()),
+                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, rc!(self.sim_config.clone())),
             },
             scheduler,
             delay,
