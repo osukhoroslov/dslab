@@ -1,9 +1,13 @@
 mod simple_scheduler;
 
+use std::io::Write;
+
 use sugars::{rc, refcell};
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+
+use env_logger::Builder;
 
 use compute::multicore::*;
 use core::simulation::Simulation;
@@ -156,6 +160,10 @@ fn reuse_files() {
 }
 
 fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+
     map_reduce();
     epigenomics(); // dax
     montage(); // dot
