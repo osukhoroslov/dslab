@@ -27,9 +27,15 @@ pub fn load_network(file: &str) -> Rc<RefCell<dyn NetworkModel>> {
     let network = network.network;
 
     if network.model == "ConstantBandwidthNetwork" {
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(network.bandwidth, network.latency)))
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
+            network.bandwidth,
+            network.latency,
+        )))
     } else if network.model == "SharedBandwidthNetwork" {
-        Rc::new(RefCell::new(SharedBandwidthNetwork::new(network.bandwidth, network.latency)))
+        Rc::new(RefCell::new(SharedBandwidthNetwork::new(
+            network.bandwidth,
+            network.latency,
+        )))
     } else {
         eprintln!("Unknown network model {}", network.model);
         std::process::exit(1);
