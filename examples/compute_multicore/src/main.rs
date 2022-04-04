@@ -1,15 +1,18 @@
+use env_logger::Builder;
 use std::cell::RefCell;
+use std::io::Write;
 use std::rc::Rc;
 
 use serde::Serialize;
 use sugars::{rc, refcell};
 
 use compute::multicore::*;
-use core::cast;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
 use core::simulation::Simulation;
+use core::{cast, log_error, log_info};
 
 #[derive(Serialize)]
 pub struct Start {}
@@ -18,7 +21,7 @@ pub struct Start {}
 pub struct Deallocate {}
 
 pub struct Task {
-    id: String,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
@@ -39,7 +42,7 @@ impl Task {
         ctx: SimulationContext,
     ) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             compute,
             flops,
             memory,
@@ -62,7 +65,7 @@ impl EventHandler for Task {
                     self.min_cores,
                     self.max_cores,
                     self.cores_dependency.clone(),
-                    &self.id,
+                    self.id,
                 );
             }
             CompStarted { id, cores } => {
@@ -99,7 +102,7 @@ impl EventHandler for Task {
 }
 
 pub struct Allocator {
-    id: String,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     allocation: Allocation,
     time: f64,
@@ -109,7 +112,7 @@ pub struct Allocator {
 impl Allocator {
     pub fn new(compute: Rc<RefCell<Compute>>, allocation: Allocation, time: f64, ctx: SimulationContext) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             compute,
             allocation,
             time,
@@ -122,52 +125,48 @@ impl EventHandler for Allocator {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                println!("{} [{}] received Start from {}", self.ctx.time(), self.id, event.src);
+                log_info!(self.ctx, "received Start from {}", self.ctx.lookup_name(event.src));
                 self.compute
                     .borrow_mut()
-                    .allocate(self.allocation.cores, self.allocation.memory, &self.id);
+                    .allocate(self.allocation.cores, self.allocation.memory, self.id);
                 self.ctx.emit_self(Deallocate {}, self.time);
             }
             Deallocate {} => {
                 self.compute
                     .borrow_mut()
-                    .deallocate(self.allocation.cores, self.allocation.memory, &self.id);
+                    .deallocate(self.allocation.cores, self.allocation.memory, self.id);
             }
             AllocationFailed { id, reason } => {
-                println!(
-                    "{} [{}] received AllocationFailed from {} for {:?} with reason {:?}",
-                    self.ctx.time(),
-                    self.id,
-                    event.src,
+                log_error!(
+                    self.ctx,
+                    "received AllocationFailed from {} for {:?} with reason {:?}",
+                    self.ctx.lookup_name(event.src),
                     id,
                     reason
                 );
             }
             DeallocationFailed { id, reason } => {
-                println!(
-                    "{} [{}] received DeallocationFailed from {} for {:?} with reason {:?}",
-                    self.ctx.time(),
-                    self.id,
-                    event.src,
+                log_error!(
+                    self.ctx,
+                    "received DeallocationFailed from {} for {:?} with reason {:?}",
+                    self.ctx.lookup_name(event.src),
                     id,
                     reason
                 );
             }
             AllocationSuccess { id } => {
-                println!(
-                    "{} [{}] received AllocationSuccess from {} for {:?}",
-                    self.ctx.time(),
-                    self.id,
-                    event.src,
+                log_info!(
+                    self.ctx,
+                    "received AllocationSuccess from {} for {:?}",
+                    self.ctx.lookup_name(event.src),
                     id
                 );
             }
             DeallocationSuccess { id } => {
-                println!(
-                    "{} [{}] received DeallocationSuccess from {} for {:?}",
-                    self.ctx.time(),
-                    self.id,
-                    event.src,
+                log_info!(
+                    self.ctx,
+                    "received DeallocationSuccess from {} for {:?}",
+                    self.ctx.lookup_name(event.src),
                     id
                 );
             }
@@ -176,6 +175,10 @@ impl EventHandler for Allocator {
 }
 
 fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+
     let mut sim = Simulation::new(123);
 
     let compute = rc!(refcell!(Compute::new(1, 10, 1024, sim.create_context("compute"))));
@@ -225,10 +228,10 @@ fn main() {
         CoresDependency::Linear,
         sim.create_context("task4"),
     );
-    sim.add_handler("task1", rc!(refcell!(task1)));
-    sim.add_handler("task2", rc!(refcell!(task2)));
-    sim.add_handler("task3", rc!(refcell!(task3)));
-    sim.add_handler("task4", rc!(refcell!(task4)));
+    let task1_id = sim.add_handler("task1", rc!(refcell!(task1)));
+    let task2_id = sim.add_handler("task2", rc!(refcell!(task2)));
+    let task3_id = sim.add_handler("task3", rc!(refcell!(task3)));
+    let task4_id = sim.add_handler("task4", rc!(refcell!(task4)));
 
     let allocator1 = Allocator::new(
         compute.clone(),
@@ -248,18 +251,18 @@ fn main() {
         30.,
         sim.create_context("allocator3"),
     );
-    sim.add_handler("allocator1", rc!(refcell!(allocator1)));
-    sim.add_handler("allocator2", rc!(refcell!(allocator2)));
-    sim.add_handler("allocator3", rc!(refcell!(allocator3)));
+    let allocator1_id = sim.add_handler("allocator1", rc!(refcell!(allocator1)));
+    let allocator2_id = sim.add_handler("allocator2", rc!(refcell!(allocator2)));
+    let allocator3_id = sim.add_handler("allocator3", rc!(refcell!(allocator3)));
 
     let mut ctx = sim.create_context("root");
-    ctx.emit(Start {}, "task1", 0.);
-    ctx.emit(Start {}, "task2", 0.);
-    ctx.emit(Start {}, "task3", 1000.);
-    ctx.emit(Start {}, "task4", 2000.);
-    ctx.emit(Start {}, "allocator1", 5000.);
-    ctx.emit(Start {}, "allocator2", 5005.);
-    ctx.emit(Start {}, "allocator3", 6000.);
+    ctx.emit(Start {}, task1_id, 0.);
+    ctx.emit(Start {}, task2_id, 0.);
+    ctx.emit(Start {}, task3_id, 1000.);
+    ctx.emit(Start {}, task4_id, 2000.);
+    ctx.emit(Start {}, allocator1_id, 5000.);
+    ctx.emit(Start {}, allocator2_id, 5005.);
+    ctx.emit(Start {}, allocator3_id, 6000.);
 
     sim.step_until_no_events();
 }

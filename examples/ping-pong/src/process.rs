@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 use core::cast;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -16,13 +17,13 @@ pub struct Pong {}
 
 pub struct Process {
     peer_count: usize,
-    peers: Vec<String>,
+    peers: Vec<Id>,
     iterations: u32,
     ctx: SimulationContext,
 }
 
 impl Process {
-    pub fn new(peers: Vec<String>, iterations: u32, ctx: SimulationContext) -> Self {
+    pub fn new(peers: Vec<Id>, iterations: u32, ctx: SimulationContext) -> Self {
         Self {
             peer_count: peers.len(),
             peers,
@@ -33,24 +34,24 @@ impl Process {
 
     fn on_start(&mut self) {
         let peer = if self.peer_count > 1 {
-            &self.peers[self.ctx.gen_range(0..self.peer_count)]
+            self.peers[self.ctx.gen_range(0..self.peer_count)]
         } else {
-            &self.peers[0]
+            self.peers[0]
         };
         let delay = self.ctx.rand();
         self.ctx.emit(Ping {}, peer, delay);
     }
 
-    fn on_ping(&mut self, from: String) {
+    fn on_ping(&mut self, from: Id) {
         let delay = self.ctx.rand();
         self.ctx.emit(Pong {}, from, delay);
     }
 
-    fn on_pong(&mut self, from: String) {
+    fn on_pong(&mut self, from: Id) {
         self.iterations -= 1;
         if self.iterations > 0 {
             let peer = if self.peer_count > 1 {
-                self.peers[self.ctx.gen_range(0..self.peer_count)].clone()
+                self.peers[self.ctx.gen_range(0..self.peer_count)]
             } else {
                 from
             };

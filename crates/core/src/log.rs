@@ -1,5 +1,10 @@
 use atty::Stream;
 use colored::{Color, ColoredString, Colorize};
+use log::error;
+use serde_json::json;
+use serde_type_name::type_name;
+
+use crate::event::Event;
 
 pub fn get_colored(s: &str, color: Color) -> ColoredString {
     if atty::is(Stream::Stderr) {
@@ -13,16 +18,16 @@ pub fn get_colored(s: &str, color: Color) -> ColoredString {
 macro_rules! log_info {
     ($ctx:expr, $msg:expr) => (
         log::info!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             "[{:.3} {}  {}] {}",
-            $ctx.time(), $crate::log::get_colored("INFO", $crate::colored::Color::Green), $ctx.id(), $msg
+            $ctx.time(), $crate::log::get_colored("INFO", $crate::colored::Color::Green), $ctx.name(), $msg
         )
     );
     ($ctx:expr, $format:expr, $($arg:tt)+) => (
         log::info!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             concat!("[{:.3} {}  {}] ", $format),
-            $ctx.time(), $crate::log::get_colored("INFO", $crate::colored::Color::Green), $ctx.id(), $($arg)+
+            $ctx.time(), $crate::log::get_colored("INFO", $crate::colored::Color::Green), $ctx.name(), $($arg)+
         )
     );
 }
@@ -31,16 +36,16 @@ macro_rules! log_info {
 macro_rules! log_debug {
     ($ctx:expr, $msg:expr) => (
         log::debug!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             "[{:.3} {} {}] {}",
-            $ctx.time(), $crate::log::get_colored("DEBUG", $crate::colored::Color::Blue), $ctx.id(), $msg
+            $ctx.time(), $crate::log::get_colored("DEBUG", $crate::colored::Color::Blue), $ctx.name(), $msg
         )
     );
     ($ctx:expr, $format:expr, $($arg:tt)+) => (
         log::debug!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             concat!("[{:.3} {} {}] ", $format),
-            $ctx.time(), $crate::log::get_colored("DEBUG", $crate::colored::Color::Blue), $ctx.id(), $($arg)+
+            $ctx.time(), $crate::log::get_colored("DEBUG", $crate::colored::Color::Blue), $ctx.name(), $($arg)+
         )
     );
 }
@@ -49,16 +54,16 @@ macro_rules! log_debug {
 macro_rules! log_trace {
     ($ctx:expr, $msg:expr) => (
         log::trace!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             "[{:.3} {} {}] {}",
-            $ctx.time(), $crate::log::get_colored("TRACE", $crate::colored::Color::Cyan), $ctx.id(), $msg
+            $ctx.time(), $crate::log::get_colored("TRACE", $crate::colored::Color::Cyan), $ctx.name(), $msg
         )
     );
     ($ctx:expr, $format:expr, $($arg:tt)+) => (
         log::trace!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             concat!("[{:.3} {} {}] ", $format),
-            $ctx.time(), $crate::log::get_colored("TRACE", $crate::colored::Color::Cyan), $ctx.id(), $($arg)+
+            $ctx.time(), $crate::log::get_colored("TRACE", $crate::colored::Color::Cyan), $ctx.name(), $($arg)+
         )
     );
 }
@@ -67,16 +72,16 @@ macro_rules! log_trace {
 macro_rules! log_error {
     ($ctx:expr, $msg:expr) => (
         log::error!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             "[{:.3} {} {}] {}",
-            $ctx.time(), $crate::log::get_colored("ERROR", $crate::colored::Color::Red), $ctx.id(), $msg
+            $ctx.time(), $crate::log::get_colored("ERROR", $crate::colored::Color::Red), $ctx.name(), $msg
         )
     );
     ($ctx:expr, $format:expr, $($arg:tt)+) => (
         log::error!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             concat!("[{:.3} {} {}] ", $format),
-            $ctx.time(), $crate::log::get_colored("ERROR", $crate::colored::Color::Red), $ctx.id(), $($arg)+
+            $ctx.time(), $crate::log::get_colored("ERROR", $crate::colored::Color::Red), $ctx.name(), $($arg)+
         )
     );
 }
@@ -85,16 +90,36 @@ macro_rules! log_error {
 macro_rules! log_warn {
     ($ctx:expr, $msg:expr) => (
         log::warn!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             "[{:.3} {}  {}] {}",
-            $ctx.time(), $crate::log::get_colored("WARN", $crate::colored::Color::Yellow), $ctx.id(), $msg
+            $ctx.time(), $crate::log::get_colored("WARN", $crate::colored::Color::Yellow), $ctx.name(), $msg
         )
     );
     ($ctx:expr, $format:expr, $($arg:tt)+) => (
         log::warn!(
-            target: $ctx.id(),
+            target: $ctx.name(),
             concat!("[{:.3} {}  {}] ", $format),
-            $ctx.time(), $crate::log::get_colored("WARN", $crate::colored::Color::Yellow), $ctx.id(), $($arg)+
+            $ctx.time(), $crate::log::get_colored("WARN", $crate::colored::Color::Yellow), $ctx.name(), $($arg)+
         )
+    );
+}
+
+pub fn log_unhandled_event(event: Event) {
+    error!(
+        target: "simulation",
+        "[{:.3} {} simulation] Unhandled event: {}",
+        event.time,
+        crate::log::get_colored("ERROR", colored::Color::Red),
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+    );
+}
+
+pub(crate) fn log_undelivered_event(event: Event) {
+    error!(
+        target: "simulation",
+        "[{:.3} {} simulation] Undelivered event: {}",
+        event.time,
+        crate::log::get_colored("ERROR", colored::Color::Red),
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
     );
 }

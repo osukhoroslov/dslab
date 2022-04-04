@@ -6,6 +6,5 @@ edition = "2021"
 [dependencies]
 core = { path = "../../crates/core" }
 network = { path = "../../crates/network" }
-log = "0.4"
 env_logger = "0.8.4"
 sugars = "3.0.0"

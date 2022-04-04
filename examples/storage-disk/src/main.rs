@@ -3,10 +3,9 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
+use env_logger::Builder;
 use serde::Serialize;
 use sugars::{rc, refcell};
-
-use env_logger::Builder;
 
 use core::cast;
 use core::context::SimulationContext;
@@ -15,8 +14,8 @@ use core::handler::EventHandler;
 use core::log_debug;
 use core::simulation::Simulation;
 
-use storage::api::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use storage::disk::Disk;
+use storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 const SEED: u64 = 16;
 
@@ -53,10 +52,7 @@ impl EventHandler for User {
                 log_debug!(self.ctx, "Test #0: Reading 3 bytes... should be OK");
                 self.requests.insert(self.disk.borrow_mut().read(3, self.ctx.id()), 0);
 
-                log_debug!(
-                    self.ctx,
-                    "Test #1: Then trying to read 6 bytes... should fail"
-                );
+                log_debug!(self.ctx, "Test #1: Then trying to read 6 bytes... should fail");
                 self.requests.insert(self.disk.borrow_mut().read(6, self.ctx.id()), 1);
 
                 log_debug!(self.ctx, "Used space: {}", self.disk.borrow().get_used_space());
@@ -124,10 +120,10 @@ fn main() {
     )));
 
     let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
-    sim.add_handler(USER_NAME, user);
+    let user_id = sim.add_handler(USER_NAME, user);
 
     let mut root = sim.create_context("root");
-    root.emit_now(Start {}, USER_NAME);
+    root.emit_now(Start {}, user_id);
 
     sim.step_until_no_events();
 
