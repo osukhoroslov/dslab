@@ -39,7 +39,7 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
         scheduler,
         sim.create_context(runner_id)
     )));
-    sim.add_handler(runner_id, runner.clone());
+    let runner_id = sim.add_handler(runner_id, runner.clone());
 
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
