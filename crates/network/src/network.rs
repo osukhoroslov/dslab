@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::{Event, EventData};
 use core::handler::EventHandler;
@@ -33,15 +34,15 @@ impl Network {
         self.topology.add_node(node_id, local_bandwidth, local_latency)
     }
 
-    pub fn set_location(&mut self, id: u32, node_id: &str) {
+    pub fn set_location(&mut self, id: Id, node_id: &str) {
         self.topology.set_location(id, node_id)
     }
 
-    pub fn get_location(&self, id: u32) -> Option<&String> {
+    pub fn get_location(&self, id: Id) -> Option<&String> {
         self.topology.get_location(id)
     }
 
-    pub fn check_same_node(&self, id1: u32, id2: u32) -> bool {
+    pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
         self.topology.check_same_node(id1, id2)
     }
 
@@ -49,7 +50,7 @@ impl Network {
         self.topology.get_nodes()
     }
 
-    pub fn send_msg(&mut self, message: String, src: u32, dest: u32) -> usize {
+    pub fn send_msg(&mut self, message: String, src: Id, dest: Id) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
@@ -61,7 +62,7 @@ impl Network {
         msg_id
     }
 
-    pub fn send_event<T: EventData>(&mut self, data: T, src: u32, dest: u32) {
+    pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dest: Id) {
         log_debug!(self.ctx, "{} sent event to {}", src, dest);
 
         let latency = if self.check_same_node(src, dest) {
@@ -72,7 +73,7 @@ impl Network {
         self.ctx.emit_as(data, src, dest, latency);
     }
 
-    pub fn transfer_data(&mut self, src: u32, dest: u32, size: f64, notification_dest: u32) -> usize {
+    pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
             id: data_id,

@@ -1,6 +1,9 @@
-use crate::{disk::Disk, events::*};
-use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+use core::component::Id;
+use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
+
+use crate::{disk::Disk, events::*};
 
 struct File {
     size: u64,
@@ -16,7 +19,7 @@ impl File {
 pub struct FileSystem {
     files: HashMap<String, File>,
     disks: HashMap<String, Rc<RefCell<Disk>>>,
-    requests: HashMap<(u32, u64), (u64, u32, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
+    requests: HashMap<(Id, u64), (u64, Id, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
     next_request_id: u64,
     ctx: SimulationContext,
 }
@@ -68,7 +71,7 @@ impl FileSystem {
         request_id
     }
 
-    pub fn read(&mut self, file_name: &str, size: u64, requester: u32) -> u64 {
+    pub fn read(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: {}, file: [{}], requester: {}",
@@ -79,7 +82,7 @@ impl FileSystem {
         self.read_impl(file_name, Some(size), requester)
     }
 
-    pub fn read_all(&mut self, file_name: &str, requester: u32) -> u64 {
+    pub fn read_all(&mut self, file_name: &str, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: all, file: [{}], requester: {}",
@@ -89,7 +92,7 @@ impl FileSystem {
         self.read_impl(file_name, None, requester)
     }
 
-    fn read_impl(&mut self, file_name: &str, size: Option<u64>, requester: u32) -> u64 {
+    fn read_impl(&mut self, file_name: &str, size: Option<u64>, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         match self.resolve_disk(&file_name) {
             Ok(disk) => {
@@ -148,7 +151,7 @@ impl FileSystem {
         request_id
     }
 
-    pub fn write(&mut self, file_name: &str, size: u64, requester: u32) -> u64 {
+    pub fn write(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received write request, size: {}, file: [{}], requester: {}",

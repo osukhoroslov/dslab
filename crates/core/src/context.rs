@@ -3,18 +3,19 @@ use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
-use crate::event::EventData;
+use crate::component::Id;
+use crate::event::{EventData, EventId};
 use crate::state::SimulationState;
 
 pub struct SimulationContext {
-    id: u32,
+    id: Id,
     name: String,
     sim_state: Rc<RefCell<SimulationState>>,
     names: Rc<RefCell<Vec<String>>>,
 }
 
 impl SimulationContext {
-    pub fn new(id: u32, name: &str, sim_state: Rc<RefCell<SimulationState>>, names: Rc<RefCell<Vec<String>>>) -> Self {
+    pub fn new(id: Id, name: &str, sim_state: Rc<RefCell<SimulationState>>, names: Rc<RefCell<Vec<String>>>) -> Self {
         Self {
             id,
             name: name.to_owned(),
@@ -23,7 +24,7 @@ impl SimulationContext {
         }
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> Id {
         self.id
     }
 
@@ -47,46 +48,46 @@ impl SimulationContext {
         self.sim_state.borrow_mut().gen_range(range)
     }
 
-    pub fn emit<T>(&mut self, data: T, dest: u32, delay: f64) -> u64
+    pub fn emit<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
     }
 
-    pub fn emit_now<T>(&mut self, data: T, dest: u32) -> u64
+    pub fn emit_now<T>(&mut self, data: T, dest: Id) -> EventId
     where
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id.clone(), dest, 0.)
     }
 
-    pub fn emit_self<T>(&mut self, data: T, delay: f64) -> u64
+    pub fn emit_self<T>(&mut self, data: T, delay: f64) -> EventId
     where
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, delay)
     }
 
-    pub fn emit_self_now<T>(&mut self, data: T) -> u64
+    pub fn emit_self_now<T>(&mut self, data: T) -> EventId
     where
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
     }
 
-    pub fn emit_as<T>(&mut self, data: T, src: u32, dest: u32, delay: f64) -> u64
+    pub fn emit_as<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, src, dest, delay)
     }
 
-    pub fn cancel_event(&mut self, event_id: u64) {
-        self.sim_state.borrow_mut().cancel_event(event_id);
+    pub fn cancel_event(&mut self, id: EventId) {
+        self.sim_state.borrow_mut().cancel_event(id);
     }
 
-    pub fn lookup_name(&self, id: u32) -> String {
+    pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
     }
 }

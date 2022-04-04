@@ -7,6 +7,7 @@ use serde::Serialize;
 use sugars::{rc, refcell};
 
 use compute::singlecore::*;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -17,7 +18,7 @@ use core::{cast, log_error, log_info};
 pub struct Start {}
 
 pub struct Task {
-    id: u32,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,

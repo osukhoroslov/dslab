@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 
 use core::cast;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -49,11 +50,11 @@ pub enum FailReason {
 struct RunningComputation {
     cores: u32,
     memory: u64,
-    requester: u32,
+    requester: Id,
 }
 
 impl RunningComputation {
-    fn new(cores: u32, memory: u64, requester: u32) -> Self {
+    fn new(cores: u32, memory: u64, requester: Id) -> Self {
         RunningComputation {
             cores,
             memory,
@@ -71,7 +72,7 @@ pub struct CompRequest {
     pub min_cores: u32,
     pub max_cores: u32,
     pub cores_dependency: CoresDependency,
-    pub requester: u32,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -94,7 +95,7 @@ pub struct CompFailed {
 #[derive(Serialize)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
-    pub requester: u32,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -111,7 +112,7 @@ pub struct AllocationFailed {
 #[derive(Serialize)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
-    pub requester: u32,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -134,7 +135,7 @@ pub struct Compute {
     memory_total: u64,
     memory_available: u64,
     computations: HashMap<u64, RunningComputation>,
-    allocations: HashMap<u32, Allocation>,
+    allocations: HashMap<Id, Allocation>,
     ctx: SimulationContext,
 }
 
@@ -179,7 +180,7 @@ impl Compute {
         min_cores: u32,
         max_cores: u32,
         cores_dependency: CoresDependency,
-        requester: u32,
+        requester: Id,
     ) -> u64 {
         let request = CompRequest {
             flops,
@@ -192,7 +193,7 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
-    pub fn allocate(&mut self, cores: u32, memory: u64, requester: u32) -> u64 {
+    pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = AllocationRequest {
             allocation: Allocation::new(cores, memory),
             requester,
@@ -200,7 +201,7 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
-    pub fn deallocate(&mut self, cores: u32, memory: u64, requester: u32) -> u64 {
+    pub fn deallocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = DeallocationRequest {
             allocation: Allocation::new(cores, memory),
             requester,

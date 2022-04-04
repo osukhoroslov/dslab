@@ -1,9 +1,10 @@
 use serde::Serialize;
 
+use core::cast;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
-use core::{cast, log_debug};
 
 #[derive(Serialize)]
 pub struct Start {}
@@ -16,13 +17,13 @@ pub struct Pong {}
 
 pub struct Process {
     peer_count: usize,
-    peers: Vec<u32>,
+    peers: Vec<Id>,
     iterations: u32,
     ctx: SimulationContext,
 }
 
 impl Process {
-    pub fn new(peers: Vec<u32>, iterations: u32, ctx: SimulationContext) -> Self {
+    pub fn new(peers: Vec<Id>, iterations: u32, ctx: SimulationContext) -> Self {
         Self {
             peer_count: peers.len(),
             peers,
@@ -41,12 +42,12 @@ impl Process {
         self.ctx.emit(Ping {}, peer, delay);
     }
 
-    fn on_ping(&mut self, from: u32) {
+    fn on_ping(&mut self, from: Id) {
         let delay = self.ctx.rand();
         self.ctx.emit(Pong {}, from, delay);
     }
 
-    fn on_pong(&mut self, from: u32) {
+    fn on_pong(&mut self, from: Id) {
         self.iterations -= 1;
         if self.iterations > 0 {
             let peer = if self.peer_count > 1 {

@@ -7,6 +7,7 @@ use serde::Serialize;
 use sugars::{rc, refcell};
 
 use compute::multicore::*;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -20,7 +21,7 @@ pub struct Start {}
 pub struct Deallocate {}
 
 pub struct Task {
-    id: u32,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     flops: u64,
     memory: u64,
@@ -101,7 +102,7 @@ impl EventHandler for Task {
 }
 
 pub struct Allocator {
-    id: u32,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     allocation: Allocation,
     time: f64,

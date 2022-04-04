@@ -3,6 +3,10 @@ use std::cmp::Ordering;
 use downcast_rs::{impl_downcast, Downcast};
 use serde::ser::Serialize;
 
+use crate::component::Id;
+
+pub type EventId = u64;
+
 pub trait EventData: Downcast + erased_serde::Serialize {}
 
 impl_downcast!(EventData);
@@ -12,10 +16,10 @@ erased_serde::serialize_trait_object!(EventData);
 impl<T: Serialize + 'static> EventData for T {}
 
 pub struct Event {
-    pub id: u64,
+    pub id: EventId,
     pub time: f64,
-    pub src: u32,
-    pub dest: u32,
+    pub src: Id,
+    pub dest: Id,
     pub data: Box<dyn EventData>,
 }
 

@@ -1,5 +1,7 @@
-use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use core::component::Id;
 use core::{context::SimulationContext, log_debug, log_error};
+
+use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 pub struct Disk {
     capacity: u64,
@@ -30,7 +32,7 @@ impl Disk {
         request_id
     }
 
-    pub fn read(&mut self, size: u64, requester: u32) -> u64 {
+    pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: {}, requester: {}",
@@ -57,7 +59,7 @@ impl Disk {
         request_id
     }
 
-    pub fn write(&mut self, size: u64, requester: u32) -> u64 {
+    pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
             self.ctx,
@@ -95,7 +97,7 @@ impl Disk {
         self.used
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> Id {
         self.ctx.id()
     }
 }

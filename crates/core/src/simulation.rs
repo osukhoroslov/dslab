@@ -7,6 +7,7 @@ use log::{debug, log_enabled, trace};
 use serde_json::json;
 use serde_type_name::type_name;
 
+use crate::component::Id;
 use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
@@ -14,7 +15,7 @@ use crate::state::SimulationState;
 
 pub struct Simulation {
     sim_state: Rc<RefCell<SimulationState>>,
-    name_to_id: HashMap<String, u32>,
+    name_to_id: HashMap<String, Id>,
     names: Rc<RefCell<Vec<String>>>,
     handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
 }
@@ -29,22 +30,22 @@ impl Simulation {
         }
     }
 
-    fn register(&mut self, name: &str) -> u32 {
+    fn register(&mut self, name: &str) -> Id {
         if let Some(&id) = self.name_to_id.get(name) {
             return id;
         }
-        let id = self.name_to_id.len() as u32;
+        let id = self.name_to_id.len() as Id;
         self.name_to_id.insert(name.to_owned(), id);
         self.names.borrow_mut().push(name.to_owned());
         self.handlers.push(None);
         id
     }
 
-    pub fn lookup_id(&self, name: &str) -> u32 {
+    pub fn lookup_id(&self, name: &str) -> Id {
         *self.name_to_id.get(name).unwrap()
     }
 
-    pub fn lookup_name(&self, id: u32) -> String {
+    pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
     }
 
@@ -66,7 +67,7 @@ impl Simulation {
         ctx
     }
 
-    pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> u32
+    pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> Id
     where
         S: AsRef<str>,
     {

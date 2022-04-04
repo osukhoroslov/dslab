@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 
 use core::cast;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -19,7 +20,7 @@ pub enum FailReason {
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
-    pub requester: u32,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -44,13 +45,13 @@ pub struct CompFailed {
 struct RunningComputation {
     memory: u64,
     finish_event_id: u64,
-    requester: u32,
+    requester: Id,
     last_update_time: f64,
     left_time: f64,
 }
 
 impl RunningComputation {
-    pub fn new(memory: u64, finish_event_id: u64, requester: u32, last_update_time: f64, left_time: f64) -> Self {
+    pub fn new(memory: u64, finish_event_id: u64, requester: Id, last_update_time: f64, left_time: f64) -> Self {
         Self {
             memory,
             finish_event_id,
@@ -96,7 +97,7 @@ impl Compute {
         }
     }
 
-    pub fn run(&mut self, flops: u64, memory: u64, requester: u32) -> u64 {
+    pub fn run(&mut self, flops: u64, memory: u64, requester: Id) -> u64 {
         let request = CompRequest {
             flops,
             memory,

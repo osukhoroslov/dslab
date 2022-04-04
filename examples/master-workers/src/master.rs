@@ -8,6 +8,7 @@ use log::Level::Info;
 use priority_queue::PriorityQueue;
 use serde::Serialize;
 
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -33,7 +34,7 @@ pub enum WorkerState {
 
 #[derive(Debug)]
 pub struct WorkerInfo {
-    id: u32,
+    id: Id,
     #[allow(dead_code)]
     state: WorkerState,
     speed: u64,
@@ -54,10 +55,10 @@ impl WorkerInfo {
 }
 
 pub struct Master {
-    id: u32,
+    id: Id,
     net: Rc<RefCell<Network>>,
-    workers: BTreeMap<u32, WorkerInfo>,
-    worker_queue: PriorityQueue<u32, WorkerScore>,
+    workers: BTreeMap<Id, WorkerInfo>,
+    worker_queue: PriorityQueue<Id, WorkerScore>,
     unassigned_tasks: BTreeMap<u64, TaskInfo>,
     assigned_tasks: HashMap<u64, TaskInfo>,
     completed_tasks: HashMap<u64, TaskInfo>,
@@ -94,7 +95,7 @@ impl Master {
         }
     }
 
-    fn on_worker_register(&mut self, worker_id: u32, cpus_total: u32, memory_total: u64, speed: u64) {
+    fn on_worker_register(&mut self, worker_id: Id, cpus_total: u32, memory_total: u64, speed: u64) {
         let worker = WorkerInfo {
             id: worker_id,
             state: WorkerState::Online,
@@ -122,7 +123,7 @@ impl Master {
         self.unassigned_tasks.insert(task.req.id, task);
     }
 
-    fn on_task_completed(&mut self, task_id: u64, worker_id: u32) {
+    fn on_task_completed(&mut self, task_id: u64, worker_id: Id) {
         log_debug!(self.ctx, "completed task: {:?}", task_id);
         let mut task = self.assigned_tasks.remove(&task_id).unwrap();
         task.state = TaskState::Completed;

@@ -1,8 +1,10 @@
+use std::collections::{BTreeMap, HashMap};
+
+use core::component::Id;
+use core::context::SimulationContext;
+
 use crate::model::*;
 use crate::shared_bandwidth_model::SharedBandwidthNetwork;
-
-use core::context::SimulationContext;
-use std::collections::{BTreeMap, HashMap};
 
 pub struct Node {
     pub local_network: Box<dyn NetworkModel>,
@@ -10,14 +12,14 @@ pub struct Node {
 
 pub struct Topology {
     nodes: BTreeMap<String, Node>,
-    actor_nodes: HashMap<u32, String>,
+    component_nodes: HashMap<Id, String>,
 }
 
 impl Topology {
     pub fn new() -> Self {
         Self {
             nodes: BTreeMap::new(),
-            actor_nodes: HashMap::new(),
+            component_nodes: HashMap::new(),
         }
     }
 
@@ -31,15 +33,15 @@ impl Topology {
         );
     }
 
-    pub fn set_location(&mut self, id: u32, node_id: &str) {
-        self.actor_nodes.insert(id, node_id.to_string());
+    pub fn set_location(&mut self, id: Id, node_id: &str) {
+        self.component_nodes.insert(id, node_id.to_string());
     }
 
-    pub fn get_location(&self, id: u32) -> Option<&String> {
-        self.actor_nodes.get(&id)
+    pub fn get_location(&self, id: Id) -> Option<&String> {
+        self.component_nodes.get(&id)
     }
 
-    pub fn check_same_node(&self, id1: u32, id2: u32) -> bool {
+    pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
         let node1 = self.get_location(id1);
         let node2 = self.get_location(id2);
         node1.is_some() && node2.is_some() && node1.unwrap() == node2.unwrap()
@@ -73,7 +75,7 @@ impl Topology {
             .send_data(data, ctx)
     }
 
-    pub fn get_local_latency(&mut self, src: u32, dst: u32) -> f64 {
+    pub fn get_local_latency(&mut self, src: Id, dst: Id) -> f64 {
         let node = self.get_location(src).unwrap();
         self.get_node_info(node).unwrap().local_network.latency(src, dst)
     }

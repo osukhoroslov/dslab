@@ -5,6 +5,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use compute::multicore::*;
+use core::component::Id;
 use core::context::SimulationContext;
 use core::event::Event;
 use core::handler::EventHandler;
@@ -30,11 +31,11 @@ pub struct TaskCompleted {
 }
 
 pub struct Worker {
-    id: u32,
+    id: Id,
     compute: Rc<RefCell<Compute>>,
     disk: Disk,
     net: Rc<RefCell<Network>>,
-    master_id: u32,
+    master_id: Id,
     tasks: HashMap<u64, TaskInfo>,
     computations: HashMap<u64, u64>,
     reads: HashMap<u64, u64>,
@@ -49,7 +50,7 @@ impl Worker {
         compute: Rc<RefCell<Compute>>,
         disk: Disk,
         net: Rc<RefCell<Network>>,
-        master_id: u32,
+        master_id: Id,
         ctx: SimulationContext,
     ) -> Self {
         Self {

@@ -4,13 +4,14 @@ use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use crate::event::{Event, EventData};
+use crate::component::Id;
+use crate::event::{Event, EventData, EventId};
 
 pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
     events: BinaryHeap<Event>,
-    canceled_events: HashSet<u64>,
+    canceled_events: HashSet<EventId>,
     event_count: u64,
 }
 
@@ -41,7 +42,7 @@ impl SimulationState {
         self.rand.gen_range(range)
     }
 
-    pub fn add_event<T>(&mut self, data: T, src: u32, dest: u32, delay: f64) -> u64
+    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
@@ -75,8 +76,8 @@ impl SimulationState {
         self.events.peek()
     }
 
-    pub fn cancel_event(&mut self, event_id: u64) {
-        self.canceled_events.insert(event_id);
+    pub fn cancel_event(&mut self, id: EventId) {
+        self.canceled_events.insert(id);
     }
 
     pub fn event_count(&self) -> u64 {
