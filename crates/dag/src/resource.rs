@@ -3,8 +3,8 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use simcore::simulation::Simulation;
 use simcore::component::Id;
+use simcore::simulation::Simulation;
 
 use compute::multicore::*;
 
