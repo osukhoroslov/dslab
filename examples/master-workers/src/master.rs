@@ -8,12 +8,12 @@ use log::Level::Info;
 use priority_queue::PriorityQueue;
 use serde::Serialize;
 
-use core::component::Id;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::{cast, log_debug, log_info, log_trace};
 use network::network::Network;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{cast, log_debug, log_info, log_trace};
 
 use crate::common::Start;
 use crate::task::*;

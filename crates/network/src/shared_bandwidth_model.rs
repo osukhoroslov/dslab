@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use core::component::Id;
-use core::context::SimulationContext;
-use core::log_trace;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::log_trace;
 
 use crate::model::*;
 

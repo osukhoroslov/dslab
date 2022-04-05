@@ -3,9 +3,9 @@ use std::io::Write;
 use env_logger::Builder;
 use sugars::{rc, refcell};
 
-use core::simulation::Simulation;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
+use simcore::simulation::Simulation;
 
 fn main() {
     Builder::from_default_env()

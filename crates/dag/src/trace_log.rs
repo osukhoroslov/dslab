@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::Write;
 
-use core::context::SimulationContext;
-use core::log_debug;
+use simcore::context::SimulationContext;
+use simcore::log_debug;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

@@ -3,9 +3,9 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use core::cast;
-use core::event::Event;
-use core::handler::EventHandler;
+use simcore::cast;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::events::monitoring::HostStateUpdate;
 

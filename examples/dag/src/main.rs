@@ -10,12 +10,12 @@ use rand_pcg::Pcg64;
 use env_logger::Builder;
 
 use compute::multicore::*;
-use core::simulation::Simulation;
 use dag::dag::DAG;
 use dag::network::load_network;
 use dag::resource::load_resources;
 use dag::runner::*;
 use network::network::Network;
+use simcore::simulation::Simulation;
 
 use crate::simple_scheduler::SimpleScheduler;
 

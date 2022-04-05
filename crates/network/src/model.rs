@@ -1,7 +1,7 @@
 use serde::Serialize;
 
-use core::component::Id;
-use core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 

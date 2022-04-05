@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use core::component::Id;
-use core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
+use simcore::component::Id;
+use simcore::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
 use crate::{disk::Disk, events::*};
 

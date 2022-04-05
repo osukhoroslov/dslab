@@ -13,9 +13,9 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use compute::multicore::{Compute, CoresDependency};
-use core::simulation::Simulation;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
+use simcore::simulation::Simulation;
 use storage::disk::Disk;
 
 use crate::common::Start;

@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use core::component::Id;
-use core::context::SimulationContext;
-use core::event::{Event, EventData};
-use core::handler::EventHandler;
-use core::{cast, log_debug};
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::{Event, EventData};
+use simcore::handler::EventHandler;
+use simcore::{cast, log_debug};
 
 use crate::model::*;
 use crate::topology::Topology;

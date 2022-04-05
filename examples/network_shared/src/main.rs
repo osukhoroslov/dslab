@@ -7,15 +7,15 @@ use log::info;
 use serde::Serialize;
 use sugars::{rc, refcell};
 
-use core::component::Id;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::simulation::Simulation;
-use core::{cast, log_info};
 use network::model::DataTransferCompleted;
 use network::network::Network;
 use network::shared_bandwidth_model::SharedBandwidthNetwork;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
+use simcore::{cast, log_info};
 
 #[derive(Serialize)]
 pub struct Start {

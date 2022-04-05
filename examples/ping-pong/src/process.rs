@@ -1,10 +1,10 @@
 use serde::Serialize;
 
-use core::cast;
-use core::component::Id;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 #[derive(Serialize)]
 pub struct Start {}

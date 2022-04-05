@@ -8,7 +8,7 @@ use clap::{arg, command};
 use env_logger::Builder;
 use sugars::{rc, refcell};
 
-use core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use crate::process::{Process, Start};
 

@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use compute::multicore::*;
 
