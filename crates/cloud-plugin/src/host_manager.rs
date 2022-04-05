@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use log::info;
 use serde::Serialize;
 
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::common::AllocationVerdict;
 use crate::energy_manager::EnergyManager;

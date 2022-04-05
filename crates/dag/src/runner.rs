@@ -6,13 +6,14 @@ use serde::Serialize;
 use serde_json::json;
 
 use compute::multicore::*;
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::{log_debug, log_error};
 use network::model::DataTransferCompleted;
 use network::network::Network;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{log_debug, log_error};
 
 use crate::dag::DAG;
 use crate::data_item::DataItemState;

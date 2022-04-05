@@ -1,5 +1,5 @@
-use core::component::Id;
-use core::{context::SimulationContext, log_debug, log_error};
+use simcore::component::Id;
+use simcore::{context::SimulationContext, log_debug, log_error};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 

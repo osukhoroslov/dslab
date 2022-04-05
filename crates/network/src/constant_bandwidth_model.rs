@@ -1,5 +1,5 @@
-use core::component::Id;
-use core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 use crate::model::*;
 
