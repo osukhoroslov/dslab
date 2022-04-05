@@ -62,7 +62,7 @@ impl AppData {
 
         // read compute actors
         for resource in trace_log.resources {
-            let name = resource["id"].as_str().unwrap().to_string();
+            let name = resource["name"].as_str().unwrap().to_string();
             compute_index.insert(name.clone(), compute.borrow().len());
             compute.borrow_mut().push(Compute {
                 name,

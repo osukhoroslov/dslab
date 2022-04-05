@@ -10,6 +10,7 @@ use compute::multicore::*;
 
 pub struct Resource {
     pub id: Id,
+    pub name: String,
     pub compute: Rc<RefCell<Compute>>,
     pub speed: u64,
     pub cores_available: u32,
@@ -44,6 +45,7 @@ pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
         let id = sim.add_handler(&resource.name, compute.clone());
         result.push(Resource {
             id,
+            name: resource.name,
             compute,
             speed: resource.speed,
             cores_available: resource.cores,

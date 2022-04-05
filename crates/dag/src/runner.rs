@@ -89,7 +89,7 @@ impl DAGRunner {
     fn trace_config(&mut self) {
         for resource in self.resources.iter() {
             self.trace_log.resources.push(json!({
-                "id": self.ctx.lookup_name(resource.id),
+                "name": resource.name.clone(),
                 "speed": resource.compute.borrow().speed(),
                 "cores": resource.cores_available,
                 "memory": resource.memory_available,
@@ -151,22 +151,22 @@ impl DAGRunner {
         }
     }
 
-    fn process_resource_queue(&mut self, resource_id: usize) {
-        while !self.resource_queue[resource_id].is_empty() {
-            if self.resource_queue[resource_id][0].cores > self.resources[resource_id].cores_available {
+    fn process_resource_queue(&mut self, resource_idx: usize) {
+        while !self.resource_queue[resource_idx].is_empty() {
+            if self.resource_queue[resource_idx][0].cores > self.resources[resource_idx].cores_available {
                 break;
             }
-            let task_id = self.resource_queue[resource_id][0].task_id;
+            let task_id = self.resource_queue[resource_idx][0].task_id;
             let task = self.dag.get_task(task_id);
-            if task.memory > self.resources[resource_id].memory_available {
+            if task.memory > self.resources[resource_idx].memory_available {
                 break;
             }
             if task.state != TaskState::Runnable {
                 break;
             }
-            let queued_task = self.resource_queue[resource_id].pop_front().unwrap();
+            let queued_task = self.resource_queue[resource_idx].pop_front().unwrap();
             let cores = queued_task.cores;
-            let mut resource = &mut self.resources[resource_id];
+            let mut resource = &mut self.resources[resource_idx];
             resource.cores_available -= cores;
             resource.memory_available -= task.memory;
             self.task_inputs.insert(task_id, task.inputs.iter().cloned().collect());
@@ -192,14 +192,14 @@ impl DAGRunner {
                         "time": self.ctx.time(),
                         "type": "start_uploading",
                         "from": "scheduler",
-                        "to": self.ctx.lookup_name(resource.id),
+                        "to": resource.name.clone(),
                         "data_id": data_event_id,
                         "data_name": data_item.name.clone(),
                         "task_id": task_id,
                     }),
                 );
             }
-            self.task_location.insert(task_id, resource_id);
+            self.task_location.insert(task_id, resource_idx);
             self.trace_log.log_event(
                 &self.ctx,
                 json!({
@@ -207,7 +207,7 @@ impl DAGRunner {
                     "type": "task_scheduled",
                     "task_id": task_id,
                     "task_name": task.name.clone(),
-                    "location": self.ctx.lookup_name(resource.id),
+                    "location": resource.name.clone(),
                     "cores": cores,
                     "memory": task.memory,
                 }),
@@ -257,7 +257,7 @@ impl DAGRunner {
                 json!({
                     "time": self.ctx.time(),
                     "type": "start_uploading",
-                    "from": self.ctx.lookup_name(self.resources[location].id),
+                    "from": self.resources[location].name.clone(),
                     "to": "scheduler",
                     "data_id": data_id,
                     "data_name": data_item.name.clone(),
@@ -315,7 +315,7 @@ impl DAGRunner {
                     "time": self.ctx.time(),
                     "type": "finish_uploading",
                     "from": "scheduler",
-                    "to": self.ctx.lookup_name(self.resources[location].id),
+                    "to": self.resources[location].name.clone(),
                     "data_id": data_event_id,
                     "data_name": data_item.name.clone(),
                     "task_id": task_id,

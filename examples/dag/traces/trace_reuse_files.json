@@ -1,19 +1,19 @@
 {
   "resources": [
     {
-      "id": "compute1",
+      "name": "compute1",
       "speed": 10,
       "cores": 2,
       "memory": 256
     },
     {
-      "id": "compute2",
+      "name": "compute2",
       "speed": 20,
       "cores": 1,
       "memory": 512
     },
     {
-      "id": "compute3",
+      "name": "compute3",
       "speed": 30,
       "cores": 4,
       "memory": 1024

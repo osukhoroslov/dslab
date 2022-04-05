@@ -31,15 +31,14 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     sim.add_handler("net", network.clone());
 
     let scheduler = SimpleScheduler::new();
-    let runner_id = "runner";
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,
         resources,
         scheduler,
-        sim.create_context(runner_id)
+        sim.create_context("runner")
     )));
-    let runner_id = sim.add_handler(runner_id, runner.clone());
+    let runner_id = sim.add_handler("runner", runner.clone());
 
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
