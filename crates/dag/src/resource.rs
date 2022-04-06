@@ -3,12 +3,14 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
+use simcore::component::Id;
 use simcore::simulation::Simulation;
 
 use compute::multicore::*;
 
 pub struct Resource {
-    pub id: String,
+    pub id: Id,
+    pub name: String,
     pub compute: Rc<RefCell<Compute>>,
     pub speed: u64,
     pub cores_available: u32,
@@ -40,9 +42,10 @@ pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
             resource.memory,
             sim.create_context(&resource.name),
         )));
-        sim.add_handler(&resource.name, compute.clone());
+        let id = sim.add_handler(&resource.name, compute.clone());
         result.push(Resource {
-            id: resource.name,
+            id,
+            name: resource.name,
             compute,
             speed: resource.speed,
             cores_available: resource.cores,
