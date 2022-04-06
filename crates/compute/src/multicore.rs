@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -49,11 +50,11 @@ pub enum FailReason {
 struct RunningComputation {
     cores: u32,
     memory: u64,
-    requester: String,
+    requester: Id,
 }
 
 impl RunningComputation {
-    fn new(cores: u32, memory: u64, requester: String) -> Self {
+    fn new(cores: u32, memory: u64, requester: Id) -> Self {
         RunningComputation {
             cores,
             memory,
@@ -71,7 +72,7 @@ pub struct CompRequest {
     pub min_cores: u32,
     pub max_cores: u32,
     pub cores_dependency: CoresDependency,
-    pub requester: String,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -94,7 +95,7 @@ pub struct CompFailed {
 #[derive(Serialize)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
-    pub requester: String,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -111,7 +112,7 @@ pub struct AllocationFailed {
 #[derive(Serialize)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
-    pub requester: String,
+    pub requester: Id,
 }
 
 #[derive(Serialize)]
@@ -134,7 +135,7 @@ pub struct Compute {
     memory_total: u64,
     memory_available: u64,
     computations: HashMap<u64, RunningComputation>,
-    allocations: HashMap<String, Allocation>,
+    allocations: HashMap<Id, Allocation>,
     ctx: SimulationContext,
 }
 
@@ -172,14 +173,14 @@ impl Compute {
         self.memory_available
     }
 
-    pub fn run<S: Into<String>>(
+    pub fn run(
         &mut self,
         flops: u64,
         memory: u64,
         min_cores: u32,
         max_cores: u32,
         cores_dependency: CoresDependency,
-        requester: S,
+        requester: Id,
     ) -> u64 {
         let request = CompRequest {
             flops,
@@ -187,23 +188,23 @@ impl Compute {
             min_cores,
             max_cores,
             cores_dependency,
-            requester: requester.into(),
+            requester,
         };
         self.ctx.emit_self_now(request)
     }
 
-    pub fn allocate<S: Into<String>>(&mut self, cores: u32, memory: u64, requester: S) -> u64 {
+    pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = AllocationRequest {
             allocation: Allocation::new(cores, memory),
-            requester: requester.into(),
+            requester,
         };
         self.ctx.emit_self_now(request)
     }
 
-    pub fn deallocate<S: Into<String>>(&mut self, cores: u32, memory: u64, requester: S) -> u64 {
+    pub fn deallocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = DeallocationRequest {
             allocation: Allocation::new(cores, memory),
-            requester: requester.into(),
+            requester,
         };
         self.ctx.emit_self_now(request)
     }
@@ -235,7 +236,7 @@ impl EventHandler for Compute {
                     let cores = self.cores_available.min(max_cores);
                     self.memory_available -= memory;
                     self.cores_available -= cores;
-                    self.ctx.emit_now(CompStarted { id: event.id, cores }, &requester);
+                    self.ctx.emit_now(CompStarted { id: event.id, cores }, requester);
 
                     let speedup = match cores_dependency {
                         CoresDependency::Linear => cores as f64,
@@ -270,7 +271,7 @@ impl EventHandler for Compute {
                                 available_memory: self.memory_available,
                             },
                         },
-                        &requester,
+                        requester,
                     );
                 } else {
                     let current_allocation = self
@@ -281,7 +282,7 @@ impl EventHandler for Compute {
                     current_allocation.memory += allocation.memory;
                     self.cores_available -= allocation.cores;
                     self.memory_available -= allocation.memory;
-                    self.ctx.emit(AllocationSuccess { id: event.id }, &requester, 0.);
+                    self.ctx.emit(AllocationSuccess { id: event.id }, requester, 0.);
                 }
             }
             DeallocationRequest { allocation, requester } => {
@@ -294,7 +295,7 @@ impl EventHandler for Compute {
                     current_allocation.memory -= allocation.memory;
                     self.cores_available += allocation.cores;
                     self.memory_available += allocation.memory;
-                    self.ctx.emit(DeallocationSuccess { id: event.id }, &requester, 0.);
+                    self.ctx.emit(DeallocationSuccess { id: event.id }, requester, 0.);
                 } else {
                     self.ctx.emit_now(
                         DeallocationFailed {
@@ -304,7 +305,7 @@ impl EventHandler for Compute {
                                 available_memory: current_allocation.memory,
                             },
                         },
-                        &requester,
+                        requester,
                     );
                 }
                 if current_allocation.cores == 0 && current_allocation.memory == 0 {

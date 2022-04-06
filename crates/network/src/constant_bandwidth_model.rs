@@ -1,4 +1,5 @@
-use core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 use crate::model::*;
 
@@ -14,7 +15,7 @@ impl ConstantBandwidthNetwork {
 }
 
 impl NetworkConfiguration for ConstantBandwidthNetwork {
-    fn latency(&self) -> f64 {
+    fn latency(&self, _src: Id, _dest: Id) -> f64 {
         self.latency
     }
 }

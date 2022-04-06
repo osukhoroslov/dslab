@@ -1,14 +1,19 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Instant;
 
+use log::log_enabled;
+use log::Level::Info;
+use priority_queue::PriorityQueue;
 use serde::Serialize;
 
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::{cast, log_debug, log_info, log_trace};
 use network::network::Network;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{cast, log_debug, log_info, log_trace};
 
 use crate::common::Start;
 use crate::task::*;
@@ -29,71 +34,179 @@ pub enum WorkerState {
 
 #[derive(Debug)]
 pub struct WorkerInfo {
-    id: String,
+    id: Id,
+    #[allow(dead_code)]
     state: WorkerState,
     speed: u64,
+    #[allow(dead_code)]
     cpus_total: u32,
     cpus_available: u32,
+    #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
 }
 
+type WorkerScore = (u64, u32, u64);
+
+impl WorkerInfo {
+    pub fn score(&self) -> WorkerScore {
+        (self.memory_available, self.cpus_available, self.speed)
+    }
+}
+
 pub struct Master {
-    id: String,
+    id: Id,
     net: Rc<RefCell<Network>>,
-    workers: BTreeMap<String, WorkerInfo>,
-    tasks: BTreeMap<u64, TaskInfo>,
+    workers: BTreeMap<Id, WorkerInfo>,
+    worker_queue: PriorityQueue<Id, WorkerScore>,
+    unassigned_tasks: BTreeMap<u64, TaskInfo>,
+    assigned_tasks: HashMap<u64, TaskInfo>,
+    completed_tasks: HashMap<u64, TaskInfo>,
+    cpus_total: u32,
     cpus_available: u32,
+    memory_total: u64,
     memory_available: u64,
-    completed: bool,
-    worker_speed: Vec<(String, u64)>,
     ctx: SimulationContext,
 }
 
 impl Master {
     pub fn new(net: Rc<RefCell<Network>>, ctx: SimulationContext) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             net,
             workers: BTreeMap::new(),
-            tasks: BTreeMap::new(),
+            worker_queue: PriorityQueue::new(),
+            unassigned_tasks: BTreeMap::new(),
+            assigned_tasks: HashMap::new(),
+            completed_tasks: HashMap::new(),
+            cpus_total: 0,
             cpus_available: 0,
+            memory_total: 0,
             memory_available: 0,
-            completed: false,
-            worker_speed: Vec::new(),
             ctx,
         }
     }
 
-    pub fn schedule_tasks(&mut self) {
+    fn on_started(&mut self) {
+        log_debug!(self.ctx, "started");
+        self.ctx.emit_self(ScheduleTasks {}, 1.);
+        if log_enabled!(Info) {
+            self.ctx.emit_self(ReportStatus {}, 100.);
+        }
+    }
+
+    fn on_worker_register(&mut self, worker_id: Id, cpus_total: u32, memory_total: u64, speed: u64) {
+        let worker = WorkerInfo {
+            id: worker_id,
+            state: WorkerState::Online,
+            speed,
+            cpus_total,
+            cpus_available: cpus_total,
+            memory_total,
+            memory_available: memory_total,
+        };
+        log_debug!(self.ctx, "registered worker: {:?}", worker);
+        self.cpus_total += worker.cpus_total;
+        self.cpus_available += worker.cpus_available;
+        self.memory_total += worker.memory_total;
+        self.memory_available += worker.memory_available;
+        self.worker_queue.push(worker.id, worker.score());
+        self.workers.insert(worker.id.clone(), worker);
+    }
+
+    fn on_task_request(&mut self, req: TaskRequest) {
+        let task = TaskInfo {
+            req,
+            state: TaskState::New,
+        };
+        log_debug!(self.ctx, "task request: {:?}", task.req);
+        self.unassigned_tasks.insert(task.req.id, task);
+    }
+
+    fn on_task_completed(&mut self, task_id: u64, worker_id: Id) {
+        log_debug!(self.ctx, "completed task: {:?}", task_id);
+        let mut task = self.assigned_tasks.remove(&task_id).unwrap();
+        task.state = TaskState::Completed;
+        let worker = self.workers.get_mut(&worker_id).unwrap();
+        worker.cpus_available += task.req.min_cores;
+        worker.memory_available += task.req.memory;
+        self.cpus_available += task.req.min_cores;
+        self.memory_available += task.req.memory;
+        self.worker_queue.push(worker.id, worker.score());
+        self.completed_tasks.insert(task_id, task);
+    }
+
+    fn schedule_tasks(&mut self) {
         log_trace!(self.ctx, "scheduling tasks");
-        for (task_id, task) in self.tasks.iter_mut() {
-            if matches!(task.state, TaskState::New) {
-                let mut assigned = false;
-                if self.cpus_available >= task.req.min_cores && self.memory_available >= task.req.memory {
-                    for (worker_id, _) in &self.worker_speed {
-                        let worker = self.workers.get_mut(worker_id).unwrap();
-                        if worker.state == WorkerState::Online
-                            && worker.cpus_available >= task.req.min_cores
-                            && worker.memory_available >= task.req.memory
-                        {
-                            log_debug!(self.ctx, "assigned task {} to worker {}", task_id, worker_id);
-                            task.state = TaskState::Assigned;
-                            worker.cpus_available -= task.req.min_cores;
-                            worker.memory_available -= task.req.memory;
-                            self.cpus_available -= task.req.min_cores;
-                            self.memory_available -= task.req.memory;
-                            self.net.borrow_mut().send_event(task.req.clone(), &self.id, &worker_id);
-                            assigned = true;
-                            break;
-                        }
-                    }
+        let t = Instant::now();
+        let mut assigned_tasks = HashSet::new();
+        for (task_id, task) in self.unassigned_tasks.iter_mut() {
+            if self.worker_queue.len() == 0 {
+                break;
+            }
+            if task.req.min_cores > self.cpus_available || task.req.memory > self.memory_available {
+                continue;
+            }
+            let mut checked_workers = Vec::new();
+            while let Some((worker_id, (memory, cpus, speed))) = self.worker_queue.pop() {
+                if cpus >= task.req.min_cores && memory >= task.req.memory {
+                    log_debug!(self.ctx, "assigned task {} to worker {}", task_id, worker_id);
+                    task.state = TaskState::Assigned;
+                    assigned_tasks.insert(*task_id);
+                    let worker = self.workers.get_mut(&worker_id).unwrap();
+                    worker.cpus_available -= task.req.min_cores;
+                    worker.memory_available -= task.req.memory;
+                    self.cpus_available -= task.req.min_cores;
+                    self.memory_available -= task.req.memory;
+                    checked_workers.push((worker.id, worker.score()));
+                    self.net.borrow_mut().send_event(task.req.clone(), self.id, worker_id);
+                    break;
+                } else {
+                    checked_workers.push((worker_id, (memory, cpus, speed)));
                 }
-                if !assigned {
+                if memory <= task.req.memory {
                     break;
                 }
             }
+            for (worker_id, (memory, cpus, speed)) in checked_workers.into_iter() {
+                if memory > 0 && cpus > 0 {
+                    self.worker_queue.push(worker_id, (memory, cpus, speed));
+                }
+            }
         }
+        let assigned_count = assigned_tasks.len();
+        for task_id in assigned_tasks.into_iter() {
+            let task = self.unassigned_tasks.remove(&task_id).unwrap();
+            self.assigned_tasks.insert(task_id, task);
+        }
+        log_info!(
+            self.ctx,
+            "schedule_tasks: assigned {} tasks in {:.2?}",
+            assigned_count,
+            t.elapsed()
+        );
+        if self.is_active() {
+            self.ctx.emit_self(ScheduleTasks {}, 10.);
+        }
+    }
+
+    fn report_status(&mut self) {
+        log_info!(
+            self.ctx,
+            "CPU: {:.2} / MEMORY: {:.2} / UNASSIGNED: {} / ASSIGNED: {} / COMPLETED: {}",
+            (self.cpus_total - self.cpus_available) as f64 / self.cpus_total as f64,
+            (self.memory_total - self.memory_available) as f64 / self.memory_total as f64,
+            self.unassigned_tasks.len(),
+            self.assigned_tasks.len(),
+            self.completed_tasks.len()
+        );
+        if self.is_active() {
+            self.ctx.emit_self(ReportStatus {}, 100.);
+        }
+    }
+
+    fn is_active(&self) -> bool {
+        self.unassigned_tasks.len() > 0 || self.assigned_tasks.len() > 0
     }
 }
 
@@ -101,37 +214,17 @@ impl EventHandler for Master {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                log_debug!(self.ctx, "started");
-                self.ctx.emit_self(ScheduleTasks {}, 5.);
+                self.on_started();
             }
             ScheduleTasks {} => {
                 self.schedule_tasks();
-                if !self.completed {
-                    self.ctx.emit_self(ScheduleTasks {}, 5.);
-                }
             }
             WorkerRegister {
                 speed,
                 cpus_total,
                 memory_total,
             } => {
-                let worker = WorkerInfo {
-                    id: event.src,
-                    state: WorkerState::Online,
-                    speed,
-                    cpus_total,
-                    cpus_available: cpus_total,
-                    memory_total,
-                    memory_available: memory_total,
-                };
-                log_debug!(self.ctx, "registered worker: {:?}", worker);
-                self.cpus_available += worker.cpus_available;
-                self.memory_available += worker.memory_available;
-                self.workers.insert(worker.id.clone(), worker);
-                // sort workers by speed
-                self.worker_speed = Vec::from_iter(self.workers.iter().map(|(w_id, w)| (w_id.clone(), w.speed)));
-                self.worker_speed
-                    .sort_by(|(id1, s1), (id2, s2)| s1.cmp(s2).reverse().then(id1.cmp(&id2)));
+                self.on_worker_register(event.src, cpus_total, memory_total, speed);
             }
             TaskRequest {
                 id,
@@ -143,59 +236,22 @@ impl EventHandler for Master {
                 input_size,
                 output_size,
             } => {
-                let task = TaskInfo {
-                    req: TaskRequest {
-                        id,
-                        flops,
-                        memory,
-                        min_cores,
-                        max_cores,
-                        cores_dependency,
-                        input_size,
-                        output_size,
-                    },
-                    state: TaskState::New,
-                };
-                log_debug!(self.ctx, "task request: {:?}", task.req);
-                self.tasks.insert(task.req.id, task);
+                self.on_task_request(TaskRequest {
+                    id,
+                    flops,
+                    memory,
+                    min_cores,
+                    max_cores,
+                    cores_dependency,
+                    input_size,
+                    output_size,
+                });
             }
             TaskCompleted { id } => {
-                log_debug!(self.ctx, "completed task: {:?}", id);
-                let task = self.tasks.get_mut(&id).unwrap();
-                task.state = TaskState::Completed;
-                let worker = self.workers.get_mut(&event.src).unwrap();
-                worker.cpus_available += task.req.min_cores;
-                worker.memory_available += task.req.memory;
-                self.cpus_available += task.req.min_cores;
-                self.memory_available += task.req.memory;
-                self.schedule_tasks();
+                self.on_task_completed(id, event.src);
             }
             ReportStatus {} => {
-                log_info!(self.ctx, "workers: {}", self.workers.len());
-                let total_cpus: u64 = self.workers.values().map(|w| w.cpus_total as u64).sum();
-                let available_cpus: u64 = self.workers.values().map(|w| w.cpus_available as u64).sum();
-                let total_memory: u64 = self.workers.values().map(|w| w.memory_total as u64).sum();
-                let available_memory: u64 = self.workers.values().map(|w| w.memory_available as u64).sum();
-                log_info!(
-                    self.ctx,
-                    "--- cpus: {} / {}, memory: {} / {}",
-                    available_cpus,
-                    total_cpus,
-                    available_memory,
-                    total_memory,
-                );
-                let task_count = self.tasks.len();
-                let completed_count = self
-                    .tasks
-                    .values()
-                    .filter(|t| matches!(t.state, TaskState::Completed))
-                    .count();
-                log_info!(self.ctx, "--- tasks: {} / {}", completed_count, task_count);
-                if task_count == 0 || completed_count != task_count {
-                    self.ctx.emit_self(ReportStatus {}, 10.);
-                } else {
-                    self.completed = true
-                }
+                self.report_status();
             }
         })
     }

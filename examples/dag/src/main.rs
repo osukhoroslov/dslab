@@ -1,15 +1,50 @@
 mod simple_scheduler;
 
+use std::io::Write;
+
 use sugars::{rc, refcell};
 
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
+use env_logger::Builder;
+
 use compute::multicore::*;
-use core::simulation::Simulation;
 use dag::dag::DAG;
+use dag::network::load_network;
+use dag::resource::load_resources;
 use dag::runner::*;
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::network::Network;
+use simcore::simulation::Simulation;
 
 use crate::simple_scheduler::SimpleScheduler;
+
+fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
+    let mut sim = Simulation::new(123);
+
+    let resources = load_resources(resources_file, &mut sim);
+
+    let network = rc!(refcell!(Network::new(
+        load_network(network_file),
+        sim.create_context("net")
+    )));
+    sim.add_handler("net", network.clone());
+
+    let scheduler = SimpleScheduler::new();
+    let runner = rc!(refcell!(DAGRunner::new(
+        dag,
+        network,
+        resources,
+        scheduler,
+        sim.create_context("runner")
+    )));
+    let runner_id = sim.add_handler("runner", runner.clone());
+
+    let mut client = sim.create_context("client");
+    client.emit_now(Start {}, runner_id);
+    sim.step_until_no_events();
+    runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+}
 
 fn map_reduce() {
     let mut dag = DAG::new();
@@ -52,217 +87,85 @@ fn map_reduce() {
     dag.add_task_output(reduce3, "result3", 32);
     dag.add_task_output(reduce4, "result4", 32);
 
-    let mut sim = Simulation::new(123);
-
-    let mut resources: Vec<Resource> = Vec::new();
-    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let compute_id = format!("compute{}", resources.len() + 1);
-        let compute = rc!(refcell!(Compute::new(
-            speed,
-            cores,
-            memory,
-            sim.create_context(&compute_id)
-        )));
-        sim.add_handler(&compute_id, compute.clone());
-        let resource = Resource {
-            id: compute_id,
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
-        };
-        resources.push(resource);
-    };
-    add_resource(10, 2, 256);
-    add_resource(20, 1, 512);
-    add_resource(30, 4, 1024);
-
-    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(10.0, 0.1)));
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
-    sim.add_handler("net", network.clone());
-
-    let scheduler = SimpleScheduler::new();
-    let runner_id = "runner";
-    let runner = rc!(refcell!(DAGRunner::new(
+    run_simulation(
         dag,
-        network,
-        resources,
-        scheduler,
-        sim.create_context(runner_id)
-    )));
-    sim.add_handler(runner_id, runner.clone());
-
-    let mut client = sim.create_context("client");
-    client.emit_now(Start {}, runner_id);
-    sim.step_until_no_events();
-    runner
-        .borrow()
-        .trace_log()
-        .save_to_file("traces/trace_map_reduce.json")
-        .unwrap();
+        "resources/cluster1.yaml",
+        "networks/network1.yaml",
+        "traces/trace_map_reduce.json",
+    );
 }
 
 fn epigenomics() {
-    let dag = DAG::from_dax("graphs/Epigenomics_100.xml", 1000.);
-
-    let mut sim = Simulation::new(123);
-
-    let mut resources: Vec<Resource> = Vec::new();
-    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let compute_id = format!("compute{}", resources.len() + 1);
-        let compute = rc!(refcell!(Compute::new(
-            speed,
-            cores,
-            memory,
-            sim.create_context(&compute_id)
-        )));
-        sim.add_handler(&compute_id, compute.clone());
-        let resource = Resource {
-            id: compute_id,
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
-        };
-        resources.push(resource);
-    };
-    add_resource(10, 8, 256);
-    add_resource(20, 2, 512);
-    add_resource(30, 4, 1024);
-
-    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(100000.0, 10.)));
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
-    sim.add_handler("net", network.clone());
-
-    let scheduler = SimpleScheduler::new();
-    let runner_id = "runner";
-    let runner = rc!(refcell!(DAGRunner::new(
-        dag,
-        network,
-        resources,
-        scheduler,
-        sim.create_context(runner_id)
-    )));
-    sim.add_handler(runner_id, runner.clone());
-
-    let mut client = sim.create_context("client");
-    client.emit_now(Start {}, runner_id);
-    sim.step_until_no_events();
-    runner
-        .borrow()
-        .trace_log()
-        .save_to_file("traces/trace_epigenomics.json")
-        .unwrap();
+    run_simulation(
+        DAG::from_dax("graphs/Epigenomics_100.xml", 1000.),
+        "resources/cluster2.yaml",
+        "networks/network2.yaml",
+        "traces/trace_epigenomics.json",
+    );
 }
 
 fn montage() {
-    let dag = DAG::from_dot("graphs/Montage.dot");
-
-    let mut sim = Simulation::new(123);
-
-    let mut resources: Vec<Resource> = Vec::new();
-    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let compute_id = format!("compute{}", resources.len() + 1);
-        let compute = rc!(refcell!(Compute::new(
-            speed,
-            cores,
-            memory,
-            sim.create_context(&compute_id)
-        )));
-        sim.add_handler(&compute_id, compute.clone());
-        let resource = Resource {
-            id: compute_id,
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
-        };
-        resources.push(resource);
-    };
-    add_resource(10, 8, 256);
-    add_resource(20, 2, 512);
-    add_resource(30, 4, 1024);
-
-    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(0.01, 1.)));
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
-    sim.add_handler("net", network.clone());
-
-    let scheduler = SimpleScheduler::new();
-    let runner_id = "runner";
-    let runner = rc!(refcell!(DAGRunner::new(
-        dag,
-        network,
-        resources,
-        scheduler,
-        sim.create_context(runner_id)
-    )));
-    sim.add_handler(runner_id, runner.clone());
-
-    let mut client = sim.create_context("client");
-    client.emit_now(Start {}, runner_id);
-    sim.step_until_no_events();
-    runner
-        .borrow()
-        .trace_log()
-        .save_to_file("traces/trace_montage.json")
-        .unwrap();
+    run_simulation(
+        DAG::from_dot("graphs/Montage.dot"),
+        "resources/cluster2.yaml",
+        "networks/network3.yaml",
+        "traces/trace_montage.json",
+    );
 }
 
 fn diamond() {
-    let dag = DAG::from_yaml("graphs/diamond.yaml");
+    run_simulation(
+        DAG::from_yaml("graphs/diamond.yaml"),
+        "resources/cluster3.yaml",
+        "networks/network4.yaml",
+        "traces/trace_diamond.json",
+    );
+}
 
-    let mut sim = Simulation::new(123);
+fn reuse_files() {
+    let mut dag = DAG::new();
 
-    let mut resources: Vec<Resource> = Vec::new();
-    let mut add_resource = |speed: u64, cores: u32, memory: u64| {
-        let compute_id = format!("compute{}", resources.len() + 1);
-        let compute = rc!(refcell!(Compute::new(
-            speed,
-            cores,
-            memory,
-            sim.create_context(&compute_id)
-        )));
-        sim.add_handler(&compute_id, compute.clone());
-        let resource = Resource {
-            id: compute_id,
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
-        };
-        resources.push(resource);
-    };
-    add_resource(10, 1, 256);
-    add_resource(20, 3, 512);
+    let input = dag.add_data_item("input", 128);
 
-    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(100., 0.1)));
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
-    sim.add_handler("net", network.clone());
+    let mut rng = Pcg64::seed_from_u64(456);
 
-    let scheduler = SimpleScheduler::new();
-    let runner_id = "runner";
-    let runner = rc!(refcell!(DAGRunner::new(
+    let a_cnt = 10;
+    let b_cnt = 10;
+    let deps_cnt = 3;
+
+    for i in 0..a_cnt {
+        let task = dag.add_task(&format!("a{}", i), 100, 128, 1, 2, CoresDependency::Linear);
+        dag.add_data_dependency(input, task);
+        dag.add_task_output(task, &format!("a{}_out", i), 10);
+    }
+
+    for i in 0..b_cnt {
+        let task = dag.add_task(&format!("b{}", i), 100, 128, 1, 2, CoresDependency::Linear);
+        let mut deps = (0..deps_cnt).map(|_| rng.gen_range(0..a_cnt) + 1).collect::<Vec<_>>();
+        deps.sort();
+        deps.dedup();
+        for dep in deps.into_iter() {
+            dag.add_data_dependency(dep, task);
+        }
+        dag.add_task_output(task, &format!("b{}_out", i), 10);
+    }
+
+    run_simulation(
         dag,
-        network,
-        resources,
-        scheduler,
-        sim.create_context(runner_id)
-    )));
-    sim.add_handler(runner_id, runner.clone());
-
-    let mut client = sim.create_context("client");
-    client.emit_now(Start {}, runner_id);
-    sim.step_until_no_events();
-    runner
-        .borrow()
-        .trace_log()
-        .save_to_file("traces/trace_diamond.json")
-        .unwrap();
+        "resources/cluster1.yaml",
+        "networks/network1.yaml",
+        "traces/trace_reuse_files.json",
+    );
 }
 
 fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+
     map_reduce();
     epigenomics(); // dax
     montage(); // dot
     diamond(); // yaml
+    reuse_files();
 }

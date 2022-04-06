@@ -45,6 +45,8 @@ impl DAG {
             }
         }
 
+        let mut data_items: HashMap<String, usize> = HashMap::new();
+
         // then all edges
         for stmt in dot.stmts.stmts.iter() {
             match stmt {
@@ -68,7 +70,9 @@ impl DAG {
                         }
                     }
 
-                    let data_item_id = dag.add_task_output(from, &label, size.round() as u64);
+                    let data_item_id = *data_items
+                        .entry(label.clone())
+                        .or_insert_with(|| dag.add_task_output(from, &label, size.round() as u64));
                     dag.add_data_dependency(data_item_id, to);
                 }
                 _ => {}

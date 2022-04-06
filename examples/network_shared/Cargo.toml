@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../crates/core" }
+simcore = { path = "../../crates/simcore" }
 network = { path = "../../crates/network" }
 log = "0.4"
 env_logger = "0.8.4"

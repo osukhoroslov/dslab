@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use log::trace;
-
-use core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::log_trace;
 
 use crate::model::*;
 
@@ -50,9 +50,9 @@ impl SharedBandwidthNetwork {
                 },
                 data_delivery_time,
             );
-            trace!(
-                "System time: {}, Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
-                ctx.time(),
+            log_trace!(
+                ctx,
+                "Calculate. Data ID: {}, From: {}, To {}, Size: {}, SizeLeft: {}, New Time: {}",
                 send_elem.data.id,
                 send_elem.data.src,
                 send_elem.data.dest,
@@ -65,7 +65,7 @@ impl SharedBandwidthNetwork {
 }
 
 impl NetworkConfiguration for SharedBandwidthNetwork {
-    fn latency(&self) -> f64 {
+    fn latency(&self, _src: Id, _dest: Id) -> f64 {
         self.latency
     }
 }

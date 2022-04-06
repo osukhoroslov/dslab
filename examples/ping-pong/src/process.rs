@@ -1,23 +1,13 @@
 use serde::Serialize;
 
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::log_debug;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 #[derive(Serialize)]
-pub struct Start {
-    other: String,
-}
-
-impl Start {
-    pub fn new(other: &str) -> Self {
-        Self {
-            other: other.to_string(),
-        }
-    }
-}
+pub struct Start {}
 
 #[derive(Serialize)]
 pub struct Ping {}
@@ -26,30 +16,47 @@ pub struct Ping {}
 pub struct Pong {}
 
 pub struct Process {
+    peer_count: usize,
+    peers: Vec<Id>,
     iterations: u32,
     ctx: SimulationContext,
 }
 
 impl Process {
-    pub fn new(iterations: u32, ctx: SimulationContext) -> Self {
-        Self { iterations, ctx }
+    pub fn new(peers: Vec<Id>, iterations: u32, ctx: SimulationContext) -> Self {
+        Self {
+            peer_count: peers.len(),
+            peers,
+            iterations,
+            ctx,
+        }
     }
 
-    fn on_start(&mut self, other: &str) {
+    fn on_start(&mut self) {
+        let peer = if self.peer_count > 1 {
+            self.peers[self.ctx.gen_range(0..self.peer_count)]
+        } else {
+            self.peers[0]
+        };
         let delay = self.ctx.rand();
-        self.ctx.emit(Ping {}, other, delay);
+        self.ctx.emit(Ping {}, peer, delay);
     }
 
-    fn on_ping(&mut self, from: String) {
+    fn on_ping(&mut self, from: Id) {
         let delay = self.ctx.rand();
         self.ctx.emit(Pong {}, from, delay);
     }
 
-    fn on_pong(&mut self, from: String) {
+    fn on_pong(&mut self, from: Id) {
         self.iterations -= 1;
         if self.iterations > 0 {
+            let peer = if self.peer_count > 1 {
+                self.peers[self.ctx.gen_range(0..self.peer_count)]
+            } else {
+                from
+            };
             let delay = self.ctx.rand();
-            self.ctx.emit(Ping {}, from, delay);
+            self.ctx.emit(Ping {}, peer, delay);
         }
     }
 }
@@ -57,16 +64,13 @@ impl Process {
 impl EventHandler for Process {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            Start { other } => {
-                log_debug!(self.ctx, "received Start from {}", event.src);
-                self.on_start(&other);
+            Start {} => {
+                self.on_start();
             }
             Ping {} => {
-                log_debug!(self.ctx, "received Ping from {}", event.src);
                 self.on_ping(event.src);
             }
             Pong {} => {
-                log_debug!(self.ctx, "received Pong from {}", event.src);
                 self.on_pong(event.src);
             }
         })

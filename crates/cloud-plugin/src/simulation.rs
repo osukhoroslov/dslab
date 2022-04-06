@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use sugars::{rc, refcell};
 
-use core::context::SimulationContext;
-use core::simulation::Simulation;
+use simcore::context::SimulationContext;
+use simcore::simulation::Simulation;
 
 use crate::events::allocation::AllocationRequest;
 use crate::host_manager::HostManager;

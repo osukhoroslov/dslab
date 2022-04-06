@@ -6,7 +6,7 @@ use cloud_plugin::load_model::ConstLoadModel;
 use cloud_plugin::simulation::CloudSimulation;
 use cloud_plugin::vm_placement_algorithm::BestFit;
 use cloud_plugin::vm_placement_algorithm::BestFitThreshold;
-use core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 fn simulation_two_best_fit_schedulers() {
     env_logger::init();

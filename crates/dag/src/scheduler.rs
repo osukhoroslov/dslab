@@ -1,5 +1,5 @@
 use crate::dag::DAG;
-use crate::runner::Resource;
+use crate::resource::Resource;
 use crate::task::TaskState;
 
 pub enum Action {

@@ -129,6 +129,9 @@ impl TimelineWidget {
     }
 
     fn draw_memory_usage(&mut self, ctx: &mut PaintCtx, y: f64, height: f64, usages: Vec<TimelineResourceBlock>) {
+        if usages.is_empty() {
+            return;
+        }
         let mut events: Vec<f64> = Vec::new();
         for item in usages.iter() {
             events.push(item.start);

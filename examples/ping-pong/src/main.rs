@@ -1,5 +1,6 @@
 mod process;
 
+use std::collections::HashSet;
 use std::io::Write;
 use std::time::Instant;
 
@@ -7,7 +8,7 @@ use clap::{arg, command};
 use env_logger::Builder;
 use sugars::{rc, refcell};
 
-use core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use crate::process::{Process, Start};
 
@@ -16,12 +17,26 @@ use crate::process::{Process, Start};
 fn main() {
     let matches = command!()
         .arg(
+            arg!([PROC_COUNT])
+                .help("Number of processes (>= 2)")
+                .validator(|s| s.parse::<u64>())
+                .default_value("2"),
+        )
+        .arg(
+            arg!([PEER_COUNT])
+                .help("Number of process peers (>= 1)")
+                .validator(|s| s.parse::<u64>())
+                .default_value("1"),
+        )
+        .arg(
             arg!([ITERATIONS])
-                .help("Number of iterations")
+                .help("Number of iterations (>= 1)")
                 .validator(|s| s.parse::<u64>())
                 .default_value("1"),
         )
         .get_matches();
+    let proc_count = matches.value_of_t("PROC_COUNT").unwrap();
+    let peer_count = matches.value_of_t("PEER_COUNT").unwrap();
     let iterations = matches.value_of_t("ITERATIONS").unwrap();
 
     Builder::from_default_env()
@@ -29,15 +44,21 @@ fn main() {
         .init();
 
     let mut sim = Simulation::new(123);
-
-    let proc1 = Process::new(iterations, sim.create_context("proc1"));
-    let proc2 = Process::new(iterations, sim.create_context("proc2"));
-    sim.add_handler("proc1", rc!(refcell!(proc1)));
-    sim.add_handler("proc2", rc!(refcell!(proc2)));
-
     let mut root = sim.create_context("root");
-    root.emit(Start::new("proc2"), "proc1", 0.);
-    root.emit(Start::new("proc1"), "proc2", 0.);
+
+    for proc_id in 1..=proc_count {
+        let proc_name = format!("proc{}", proc_id);
+        let mut peers = HashSet::new();
+        while peers.len() < peer_count {
+            let peer_id = root.gen_range(1..=proc_count);
+            if peer_id != proc_id {
+                peers.insert(peer_id);
+            }
+        }
+        let proc = Process::new(Vec::from_iter(peers), iterations, sim.create_context(&proc_name));
+        sim.add_handler(&proc_name, rc!(refcell!(proc)));
+        root.emit(Start {}, proc_id, 0.);
+    }
 
     let t = Instant::now();
     sim.step_until_no_events();

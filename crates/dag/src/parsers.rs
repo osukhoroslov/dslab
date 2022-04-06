@@ -1,3 +1,3 @@
 mod dax_parser;
 mod dot_parser;
-mod yaml_parser;
+pub mod yaml_parser;

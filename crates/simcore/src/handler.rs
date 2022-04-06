@@ -1,17 +1,7 @@
-use log::error;
-
 use crate::event::Event;
 
 pub trait EventHandler {
     fn on(&mut self, event: Event);
-}
-
-pub fn _log_unhandled_event(event: Event) {
-    error!(
-        "[{:.3} ERROR simulation] Unhandled event: {}",
-        event.time.into_inner(),
-        serde_json::to_string(&event).unwrap()
-    );
 }
 
 #[macro_export]
@@ -26,7 +16,7 @@ macro_rules! cast {
             } else
         )*
         {
-            $crate::handler::_log_unhandled_event($event);
+            $crate::log::log_unhandled_event($event);
         }
     }
 }

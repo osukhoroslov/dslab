@@ -1,6 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 
+use simcore::context::SimulationContext;
+use simcore::log_debug;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -49,7 +52,7 @@ impl TraceLog {
         }
     }
 
-    pub fn log_event<S: AsRef<str>>(&mut self, proc_id: S, event: Value) {
+    pub fn log_event(&mut self, ctx: &SimulationContext, event: Value) {
         let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
         let log_message = match event["type"].as_str().unwrap().as_ref() {
             "task_scheduled" => {
@@ -84,8 +87,7 @@ impl TraceLog {
             }
             _ => "unknown event".to_string(),
         };
-        let time = event["time"].as_f64().unwrap();
-        println!("{:>8.3} [{}] {}", time, proc_id.as_ref(), log_message);
+        log_debug!(ctx, log_message);
         self.events.push(event);
     }
 

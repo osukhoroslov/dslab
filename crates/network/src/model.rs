@@ -1,23 +1,24 @@
 use serde::Serialize;
 
-use core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Data {
     pub id: usize,
-    pub src: String,
-    pub dest: String,
+    pub src: Id,
+    pub dest: Id,
     pub size: f64,
-    pub notification_dest: String,
+    pub notification_dest: Id,
 }
 
 #[derive(Serialize, Clone)]
 pub struct Message {
     pub id: usize,
-    pub src: String,
-    pub dest: String,
+    pub src: Id,
+    pub dest: Id,
     pub data: String,
 }
 
@@ -66,7 +67,7 @@ pub trait DataOperation {
 }
 
 pub trait NetworkConfiguration {
-    fn latency(&self) -> f64;
+    fn latency(&self, src: Id, dst: Id) -> f64;
 }
 
 pub trait NetworkModel: DataOperation + NetworkConfiguration {}

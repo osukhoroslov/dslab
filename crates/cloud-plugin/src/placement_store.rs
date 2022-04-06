@@ -2,10 +2,10 @@ use std::collections::HashSet;
 
 use log::info;
 
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::common::AllocationVerdict;
 use crate::events::allocation::{

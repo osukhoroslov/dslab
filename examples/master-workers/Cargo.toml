@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../crates/core" }
+simcore = { path = "../../crates/simcore" }
 compute = { path = "../../crates/compute" }
+storage = { path = "../../crates/storage" }
 network = { path = "../../crates/network" }
 clap = { version = "3.0.14", features = ["cargo"] }
 log = "0.4.14"
@@ -14,3 +15,4 @@ rand = "0.8.4"
 rand_pcg = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
 sugars = "3.0.0"
+priority-queue = "1.2.1"
