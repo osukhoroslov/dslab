@@ -2,7 +2,7 @@ use crate::coldstart::ColdStartPolicy;
 use crate::deployer::IdleDeployer;
 use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};
 use crate::function::FunctionRegistry;
-use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
+use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::{InvocationStatus, Invoker, InvokerLogic};
 use crate::resource::ResourceProvider;
 use crate::scheduler::Scheduler;

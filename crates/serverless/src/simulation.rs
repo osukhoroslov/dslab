@@ -1,17 +1,15 @@
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::controller::Controller;
 use crate::deployer::{BasicDeployer, IdleDeployer};
-use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};
+use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Function, FunctionRegistry, Group};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::{BasicInvoker, Invoker, InvokerLogic};
-use crate::resource::{ResourceConsumer, ResourceProvider};
+use crate::invoker::{BasicInvoker, InvokerLogic};
+use crate::resource::ResourceProvider;
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::stats::Stats;
 
 use simcore::context::SimulationContext;
-use simcore::event::Event;
-use simcore::handler::EventHandler;
 use simcore::simulation::Simulation;
 
 use std::cell::RefCell;
@@ -23,7 +21,6 @@ pub struct ServerlessSimulation {
     controller: Rc<RefCell<Controller>>,
     controller_handler_id: HandlerId,
     function_registry: Rc<RefCell<FunctionRegistry>>,
-    invocation_registry: Rc<RefCell<InvocationRegistry>>,
     ctx: SimulationContext,
     sim: Simulation,
     stats: Rc<RefCell<Stats>>,
@@ -68,7 +65,6 @@ impl ServerlessSimulation {
             controller,
             controller_handler_id,
             function_registry: function_registry.clone(),
-            invocation_registry: invocation_registry.clone(),
             ctx,
             sim,
             stats,

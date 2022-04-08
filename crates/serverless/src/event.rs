@@ -86,7 +86,7 @@ impl Serialize for SimulationEndEvent {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("SimulationEndEvent", 1)?;
+        let state = serializer.serialize_struct("SimulationEndEvent", 0)?;
         state.end()
     }
 }

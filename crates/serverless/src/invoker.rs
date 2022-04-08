@@ -1,9 +1,9 @@
 use crate::coldstart::ColdStartPolicy;
 use crate::container::ContainerStatus;
-use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
+use crate::event::{ContainerEndEvent, ContainerStartEvent, InvocationEndEvent};
 use crate::function::{FunctionRegistry, Group};
 use crate::host::Host;
-use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
+use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
@@ -15,7 +15,6 @@ use simcore::simulation::Simulation;
 
 use std::boxed::Box;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 type InvocationQueue = Vec<InvocationRequest>;
