@@ -4,5 +4,5 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../crates/core" }
+simcore = { path = "../../crates/simcore" }
 serverless = { path = "../../crates/serverless" }

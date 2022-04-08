@@ -4,5 +4,5 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-core = { path = "../core" }
+simcore = { path = "../simcore" }
 serde = "1.0"

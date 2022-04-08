@@ -52,14 +52,14 @@ impl Function {
 }
 
 #[derive(Default)]
-pub struct FunctionManager {
+pub struct FunctionRegistry {
     function_ctr: Counter,
     functions: HashMap<u64, Function>,
     group_ctr: Counter,
     groups: HashMap<u64, Group>,
 }
 
-impl FunctionManager {
+impl FunctionRegistry {
     pub fn get_function(&self, id: u64) -> Option<&Function> {
         self.functions.get(&id)
     }

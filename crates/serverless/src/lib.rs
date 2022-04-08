@@ -1,10 +1,14 @@
 pub mod coldstart;
 pub mod container;
+pub mod controller;
 pub mod deployer;
+pub mod event;
 pub mod function;
 pub mod host;
+pub mod invocation;
 pub mod invoker;
 pub mod resource;
+pub mod scheduler;
 pub mod simulation;
 pub mod stats;
 pub mod util;

@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-core = { path = "../../crates/core" }
+simcore = { path = "../../crates/simcore" }
 csv = "1.1"
 rand = "0.8.4"
 rand_pcg = "0.3.1"

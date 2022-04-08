@@ -1,9 +1,9 @@
-use core::simulation::Simulation;
-
 use serverless::function::Group;
-use serverless::invoker::InvocationRequest;
+use serverless::invocation::InvocationRequest;
 use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
 use serverless::simulation::ServerlessSimulation;
+
+use simcore::simulation::Simulation;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,10 +13,13 @@ fn main() {
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim, None, None, None);
     for _ in 0..2 {
-        serverless.new_host(ResourceProvider::new(HashMap::<String, Resource>::from([(
-            "mem".to_string(),
-            Resource::new("mem".to_string(), 2),
-        )])));
+        serverless.new_invoker(
+            None,
+            ResourceProvider::new(HashMap::<String, Resource>::from([(
+                "mem".to_string(),
+                Resource::new("mem".to_string(), 2),
+            )])),
+        );
     }
     let fast = serverless.new_function_with_group(Group::new(
         1,

@@ -16,14 +16,14 @@ impl Resource {
         }
     }
 
-    pub fn can_acquire(&self, req: &ResourceRequirement) -> bool {
+    pub fn can_allocate(&self, req: &ResourceRequirement) -> bool {
         if req.quantity + self.consumed <= self.available {
             return true;
         }
         false
     }
 
-    pub fn acquire(&mut self, req: &ResourceRequirement) {
+    pub fn allocate(&mut self, req: &ResourceRequirement) {
         self.consumed += req.quantity;
     }
 
@@ -60,10 +60,10 @@ impl ResourceProvider {
         }
     }
 
-    pub fn can_acquire(&self, consumer: &ResourceConsumer) -> bool {
+    pub fn can_allocate(&self, consumer: &ResourceConsumer) -> bool {
         for (name, req) in consumer.iter() {
             if let Some(resource) = self.resources.get(name) {
-                if !resource.can_acquire(req) {
+                if !resource.can_allocate(req) {
                     return false;
                 }
             } else {
@@ -73,9 +73,9 @@ impl ResourceProvider {
         return true;
     }
 
-    pub fn acquire(&mut self, consumer: &ResourceConsumer) {
+    pub fn allocate(&mut self, consumer: &ResourceConsumer) {
         for (name, req) in consumer.iter() {
-            self.resources.get_mut(name).unwrap().acquire(req);
+            self.resources.get_mut(name).unwrap().allocate(req);
         }
     }
 

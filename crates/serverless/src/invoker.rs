@@ -1,186 +1,143 @@
-use core::event::Event;
-use core::handler::EventHandler;
-
+use crate::coldstart::ColdStartPolicy;
 use crate::container::ContainerStatus;
-use crate::deployer::{Deployer, DeploymentStatus};
-use crate::simulation::{Backend, ServerlessContext};
+use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
+use crate::function::{FunctionRegistry, Group};
+use crate::host::Host;
+use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
+use crate::resource::{ResourceConsumer, ResourceProvider};
+use crate::simulation::HandlerId;
 use crate::stats::Stats;
-use crate::util::Counter;
 
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use simcore::cast;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
 
+use std::boxed::Box;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::ops::DerefMut;
 use std::rc::Rc;
 
-#[derive(PartialEq)]
+type InvocationQueue = Vec<InvocationRequest>;
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum InvocationStatus {
-    Instant(u64),
-    Delayed(f64),
+    Warm(u64),
+    Cold((u64, f64)),
+    Queued,
     Rejected,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct InvocationRequest {
-    pub id: u64,
-    pub duration: f64,
-    pub time: f64,
-}
-
-impl Serialize for InvocationRequest {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("InvocationRequest", 3)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("duration", &self.duration)?;
-        state.serialize_field("time", &self.time)?;
-        state.end()
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct Invocation {
-    pub request: InvocationRequest,
-    pub container_id: u64,
-    pub finished: Option<f64>,
-}
-
-#[derive(Default)]
-pub struct InvocationManager {
-    invocation_ctr: Counter,
-    invocations: HashMap<u64, Invocation>,
-}
-
-impl InvocationManager {
-    pub fn new_invocation(&mut self, request: InvocationRequest, container_id: u64) -> u64 {
-        let id = self.invocation_ctr.next();
-        let invocation = Invocation {
-            request,
-            container_id,
-            finished: None,
-        };
-        self.invocations.insert(id, invocation);
-        id
-    }
-
-    pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {
-        self.invocations.get(&id)
-    }
-
-    pub fn get_invocation_mut(&mut self, id: u64) -> Option<&mut Invocation> {
-        self.invocations.get_mut(&id)
-    }
-}
-
 /*
- * InvokerCore invokes an existing function instance
- * or calls Deployer in case there is none
+ * InvokerLogic handles invocations at host level.
+ * It chooses container for execution and deploys new containers.
+ * It also manages host invocation queue.
  */
-pub trait InvokerCore {
+pub trait InvokerLogic {
+    // try to invoke some of the queued functions
+    fn dequeue(&mut self, host: &mut Host, queue: &mut InvocationQueue, time: f64);
+
     fn invoke(
         &mut self,
+        host: &mut Host,
+        queue: &mut InvocationQueue,
         request: InvocationRequest,
-        backend: Rc<RefCell<Backend>>,
-        ctx: Rc<RefCell<ServerlessContext>>,
-        deployer: Rc<RefCell<Deployer>>,
-        curr_time: f64,
+        time: f64,
     ) -> InvocationStatus;
 }
 
 pub struct Invoker {
-    backend: Rc<RefCell<Backend>>,
-    core: Box<dyn InvokerCore>,
-    ctx: Rc<RefCell<ServerlessContext>>,
-    deployer: Rc<RefCell<Deployer>>,
-    stats: Rc<RefCell<Stats>>,
+    host: Host,
+    logic: Box<dyn InvokerLogic>,
+    queue: InvocationQueue,
 }
 
 impl Invoker {
     pub fn new(
-        backend: Rc<RefCell<Backend>>,
-        core: Box<dyn InvokerCore>,
-        ctx: Rc<RefCell<ServerlessContext>>,
-        deployer: Rc<RefCell<Deployer>>,
+        id: u64,
+        coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
+        controller_id: HandlerId,
+        function_registry: Rc<RefCell<FunctionRegistry>>,
+        invocation_registry: Rc<RefCell<InvocationRegistry>>,
+        logic: Box<dyn InvokerLogic>,
+        resources: ResourceProvider,
+        sim: &mut Simulation,
         stats: Rc<RefCell<Stats>>,
     ) -> Self {
-        Self {
-            backend,
-            core,
+        let ctx = sim.create_context(format!("host_{}", id));
+        let host = Host::new(
+            id,
+            coldstart,
+            controller_id,
             ctx,
-            deployer,
+            function_registry,
+            invocation_registry,
+            resources,
             stats,
+        );
+        Self {
+            host,
+            logic,
+            queue: Default::default(),
         }
     }
 
-    pub fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
-        let mut backend = self.backend.borrow_mut();
-        let inv_id = backend.invocation_mgr.new_invocation(request, cont_id);
-        let container = backend.container_mgr.get_container_mut(cont_id).unwrap();
-        if container.status == ContainerStatus::Idle {
-            let delta = time - container.last_change;
-            self.stats
-                .borrow_mut()
-                .update_wasted_resources(delta, &container.resources);
-        }
-        container.last_change = time;
-        container.status = ContainerStatus::Running;
-        container.invocations.insert(inv_id);
-        self.ctx.borrow_mut().new_invocation_end_event(inv_id, request.duration);
+    pub fn can_allocate(&self, resources: &ResourceConsumer) -> bool {
+        self.host.can_allocate(resources)
+    }
+
+    pub fn can_invoke(&self, group: &Group) -> bool {
+        self.host.can_invoke(group)
+    }
+
+    pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+        self.logic.invoke(&mut self.host, &mut self.queue, request, time)
+    }
+
+    pub fn setup_handler(&mut self, handler_id: HandlerId) {
+        self.host.invoker_handler_id = handler_id;
+    }
+
+    pub fn try_deploy(&mut self, group: &Group, time: f64) -> Option<(u64, f64)> {
+        self.host.try_deploy(group, time)
+    }
+
+    pub fn update_end_metrics(&mut self, time: f64) {
+        self.host.update_end_metrics(time);
     }
 }
 
 impl EventHandler for Invoker {
     fn on(&mut self, event: Event) {
-        if event.data.is::<InvocationRequest>() {
-            if let Ok(_request) = event.data.downcast::<InvocationRequest>() {
-                let request = *_request;
-                let status = self.core.invoke(
-                    request,
-                    self.backend.clone(),
-                    self.ctx.clone(),
-                    self.deployer.clone(),
-                    event.time.into_inner(),
-                );
-                if status != InvocationStatus::Rejected {
-                    let mut stats = self.stats.borrow_mut();
-                    stats.invocations += 1;
-                    if let InvocationStatus::Delayed(delay) = status {
-                        stats.cold_starts_total_time += delay;
-                        stats.cold_starts += 1;
-                    } else if let InvocationStatus::Instant(cont_id) = status {
-                        drop(stats);
-                        self.start_invocation(cont_id, request, event.time.into_inner());
-                    }
-                }
+        cast!(match event.data {
+            ContainerStartEvent { id } => {
+                self.host.start_container(id, event.time);
+                self.logic.dequeue(&mut self.host, &mut self.queue, event.time);
             }
-        }
+            ContainerEndEvent { id, expected_count } => {
+                self.host.end_container(id, expected_count, event.time);
+            }
+            InvocationEndEvent { id } => {
+                self.host.end_invocation(id, event.time);
+                self.logic.dequeue(&mut self.host, &mut self.queue, event.time);
+            }
+        });
     }
 }
 
-// BasicInvoker tries to invoke the function
-// inside the first container that fits
 pub struct BasicInvoker {}
 
-impl InvokerCore for BasicInvoker {
-    fn invoke(
-        &mut self,
-        request: InvocationRequest,
-        backend: Rc<RefCell<Backend>>,
-        _ctx: Rc<RefCell<ServerlessContext>>,
-        deployer: Rc<RefCell<Deployer>>,
-        curr_time: f64,
-    ) -> InvocationStatus {
-        let mut backend_ = backend.borrow_mut();
-        let group_id = backend_.function_mgr.get_function(request.id).unwrap().group_id;
-        let group = backend_.function_mgr.get_group(group_id).unwrap();
-        let it = backend_.container_mgr.get_possible_containers(group);
+impl BasicInvoker {
+    fn try_invoke_inner(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
+        let fr = host.function_registry.clone();
+        let function_registry = fr.borrow();
+        let group_id = function_registry.get_function(request.id).unwrap().group_id;
+        let group = function_registry.get_group(group_id).unwrap();
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
-        for c in it {
+        for c in host.get_possible_containers(group) {
             let delay = if c.status == ContainerStatus::Deploying {
-                c.deployment_time + c.last_change - curr_time
+                c.deployment_time + c.last_change - time
             } else {
                 0.0
             };
@@ -190,19 +147,53 @@ impl InvokerCore for BasicInvoker {
             }
         }
         if let Some(id) = nearest {
-            if backend_.container_mgr.get_container(id).unwrap().status == ContainerStatus::Idle {
-                InvocationStatus::Instant(id)
+            if host.get_container(id).unwrap().status == ContainerStatus::Idle {
+                return InvocationStatus::Warm(id);
             } else {
-                backend_.container_mgr.reserve_container(id, request);
-                InvocationStatus::Delayed(wait)
+                return InvocationStatus::Cold((id, wait));
             }
-        } else {
-            drop(backend_);
-            let d = deployer.borrow_mut().deploy(group_id, Some(request), curr_time);
-            if d.status == DeploymentStatus::Rejected {
-                return InvocationStatus::Rejected;
-            }
-            InvocationStatus::Delayed(d.deployment_time)
         }
+        if let Some((id, delay)) = host.try_deploy(group, time) {
+            return InvocationStatus::Cold((id, delay));
+        }
+        return InvocationStatus::Rejected;
+    }
+
+    fn try_invoke(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
+        let status = self.try_invoke_inner(host, request, time);
+        host.process_response(request, status, time);
+        status
+    }
+}
+
+impl InvokerLogic for BasicInvoker {
+    fn dequeue(&mut self, host: &mut Host, queue: &mut InvocationQueue, time: f64) {
+        if queue.is_empty() {
+            return;
+        }
+        let q = queue.clone();
+        let mut new_queue = Vec::new();
+        for item in q {
+            let status = self.try_invoke(host, item, time);
+            if status == InvocationStatus::Rejected {
+                new_queue.push(item);
+            }
+        }
+        *queue = new_queue;
+    }
+
+    fn invoke(
+        &mut self,
+        host: &mut Host,
+        queue: &mut InvocationQueue,
+        request: InvocationRequest,
+        time: f64,
+    ) -> InvocationStatus {
+        let status = self.try_invoke(host, request, time);
+        if status == InvocationStatus::Rejected {
+            queue.push(request);
+            return InvocationStatus::Queued;
+        }
+        status
     }
 }

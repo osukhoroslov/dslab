@@ -1,5 +1,3 @@
-use core::simulation::Simulation;
-
 use csv::ReaderBuilder;
 
 use rand::prelude::*;
@@ -7,12 +5,14 @@ use rand_pcg::Pcg64;
 
 use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use serverless::function::{Function, Group};
-use serverless::invoker::InvocationRequest;
+use serverless::invocation::InvocationRequest;
 use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
 use serverless::simulation::ServerlessSimulation;
 use serverless::stats::Stats;
 
 use serverless_extra::hybrid_histogram::HybridHistogramPolicy;
+
+use simcore::simulation::Simulation;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -243,12 +243,15 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
         time_range = f64::max(time_range, req.time + req.dur);
     }
     let sim = Simulation::new(1);
-    let mut serverless = ServerlessSimulation::new(sim, None, None, policy);
+    let mut serverless = ServerlessSimulation::new(sim, None, policy, None);
     for _ in 0..1000 {
-        serverless.new_host(ResourceProvider::new(HashMap::<String, Resource>::from([(
-            "mem".to_string(),
-            Resource::new("mem".to_string(), 4096 * 4),
-        )])));
+        serverless.new_invoker(
+            None,
+            ResourceProvider::new(HashMap::<String, Resource>::from([(
+                "mem".to_string(),
+                Resource::new("mem".to_string(), 4096 * 4),
+            )])),
+        );
     }
     for group in trace.2.iter() {
         serverless.new_group(Group::new(

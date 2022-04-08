@@ -5,7 +5,7 @@ use rand::prelude::*;
 use serverless::coldstart::ColdStartPolicy;
 use serverless::container::Container;
 use serverless::function::Group;
-use serverless::invoker::Invocation;
+use serverless::invocation::Invocation;
 
 use std::collections::HashMap;
 

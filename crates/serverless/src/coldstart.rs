@@ -1,6 +1,6 @@
 use crate::container::Container;
 use crate::function::Group;
-use crate::invoker::Invocation;
+use crate::invocation::Invocation;
 
 pub trait ColdStartPolicy {
     // maximum allowed idle time until container destruction
