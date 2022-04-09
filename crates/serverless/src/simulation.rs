@@ -33,23 +33,11 @@ impl ServerlessSimulation {
         coldstart_policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>,
         scheduler: Option<Box<dyn Scheduler>>,
     ) -> Self {
-        let coldstart = if let Some(cs) = coldstart_policy {
-            cs
-        } else {
-            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, 0.0)))
-        };
+        let coldstart = coldstart_policy.unwrap_or(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, 0.0))));
         let stats = Rc::new(RefCell::new(Default::default()));
         let ctx = sim.create_context("entry point");
-        let deployer = if let Some(d) = idle_deployer {
-            d
-        } else {
-            Box::new(BasicDeployer {})
-        };
-        let real_scheduler = if let Some(s) = scheduler {
-            s
-        } else {
-            Box::new(BasicScheduler {})
-        };
+        let deployer = idle_deployer.unwrap_or(Box::new(BasicDeployer {}));
+        let real_scheduler = scheduler.unwrap_or(Box::new(BasicScheduler {}));
         let function_registry: Rc<RefCell<FunctionRegistry>> = Rc::new(RefCell::new(Default::default()));
         let invocation_registry: Rc<RefCell<InvocationRegistry>> = Rc::new(RefCell::new(Default::default()));
         let controller = Rc::new(RefCell::new(Controller::new(
@@ -76,11 +64,7 @@ impl ServerlessSimulation {
     }
 
     pub fn new_invoker(&mut self, logic: Option<Box<dyn InvokerLogic>>, resources: ResourceProvider) -> u64 {
-        let real_logic = if let Some(l) = logic {
-            l
-        } else {
-            Box::new(BasicInvoker {})
-        };
+        let real_logic = logic.unwrap_or(Box::new(BasicInvoker {}));
         self.controller
             .borrow_mut()
             .new_invoker(self.controller_handler_id, real_logic, resources, &mut self.sim)

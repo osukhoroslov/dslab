@@ -27,15 +27,11 @@ pub enum InvocationStatus {
     Rejected,
 }
 
-/*
- * InvokerLogic handles invocations at host level.
- * It chooses container for execution and deploys new containers.
- * It also manages host invocation queue.
- */
 pub trait InvokerLogic {
     // try to invoke some of the queued functions
     fn dequeue(&mut self, host: &mut Host, queue: &mut InvocationQueue, time: f64);
 
+    // invoke or queue new invocation request
     fn invoke(
         &mut self,
         host: &mut Host,
@@ -45,6 +41,11 @@ pub trait InvokerLogic {
     ) -> InvocationStatus;
 }
 
+/*
+ * Invoker handles invocations at host level.
+ * It chooses containers for execution and deploys new containers.
+ * It also manages host invocation queue.
+ */
 pub struct Invoker {
     host: Host,
     logic: Box<dyn InvokerLogic>,
@@ -170,9 +171,8 @@ impl InvokerLogic for BasicInvoker {
         if queue.is_empty() {
             return;
         }
-        let q = queue.clone();
         let mut new_queue = Vec::new();
-        for item in q {
+        for item in queue.drain(..) {
             let status = self.try_invoke(host, item, time);
             if status == InvocationStatus::Rejected {
                 new_queue.push(item);
