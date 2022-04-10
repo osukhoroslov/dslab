@@ -5,9 +5,7 @@ use serverless::simulation::ServerlessSimulation;
 
 use simcore::simulation::Simulation;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 fn main() {
     let sim = Simulation::new(1);

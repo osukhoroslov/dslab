@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Resource {
+    #[allow(dead_code)]
     name: String,
     available: u64,
     consumed: u64,
