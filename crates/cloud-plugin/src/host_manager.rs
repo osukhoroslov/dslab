@@ -73,7 +73,7 @@ impl HostManager {
             monitoring_id,
             placement_store_id,
             ctx,
-            sim_config: sim_config.clone(),
+            sim_config: sim_config,
         }
     }
 
