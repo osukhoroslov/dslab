@@ -1,19 +1,13 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use serde::Serialize;
 
-<<<<<<< HEAD
 use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-=======
-use core::cast;
-use core::context::SimulationContext;
-use core::event::Event;
-use core::handler::EventHandler;
-use core::log_debug;
->>>>>>> Review fixes
+use simcore::log_debug;
 
 use crate::common::AllocationVerdict;
 use crate::config::SimulationConfig;
@@ -27,7 +21,7 @@ use crate::resource_pool::Allocation;
 use crate::vm::VirtualMachine;
 
 pub struct HostManager {
-    pub id: String,
+    pub id: u32,
 
     cpu_total: u32,
     cpu_available: u32,
@@ -40,30 +34,30 @@ pub struct HostManager {
     memory_overcommit: u64,
 
     allow_vm_overcommit: bool,
-    allocs: HashMap<String, Allocation>,
-    vms: HashMap<String, VirtualMachine>,
-    previously_added_vms: Vec<String>,
-    previously_removed_vms: Vec<String>,
+    allocs: HashMap<u32, Allocation>,
+    vms: HashMap<u32, VirtualMachine>,
+    previously_added_vms: Vec<u32>,
+    previously_removed_vms: Vec<u32>,
     energy_manager: EnergyManager,
-    monitoring_id: String,
-    placement_store_id: String,
+    monitoring_id: u32,
+    placement_store_id: u32,
 
     ctx: SimulationContext,
-    sim_config: SimulationConfig,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl HostManager {
     pub fn new(
         cpu_total: u32,
         memory_total: u64,
-        monitoring_id: String,
-        placement_store_id: String,
+        monitoring_id: u32,
+        placement_store_id: u32,
         allow_vm_overcommit: bool,
         ctx: SimulationContext,
-        sim_config: SimulationConfig,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             cpu_total,
             memory_total,
             cpu_available: cpu_total,
@@ -111,9 +105,9 @@ impl HostManager {
             self.memory_available -= alloc.memory_usage;
         }
 
-        self.allocs.insert(alloc.id.clone(), alloc.clone());
-        self.vms.insert(alloc.id.clone(), vm);
-        self.previously_added_vms.push(alloc.id.clone());
+        self.allocs.insert(alloc.id, alloc.clone());
+        self.vms.insert(alloc.id, vm);
+        self.previously_added_vms.push(alloc.id);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
@@ -133,8 +127,24 @@ impl HostManager {
         }
         self.allocs.remove(&alloc.id);
         self.vms.remove(&alloc.id);
-        self.previously_removed_vms.push(alloc.id.clone());
+        self.previously_removed_vms.push(alloc.id);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
+    }
+
+    pub fn get_cpu_allocated(&self) -> f64 {
+        let mut cpu_used = 0.;
+        for (_vm_id, alloc) in &self.allocs {
+            cpu_used += alloc.cpu_usage as f64;
+        }
+        return cpu_used;
+    }
+
+    pub fn get_memory_allocated(&self) -> f64 {
+        let mut memory_used = 0.;
+        for (_vm_id, alloc) in &self.allocs {
+            memory_used += alloc.memory_usage as f64;
+        }
+        return memory_used;
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {
@@ -178,16 +188,16 @@ impl HostManager {
             self.ctx.emit(
                 AllocationFailed {
                     alloc,
-                    host_id: self.id.clone(),
+                    host_id: self.id,
                 },
-                &self.placement_store_id,
+                self.placement_store_id,
                 self.sim_config.message_delay,
             );
             false
         }
     }
 
-    fn on_migration_request(&mut self, source_host: String, alloc: Allocation, vm: VirtualMachine) {
+    fn on_migration_request(&mut self, source_host: u32, alloc: Allocation, vm: VirtualMachine) {
         if self.can_allocate(&alloc) == AllocationVerdict::Success {
             let start_duration = vm.start_duration();
             self.allocate(self.ctx.time(), &alloc, vm);
@@ -202,8 +212,11 @@ impl HostManager {
 
             self.ctx
                 .emit_self(VMStarted { alloc: alloc.clone() }, migration_duration + start_duration);
-            self.ctx
-                .emit(VMDeleted { alloc: alloc.clone() }, &source_host, migration_duration);
+            self.ctx.emit(
+                AllocationReleaseRequest { alloc: alloc.clone() },
+                source_host,
+                migration_duration,
+            );
         } else {
             log_debug!(
                 self.ctx,
@@ -237,9 +250,9 @@ impl HostManager {
         self.ctx.emit(
             AllocationReleased {
                 alloc,
-                host_id: self.id.clone(),
+                host_id: self.id,
             },
-            &self.placement_store_id,
+            self.placement_store_id,
             self.sim_config.message_delay,
         );
     }
@@ -250,13 +263,13 @@ impl HostManager {
         let removed = self.previously_removed_vms.to_vec();
         self.ctx.emit(
             HostStateUpdate {
-                host_id: self.id.clone(),
+                host_id: self.id,
                 cpu_load: self.get_cpu_load(self.ctx.time()),
                 memory_load: self.get_memory_load(self.ctx.time()),
                 previously_added_vms: added,
                 previously_removed_vms: removed,
             },
-            &self.monitoring_id,
+            self.monitoring_id,
             self.sim_config.message_delay,
         );
 

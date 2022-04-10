@@ -6,7 +6,7 @@ use crate::common::AllocationVerdict;
 
 #[derive(Serialize, Clone)]
 pub struct Allocation {
-    pub id: String,
+    pub id: u32,
     pub cpu_usage: u32,
     pub memory_usage: u64,
 }
@@ -22,7 +22,7 @@ pub struct HostInfo {
     pub cpu_overcommit: u32,
     pub memory_overcommit: u64,
 
-    pub allocations: BTreeMap<String, Allocation>,
+    pub allocations: BTreeMap<u32, Allocation>,
 }
 
 impl HostInfo {
@@ -41,7 +41,7 @@ impl HostInfo {
 
 #[derive(Clone)]
 pub struct ResourcePoolState {
-    hosts: BTreeMap<String, HostInfo>,
+    hosts: BTreeMap<u32, HostInfo>,
 }
 
 impl ResourcePoolState {
@@ -49,32 +49,32 @@ impl ResourcePoolState {
         Self { hosts: BTreeMap::new() }
     }
 
-    pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
+    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
         self.hosts.insert(
-            id.to_string(),
+            id,
             HostInfo::new(cpu_total, memory_total, cpu_available, memory_available),
         );
     }
 
-    pub fn get_hosts_list(&self) -> Vec<String> {
+    pub fn get_hosts_list(&self) -> Vec<u32> {
         self.hosts.keys().cloned().collect()
     }
 
-    pub fn can_allocate(&self, alloc: &Allocation, host_id: &String) -> AllocationVerdict {
-        if !self.hosts.contains_key(host_id) {
+    pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
+        if !self.hosts.contains_key(&host_id) {
             return AllocationVerdict::HostNotFound;
         }
-        if self.hosts[host_id].cpu_available < alloc.cpu_usage {
+        if self.hosts[&host_id].cpu_available < alloc.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
-        if self.hosts[host_id].memory_available < alloc.memory_usage {
+        if self.hosts[&host_id].memory_available < alloc.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
         return AllocationVerdict::Success;
     }
 
-    pub fn allocate(&mut self, alloc: &Allocation, host_id: &String) {
-        self.hosts.get_mut(host_id).map(|host| {
+    pub fn allocate(&mut self, alloc: &Allocation, host_id: u32) {
+        self.hosts.get_mut(&host_id).map(|host| {
             if host.allocations.contains_key(&alloc.id) {
                 return;
             }
@@ -93,12 +93,12 @@ impl ResourcePoolState {
                 host.memory_available -= alloc.memory_usage;
             }
 
-            host.allocations.insert(alloc.id.clone(), alloc.clone());
+            host.allocations.insert(alloc.id, alloc.clone());
         });
     }
 
-    pub fn release(&mut self, alloc: &Allocation, host_id: &String) {
-        self.hosts.get_mut(host_id).map(|host| {
+    pub fn release(&mut self, alloc: &Allocation, host_id: u32) {
+        self.hosts.get_mut(&host_id).map(|host| {
             if host.cpu_overcommit >= alloc.cpu_usage {
                 host.cpu_overcommit -= alloc.cpu_usage;
             } else {
@@ -117,19 +117,19 @@ impl ResourcePoolState {
         });
     }
 
-    pub fn get_available_cpu(&self, host_id: &String) -> u32 {
-        return self.hosts[host_id].cpu_available;
+    pub fn get_available_cpu(&self, host_id: u32) -> u32 {
+        return self.hosts[&host_id].cpu_available;
     }
 
-    pub fn get_available_memory(&self, host_id: &String) -> u64 {
-        return self.hosts[host_id].memory_available;
+    pub fn get_available_memory(&self, host_id: u32) -> u64 {
+        return self.hosts[&host_id].memory_available;
     }
 
-    pub fn get_cpu_load(&self, host_id: &String) -> f64 {
-        return 1. - self.hosts[host_id].cpu_available as f64 / self.hosts[host_id].cpu_total as f64;
+    pub fn get_cpu_load(&self, host_id: u32) -> f64 {
+        return 1. - self.hosts[&host_id].cpu_available as f64 / self.hosts[&host_id].cpu_total as f64;
     }
 
-    pub fn get_memory_load(&self, host_id: &String) -> f64 {
-        return 1. - self.hosts[host_id].memory_available as f64 / self.hosts[host_id].memory_total as f64;
+    pub fn get_memory_load(&self, host_id: u32) -> f64 {
+        return 1. - self.hosts[&host_id].memory_available as f64 / self.hosts[&host_id].memory_total as f64;
     }
 }

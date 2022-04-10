@@ -1,12 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use log::info;
-
 use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
+use simcore::log_debug;
 
 use crate::config::SimulationConfig;
 use crate::events::allocation::{
@@ -19,26 +18,26 @@ use crate::vm::VirtualMachine;
 use crate::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct Scheduler {
-    pub id: String,
+    pub id: u32,
     pool_state: ResourcePoolState,
-    placement_store_id: String,
+    placement_store_id: u32,
     monitoring: Rc<RefCell<Monitoring>>,
     vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
-    sim_config: SimulationConfig,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl Scheduler {
     pub fn new(
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
-        placement_store_id: String,
+        placement_store_id: u32,
         vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
-        sim_config: SimulationConfig,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
-            id: ctx.id().to_string(),
+            id: ctx.id(),
             pool_state: snapshot,
             placement_store_id,
             monitoring,
@@ -48,7 +47,7 @@ impl Scheduler {
         }
     }
 
-    pub fn add_host(&mut self, id: &str, cpu_total: u32, memory_total: u64) {
+    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
         self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
@@ -65,7 +64,7 @@ impl Scheduler {
                 alloc.id,
                 host
             );
-            self.pool_state.allocate(&alloc, &host);
+            self.pool_state.allocate(&alloc, host);
 
             self.ctx.emit(
                 AllocationCommitRequest {
@@ -73,7 +72,7 @@ impl Scheduler {
                     vm,
                     host_id: host,
                 },
-                &self.placement_store_id,
+                self.placement_store_id,
                 self.sim_config.message_delay,
             );
         } else {
@@ -83,20 +82,20 @@ impl Scheduler {
         }
     }
 
-    fn on_allocation_commit_succeeded(&mut self, alloc: Allocation, host_id: String) {
-        self.pool_state.allocate(&alloc, &host_id);
+    fn on_allocation_commit_succeeded(&mut self, alloc: Allocation, host_id: u32) {
+        self.pool_state.allocate(&alloc, host_id);
     }
 
-    fn on_allocation_commit_failed(&mut self, alloc: Allocation, host_id: String) {
-        self.pool_state.release(&alloc, &host_id);
+    fn on_allocation_commit_failed(&mut self, alloc: Allocation, host_id: u32) {
+        self.pool_state.release(&alloc, host_id);
     }
 
-    fn on_allocation_released(&mut self, alloc: Allocation, host_id: String) {
-        self.pool_state.release(&alloc, &host_id);
+    fn on_allocation_released(&mut self, alloc: Allocation, host_id: u32) {
+        self.pool_state.release(&alloc, host_id);
     }
 
-    fn on_allocation_failed(&mut self, alloc: Allocation, host_id: String) {
-        self.pool_state.release(&alloc, &host_id);
+    fn on_allocation_failed(&mut self, alloc: Allocation, host_id: u32) {
+        self.pool_state.release(&alloc, host_id);
     }
 }
 
