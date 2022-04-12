@@ -18,6 +18,10 @@ impl NetworkConfiguration for ConstantBandwidthNetwork {
     fn latency(&self, _src: Id, _dest: Id) -> f64 {
         self.latency
     }
+
+    fn bandwidth(&self, _src: Id, _dest: Id) -> f64 {
+        self.bandwidth
+    }
 }
 
 impl DataOperation for ConstantBandwidthNetwork {

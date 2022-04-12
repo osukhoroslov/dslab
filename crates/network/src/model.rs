@@ -68,6 +68,7 @@ pub trait DataOperation {
 
 pub trait NetworkConfiguration {
     fn latency(&self, src: Id, dst: Id) -> f64;
+    fn bandwidth(&self, src: Id, dst: Id) -> f64;
 }
 
 pub trait NetworkModel: DataOperation + NetworkConfiguration {}
