@@ -1,3 +1,5 @@
+use simcore::context::SimulationContext;
+
 use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
 use dag::task::*;
@@ -46,7 +48,7 @@ impl SimpleScheduler {
 }
 
 impl Scheduler for SimpleScheduler {
-    fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>, _ctx: &SimulationContext) -> Vec<Action> {
         self.schedule(dag, resources)
     }
 
@@ -56,6 +58,7 @@ impl Scheduler for SimpleScheduler {
         _task_state: TaskState,
         dag: &DAG,
         resources: &Vec<dag::resource::Resource>,
+        _ctx: &SimulationContext,
     ) -> Vec<Action> {
         self.schedule(dag, resources)
     }

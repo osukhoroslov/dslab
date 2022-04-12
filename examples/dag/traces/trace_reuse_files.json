@@ -462,15 +462,15 @@
       "to": "compute1",
       "data_id": 1,
       "data_name": "input",
-      "task_id": 0
+      "task_id": 9
     },
     {
       "time": 0.0,
       "type": "task_scheduled",
-      "task_id": 0,
-      "task_name": "a0",
+      "task_id": 9,
+      "task_name": "a9",
       "location": "compute1",
-      "cores": 2,
+      "cores": 1,
       "memory": 128
     },
     {
@@ -480,13 +480,13 @@
       "to": "compute2",
       "data_id": 2,
       "data_name": "input",
-      "task_id": 1
+      "task_id": 4
     },
     {
       "time": 0.0,
       "type": "task_scheduled",
-      "task_id": 1,
-      "task_name": "a1",
+      "task_id": 4,
+      "task_name": "a4",
       "location": "compute2",
       "cores": 1,
       "memory": 128
@@ -497,6 +497,42 @@
       "from": "scheduler",
       "to": "compute3",
       "data_id": 3,
+      "data_name": "input",
+      "task_id": 0
+    },
+    {
+      "time": 0.0,
+      "type": "task_scheduled",
+      "task_id": 0,
+      "task_name": "a0",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 0.0,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 4,
+      "data_name": "input",
+      "task_id": 1
+    },
+    {
+      "time": 0.0,
+      "type": "task_scheduled",
+      "task_id": 1,
+      "task_name": "a1",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 0.0,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 5,
       "data_name": "input",
       "task_id": 2
     },
@@ -506,7 +542,7 @@
       "task_id": 2,
       "task_name": "a2",
       "location": "compute3",
-      "cores": 2,
+      "cores": 1,
       "memory": 128
     },
     {
@@ -514,7 +550,7 @@
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 4,
+      "data_id": 6,
       "data_name": "input",
       "task_id": 3
     },
@@ -524,7 +560,7 @@
       "task_id": 3,
       "task_name": "a3",
       "location": "compute3",
-      "cores": 2,
+      "cores": 1,
       "memory": 128
     },
     {
@@ -534,13 +570,13 @@
       "to": "compute1",
       "data_id": 1,
       "data_name": "input",
-      "task_id": 0
+      "task_id": 9
     },
     {
       "time": 12.9,
       "type": "task_started",
-      "task_id": 0,
-      "task_name": "a0"
+      "task_id": 9,
+      "task_name": "a9"
     },
     {
       "time": 12.9,
@@ -549,13 +585,13 @@
       "to": "compute2",
       "data_id": 2,
       "data_name": "input",
-      "task_id": 1
+      "task_id": 4
     },
     {
       "time": 12.9,
       "type": "task_started",
-      "task_id": 1,
-      "task_name": "a1"
+      "task_id": 4,
+      "task_name": "a4"
     },
     {
       "time": 12.9,
@@ -564,13 +600,13 @@
       "to": "compute3",
       "data_id": 3,
       "data_name": "input",
-      "task_id": 2
+      "task_id": 0
     },
     {
       "time": 12.9,
       "type": "task_started",
-      "task_id": 2,
-      "task_name": "a2"
+      "task_id": 0,
+      "task_name": "a0"
     },
     {
       "time": 12.9,
@@ -579,6 +615,36 @@
       "to": "compute3",
       "data_id": 4,
       "data_name": "input",
+      "task_id": 1
+    },
+    {
+      "time": 12.9,
+      "type": "task_started",
+      "task_id": 1,
+      "task_name": "a1"
+    },
+    {
+      "time": 12.9,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 5,
+      "data_name": "input",
+      "task_id": 2
+    },
+    {
+      "time": 12.9,
+      "type": "task_started",
+      "task_id": 2,
+      "task_name": "a2"
+    },
+    {
+      "time": 12.9,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 6,
+      "data_name": "input",
       "task_id": 3
     },
     {
@@ -588,190 +654,223 @@
       "task_name": "a3"
     },
     {
-      "time": 14.566666666666666,
-      "type": "task_completed",
-      "task_id": 2,
-      "task_name": "a2"
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 5,
-      "data_name": "a2_out",
-      "task_id": 2
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 6,
-      "data_name": "input",
-      "task_id": 4
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "task_scheduled",
-      "task_id": 4,
-      "task_name": "a4",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "task_completed",
-      "task_id": 3,
-      "task_name": "a3"
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 7,
-      "data_name": "a3_out",
-      "task_id": 3
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 8,
-      "data_name": "input",
-      "task_id": 5
-    },
-    {
-      "time": 14.566666666666666,
-      "type": "task_scheduled",
-      "task_id": 5,
-      "task_name": "a5",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 15.666666666666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 5,
-      "data_name": "a2_out",
-      "task_id": 2
-    },
-    {
-      "time": 15.666666666666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 7,
-      "data_name": "a3_out",
-      "task_id": 3
-    },
-    {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "task_completed",
       "task_id": 0,
       "task_name": "a0"
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "compute1",
+      "from": "compute3",
       "to": "scheduler",
-      "data_id": 9,
+      "data_id": 7,
       "data_name": "a0_out",
       "task_id": 0
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute1",
-      "data_id": 10,
+      "to": "compute3",
+      "data_id": 8,
       "data_name": "input",
-      "task_id": 6
+      "task_id": 5
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "task_scheduled",
-      "task_id": 6,
-      "task_name": "a6",
-      "location": "compute1",
-      "cores": 2,
+      "task_id": 5,
+      "task_name": "a5",
+      "location": "compute3",
+      "cores": 1,
       "memory": 128
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "task_completed",
       "task_id": 1,
       "task_name": "a1"
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "compute2",
+      "from": "compute3",
       "to": "scheduler",
-      "data_id": 11,
+      "data_id": 9,
       "data_name": "a1_out",
       "task_id": 1
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute2",
+      "to": "compute3",
+      "data_id": 10,
+      "data_name": "input",
+      "task_id": 6
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "task_scheduled",
+      "task_id": 6,
+      "task_name": "a6",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "task_completed",
+      "task_id": 2,
+      "task_name": "a2"
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 11,
+      "data_name": "a2_out",
+      "task_id": 2
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
       "data_id": 12,
       "data_name": "input",
       "task_id": 7
     },
     {
-      "time": 17.9,
+      "time": 16.233333333333334,
       "type": "task_scheduled",
       "task_id": 7,
       "task_name": "a7",
-      "location": "compute2",
+      "location": "compute3",
       "cores": 1,
       "memory": 128
     },
     {
-      "time": 19.0,
-      "type": "finish_uploading",
-      "from": "compute1",
+      "time": 16.233333333333334,
+      "type": "task_completed",
+      "task_id": 3,
+      "task_name": "a3"
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "start_uploading",
+      "from": "compute3",
       "to": "scheduler",
-      "data_id": 9,
+      "data_id": 13,
+      "data_name": "a3_out",
+      "task_id": 3
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 14,
+      "data_name": "input",
+      "task_id": 8
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "task_scheduled",
+      "task_id": 8,
+      "task_name": "a8",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 7,
       "data_name": "a0_out",
       "task_id": 0
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 9,
+      "data_name": "a1_out",
+      "task_id": 1
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 11,
+      "data_name": "a2_out",
+      "task_id": 2
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 13,
+      "data_name": "a3_out",
+      "task_id": 3
+    },
+    {
+      "time": 17.9,
+      "type": "task_completed",
+      "task_id": 4,
+      "task_name": "a4"
+    },
+    {
+      "time": 17.9,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "scheduler",
+      "data_id": 15,
+      "data_name": "a4_out",
+      "task_id": 4
     },
     {
       "time": 19.0,
       "type": "finish_uploading",
       "from": "compute2",
       "to": "scheduler",
-      "data_id": 11,
-      "data_name": "a1_out",
-      "task_id": 1
-    },
-    {
-      "time": 27.46666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 6,
-      "data_name": "input",
+      "data_id": 15,
+      "data_name": "a4_out",
       "task_id": 4
     },
     {
-      "time": 27.46666666666667,
-      "type": "task_started",
-      "task_id": 4,
-      "task_name": "a4"
+      "time": 22.9,
+      "type": "task_completed",
+      "task_id": 9,
+      "task_name": "a9"
     },
     {
-      "time": 27.46666666666667,
+      "time": 22.9,
+      "type": "start_uploading",
+      "from": "compute1",
+      "to": "scheduler",
+      "data_id": 16,
+      "data_name": "a9_out",
+      "task_id": 9
+    },
+    {
+      "time": 24.0,
+      "type": "finish_uploading",
+      "from": "compute1",
+      "to": "scheduler",
+      "data_id": 16,
+      "data_name": "a9_out",
+      "task_id": 9
+    },
+    {
+      "time": 29.133333333333336,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
@@ -780,328 +879,43 @@
       "task_id": 5
     },
     {
-      "time": 27.46666666666667,
+      "time": 29.133333333333336,
       "type": "task_started",
       "task_id": 5,
       "task_name": "a5"
     },
     {
       "time": 29.133333333333336,
-      "type": "task_completed",
-      "task_id": 4,
-      "task_name": "a4"
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 13,
-      "data_name": "a4_out",
-      "task_id": 4
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "start_uploading",
+      "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 14,
-      "data_name": "input",
-      "task_id": 8
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "task_scheduled",
-      "task_id": 8,
-      "task_name": "a8",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "task_completed",
-      "task_id": 5,
-      "task_name": "a5"
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 15,
-      "data_name": "a5_out",
-      "task_id": 5
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 16,
-      "data_name": "input",
-      "task_id": 9
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "task_scheduled",
-      "task_id": 9,
-      "task_name": "a9",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 30.233333333333338,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 13,
-      "data_name": "a4_out",
-      "task_id": 4
-    },
-    {
-      "time": 30.233333333333338,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 15,
-      "data_name": "a5_out",
-      "task_id": 5
-    },
-    {
-      "time": 30.8,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
       "data_id": 10,
       "data_name": "input",
       "task_id": 6
     },
     {
-      "time": 30.8,
+      "time": 29.133333333333336,
       "type": "task_started",
       "task_id": 6,
       "task_name": "a6"
     },
     {
-      "time": 30.8,
+      "time": 29.133333333333336,
       "type": "finish_uploading",
       "from": "scheduler",
-      "to": "compute2",
+      "to": "compute3",
       "data_id": 12,
       "data_name": "input",
       "task_id": 7
     },
     {
-      "time": 30.8,
+      "time": 29.133333333333336,
       "type": "task_started",
       "task_id": 7,
       "task_name": "a7"
     },
     {
-      "time": 35.8,
-      "type": "task_completed",
-      "task_id": 6,
-      "task_name": "a6"
-    },
-    {
-      "time": 35.8,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 17,
-      "data_name": "a6_out",
-      "task_id": 6
-    },
-    {
-      "time": 35.8,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 18,
-      "data_name": "a0_out",
-      "task_id": 10
-    },
-    {
-      "time": 35.8,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 19,
-      "data_name": "a5_out",
-      "task_id": 10
-    },
-    {
-      "time": 35.8,
-      "type": "task_scheduled",
-      "task_id": 10,
-      "task_name": "b0",
-      "location": "compute1",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 35.8,
-      "type": "task_completed",
-      "task_id": 7,
-      "task_name": "a7"
-    },
-    {
-      "time": 35.8,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 20,
-      "data_name": "a7_out",
-      "task_id": 7
-    },
-    {
-      "time": 36.9,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 17,
-      "data_name": "a6_out",
-      "task_id": 6
-    },
-    {
-      "time": 36.9,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 21,
-      "data_name": "a0_out",
-      "task_id": 15
-    },
-    {
-      "time": 36.9,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 22,
-      "data_name": "a6_out",
-      "task_id": 15
-    },
-    {
-      "time": 36.9,
-      "type": "task_scheduled",
-      "task_id": 15,
-      "task_name": "b5",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 36.9,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 18,
-      "data_name": "a0_out",
-      "task_id": 10
-    },
-    {
-      "time": 36.9,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 19,
-      "data_name": "a5_out",
-      "task_id": 10
-    },
-    {
-      "time": 36.9,
-      "type": "task_started",
-      "task_id": 10,
-      "task_name": "b0"
-    },
-    {
-      "time": 36.9,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 20,
-      "data_name": "a7_out",
-      "task_id": 7
-    },
-    {
-      "time": 38.0,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 21,
-      "data_name": "a0_out",
-      "task_id": 15
-    },
-    {
-      "time": 38.0,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 22,
-      "data_name": "a6_out",
-      "task_id": 15
-    },
-    {
-      "time": 38.0,
-      "type": "task_started",
-      "task_id": 15,
-      "task_name": "b5"
-    },
-    {
-      "time": 41.9,
-      "type": "task_completed",
-      "task_id": 10,
-      "task_name": "b0"
-    },
-    {
-      "time": 41.9,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 23,
-      "data_name": "b0_out",
-      "task_id": 10
-    },
-    {
-      "time": 41.9,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 24,
-      "data_name": "a0_out",
-      "task_id": 11
-    },
-    {
-      "time": 41.9,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 25,
-      "data_name": "a4_out",
-      "task_id": 11
-    },
-    {
-      "time": 41.9,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 26,
-      "data_name": "a7_out",
-      "task_id": 11
-    },
-    {
-      "time": 41.9,
-      "type": "task_scheduled",
-      "task_id": 11,
-      "task_name": "b1",
-      "location": "compute1",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 42.03333333333334,
+      "time": 29.133333333333336,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
@@ -1110,743 +924,902 @@
       "task_id": 8
     },
     {
-      "time": 42.03333333333334,
+      "time": 29.133333333333336,
       "type": "task_started",
       "task_id": 8,
       "task_name": "a8"
     },
     {
-      "time": 42.03333333333334,
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 5,
+      "task_name": "a5"
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 17,
+      "data_name": "a5_out",
+      "task_id": 5
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 6,
+      "task_name": "a6"
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 18,
+      "data_name": "a6_out",
+      "task_id": 6
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 7,
+      "task_name": "a7"
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 19,
+      "data_name": "a7_out",
+      "task_id": 7
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 8,
+      "task_name": "a8"
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 20,
+      "data_name": "a8_out",
+      "task_id": 8
+    },
+    {
+      "time": 33.56666666666667,
       "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 17,
+      "data_name": "a5_out",
+      "task_id": 5
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 16,
-      "data_name": "input",
-      "task_id": 9
+      "data_id": 21,
+      "data_name": "a0_out",
+      "task_id": 10
     },
     {
-      "time": 42.03333333333334,
-      "type": "task_started",
-      "task_id": 9,
-      "task_name": "a9"
-    },
-    {
-      "time": 43.0,
-      "type": "task_completed",
-      "task_id": 15,
-      "task_name": "b5"
-    },
-    {
-      "time": 43.0,
+      "time": 33.56666666666667,
       "type": "start_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 27,
-      "data_name": "b5_out",
-      "task_id": 15
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 22,
+      "data_name": "a5_out",
+      "task_id": 10
     },
     {
-      "time": 43.0,
+      "time": 33.56666666666667,
+      "type": "task_scheduled",
+      "task_id": 10,
+      "task_name": "b0",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 18,
+      "data_name": "a6_out",
+      "task_id": 6
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 23,
+      "data_name": "a2_out",
+      "task_id": 19
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 24,
+      "data_name": "a5_out",
+      "task_id": 19
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 25,
+      "data_name": "a6_out",
+      "task_id": 19
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "task_scheduled",
+      "task_id": 19,
+      "task_name": "b9",
+      "location": "compute1",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 19,
+      "data_name": "a7_out",
+      "task_id": 7
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 26,
+      "data_name": "a1_out",
+      "task_id": 14
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 27,
+      "data_name": "a2_out",
+      "task_id": 14
+    },
+    {
+      "time": 33.56666666666667,
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute2",
       "data_id": 28,
-      "data_name": "a3_out",
-      "task_id": 12
-    },
-    {
-      "time": 43.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 29,
-      "data_name": "a4_out",
-      "task_id": 12
-    },
-    {
-      "time": 43.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 30,
       "data_name": "a7_out",
-      "task_id": 12
+      "task_id": 14
     },
     {
-      "time": 43.0,
+      "time": 33.56666666666667,
       "type": "task_scheduled",
-      "task_id": 12,
-      "task_name": "b2",
+      "task_id": 14,
+      "task_name": "b4",
       "location": "compute2",
       "cores": 1,
       "memory": 128
     },
     {
-      "time": 43.0,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 23,
-      "data_name": "b0_out",
-      "task_id": 10
-    },
-    {
-      "time": 43.0,
-      "type": "finish_uploading",
+      "time": 33.56666666666667,
+      "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute1",
-      "data_id": 24,
+      "to": "compute3",
+      "data_id": 29,
       "data_name": "a0_out",
       "task_id": 11
     },
     {
-      "time": 43.0,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 25,
-      "data_name": "a4_out",
-      "task_id": 11
-    },
-    {
-      "time": 43.0,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 26,
-      "data_name": "a7_out",
-      "task_id": 11
-    },
-    {
-      "time": 43.0,
-      "type": "task_started",
-      "task_id": 11,
-      "task_name": "b1"
-    },
-    {
-      "time": 43.7,
-      "type": "task_completed",
-      "task_id": 8,
-      "task_name": "a8"
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 31,
-      "data_name": "a8_out",
-      "task_id": 8
-    },
-    {
-      "time": 43.7,
+      "time": 33.56666666666667,
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 32,
-      "data_name": "a1_out",
-      "task_id": 14
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 33,
-      "data_name": "a2_out",
-      "task_id": 14
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 34,
-      "data_name": "a7_out",
-      "task_id": 14
-    },
-    {
-      "time": 43.7,
-      "type": "task_scheduled",
-      "task_id": 14,
-      "task_name": "b4",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 43.7,
-      "type": "task_completed",
-      "task_id": 9,
-      "task_name": "a9"
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 35,
-      "data_name": "a9_out",
-      "task_id": 9
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 36,
-      "data_name": "a2_out",
-      "task_id": 16
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 37,
-      "data_name": "a6_out",
-      "task_id": 16
-    },
-    {
-      "time": 43.7,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 38,
-      "data_name": "a7_out",
-      "task_id": 16
-    },
-    {
-      "time": 43.7,
-      "type": "task_scheduled",
-      "task_id": 16,
-      "task_name": "b6",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 44.1,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 27,
-      "data_name": "b5_out",
-      "task_id": 15
-    },
-    {
-      "time": 44.1,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 28,
-      "data_name": "a3_out",
-      "task_id": 12
-    },
-    {
-      "time": 44.1,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 29,
-      "data_name": "a4_out",
-      "task_id": 12
-    },
-    {
-      "time": 44.1,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute2",
       "data_id": 30,
-      "data_name": "a7_out",
-      "task_id": 12
-    },
-    {
-      "time": 44.1,
-      "type": "task_started",
-      "task_id": 12,
-      "task_name": "b2"
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 31,
-      "data_name": "a8_out",
-      "task_id": 8
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 32,
-      "data_name": "a1_out",
-      "task_id": 14
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 33,
-      "data_name": "a2_out",
-      "task_id": 14
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 34,
-      "data_name": "a7_out",
-      "task_id": 14
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "task_started",
-      "task_id": 14,
-      "task_name": "b4"
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 35,
-      "data_name": "a9_out",
-      "task_id": 9
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 36,
-      "data_name": "a2_out",
-      "task_id": 16
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 37,
-      "data_name": "a6_out",
-      "task_id": 16
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 38,
-      "data_name": "a7_out",
-      "task_id": 16
-    },
-    {
-      "time": 44.800000000000004,
-      "type": "task_started",
-      "task_id": 16,
-      "task_name": "b6"
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "task_completed",
-      "task_id": 14,
-      "task_name": "b4"
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 39,
-      "data_name": "b4_out",
-      "task_id": 14
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 40,
       "data_name": "a4_out",
-      "task_id": 13
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 41,
-      "data_name": "a5_out",
-      "task_id": 13
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 42,
-      "data_name": "a8_out",
-      "task_id": 13
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "task_scheduled",
-      "task_id": 13,
-      "task_name": "b3",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "task_completed",
-      "task_id": 16,
-      "task_name": "b6"
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 43,
-      "data_name": "b6_out",
-      "task_id": 16
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 44,
-      "data_name": "a5_out",
-      "task_id": 17
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 45,
-      "data_name": "a6_out",
-      "task_id": 17
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 46,
-      "data_name": "a7_out",
-      "task_id": 17
-    },
-    {
-      "time": 46.46666666666667,
-      "type": "task_scheduled",
-      "task_id": 17,
-      "task_name": "b7",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 39,
-      "data_name": "b4_out",
-      "task_id": 14
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 40,
-      "data_name": "a4_out",
-      "task_id": 13
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 41,
-      "data_name": "a5_out",
-      "task_id": 13
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 42,
-      "data_name": "a8_out",
-      "task_id": 13
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "task_started",
-      "task_id": 13,
-      "task_name": "b3"
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 43,
-      "data_name": "b6_out",
-      "task_id": 16
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 44,
-      "data_name": "a5_out",
-      "task_id": 17
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 45,
-      "data_name": "a6_out",
-      "task_id": 17
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 46,
-      "data_name": "a7_out",
-      "task_id": 17
-    },
-    {
-      "time": 47.56666666666667,
-      "type": "task_started",
-      "task_id": 17,
-      "task_name": "b7"
-    },
-    {
-      "time": 48.0,
-      "type": "task_completed",
-      "task_id": 11,
-      "task_name": "b1"
-    },
-    {
-      "time": 48.0,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 47,
-      "data_name": "b1_out",
       "task_id": 11
     },
     {
-      "time": 48.0,
+      "time": 33.56666666666667,
       "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute1",
-      "data_id": 48,
-      "data_name": "a3_out",
-      "task_id": 18
-    },
-    {
-      "time": 48.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 49,
+      "to": "compute3",
+      "data_id": 31,
       "data_name": "a7_out",
-      "task_id": 18
+      "task_id": 11
     },
     {
-      "time": 48.0,
+      "time": 33.56666666666667,
       "type": "task_scheduled",
-      "task_id": 18,
-      "task_name": "b8",
-      "location": "compute1",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 49.1,
-      "type": "task_completed",
-      "task_id": 12,
-      "task_name": "b2"
-    },
-    {
-      "time": 49.1,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 50,
-      "data_name": "b2_out",
-      "task_id": 12
-    },
-    {
-      "time": 49.1,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 51,
-      "data_name": "a2_out",
-      "task_id": 19
-    },
-    {
-      "time": 49.1,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 52,
-      "data_name": "a5_out",
-      "task_id": 19
-    },
-    {
-      "time": 49.1,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 53,
-      "data_name": "a6_out",
-      "task_id": 19
-    },
-    {
-      "time": 49.1,
-      "type": "task_scheduled",
-      "task_id": 19,
-      "task_name": "b9",
-      "location": "compute2",
+      "task_id": 11,
+      "task_name": "b1",
+      "location": "compute3",
       "cores": 1,
       "memory": 128
     },
     {
-      "time": 49.1,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 47,
-      "data_name": "b1_out",
-      "task_id": 11
-    },
-    {
-      "time": 49.1,
-      "type": "finish_uploading",
+      "time": 33.56666666666667,
+      "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute1",
-      "data_id": 48,
+      "to": "compute3",
+      "data_id": 32,
       "data_name": "a3_out",
-      "task_id": 18
-    },
-    {
-      "time": 49.1,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 49,
-      "data_name": "a7_out",
-      "task_id": 18
-    },
-    {
-      "time": 49.1,
-      "type": "task_started",
-      "task_id": 18,
-      "task_name": "b8"
-    },
-    {
-      "time": 49.233333333333334,
-      "type": "task_completed",
-      "task_id": 13,
-      "task_name": "b3"
-    },
-    {
-      "time": 49.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 54,
-      "data_name": "b3_out",
-      "task_id": 13
-    },
-    {
-      "time": 49.233333333333334,
-      "type": "task_completed",
-      "task_id": 17,
-      "task_name": "b7"
-    },
-    {
-      "time": 49.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 55,
-      "data_name": "b7_out",
-      "task_id": 17
-    },
-    {
-      "time": 50.2,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 50,
-      "data_name": "b2_out",
       "task_id": 12
     },
     {
-      "time": 50.2,
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 33,
+      "data_name": "a4_out",
+      "task_id": 12
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 34,
+      "data_name": "a7_out",
+      "task_id": 12
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "task_scheduled",
+      "task_id": 12,
+      "task_name": "b2",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 20,
+      "data_name": "a8_out",
+      "task_id": 8
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 35,
+      "data_name": "a4_out",
+      "task_id": 13
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 36,
+      "data_name": "a5_out",
+      "task_id": 13
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 37,
+      "data_name": "a8_out",
+      "task_id": 13
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "task_scheduled",
+      "task_id": 13,
+      "task_name": "b3",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 34.66666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
-      "to": "compute2",
-      "data_id": 51,
+      "to": "compute3",
+      "data_id": 21,
+      "data_name": "a0_out",
+      "task_id": 10
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 22,
+      "data_name": "a5_out",
+      "task_id": 10
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "task_started",
+      "task_id": 10,
+      "task_name": "b0"
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 23,
       "data_name": "a2_out",
       "task_id": 19
     },
     {
-      "time": 50.2,
+      "time": 34.66666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
-      "to": "compute2",
-      "data_id": 52,
+      "to": "compute1",
+      "data_id": 24,
       "data_name": "a5_out",
       "task_id": 19
     },
     {
-      "time": 50.2,
+      "time": 34.66666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
-      "to": "compute2",
-      "data_id": 53,
+      "to": "compute1",
+      "data_id": 25,
       "data_name": "a6_out",
       "task_id": 19
     },
     {
-      "time": 50.2,
+      "time": 34.66666666666667,
       "type": "task_started",
       "task_id": 19,
       "task_name": "b9"
     },
     {
-      "time": 50.333333333333336,
+      "time": 34.66666666666667,
       "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 26,
+      "data_name": "a1_out",
+      "task_id": 14
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 27,
+      "data_name": "a2_out",
+      "task_id": 14
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 28,
+      "data_name": "a7_out",
+      "task_id": 14
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "task_started",
+      "task_id": 14,
+      "task_name": "b4"
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 29,
+      "data_name": "a0_out",
+      "task_id": 11
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 30,
+      "data_name": "a4_out",
+      "task_id": 11
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 31,
+      "data_name": "a7_out",
+      "task_id": 11
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "task_started",
+      "task_id": 11,
+      "task_name": "b1"
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 32,
+      "data_name": "a3_out",
+      "task_id": 12
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 33,
+      "data_name": "a4_out",
+      "task_id": 12
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 34,
+      "data_name": "a7_out",
+      "task_id": 12
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "task_started",
+      "task_id": 12,
+      "task_name": "b2"
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 35,
+      "data_name": "a4_out",
+      "task_id": 13
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 36,
+      "data_name": "a5_out",
+      "task_id": 13
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 37,
+      "data_name": "a8_out",
+      "task_id": 13
+    },
+    {
+      "time": 34.66666666666667,
+      "type": "task_started",
+      "task_id": 13,
+      "task_name": "b3"
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_completed",
+      "task_id": 10,
+      "task_name": "b0"
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 54,
+      "data_id": 38,
+      "data_name": "b0_out",
+      "task_id": 10
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 39,
+      "data_name": "a0_out",
+      "task_id": 15
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 40,
+      "data_name": "a6_out",
+      "task_id": 15
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_scheduled",
+      "task_id": 15,
+      "task_name": "b5",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_completed",
+      "task_id": 11,
+      "task_name": "b1"
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 41,
+      "data_name": "b1_out",
+      "task_id": 11
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 42,
+      "data_name": "a2_out",
+      "task_id": 16
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 43,
+      "data_name": "a6_out",
+      "task_id": 16
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 44,
+      "data_name": "a7_out",
+      "task_id": 16
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_scheduled",
+      "task_id": 16,
+      "task_name": "b6",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_completed",
+      "task_id": 12,
+      "task_name": "b2"
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 45,
+      "data_name": "b2_out",
+      "task_id": 12
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 46,
+      "data_name": "a5_out",
+      "task_id": 17
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 47,
+      "data_name": "a6_out",
+      "task_id": 17
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 48,
+      "data_name": "a7_out",
+      "task_id": 17
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_scheduled",
+      "task_id": 17,
+      "task_name": "b7",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_completed",
+      "task_id": 13,
+      "task_name": "b3"
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 49,
       "data_name": "b3_out",
       "task_id": 13
     },
     {
-      "time": 50.333333333333336,
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 50,
+      "data_name": "a3_out",
+      "task_id": 18
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 51,
+      "data_name": "a7_out",
+      "task_id": 18
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "task_scheduled",
+      "task_id": 18,
+      "task_name": "b8",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 39.10000000000001,
       "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 38,
+      "data_name": "b0_out",
+      "task_id": 10
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 39,
+      "data_name": "a0_out",
+      "task_id": 15
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 40,
+      "data_name": "a6_out",
+      "task_id": 15
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "task_started",
+      "task_id": 15,
+      "task_name": "b5"
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 41,
+      "data_name": "b1_out",
+      "task_id": 11
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 42,
+      "data_name": "a2_out",
+      "task_id": 16
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 43,
+      "data_name": "a6_out",
+      "task_id": 16
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 44,
+      "data_name": "a7_out",
+      "task_id": 16
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "task_started",
+      "task_id": 16,
+      "task_name": "b6"
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 45,
+      "data_name": "b2_out",
+      "task_id": 12
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 46,
+      "data_name": "a5_out",
+      "task_id": 17
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 47,
+      "data_name": "a6_out",
+      "task_id": 17
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 48,
+      "data_name": "a7_out",
+      "task_id": 17
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "task_started",
+      "task_id": 17,
+      "task_name": "b7"
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 49,
+      "data_name": "b3_out",
+      "task_id": 13
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 50,
+      "data_name": "a3_out",
+      "task_id": 18
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 51,
+      "data_name": "a7_out",
+      "task_id": 18
+    },
+    {
+      "time": 39.10000000000001,
+      "type": "task_started",
+      "task_id": 18,
+      "task_name": "b8"
+    },
+    {
+      "time": 39.66666666666667,
+      "type": "task_completed",
+      "task_id": 14,
+      "task_name": "b4"
+    },
+    {
+      "time": 39.66666666666667,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "scheduler",
+      "data_id": 52,
+      "data_name": "b4_out",
+      "task_id": 14
+    },
+    {
+      "time": 40.76666666666667,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "scheduler",
+      "data_id": 52,
+      "data_name": "b4_out",
+      "task_id": 14
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "task_completed",
+      "task_id": 15,
+      "task_name": "b5"
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 53,
+      "data_name": "b5_out",
+      "task_id": 15
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "task_completed",
+      "task_id": 16,
+      "task_name": "b6"
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 54,
+      "data_name": "b6_out",
+      "task_id": 16
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "task_completed",
+      "task_id": 17,
+      "task_name": "b7"
+    },
+    {
+      "time": 42.433333333333344,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
       "data_id": 55,
@@ -1854,48 +1827,75 @@
       "task_id": 17
     },
     {
-      "time": 54.1,
+      "time": 42.433333333333344,
       "type": "task_completed",
       "task_id": 18,
       "task_name": "b8"
     },
     {
-      "time": 54.1,
+      "time": 42.433333333333344,
       "type": "start_uploading",
-      "from": "compute1",
+      "from": "compute3",
       "to": "scheduler",
       "data_id": 56,
       "data_name": "b8_out",
       "task_id": 18
     },
     {
-      "time": 55.2,
+      "time": 43.533333333333346,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 53,
+      "data_name": "b5_out",
+      "task_id": 15
+    },
+    {
+      "time": 43.533333333333346,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 54,
+      "data_name": "b6_out",
+      "task_id": 16
+    },
+    {
+      "time": 43.533333333333346,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 55,
+      "data_name": "b7_out",
+      "task_id": 17
+    },
+    {
+      "time": 43.533333333333346,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 56,
+      "data_name": "b8_out",
+      "task_id": 18
+    },
+    {
+      "time": 44.66666666666667,
       "type": "task_completed",
       "task_id": 19,
       "task_name": "b9"
     },
     {
-      "time": 55.2,
+      "time": 44.66666666666667,
       "type": "start_uploading",
-      "from": "compute2",
+      "from": "compute1",
       "to": "scheduler",
       "data_id": 57,
       "data_name": "b9_out",
       "task_id": 19
     },
     {
-      "time": 55.2,
+      "time": 45.76666666666667,
       "type": "finish_uploading",
       "from": "compute1",
-      "to": "scheduler",
-      "data_id": 56,
-      "data_name": "b8_out",
-      "task_id": 18
-    },
-    {
-      "time": 56.300000000000004,
-      "type": "finish_uploading",
-      "from": "compute2",
       "to": "scheduler",
       "data_id": 57,
       "data_name": "b9_out",

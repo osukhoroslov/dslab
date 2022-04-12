@@ -5,6 +5,8 @@ use std::rc::Rc;
 use serde::Serialize;
 use serde_json::json;
 
+use enum_iterator::IntoEnumIterator;
+
 use compute::multicore::*;
 use network::model::DataTransferCompleted;
 use network::network::Network;
@@ -13,7 +15,7 @@ use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-use simcore::{log_debug, log_error};
+use simcore::{log_error, log_info};
 
 use crate::dag::DAG;
 use crate::data_item::DataItemState;
@@ -80,9 +82,16 @@ impl DAGRunner {
     }
 
     pub fn start(&mut self) {
-        log_debug!(self.ctx, "started DAG execution");
+        log_info!(
+            self.ctx,
+            "started DAG execution: total {} resources, {} tasks, {} data items",
+            self.resources.len(),
+            self.dag.get_tasks().len(),
+            self.dag.get_data_items().len()
+        );
         self.trace_config();
-        self.actions.extend(self.scheduler.start(&self.dag, &self.resources));
+        self.actions
+            .extend(self.scheduler.start(&self.dag, &self.resources, &self.ctx));
         self.process_actions();
     }
 
@@ -266,15 +275,16 @@ impl DAGRunner {
             );
         }
 
-        self.actions.extend(
-            self.scheduler
-                .on_task_state_changed(task_id, TaskState::Done, &self.dag, &self.resources),
-        );
+        self.actions.extend(self.scheduler.on_task_state_changed(
+            task_id,
+            TaskState::Done,
+            &self.dag,
+            &self.resources,
+            &self.ctx,
+        ));
         self.process_actions();
 
-        if self.dag.is_completed() && self.data_transfers.is_empty() {
-            log_debug!(self.ctx, "finished DAG execution");
-        }
+        self.check_and_log_completed();
     }
 
     fn start_task(&mut self, task_id: usize) {
@@ -345,16 +355,41 @@ impl DAGRunner {
                 .update_data_item_state(data_id, DataItemState::Ready)
                 .into_iter()
             {
-                self.actions.extend(
-                    self.scheduler
-                        .on_task_state_changed(task, state, &self.dag, &self.resources),
-                );
+                self.actions.extend(self.scheduler.on_task_state_changed(
+                    task,
+                    state,
+                    &self.dag,
+                    &self.resources,
+                    &self.ctx,
+                ));
                 self.process_actions();
             }
         }
 
+        self.check_and_log_completed();
+    }
+
+    fn check_and_log_completed(&self) {
         if self.dag.is_completed() && self.data_transfers.is_empty() {
-            log_debug!(self.ctx, "finished DAG execution");
+            log_info!(self.ctx, "finished DAG execution");
+        }
+    }
+
+    pub fn validate_completed(&self) {
+        if !self.dag.is_completed() {
+            let mut states: Vec<String> = Vec::new();
+            for task_state in TaskState::into_enum_iter() {
+                let cnt = self
+                    .dag
+                    .get_tasks()
+                    .iter()
+                    .filter(|task| task.state == task_state)
+                    .count();
+                if cnt != 0 {
+                    states.push(format!("{} {:?}", cnt, task_state));
+                }
+            }
+            log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
         }
     }
 }

@@ -1,6 +1,8 @@
+use enum_iterator::IntoEnumIterator;
+
 use compute::multicore::CoresDependency;
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, IntoEnumIterator)]
 pub enum TaskState {
     Pending,
     Ready,
@@ -20,7 +22,7 @@ pub struct Task {
     pub cores_dependency: CoresDependency,
     pub state: TaskState,
     pub inputs: Vec<usize>,
-    pub(crate) outputs: Vec<usize>,
+    pub outputs: Vec<usize>,
     pub(crate) ready_inputs: usize,
 }
 

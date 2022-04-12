@@ -1,4 +1,4 @@
-mod simple_scheduler;
+mod schedulers;
 
 use std::io::Write;
 
@@ -17,20 +17,19 @@ use dag::runner::*;
 use network::network::Network;
 use simcore::simulation::Simulation;
 
-use crate::simple_scheduler::SimpleScheduler;
+use crate::schedulers::heft::HeftScheduler;
 
 fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let mut sim = Simulation::new(123);
 
     let resources = load_resources(resources_file, &mut sim);
 
-    let network = rc!(refcell!(Network::new(
-        load_network(network_file),
-        sim.create_context("net")
-    )));
+    let network_model = load_network(network_file);
+    let scheduler = HeftScheduler::new(network_model.borrow().bandwidth(0, 0));
+
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
 
-    let scheduler = SimpleScheduler::new();
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,
@@ -43,6 +42,7 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
     sim.step_until_no_events();
+    runner.borrow().validate_completed();
     runner.borrow().trace_log().save_to_file(trace_file).unwrap();
 }
 
