@@ -1,7 +1,10 @@
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::ops::Bound::{Excluded, Included, Unbounded};
+use std::rc::Rc;
 
+use network::model::NetworkModel;
 use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info};
 
@@ -47,14 +50,14 @@ impl PartialEq for ScheduledTask {
 impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
-    bandwidth: f64,
+    network: Rc<RefCell<dyn NetworkModel>>,
     scheduled_tasks: Vec<Vec<BTreeSet<ScheduledTask>>>,
 }
 
 impl HeftScheduler {
-    pub fn new(bandwidth: f64) -> Self {
+    pub fn new(network: Rc<RefCell<dyn NetworkModel>>) -> Self {
         HeftScheduler {
-            bandwidth,
+            network,
             scheduled_tasks: Vec::new(),
         }
     }
@@ -68,15 +71,24 @@ impl HeftScheduler {
         result
     }
 
-    fn calc_rank(&self, v: usize, avg_flop_time: f64, dag: &DAG, rank: &mut Vec<f64>, used: &mut Vec<bool>) {
+    fn calc_rank(
+        &self,
+        v: usize,
+        avg_flop_time: f64,
+        avg_netspeed: f64,
+        dag: &DAG,
+        rank: &mut Vec<f64>,
+        used: &mut Vec<bool>,
+    ) {
         if used[v] {
             return;
         }
+        used[v] = true;
 
         rank[v] = 0.;
         for &(succ, edge_weight) in HeftScheduler::successors(v, dag).iter() {
-            self.calc_rank(succ, avg_flop_time, dag, rank, used);
-            rank[v] = rank[v].max(rank[succ] + edge_weight as f64 / self.bandwidth);
+            self.calc_rank(succ, avg_flop_time, avg_netspeed, dag, rank, used);
+            rank[v] = rank[v].max(rank[succ] + edge_weight as f64 * avg_netspeed);
         }
         rank[v] += dag.get_task(v).flops as f64 * avg_flop_time;
     }
@@ -134,13 +146,19 @@ impl Scheduler for HeftScheduler {
         // average time over all resources for executing one flop
         let avg_flop_time = resources.iter().map(|r| 1. / r.speed as f64).sum::<f64>() / resources.len() as f64;
 
+        let avg_netspeed = resources
+            .iter()
+            .map(|resource| 1. / self.network.borrow().bandwidth(ctx.id(), resource.id))
+            .sum::<f64>()
+            / resources.len() as f64;
+
         let total_tasks = dag.get_tasks().len();
 
         let mut used = vec![false; total_tasks];
         let mut rank = vec![0.; total_tasks];
 
         for i in 0..total_tasks {
-            self.calc_rank(i, avg_flop_time, dag, &mut rank, &mut used);
+            self.calc_rank(i, avg_flop_time, avg_netspeed, dag, &mut rank, &mut used);
         }
 
         let mut pred = vec![vec![(0 as usize, 0.); 0]; total_tasks];
@@ -166,7 +184,7 @@ impl Scheduler for HeftScheduler {
         for task in tasks.into_iter() {
             let est = pred[task]
                 .iter()
-                .map(|&(task, weight)| eft[task] + weight / self.bandwidth)
+                .map(|&(task, weight)| eft[task] + weight * avg_netspeed)
                 .max_by(|a, b| a.partial_cmp(&b).unwrap())
                 .unwrap_or(0.);
 
@@ -209,7 +227,7 @@ impl Scheduler for HeftScheduler {
 
         log_info!(
             ctx,
-            "expected timespan: {:.3}",
+            "expected makespan: {:.3}",
             self.scheduled_tasks
                 .iter()
                 .map(|cores| cores

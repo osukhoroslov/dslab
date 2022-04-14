@@ -25,7 +25,7 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     let resources = load_resources(resources_file, &mut sim);
 
     let network_model = load_network(network_file);
-    let scheduler = HeftScheduler::new(network_model.borrow().bandwidth(0, 0));
+    let scheduler = HeftScheduler::new(network_model.clone());
 
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
