@@ -4,8 +4,18 @@ use crate::task::TaskState;
 
 use simcore::context::SimulationContext;
 
+#[derive(Debug)]
 pub enum Action {
-    Schedule { task: usize, resource: usize, cores: u32 },
+    Schedule {
+        task: usize,
+        resource: usize,
+        cores: u32,
+    },
+    ScheduleOnCores {
+        task: usize,
+        resource: usize,
+        cores: Vec<u32>,
+    },
 }
 
 pub trait Scheduler {

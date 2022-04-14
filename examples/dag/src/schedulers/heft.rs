@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use network::model::NetworkModel;
 use simcore::context::SimulationContext;
-use simcore::{log_debug, log_error, log_info};
+use simcore::{log_error, log_info};
 
 use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
@@ -51,15 +51,11 @@ impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
     network: Rc<RefCell<dyn NetworkModel>>,
-    scheduled_tasks: Vec<Vec<BTreeSet<ScheduledTask>>>,
 }
 
 impl HeftScheduler {
     pub fn new(network: Rc<RefCell<dyn NetworkModel>>) -> Self {
-        HeftScheduler {
-            network,
-            scheduled_tasks: Vec::new(),
-        }
+        HeftScheduler { network }
     }
 
     fn successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
@@ -91,41 +87,6 @@ impl HeftScheduler {
             rank[v] = rank[v].max(rank[succ] + edge_weight as f64 * avg_netspeed);
         }
         rank[v] += dag.get_task(v).flops as f64 * avg_flop_time;
-    }
-
-    fn schedule(&mut self, dag: &DAG, ctx: &SimulationContext) -> Vec<Action> {
-        let mut result = Vec::new();
-
-        for resource in 0..self.scheduled_tasks.len() {
-            for core in 0..self.scheduled_tasks[resource].len() {
-                let schedule = &mut self.scheduled_tasks[resource][core];
-                while !schedule.is_empty()
-                    && dag.get_task(schedule.iter().next().unwrap().task).state == TaskState::Done
-                {
-                    let item = schedule.iter().next().unwrap().clone();
-                    schedule.remove(&item);
-                }
-
-                if !schedule.is_empty() && dag.get_task(schedule.iter().next().unwrap().task).state == TaskState::Ready
-                {
-                    let item = schedule.iter().next().unwrap();
-                    result.push(Action::Schedule {
-                        task: item.task,
-                        resource: resource,
-                        cores: 1,
-                    });
-                    log_debug!(
-                        ctx,
-                        "task {} scheduled now, planned: {:.3}-{:.3}",
-                        dag.get_task(item.task).name,
-                        item.start_time,
-                        item.end_time,
-                    );
-                }
-            }
-        }
-
-        result
     }
 }
 
@@ -171,7 +132,7 @@ impl Scheduler for HeftScheduler {
         let mut tasks = (0..total_tasks).collect::<Vec<_>>();
         tasks.sort_by(|&a, &b| rank[b].partial_cmp(&rank[a]).unwrap());
 
-        self.scheduled_tasks = resources
+        let mut scheduled_tasks = resources
             .iter()
             .map(|resource| {
                 (0..resource.cores_available)
@@ -195,9 +156,9 @@ impl Scheduler for HeftScheduler {
                 let time = dag.get_task(task).flops as f64 / resources[resource].speed as f64;
                 for core in 0..resources[resource].cores_available as usize {
                     let mut est = est;
-                    let range = self.scheduled_tasks[resource][core]
+                    let range = scheduled_tasks[resource][core]
                         .range((Excluded(ScheduledTask::new(est, 0., 0 as usize)), Unbounded));
-                    let prev = self.scheduled_tasks[resource][core]
+                    let prev = scheduled_tasks[resource][core]
                         .range((Unbounded, Included(ScheduledTask::new(est, 0., 0 as usize))))
                         .next_back();
                     if let Some(scheduled_task) = prev {
@@ -217,7 +178,7 @@ impl Scheduler for HeftScheduler {
                 }
             }
 
-            self.scheduled_tasks[best_resource][best_core].insert(ScheduledTask::new(
+            scheduled_tasks[best_resource][best_core].insert(ScheduledTask::new(
                 best_finish - dag.get_task(task).flops as f64 / resources[best_resource].speed as f64,
                 best_finish,
                 task,
@@ -228,7 +189,7 @@ impl Scheduler for HeftScheduler {
         log_info!(
             ctx,
             "expected makespan: {:.3}",
-            self.scheduled_tasks
+            scheduled_tasks
                 .iter()
                 .map(|cores| cores
                     .iter()
@@ -239,17 +200,29 @@ impl Scheduler for HeftScheduler {
                 .unwrap_or(0.)
         );
 
-        self.schedule(dag, ctx)
+        scheduled_tasks
+            .iter()
+            .enumerate()
+            .flat_map(|(resource_id, schedule)| {
+                schedule.iter().enumerate().flat_map(move |(core_id, schedule)| {
+                    schedule.iter().map(move |task| Action::ScheduleOnCores {
+                        task: task.task,
+                        resource: resource_id,
+                        cores: vec![core_id as u32],
+                    })
+                })
+            })
+            .collect::<Vec<_>>()
     }
 
     fn on_task_state_changed(
         &mut self,
         _task: usize,
         _task_state: TaskState,
-        dag: &DAG,
+        _dag: &DAG,
         _resources: &Vec<dag::resource::Resource>,
-        ctx: &SimulationContext,
+        _ctx: &SimulationContext,
     ) -> Vec<Action> {
-        self.schedule(dag, ctx)
+        Vec::new()
     }
 }
