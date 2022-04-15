@@ -459,44 +459,8 @@
       "time": 0.0,
       "type": "start_uploading",
       "from": "scheduler",
-      "to": "compute1",
-      "data_id": 1,
-      "data_name": "input",
-      "task_id": 9
-    },
-    {
-      "time": 0.0,
-      "type": "task_scheduled",
-      "task_id": 9,
-      "task_name": "a9",
-      "location": "compute1",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 0.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute2",
-      "data_id": 2,
-      "data_name": "input",
-      "task_id": 4
-    },
-    {
-      "time": 0.0,
-      "type": "task_scheduled",
-      "task_id": 4,
-      "task_name": "a4",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 0.0,
-      "type": "start_uploading",
-      "from": "scheduler",
       "to": "compute3",
-      "data_id": 3,
+      "data_id": 1,
       "data_name": "input",
       "task_id": 0
     },
@@ -514,7 +478,7 @@
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 4,
+      "data_id": 2,
       "data_name": "input",
       "task_id": 1
     },
@@ -532,7 +496,7 @@
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 5,
+      "data_id": 3,
       "data_name": "input",
       "task_id": 2
     },
@@ -550,7 +514,7 @@
       "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 6,
+      "data_id": 4,
       "data_name": "input",
       "task_id": 3
     },
@@ -564,41 +528,47 @@
       "memory": 128
     },
     {
-      "time": 12.9,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute1",
-      "data_id": 1,
-      "data_name": "input",
-      "task_id": 9
-    },
-    {
-      "time": 12.9,
-      "type": "task_started",
-      "task_id": 9,
-      "task_name": "a9"
-    },
-    {
-      "time": 12.9,
-      "type": "finish_uploading",
+      "time": 0.0,
+      "type": "start_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 2,
+      "data_id": 5,
       "data_name": "input",
       "task_id": 4
     },
     {
-      "time": 12.9,
-      "type": "task_started",
+      "time": 0.0,
+      "type": "task_scheduled",
       "task_id": 4,
-      "task_name": "a4"
+      "task_name": "a4",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 0.0,
+      "type": "start_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 6,
+      "data_name": "input",
+      "task_id": 9
+    },
+    {
+      "time": 0.0,
+      "type": "task_scheduled",
+      "task_id": 9,
+      "task_name": "a9",
+      "location": "compute1",
+      "cores": 1,
+      "memory": 128
     },
     {
       "time": 12.9,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 3,
+      "data_id": 1,
       "data_name": "input",
       "task_id": 0
     },
@@ -613,7 +583,7 @@
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 4,
+      "data_id": 2,
       "data_name": "input",
       "task_id": 1
     },
@@ -628,7 +598,7 @@
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 5,
+      "data_id": 3,
       "data_name": "input",
       "task_id": 2
     },
@@ -643,7 +613,7 @@
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 6,
+      "data_id": 4,
       "data_name": "input",
       "task_id": 3
     },
@@ -652,6 +622,36 @@
       "type": "task_started",
       "task_id": 3,
       "task_name": "a3"
+    },
+    {
+      "time": 12.9,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute2",
+      "data_id": 5,
+      "data_name": "input",
+      "task_id": 4
+    },
+    {
+      "time": 12.9,
+      "type": "task_started",
+      "task_id": 4,
+      "task_name": "a4"
+    },
+    {
+      "time": 12.9,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute1",
+      "data_id": 6,
+      "data_name": "input",
+      "task_id": 9
+    },
+    {
+      "time": 12.9,
+      "type": "task_started",
+      "task_id": 9,
+      "task_name": "a9"
     },
     {
       "time": 16.233333333333334,

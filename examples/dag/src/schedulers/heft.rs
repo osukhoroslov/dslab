@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use network::model::NetworkModel;
 use simcore::context::SimulationContext;
-use simcore::{log_error, log_info};
+use simcore::{log_error, log_info, log_warn};
 
 use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
@@ -16,16 +16,11 @@ use dag::task::*;
 struct ScheduledTask {
     start_time: f64,
     end_time: f64,
-    task: usize,
 }
 
 impl ScheduledTask {
-    fn new(start_time: f64, end_time: f64, task: usize) -> ScheduledTask {
-        ScheduledTask {
-            start_time,
-            end_time,
-            task,
-        }
+    fn new(start_time: f64, end_time: f64) -> ScheduledTask {
+        ScheduledTask { start_time, end_time }
     }
 }
 
@@ -92,16 +87,11 @@ impl HeftScheduler {
 
 impl Scheduler for HeftScheduler {
     fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>, ctx: &SimulationContext) -> Vec<Action> {
-        if dag
-            .get_tasks()
-            .iter()
-            .any(|task| task.min_cores > 1 || task.max_cores < 1)
-        {
-            log_error!(
+        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
+            log_warn!(
                 ctx,
-                "HEFT can only run tasks on one core and some input tasks don't support it"
+                "some tasks support different number of cores, but HEFT will always use min_cores"
             );
-            return Vec::new();
         }
 
         // average time over all resources for executing one flop
@@ -142,6 +132,8 @@ impl Scheduler for HeftScheduler {
             .collect::<Vec<_>>();
         let mut eft = vec![0.; total_tasks];
 
+        let mut result: Vec<(f64, Action)> = Vec::new();
+
         for task in tasks.into_iter() {
             let est = pred[task]
                 .iter()
@@ -150,40 +142,85 @@ impl Scheduler for HeftScheduler {
                 .unwrap_or(0.);
 
             let mut best_finish = -1.;
+            let mut best_time = -1.;
             let mut best_resource = 0 as usize;
-            let mut best_core = 0 as usize;
+            let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
-                let time = dag.get_task(task).flops as f64 / resources[resource].speed as f64;
-                for core in 0..resources[resource].cores_available as usize {
-                    let mut est = est;
-                    let range = scheduled_tasks[resource][core]
-                        .range((Excluded(ScheduledTask::new(est, 0., 0 as usize)), Unbounded));
-                    let prev = scheduled_tasks[resource][core]
-                        .range((Unbounded, Included(ScheduledTask::new(est, 0., 0 as usize))))
-                        .next_back();
-                    if let Some(scheduled_task) = prev {
-                        est = est.max(scheduled_task.end_time);
-                    }
-                    for next in range {
-                        if next.start_time >= est + time {
-                            break;
+                let need_cores = dag.get_task(task).min_cores;
+                if resources[resource].compute.borrow().cores_total() < need_cores {
+                    continue;
+                }
+
+                let time = dag.get_task(task).flops as f64
+                    / resources[resource].speed as f64
+                    / dag.get_task(task).cores_dependency.speedup(need_cores);
+
+                let mut possible_starts = scheduled_tasks[resource]
+                    .iter()
+                    .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.end_time))
+                    .filter(|&a| a >= est)
+                    .collect::<Vec<_>>();
+                possible_starts.push(est);
+                possible_starts.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                possible_starts.dedup();
+
+                let mut cores: Vec<u32> = Vec::new();
+                let mut est = est;
+                for &possible_start in possible_starts.iter() {
+                    for core in 0..resources[resource].cores_available as usize {
+                        let next = scheduled_tasks[resource][core]
+                            .range((Excluded(ScheduledTask::new(possible_start, 0.)), Unbounded))
+                            .next();
+                        let prev = scheduled_tasks[resource][core]
+                            .range((Unbounded, Included(ScheduledTask::new(possible_start, 0.))))
+                            .next_back();
+                        if let Some(scheduled_task) = prev {
+                            if scheduled_task.end_time > possible_start {
+                                continue;
+                            }
                         }
-                        est = est.max(next.end_time);
+                        if let Some(scheduled_task) = next {
+                            if scheduled_task.start_time < possible_start + time {
+                                continue;
+                            }
+                        }
+                        cores.push(core as u32);
                     }
-                    if best_finish == -1. || best_finish > est + time {
-                        best_finish = est + time;
-                        best_resource = resource;
-                        best_core = core;
+                    if cores.len() >= need_cores as usize {
+                        est = possible_start;
+                        break;
+                    } else {
+                        cores.clear();
                     }
+                }
+
+                assert!(cores.len() >= need_cores as usize);
+                if best_finish == -1. || best_finish > est + time {
+                    best_time = time;
+                    best_finish = est + time;
+                    best_resource = resource;
+                    best_cores = cores.iter().take(need_cores as usize).cloned().collect();
                 }
             }
 
-            scheduled_tasks[best_resource][best_core].insert(ScheduledTask::new(
-                best_finish - dag.get_task(task).flops as f64 / resources[best_resource].speed as f64,
-                best_finish,
-                task,
-            ));
+            if best_finish == -1. {
+                log_error!(ctx, "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task", dag.get_task(task).name);
+                return Vec::new();
+            }
+
+            for &core in best_cores.iter() {
+                scheduled_tasks[best_resource][core as usize]
+                    .insert(ScheduledTask::new(best_finish - best_time, best_finish));
+            }
             eft[task] = best_finish;
+            result.push((
+                best_finish - best_time,
+                Action::ScheduleOnCores {
+                    task,
+                    resource: best_resource,
+                    cores: best_cores,
+                },
+            ));
         }
 
         log_info!(
@@ -200,19 +237,8 @@ impl Scheduler for HeftScheduler {
                 .unwrap_or(0.)
         );
 
-        scheduled_tasks
-            .iter()
-            .enumerate()
-            .flat_map(|(resource_id, schedule)| {
-                schedule.iter().enumerate().flat_map(move |(core_id, schedule)| {
-                    schedule.iter().map(move |task| Action::ScheduleOnCores {
-                        task: task.task,
-                        resource: resource_id,
-                        cores: vec![core_id as u32],
-                    })
-                })
-            })
-            .collect::<Vec<_>>()
+        result.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        result.into_iter().map(|(_, b)| b).collect()
     }
 
     fn on_task_state_changed(
