@@ -1,6 +1,7 @@
 mod schedulers;
 
 use std::io::Write;
+use std::time::Instant;
 
 use sugars::{rc, refcell};
 
@@ -30,20 +31,34 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
 
+    let enable_trace_log = true;
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,
         resources,
         scheduler,
         sim.create_context("runner")
-    )));
+    )
+    .enable_trace_log(enable_trace_log)));
     let runner_id = sim.add_handler("runner", runner.clone());
 
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
+
+    let t = Instant::now();
     sim.step_until_no_events();
+    println!(
+        "Processed {} events in {:.2?} ({:.0} events/sec)",
+        sim.event_count(),
+        t.elapsed(),
+        sim.event_count() as f64 / t.elapsed().as_secs_f64()
+    );
     runner.borrow().validate_completed();
-    runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+    if enable_trace_log {
+        runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+    }
+
+    println!();
 }
 
 fn map_reduce() {
