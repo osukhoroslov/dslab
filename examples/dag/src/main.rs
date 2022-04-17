@@ -3,6 +3,8 @@ mod schedulers;
 use std::io::Write;
 use std::time::Instant;
 
+use clap::{command, Arg};
+
 use sugars::{rc, refcell};
 
 use rand::prelude::*;
@@ -18,7 +20,7 @@ use dag::runner::*;
 use network::network::Network;
 use simcore::simulation::Simulation;
 
-use crate::schedulers::heft::HeftScheduler;
+use crate::schedulers::heft::{DataSendingPolicy, HeftScheduler};
 
 fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let mut sim = Simulation::new(123);
@@ -26,12 +28,17 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     let resources = load_resources(resources_file, &mut sim);
 
     let network_model = load_network(network_file);
-    let scheduler = HeftScheduler::new(network_model.clone());
+    let scheduler =
+        HeftScheduler::new(network_model.clone()).with_data_sending_policy(DataSendingPolicy::ThroughRunner);
 
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
 
-    let enable_trace_log = true;
+    let matches = command!()
+        .arg(Arg::new("trace-log").help("Save trace_log to file").takes_value(false))
+        .get_matches();
+
+    let enable_trace_log = matches.is_present("trace-log");
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,

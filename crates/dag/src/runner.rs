@@ -83,7 +83,7 @@ impl DAGRunner {
             id: ctx.id(),
             dag,
             network,
-            resources: resources,
+            resources,
             computations: HashMap::new(),
             task_location: HashMap::new(),
             data_transfers: HashMap::new(),

@@ -5,12 +5,29 @@ use std::ops::Bound::{Excluded, Included, Unbounded};
 use std::rc::Rc;
 
 use network::model::NetworkModel;
+use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::{log_error, log_info, log_warn};
 
 use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
 use dag::task::*;
+
+pub enum DataSendingPolicy {
+    ThroughRunner,
+    Direct,
+}
+
+impl DataSendingPolicy {
+    fn net_time(&self, network: &dyn NetworkModel, src: Id, dst: Id, runner: Id) -> f64 {
+        match self {
+            DataSendingPolicy::ThroughRunner => {
+                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
+            }
+            DataSendingPolicy::Direct => 1. / network.bandwidth(src, dst),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 struct ScheduledTask {
@@ -46,18 +63,27 @@ impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
     network: Rc<RefCell<dyn NetworkModel>>,
+    data_sending_policy: DataSendingPolicy,
 }
 
 impl HeftScheduler {
     pub fn new(network: Rc<RefCell<dyn NetworkModel>>) -> Self {
-        HeftScheduler { network }
+        HeftScheduler {
+            network,
+            data_sending_policy: DataSendingPolicy::ThroughRunner,
+        }
+    }
+
+    pub fn with_data_sending_policy(mut self, data_sending_policy: DataSendingPolicy) -> Self {
+        self.data_sending_policy = data_sending_policy;
+        self
     }
 
     fn successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
         let mut result = Vec::new();
         for &data_item_id in dag.get_task(v).outputs.iter() {
             let data_item = dag.get_data_item(data_item_id);
-            result.extend(data_item.consumers.iter().map(|&v| (v, data_item.size * 2)));
+            result.extend(data_item.consumers.iter().map(|&v| (v, data_item.size)));
         }
         result
     }
@@ -66,7 +92,7 @@ impl HeftScheduler {
         &self,
         v: usize,
         avg_flop_time: f64,
-        avg_netspeed: f64,
+        avg_net_time: f64,
         dag: &DAG,
         rank: &mut Vec<f64>,
         used: &mut Vec<bool>,
@@ -78,8 +104,8 @@ impl HeftScheduler {
 
         rank[v] = 0.;
         for &(succ, edge_weight) in HeftScheduler::successors(v, dag).iter() {
-            self.calc_rank(succ, avg_flop_time, avg_netspeed, dag, rank, used);
-            rank[v] = rank[v].max(rank[succ] + edge_weight as f64 * avg_netspeed);
+            self.calc_rank(succ, avg_flop_time, avg_net_time, dag, rank, used);
+            rank[v] = rank[v].max(rank[succ] + edge_weight as f64 * avg_net_time);
         }
         rank[v] += dag.get_task(v).flops as f64 * avg_flop_time;
     }
@@ -97,11 +123,19 @@ impl Scheduler for HeftScheduler {
         // average time over all resources for executing one flop
         let avg_flop_time = resources.iter().map(|r| 1. / r.speed as f64).sum::<f64>() / resources.len() as f64;
 
-        let avg_netspeed = resources
+        let avg_net_time = resources
             .iter()
-            .map(|resource| 1. / self.network.borrow().bandwidth(ctx.id(), resource.id))
+            .map(|r1| {
+                resources
+                    .iter()
+                    .map(|r2| {
+                        self.data_sending_policy
+                            .net_time(&*self.network.borrow(), r1.id, r2.id, ctx.id())
+                    })
+                    .sum::<f64>()
+            })
             .sum::<f64>()
-            / resources.len() as f64;
+            / (resources.len() as f64).powf(2.);
 
         let total_tasks = dag.get_tasks().len();
 
@@ -109,7 +143,7 @@ impl Scheduler for HeftScheduler {
         let mut rank = vec![0.; total_tasks];
 
         for i in 0..total_tasks {
-            self.calc_rank(i, avg_flop_time, avg_netspeed, dag, &mut rank, &mut used);
+            self.calc_rank(i, avg_flop_time, avg_net_time, dag, &mut rank, &mut used);
         }
 
         let mut pred = vec![vec![(0 as usize, 0.); 0]; total_tasks];
@@ -137,7 +171,7 @@ impl Scheduler for HeftScheduler {
         for task in tasks.into_iter() {
             let est = pred[task]
                 .iter()
-                .map(|&(task, weight)| eft[task] + weight * avg_netspeed)
+                .map(|&(task, weight)| eft[task] + weight * avg_net_time)
                 .max_by(|a, b| a.partial_cmp(&b).unwrap())
                 .unwrap_or(0.);
 
@@ -204,7 +238,11 @@ impl Scheduler for HeftScheduler {
             }
 
             if best_finish == -1. {
-                log_error!(ctx, "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task", dag.get_task(task).name);
+                log_error!(
+                    ctx,
+                    "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task",
+                    dag.get_task(task).name
+                );
                 return Vec::new();
             }
 
