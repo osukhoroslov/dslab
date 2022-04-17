@@ -50,7 +50,7 @@ pub struct DAGRunner {
     task_cores: HashMap<usize, Vec<u32>>,
     task_inputs: HashMap<usize, HashSet<usize>>,
     trace_log: TraceLog,
-    scheduler: Box<dyn Scheduler>,
+    scheduler: Rc<RefCell<dyn Scheduler>>,
     actions: VecDeque<Action>,
     action_id: usize,
     resource_queue: Vec<Vec<VecDeque<QueuedTask>>>,
@@ -60,11 +60,11 @@ pub struct DAGRunner {
 }
 
 impl DAGRunner {
-    pub fn new<T: Scheduler + 'static>(
+    pub fn new(
         dag: DAG,
         network: Rc<RefCell<Network>>,
         resources: Vec<Resource>,
-        scheduler: T,
+        scheduler: Rc<RefCell<dyn Scheduler>>,
         ctx: SimulationContext,
     ) -> Self {
         let resource_queue = resources
@@ -90,7 +90,7 @@ impl DAGRunner {
             task_cores: HashMap::new(),
             task_inputs: HashMap::new(),
             trace_log: TraceLog::new(),
-            scheduler: Box::new(scheduler),
+            scheduler,
             actions: VecDeque::new(),
             action_id: 0 as usize,
             resource_queue,
@@ -115,7 +115,7 @@ impl DAGRunner {
         );
         self.trace_config();
         self.actions
-            .extend(self.scheduler.start(&self.dag, &self.resources, &self.ctx));
+            .extend(self.scheduler.borrow_mut().start(&self.dag, &self.resources, &self.ctx));
         self.process_actions();
     }
 
@@ -371,7 +371,7 @@ impl DAGRunner {
             }
         }
 
-        self.actions.extend(self.scheduler.on_task_state_changed(
+        self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
             task_id,
             TaskState::Done,
             &self.dag,
@@ -457,7 +457,7 @@ impl DAGRunner {
                 .update_data_item_state(data_id, DataItemState::Ready)
                 .into_iter()
             {
-                self.actions.extend(self.scheduler.on_task_state_changed(
+                self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
                     task,
                     state,
                     &self.dag,

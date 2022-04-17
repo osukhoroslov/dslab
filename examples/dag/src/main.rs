@@ -1,9 +1,11 @@
 mod schedulers;
 
+use std::cell::RefCell;
 use std::io::Write;
+use std::rc::Rc;
 use std::time::Instant;
 
-use clap::{command, Arg};
+use clap::{command, Arg, ArgEnum};
 
 use sugars::{rc, refcell};
 
@@ -17,10 +19,18 @@ use dag::dag::DAG;
 use dag::network::load_network;
 use dag::resource::load_resources;
 use dag::runner::*;
+use dag::scheduler::Scheduler;
 use network::network::Network;
 use simcore::simulation::Simulation;
 
 use crate::schedulers::heft::{DataSendingPolicy, HeftScheduler};
+use crate::schedulers::simple_scheduler::SimpleScheduler;
+
+#[derive(ArgEnum, Clone, Debug)]
+pub enum ArgScheduler {
+    Simple,
+    Heft,
+}
 
 fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let mut sim = Simulation::new(123);
@@ -28,17 +38,43 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     let resources = load_resources(resources_file, &mut sim);
 
     let network_model = load_network(network_file);
-    let scheduler =
-        HeftScheduler::new(network_model.clone()).with_data_sending_policy(DataSendingPolicy::ThroughRunner);
+
+    let matches = command!()
+        .arg(
+            Arg::new("trace-log")
+                .long("trace-log")
+                .help("Save trace_log to file")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("scheduler")
+                .long("scheduler")
+                .help(
+                    format!(
+                        "Scheduler {}",
+                        format!("{:?}", ArgScheduler::value_variants()).to_lowercase()
+                    )
+                    .as_str(),
+                )
+                .validator(|s| ArgScheduler::from_str(s, true))
+                .default_value("heft")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let enable_trace_log = matches.is_present("trace-log");
+    let scheduler: Rc<RefCell<dyn Scheduler>> =
+        match ArgScheduler::from_str(matches.value_of("scheduler").unwrap(), true).unwrap() {
+            ArgScheduler::Simple => rc!(refcell!(SimpleScheduler::new())),
+            ArgScheduler::Heft => {
+                rc!(refcell!(HeftScheduler::new(network_model.clone())
+                    .with_data_sending_policy(DataSendingPolicy::ThroughRunner)))
+            }
+        };
 
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
 
-    let matches = command!()
-        .arg(Arg::new("trace-log").help("Save trace_log to file").takes_value(false))
-        .get_matches();
-
-    let enable_trace_log = matches.is_present("trace-log");
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,
