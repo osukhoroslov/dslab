@@ -61,8 +61,10 @@ impl Simulation {
         );
         debug!(
             target: "simulation",
-            "[{:.3} DEBUG simulation] Created context: {}",
-            self.time(), json!({"name": ctx.name(), "id": ctx.id()})
+            "[{:.3} {} simulation] Created context: {}",
+            self.time(),
+            crate::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": ctx.name(), "id": ctx.id()})
         );
         ctx
     }
@@ -75,8 +77,10 @@ impl Simulation {
         self.handlers[id as usize] = Some(handler);
         debug!(
             target: "simulation",
-            "[{:.3} DEBUG simulation] Added handler: {}",
-            self.time(), json!({"name": name.as_ref(), "id": id})
+            "[{:.3} {} simulation] Added handler: {}",
+            self.time(),
+            crate::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": name.as_ref(), "id": id})
         );
         id
     }
