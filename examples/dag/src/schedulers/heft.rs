@@ -1,13 +1,13 @@
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 use std::rc::Rc;
 
 use network::model::NetworkModel;
 use simcore::component::Id;
 use simcore::context::SimulationContext;
-use simcore::{log_error, log_info, log_warn};
+use simcore::{log_debug, log_error, log_info, log_warn};
 
 use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
@@ -33,11 +33,16 @@ impl DataSendingPolicy {
 struct ScheduledTask {
     start_time: f64,
     end_time: f64,
+    task: usize,
 }
 
 impl ScheduledTask {
-    fn new(start_time: f64, end_time: f64) -> ScheduledTask {
-        ScheduledTask { start_time, end_time }
+    fn new(start_time: f64, end_time: f64, task: usize) -> ScheduledTask {
+        ScheduledTask {
+            start_time,
+            end_time,
+            task,
+        }
     }
 }
 
@@ -168,6 +173,19 @@ impl Scheduler for HeftScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
+        let inputs: HashSet<usize> = dag
+            .get_tasks()
+            .iter()
+            .flat_map(|task| task.inputs.iter())
+            .cloned()
+            .collect();
+        let outputs: HashSet<usize> = dag
+            .get_tasks()
+            .iter()
+            .flat_map(|task| task.outputs.iter())
+            .cloned()
+            .collect();
+
         for task in tasks.into_iter() {
             let est = pred[task]
                 .iter()
@@ -180,6 +198,17 @@ impl Scheduler for HeftScheduler {
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
+                let cur_net_time = 1. / self.network.borrow().bandwidth(ctx.id(), resources[resource].id);
+                let input_load_time = dag
+                    .get_task(task)
+                    .inputs
+                    .iter()
+                    .filter(|f| !outputs.contains(f))
+                    .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
+                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .unwrap_or(0.);
+                let est = est.max(input_load_time);
+
                 let need_cores = dag.get_task(task).min_cores;
                 if resources[resource].compute.borrow().cores_total() < need_cores {
                     continue;
@@ -203,10 +232,10 @@ impl Scheduler for HeftScheduler {
                 for &possible_start in possible_starts.iter() {
                     for core in 0..resources[resource].cores_available as usize {
                         let next = scheduled_tasks[resource][core]
-                            .range((Excluded(ScheduledTask::new(possible_start, 0.)), Unbounded))
+                            .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))
                             .next();
                         let prev = scheduled_tasks[resource][core]
-                            .range((Unbounded, Included(ScheduledTask::new(possible_start, 0.))))
+                            .range((Unbounded, Included(ScheduledTask::new(possible_start, 0., 0))))
                             .next_back();
                         if let Some(scheduled_task) = prev {
                             if scheduled_task.end_time > possible_start {
@@ -246,9 +275,22 @@ impl Scheduler for HeftScheduler {
                 return Vec::new();
             }
 
+            log_debug!(
+                ctx,
+                "scheduling [heft] task {} on resource {} on cores {:?} on time {:.3}-{:.3}",
+                dag.get_task(task).name,
+                resources[best_resource].name,
+                best_cores,
+                best_finish - best_time,
+                best_finish
+            );
+
             for &core in best_cores.iter() {
-                scheduled_tasks[best_resource][core as usize]
-                    .insert(ScheduledTask::new(best_finish - best_time, best_finish));
+                scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
+                    best_finish - best_time,
+                    best_finish,
+                    task,
+                ));
             }
             eft[task] = best_finish;
             result.push((
@@ -266,11 +308,27 @@ impl Scheduler for HeftScheduler {
             "expected makespan: {:.3}",
             scheduled_tasks
                 .iter()
-                .map(|cores| cores
-                    .iter()
-                    .map(|schedule| schedule.iter().next_back().map_or(0., |task| task.end_time))
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
-                    .unwrap_or(0.))
+                .enumerate()
+                .map(|(resource, cores)| {
+                    let cur_net_time = 1. / self.network.borrow().bandwidth(resources[resource].id, ctx.id());
+                    cores
+                        .iter()
+                        .map(|schedule| {
+                            schedule.iter().next_back().map_or(0., |task| {
+                                task.end_time
+                                    + dag
+                                        .get_task(task.task)
+                                        .outputs
+                                        .iter()
+                                        .filter(|f| !inputs.contains(f))
+                                        .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
+                                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                                        .unwrap_or(0.)
+                            })
+                        })
+                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .unwrap_or(0.)
+                })
                 .max_by(|a, b| a.partial_cmp(&b).unwrap())
                 .unwrap_or(0.)
         );
