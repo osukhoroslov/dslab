@@ -37,7 +37,7 @@ impl VirtualMachine {
             start_time: 0.,
             cpu_load_model,
             memory_load_model,
-            sim_config: sim_config,
+            sim_config,
         }
     }
 

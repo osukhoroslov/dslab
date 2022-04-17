@@ -8,7 +8,7 @@ $ sqlite3 packing_trace_zone_a_v1.sqlite
 sqlite> .headers on
 sqlite> .mode csv
 sqlite> .output vm_instances.csv
-sqlite> SELECT vmId, vmTypeId, starttime, endtime FROM vm;
+sqlite> SELECT vmId, vmTypeId, starttime, endtime FROM vm ORDER BY starttime;
 sqlite> .quit
 ````
 3) Convert vmType table:

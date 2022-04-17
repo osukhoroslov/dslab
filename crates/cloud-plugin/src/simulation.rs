@@ -35,22 +35,20 @@ pub struct CloudSimulation {
 
 impl CloudSimulation {
     pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
-        let monitoring_id = "monitoring";
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
-        let monitoring_id_as_u32 = sim.add_handler(monitoring_id, monitoring.clone());
-        let placement_store_id = "placement_store";
+        let monitoring_id = sim.add_handler("monitoring", monitoring.clone());
         let placement_store = rc!(refcell!(PlacementStore::new(
             sim_config.allow_vm_overcommit,
-            sim.create_context(placement_store_id),
+            sim.create_context("placement_store"),
             sim_config.clone(),
         )));
-        let placement_store_id_as_u32 = sim.add_handler(placement_store_id, placement_store.clone());
+        let placement_store_id = sim.add_handler("placement_store", placement_store.clone());
         let ctx = sim.create_context("simulation");
         Self {
             monitoring,
-            monitoring_id: monitoring_id_as_u32,
+            monitoring_id: monitoring_id,
             placement_store,
-            placement_store_id: placement_store_id_as_u32,
+            placement_store_id,
             hosts: BTreeMap::new(),
             vms: BTreeMap::new(),
             allocations: HashMap::new(),
@@ -113,10 +111,10 @@ impl CloudSimulation {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
-        scheduler: u32,
+        scheduler_id: u32,
     ) {
         let alloc = Allocation {
-            id: id,
+            id,
             cpu_usage,
             memory_usage,
         };
@@ -125,13 +123,8 @@ impl CloudSimulation {
         self.vms.insert(id, vm.clone());
         self.allocations.insert(id, alloc.clone());
 
-        self.ctx.emit_now(
-            AllocationRequest {
-                alloc: alloc.clone(),
-                vm: vm.clone(),
-            },
-            scheduler,
-        );
+        self.ctx
+            .emit_now(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id);
     }
 
     pub fn spawn_vm_with_delay(
@@ -142,21 +135,21 @@ impl CloudSimulation {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
-        scheduler: u32,
+        scheduler_id: u32,
         delay: f64,
     ) {
-        self.ctx.emit(
-            AllocationRequest {
-                alloc: Allocation {
-                    id: id,
-                    cpu_usage,
-                    memory_usage,
-                },
-                vm: VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone()),
-            },
-            scheduler,
-            delay,
-        );
+        let alloc = Allocation {
+            id,
+            cpu_usage,
+            memory_usage,
+        };
+        let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
+
+        self.vms.insert(id, vm.clone());
+        self.allocations.insert(id, alloc.clone());
+
+        self.ctx
+            .emit(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id, delay);
     }
 
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, destination_host_id: u32) {

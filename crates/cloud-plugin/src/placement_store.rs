@@ -30,7 +30,7 @@ impl PlacementStore {
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
             ctx,
-            sim_config: sim_config,
+            sim_config,
         }
     }
 

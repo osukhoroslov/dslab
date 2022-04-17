@@ -93,7 +93,7 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
 
     for i in 0..10 {
         cloud_sim.spawn_vm_with_delay(
@@ -103,7 +103,7 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
             2.0,
             Box::new(ConstLoadModel::new(0.5)),
             Box::new(ConstLoadModel::new(0.5)),
-            s,
+            scheduler_id,
             i as f64,
         );
     }
@@ -127,7 +127,7 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     cloud_sim.spawn_vm_now(
         0,
@@ -136,7 +136,7 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
         20.0,
         Box::new(ConstLoadModel::new(0.5)),
         Box::new(ConstLoadModel::new(0.5)),
-        s,
+        scheduler_id,
     );
 
     cloud_sim.sleep_for(10.);

@@ -79,7 +79,7 @@ impl Monitoring {
             self.vm_locations.insert(vm_id, host_id);
         }
         for vm_id in previously_removed_vms {
-            if self.vm_locations.contains_key(&vm_id) {
+            if self.vm_locations.get(&vm_id) == Some(&host_id) {
                 self.vm_locations.remove(&vm_id);
             }
         }

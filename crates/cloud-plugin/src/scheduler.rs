@@ -43,7 +43,7 @@ impl Scheduler {
             monitoring,
             vm_placement_algorithm,
             ctx,
-            sim_config: sim_config,
+            sim_config,
         }
     }
 

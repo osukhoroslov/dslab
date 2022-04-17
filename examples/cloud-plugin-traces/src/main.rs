@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -13,13 +14,12 @@ use cloud_plugin::vm_placement_algorithm::FirstFit;
 use simcore::log_info;
 use simcore::simulation::Simulation;
 
-pub static HOST_CPU_CAPACITY: f64 = 1000.;
-pub static HOST_MEMORY_CAPACITY: f64 = 1000.;
-pub static SIMULATION_LENGTH: f64 = 100.;
-pub static NUMBER_OF_HOSTS: u32 = 1000;
-pub static MAX_VMS_IN_SIMULATION: u32 = 5000;
-pub static TIME_MARGIN: f64 = 7200.; // due to simulation begins ~7200 hours before the two weeks period
-pub static BLOCK_STEPS: u64 = 1000;
+pub static HOST_CPU_CAPACITY: f64 = 100.;
+pub static HOST_MEMORY_CAPACITY: f64 = 100.;
+pub static SIMULATION_LENGTH: f64 = 8640000 as f64; // 100 days in seconds
+pub static NUMBER_OF_HOSTS: u32 = 2000;
+pub static MAX_VMS_IN_SIMULATION: u32 = 10000;
+pub static BLOCK_STEPS: u64 = 10000;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -33,18 +33,22 @@ fn init_logger() {
 #[derive(Serialize, Deserialize, Debug)]
 struct VMType {
     id: String,
-    vmTypeId: String,
+    #[serde(rename = "vmTypeId")]
+    vm_type_id: String,
     core: f64,
     memory: f64,
 }
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 struct VMInstance {
-    vmId: u32,
-    vmTypeId: String,
-    starttime: f64,
-    endtime: Option<f64>,
+    #[serde(rename = "vmId")]
+    vm_id: u32,
+    #[serde(rename = "vmTypeId")]
+    vm_type_id: String,
+    #[serde(rename = "starttime")]
+    start_time: f64,
+    #[serde(rename = "endtime")]
+    end_time: Option<f64>,
 }
 
 struct SimulationDatacet {
@@ -76,18 +80,20 @@ impl SimulationDatacet {
         }
 
         let raw_vm = &self.vm_instances[self.current_vm];
-        let vm_params = self.vm_types.get(&raw_vm.vmTypeId).unwrap();
+        let start_time = raw_vm.start_time.max(0.) * 86400.;
+        let vm_params = self.vm_types.get(&raw_vm.vm_type_id).unwrap();
         let cpu_usage = (HOST_CPU_CAPACITY * vm_params.core) as u32;
         let memory_usage = (HOST_MEMORY_CAPACITY * vm_params.memory) as u64;
         self.current_vm += 1;
 
-        let lifetime = raw_vm.endtime.unwrap_or(SIMULATION_LENGTH) - raw_vm.starttime;
+        let end_time = raw_vm.end_time.unwrap_or(100.) * 86400.; // simulation length in days
+        let lifetime = end_time - start_time;
         Some(VMRequest {
-            id: raw_vm.vmId.clone(),
+            id: raw_vm.vm_id.clone(),
             cpu_usage,
             memory_usage,
             lifetime,
-            start_time: raw_vm.starttime,
+            start_time: start_time,
         })
     }
 }
@@ -98,7 +104,7 @@ fn parse_vm_types(file_name: &str) -> Result<HashMap<String, VMType>, Box<dyn Er
     let mut rdr = csv::Reader::from_reader(File::open(file_name)?);
     for record in rdr.deserialize() {
         let vm_type: VMType = record?;
-        result.insert(vm_type.vmTypeId.clone(), vm_type);
+        result.insert(vm_type.vm_type_id.clone(), vm_type);
     }
     Ok(result)
 }
@@ -116,7 +122,7 @@ fn parse_vm_instances(file_name: &str, instances_count: u32) -> Result<Vec<VMIns
         }
         result.push(vm_instance);
     }
-    result.sort_by(|a, b| a.starttime.partial_cmp(&b.starttime).unwrap());
+    result.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
     Ok(result)
 }
 
@@ -157,7 +163,7 @@ fn simulation_with_traces(
         let host_id = cloud_sim.add_host(host_name, HOST_CPU_CAPACITY as u32, HOST_MEMORY_CAPACITY as u64);
         hosts.push(host_id);
     }
-    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
     loop {
         let request_opt = dataset.get_next_vm();
@@ -173,8 +179,8 @@ fn simulation_with_traces(
             request.lifetime,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
-            s,
-            request.start_time + TIME_MARGIN,
+            scheduler_id,
+            request.start_time,
         );
     }
 
@@ -231,7 +237,7 @@ fn simulation_with_traces(
     log_info!(
         cloud_sim.context(),
         "Events per second {}",
-        cloud_sim.event_count() as u64 / simulation_start.elapsed().as_secs()
+        cloud_sim.event_count() as u64 / max(simulation_start.elapsed().as_secs(), 1)
     );
 }
 
