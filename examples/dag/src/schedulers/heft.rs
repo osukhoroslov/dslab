@@ -19,6 +19,11 @@ pub enum DataTransferMode {
     Direct,
 }
 
+pub enum DataTransferStrategy {
+    Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
+    Lazy,  // data transfer starts only when the destination node is ready to execute the task
+}
+
 impl DataTransferMode {
     fn net_time(&self, network: &dyn NetworkModel, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
@@ -70,6 +75,7 @@ impl Eq for ScheduledTask {}
 pub struct HeftScheduler {
     network: Rc<RefCell<dyn NetworkModel>>,
     data_transfer_mode: DataTransferMode,
+    data_transfer_strategy: DataTransferStrategy,
 }
 
 impl HeftScheduler {
@@ -77,11 +83,17 @@ impl HeftScheduler {
         HeftScheduler {
             network,
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            data_transfer_strategy: DataTransferStrategy::Eager,
         }
     }
 
     pub fn with_data_transfer_mode(mut self, data_transfer_mode: DataTransferMode) -> Self {
         self.data_transfer_mode = data_transfer_mode;
+        self
+    }
+
+    pub fn with_data_transfer_strategy(mut self, data_transfer_strategy: DataTransferStrategy) -> Self {
+        self.data_transfer_strategy = data_transfer_strategy;
         self
     }
 
@@ -142,6 +154,11 @@ impl Scheduler for HeftScheduler {
             })
             .sum::<f64>()
             / (resources.len() as f64).powf(2.);
+        let avg_upload_net_time = resources
+            .iter()
+            .map(|r| 1. / self.network.borrow().bandwidth(r.id, ctx.id()))
+            .sum::<f64>()
+            / resources.len() as f64;
 
         let total_tasks = dag.get_tasks().len();
 
@@ -188,11 +205,24 @@ impl Scheduler for HeftScheduler {
             .collect();
 
         for task in tasks.into_iter() {
-            let est = pred[task]
-                .iter()
-                .map(|&(task, weight)| eft[task] + weight * avg_net_time)
-                .max_by(|a, b| a.partial_cmp(&b).unwrap())
-                .unwrap_or(0.);
+            let est = match self.data_transfer_strategy {
+                DataTransferStrategy::Eager => pred[task]
+                    .iter()
+                    .map(|&(task, weight)| eft[task] + weight * avg_net_time)
+                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .unwrap_or(0.),
+                DataTransferStrategy::Lazy => pred[task]
+                    .iter()
+                    .map(|&(task, weight)| {
+                        let data_upload_time = match self.data_transfer_mode {
+                            DataTransferMode::ViaMasterNode => weight * avg_upload_net_time,
+                            DataTransferMode::Direct => 0.,
+                        };
+                        eft[task] + data_upload_time
+                    })
+                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .unwrap_or(0.),
+            };
 
             let mut best_finish = -1.;
             let mut best_time = -1.;
@@ -200,14 +230,17 @@ impl Scheduler for HeftScheduler {
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
                 let cur_net_time = 1. / self.network.borrow().bandwidth(ctx.id(), resources[resource].id);
-                let input_load_time = dag
-                    .get_task(task)
-                    .inputs
-                    .iter()
-                    .filter(|f| !outputs.contains(f))
-                    .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
-                    .unwrap_or(0.);
+                let input_load_time = match self.data_transfer_strategy {
+                    DataTransferStrategy::Eager => dag
+                        .get_task(task)
+                        .inputs
+                        .iter()
+                        .filter(|f| !outputs.contains(f))
+                        .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
+                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .unwrap_or(0.),
+                    DataTransferStrategy::Lazy => 0.,
+                };
                 let est = est.max(input_load_time);
 
                 let need_cores = dag.get_task(task).min_cores;
@@ -215,9 +248,29 @@ impl Scheduler for HeftScheduler {
                     continue;
                 }
 
+                let download_time = match self.data_transfer_strategy {
+                    DataTransferStrategy::Eager => 0.,
+                    DataTransferStrategy::Lazy => dag
+                        .get_task(task)
+                        .inputs
+                        .iter()
+                        .map(|&f| match self.data_transfer_mode {
+                            DataTransferMode::ViaMasterNode => dag.get_data_item(f).size as f64 * cur_net_time,
+                            DataTransferMode::Direct => {
+                                if outputs.contains(&f) {
+                                    dag.get_data_item(f).size as f64 * avg_net_time
+                                } else {
+                                    dag.get_data_item(f).size as f64 * cur_net_time
+                                }
+                            }
+                        })
+                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .unwrap_or(0.),
+                };
                 let time = dag.get_task(task).flops as f64
                     / resources[resource].speed as f64
-                    / dag.get_task(task).cores_dependency.speedup(need_cores);
+                    / dag.get_task(task).cores_dependency.speedup(need_cores)
+                    + download_time;
 
                 let mut possible_starts = scheduled_tasks[resource]
                     .iter()

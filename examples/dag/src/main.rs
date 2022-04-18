@@ -23,7 +23,7 @@ use dag::scheduler::Scheduler;
 use network::network::Network;
 use simcore::simulation::Simulation;
 
-use crate::schedulers::heft::{DataTransferMode, HeftScheduler};
+use crate::schedulers::heft::{DataTransferMode, DataTransferStrategy, HeftScheduler};
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 #[derive(ArgEnum, Clone, Debug)]
@@ -67,9 +67,9 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
         match ArgScheduler::from_str(matches.value_of("scheduler").unwrap(), true).unwrap() {
             ArgScheduler::Simple => rc!(refcell!(SimpleScheduler::new())),
             ArgScheduler::Heft => {
-                rc!(refcell!(
-                    HeftScheduler::new(network_model.clone()).with_data_transfer_mode(DataTransferMode::ViaMasterNode)
-                ))
+                rc!(refcell!(HeftScheduler::new(network_model.clone())
+                    .with_data_transfer_mode(DataTransferMode::ViaMasterNode)
+                    .with_data_transfer_strategy(DataTransferStrategy::Lazy)))
             }
         };
 
