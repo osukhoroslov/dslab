@@ -177,16 +177,16 @@ impl CloudSimulation {
         return self.sim.steps(step_count);
     }
 
+    pub fn step_for_duration(&mut self, time: f64) {
+        self.sim.step_for_duration(time);
+    }
+
     pub fn event_count(&self) -> u64 {
         return self.sim.event_count();
     }
 
     pub fn current_time(&mut self) -> f64 {
         return self.sim.time();
-    }
-
-    pub fn sleep_for(&mut self, time: f64) {
-        self.sim.step_for_duration(time);
     }
 
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {

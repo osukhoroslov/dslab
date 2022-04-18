@@ -139,7 +139,7 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
         scheduler_id,
     );
 
-    cloud_sim.sleep_for(10.);
+    cloud_sim.step_for_duration(10.);
     cloud_sim.migrate_vm_to_host(0, h2);
 
     cloud_sim.steps(300);

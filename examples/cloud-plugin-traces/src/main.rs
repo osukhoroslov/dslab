@@ -1,11 +1,10 @@
-use log::info;
-
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::process;
 use std::time::Instant;
 
+use log::info;
 use serde::{Deserialize, Serialize};
 
 use cloud_plugin::config::SimulationConfig;
@@ -15,11 +14,11 @@ use cloud_plugin::vm_placement_algorithm::FirstFit;
 use simcore::log_info;
 use simcore::simulation::Simulation;
 
+pub static NUMBER_OF_HOSTS: u32 = 3000;
 pub static HOST_CPU_CAPACITY: f64 = 1000000.;
 pub static HOST_MEMORY_CAPACITY: f64 = 1000000.;
-pub static SIMULATION_LENGTH: f64 = 8640.; // 100 days in seconds
-pub static NUMBER_OF_HOSTS: u32 = 3000;
-pub static BLOCK_STEPS: u64 = 10000;
+pub static SIMULATION_LENGTH: f64 = 8640.;
+pub static STEP_DURATION: f64 = 600.;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -192,7 +191,7 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
     let simulation_start = Instant::now();
 
     loop {
-        cloud_sim.steps(BLOCK_STEPS);
+        cloud_sim.step_for_duration(STEP_DURATION);
 
         let mut sum_cpu_load = 0.;
         let mut sum_memory_load = 0.;
@@ -217,7 +216,7 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
             sum_cpu_load / (hosts.len() as f64),
             sum_memory_load / (hosts.len() as f64)
         );
-        if cloud_sim.context().time() > SIMULATION_LENGTH {
+        if cloud_sim.current_time() > SIMULATION_LENGTH {
             break;
         }
     }
