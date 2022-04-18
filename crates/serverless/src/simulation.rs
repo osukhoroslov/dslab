@@ -5,7 +5,7 @@ use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Function, FunctionRegistry, Group};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, InvokerLogic};
-use crate::resource::ResourceProvider;
+use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::stats::Stats;
 
@@ -22,6 +22,7 @@ pub struct ServerlessSimulation {
     controller_handler_id: HandlerId,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     ctx: SimulationContext,
+    resource_name_resolver: ResourceNameResolver,
     sim: Simulation,
     stats: Rc<RefCell<Stats>>,
 }
@@ -54,9 +55,22 @@ impl ServerlessSimulation {
             controller_handler_id,
             function_registry: function_registry.clone(),
             ctx,
+            resource_name_resolver: Default::default(),
             sim,
             stats,
         }
+    }
+
+    pub fn try_resolve_resource_name(&self, name: &str) -> Option<usize> {
+        self.resource_name_resolver.try_resolve(name)
+    }
+
+    pub fn create_resource(&mut self, name: &str, available: u64) -> Resource {
+        Resource::new(self.resource_name_resolver.resolve(name), available)
+    }
+
+    pub fn create_resource_requirement(&mut self, name: &str, needed: u64) -> ResourceRequirement {
+        ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
     pub fn get_stats(&self) -> Stats {

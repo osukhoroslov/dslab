@@ -245,23 +245,12 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim, None, policy, None);
     for _ in 0..1000 {
-        serverless.new_invoker(
-            None,
-            ResourceProvider::new(HashMap::<String, Resource>::from([(
-                "mem".to_string(),
-                Resource::new("mem".to_string(), 4096 * 4),
-            )])),
-        );
+        let mem = serverless.create_resource("mem", 4096 * 4);
+        serverless.new_invoker(None, ResourceProvider::new(vec![mem]));
     }
     for group in trace.2.iter() {
-        serverless.new_group(Group::new(
-            16,
-            group.cold_start,
-            ResourceConsumer::new(HashMap::<String, ResourceRequirement>::from([(
-                "mem".to_string(),
-                ResourceRequirement::new("mem".to_string(), group.mem),
-            )])),
-        ));
+        let mem = serverless.create_resource_requirement("mem", group.mem);
+        serverless.new_group(Group::new(16, group.cold_start, ResourceConsumer::new(vec![mem])));
     }
     for func in trace.1.iter() {
         serverless.new_function(Function::new(func.group_id));
@@ -285,10 +274,7 @@ fn describe(stats: Stats, name: &str) {
         "cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
-    println!(
-        "wasted memory time = {}",
-        *stats.wasted_resource_time.get("mem").unwrap()
-    );
+    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
 }
 
 fn main() {

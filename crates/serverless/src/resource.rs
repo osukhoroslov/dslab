@@ -1,17 +1,37 @@
 use std::collections::HashMap;
 
+#[derive(Default)]
+pub struct ResourceNameResolver {
+    map: HashMap<String, usize>,
+}
+
+impl ResourceNameResolver {
+    pub fn try_resolve(&self, name: &str) -> Option<usize> {
+        self.map.get(name).copied()
+    }
+
+    pub fn resolve(&mut self, name: &str) -> usize {
+        if let Some(id) = self.try_resolve(name) {
+            id
+        } else {
+            let id = self.map.len();
+            self.map.insert(name.to_string(), id);
+            id
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Resource {
-    #[allow(dead_code)]
-    name: String,
+    id: usize,
     available: u64,
     consumed: u64,
 }
 
 impl Resource {
-    pub fn new(name: String, available: u64) -> Self {
+    pub fn new(id: usize, available: u64) -> Self {
         Self {
-            name,
+            id,
             available,
             consumed: 0,
         }
@@ -35,24 +55,28 @@ impl Resource {
 
 #[derive(Clone)]
 pub struct ResourceRequirement {
-    pub name: String,
+    pub id: usize,
     pub quantity: u64,
 }
 
 impl ResourceRequirement {
-    pub fn new(name: String, quantity: u64) -> Self {
-        Self { name, quantity }
+    pub fn new(id: usize, quantity: u64) -> Self {
+        Self { id, quantity }
     }
 }
 
 #[derive(Clone, Default)]
 pub struct ResourceProvider {
-    resources: HashMap<String, Resource>,
+    resources: HashMap<usize, Resource>,
 }
 
 impl ResourceProvider {
-    pub fn new(resources: HashMap<String, Resource>) -> Self {
-        Self { resources }
+    pub fn new(mut resources: Vec<Resource>) -> Self {
+        let mut map = HashMap::new();
+        for r in resources.drain(..) {
+            map.insert(r.id, r);
+        }
+        Self { resources: map }
     }
 
     pub fn new_empty() -> Self {
@@ -62,8 +86,8 @@ impl ResourceProvider {
     }
 
     pub fn can_allocate(&self, consumer: &ResourceConsumer) -> bool {
-        for (name, req) in consumer.iter() {
-            if let Some(resource) = self.resources.get(name) {
+        for (id, req) in consumer.iter() {
+            if let Some(resource) = self.resources.get(id) {
                 if !resource.can_allocate(req) {
                     return false;
                 }
@@ -75,26 +99,32 @@ impl ResourceProvider {
     }
 
     pub fn allocate(&mut self, consumer: &ResourceConsumer) {
-        for (name, req) in consumer.iter() {
-            self.resources.get_mut(name).unwrap().allocate(req);
+        for (id, req) in consumer.iter() {
+            self.resources.get_mut(id).unwrap().allocate(req);
         }
     }
 
     pub fn release(&mut self, consumer: &ResourceConsumer) {
-        for (name, req) in consumer.iter() {
-            self.resources.get_mut(name).unwrap().release(req);
+        for (id, req) in consumer.iter() {
+            self.resources.get_mut(id).unwrap().release(req);
         }
     }
 }
 
 #[derive(Clone, Default)]
 pub struct ResourceConsumer {
-    resources: HashMap<String, ResourceRequirement>,
+    resources: HashMap<usize, ResourceRequirement>,
 }
 
+type ResourceRequirementIterator<'a> = std::collections::hash_map::Iter<'a, usize, ResourceRequirement>;
+
 impl ResourceConsumer {
-    pub fn new(resources: HashMap<String, ResourceRequirement>) -> Self {
-        Self { resources }
+    pub fn new(mut resources: Vec<ResourceRequirement>) -> Self {
+        let mut map = HashMap::new();
+        for r in resources.drain(..) {
+            map.insert(r.id, r);
+        }
+        Self { resources: map }
     }
 
     pub fn new_empty() -> Self {
@@ -104,19 +134,6 @@ impl ResourceConsumer {
     }
 
     pub fn iter(&self) -> ResourceRequirementIterator<'_> {
-        ResourceRequirementIterator {
-            inner: self.resources.iter(),
-        }
-    }
-}
-
-pub struct ResourceRequirementIterator<'a> {
-    inner: std::collections::hash_map::Iter<'a, String, ResourceRequirement>,
-}
-
-impl<'a> Iterator for ResourceRequirementIterator<'a> {
-    type Item = (&'a String, &'a ResourceRequirement);
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next()
+        self.resources.iter()
     }
 }

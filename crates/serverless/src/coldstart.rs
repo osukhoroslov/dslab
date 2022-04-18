@@ -14,23 +14,26 @@ pub trait ColdStartPolicy {
 }
 
 pub struct FixedTimeColdStartPolicy {
-    keepalive: f64,
-    prewarm: f64,
+    keepalive_window: f64,
+    prewarm_window: f64,
 }
 
 impl FixedTimeColdStartPolicy {
-    pub fn new(keepalive: f64, prewarm: f64) -> Self {
-        Self { keepalive, prewarm }
+    pub fn new(keepalive_window: f64, prewarm_window: f64) -> Self {
+        Self {
+            keepalive_window,
+            prewarm_window,
+        }
     }
 }
 
 impl ColdStartPolicy for FixedTimeColdStartPolicy {
     fn keepalive_window(&mut self, _container: &Container) -> f64 {
-        self.keepalive
+        self.keepalive_window
     }
 
     fn prewarm_window(&mut self, _group: &Group) -> f64 {
-        self.prewarm
+        self.prewarm_window
     }
 
     fn update(&mut self, _invocation: &Invocation, _group: &Group) {}
