@@ -1,6 +1,11 @@
-mod simple_scheduler;
+mod schedulers;
 
+use std::cell::RefCell;
 use std::io::Write;
+use std::rc::Rc;
+use std::time::Instant;
+
+use clap::{command, Arg, ArgEnum};
 
 use sugars::{rc, refcell};
 
@@ -14,36 +19,90 @@ use dag::dag::DAG;
 use dag::network::load_network;
 use dag::resource::load_resources;
 use dag::runner::*;
+use dag::scheduler::Scheduler;
 use network::network::Network;
 use simcore::simulation::Simulation;
 
-use crate::simple_scheduler::SimpleScheduler;
+use crate::schedulers::heft::{DataTransferMode, DataTransferStrategy, HeftScheduler};
+use crate::schedulers::simple_scheduler::SimpleScheduler;
+
+#[derive(ArgEnum, Clone, Debug)]
+pub enum ArgScheduler {
+    Simple,
+    Heft,
+}
 
 fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let mut sim = Simulation::new(123);
 
     let resources = load_resources(resources_file, &mut sim);
 
-    let network = rc!(refcell!(Network::new(
-        load_network(network_file),
-        sim.create_context("net")
-    )));
+    let network_model = load_network(network_file);
+
+    let matches = command!()
+        .arg(
+            Arg::new("trace-log")
+                .long("trace-log")
+                .help("Save trace_log to file")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("scheduler")
+                .long("scheduler")
+                .help(
+                    format!(
+                        "Scheduler {}",
+                        format!("{:?}", ArgScheduler::value_variants()).to_lowercase()
+                    )
+                    .as_str(),
+                )
+                .validator(|s| ArgScheduler::from_str(s, true))
+                .default_value("heft")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let enable_trace_log = matches.is_present("trace-log");
+    let scheduler: Rc<RefCell<dyn Scheduler>> =
+        match ArgScheduler::from_str(matches.value_of("scheduler").unwrap(), true).unwrap() {
+            ArgScheduler::Simple => rc!(refcell!(SimpleScheduler::new())),
+            ArgScheduler::Heft => {
+                rc!(refcell!(HeftScheduler::new(network_model.clone())
+                    .with_data_transfer_mode(DataTransferMode::ViaMasterNode)
+                    .with_data_transfer_strategy(DataTransferStrategy::Lazy)))
+            }
+        };
+
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
 
-    let scheduler = SimpleScheduler::new();
     let runner = rc!(refcell!(DAGRunner::new(
         dag,
         network,
         resources,
         scheduler,
         sim.create_context("runner")
-    )));
+    )
+    .enable_trace_log(enable_trace_log)));
     let runner_id = sim.add_handler("runner", runner.clone());
 
     let mut client = sim.create_context("client");
     client.emit_now(Start {}, runner_id);
+
+    let t = Instant::now();
     sim.step_until_no_events();
-    runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+    println!(
+        "Processed {} events in {:.2?} ({:.0} events/sec)",
+        sim.event_count(),
+        t.elapsed(),
+        sim.event_count() as f64 / t.elapsed().as_secs_f64()
+    );
+    runner.borrow().validate_completed();
+    if enable_trace_log {
+        runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+    }
+
+    println!();
 }
 
 fn map_reduce() {

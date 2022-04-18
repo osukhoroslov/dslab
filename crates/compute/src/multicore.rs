@@ -35,6 +35,16 @@ pub enum CoresDependency {
     },
 }
 
+impl CoresDependency {
+    pub fn speedup(&self, cores: u32) -> f64 {
+        match self {
+            CoresDependency::Linear => cores as f64,
+            CoresDependency::LinearWithFixed { fixed_part } => 1. / (fixed_part + (1. - fixed_part) / cores as f64),
+            CoresDependency::Custom { func } => func(cores),
+        }
+    }
+}
+
 #[derive(Serialize, Debug)]
 pub enum FailReason {
     NotEnoughResources {
@@ -238,13 +248,7 @@ impl EventHandler for Compute {
                     self.cores_available -= cores;
                     self.ctx.emit_now(CompStarted { id: event.id, cores }, requester);
 
-                    let speedup = match cores_dependency {
-                        CoresDependency::Linear => cores as f64,
-                        CoresDependency::LinearWithFixed { fixed_part } => {
-                            1. / (fixed_part + (1. - fixed_part) / cores as f64)
-                        }
-                        CoresDependency::Custom { func } => func(cores),
-                    };
+                    let speedup = cores_dependency.speedup(cores);
 
                     let compute_time = flops as f64 / self.speed as f64 / speedup;
                     self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
