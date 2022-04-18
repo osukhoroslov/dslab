@@ -13,18 +13,19 @@ use dag::dag::DAG;
 use dag::scheduler::{Action, Scheduler};
 use dag::task::*;
 
-pub enum DataSendingPolicy {
-    ThroughRunner,
+pub enum DataTransferMode {
+    ViaMasterNode,
+    #[allow(dead_code)]
     Direct,
 }
 
-impl DataSendingPolicy {
+impl DataTransferMode {
     fn net_time(&self, network: &dyn NetworkModel, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
-            DataSendingPolicy::ThroughRunner => {
+            DataTransferMode::ViaMasterNode => {
                 1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
             }
-            DataSendingPolicy::Direct => 1. / network.bandwidth(src, dst),
+            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
         }
     }
 }
@@ -68,19 +69,19 @@ impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
     network: Rc<RefCell<dyn NetworkModel>>,
-    data_sending_policy: DataSendingPolicy,
+    data_transfer_mode: DataTransferMode,
 }
 
 impl HeftScheduler {
     pub fn new(network: Rc<RefCell<dyn NetworkModel>>) -> Self {
         HeftScheduler {
             network,
-            data_sending_policy: DataSendingPolicy::ThroughRunner,
+            data_transfer_mode: DataTransferMode::ViaMasterNode,
         }
     }
 
-    pub fn with_data_sending_policy(mut self, data_sending_policy: DataSendingPolicy) -> Self {
-        self.data_sending_policy = data_sending_policy;
+    pub fn with_data_transfer_mode(mut self, data_transfer_mode: DataTransferMode) -> Self {
+        self.data_transfer_mode = data_transfer_mode;
         self
     }
 
@@ -134,7 +135,7 @@ impl Scheduler for HeftScheduler {
                 resources
                     .iter()
                     .map(|r2| {
-                        self.data_sending_policy
+                        self.data_transfer_mode
                             .net_time(&*self.network.borrow(), r1.id, r2.id, ctx.id())
                     })
                     .sum::<f64>()
