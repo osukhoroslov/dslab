@@ -1,11 +1,8 @@
 use serverless::function::Group;
 use serverless::invocation::InvocationRequest;
-use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
+use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
-
 use simcore::simulation::Simulation;
-
-use std::collections::HashMap;
 
 fn main() {
     let sim = Simulation::new(1);

@@ -1,3 +1,9 @@
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+
+use simcore::context::SimulationContext;
+
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{Container, ContainerStatus};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
@@ -8,12 +14,6 @@ use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
 use crate::util::Counter;
-
-use simcore::context::SimulationContext;
-
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 
 pub struct Host {
     id: u64,

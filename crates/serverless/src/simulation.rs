@@ -1,3 +1,9 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use simcore::context::SimulationContext;
+use simcore::simulation::Simulation;
+
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::controller::Controller;
 use crate::deployer::{BasicDeployer, IdleDeployer};
@@ -8,12 +14,6 @@ use crate::invoker::{BasicInvoker, InvokerLogic};
 use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::stats::Stats;
-
-use simcore::context::SimulationContext;
-use simcore::simulation::Simulation;
-
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub type HandlerId = simcore::component::Id;
 

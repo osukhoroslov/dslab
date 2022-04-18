@@ -1,7 +1,7 @@
+use std::collections::HashMap;
+
 use crate::resource::ResourceConsumer;
 use crate::util::Counter;
-
-use std::collections::HashMap;
 
 // A group shares a common container image.
 // Functions from the same group can be executed

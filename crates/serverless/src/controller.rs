@@ -1,3 +1,12 @@
+use std::boxed::Box;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use simcore::cast;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
+
 use crate::coldstart::ColdStartPolicy;
 use crate::deployer::IdleDeployer;
 use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};
@@ -8,15 +17,6 @@ use crate::resource::ResourceProvider;
 use crate::scheduler::Scheduler;
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
-
-use simcore::cast;
-use simcore::event::Event;
-use simcore::handler::EventHandler;
-use simcore::simulation::Simulation;
-
-use std::boxed::Box;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct Controller {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,

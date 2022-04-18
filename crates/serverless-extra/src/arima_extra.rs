@@ -1,9 +1,8 @@
-use num::{Float, Num};
-
-use rand::prelude::*;
-
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div};
+
+use num::{Float, Num};
+use rand::prelude::*;
 
 // Copy-pasted from https://github.com/krfricke/arima/tree/master/src
 // because latest arima crate doesn't have these features yet

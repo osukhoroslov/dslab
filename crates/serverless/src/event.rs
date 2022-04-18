@@ -1,6 +1,6 @@
-use crate::invocation::InvocationRequest;
-
 use serde::ser::{Serialize, SerializeStruct, Serializer};
+
+use crate::invocation::InvocationRequest;
 
 pub struct ContainerEndEvent {
     pub id: u64,

@@ -1,8 +1,8 @@
-use crate::util::Counter;
+use std::collections::HashMap;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use std::collections::HashMap;
+use crate::util::Counter;
 
 #[derive(Copy, Clone, Debug)]
 pub struct InvocationRequest {

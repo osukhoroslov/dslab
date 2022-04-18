@@ -1,8 +1,8 @@
-use crate::function::Group;
-use crate::invoker::Invoker;
-
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use crate::function::Group;
+use crate::invoker::Invoker;
 
 /*
  * IdleDeployer chooses an invoker to deploy

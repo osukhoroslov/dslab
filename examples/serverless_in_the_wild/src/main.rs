@@ -1,25 +1,22 @@
-use csv::ReaderBuilder;
-
-use rand::prelude::*;
-use rand_pcg::Pcg64;
-
-use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use serverless::function::{Function, Group};
-use serverless::invocation::InvocationRequest;
-use serverless::resource::{Resource, ResourceConsumer, ResourceProvider, ResourceRequirement};
-use serverless::simulation::ServerlessSimulation;
-use serverless::stats::Stats;
-
-use serverless_extra::hybrid_histogram::HybridHistogramPolicy;
-
-use simcore::simulation::Simulation;
-
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
+
+use csv::ReaderBuilder;
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
+use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
+use serverless::function::{Function, Group};
+use serverless::invocation::InvocationRequest;
+use serverless::resource::{ResourceConsumer, ResourceProvider};
+use serverless::simulation::ServerlessSimulation;
+use serverless::stats::Stats;
+use serverless_extra::hybrid_histogram::HybridHistogramPolicy;
+use simcore::simulation::Simulation;
 
 #[derive(Default, Clone, Copy)]
 struct TraceRecord {

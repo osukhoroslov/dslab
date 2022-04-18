@@ -1,6 +1,6 @@
-use crate::resource::ResourceConsumer;
-
 use std::collections::HashMap;
+
+use crate::resource::ResourceConsumer;
 
 #[derive(Clone, Default)]
 pub struct Stats {

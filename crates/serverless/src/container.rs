@@ -1,7 +1,7 @@
+use std::collections::HashSet;
+
 use crate::resource::ResourceConsumer;
 use crate::util::Counter;
-
-use std::collections::HashSet;
 
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {

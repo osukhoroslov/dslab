@@ -1,4 +1,4 @@
-use crate::arima_extra::{arima_forecast, autofit};
+use std::collections::HashMap;
 
 use rand::prelude::*;
 
@@ -7,7 +7,7 @@ use serverless::container::Container;
 use serverless::function::Group;
 use serverless::invocation::Invocation;
 
-use std::collections::HashMap;
+use crate::arima_extra::{arima_forecast, autofit};
 
 const HEAD: f64 = 0.05;
 const TAIL: f64 = 0.99;
