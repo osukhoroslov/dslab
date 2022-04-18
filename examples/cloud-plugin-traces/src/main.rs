@@ -17,10 +17,9 @@ use simcore::simulation::Simulation;
 
 pub static HOST_CPU_CAPACITY: f64 = 1000000.;
 pub static HOST_MEMORY_CAPACITY: f64 = 1000000.;
-pub static SIMULATION_LENGTH: f64 = 8640 as f64; // 100 days in seconds
+pub static SIMULATION_LENGTH: f64 = 8640.; // 100 days in seconds
 pub static NUMBER_OF_HOSTS: u32 = 3000;
 pub static BLOCK_STEPS: u64 = 10000;
-pub static EPS: f64 = 0.000001;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -88,10 +87,6 @@ impl SimulationDatacet {
             let memory_usage = (HOST_MEMORY_CAPACITY * vm_params.memory) as u64;
             self.current_vm += 1;
 
-            if start_time <= EPS {
-                continue;
-            }
-
             let end_time = raw_vm
                 .end_time
                 .map(|t| t * 86400.)
@@ -127,8 +122,11 @@ fn parse_vm_instances(file_name: &str) -> Result<Vec<VMInstance>, Box<dyn Error>
     for record in rdr.deserialize() {
         let vm_instance: VMInstance = record?;
 
-        if vm_instance.start_time * 86400. > SIMULATION_LENGTH {
+        if vm_instance.start_time < 0. {
             continue;
+        }
+        if vm_instance.start_time * 86400. > SIMULATION_LENGTH {
+            break;
         }
         result.push(vm_instance);
     }
@@ -195,7 +193,6 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
         "Simulation init time: {:.2?}",
         initialization_start.elapsed()
     );
-    let mut current_block = 0;
     let simulation_start = Instant::now();
 
     loop {
@@ -212,7 +209,6 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
             sum_cpu_allocated += cloud_sim.host(*host_id).borrow().get_cpu_allocated();
             sum_memory_allocated += cloud_sim.host(*host_id).borrow().get_memory_allocated();
         }
-        current_block += 1;
 
         log_info!(
             ctx,
@@ -225,7 +221,7 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
             sum_cpu_load / (hosts.len() as f64),
             sum_memory_load / (hosts.len() as f64)
         );
-        if sum_cpu_load == 0. && current_block > 5 {
+        if cloud_sim.context().time() > SIMULATION_LENGTH {
             break;
         }
     }
@@ -242,7 +238,7 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
     );
     log_info!(
         cloud_sim.context(),
-        "Events per second {}",
+        "Events per second {:.0}",
         cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
     );
 }
