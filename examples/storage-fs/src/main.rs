@@ -161,14 +161,14 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk1 = rc!(refcell!(Disk::new(
+    let disk1 = rc!(refcell!(Disk::new_simple(
         DISK_1_CAPACITY,
         DISK_1_READ_BW,
         DISK_1_WRITE_BW,
         sim.create_context(DISK_1_NAME),
     )));
 
-    let disk2 = rc!(refcell!(Disk::new(
+    let disk2 = rc!(refcell!(Disk::new_simple(
         DISK_2_CAPACITY,
         DISK_2_READ_BW,
         DISK_2_WRITE_BW,

@@ -1,29 +1,46 @@
+use sugars::boxed;
+
 use simcore::component::Id;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
+use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 pub struct Disk {
     capacity: u64,
     used: u64,
-    read_bandwidth: u64,
-    write_bandwidth: u64,
+    read_bw_model: Box<dyn BWModel>,
+    write_bw_model: Box<dyn BWModel>,
     ready_time: f64,
     next_request_id: u64,
     ctx: SimulationContext,
 }
 
 impl Disk {
-    pub fn new(capacity: u64, read_bandwidth: u64, write_bandwidth: u64, ctx: SimulationContext) -> Self {
+    pub fn new(
+        capacity: u64,
+        read_bw_model: Box<dyn BWModel>,
+        write_bw_model: Box<dyn BWModel>,
+        ctx: SimulationContext,
+    ) -> Self {
         Self {
             capacity,
             used: 0,
-            read_bandwidth,
-            write_bandwidth,
+            read_bw_model,
+            write_bw_model,
             ready_time: 0.,
             next_request_id: 0,
             ctx,
         }
+    }
+
+    pub fn new_simple(capacity: u64, read_bandwidth: u64, write_bandwidth: u64, ctx: SimulationContext) -> Self {
+        Self::new(
+            capacity,
+            boxed!(ConstantBWModel::new(read_bandwidth)),
+            boxed!(ConstantBWModel::new(write_bandwidth)),
+            ctx,
+        )
     }
 
     fn get_unique_request_id(&mut self) -> u64 {
@@ -48,7 +65,9 @@ impl Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            let read_time = size as f64 / self.read_bandwidth as f64;
+            let bw = self.read_bw_model.get_bandwidth(size, &mut self.ctx);
+            log_debug!(self.ctx, "Read bandwidth: {}", bw);
+            let read_time = size as f64 / bw as f64;
             self.ready_time = self.ready_time.max(self.ctx.time()) + read_time;
             self.ctx.emit(
                 DataReadCompleted { request_id, size },
@@ -74,7 +93,9 @@ impl Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-            let write_time = size as f64 / self.write_bandwidth as f64;
+            let bw = self.write_bw_model.get_bandwidth(size, &mut self.ctx);
+            log_debug!(self.ctx, "Write bandwidth: {}", bw);
+            let write_time = size as f64 / bw as f64;
             self.ready_time = self.ready_time.max(self.ctx.time()) + write_time;
             self.ctx.emit(
                 DataWriteCompleted { request_id, size },

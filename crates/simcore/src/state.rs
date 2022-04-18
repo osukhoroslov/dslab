@@ -30,6 +30,10 @@ impl SimulationState {
         self.clock
     }
 
+    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
+        dist.sample(&mut self.rand)
+    }
+
     pub fn rand(&mut self) -> f64 {
         self.rand.gen_range(0.0..1.0)
     }

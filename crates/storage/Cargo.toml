@@ -7,3 +7,6 @@ edition = "2021"
 simcore = { path = "../simcore" }
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
+rand = "0.8.4"
+rand_pcg = "0.3.1"
+sugars = "3.0.0"
