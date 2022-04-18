@@ -87,11 +87,7 @@ impl SimulationDatacet {
             let memory_usage = (HOST_MEMORY_CAPACITY * vm_params.memory) as u64;
             self.current_vm += 1;
 
-            let end_time = raw_vm
-                .end_time
-                .map(|t| t * 86400.)
-                .unwrap_or(SIMULATION_LENGTH)
-                .min(SIMULATION_LENGTH);
+            let end_time = raw_vm.end_time.map(|t| t * 86400.).unwrap_or(SIMULATION_LENGTH);
             let lifetime = end_time - start_time;
             return Some(VMRequest {
                 id: raw_vm.vm_id.clone(),
