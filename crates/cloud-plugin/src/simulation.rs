@@ -46,7 +46,7 @@ impl CloudSimulation {
         let ctx = sim.create_context("simulation");
         Self {
             monitoring,
-            monitoring_id: monitoring_id,
+            monitoring_id,
             placement_store,
             placement_store_id,
             hosts: BTreeMap::new(),

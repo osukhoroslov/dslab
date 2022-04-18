@@ -1,4 +1,5 @@
-use std::cmp::max;
+use log::info;
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -14,12 +15,12 @@ use cloud_plugin::vm_placement_algorithm::FirstFit;
 use simcore::log_info;
 use simcore::simulation::Simulation;
 
-pub static HOST_CPU_CAPACITY: f64 = 100.;
-pub static HOST_MEMORY_CAPACITY: f64 = 100.;
-pub static SIMULATION_LENGTH: f64 = 8640000 as f64; // 100 days in seconds
-pub static NUMBER_OF_HOSTS: u32 = 2000;
-pub static MAX_VMS_IN_SIMULATION: u32 = 10000;
+pub static HOST_CPU_CAPACITY: f64 = 1000000.;
+pub static HOST_MEMORY_CAPACITY: f64 = 1000000.;
+pub static SIMULATION_LENGTH: f64 = 8640 as f64; // 100 days in seconds
+pub static NUMBER_OF_HOSTS: u32 = 3000;
 pub static BLOCK_STEPS: u64 = 10000;
+pub static EPS: f64 = 0.000001;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -75,26 +76,36 @@ impl SimulationDatacet {
     }
 
     pub fn get_next_vm(&mut self) -> Option<VMRequest> {
-        if self.current_vm >= self.vm_instances.len() {
-            return None;
+        loop {
+            if self.current_vm >= self.vm_instances.len() {
+                return None;
+            }
+
+            let raw_vm = &self.vm_instances[self.current_vm];
+            let start_time = raw_vm.start_time.max(0.) * 86400.;
+            let vm_params = self.vm_types.get(&raw_vm.vm_type_id).unwrap();
+            let cpu_usage = (HOST_CPU_CAPACITY * vm_params.core) as u32;
+            let memory_usage = (HOST_MEMORY_CAPACITY * vm_params.memory) as u64;
+            self.current_vm += 1;
+
+            if start_time <= EPS {
+                continue;
+            }
+
+            let end_time = raw_vm
+                .end_time
+                .map(|t| t * 86400.)
+                .unwrap_or(SIMULATION_LENGTH)
+                .min(SIMULATION_LENGTH);
+            let lifetime = end_time - start_time;
+            return Some(VMRequest {
+                id: raw_vm.vm_id.clone(),
+                cpu_usage,
+                memory_usage,
+                lifetime,
+                start_time,
+            });
         }
-
-        let raw_vm = &self.vm_instances[self.current_vm];
-        let start_time = raw_vm.start_time.max(0.) * 86400.;
-        let vm_params = self.vm_types.get(&raw_vm.vm_type_id).unwrap();
-        let cpu_usage = (HOST_CPU_CAPACITY * vm_params.core) as u32;
-        let memory_usage = (HOST_MEMORY_CAPACITY * vm_params.memory) as u64;
-        self.current_vm += 1;
-
-        let end_time = raw_vm.end_time.unwrap_or(100.) * 86400.; // simulation length in days
-        let lifetime = end_time - start_time;
-        Some(VMRequest {
-            id: raw_vm.vm_id.clone(),
-            cpu_usage,
-            memory_usage,
-            lifetime,
-            start_time: start_time,
-        })
     }
 }
 
@@ -109,24 +120,24 @@ fn parse_vm_types(file_name: &str) -> Result<HashMap<String, VMType>, Box<dyn Er
     Ok(result)
 }
 
-fn parse_vm_instances(file_name: &str, instances_count: u32) -> Result<Vec<VMInstance>, Box<dyn Error>> {
+fn parse_vm_instances(file_name: &str) -> Result<Vec<VMInstance>, Box<dyn Error>> {
     let mut result: Vec<VMInstance> = Vec::new();
 
     let mut rdr = csv::Reader::from_reader(File::open(file_name)?);
-    let mut count = 0;
     for record in rdr.deserialize() {
         let vm_instance: VMInstance = record?;
-        count += 1;
-        if count >= instances_count {
-            break;
+
+        if vm_instance.start_time * 86400. > SIMULATION_LENGTH {
+            continue;
         }
         result.push(vm_instance);
     }
-    result.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
+
+    info!("Got {} active VMs", result.len());
     Ok(result)
 }
 
-fn parse_dataset(vm_types_file_name: &str, vm_instances_file_name: &str, instnces_count: u32) -> SimulationDatacet {
+fn parse_dataset(vm_types_file_name: &str, vm_instances_file_name: &str) -> SimulationDatacet {
     let mut result = SimulationDatacet::new();
 
     let vm_types_or_error = parse_vm_types(vm_types_file_name);
@@ -136,7 +147,7 @@ fn parse_dataset(vm_types_file_name: &str, vm_instances_file_name: &str, instnce
     }
     result.vm_types = vm_types_or_error.unwrap();
 
-    let vm_instances_or_error = parse_vm_instances(vm_instances_file_name, instnces_count);
+    let vm_instances_or_error = parse_vm_instances(vm_instances_file_name);
     if vm_instances_or_error.is_err() {
         println!("error parsing VM instances: {}", vm_instances_or_error.err().unwrap());
         process::exit(1);
@@ -145,17 +156,12 @@ fn parse_dataset(vm_types_file_name: &str, vm_instances_file_name: &str, instnce
     result
 }
 
-fn simulation_with_traces(
-    vm_types_file_name: &str,
-    vm_instances_file_name: &str,
-    instnces_count: u32,
-    sim_config: SimulationConfig,
-) {
+fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str, sim_config: SimulationConfig) {
     let initialization_start = Instant::now();
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
-    let mut dataset = parse_dataset(vm_types_file_name, vm_instances_file_name, instnces_count);
+    let mut dataset = parse_dataset(vm_types_file_name, vm_instances_file_name);
 
     let mut hosts: Vec<u32> = Vec::new();
     for i in 1..NUMBER_OF_HOSTS {
@@ -237,17 +243,12 @@ fn simulation_with_traces(
     log_info!(
         cloud_sim.context(),
         "Events per second {}",
-        cloud_sim.event_count() as u64 / max(simulation_start.elapsed().as_secs(), 1)
+        cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
     );
 }
 
 fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
-    simulation_with_traces(
-        "vm_types.csv",
-        "vm_instances.csv",
-        MAX_VMS_IN_SIMULATION,
-        config.clone(),
-    );
+    simulation_with_traces("vm_types.csv", "vm_instances.csv", config.clone());
 }

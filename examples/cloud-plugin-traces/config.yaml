@@ -1,7 +1,7 @@
-send_stats_period: 10000.0
+send_stats_period: 10000
 message_delay: 0.0
-allocation_retry_period: 0.0007
-vm_start_duration: 0.0007
-vm_stop_duration: 0.0007
+allocation_retry_period: 60
+vm_start_duration: 120
+vm_stop_duration: 60
 allow_vm_overcommit: false
 network_throughput: 10
