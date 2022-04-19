@@ -13,34 +13,41 @@ pub mod allocation {
     }
 
     #[derive(Serialize)]
+    pub struct MigrationRequest {
+        pub source_host: u32,
+        pub alloc: Allocation,
+        pub vm: VirtualMachine,
+    }
+
+    #[derive(Serialize)]
     pub struct AllocationCommitRequest {
         pub alloc: Allocation,
         pub vm: VirtualMachine,
-        pub host_id: String,
+        pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitSucceeded {
         pub alloc: Allocation,
-        pub host_id: String,
+        pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitFailed {
         pub alloc: Allocation,
-        pub host_id: String,
+        pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationFailed {
         pub alloc: Allocation,
-        pub host_id: String,
+        pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationReleased {
         pub alloc: Allocation,
-        pub host_id: String,
+        pub host_id: u32,
     }
 
     #[derive(Serialize, Clone)]
@@ -74,8 +81,10 @@ pub mod monitoring {
 
     #[derive(Serialize)]
     pub struct HostStateUpdate {
-        pub host_id: String,
+        pub host_id: u32,
         pub cpu_load: f64,
         pub memory_load: f64,
+        pub previously_added_vms: Vec<u32>,
+        pub previously_removed_vms: Vec<u32>,
     }
 }
