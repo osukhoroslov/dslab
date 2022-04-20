@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use crate::resource::ResourceConsumer;
-use crate::util::Counter;
 
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {
@@ -17,14 +16,14 @@ pub struct Container {
     pub app_id: u64,
     pub invocations: HashSet<u64>,
     pub resources: ResourceConsumer,
-    pub started_invocations: Counter,
+    pub started_invocations: u64,
     pub last_change: f64,
 }
 
 impl Container {
     pub fn start_invocation(&mut self, id: u64) {
         self.invocations.insert(id);
-        self.started_invocations.next();
+        self.started_invocations += 1;
     }
 
     pub fn end_invocation(&mut self, id: u64, curr_time: f64) {

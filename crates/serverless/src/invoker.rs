@@ -28,10 +28,10 @@ pub enum InvocationStatus {
 }
 
 pub trait InvokerLogic {
-    // try to invoke some of the queued functions
+    /// try to invoke some of the queued functions
     fn dequeue(&mut self, host: &mut Host, queue: &mut InvocationQueue, time: f64);
 
-    // invoke or queue new invocation request
+    /// invoke or queue new invocation request
     fn invoke(
         &mut self,
         host: &mut Host,
@@ -41,11 +41,8 @@ pub trait InvokerLogic {
     ) -> InvocationStatus;
 }
 
-/*
- * Invoker handles invocations at host level.
- * It chooses containers for execution and deploys new containers.
- * It also manages host invocation queue.
- */
+/// Invoker handles invocations at host level.
+/// It chooses containers for execution, deploys new containers and manages invocation queue.
 pub struct Invoker {
     host: Host,
     logic: Box<dyn InvokerLogic>,

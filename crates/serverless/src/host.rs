@@ -93,7 +93,7 @@ impl Host {
             app_id: app.id,
             invocations: Default::default(),
             resources: app.get_resources().clone(),
-            started_invocations: Default::default(),
+            started_invocations: 0u64,
             last_change: time,
         };
         self.resources.allocate(&container.resources);
@@ -114,7 +114,7 @@ impl Host {
 
     pub fn end_container(&mut self, id: u64, expected: u64, time: f64) {
         if let Some(cont) = self.get_container(id) {
-            if cont.status == ContainerStatus::Idle && cont.started_invocations.curr() == expected {
+            if cont.status == ContainerStatus::Idle && cont.started_invocations == expected {
                 let delta = time - cont.last_change;
                 self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
                 self.delete_container(id);
@@ -137,7 +137,7 @@ impl Host {
             .update(invocation, self.function_registry.borrow().get_app(app_id).unwrap());
         let container = self.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
-        let expect = container.started_invocations.curr();
+        let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let prewarm = self.coldstart.borrow_mut().prewarm_window(app);

@@ -106,12 +106,9 @@ impl ServerlessSimulation {
         );
     }
 
-    // Simulation end event is useful in case
-    // you have a no-unloading policy and you
-    // want metrics like wasted resource time
-    // to be correct at the end of simulation
-    // (of course, you have to provide correct
-    // time)
+    /// Simulation end event is useful in case you have a no-unloading policy and you
+    /// want metrics like wasted resource time to be correct at the end of simulation
+    /// (of course, you have to provide correct time).
     pub fn set_simulation_end(&mut self, time: f64) {
         self.ctx
             .emit(SimulationEndEvent {}, self.controller_id, time - self.sim.time());
