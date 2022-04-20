@@ -11,7 +11,6 @@ use rand_pcg::Pcg64;
 
 use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use serverless::function::{Application, Function};
-use serverless::invocation::InvocationRequest;
 use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
 use serverless::stats::Stats;
@@ -253,11 +252,7 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
         serverless.add_function(Function::new(func.app_id));
     }
     for req in trace.0.iter() {
-        serverless.send_invocation_request(InvocationRequest {
-            id: req.id as u64,
-            duration: req.dur,
-            time: req.time,
-        });
+        serverless.send_invocation_request(req.id as u64, req.dur, req.time);
     }
     serverless.set_simulation_end(time_range);
     serverless.step_until_no_events();

@@ -19,7 +19,7 @@ pub type HandlerId = simcore::component::Id;
 
 pub struct ServerlessSimulation {
     controller: Rc<RefCell<Controller>>,
-    controller_handler_id: HandlerId,
+    controller_id: HandlerId,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     ctx: SimulationContext,
     resource_name_resolver: ResourceNameResolver,
@@ -49,10 +49,10 @@ impl ServerlessSimulation {
             real_scheduler,
             stats.clone(),
         )));
-        let controller_handler_id = sim.add_handler("controller", controller.clone());
+        let controller_id = sim.add_handler("controller", controller.clone());
         Self {
             controller,
-            controller_handler_id,
+            controller_id,
             function_registry: function_registry.clone(),
             ctx,
             resource_name_resolver: Default::default(),
@@ -81,7 +81,7 @@ impl ServerlessSimulation {
         let real_logic = logic.unwrap_or(Box::new(BasicInvoker {}));
         self.controller
             .borrow_mut()
-            .new_invoker(self.controller_handler_id, real_logic, resources, &mut self.sim)
+            .new_invoker(self.controller_id, real_logic, resources, &mut self.sim)
     }
 
     pub fn add_function(&mut self, f: Function) -> u64 {
@@ -96,10 +96,14 @@ impl ServerlessSimulation {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    pub fn send_invocation_request(&mut self, request: InvocationRequest) {
-        let time = request.time;
-        self.ctx
-            .emit(InvocationStartEvent { request }, self.controller_handler_id, time);
+    pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) {
+        self.ctx.emit(
+            InvocationStartEvent {
+                request: InvocationRequest { id, duration, time },
+            },
+            self.controller_id,
+            time - self.sim.time(),
+        );
     }
 
     // Simulation end event is useful in case
@@ -109,7 +113,8 @@ impl ServerlessSimulation {
     // (of course, you have to provide correct
     // time)
     pub fn set_simulation_end(&mut self, time: f64) {
-        self.ctx.emit(SimulationEndEvent {}, self.controller_handler_id, time);
+        self.ctx
+            .emit(SimulationEndEvent {}, self.controller_id, time - self.sim.time());
     }
 
     pub fn step(&mut self) -> bool {

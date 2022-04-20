@@ -1,5 +1,4 @@
 use serverless::function::Application;
-use serverless::invocation::InvocationRequest;
 use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
 use simcore::simulation::Simulation;
@@ -15,21 +14,9 @@ fn main() {
     let fast = serverless.add_app_with_single_function(Application::new(1, 1., ResourceConsumer::new(vec![fast_mem])));
     let slow_mem = serverless.create_resource_requirement("mem", 2);
     let slow = serverless.add_app_with_single_function(Application::new(1, 2., ResourceConsumer::new(vec![slow_mem])));
-    serverless.send_invocation_request(InvocationRequest {
-        id: fast,
-        duration: 1.0,
-        time: 0.,
-    });
-    serverless.send_invocation_request(InvocationRequest {
-        id: slow,
-        duration: 1.0,
-        time: 0.,
-    });
-    serverless.send_invocation_request(InvocationRequest {
-        id: slow,
-        duration: 1.0,
-        time: 3.1,
-    });
+    serverless.send_invocation_request(fast, 1.0, 0.0);
+    serverless.send_invocation_request(slow, 1.0, 0.0);
+    serverless.send_invocation_request(slow, 1.0, 3.1);
     serverless.step_until_no_events();
     let stats = serverless.get_stats();
     println!(
