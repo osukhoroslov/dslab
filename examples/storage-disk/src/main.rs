@@ -114,12 +114,12 @@ fn main() {
     let mut sim = Simulation::new(SEED);
 
     let points = [
-        (DISK_READ_BW - 2, 3),
-        (DISK_READ_BW - 1, 10),
+        (DISK_READ_BW - 20, 3),
+        (DISK_READ_BW - 10, 10),
         (DISK_READ_BW, 31),
-        (DISK_READ_BW + 1, 15),
-        (DISK_READ_BW + 2, 5),
-        (DISK_READ_BW + 3, 6),
+        (DISK_READ_BW + 10, 15),
+        (DISK_READ_BW + 20, 5),
+        (DISK_READ_BW + 30, 6),
     ];
     let model = EmpiricalBWModel::new(&points);
     assert!(model.is_ok());

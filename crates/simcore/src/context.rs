@@ -37,10 +37,6 @@ impl SimulationContext {
         self.sim_state.borrow().time()
     }
 
-    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
-        self.sim_state.borrow_mut().sample_from_distribution(dist)
-    }
-
     pub fn rand(&mut self) -> f64 {
         self.sim_state.borrow_mut().rand()
     }
@@ -51,6 +47,10 @@ impl SimulationContext {
         R: SampleRange<T>,
     {
         self.sim_state.borrow_mut().gen_range(range)
+    }
+
+    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
+        self.sim_state.borrow_mut().sample_from_distribution(dist)
     }
 
     pub fn emit<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
