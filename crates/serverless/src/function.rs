@@ -3,18 +3,18 @@ use std::collections::HashMap;
 use crate::resource::ResourceConsumer;
 use crate::util::Counter;
 
-// A group shares a common container image.
-// Functions from the same group can be executed
+// An application shares a common container image.
+// Functions from the same application can be executed
 // on the same container (limited by concurrent_invocations
 // field).
-pub struct Group {
+pub struct Application {
     pub id: u64,
     concurrent_invocations: usize,
     container_deployment_time: f64,
     container_resources: ResourceConsumer,
 }
 
-impl Group {
+impl Application {
     pub fn new(
         concurrent_invocations: usize,
         container_deployment_time: f64,
@@ -42,21 +42,21 @@ impl Group {
 }
 
 pub struct Function {
-    pub group_id: u64,
+    pub app_id: u64,
 }
 
 impl Function {
-    pub fn new(group_id: u64) -> Self {
-        Self { group_id }
+    pub fn new(app_id: u64) -> Self {
+        Self { app_id }
     }
 }
 
 #[derive(Default)]
 pub struct FunctionRegistry {
+    app_ctr: Counter,
+    apps: HashMap<u64, Application>,
     function_ctr: Counter,
     functions: HashMap<u64, Function>,
-    group_ctr: Counter,
-    groups: HashMap<u64, Group>,
 }
 
 impl FunctionRegistry {
@@ -64,25 +64,25 @@ impl FunctionRegistry {
         self.functions.get(&id)
     }
 
-    pub fn get_group(&self, id: u64) -> Option<&Group> {
-        self.groups.get(&id)
+    pub fn get_app(&self, id: u64) -> Option<&Application> {
+        self.apps.get(&id)
     }
 
-    pub fn new_function(&mut self, f: Function) -> u64 {
+    pub fn add_function(&mut self, f: Function) -> u64 {
         let id = self.function_ctr.next();
         self.functions.insert(id, f);
         id
     }
 
-    pub fn new_function_with_group(&mut self, g: Group) -> u64 {
-        let group_id = self.new_group(g);
-        self.new_function(Function::new(group_id))
+    pub fn add_app_with_single_function(&mut self, a: Application) -> u64 {
+        let app_id = self.add_app(a);
+        self.add_function(Function::new(app_id))
     }
 
-    pub fn new_group(&mut self, mut g: Group) -> u64 {
-        let id = self.group_ctr.next();
-        g.id = id;
-        self.groups.insert(id, g);
+    pub fn add_app(&mut self, mut a: Application) -> u64 {
+        let id = self.app_ctr.next();
+        a.id = id;
+        self.apps.insert(id, a);
         id
     }
 }

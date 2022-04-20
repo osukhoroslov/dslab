@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::function::Group;
+use crate::function::Application;
 use crate::invoker::Invoker;
 
 /*
@@ -9,7 +9,7 @@ use crate::invoker::Invoker;
  * new idle container on. Used for prewarm.
  */
 pub trait IdleDeployer {
-    fn deploy(&mut self, group: &Group, invokers: &Vec<Rc<RefCell<Invoker>>>) -> Option<usize>;
+    fn deploy(&mut self, app: &Application, invokers: &Vec<Rc<RefCell<Invoker>>>) -> Option<usize>;
 }
 
 // BasicDeployer deploys new container on
@@ -17,9 +17,9 @@ pub trait IdleDeployer {
 pub struct BasicDeployer {}
 
 impl IdleDeployer for BasicDeployer {
-    fn deploy(&mut self, group: &Group, invokers: &Vec<Rc<RefCell<Invoker>>>) -> Option<usize> {
+    fn deploy(&mut self, app: &Application, invokers: &Vec<Rc<RefCell<Invoker>>>) -> Option<usize> {
         for (i, invoker) in invokers.iter().enumerate() {
-            if invoker.borrow().can_allocate(group.get_resources()) {
+            if invoker.borrow().can_allocate(app.get_resources()) {
                 return Some(i);
             }
         }

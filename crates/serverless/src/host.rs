@@ -7,7 +7,7 @@ use simcore::context::SimulationContext;
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{Container, ContainerStatus};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
-use crate::function::{FunctionRegistry, Group};
+use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::InvocationStatus;
 use crate::resource::{ResourceConsumer, ResourceProvider};
@@ -19,7 +19,7 @@ pub struct Host {
     id: u64,
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     containers: HashMap<u64, Container>,
-    containers_by_group: HashMap<u64, HashSet<u64>>,
+    containers_by_app: HashMap<u64, HashSet<u64>>,
     container_counter: Counter,
     controller_handler_id: HandlerId,
     ctx: SimulationContext,
@@ -46,7 +46,7 @@ impl Host {
             id,
             coldstart,
             containers: Default::default(),
-            containers_by_group: Default::default(),
+            containers_by_app: Default::default(),
             container_counter: Default::default(),
             controller_handler_id,
             ctx,
@@ -63,8 +63,8 @@ impl Host {
         self.resources.can_allocate(resources)
     }
 
-    pub fn can_invoke(&self, group: &Group) -> bool {
-        self.get_possible_containers(group).next().is_some()
+    pub fn can_invoke(&self, app: &Application) -> bool {
+        self.get_possible_containers(app).next().is_some()
     }
 
     pub fn get_container(&self, id: u64) -> Option<&Container> {
@@ -75,43 +75,40 @@ impl Host {
         self.containers.get_mut(&id)
     }
 
-    pub fn get_possible_containers(&self, group: &Group) -> PossibleContainerIterator<'_> {
-        let id = group.id;
-        let limit = group.get_concurrent_invocations();
-        if let Some(set) = self.containers_by_group.get(&id) {
+    pub fn get_possible_containers(&self, app: &Application) -> PossibleContainerIterator<'_> {
+        let id = app.id;
+        let limit = app.get_concurrent_invocations();
+        if let Some(set) = self.containers_by_app.get(&id) {
             return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.reservations, limit);
         }
         PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit)
     }
 
-    pub fn deploy_container(&mut self, group: &Group, time: f64) -> u64 {
+    pub fn deploy_container(&mut self, app: &Application, time: f64) -> u64 {
         let cont_id = self.container_counter.next();
         let container = Container {
             status: ContainerStatus::Deploying,
             id: cont_id,
-            deployment_time: group.get_deployment_time(),
-            group_id: group.id,
+            deployment_time: app.get_deployment_time(),
+            app_id: app.id,
             invocations: Default::default(),
-            resources: group.get_resources().clone(),
+            resources: app.get_resources().clone(),
             started_invocations: Default::default(),
             last_change: time,
         };
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);
-        if !self.containers_by_group.contains_key(&group.id) {
-            self.containers_by_group.insert(group.id, HashSet::new());
+        if !self.containers_by_app.contains_key(&app.id) {
+            self.containers_by_app.insert(app.id, HashSet::new());
         }
-        self.containers_by_group.get_mut(&group.id).unwrap().insert(cont_id);
-        self.new_container_start_event(cont_id, group.get_deployment_time());
+        self.containers_by_app.get_mut(&app.id).unwrap().insert(cont_id);
+        self.new_container_start_event(cont_id, app.get_deployment_time());
         cont_id
     }
 
     pub fn delete_container(&mut self, id: u64) {
         let container = self.containers.remove(&id).unwrap();
-        self.containers_by_group
-            .get_mut(&container.group_id)
-            .unwrap()
-            .remove(&id);
+        self.containers_by_app.get_mut(&container.app_id).unwrap().remove(&id);
         self.resources.release(&container.resources);
     }
 
@@ -134,18 +131,18 @@ impl Host {
         let invocation = invocation_registry.get_invocation(id).unwrap();
         let func_id = invocation.request.id;
         let cont_id = invocation.container_id;
-        let group_id = function_registry.get_function(func_id).unwrap().group_id;
+        let app_id = function_registry.get_function(func_id).unwrap().app_id;
         self.coldstart
             .borrow_mut()
-            .update(invocation, self.function_registry.borrow().get_group(group_id).unwrap());
+            .update(invocation, self.function_registry.borrow().get_app(app_id).unwrap());
         let container = self.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         let expect = container.started_invocations.curr();
-        let group = function_registry.get_group(group_id).unwrap();
+        let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
-            let prewarm = self.coldstart.borrow_mut().prewarm_window(group);
+            let prewarm = self.coldstart.borrow_mut().prewarm_window(app);
             if prewarm != 0. {
-                self.new_idle_deploy_event(group_id, prewarm);
+                self.new_idle_deploy_event(app_id, prewarm);
                 self.new_container_end_event(cont_id, expect, 0.0);
             } else {
                 let immut_container = self.get_container(cont_id).unwrap();
@@ -171,9 +168,9 @@ impl Host {
         );
     }
 
-    pub fn new_idle_deploy_event(&mut self, group_id: u64, prewarm: f64) {
+    pub fn new_idle_deploy_event(&mut self, app_id: u64, prewarm: f64) {
         self.ctx
-            .emit(IdleDeployEvent { id: group_id }, self.controller_handler_id, prewarm);
+            .emit(IdleDeployEvent { id: app_id }, self.controller_handler_id, prewarm);
     }
 
     pub fn new_invocation_end_event(&mut self, id: u64, delay: f64) {
@@ -245,10 +242,10 @@ impl Host {
         self.new_invocation_end_event(inv_id, request.duration);
     }
 
-    pub fn try_deploy(&mut self, group: &Group, time: f64) -> Option<(u64, f64)> {
-        if self.resources.can_allocate(group.get_resources()) {
-            let id = self.deploy_container(group, time);
-            return Some((id, group.get_deployment_time()));
+    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
+        if self.resources.can_allocate(app.get_resources()) {
+            let id = self.deploy_container(app, time);
+            return Some((id, app.get_deployment_time()));
         }
         None
     }

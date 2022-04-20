@@ -10,7 +10,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 
 use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use serverless::function::{Function, Group};
+use serverless::function::{Application, Function};
 use serverless::invocation::InvocationRequest;
 use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
@@ -27,16 +27,16 @@ struct TraceRecord {
 
 #[derive(Default, Clone, Copy)]
 struct FunctionRecord {
-    pub group_id: u64,
+    pub app_id: u64,
 }
 
 #[derive(Default, Clone, Copy)]
-struct GroupRecord {
+struct ApplicationRecord {
     pub mem: u64,
     pub cold_start: f64,
 }
 
-type Trace = (Vec<TraceRecord>, Vec<FunctionRecord>, Vec<GroupRecord>);
+type Trace = (Vec<TraceRecord>, Vec<FunctionRecord>, Vec<ApplicationRecord>);
 
 fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
     let p = gen.gen_range(0.0..1.0);
@@ -216,10 +216,10 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             }
         }
     }
-    let mut groups: Vec<GroupRecord> = vec![Default::default(); app_data.len()];
+    let mut apps: Vec<ApplicationRecord> = vec![Default::default(); app_data.len()];
     let mut funcs: Vec<FunctionRecord> = vec![Default::default(); fn_id.len()];
     for (_, data) in app_data.iter() {
-        groups[data.0] = GroupRecord {
+        apps[data.0] = ApplicationRecord {
             mem: data.2,
             cold_start: data.1,
         };
@@ -227,11 +227,11 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     for (name, id) in fn_id.iter() {
         let app = app_id(name);
         funcs[*id] = FunctionRecord {
-            group_id: app_data.get(&app).unwrap().0 as u64,
+            app_id: app_data.get(&app).unwrap().0 as u64,
         };
     }
     trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.partial_cmp(&y.time).unwrap());
-    (trace, funcs, groups)
+    (trace, funcs, apps)
 }
 
 fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) -> Stats {
@@ -245,12 +245,12 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
         let mem = serverless.create_resource("mem", 4096 * 4);
         serverless.new_invoker(None, ResourceProvider::new(vec![mem]));
     }
-    for group in trace.2.iter() {
-        let mem = serverless.create_resource_requirement("mem", group.mem);
-        serverless.new_group(Group::new(16, group.cold_start, ResourceConsumer::new(vec![mem])));
+    for app in trace.2.iter() {
+        let mem = serverless.create_resource_requirement("mem", app.mem);
+        serverless.add_app(Application::new(16, app.cold_start, ResourceConsumer::new(vec![mem])));
     }
     for func in trace.1.iter() {
-        serverless.new_function(Function::new(func.group_id));
+        serverless.add_function(Function::new(func.app_id));
     }
     for req in trace.0.iter() {
         serverless.send_invocation_request(InvocationRequest {

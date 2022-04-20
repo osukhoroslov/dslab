@@ -14,7 +14,7 @@ pub struct Container {
     pub status: ContainerStatus,
     pub id: u64,
     pub deployment_time: f64,
-    pub group_id: u64,
+    pub app_id: u64,
     pub invocations: HashSet<u64>,
     pub resources: ResourceConsumer,
     pub started_invocations: Counter,

@@ -1,5 +1,5 @@
 use crate::container::Container;
-use crate::function::Group;
+use crate::function::Application;
 use crate::invocation::Invocation;
 
 pub trait ColdStartPolicy {
@@ -7,10 +7,10 @@ pub trait ColdStartPolicy {
     fn keepalive_window(&mut self, container: &Container) -> f64;
     // prewarm = x > 0 => destroy container, deploy new container after x time units since execution
     // prewarm = 0 => do not destroy container immediately after execution
-    fn prewarm_window(&mut self, group: &Group) -> f64;
+    fn prewarm_window(&mut self, app: &Application) -> f64;
     // this function allows tuning policy
     // on finished invocations
-    fn update(&mut self, invocation: &Invocation, group: &Group);
+    fn update(&mut self, invocation: &Invocation, app: &Application);
 }
 
 pub struct FixedTimeColdStartPolicy {
@@ -32,9 +32,9 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
         self.keepalive_window
     }
 
-    fn prewarm_window(&mut self, _group: &Group) -> f64 {
+    fn prewarm_window(&mut self, _app: &Application) -> f64 {
         self.prewarm_window
     }
 
-    fn update(&mut self, _invocation: &Invocation, _group: &Group) {}
+    fn update(&mut self, _invocation: &Invocation, _app: &Application) {}
 }

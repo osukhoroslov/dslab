@@ -48,19 +48,19 @@ impl Controller {
         }
     }
 
-    fn idle_deploy(&mut self, group_id: u64, time: f64) {
+    fn idle_deploy(&mut self, app_id: u64, time: f64) {
         let reg = self.function_registry.borrow();
-        let group = reg.get_group(group_id).unwrap();
-        if let Some(invoker) = self.idle_deployer.deploy(group, &mut self.invokers) {
-            self.invokers[invoker].borrow_mut().try_deploy(group, time);
+        let app = reg.get_app(app_id).unwrap();
+        if let Some(invoker) = self.idle_deployer.deploy(app, &mut self.invokers) {
+            self.invokers[invoker].borrow_mut().try_deploy(app, time);
         }
     }
 
     fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
         let reg = self.function_registry.borrow();
-        let group_id = reg.get_function(request.id).unwrap().group_id;
-        let group = reg.get_group(group_id).unwrap();
-        let invoker = self.scheduler.select_invoker(group, &self.invokers);
+        let app_id = reg.get_function(request.id).unwrap().app_id;
+        let app = reg.get_app(app_id).unwrap();
+        let invoker = self.scheduler.select_invoker(app, &self.invokers);
         self.invokers[invoker].borrow_mut().invoke(request, time)
     }
 

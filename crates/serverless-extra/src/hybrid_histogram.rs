@@ -4,7 +4,7 @@ use rand::prelude::*;
 
 use serverless::coldstart::ColdStartPolicy;
 use serverless::container::Container;
-use serverless::function::Group;
+use serverless::function::Application;
 use serverless::invocation::Invocation;
 
 use crate::arima_extra::{arima_forecast, autofit};
@@ -12,7 +12,7 @@ use crate::arima_extra::{arima_forecast, autofit};
 const HEAD: f64 = 0.05;
 const TAIL: f64 = 0.99;
 
-struct GroupData {
+struct ApplicationData {
     pub cv: f64,
     pub bin_len: f64,
     pub bins: Vec<usize>,
@@ -22,7 +22,7 @@ struct GroupData {
     pub raw: Vec<f64>,
 }
 
-impl GroupData {
+impl ApplicationData {
     pub fn new(n_bins: usize, bin_len: f64) -> Self {
         Self {
             cv: 0.0,
@@ -116,7 +116,7 @@ pub struct HybridHistogramPolicy {
     cv_thr: f64,
     oob_thr: f64,
     n_bins: usize,
-    data: HashMap<u64, GroupData>,
+    data: HashMap<u64, ApplicationData>,
     last: HashMap<u64, f64>,
 }
 
@@ -142,10 +142,10 @@ impl HybridHistogramPolicy {
         }
     }
 
-    fn describe_pattern(&mut self, group_id: u64) -> Pattern {
+    fn describe_pattern(&mut self, app_id: u64) -> Pattern {
         let cv_thr = self.cv_thr;
         let oob_thr = self.oob_thr;
-        let data = self.get_group(group_id);
+        let data = self.get_app(app_id);
         if data.oob_rate() >= oob_thr {
             Pattern::OOB
         } else if data.cv < cv_thr {
@@ -155,16 +155,16 @@ impl HybridHistogramPolicy {
         }
     }
 
-    fn get_group(&mut self, id: u64) -> &GroupData {
+    fn get_app(&mut self, id: u64) -> &ApplicationData {
         if !self.data.contains_key(&id) {
-            self.data.insert(id, GroupData::new(self.n_bins, self.bin_len));
+            self.data.insert(id, ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get(&id).unwrap()
     }
 
-    fn get_group_mut(&mut self, id: u64) -> &mut GroupData {
+    fn get_app_mut(&mut self, id: u64) -> &mut ApplicationData {
         if !self.data.contains_key(&id) {
-            self.data.insert(id, GroupData::new(self.n_bins, self.bin_len));
+            self.data.insert(id, ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get_mut(&id).unwrap()
     }
@@ -172,32 +172,32 @@ impl HybridHistogramPolicy {
 
 impl ColdStartPolicy for HybridHistogramPolicy {
     fn keepalive_window(&mut self, container: &Container) -> f64 {
-        match self.describe_pattern(container.group_id) {
+        match self.describe_pattern(container.app_id) {
             Pattern::Uncertain => self.range,
             Pattern::Certain => {
-                let tail = 1 + self.get_group(container.group_id).get_tail();
+                let tail = 1 + self.get_app(container.app_id).get_tail();
                 (tail as f64) * self.bin_len * (1. + self.hist_margin)
             }
-            Pattern::OOB => self.get_group(container.group_id).arima() * self.arima_margin * 2.,
+            Pattern::OOB => self.get_app(container.app_id).arima() * self.arima_margin * 2.,
         }
     }
 
-    fn prewarm_window(&mut self, group: &Group) -> f64 {
-        match self.describe_pattern(group.id) {
+    fn prewarm_window(&mut self, app: &Application) -> f64 {
+        match self.describe_pattern(app.id) {
             Pattern::Uncertain => 0.0,
             Pattern::Certain => {
-                let head = self.get_group(group.id).get_head();
+                let head = self.get_app(app.id).get_head();
                 (head as f64) * self.bin_len * (1. - self.hist_margin)
             }
-            Pattern::OOB => self.get_group(group.id).arima() * (1. - self.arima_margin),
+            Pattern::OOB => self.get_app(app.id).arima() * (1. - self.arima_margin),
         }
     }
 
-    fn update(&mut self, invocation: &Invocation, group: &Group) {
+    fn update(&mut self, invocation: &Invocation, app: &Application) {
         let fn_id = invocation.request.id;
         if let Some(old) = self.last.get(&fn_id) {
             let it = f64::max(0.0, invocation.request.time - old);
-            self.get_group_mut(group.id).update(it);
+            self.get_app_mut(app.id).update(it);
         }
         self.last.insert(fn_id, invocation.finished.unwrap());
     }

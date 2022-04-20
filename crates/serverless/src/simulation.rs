@@ -8,7 +8,7 @@ use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::controller::Controller;
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
-use crate::function::{Function, FunctionRegistry, Group};
+use crate::function::{Application, Function, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, InvokerLogic};
 use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
@@ -84,16 +84,16 @@ impl ServerlessSimulation {
             .new_invoker(self.controller_handler_id, real_logic, resources, &mut self.sim)
     }
 
-    pub fn new_function(&mut self, f: Function) -> u64 {
-        self.function_registry.borrow_mut().new_function(f)
+    pub fn add_function(&mut self, f: Function) -> u64 {
+        self.function_registry.borrow_mut().add_function(f)
     }
 
-    pub fn new_function_with_group(&mut self, g: Group) -> u64 {
-        self.function_registry.borrow_mut().new_function_with_group(g)
+    pub fn add_app_with_single_function(&mut self, app: Application) -> u64 {
+        self.function_registry.borrow_mut().add_app_with_single_function(app)
     }
 
-    pub fn new_group(&mut self, g: Group) -> u64 {
-        self.function_registry.borrow_mut().new_group(g)
+    pub fn add_app(&mut self, app: Application) -> u64 {
+        self.function_registry.borrow_mut().add_app(app)
     }
 
     pub fn send_invocation_request(&mut self, request: InvocationRequest) {

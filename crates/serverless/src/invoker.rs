@@ -10,7 +10,7 @@ use simcore::simulation::Simulation;
 use crate::coldstart::ColdStartPolicy;
 use crate::container::ContainerStatus;
 use crate::event::{ContainerEndEvent, ContainerStartEvent, InvocationEndEvent};
-use crate::function::{FunctionRegistry, Group};
+use crate::function::{Application, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::resource::{ResourceConsumer, ResourceProvider};
@@ -86,8 +86,8 @@ impl Invoker {
         self.host.can_allocate(resources)
     }
 
-    pub fn can_invoke(&self, group: &Group) -> bool {
-        self.host.can_invoke(group)
+    pub fn can_invoke(&self, app: &Application) -> bool {
+        self.host.can_invoke(app)
     }
 
     pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
@@ -98,8 +98,8 @@ impl Invoker {
         self.host.invoker_handler_id = handler_id;
     }
 
-    pub fn try_deploy(&mut self, group: &Group, time: f64) -> Option<(u64, f64)> {
-        self.host.try_deploy(group, time)
+    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
+        self.host.try_deploy(app, time)
     }
 
     pub fn update_end_metrics(&mut self, time: f64) {
@@ -131,11 +131,11 @@ impl BasicInvoker {
     fn try_invoke_inner(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
         let fr = host.function_registry.clone();
         let function_registry = fr.borrow();
-        let group_id = function_registry.get_function(request.id).unwrap().group_id;
-        let group = function_registry.get_group(group_id).unwrap();
+        let app_id = function_registry.get_function(request.id).unwrap().app_id;
+        let app = function_registry.get_app(app_id).unwrap();
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
-        for c in host.get_possible_containers(group) {
+        for c in host.get_possible_containers(app) {
             let delay = if c.status == ContainerStatus::Deploying {
                 c.deployment_time + c.last_change - time
             } else {
@@ -153,7 +153,7 @@ impl BasicInvoker {
                 return InvocationStatus::Cold((id, wait));
             }
         }
-        if let Some((id, delay)) = host.try_deploy(group, time) {
+        if let Some((id, delay)) = host.try_deploy(app, time) {
             return InvocationStatus::Cold((id, delay));
         }
         return InvocationStatus::Rejected;

@@ -1,4 +1,4 @@
-use serverless::function::Group;
+use serverless::function::Application;
 use serverless::invocation::InvocationRequest;
 use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
@@ -12,9 +12,9 @@ fn main() {
         serverless.new_invoker(None, ResourceProvider::new(vec![mem]));
     }
     let fast_mem = serverless.create_resource_requirement("mem", 1);
-    let fast = serverless.new_function_with_group(Group::new(1, 1., ResourceConsumer::new(vec![fast_mem])));
+    let fast = serverless.add_app_with_single_function(Application::new(1, 1., ResourceConsumer::new(vec![fast_mem])));
     let slow_mem = serverless.create_resource_requirement("mem", 2);
-    let slow = serverless.new_function_with_group(Group::new(1, 2., ResourceConsumer::new(vec![slow_mem])));
+    let slow = serverless.add_app_with_single_function(Application::new(1, 2., ResourceConsumer::new(vec![slow_mem])));
     serverless.send_invocation_request(InvocationRequest {
         id: fast,
         duration: 1.0,
