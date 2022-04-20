@@ -1,16 +1,16 @@
 #[derive(Default)]
 pub struct Counter {
-    body: u64,
+    value: u64,
 }
 
 impl Counter {
     pub fn curr(&self) -> u64 {
-        self.body
+        self.value
     }
 
     pub fn next(&mut self) -> u64 {
-        let id = self.body;
-        self.body += 1;
-        id
+        let curr = self.value;
+        self.value += 1;
+        curr
     }
 }

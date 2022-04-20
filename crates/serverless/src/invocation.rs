@@ -1,27 +1,14 @@
 use std::collections::HashMap;
 
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde::Serialize;
 
 use crate::util::Counter;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub struct InvocationRequest {
     pub id: u64,
     pub duration: f64,
     pub time: f64,
-}
-
-impl Serialize for InvocationRequest {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("InvocationRequest", 3)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("duration", &self.duration)?;
-        state.serialize_field("time", &self.time)?;
-        state.end()
-    }
 }
 
 #[derive(Copy, Clone)]

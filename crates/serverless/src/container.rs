@@ -22,16 +22,16 @@ pub struct Container {
 }
 
 impl Container {
+    pub fn start_invocation(&mut self, id: u64) {
+        self.invocations.insert(id);
+        self.started_invocations.next();
+    }
+
     pub fn end_invocation(&mut self, id: u64, curr_time: f64) {
         self.last_change = curr_time;
         self.invocations.remove(&id);
         if self.invocations.is_empty() {
             self.status = ContainerStatus::Idle;
         }
-    }
-
-    pub fn start_invocation(&mut self, id: u64) {
-        self.invocations.insert(id);
-        self.started_invocations.next();
     }
 }

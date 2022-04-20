@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
 use crate::resource::ResourceConsumer;
-use crate::util::Counter;
 
 // An application shares a common container image.
 // Functions from the same application can be executed
@@ -53,25 +50,33 @@ impl Function {
 
 #[derive(Default)]
 pub struct FunctionRegistry {
-    app_ctr: Counter,
-    apps: HashMap<u64, Application>,
-    function_ctr: Counter,
-    functions: HashMap<u64, Function>,
+    apps: Vec<Application>,
+    functions: Vec<Function>,
 }
 
 impl FunctionRegistry {
     pub fn get_function(&self, id: u64) -> Option<&Function> {
-        self.functions.get(&id)
+        let pos = id as usize;
+        if pos < self.functions.len() {
+            Some(&self.functions[pos])
+        } else {
+            None
+        }
     }
 
     pub fn get_app(&self, id: u64) -> Option<&Application> {
-        self.apps.get(&id)
+        let pos = id as usize;
+        if pos < self.apps.len() {
+            Some(&self.apps[pos])
+        } else {
+            None
+        }
     }
 
     pub fn add_function(&mut self, f: Function) -> u64 {
-        let id = self.function_ctr.next();
-        self.functions.insert(id, f);
-        id
+        let id = self.functions.len();
+        self.functions.push(f);
+        id as u64
     }
 
     pub fn add_app_with_single_function(&mut self, a: Application) -> u64 {
@@ -80,9 +85,9 @@ impl FunctionRegistry {
     }
 
     pub fn add_app(&mut self, mut a: Application) -> u64 {
-        let id = self.app_ctr.next();
+        let id = self.apps.len() as u64;
         a.id = id;
-        self.apps.insert(id, a);
+        self.apps.push(a);
         id
     }
 }
