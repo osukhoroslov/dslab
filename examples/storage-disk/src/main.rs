@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use env_logger::Builder;
 use serde::Serialize;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
 use simcore::cast;
 use simcore::context::SimulationContext;
@@ -14,6 +14,7 @@ use simcore::handler::EventHandler;
 use simcore::log_debug;
 use simcore::simulation::Simulation;
 
+use storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel};
 use storage::disk::Disk;
 use storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
@@ -112,10 +113,21 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
+    let points = [
+        (DISK_READ_BW - 20, 3),
+        (DISK_READ_BW - 10, 10),
+        (DISK_READ_BW, 31),
+        (DISK_READ_BW + 10, 15),
+        (DISK_READ_BW + 20, 5),
+        (DISK_READ_BW + 30, 6),
+    ];
+    let model = EmpiricalBWModel::new(&points);
+    assert!(model.is_ok());
+
     let disk = rc!(refcell!(Disk::new(
         DISK_CAPACITY,
-        DISK_READ_BW,
-        DISK_WRITE_BW,
+        boxed!(model.unwrap()),
+        boxed!(make_uniform_bw_model(DISK_WRITE_BW - 10, DISK_WRITE_BW + 10)),
         sim.create_context(DISK_NAME),
     )));
 

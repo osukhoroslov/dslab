@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
+use rand::prelude::Distribution;
 
 use crate::component::Id;
 use crate::event::{EventData, EventId};
@@ -46,6 +47,10 @@ impl SimulationContext {
         R: SampleRange<T>,
     {
         self.sim_state.borrow_mut().gen_range(range)
+    }
+
+    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
+        self.sim_state.borrow_mut().sample_from_distribution(dist)
     }
 
     pub fn emit<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId

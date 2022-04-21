@@ -42,6 +42,10 @@ impl SimulationState {
         self.rand.gen_range(range)
     }
 
+    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
+        dist.sample(&mut self.rand)
+    }
+
     pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
