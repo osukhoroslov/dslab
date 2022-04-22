@@ -18,28 +18,32 @@ pub struct Pong {}
 pub struct Process {
     peer_count: usize,
     peers: Vec<Id>,
+    is_pinger: bool,
     iterations: u32,
     ctx: SimulationContext,
 }
 
 impl Process {
-    pub fn new(peers: Vec<Id>, iterations: u32, ctx: SimulationContext) -> Self {
+    pub fn new(peers: Vec<Id>, is_pinger: bool, iterations: u32, ctx: SimulationContext) -> Self {
         Self {
             peer_count: peers.len(),
             peers,
+            is_pinger,
             iterations,
             ctx,
         }
     }
 
     fn on_start(&mut self) {
-        let peer = if self.peer_count > 1 {
-            self.peers[self.ctx.gen_range(0..self.peer_count)]
-        } else {
-            self.peers[0]
-        };
-        let delay = self.ctx.rand();
-        self.ctx.emit(Ping {}, peer, delay);
+        if self.is_pinger {
+            let peer = if self.peer_count > 1 {
+                self.peers[self.ctx.gen_range(0..self.peer_count)]
+            } else {
+                self.peers[0]
+            };
+            let delay = self.ctx.rand();
+            self.ctx.emit(Ping {}, peer, delay);
+        }
     }
 
     fn on_ping(&mut self, from: Id) {
