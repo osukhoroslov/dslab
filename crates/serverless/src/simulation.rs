@@ -9,18 +9,23 @@ use crate::controller::Controller;
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
+use crate::host::Host;
 use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::{BasicInvoker, InvokerLogic};
+use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::stats::Stats;
+use crate::util::Counter;
 
 pub type HandlerId = simcore::component::Id;
 
 pub struct ServerlessSimulation {
+    coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
     controller_id: HandlerId,
     function_registry: Rc<RefCell<FunctionRegistry>>,
+    host_ctr: Counter,
+    invocation_registry: Rc<RefCell<InvocationRegistry>>,
     ctx: SimulationContext,
     resource_name_resolver: ResourceNameResolver,
     sim: Simulation,
@@ -42,18 +47,18 @@ impl ServerlessSimulation {
         let function_registry: Rc<RefCell<FunctionRegistry>> = Rc::new(RefCell::new(Default::default()));
         let invocation_registry: Rc<RefCell<InvocationRegistry>> = Rc::new(RefCell::new(Default::default()));
         let controller = Rc::new(RefCell::new(Controller::new(
-            coldstart,
             function_registry.clone(),
             deployer,
-            invocation_registry.clone(),
             real_scheduler,
-            stats.clone(),
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
         Self {
+            coldstart,
             controller,
             controller_id,
-            function_registry: function_registry.clone(),
+            function_registry,
+            host_ctr: Default::default(),
+            invocation_registry,
             ctx,
             resource_name_resolver: Default::default(),
             sim,
@@ -77,11 +82,24 @@ impl ServerlessSimulation {
         self.stats.borrow().clone()
     }
 
-    pub fn new_invoker(&mut self, logic: Option<Box<dyn InvokerLogic>>, resources: ResourceProvider) -> u64 {
-        let real_logic = logic.unwrap_or(Box::new(BasicInvoker {}));
-        self.controller
-            .borrow_mut()
-            .new_invoker(self.controller_id, real_logic, resources, &mut self.sim)
+    pub fn add_host(&mut self, invoker: Option<Rc<RefCell<dyn Invoker>>>, resources: ResourceProvider) {
+        let id = self.host_ctr.next();
+        let real_invoker = invoker.unwrap_or(Rc::new(RefCell::new(BasicInvoker::new())));
+        let ctx = self.sim.create_context(format!("host_{}", id));
+        let host = Rc::new(RefCell::new(Host::new(
+            id,
+            self.coldstart.clone(),
+            self.controller_id,
+            ctx,
+            self.function_registry.clone(),
+            self.invocation_registry.clone(),
+            real_invoker,
+            resources,
+            self.stats.clone(),
+        )));
+        let handler_id = self.sim.add_handler(format!("host_{}", id), host.clone());
+        host.borrow_mut().setup_handler_id(handler_id);
+        self.controller.borrow_mut().add_host(host);
     }
 
     pub fn add_function(&mut self, f: Function) -> u64 {

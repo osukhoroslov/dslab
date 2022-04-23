@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::function::Application;
-use crate::invoker::Invoker;
+use crate::host::Host;
 
 /*
  * Scheduler chooses an invoker
@@ -10,7 +10,7 @@ use crate::invoker::Invoker;
  * from given application.
  */
 pub trait Scheduler {
-    fn select_invoker(&mut self, app: &Application, invokers: &Vec<Rc<RefCell<Invoker>>>) -> usize;
+    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize;
 }
 
 /* BasicScheduler chooses the first invoker
@@ -20,14 +20,14 @@ pub trait Scheduler {
 pub struct BasicScheduler {}
 
 impl Scheduler for BasicScheduler {
-    fn select_invoker(&mut self, app: &Application, invokers: &Vec<Rc<RefCell<Invoker>>>) -> usize {
-        for (i, invoker) in invokers.iter().enumerate() {
-            if invoker.borrow().can_invoke(app) {
+    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+        for (i, host) in hosts.iter().enumerate() {
+            if host.borrow().can_invoke(app) {
                 return i;
             }
         }
-        for (i, invoker) in invokers.iter().enumerate() {
-            if invoker.borrow().can_allocate(app.get_resources()) {
+        for (i, host) in hosts.iter().enumerate() {
+            if host.borrow().can_allocate(app.get_resources()) {
                 return i;
             }
         }

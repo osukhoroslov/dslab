@@ -1,3 +1,4 @@
+use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -116,8 +117,6 @@ pub struct ResourceConsumer {
     resources: HashMap<usize, ResourceRequirement>,
 }
 
-type ResourceRequirementIterator<'a> = std::collections::hash_map::Iter<'a, usize, ResourceRequirement>;
-
 impl ResourceConsumer {
     pub fn new(mut resources: Vec<ResourceRequirement>) -> Self {
         let mut map = HashMap::new();
@@ -133,7 +132,7 @@ impl ResourceConsumer {
         }
     }
 
-    pub fn iter(&self) -> ResourceRequirementIterator<'_> {
+    pub fn iter(&self) -> Iter<usize, ResourceRequirement> {
         self.resources.iter()
     }
 }

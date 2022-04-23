@@ -2,14 +2,17 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use simcore::cast;
 use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{Container, ContainerStatus};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::InvocationStatus;
+use crate::invoker::{InvocationStatus, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
@@ -21,13 +24,14 @@ pub struct Host {
     containers: HashMap<u64, Container>,
     containers_by_app: HashMap<u64, HashSet<u64>>,
     container_counter: Counter,
-    controller_handler_id: HandlerId,
+    controller_id: HandlerId,
     ctx: SimulationContext,
     pub function_registry: Rc<RefCell<FunctionRegistry>>,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
-    pub invoker_handler_id: HandlerId,
+    invoker: Rc<RefCell<dyn Invoker>>,
     reservations: HashMap<u64, Vec<InvocationRequest>>,
     pub resources: ResourceProvider,
+    self_id: HandlerId,
     stats: Rc<RefCell<Stats>>,
 }
 
@@ -35,10 +39,11 @@ impl Host {
     pub fn new(
         id: u64,
         coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
-        controller_handler_id: HandlerId,
+        controller_id: HandlerId,
         ctx: SimulationContext,
         function_registry: Rc<RefCell<FunctionRegistry>>,
         invocation_registry: Rc<RefCell<InvocationRegistry>>,
+        invoker: Rc<RefCell<dyn Invoker>>,
         resources: ResourceProvider,
         stats: Rc<RefCell<Stats>>,
     ) -> Self {
@@ -48,13 +53,14 @@ impl Host {
             containers: Default::default(),
             containers_by_app: Default::default(),
             container_counter: Default::default(),
-            controller_handler_id,
+            controller_id,
             ctx,
             function_registry,
             invocation_registry,
-            invoker_handler_id: 0,
+            invoker,
             reservations: Default::default(),
             resources,
+            self_id: Default::default(),
             stats,
         }
     }
@@ -152,9 +158,15 @@ impl Host {
         }
     }
 
+    pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+        let invoker = self.invoker.clone();
+        let status = invoker.borrow_mut().invoke(self, request, time);
+        status
+    }
+
     pub fn new_container_start_event(&mut self, container_id: u64, delay: f64) {
         self.ctx
-            .emit(ContainerStartEvent { id: container_id }, self.invoker_handler_id, delay);
+            .emit(ContainerStartEvent { id: container_id }, self.self_id, delay);
     }
 
     pub fn new_container_end_event(&mut self, container_id: u64, expected: u64, delay: f64) {
@@ -163,18 +175,18 @@ impl Host {
                 id: container_id,
                 expected_count: expected,
             },
-            self.invoker_handler_id,
+            self.self_id,
             delay,
         );
     }
 
     pub fn new_idle_deploy_event(&mut self, app_id: u64, prewarm: f64) {
         self.ctx
-            .emit(IdleDeployEvent { id: app_id }, self.controller_handler_id, prewarm);
+            .emit(IdleDeployEvent { id: app_id }, self.controller_id, prewarm);
     }
 
     pub fn new_invocation_end_event(&mut self, id: u64, delay: f64) {
-        self.ctx.emit(InvocationEndEvent { id }, self.invoker_handler_id, delay);
+        self.ctx.emit(InvocationEndEvent { id }, self.self_id, delay);
     }
 
     pub fn process_response(&mut self, request: InvocationRequest, response: InvocationStatus, time: f64) {
@@ -259,6 +271,30 @@ impl Host {
                 container.status = ContainerStatus::Deploying;
             }
         }
+    }
+
+    pub fn setup_handler_id(&mut self, id: HandlerId) {
+        self.self_id = id;
+    }
+}
+
+impl EventHandler for Host {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
+            ContainerStartEvent { id } => {
+                self.start_container(id, event.time);
+                let invoker = self.invoker.clone();
+                invoker.borrow_mut().dequeue(self, event.time);
+            }
+            ContainerEndEvent { id, expected_count } => {
+                self.end_container(id, expected_count, event.time);
+            }
+            InvocationEndEvent { id } => {
+                self.end_invocation(id, event.time);
+                let invoker = self.invoker.clone();
+                invoker.borrow_mut().dequeue(self, event.time);
+            }
+        });
     }
 }
 

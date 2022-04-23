@@ -8,7 +8,7 @@ fn main() {
     let mut serverless = ServerlessSimulation::new(sim, None, None, None);
     for _ in 0..2 {
         let mem = serverless.create_resource("mem", 2);
-        serverless.new_invoker(None, ResourceProvider::new(vec![mem]));
+        serverless.add_host(None, ResourceProvider::new(vec![mem]));
     }
     let fast_mem = serverless.create_resource_requirement("mem", 1);
     let fast = serverless.add_app_with_single_function(Application::new(1, 1., ResourceConsumer::new(vec![fast_mem])));
