@@ -209,7 +209,7 @@ impl Widget<AppData> for TimelineWidget {
         ctx.request_paint();
     }
     fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &AppData, _: &Env) -> druid::Size {
-        Size::new(bc.max().width, 10000.)
+        Size::new(bc.max().width, 1000000.)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _: &Env) {

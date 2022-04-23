@@ -1,9 +1,10 @@
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum DataItemState {
     Pending,
     Ready,
 }
 
+#[derive(Clone)]
 pub struct DataItem {
     pub name: String,
     pub size: u64,

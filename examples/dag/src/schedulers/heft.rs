@@ -4,13 +4,14 @@ use std::collections::{BTreeSet, HashSet};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 use std::rc::Rc;
 
+use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use network::model::NetworkModel;
 use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
 
 use dag::dag::DAG;
-use dag::scheduler::{Action, Scheduler};
+use dag::scheduler::{Action, Config, Scheduler};
 use dag::task::*;
 
 pub enum DataTransferMode {
@@ -79,9 +80,9 @@ pub struct HeftScheduler {
 }
 
 impl HeftScheduler {
-    pub fn new(network: Rc<RefCell<dyn NetworkModel>>) -> Self {
+    pub fn new() -> Self {
         HeftScheduler {
-            network,
+            network: Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1., 0.))),
             data_transfer_mode: DataTransferMode::ViaMasterNode,
             data_transfer_strategy: DataTransferStrategy::Eager,
         }
@@ -130,6 +131,10 @@ impl HeftScheduler {
 }
 
 impl Scheduler for HeftScheduler {
+    fn set_config(&mut self, config: Config) {
+        self.network = config.network;
+    }
+
     fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>, ctx: &SimulationContext) -> Vec<Action> {
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
