@@ -1,9 +1,16 @@
+use std::io::Write;
+
+use env_logger::Builder;
+
 use serverless::function::Application;
 use serverless::resource::{ResourceConsumer, ResourceProvider};
 use serverless::simulation::ServerlessSimulation;
 use simcore::simulation::Simulation;
 
 fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
     let sim = Simulation::new(1);
     let mut serverless = ServerlessSimulation::new(sim, None, None, None);
     for _ in 0..2 {
