@@ -7,6 +7,10 @@
 
         <link id="loopback1" latency="0" bandwidth="100GBps"/>
         <link id="loopback2" latency="0" bandwidth="100GBps"/>
+        <!-- FATPIPE is slower!
+        <link id="loopback1" latency="0" bandwidth="100GBps" sharing_policy="FATPIPE"/>
+        <link id="loopback2" latency="0" bandwidth="100GBps" sharing_policy="FATPIPE"/>
+        -->
         <link id="netlink" latency="10ms" bandwidth="100Gbps" />
 
         <!-- Loopback links significantly improve local mode performance -->
