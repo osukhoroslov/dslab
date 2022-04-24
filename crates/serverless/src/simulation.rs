@@ -82,23 +82,22 @@ impl ServerlessSimulation {
         self.stats.borrow().clone()
     }
 
-    pub fn add_host(&mut self, invoker: Option<Rc<RefCell<dyn Invoker>>>, resources: ResourceProvider) {
+    pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider) {
         let id = self.host_ctr.next();
-        let real_invoker = invoker.unwrap_or(Rc::new(RefCell::new(BasicInvoker::new())));
+        let real_invoker = invoker.unwrap_or(Box::new(BasicInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,
-            self.coldstart.clone(),
-            self.controller_id,
-            ctx,
+            resources,
+            real_invoker,
             self.function_registry.clone(),
             self.invocation_registry.clone(),
-            real_invoker,
-            resources,
+            self.coldstart.clone(),
+            self.controller_id,
             self.stats.clone(),
+            ctx,
         )));
-        let handler_id = self.sim.add_handler(format!("host_{}", id), host.clone());
-        host.borrow_mut().setup_handler_id(handler_id);
+        self.sim.add_handler(format!("host_{}", id), host.clone());
         self.controller.borrow_mut().add_host(host);
     }
 

@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use simcore::cast;
@@ -8,7 +7,7 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
-use crate::container::{Container, ContainerStatus};
+use crate::container::{ContainerManager, ContainerStatus};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
@@ -16,119 +15,137 @@ use crate::invoker::{InvocationStatus, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
-use crate::util::Counter;
 
 pub struct Host {
     id: u64,
-    coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
-    containers: HashMap<u64, Container>,
-    containers_by_app: HashMap<u64, HashSet<u64>>,
-    container_counter: Counter,
-    controller_id: HandlerId,
-    ctx: SimulationContext,
-    pub function_registry: Rc<RefCell<FunctionRegistry>>,
+    invoker: Box<dyn Invoker>,
+    container_manager: ContainerManager,
+    function_registry: Rc<RefCell<FunctionRegistry>>,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
-    invoker: Rc<RefCell<dyn Invoker>>,
-    reservations: HashMap<u64, Vec<InvocationRequest>>,
-    pub resources: ResourceProvider,
-    self_id: HandlerId,
+    coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
+    controller_id: HandlerId,
     stats: Rc<RefCell<Stats>>,
+    ctx: Rc<RefCell<SimulationContext>>,
 }
 
 impl Host {
     pub fn new(
         id: u64,
-        coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
-        controller_id: HandlerId,
-        ctx: SimulationContext,
+        resources: ResourceProvider,
+        invoker: Box<dyn Invoker>,
         function_registry: Rc<RefCell<FunctionRegistry>>,
         invocation_registry: Rc<RefCell<InvocationRegistry>>,
-        invoker: Rc<RefCell<dyn Invoker>>,
-        resources: ResourceProvider,
+        coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
+        controller_id: HandlerId,
         stats: Rc<RefCell<Stats>>,
+        ctx: SimulationContext,
     ) -> Self {
+        let ctx = Rc::new(RefCell::new(ctx));
         Self {
             id,
-            coldstart,
-            containers: Default::default(),
-            containers_by_app: Default::default(),
-            container_counter: Default::default(),
-            controller_id,
-            ctx,
+            invoker,
+            container_manager: ContainerManager::new(resources, ctx.clone()),
             function_registry,
             invocation_registry,
-            invoker,
-            reservations: Default::default(),
-            resources,
-            self_id: Default::default(),
+            coldstart,
+            controller_id,
             stats,
+            ctx,
         }
     }
 
     pub fn can_allocate(&self, resources: &ResourceConsumer) -> bool {
-        self.resources.can_allocate(resources)
+        self.container_manager.can_allocate(resources)
     }
 
     pub fn can_invoke(&self, app: &Application) -> bool {
-        self.get_possible_containers(app).next().is_some()
+        self.container_manager.get_possible_containers(app).next().is_some()
     }
 
-    pub fn get_container(&self, id: u64) -> Option<&Container> {
-        self.containers.get(&id)
-    }
-
-    pub fn get_container_mut(&mut self, id: u64) -> Option<&mut Container> {
-        self.containers.get_mut(&id)
-    }
-
-    pub fn get_possible_containers(&self, app: &Application) -> PossibleContainerIterator<'_> {
-        let id = app.id;
-        let limit = app.get_concurrent_invocations();
-        if let Some(set) = self.containers_by_app.get(&id) {
-            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.reservations, limit);
+    pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+        let status = self.invoker.invoke(
+            request,
+            self.function_registry.clone(),
+            &mut self.container_manager,
+            time,
+        );
+        let mut stats = self.stats.borrow_mut();
+        stats.invocations += 1;
+        match status {
+            InvocationStatus::Warm(id) => {
+                drop(stats);
+                self.start_invocation(id, request, time);
+            }
+            InvocationStatus::Cold((id, delay)) => {
+                stats.cold_starts_total_time += delay;
+                stats.cold_starts += 1;
+                drop(stats);
+                self.container_manager.reserve_container(id, request);
+            }
+            _ => {}
         }
-        PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit)
+        status
     }
 
-    pub fn deploy_container(&mut self, app: &Application, time: f64) -> u64 {
-        let cont_id = self.container_counter.next();
-        let container = Container {
-            status: ContainerStatus::Deploying,
-            id: cont_id,
-            deployment_time: app.get_deployment_time(),
-            app_id: app.id,
-            invocations: Default::default(),
-            resources: app.get_resources().clone(),
-            started_invocations: 0u64,
-            last_change: time,
-        };
-        self.resources.allocate(&container.resources);
-        self.containers.insert(cont_id, container);
-        if !self.containers_by_app.contains_key(&app.id) {
-            self.containers_by_app.insert(app.id, HashSet::new());
-        }
-        self.containers_by_app.get_mut(&app.id).unwrap().insert(cont_id);
-        self.new_container_start_event(cont_id, app.get_deployment_time());
-        cont_id
+    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
+        self.container_manager.try_deploy(app, time)
     }
 
-    pub fn delete_container(&mut self, id: u64) {
-        let container = self.containers.remove(&id).unwrap();
-        self.containers_by_app.get_mut(&container.app_id).unwrap().remove(&id);
-        self.resources.release(&container.resources);
-    }
-
-    pub fn end_container(&mut self, id: u64, expected: u64, time: f64) {
-        if let Some(cont) = self.get_container(id) {
-            if cont.status == ContainerStatus::Idle && cont.started_invocations == expected {
-                let delta = time - cont.last_change;
-                self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
-                self.delete_container(id);
+    pub fn update_end_metrics(&mut self, time: f64) {
+        let mut stats = self.stats.borrow_mut();
+        for (_, container) in self.container_manager.get_containers().iter_mut() {
+            if container.status == ContainerStatus::Idle {
+                let delta = time - container.last_change;
+                stats.update_wasted_resources(delta, &container.resources);
+                container.status = ContainerStatus::Deploying;
             }
         }
     }
 
-    pub fn end_invocation(&mut self, id: u64, time: f64) {
+    fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
+        let inv_id = self
+            .invocation_registry
+            .borrow_mut()
+            .new_invocation(request, self.id, cont_id);
+        let stats = self.stats.clone();
+        let container = self.container_manager.get_container_mut(cont_id).unwrap();
+        if container.status == ContainerStatus::Idle {
+            let delta = time - container.last_change;
+            stats.borrow_mut().update_wasted_resources(delta, &container.resources);
+        }
+        container.last_change = time;
+        container.status = ContainerStatus::Running;
+        container.start_invocation(inv_id);
+        self.ctx
+            .borrow_mut()
+            .emit_self(InvocationEndEvent { id: inv_id }, request.duration);
+    }
+
+    fn on_container_start(&mut self, id: u64, time: f64) {
+        if let Some(invocations) = self.container_manager.take_reservations(id) {
+            for invocation in invocations {
+                self.start_invocation(id, invocation, time);
+            }
+        } else {
+            let container = self.container_manager.get_container_mut(id).unwrap();
+            container.status = ContainerStatus::Idle;
+            let immut_container = self.container_manager.get_container(id).unwrap();
+            let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
+            self.new_container_end_event(id, 0, keepalive);
+        }
+    }
+
+    pub fn on_container_end(&mut self, id: u64, expected: u64, time: f64) {
+        if let Some(cont) = self.container_manager.get_container(id) {
+            if cont.status == ContainerStatus::Idle && cont.started_invocations == expected {
+                let delta = time - cont.last_change;
+                self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
+                self.container_manager.delete_container(id);
+            }
+        }
+    }
+
+    pub fn on_invocation_end(&mut self, id: u64, time: f64) {
         let ir = self.invocation_registry.clone();
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();
@@ -141,140 +158,33 @@ impl Host {
         self.coldstart
             .borrow_mut()
             .update(invocation, self.function_registry.borrow().get_app(app_id).unwrap());
-        let container = self.get_container_mut(cont_id).unwrap();
+        let container = self.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let prewarm = self.coldstart.borrow_mut().prewarm_window(app);
             if prewarm != 0. {
-                self.new_idle_deploy_event(app_id, prewarm);
+                self.ctx
+                    .borrow_mut()
+                    .emit(IdleDeployEvent { id: app_id }, self.controller_id, prewarm);
                 self.new_container_end_event(cont_id, expect, 0.0);
             } else {
-                let immut_container = self.get_container(cont_id).unwrap();
+                let immut_container = self.container_manager.get_container(cont_id).unwrap();
                 let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
                 self.new_container_end_event(cont_id, expect, keepalive);
             }
         }
     }
 
-    pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
-        let invoker = self.invoker.clone();
-        let status = invoker.borrow_mut().invoke(self, request, time);
-        status
-    }
-
-    pub fn new_container_start_event(&mut self, container_id: u64, delay: f64) {
-        self.ctx
-            .emit(ContainerStartEvent { id: container_id }, self.self_id, delay);
-    }
-
-    pub fn new_container_end_event(&mut self, container_id: u64, expected: u64, delay: f64) {
-        self.ctx.emit(
+    fn new_container_end_event(&mut self, container_id: u64, expected: u64, delay: f64) {
+        self.ctx.borrow_mut().emit_self(
             ContainerEndEvent {
                 id: container_id,
                 expected_count: expected,
             },
-            self.self_id,
             delay,
         );
-    }
-
-    pub fn new_idle_deploy_event(&mut self, app_id: u64, prewarm: f64) {
-        self.ctx
-            .emit(IdleDeployEvent { id: app_id }, self.controller_id, prewarm);
-    }
-
-    pub fn new_invocation_end_event(&mut self, id: u64, delay: f64) {
-        self.ctx.emit(InvocationEndEvent { id }, self.self_id, delay);
-    }
-
-    pub fn process_response(&mut self, request: InvocationRequest, response: InvocationStatus, time: f64) {
-        let mut stats = self.stats.borrow_mut();
-        stats.invocations += 1;
-        match response {
-            InvocationStatus::Warm(id) => {
-                drop(stats);
-                self.start_invocation(id, request, time);
-            }
-            InvocationStatus::Cold((id, delay)) => {
-                stats.cold_starts_total_time += delay;
-                stats.cold_starts += 1;
-                drop(stats);
-                self.reserve_container(id, request);
-            }
-            _ => {}
-        }
-    }
-
-    pub fn take_reservations(&mut self, id: u64) -> Option<Vec<InvocationRequest>> {
-        self.reservations.remove(&id)
-    }
-
-    pub fn reserve_container(&mut self, id: u64, request: InvocationRequest) {
-        if let Some(reserve) = self.reservations.get_mut(&id) {
-            reserve.push(request);
-        } else {
-            self.reservations.insert(id, vec![request]);
-        }
-    }
-
-    pub fn start_container(&mut self, id: u64, time: f64) {
-        let mut invocations = Vec::new();
-        if let Some(reserve) = self.take_reservations(id) {
-            invocations = reserve;
-        }
-        let container = self.get_container_mut(id).unwrap();
-        if !invocations.is_empty() {
-            for invocation in invocations {
-                self.start_invocation(id, invocation, time);
-            }
-        } else {
-            container.status = ContainerStatus::Idle;
-            let immut_container = self.get_container(id).unwrap();
-            let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
-            self.new_container_end_event(id, 0, keepalive);
-        }
-    }
-
-    pub fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
-        let inv_id = self
-            .invocation_registry
-            .borrow_mut()
-            .new_invocation(request, self.id, cont_id);
-        let stats = self.stats.clone();
-        let container = self.get_container_mut(cont_id).unwrap();
-        if container.status == ContainerStatus::Idle {
-            let delta = time - container.last_change;
-            stats.borrow_mut().update_wasted_resources(delta, &container.resources);
-        }
-        container.last_change = time;
-        container.status = ContainerStatus::Running;
-        container.start_invocation(inv_id);
-        self.new_invocation_end_event(inv_id, request.duration);
-    }
-
-    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
-        if self.resources.can_allocate(app.get_resources()) {
-            let id = self.deploy_container(app, time);
-            return Some((id, app.get_deployment_time()));
-        }
-        None
-    }
-
-    pub fn update_end_metrics(&mut self, time: f64) {
-        let mut stats = self.stats.borrow_mut();
-        for (_, container) in self.containers.iter_mut() {
-            if container.status == ContainerStatus::Idle {
-                let delta = time - container.last_change;
-                stats.update_wasted_resources(delta, &container.resources);
-                container.status = ContainerStatus::Deploying;
-            }
-        }
-    }
-
-    pub fn setup_handler_id(&mut self, id: HandlerId) {
-        self.self_id = id;
     }
 }
 
@@ -282,62 +192,18 @@ impl EventHandler for Host {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             ContainerStartEvent { id } => {
-                self.start_container(id, event.time);
-                let invoker = self.invoker.clone();
-                invoker.borrow_mut().dequeue(self, event.time);
+                self.on_container_start(id, event.time);
+                self.invoker
+                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
             }
             ContainerEndEvent { id, expected_count } => {
-                self.end_container(id, expected_count, event.time);
+                self.on_container_end(id, expected_count, event.time);
             }
             InvocationEndEvent { id } => {
-                self.end_invocation(id, event.time);
-                let invoker = self.invoker.clone();
-                invoker.borrow_mut().dequeue(self, event.time);
+                self.on_invocation_end(id, event.time);
+                self.invoker
+                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
             }
         });
-    }
-}
-
-pub struct PossibleContainerIterator<'a> {
-    inner: Option<std::collections::hash_set::Iter<'a, u64>>,
-    containers: &'a HashMap<u64, Container>,
-    reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
-    limit: usize,
-}
-
-impl<'a> PossibleContainerIterator<'a> {
-    pub fn new(
-        inner: Option<std::collections::hash_set::Iter<'a, u64>>,
-        containers: &'a HashMap<u64, Container>,
-        reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
-        limit: usize,
-    ) -> Self {
-        Self {
-            inner,
-            containers,
-            reserve,
-            limit,
-        }
-    }
-}
-
-impl<'a> Iterator for PossibleContainerIterator<'a> {
-    type Item = &'a Container;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(inner) = self.inner.as_mut() {
-            while let Some(id) = inner.next() {
-                let c = self.containers.get(&id).unwrap();
-                if c.status != ContainerStatus::Deploying && c.invocations.len() < self.limit {
-                    return Some(c);
-                }
-                if c.status == ContainerStatus::Deploying
-                    && (!self.reserve.contains_key(&id) || self.reserve.get(&id).unwrap().len() < self.limit)
-                {
-                    return Some(c);
-                }
-            }
-            return None;
-        }
-        None
     }
 }

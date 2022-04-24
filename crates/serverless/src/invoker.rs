@@ -1,5 +1,8 @@
-use crate::container::ContainerStatus;
-use crate::host::Host;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::container::{ContainerManager, ContainerStatus};
+use crate::function::FunctionRegistry;
 use crate::invocation::InvocationRequest;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -14,10 +17,16 @@ pub enum InvocationStatus {
 /// It chooses containers for execution, deploys new containers and manages invocation queue.
 pub trait Invoker {
     /// try to invoke some of the queued functions
-    fn dequeue(&mut self, host: &mut Host, time: f64);
+    fn dequeue(&mut self, fr: Rc<RefCell<FunctionRegistry>>, cm: &mut ContainerManager, time: f64);
 
     /// invoke or queue new invocation request
-    fn invoke(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus;
+    fn invoke(
+        &mut self,
+        request: InvocationRequest,
+        fr: Rc<RefCell<FunctionRegistry>>,
+        cm: &mut ContainerManager,
+        time: f64,
+    ) -> InvocationStatus;
 }
 
 pub struct BasicInvoker {
@@ -29,14 +38,18 @@ impl BasicInvoker {
         Self { queue: Vec::new() }
     }
 
-    fn try_invoke_inner(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
-        let fr = host.function_registry.clone();
-        let function_registry = fr.borrow();
-        let app_id = function_registry.get_function(request.id).unwrap().app_id;
-        let app = function_registry.get_app(app_id).unwrap();
+    fn try_invoke(
+        &mut self,
+        request: InvocationRequest,
+        fr: Rc<RefCell<FunctionRegistry>>,
+        cm: &mut ContainerManager,
+        time: f64,
+    ) -> InvocationStatus {
+        let fr = fr.borrow();
+        let app = fr.get_app_by_function(request.id).unwrap();
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
-        for c in host.get_possible_containers(app) {
+        for c in cm.get_possible_containers(app) {
             let delay = if c.status == ContainerStatus::Deploying {
                 c.deployment_time + c.last_change - time
             } else {
@@ -48,33 +61,27 @@ impl BasicInvoker {
             }
         }
         if let Some(id) = nearest {
-            if host.get_container(id).unwrap().status == ContainerStatus::Idle {
+            if cm.get_container(id).unwrap().status == ContainerStatus::Idle {
                 return InvocationStatus::Warm(id);
             } else {
                 return InvocationStatus::Cold((id, wait));
             }
         }
-        if let Some((id, delay)) = host.try_deploy(app, time) {
+        if let Some((id, delay)) = cm.try_deploy(app, time) {
             return InvocationStatus::Cold((id, delay));
         }
         return InvocationStatus::Rejected;
     }
-
-    fn try_invoke(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
-        let status = self.try_invoke_inner(host, request, time);
-        host.process_response(request, status, time);
-        status
-    }
 }
 
 impl Invoker for BasicInvoker {
-    fn dequeue(&mut self, host: &mut Host, time: f64) {
+    fn dequeue(&mut self, fr: Rc<RefCell<FunctionRegistry>>, cm: &mut ContainerManager, time: f64) {
         if self.queue.is_empty() {
             return;
         }
         let mut new_queue = Vec::new();
         for item in self.queue.clone().drain(..) {
-            let status = self.try_invoke(host, item, time);
+            let status = self.try_invoke(item, fr.clone(), cm, time);
             if status == InvocationStatus::Rejected {
                 new_queue.push(item);
             }
@@ -82,8 +89,14 @@ impl Invoker for BasicInvoker {
         self.queue = new_queue;
     }
 
-    fn invoke(&mut self, host: &mut Host, request: InvocationRequest, time: f64) -> InvocationStatus {
-        let status = self.try_invoke(host, request, time);
+    fn invoke(
+        &mut self,
+        request: InvocationRequest,
+        fr: Rc<RefCell<FunctionRegistry>>,
+        cm: &mut ContainerManager,
+        time: f64,
+    ) -> InvocationStatus {
+        let status = self.try_invoke(request, fr, cm, time);
         if status == InvocationStatus::Rejected {
             self.queue.push(request);
             return InvocationStatus::Queued;

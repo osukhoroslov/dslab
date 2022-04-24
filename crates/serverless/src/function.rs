@@ -71,6 +71,14 @@ impl FunctionRegistry {
         }
     }
 
+    pub fn get_app_by_function(&self, id: u64) -> Option<&Application> {
+        if let Some(func) = self.get_function(id) {
+            self.get_app(func.app_id)
+        } else {
+            None
+        }
+    }
+
     pub fn add_function(&mut self, f: Function) -> u64 {
         let id = self.functions.len();
         self.functions.push(f);
