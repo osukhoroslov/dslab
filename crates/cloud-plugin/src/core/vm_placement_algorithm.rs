@@ -1,7 +1,7 @@
-use crate::common::AllocationVerdict;
-use crate::monitoring::Monitoring;
-use crate::resource_pool::Allocation;
-use crate::resource_pool::ResourcePoolState;
+use crate::core::common::AllocationVerdict;
+use crate::core::monitoring::Monitoring;
+use crate::core::resource_pool::Allocation;
+use crate::core::resource_pool::ResourcePoolState;
 
 pub trait VMPlacementAlgorithm {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;

@@ -8,7 +8,7 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
-use crate::events::monitoring::HostStateUpdate;
+use crate::core::events::monitoring::HostStateUpdate;
 
 #[derive(Debug)]
 pub struct HostState {
