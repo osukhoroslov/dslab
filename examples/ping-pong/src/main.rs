@@ -1,6 +1,6 @@
 mod process;
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::time::Instant;
 
@@ -70,7 +70,7 @@ fn main() {
     for i in 1..=proc_count {
         let proc_id = i + id_offset;
         let proc_name = format!("proc{}", i);
-        let mut peers = HashSet::new();
+        let mut peers = BTreeSet::new();
         if args.peer_count == 1 {
             let peer_id = (i % proc_count) + 1 + id_offset;
             peers.insert(peer_id);
