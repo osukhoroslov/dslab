@@ -8,9 +8,6 @@ namespace sg4 = simgrid::s4u;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(ping_pong_app, "Ping-pong example");
 
-bool* PING = new bool(false);
-bool* PONG = new bool(true);
-
 enum class MessageType {
     START,
     PING,
