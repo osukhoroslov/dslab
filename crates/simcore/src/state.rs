@@ -66,8 +66,8 @@ impl SimulationState {
     pub fn next_event(&mut self) -> Option<Event> {
         loop {
             if let Some(event) = self.events.pop() {
-                self.clock = event.time;
                 if !self.canceled_events.remove(&event.id) {
+                    self.clock = event.time;
                     return Some(event);
                 }
             } else {
