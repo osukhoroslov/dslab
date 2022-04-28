@@ -62,23 +62,23 @@ impl Line {
 
 pub struct ThroughputModel<T> {
     id: u64,
-    width: f64,
+    throughput: f64,
     line: Line,
     items: BinaryHeap<ThroughputModelItem<T>>,
 }
 
 impl<T: std::fmt::Debug> ThroughputModel<T> {
-    pub fn new(width: f64) -> Self {
+    pub fn new(throughput: f64) -> Self {
         ThroughputModel {
             id: 0,
-            width,
+            throughput,
             line: Line::new(1., 0.),
             items: BinaryHeap::new(),
         }
     }
 
     pub fn insert(&mut self, current_time: f64, mut volume: f64, item: T) {
-        volume /= self.width;
+        volume /= self.throughput;
         self.id += 1;
         if self.items.is_empty() {
             self.line = Line::new(1., 0.);
