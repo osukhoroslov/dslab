@@ -25,13 +25,10 @@ use threadpool::ThreadPool;
 
 use compute::multicore::*;
 use dag::dag::DAG;
-use dag::resource::Resource;
-use dag::runner::*;
+use dag::dag_simulation::DagSimulation;
 use dag::scheduler::{Config, Scheduler};
 use dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network::Network;
-use simcore::simulation::Simulation;
 
 struct RunResult {
     algo: usize,
@@ -157,37 +154,6 @@ fn run_experiments(matches: &ArgMatches) {
                 let platform_id = platform_id.clone();
                 let results = results.clone();
                 pool.execute(move || {
-                    let mut sim = Simulation::new(123);
-
-                    let mut create_resource = |speed: i32, cluster: usize, node: usize| -> Resource {
-                        let name = format!("compute-{}-{}", cluster, node);
-                        let speed = speed as u64 * 1_000_000_000 as u64;
-                        let cores = 8;
-                        let memory = 0;
-                        let compute = Rc::new(RefCell::new(Compute::new(
-                            speed,
-                            cores,
-                            memory,
-                            sim.create_context(&name),
-                        )));
-                        let id = sim.add_handler(&name, compute.clone());
-                        Resource {
-                            id,
-                            name,
-                            compute,
-                            speed,
-                            cores_available: cores,
-                            memory_available: memory,
-                        }
-                    };
-
-                    let mut resources: Vec<Resource> = Vec::new();
-                    for (cluster, &(nodes, speed, _bandwidth)) in platform_config.iter().enumerate() {
-                        for node in 0..nodes {
-                            resources.push(create_resource(speed, cluster, node));
-                        }
-                    }
-
                     let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0e+8, 0.)));
 
                     let mut scheduler = PortfolioScheduler::new(algo);
@@ -195,21 +161,23 @@ fn run_experiments(matches: &ArgMatches) {
                         network: network_model.clone(),
                     });
 
-                    let network = rc!(refcell!(Network::new(network_model.clone(), sim.create_context("net"))));
-                    sim.add_handler("net", network.clone());
+                    let mut sim = DagSimulation::new(123, network_model, rc!(refcell!(scheduler)));
+                    let mut create_resource = |speed: i32, cluster: usize, node: usize| {
+                        let name = format!("compute-{}-{}", cluster, node);
+                        let speed = speed as u64 * 1_000_000_000 as u64;
+                        let cores = 8;
+                        let memory = 0;
+                        sim.add_resource(&name, speed, cores, memory);
+                    };
 
-                    let runner = rc!(refcell!(DAGRunner::new(
-                        dag,
-                        network,
-                        resources,
-                        Rc::new(RefCell::new(scheduler)),
-                        sim.create_context("runner")
-                    )
-                    .enable_trace_log(enable_trace_log)));
-                    let runner_id = sim.add_handler("runner", runner.clone());
+                    for (cluster, &(nodes, speed, _bandwidth)) in platform_config.iter().enumerate() {
+                        for node in 0..nodes {
+                            create_resource(speed, cluster, node);
+                        }
+                    }
 
-                    let mut client = sim.create_context("client");
-                    client.emit_now(Start {}, runner_id);
+                    let runner = sim.init(dag);
+                    runner.borrow_mut().enable_trace_log(enable_trace_log);
 
                     let t = Instant::now();
                     sim.step_until_no_events();

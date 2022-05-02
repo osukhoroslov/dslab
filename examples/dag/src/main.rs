@@ -14,14 +14,11 @@ use env_logger::Builder;
 
 use compute::multicore::*;
 use dag::dag::DAG;
+use dag::dag_simulation::DagSimulation;
 use dag::network::load_network;
-use dag::resource::load_resources;
-use dag::runner::*;
 use dag::scheduler::{Config, Scheduler};
 use dag::schedulers::heft::{DataTransferMode, DataTransferStrategy, HeftScheduler};
 use dag::schedulers::simple_scheduler::SimpleScheduler;
-use network::network::Network;
-use simcore::simulation::Simulation;
 
 #[derive(ArgEnum, Clone, Debug)]
 pub enum ArgScheduler {
@@ -30,12 +27,6 @@ pub enum ArgScheduler {
 }
 
 fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
-    let mut sim = Simulation::new(123);
-
-    let resources = load_resources(resources_file, &mut sim);
-
-    let network_model = load_network(network_file);
-
     let matches = command!()
         .arg(
             Arg::new("trace-log")
@@ -59,6 +50,8 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
         )
         .get_matches();
 
+    let network_model = load_network(network_file);
+
     let enable_trace_log = matches.is_present("trace-log");
     let scheduler: Rc<RefCell<dyn Scheduler>> =
         match ArgScheduler::from_str(matches.value_of("scheduler").unwrap(), true).unwrap() {
@@ -73,21 +66,11 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
         network: network_model.clone(),
     });
 
-    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
-    sim.add_handler("net", network.clone());
+    let mut sim = DagSimulation::new(123, network_model, scheduler);
+    sim.load_resources(resources_file);
 
-    let runner = rc!(refcell!(DAGRunner::new(
-        dag,
-        network,
-        resources,
-        scheduler,
-        sim.create_context("runner")
-    )
-    .enable_trace_log(enable_trace_log)));
-    let runner_id = sim.add_handler("runner", runner.clone());
-
-    let mut client = sim.create_context("client");
-    client.emit_now(Start {}, runner_id);
+    let runner = sim.init(dag);
+    runner.borrow_mut().enable_trace_log(enable_trace_log);
 
     let t = Instant::now();
     sim.step_until_no_events();

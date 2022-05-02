@@ -102,9 +102,8 @@ impl DAGRunner {
         }
     }
 
-    pub fn enable_trace_log(mut self, flag: bool) -> Self {
+    pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
-        self
     }
 
     pub fn start(&mut self) {
