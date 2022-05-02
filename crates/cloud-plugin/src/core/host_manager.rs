@@ -9,16 +9,16 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
-use crate::common::AllocationVerdict;
-use crate::config::SimulationConfig;
-use crate::energy_manager::EnergyManager;
-use crate::events::allocation::{
+use crate::core::common::AllocationVerdict;
+use crate::core::config::SimulationConfig;
+use crate::core::energy_manager::EnergyManager;
+use crate::core::events::allocation::{
     AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest, MigrationRequest,
 };
-use crate::events::monitoring::HostStateUpdate;
-use crate::events::vm::{VMDeleted, VMStarted};
-use crate::resource_pool::Allocation;
-use crate::vm::VirtualMachine;
+use crate::core::events::monitoring::HostStateUpdate;
+use crate::core::events::vm::{VMDeleted, VMStarted};
+use crate::core::resource_pool::Allocation;
+use crate::core::vm::VirtualMachine;
 
 pub struct HostManager {
     pub id: u32,

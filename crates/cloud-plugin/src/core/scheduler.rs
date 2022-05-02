@@ -7,15 +7,15 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
-use crate::config::SimulationConfig;
-use crate::events::allocation::{
+use crate::core::config::SimulationConfig;
+use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
-use crate::monitoring::Monitoring;
-use crate::resource_pool::{Allocation, ResourcePoolState};
-use crate::vm::VirtualMachine;
-use crate::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::monitoring::Monitoring;
+use crate::core::resource_pool::{Allocation, ResourcePoolState};
+use crate::core::vm::VirtualMachine;
+use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct Scheduler {
     pub id: u32,

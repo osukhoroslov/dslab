@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use crate::common::AllocationVerdict;
+use crate::core::common::AllocationVerdict;
 
 #[derive(Serialize, Clone)]
 pub struct Allocation {

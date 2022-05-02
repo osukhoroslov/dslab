@@ -7,10 +7,10 @@ use std::time::Instant;
 use log::info;
 use serde::{Deserialize, Serialize};
 
-use cloud_plugin::config::SimulationConfig;
-use cloud_plugin::load_model::ConstLoadModel;
+use cloud_plugin::core::config::SimulationConfig;
+use cloud_plugin::core::load_model::ConstLoadModel;
+use cloud_plugin::core::vm_placement_algorithm::FirstFit;
 use cloud_plugin::simulation::CloudSimulation;
-use cloud_plugin::vm_placement_algorithm::FirstFit;
 use simcore::log_info;
 use simcore::simulation::Simulation;
 
@@ -197,16 +197,21 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
         let mut sum_memory_load = 0.;
         let mut sum_cpu_allocated = 0.;
         let mut sum_memory_allocated = 0.;
-        let ctx = cloud_sim.context();
         for host_id in &hosts {
-            sum_cpu_load += cloud_sim.host(*host_id).borrow().get_cpu_load(ctx.time());
-            sum_memory_load += cloud_sim.host(*host_id).borrow().get_memory_load(ctx.time());
+            sum_cpu_load += cloud_sim
+                .host(*host_id)
+                .borrow()
+                .get_cpu_load(cloud_sim.context().time());
+            sum_memory_load += cloud_sim
+                .host(*host_id)
+                .borrow()
+                .get_memory_load(cloud_sim.context().time());
             sum_cpu_allocated += cloud_sim.host(*host_id).borrow().get_cpu_allocated();
             sum_memory_allocated += cloud_sim.host(*host_id).borrow().get_memory_allocated();
         }
 
         log_info!(
-            ctx,
+            cloud_sim.context(),
             concat!(
                 "CPU allocation rate: {:.2?}, memory allocation rate: {:.2?},",
                 " CPU load rate: {:.2?}, memory load rate: {:.2?}"

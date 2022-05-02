@@ -3,8 +3,8 @@
 pub mod allocation {
     use serde::Serialize;
 
-    use crate::resource_pool::Allocation;
-    use crate::vm::VirtualMachine;
+    use crate::core::resource_pool::Allocation;
+    use crate::core::vm::VirtualMachine;
 
     #[derive(Serialize)]
     pub struct AllocationRequest {
@@ -61,7 +61,7 @@ pub mod allocation {
 pub mod vm {
     use serde::Serialize;
 
-    use crate::resource_pool::Allocation;
+    use crate::core::resource_pool::Allocation;
 
     #[derive(Serialize)]
     pub struct VMStarted {

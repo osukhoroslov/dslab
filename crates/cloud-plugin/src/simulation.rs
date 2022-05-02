@@ -7,17 +7,18 @@ use sugars::{rc, refcell};
 use simcore::context::SimulationContext;
 use simcore::simulation::Simulation;
 
-use crate::config::SimulationConfig;
-use crate::events::allocation::{AllocationRequest, MigrationRequest};
-use crate::host_manager::HostManager;
-use crate::host_manager::SendHostState;
-use crate::load_model::LoadModel;
-use crate::monitoring::Monitoring;
-use crate::placement_store::PlacementStore;
-use crate::resource_pool::Allocation;
-use crate::scheduler::Scheduler;
-use crate::vm::VirtualMachine;
-use crate::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::config::SimulationConfig;
+use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
+use crate::core::host_manager::HostManager;
+use crate::core::host_manager::SendHostState;
+use crate::core::load_model::LoadModel;
+use crate::core::monitoring::Monitoring;
+use crate::core::placement_store::PlacementStore;
+use crate::core::resource_pool::Allocation;
+use crate::core::scheduler::Scheduler;
+use crate::core::vm::VirtualMachine;
+use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::custom_component::CustomComponent;
 
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
@@ -28,6 +29,7 @@ pub struct CloudSimulation {
     vms: BTreeMap<u32, VirtualMachine>,
     allocations: HashMap<u32, Allocation>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
+    components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -53,6 +55,7 @@ impl CloudSimulation {
             vms: BTreeMap::new(),
             allocations: HashMap::new(),
             schedulers: HashMap::new(),
+            components: HashMap::new(),
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -167,6 +170,20 @@ impl CloudSimulation {
             destination_host_id,
             self.sim_config.message_delay,
         );
+    }
+
+    pub fn build_custom_component<Component: 'static + CustomComponent>(
+        &mut self,
+        name: &str,
+    ) -> Rc<RefCell<Component>> {
+        let component = rc!(refcell!(Component::new(self.sim.create_context(name))));
+        let id = self.sim.add_handler(name, component.clone());
+        self.components.insert(id, component.clone());
+        component
+    }
+
+    pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {
+        self.monitoring.clone()
     }
 
     pub fn context(&self) -> &SimulationContext {

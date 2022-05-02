@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::config::SimulationConfig;
-use crate::load_model::LoadModel;
+use crate::core::config::SimulationConfig;
+use crate::core::load_model::LoadModel;
 
 #[derive(Clone)]
 pub struct VirtualMachine {
