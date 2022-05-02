@@ -5,7 +5,6 @@ use std::rc::Rc;
 use sugars::{rc, refcell};
 
 use simcore::context::SimulationContext;
-use simcore::handler::EventHandler;
 use simcore::simulation::Simulation;
 
 use crate::core::config::SimulationConfig;
@@ -30,9 +29,9 @@ pub struct CloudSimulation {
     vms: BTreeMap<u32, VirtualMachine>,
     allocations: HashMap<u32, Allocation>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
-    components: HashMap<u32, Rc<RefCell<dyn EventHandler>>>,
-    sim: Rc<RefCell<Simulation>>,
-    ctx: Rc<RefCell<SimulationContext>>,
+    components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
+    sim: Simulation,
+    ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
 }
 
@@ -46,7 +45,7 @@ impl CloudSimulation {
             sim_config.clone(),
         )));
         let placement_store_id = sim.add_handler("placement_store", placement_store.clone());
-        let ctx = rc!(refcell!(sim.create_context("simulation")));
+        let ctx = sim.create_context("simulation");
         Self {
             monitoring,
             monitoring_id,
@@ -57,7 +56,7 @@ impl CloudSimulation {
             allocations: HashMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            sim: rc!(refcell!(sim)),
+            sim,
             ctx,
             sim_config: rc!(sim_config),
         }
@@ -71,10 +70,10 @@ impl CloudSimulation {
             self.monitoring_id,
             self.placement_store_id,
             self.sim_config.allow_vm_overcommit,
-            self.sim.borrow_mut().create_context(name),
+            self.sim.create_context(name),
             self.sim_config.clone(),
         )));
-        let id = self.sim.borrow_mut().add_handler(name, host.clone());
+        let id = self.sim.add_handler(name, host.clone());
         self.hosts.insert(id, host);
         // add host to monitoring
         self.monitoring.borrow_mut().add_host(id, cpu_total, memory_total);
@@ -85,7 +84,7 @@ impl CloudSimulation {
             scheduler.borrow_mut().add_host(id, cpu_total, memory_total);
         }
         // start sending host state to monitoring
-        self.ctx.borrow_mut().emit_now(SendHostState {}, id);
+        self.ctx.emit_now(SendHostState {}, id);
         id
     }
 
@@ -97,10 +96,10 @@ impl CloudSimulation {
             self.monitoring.clone(),
             self.placement_store_id,
             vm_placement_algorithm,
-            self.sim.borrow_mut().create_context(name),
+            self.sim.create_context(name),
             self.sim_config.clone(),
         )));
-        let id = self.sim.borrow_mut().add_handler(name, scheduler.clone());
+        let id = self.sim.add_handler(name, scheduler.clone());
         self.schedulers.insert(id, scheduler);
         // notify placement store
         self.placement_store.borrow_mut().add_scheduler(id);
@@ -128,7 +127,6 @@ impl CloudSimulation {
         self.allocations.insert(id, alloc.clone());
 
         self.ctx
-            .borrow_mut()
             .emit_now(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id);
     }
 
@@ -154,17 +152,16 @@ impl CloudSimulation {
         self.allocations.insert(id, alloc.clone());
 
         self.ctx
-            .borrow_mut()
             .emit(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id, delay);
     }
 
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, destination_host_id: u32) {
         let alloc = self.allocations.get(&vm_id).unwrap();
         let mut vm = self.vms.get_mut(&vm_id).unwrap();
-        vm.lifetime -= self.ctx.borrow_mut().time() - vm.start_time;
+        vm.lifetime -= self.ctx.time() - vm.start_time;
         let source_host = self.monitoring.borrow_mut().find_host_by_vm(vm_id);
 
-        self.ctx.borrow_mut().emit(
+        self.ctx.emit(
             MigrationRequest {
                 source_host: source_host.clone(),
                 alloc: alloc.clone(),
@@ -175,38 +172,38 @@ impl CloudSimulation {
         );
     }
 
-    pub fn build_custom_component<Component: CustomComponent>(&mut self, name: &str) -> Rc<RefCell<Component>> {
-        let component = rc!(refcell!(Component::new(self.sim.borrow_mut().create_context(name))));
-        let id = self
-            .sim
-            .borrow_mut()
-            .add_handler(name, component.borrow_mut().handler().clone());
-        self.components.insert(id, component.borrow_mut().handler().clone());
-        component.clone()
+    pub fn build_custom_component<Component: 'static + CustomComponent>(
+        &mut self,
+        name: &str,
+    ) -> Rc<RefCell<Component>> {
+        let component = rc!(refcell!(Component::new(self.sim.create_context(name))));
+        let id = self.sim.add_handler(name, component.clone());
+        self.components.insert(id, component.clone());
+        component
     }
 
     pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {
         self.monitoring.clone()
     }
 
-    pub fn context(&self) -> Rc<RefCell<SimulationContext>> {
-        return self.ctx.clone();
+    pub fn context(&self) -> &SimulationContext {
+        return &self.ctx;
     }
 
     pub fn steps(&mut self, step_count: u64) -> bool {
-        return self.sim.borrow_mut().steps(step_count);
+        return self.sim.steps(step_count);
     }
 
     pub fn step_for_duration(&mut self, time: f64) {
-        self.sim.borrow_mut().step_for_duration(time);
+        self.sim.step_for_duration(time);
     }
 
     pub fn event_count(&self) -> u64 {
-        return self.sim.borrow().event_count();
+        return self.sim.event_count();
     }
 
     pub fn current_time(&mut self) -> f64 {
-        return self.sim.borrow().time();
+        return self.sim.time();
     }
 
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {

@@ -5,11 +5,10 @@ use cloud_plugin::core::load_model::ConstLoadModel;
 use cloud_plugin::core::load_model::LoadModel;
 use cloud_plugin::core::vm_placement_algorithm::BestFit;
 use cloud_plugin::core::vm_placement_algorithm::BestFitThreshold;
-use cloud_plugin::extensions::vm_migration_component::VmMigrationComponent;
+use cloud_plugin::custom_component::CustomComponent;
+use cloud_plugin::extensions::vm_migrator::VmMigrator;
 use cloud_plugin::simulation::CloudSimulation;
 use simcore::simulation::Simulation;
-
-use cloud_plugin::custom_component::CustomComponent;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -209,7 +208,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         scheduler_id,
     );
 
-    let migrator = cloud_sim.build_custom_component::<VmMigrationComponent>("migrator");
+    let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");
     migrator
         .borrow_mut()
         .patch_custom_args(1., cloud_sim.monitoring().clone());

@@ -184,7 +184,7 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
     }
 
     log_info!(
-        cloud_sim.context().borrow(),
+        cloud_sim.context(),
         "Simulation init time: {:.2?}",
         initialization_start.elapsed()
     );
@@ -201,17 +201,17 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
             sum_cpu_load += cloud_sim
                 .host(*host_id)
                 .borrow()
-                .get_cpu_load(cloud_sim.context().borrow().time());
+                .get_cpu_load(cloud_sim.context().time());
             sum_memory_load += cloud_sim
                 .host(*host_id)
                 .borrow()
-                .get_memory_load(cloud_sim.context().borrow().time());
+                .get_memory_load(cloud_sim.context().time());
             sum_cpu_allocated += cloud_sim.host(*host_id).borrow().get_cpu_allocated();
             sum_memory_allocated += cloud_sim.host(*host_id).borrow().get_memory_allocated();
         }
 
         log_info!(
-            cloud_sim.context().borrow(),
+            cloud_sim.context(),
             concat!(
                 "CPU allocation rate: {:.2?}, memory allocation rate: {:.2?},",
                 " CPU load rate: {:.2?}, memory load rate: {:.2?}"
@@ -227,17 +227,17 @@ fn simulation_with_traces(vm_types_file_name: &str, vm_instances_file_name: &str
     }
 
     log_info!(
-        cloud_sim.context().borrow(),
+        cloud_sim.context(),
         "Simulation process time {:.2?}",
         simulation_start.elapsed()
     );
     log_info!(
-        cloud_sim.context().borrow(),
+        cloud_sim.context(),
         "Total events processed {}",
         cloud_sim.event_count()
     );
     log_info!(
-        cloud_sim.context().borrow(),
+        cloud_sim.context(),
         "Events per second {:.0}",
         cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
     );

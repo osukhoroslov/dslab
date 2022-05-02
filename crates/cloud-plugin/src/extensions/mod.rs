@@ -1,1 +1,1 @@
-pub mod vm_migration_component;
+pub mod vm_migrator;
