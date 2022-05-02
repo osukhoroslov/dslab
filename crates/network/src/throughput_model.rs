@@ -25,7 +25,7 @@ impl<T> Ord for ThroughputModelItem<T> {
             .position
             .partial_cmp(&self.position)
             .unwrap()
-            .then(self.id.cmp(&other.id))
+            .then(other.id.cmp(&self.id))
     }
 }
 
@@ -37,62 +37,44 @@ impl<T> PartialEq for ThroughputModelItem<T> {
 
 impl<T> Eq for ThroughputModelItem<T> {}
 
-struct Line {
-    k: f64,
+struct TimeFunction {
+    a: f64,
     b: f64,
 }
 
-impl Line {
-    fn new(k: f64, b: f64) -> Self {
-        Line { k, b }
+impl TimeFunction {
+    fn new(a: f64, b: f64) -> Self {
+        TimeFunction { a, b }
     }
 
     fn at(&self, x: f64) -> f64 {
-        self.k * x + self.b
+        self.a * x + self.b
     }
 
-    fn inv(&self) -> Line {
-        Line::new(1. / self.k, -self.b / self.k)
+    fn inverse(&self) -> TimeFunction {
+        TimeFunction::new(1. / self.a, -self.b / self.a)
     }
 
-    fn then(&self, other: Line) -> Line {
-        Line::new(self.k * other.k, self.b * other.k + other.b)
+    fn update(&mut self, c1: f64, c2: f64) {
+        self.a *= c1;
+        self.b = self.b * c1 + c2;
     }
 }
 
 pub struct ThroughputModel<T> {
-    id: u64,
     throughput: f64,
-    line: Line,
+    time_fn: TimeFunction,
     items: BinaryHeap<ThroughputModelItem<T>>,
+    next_id: u64,
 }
 
 impl<T: std::fmt::Debug> ThroughputModel<T> {
     pub fn new(throughput: f64) -> Self {
         ThroughputModel {
-            id: 0,
             throughput,
-            line: Line::new(1., 0.),
+            time_fn: TimeFunction::new(1., 0.),
             items: BinaryHeap::new(),
-        }
-    }
-
-    pub fn insert(&mut self, current_time: f64, mut volume: f64, item: T) {
-        volume /= self.throughput;
-        self.id += 1;
-        if self.items.is_empty() {
-            self.line = Line::new(1., 0.);
-            self.items
-                .push(ThroughputModelItem::<T>::new(current_time + volume, self.id - 1, item));
-        } else {
-            let k = self.items.len() as f64;
-            self.line = self.line.then(Line::new((k + 1.) / k, -1. / k * current_time));
-            let length = volume * (k + 1.);
-            self.items.push(ThroughputModelItem::<T>::new(
-                self.line.inv().at(current_time + length),
-                self.id - 1,
-                item,
-            ));
+            next_id: 0,
         }
     }
 
@@ -104,22 +86,43 @@ impl<T: std::fmt::Debug> ThroughputModel<T> {
         self.items.len()
     }
 
+    pub fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+        if self.items.is_empty() {
+            let finish_time = current_time + volume / self.throughput;
+            self.time_fn = TimeFunction::new(1., 0.);
+            self.items
+                .push(ThroughputModelItem::<T>::new(finish_time, self.next_id, item));
+        } else {
+            let par_old = self.items.len() as f64;
+            let par_new = par_old + 1.;
+            self.time_fn.update(par_new / par_old, -current_time / par_old);
+            let finish_time = current_time + (volume / self.throughput) * par_new;
+            self.items.push(ThroughputModelItem::<T>::new(
+                self.time_fn.inverse().at(finish_time),
+                self.next_id,
+                item,
+            ));
+        }
+        self.next_id += 1;
+    }
+
     pub fn pop(&mut self) -> Option<(f64, T)> {
         if let Some(item) = self.items.pop() {
-            let k = self.items.len() as f64;
-            let y = self.line.at(item.position);
-            self.line = self.line.then(Line::new(k / (k + 1.), 1. / (k + 1.) * y));
-            Some((y, item.item))
+            let par_new = self.items.len() as f64;
+            let par_old = par_new + 1.;
+            let current_time = self.time_fn.at(item.position);
+            self.time_fn.update(par_new / par_old, current_time / par_old);
+            Some((current_time, item.item))
         } else {
             None
         }
     }
 
     pub fn peek(&mut self) -> Option<(f64, &T)> {
-        self.items.peek().map(|x| (self.line.at(x.position), &x.item))
+        self.items.peek().map(|x| (self.time_fn.at(x.position), &x.item))
     }
 
-    pub fn next_event(&self) -> Option<f64> {
-        self.items.peek().map(|x| self.line.at(x.position))
+    pub fn next_time(&self) -> Option<f64> {
+        self.items.peek().map(|x| self.time_fn.at(x.position))
     }
 }
