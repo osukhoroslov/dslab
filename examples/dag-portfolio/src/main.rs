@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -135,7 +136,7 @@ fn run_experiments(matches: &ArgMatches) {
     let algos = (0..36).filter(|&algo| algo % 9 / 3 != 0).collect::<Vec<_>>();
 
     let total_runs = algos.len() * dags.len() * platform_configs.len();
-    let finished_runs = Arc::new(Mutex::new(0));
+    let finished_runs = Arc::new(AtomicUsize::new(0));
 
     let results = Arc::new(Mutex::new(Vec::<(i32, usize, usize, f64)>::new()));
 
@@ -232,9 +233,12 @@ fn run_experiments(matches: &ArgMatches) {
                             .unwrap();
                     }
 
-                    let mut finished_runs = finished_runs.lock().unwrap();
-                    *finished_runs += 1;
-                    print!("\rFinished {}/{} runs", finished_runs, total_runs);
+                    finished_runs.fetch_add(1, Ordering::SeqCst);
+                    print!(
+                        "\rFinished {}/{} runs",
+                        finished_runs.load(Ordering::SeqCst),
+                        total_runs
+                    );
                     std::io::stdout().flush().unwrap();
                     results.lock().unwrap().push((algo, dag_id, platform_id, sim.time()));
                 });
