@@ -113,6 +113,15 @@ fn run_experiments(matches: &ArgMatches) {
         std::fs::create_dir_all(traces_folder).unwrap();
     }
 
+    let run_one = matches.value_of("run-one").map(|s| {
+        let mut s = s.split('-');
+        (
+            s.next().unwrap().parse::<i32>().unwrap(),
+            s.next().unwrap().parse::<usize>().unwrap(),
+            s.next().unwrap().parse::<usize>().unwrap(),
+        )
+    });
+
     let num_threads: usize = matches.value_of_t("threads").unwrap();
     let pool = ThreadPool::new(num_threads);
 
@@ -128,6 +137,11 @@ fn run_experiments(matches: &ArgMatches) {
     for algo in algos.into_iter() {
         for dag_id in 0..dags.len() {
             for platform_id in 0..platform_configs.len() {
+                if let Some((one_algo, one_dag, one_platform)) = run_one {
+                    if algo != one_algo || dag_id != one_dag || one_platform != platform_id {
+                        continue;
+                    }
+                }
                 let dag = dags[dag_id].clone();
                 let platform_config = platform_configs[platform_id].clone();
                 let algo = algo;
@@ -224,24 +238,29 @@ fn run_experiments(matches: &ArgMatches) {
     }
     let t = Instant::now();
     pool.join();
-    println!("\rFinished {} runs in {:.2?}", total_runs, t.elapsed());
 
-    let mut results = results.lock().unwrap();
-    results.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    if run_one.is_none() {
+        println!("\rFinished {} runs in {:.2?}", total_runs, t.elapsed());
 
-    std::fs::File::create("data/results.txt")
-        .unwrap()
-        .write_all(
-            results
-                .iter()
-                .map(|(algo, dag_id, platform_id, time)| {
-                    format!("{}\t{}\t{}\t{:.10}\n", algo, dag_id, platform_id, time)
-                })
-                .collect::<Vec<_>>()
-                .join("")
-                .as_bytes(),
-        )
-        .unwrap();
+        let mut results = results.lock().unwrap();
+        results.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+
+        std::fs::File::create("data/results.txt")
+            .unwrap()
+            .write_all(
+                results
+                    .iter()
+                    .map(|(algo, dag_id, platform_id, time)| {
+                        format!("{}\t{}\t{}\t{:.10}\n", algo, dag_id, platform_id, time)
+                    })
+                    .collect::<Vec<_>>()
+                    .join("")
+                    .as_bytes(),
+            )
+            .unwrap();
+    } else {
+        println!("\rFinished one run in {:.2?}", t.elapsed());
+    }
 }
 
 fn main() {
@@ -268,12 +287,22 @@ fn main() {
                 .help("Number of threads")
                 .default_value("8"),
         )
+        .arg(
+            Arg::new("run-one")
+                .long("run-one")
+                .help("Run only one experiment (algo-dag-platform)")
+                .default_value("8-0-4"),
+        )
         .get_matches();
 
     let load_results = matches.is_present("load-results");
 
     if !load_results {
         run_experiments(&matches);
+    }
+
+    if matches.is_present("run-one") {
+        return;
     }
 
     let results = std::fs::read_to_string("data/results.txt")
