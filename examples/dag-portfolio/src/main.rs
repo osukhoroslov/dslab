@@ -78,8 +78,13 @@ fn run_experiments(matches: &ArgMatches) {
     let mut dags: Vec<DAG> = Vec::new();
     let mut rng = Pcg64::seed_from_u64(456);
 
-    for path in std::fs::read_dir(graphs_folder).unwrap() {
-        let filename = path.unwrap().file_name().into_string().unwrap();
+    let mut filenames = std::fs::read_dir(graphs_folder)
+        .unwrap()
+        .map(|path| path.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    filenames.sort();
+
+    for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
         let mut dag = DAG::from_wfcommons(&format!("{}{}", graphs_folder, filename), 1.0e+10);
 
@@ -291,7 +296,7 @@ fn main() {
             Arg::new("run-one")
                 .long("run-one")
                 .help("Run only one experiment (algo-dag-platform)")
-                .default_value("8-0-4"),
+                .takes_value(true),
         )
         .get_matches();
 
