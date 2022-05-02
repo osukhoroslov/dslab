@@ -1,8 +1,8 @@
 use simcore::context::SimulationContext;
 
-use dag::dag::DAG;
-use dag::scheduler::{Action, Config, Scheduler};
-use dag::task::*;
+use crate::dag::DAG;
+use crate::scheduler::{Action, Config, Scheduler};
+use crate::task::*;
 
 struct Resource {
     cores_available: u32,
@@ -16,7 +16,7 @@ impl SimpleScheduler {
         SimpleScheduler {}
     }
 
-    fn schedule(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &Vec<crate::resource::Resource>) -> Vec<Action> {
         let mut resources: Vec<Resource> = resources
             .iter()
             .map(|resource| Resource {
@@ -50,7 +50,12 @@ impl SimpleScheduler {
 impl Scheduler for SimpleScheduler {
     fn set_config(&mut self, _config: Config) {}
 
-    fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>, _ctx: &SimulationContext) -> Vec<Action> {
+    fn start(
+        &mut self,
+        dag: &DAG,
+        resources: &Vec<crate::resource::Resource>,
+        _ctx: &SimulationContext,
+    ) -> Vec<Action> {
         self.schedule(dag, resources)
     }
 
@@ -59,7 +64,7 @@ impl Scheduler for SimpleScheduler {
         _task: usize,
         _task_state: TaskState,
         dag: &DAG,
-        resources: &Vec<dag::resource::Resource>,
+        resources: &Vec<crate::resource::Resource>,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
         self.schedule(dag, resources)

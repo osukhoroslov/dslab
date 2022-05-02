@@ -10,9 +10,9 @@ use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
 
-use dag::dag::DAG;
-use dag::scheduler::{Action, Config, Scheduler};
-use dag::task::*;
+use crate::dag::DAG;
+use crate::scheduler::{Action, Config, Scheduler};
+use crate::task::*;
 
 pub enum DataTransferMode {
     ViaMasterNode,
@@ -135,7 +135,7 @@ impl Scheduler for HeftScheduler {
         self.network = config.network;
     }
 
-    fn start(&mut self, dag: &DAG, resources: &Vec<dag::resource::Resource>, ctx: &SimulationContext) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, resources: &Vec<crate::resource::Resource>, ctx: &SimulationContext) -> Vec<Action> {
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,
@@ -401,7 +401,7 @@ impl Scheduler for HeftScheduler {
         _task: usize,
         _task_state: TaskState,
         _dag: &DAG,
-        _resources: &Vec<dag::resource::Resource>,
+        _resources: &Vec<crate::resource::Resource>,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
         Vec::new()

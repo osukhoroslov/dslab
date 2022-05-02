@@ -5,5 +5,6 @@ pub mod parsers;
 pub mod resource;
 pub mod runner;
 pub mod scheduler;
+pub mod schedulers;
 pub mod task;
 pub mod trace_log;
