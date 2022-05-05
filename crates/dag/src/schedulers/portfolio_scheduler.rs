@@ -171,13 +171,12 @@ impl PortfolioScheduler {
 }
 
 impl Scheduler for PortfolioScheduler {
-    fn set_config(&mut self, _config: Config) {}
-
     fn start(
         &mut self,
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
         _ctx: &SimulationContext,
+        _config: Config,
     ) -> Vec<Action> {
         self.schedule(dag, resources)
     }

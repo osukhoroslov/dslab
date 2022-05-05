@@ -1,11 +1,8 @@
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::ops::Bound::{Excluded, Included, Unbounded};
-use std::rc::Rc;
 
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::model::NetworkModel;
+use network::network::Network;
 use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
@@ -26,7 +23,7 @@ pub enum DataTransferStrategy {
 }
 
 impl DataTransferMode {
-    fn net_time(&self, network: &dyn NetworkModel, src: Id, dst: Id, runner: Id) -> f64 {
+    fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
             DataTransferMode::ViaMasterNode => {
                 1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
@@ -74,7 +71,6 @@ impl PartialEq for ScheduledTask {
 impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
-    network: Rc<RefCell<dyn NetworkModel>>,
     data_transfer_mode: DataTransferMode,
     data_transfer_strategy: DataTransferStrategy,
 }
@@ -82,7 +78,6 @@ pub struct HeftScheduler {
 impl HeftScheduler {
     pub fn new() -> Self {
         HeftScheduler {
-            network: Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1., 0.))),
             data_transfer_mode: DataTransferMode::ViaMasterNode,
             data_transfer_strategy: DataTransferStrategy::Eager,
         }
@@ -131,11 +126,15 @@ impl HeftScheduler {
 }
 
 impl Scheduler for HeftScheduler {
-    fn set_config(&mut self, config: Config) {
-        self.network = config.network;
-    }
+    fn start(
+        &mut self,
+        dag: &DAG,
+        resources: &Vec<crate::resource::Resource>,
+        ctx: &SimulationContext,
+        config: Config,
+    ) -> Vec<Action> {
+        let network = &config.network.borrow();
 
-    fn start(&mut self, dag: &DAG, resources: &Vec<crate::resource::Resource>, ctx: &SimulationContext) -> Vec<Action> {
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,
@@ -151,17 +150,14 @@ impl Scheduler for HeftScheduler {
             .map(|r1| {
                 resources
                     .iter()
-                    .map(|r2| {
-                        self.data_transfer_mode
-                            .net_time(&*self.network.borrow(), r1.id, r2.id, ctx.id())
-                    })
+                    .map(|r2| self.data_transfer_mode.net_time(network, r1.id, r2.id, ctx.id()))
                     .sum::<f64>()
             })
             .sum::<f64>()
             / (resources.len() as f64).powf(2.);
         let avg_upload_net_time = resources
             .iter()
-            .map(|r| 1. / self.network.borrow().bandwidth(r.id, ctx.id()))
+            .map(|r| 1. / network.bandwidth(r.id, ctx.id()))
             .sum::<f64>()
             / resources.len() as f64;
 
@@ -234,7 +230,7 @@ impl Scheduler for HeftScheduler {
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
-                let cur_net_time = 1. / self.network.borrow().bandwidth(ctx.id(), resources[resource].id);
+                let cur_net_time = 1. / network.bandwidth(ctx.id(), resources[resource].id);
                 let input_load_time = match self.data_transfer_strategy {
                     DataTransferStrategy::Eager => dag
                         .get_task(task)
@@ -369,7 +365,7 @@ impl Scheduler for HeftScheduler {
                 .iter()
                 .enumerate()
                 .map(|(resource, cores)| {
-                    let cur_net_time = 1. / self.network.borrow().bandwidth(resources[resource].id, ctx.id());
+                    let cur_net_time = 1. / network.bandwidth(resources[resource].id, ctx.id());
                     cores
                         .iter()
                         .map(|schedule| {

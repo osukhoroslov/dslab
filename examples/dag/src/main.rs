@@ -16,7 +16,7 @@ use compute::multicore::*;
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
 use dag::network::load_network;
-use dag::scheduler::{Config, Scheduler};
+use dag::scheduler::Scheduler;
 use dag::schedulers::heft::{DataTransferMode, DataTransferStrategy, HeftScheduler};
 use dag::schedulers::simple_scheduler::SimpleScheduler;
 
@@ -62,9 +62,6 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
                     .with_data_transfer_strategy(DataTransferStrategy::Lazy)))
             }
         };
-    scheduler.borrow_mut().set_config(Config {
-        network: network_model.clone(),
-    });
 
     let mut sim = DagSimulation::new(123, network_model, scheduler);
     sim.load_resources(resources_file);

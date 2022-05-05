@@ -26,7 +26,6 @@ use threadpool::ThreadPool;
 use compute::multicore::*;
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
-use dag::scheduler::{Config, Scheduler};
 use dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 
@@ -156,10 +155,7 @@ fn run_experiments(matches: &ArgMatches) {
                 pool.execute(move || {
                     let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0e+8, 0.)));
 
-                    let mut scheduler = PortfolioScheduler::new(algo);
-                    scheduler.set_config(Config {
-                        network: network_model.clone(),
-                    });
+                    let scheduler = PortfolioScheduler::new(algo);
 
                     let mut sim = DagSimulation::new(123, network_model, rc!(refcell!(scheduler)));
                     let mut create_resource = |speed: i32, cluster: usize, node: usize| {
@@ -240,48 +236,7 @@ fn run_experiments(matches: &ArgMatches) {
     }
 }
 
-fn main() {
-    Builder::from_default_env()
-        .format(|buf, record| writeln!(buf, "{}", record.args()))
-        .init();
-
-    let matches = command!()
-        .arg(
-            Arg::new("trace-log")
-                .long("trace-log")
-                .help("Save trace_log to file")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("load-results")
-                .long("load-results")
-                .help("Load result from data/results.txt without running simulation")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("threads")
-                .long("threads")
-                .help("Number of threads")
-                .default_value("8"),
-        )
-        .arg(
-            Arg::new("run-one")
-                .long("run-one")
-                .help("Run only one experiment (algo-dag-platform)")
-                .takes_value(true),
-        )
-        .get_matches();
-
-    let load_results = matches.is_present("load-results");
-
-    if !load_results {
-        run_experiments(&matches);
-    }
-
-    if matches.is_present("run-one") {
-        return;
-    }
-
+fn process_results() {
     let results = std::fs::read_to_string("data/results.txt")
         .unwrap()
         .split('\n')
@@ -342,4 +297,49 @@ fn main() {
             algos[i], avg_place[i], avg_ratio_to_best[i], first_places_cnt[i],
         );
     }
+}
+
+fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+
+    let matches = command!()
+        .arg(
+            Arg::new("trace-log")
+                .long("trace-log")
+                .help("Save trace_log to file")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("load-results")
+                .long("load-results")
+                .help("Load result from data/results.txt without running simulation")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("threads")
+                .long("threads")
+                .help("Number of threads")
+                .default_value("8"),
+        )
+        .arg(
+            Arg::new("run-one")
+                .long("run-one")
+                .help("Run only one experiment (algo-dag-platform)")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let load_results = matches.is_present("load-results");
+
+    if !load_results {
+        run_experiments(&matches);
+    }
+
+    if matches.is_present("run-one") {
+        return;
+    }
+
+    process_results();
 }
