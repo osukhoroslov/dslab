@@ -21,7 +21,7 @@ public:
     MessageType type;
     sg4::Mailbox* from = nullptr;
 
-    explicit Message(MessageType type, sg4::Mailbox* from) : type(type), from(from) {}
+    explicit Message(MessageType type, sg4::Mailbox* from) : type(type), from(from) {};
 
     static void destroy(void* message);
 };

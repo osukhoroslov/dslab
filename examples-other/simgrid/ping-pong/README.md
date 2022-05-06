@@ -47,3 +47,9 @@ bin/ping-pong 2 1 1 1 1 platform.xml --log=ping_pong_app.thres:debug
 ```
 bin/ping-pong 1000 10 0 0 100 platform.xml --log=ping_pong_app.thres:info
 ```
+
+Constant network model:
+
+```
+bin/ping-pong 1000 10 0 0 1000 platform-constant.xml --log=ping_pong_app.thres:info  --cfg=network/model:Constant
+```
