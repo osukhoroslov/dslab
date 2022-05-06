@@ -1,8 +1,9 @@
+use network::network::Network;
+use simcore::context::SimulationContext;
+
 use crate::dag::DAG;
 use crate::resource::Resource;
 use crate::task::TaskState;
-
-use simcore::context::SimulationContext;
 
 #[derive(Debug)]
 pub enum Action {
@@ -19,7 +20,13 @@ pub enum Action {
 }
 
 pub trait Scheduler {
-    fn start(&mut self, dag: &DAG, resources: &Vec<Resource>, ctx: &SimulationContext) -> Vec<Action>;
+    fn start(
+        &mut self,
+        dag: &DAG,
+        resources: &Vec<Resource>,
+        network: &Network,
+        ctx: &SimulationContext,
+    ) -> Vec<Action>;
     fn on_task_state_changed(
         &mut self,
         task: usize,

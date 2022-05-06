@@ -8,6 +8,7 @@ use simcore::simulation::Simulation;
 
 use compute::multicore::*;
 
+#[derive(Clone)]
 pub struct Resource {
     pub id: Id,
     pub name: String,

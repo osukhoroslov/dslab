@@ -53,6 +53,7 @@ pub struct DAGRunner {
     scheduler: Rc<RefCell<dyn Scheduler>>,
     actions: VecDeque<Action>,
     action_id: usize,
+    scheduled_actions: HashSet<usize>,
     resource_queue: Vec<Vec<VecDeque<QueuedTask>>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
@@ -93,6 +94,7 @@ impl DAGRunner {
             scheduler,
             actions: VecDeque::new(),
             action_id: 0 as usize,
+            scheduled_actions: HashSet::new(),
             resource_queue,
             available_cores,
             trace_log_enabled: true,
@@ -100,9 +102,8 @@ impl DAGRunner {
         }
     }
 
-    pub fn enable_trace_log(mut self, flag: bool) -> Self {
+    pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
-        self
     }
 
     pub fn start(&mut self) {
@@ -114,8 +115,12 @@ impl DAGRunner {
             self.dag.get_data_items().len()
         );
         self.trace_config();
-        self.actions
-            .extend(self.scheduler.borrow_mut().start(&self.dag, &self.resources, &self.ctx));
+        self.actions.extend(self.scheduler.borrow_mut().start(
+            &self.dag,
+            &self.resources,
+            &self.network.borrow(),
+            &self.ctx,
+        ));
         self.process_actions();
     }
 
@@ -220,6 +225,13 @@ impl DAGRunner {
             let mut task_ids: BTreeMap<usize, usize> = BTreeMap::new();
             let mut ready_cores: BTreeMap<usize, Vec<u32>> = BTreeMap::new();
             for &core in self.available_cores[resource_idx].iter() {
+                while !self.resource_queue[resource_idx][core as usize].is_empty()
+                    && self
+                        .scheduled_actions
+                        .contains(&self.resource_queue[resource_idx][core as usize][0].action_id)
+                {
+                    self.resource_queue[resource_idx][core as usize].pop_front();
+                }
                 if self.resource_queue[resource_idx][core as usize].is_empty() {
                     continue;
                 }
@@ -309,6 +321,7 @@ impl DAGRunner {
                 }
 
                 something_scheduled = true;
+                self.scheduled_actions.insert(action_id);
             }
 
             if !something_scheduled {

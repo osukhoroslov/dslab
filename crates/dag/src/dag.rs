@@ -5,6 +5,7 @@ use compute::multicore::CoresDependency;
 use crate::data_item::*;
 use crate::task::*;
 
+#[derive(Clone)]
 pub struct DAG {
     tasks: Vec<Task>,
     data_items: Vec<DataItem>,
@@ -40,6 +41,10 @@ impl DAG {
 
     pub fn get_task(&self, task_id: usize) -> &Task {
         self.tasks.get(task_id).unwrap()
+    }
+
+    pub fn get_task_mut(&mut self, task_id: usize) -> &mut Task {
+        &mut self.tasks[task_id]
     }
 
     pub fn get_tasks(&self) -> &Vec<Task> {

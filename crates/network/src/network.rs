@@ -85,6 +85,10 @@ impl Network {
         self.ctx.emit_self_now(DataTransferRequest { data });
         data_id
     }
+
+    pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
+        self.network_model.borrow().bandwidth(src, dest)
+    }
 }
 
 impl EventHandler for Network {
