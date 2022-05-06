@@ -50,7 +50,9 @@ enum TaskState {
     NEW,
     ASSIGNED,
     DOWNLOADING,
+    READING,
     RUNNING,
+    WRITING,
     UPLOADING,
     COMPLETED
 };
@@ -383,16 +385,23 @@ public:
                         }
                     // data download completed
                     } else if (completed_name.starts_with(std::string_view("download-"))) {
-                        on_task_download_completed(task_id);
+                        on_data_download_completed(task_id);
                     // data upload completed
                     } else if (completed_name.starts_with(std::string_view("upload-"))) {
-                        on_task_upload_completed(task_id);
+                        on_data_upload_completed(task_id);
                     }
                 // task execution completed
                 } else if (dynamic_cast<sg4::Exec*>(completed)) {
                     on_task_exec_completed(task_id);
                 // disk I/O completed
                 } else if (dynamic_cast<sg4::Io*>(completed)) {
+                    // disk read completed
+                    if (completed_name.starts_with(std::string_view("read-"))) {
+                        on_data_read_completed(task_id);
+                    // disk write completed
+                    } else if (completed_name.starts_with(std::string_view("write-"))) {
+                        on_data_write_completed(task_id);
+                    }
                 }
                 pending_activities.erase(pending_activities.begin() + changed_pos);
             }
@@ -413,20 +422,27 @@ private:
         tasks.insert({req->id, TaskInfo{req, TaskState::DOWNLOADING}});
 
         // download task input data from master
-        auto comm = sg4::Comm::sendto_async(master_host, sg4::this_actor::get_host(), req->input_size);
-        comm->wait();
+        sg4::Comm::sendto(master_host, sg4::this_actor::get_host(), req->input_size);
         XBT_DEBUG("Task %d: downloaded input", req->id);
+
+        // read input data from disk
+        tasks[req->id].state = TaskState::READING;
+        sg4::Host::current()->get_disks().front()->read(req->input_size);
+        XBT_DEBUG("Task %d: read input", req->id);
 
         // run task
         tasks[req->id].state = TaskState::RUNNING;
-        auto exec = sg4::this_actor::exec_async(req->flops);
-        exec->wait();
+        sg4::this_actor::execute(req->flops);
         XBT_DEBUG("Task %d: completed execution", req->id);
+
+        // write output data to disk
+        tasks[req->id].state = TaskState::WRITING;
+        sg4::Host::current()->get_disks().front()->write(req->output_size);
+        XBT_DEBUG("Task %d: wrote output", req->id);
 
         // upload task output data to master
         tasks[req->id].state = TaskState::UPLOADING;
-        comm = sg4::Comm::sendto_async(sg4::this_actor::get_host(), master_host, req->output_size);
-        comm->wait();
+        sg4::Comm::sendto(sg4::this_actor::get_host(), master_host, req->output_size);
         XBT_DEBUG("Task %d: uploaded output", req->id);
 
         tasks[req->id].state = TaskState::COMPLETED;
@@ -445,7 +461,17 @@ private:
         activity_tasks.insert({comm->get_name(), task_id});
     }
 
-    void on_task_download_completed(int task_id) {
+    void on_data_download_completed(int task_id) {
+        auto& task = tasks[task_id];
+        task.state = TaskState::READING;
+        // read data from disk asynchronously
+        auto io = sg4::Host::current()->get_disks().front()->read_async(task.req->input_size);
+        io->set_name("read-" + std::to_string(task_id));
+        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
+        activity_tasks.insert({io->get_name(), task_id});
+    }
+
+    void on_data_read_completed(int task_id) {
         auto& task = tasks[task_id];
         task.state = TaskState::RUNNING;
         // execute task asynchronously
@@ -457,6 +483,16 @@ private:
 
     void on_task_exec_completed(int task_id) {
         auto& task = tasks[task_id];
+        task.state = TaskState::WRITING;
+        // write data to disk asynchronously
+        auto io = sg4::Host::current()->get_disks().front()->write_async(task.req->output_size);
+        io->set_name("write-" + std::to_string(task_id));
+        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
+        activity_tasks.insert({io->get_name(), task_id});
+    }
+
+    void on_data_write_completed(int task_id) {
+        auto& task = tasks[task_id];
         task.state = TaskState::UPLOADING;
         // upload task output data asynchronously
         auto comm = sg4::Comm::sendto_async(sg4::this_actor::get_host(), master_host, task.req->output_size);
@@ -465,7 +501,7 @@ private:
         activity_tasks.insert({comm->get_name(), task_id});
     }
 
-    void on_task_upload_completed(int task_id) {
+    void on_data_upload_completed(int task_id) {
         auto& task = tasks[task_id];
         task.state = TaskState::COMPLETED;
         // report task completion to master
@@ -526,7 +562,7 @@ int main(int argc, char* argv[]) {
         int memory = random.uniform_int(1, 4) * 1024;
         auto host = zone->create_host(hostname, speed);
         host->set_core_count(cores);
-        auto disk = host->create_disk(hostname + "-fs", "100MBps", "100MBps");
+        auto disk = host->create_disk(hostname + "-fs", "1GBps", "1GBps");
         disk->set_property("size", "1000GiB");
         disk->set_property("mount", "/");
         // loopback link is used for intra-host communications
