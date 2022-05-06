@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.1)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "-O2")
+
+project(MasterWorkers)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+find_package(SimGrid 3.31 REQUIRED)
+
+include_directories(${SimGrid_INCLUDE_DIR})
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_executable(master-workers master-workers.cpp)
+target_link_libraries(master-workers ${SimGrid_LIBRARY})
