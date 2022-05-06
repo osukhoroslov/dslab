@@ -203,11 +203,9 @@ int main(int argc, char* argv[]) {
     auto start = std::chrono::steady_clock::now();
     e.run();
     auto stop = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-    XBT_INFO("Elapsed time: %d ms", duration);
+    auto duration = (double)(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()) / 1000;
     if (duration > 0) {
-        auto ips = iterations * 1000 / duration;
-        XBT_INFO("Iterations per second: %d", ips);
+        printf("Processed %d iterations in %.2fs (%.2f iter/s)\n", iterations, duration, iterations / duration);
     }
 
     return 0;

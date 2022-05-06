@@ -45,11 +45,11 @@ bin/ping-pong 2 1 1 1 1 platform.xml --log=ping_pong_app.thres:debug
 1000 processes with 10 random peers, local, 100 iterations:
 
 ```
-bin/ping-pong 1000 10 0 0 100 platform.xml --log=ping_pong_app.thres:info
+bin/ping-pong 1000 10 0 0 100 platform.xml
 ```
 
 Constant network model:
 
 ```
-bin/ping-pong 1000 10 0 0 1000 platform-constant.xml --log=ping_pong_app.thres:info  --cfg=network/model:Constant
+bin/ping-pong 1000 10 0 0 1000 platform-constant.xml --log=root.thres:critical --cfg=network/model:Constant
 ```

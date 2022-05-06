@@ -18,20 +18,26 @@ make
 
 ## Run Examples
 
+10 hosts and 100 tasks:
+
+```
+bin/master-workers 10 100 --log=master_workers_app.thres:debug --log=no_loc
+```
+
 100 hosts and 10000 tasks:
 
 ```
-bin/master-workers 100 10000 --log=master_workers_app.thres:error --log=no_loc
+bin/master-workers 100 10000 --log=root.thres:critical
 ```
 
 CM02 network model:
 
 ```
-bin/master-workers 100 10000 --log=master_workers_app.thres:error --log=no_loc --cfg=network/model:CM02
+bin/master-workers 100 10000 --log=root.thres:critical --cfg=network/model:CM02
 ```
 
 Constant network model (requires commenting all code related to links):
 
 ```
-bin/master-workers 100 10000 --log=master_workers_app.thres:error --log=no_loc --cfg=network/model:Constant
+bin/master-workers 100 10000 --log=root.thres:critical --cfg=network/model:Constant
 ```

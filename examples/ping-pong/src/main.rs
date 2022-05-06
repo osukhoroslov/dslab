@@ -111,11 +111,15 @@ fn main() {
     sim.step_until_no_events();
     let elapsed = t.elapsed().as_secs_f64();
     println!(
-        "Processed {} iterations / {} events in {:.2?} s ({:.0} events/s, {:.2} iter/s)",
+        "Processed {} iterations in {:.2?}s ({:.2} iter/s)",
         iterations,
+        elapsed,
+        iterations as f64 / elapsed
+    );
+    println!(
+        "Processed {} events in {:.2?}s ({:.0} events/s)",
         sim.event_count(),
         elapsed,
-        sim.event_count() as f64 / elapsed,
-        iterations as f64 / elapsed
+        sim.event_count() as f64 / elapsed
     );
 }
