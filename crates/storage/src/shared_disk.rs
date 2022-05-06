@@ -1,35 +1,36 @@
 use serde::Serialize;
+
 use simcore::cast;
+use simcore::component::Id;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-
-use simcore::component::Id;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::fair_sharing::*;
 
-#[derive(Serialize, Clone)]
-struct DiskReadTask {
+#[derive(Clone)]
+struct DiskActivity {
+    request_id: u64,
     requester: Id,
-    on_complete_event: DataReadCompleted,
+    size: u64,
 }
 
-#[derive(Serialize, Clone)]
-struct DiskWriteTask {
-    requester: Id,
-    on_complete_event: DataWriteCompleted,
-}
+#[derive(Serialize)]
+pub struct DiskReadActivityCompleted {}
+
+#[derive(Serialize)]
+pub struct DiskWriteActivityCompleted {}
 
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
-    read_throughput_model: FairThroughputSharingModel<DiskReadTask>,
-    write_throughput_model: FairThroughputSharingModel<DiskWriteTask>,
+    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
     next_request_id: u64,
-    ctx: SimulationContext,
     next_read_event: u64,
     next_write_event: u64,
+    ctx: SimulationContext,
 }
 
 impl SharedDisk {
@@ -40,16 +41,10 @@ impl SharedDisk {
             read_throughput_model: FairThroughputSharingModel::new(read_bandwidth as f64),
             write_throughput_model: FairThroughputSharingModel::new(write_bandwidth as f64),
             next_request_id: 0,
-            ctx,
             next_read_event: 0,
             next_write_event: 0,
+            ctx,
         }
-    }
-
-    fn get_unique_request_id(&mut self) -> u64 {
-        let request_id = self.next_request_id;
-        self.next_request_id += 1;
-        request_id
     }
 
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
@@ -71,12 +66,14 @@ impl SharedDisk {
             self.read_throughput_model.insert(
                 self.ctx.time(),
                 size as f64,
-                DiskReadTask {
+                DiskActivity {
+                    request_id,
                     requester,
-                    on_complete_event: DataReadCompleted { request_id, size },
+                    size,
                 },
             );
-            self.reschedule_read_top_event();
+            self.ctx.cancel_event(self.next_read_event);
+            self.schedule_next_read_event();
         }
         request_id
     }
@@ -99,28 +96,16 @@ impl SharedDisk {
             self.write_throughput_model.insert(
                 self.ctx.time(),
                 size as f64,
-                DiskWriteTask {
+                DiskActivity {
+                    request_id,
                     requester,
-                    on_complete_event: DataWriteCompleted { request_id, size },
+                    size,
                 },
             );
-            self.reschedule_write_top_event();
+            self.ctx.cancel_event(self.next_write_event);
+            self.schedule_next_write_event();
         }
         request_id
-    }
-
-    fn reschedule_read_top_event(&mut self) {
-        self.ctx.cancel_event(self.next_read_event);
-        if let Some((time, event)) = self.read_throughput_model.peek() {
-            self.next_read_event = self.ctx.emit_self(event.clone(), time - self.ctx.time());
-        }
-    }
-
-    fn reschedule_write_top_event(&mut self) {
-        self.ctx.cancel_event(self.next_write_event);
-        if let Some((time, event)) = self.read_throughput_model.peek() {
-            self.next_write_event = self.ctx.emit_self(event.clone(), time - self.ctx.time());
-        }
     }
 
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
@@ -138,26 +123,62 @@ impl SharedDisk {
     pub fn id(&self) -> Id {
         self.ctx.id()
     }
+
+    fn get_unique_request_id(&mut self) -> u64 {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+        request_id
+    }
+
+    fn schedule_next_read_event(&mut self) {
+        if let Some(time) = self.read_throughput_model.next_time() {
+            self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
+        }
+    }
+
+    fn schedule_next_write_event(&mut self) {
+        if let Some(time) = self.read_throughput_model.next_time() {
+            self.next_write_event = self
+                .ctx
+                .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
+        }
+    }
+
+    fn on_read_completed(&mut self) {
+        let (time, activity) = self.read_throughput_model.pop().unwrap();
+        assert_eq!(time, self.ctx.time());
+        self.ctx.emit_now(
+            DataReadCompleted {
+                request_id: activity.request_id,
+                size: activity.size,
+            },
+            activity.requester,
+        );
+        self.schedule_next_read_event();
+    }
+
+    fn on_write_completed(&mut self) {
+        let (time, activity) = self.write_throughput_model.pop().unwrap();
+        assert_eq!(time, self.ctx.time());
+        self.ctx.emit_now(
+            DataWriteCompleted {
+                request_id: activity.request_id,
+                size: activity.size,
+            },
+            activity.requester,
+        );
+        self.schedule_next_write_event();
+    }
 }
 
 impl EventHandler for SharedDisk {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            DiskReadTask {
-                requester,
-                on_complete_event,
-            } => {
-                self.ctx.emit_now(on_complete_event, requester);
-                self.read_throughput_model.pop().unwrap();
-                self.reschedule_read_top_event();
+            DiskReadActivityCompleted {} => {
+                self.on_read_completed();
             }
-            DiskWriteTask {
-                requester,
-                on_complete_event,
-            } => {
-                self.ctx.emit_now(on_complete_event, requester);
-                self.write_throughput_model.pop().unwrap();
-                self.reschedule_write_top_event();
+            DiskWriteActivityCompleted {} => {
+                self.on_write_completed();
             }
         })
     }
