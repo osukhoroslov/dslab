@@ -1,12 +1,9 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use network::network::Network;
+use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::resource::Resource;
 use crate::task::TaskState;
-
-use network::network::Network;
-use simcore::context::SimulationContext;
 
 #[derive(Debug)]
 pub enum Action {
@@ -22,12 +19,14 @@ pub enum Action {
     },
 }
 
-pub struct Config {
-    pub network: Rc<RefCell<Network>>,
-}
-
 pub trait Scheduler {
-    fn start(&mut self, dag: &DAG, resources: &Vec<Resource>, ctx: &SimulationContext, config: Config) -> Vec<Action>;
+    fn start(
+        &mut self,
+        dag: &DAG,
+        resources: &Vec<Resource>,
+        network: &Network,
+        ctx: &SimulationContext,
+    ) -> Vec<Action>;
     fn on_task_state_changed(
         &mut self,
         task: usize,

@@ -8,7 +8,7 @@ use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
 
 use crate::dag::DAG;
-use crate::scheduler::{Action, Config, Scheduler};
+use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
 pub enum DataTransferMode {
@@ -130,11 +130,9 @@ impl Scheduler for HeftScheduler {
         &mut self,
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
+        network: &Network,
         ctx: &SimulationContext,
-        config: Config,
     ) -> Vec<Action> {
-        let network = &config.network.borrow();
-
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,

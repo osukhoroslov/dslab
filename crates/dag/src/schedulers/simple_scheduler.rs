@@ -1,7 +1,8 @@
+use network::network::Network;
 use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
-use crate::scheduler::{Action, Config, Scheduler};
+use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
 struct Resource {
@@ -52,8 +53,8 @@ impl Scheduler for SimpleScheduler {
         &mut self,
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
+        _network: &Network,
         _ctx: &SimulationContext,
-        _config: Config,
     ) -> Vec<Action> {
         self.schedule(dag, resources)
     }

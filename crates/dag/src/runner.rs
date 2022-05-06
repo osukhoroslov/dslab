@@ -20,7 +20,7 @@ use simcore::{log_error, log_info};
 use crate::dag::DAG;
 use crate::data_item::DataItemState;
 use crate::resource::Resource;
-use crate::scheduler::{Action, Config, Scheduler};
+use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 
@@ -118,10 +118,8 @@ impl DAGRunner {
         self.actions.extend(self.scheduler.borrow_mut().start(
             &self.dag,
             &self.resources,
+            &self.network.borrow(),
             &self.ctx,
-            Config {
-                network: self.network.clone(),
-            },
         ));
         self.process_actions();
     }
