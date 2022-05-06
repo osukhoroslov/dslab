@@ -3,10 +3,12 @@ mod master;
 mod task;
 mod worker;
 
+use std::cell::RefCell;
 use std::io::Write;
+use std::rc::Rc;
 use std::time::Instant;
 
-use clap::{arg, command};
+use clap::Parser;
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -14,7 +16,9 @@ use sugars::{rc, refcell};
 
 use compute::multicore::{Compute, CoresDependency};
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
+use network::model::NetworkModel;
 use network::network::Network;
+use network::shared_bandwidth_model::SharedBandwidthNetwork;
 use simcore::simulation::Simulation;
 use storage::disk::Disk;
 
@@ -23,30 +27,32 @@ use crate::master::Master;
 use crate::task::TaskRequest;
 use crate::worker::Worker;
 
+/// Master-workers example
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Number of hosts
+    #[clap(long, default_value_t = 100)]
+    host_count: usize,
+
+    /// Number of tasks
+    #[clap(long, default_value_t = 100000)]
+    task_count: u64,
+
+    /// Use shared network
+    #[clap(long)]
+    use_shared_network: bool,
+}
+
 fn main() {
     // logger
     Builder::from_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    // CLI
-    let matches = command!()
-        .arg(
-            arg!([HOST_COUNT])
-                .help("Number of hosts")
-                .validator(|s| s.parse::<u64>())
-                .default_value("100"),
-        )
-        .arg(
-            arg!([TASK_COUNT])
-                .help("Number of tasks")
-                .validator(|s| s.parse::<u64>())
-                .default_value("100000"),
-        )
-        .get_matches();
-
     // params
-    let host_count = matches.value_of_t("HOST_COUNT").unwrap();
+    let args = Args::parse();
+    let host_count = args.host_count;
     let local_latency = 0.0;
     let local_bandwidth = 10000;
     let network_latency = 0.5;
@@ -54,7 +60,8 @@ fn main() {
     let disk_capacity = 1000;
     let disk_read_bandwidth = 2000;
     let disk_write_bandwidth = 2000;
-    let task_count = matches.value_of_t("TASK_COUNT").unwrap();
+    let task_count = args.task_count;
+    let use_shared_network = args.use_shared_network;
     let seed = 123;
 
     let mut sim = Simulation::new(seed);
@@ -65,10 +72,17 @@ fn main() {
     let mut client = sim.create_context("client");
 
     // create network and add hosts
-    let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(
-        network_bandwidth as f64,
-        network_latency
-    )));
+    let network_model: Rc<RefCell<dyn NetworkModel>> = if use_shared_network {
+        rc!(refcell!(SharedBandwidthNetwork::new(
+            network_bandwidth as f64,
+            network_latency
+        )))
+    } else {
+        rc!(refcell!(ConstantBandwidthNetwork::new(
+            network_bandwidth as f64,
+            network_latency
+        )))
+    };
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
     for i in 0..host_count {
@@ -81,8 +95,8 @@ fn main() {
     // create and start master on host0
     let host = &hosts[0];
     let master_name = &format!("{}::master", host);
-    let master = Master::new(network.clone(), sim.create_context(master_name));
-    let master_id = sim.add_handler(master_name, rc!(refcell!(master)));
+    let master = rc!(refcell!(Master::new(network.clone(), sim.create_context(master_name))));
+    let master_id = sim.add_handler(master_name, master.clone());
     network.borrow_mut().set_location(master_id, host);
     admin.emit_now(Start {}, master_id);
 
@@ -92,9 +106,9 @@ fn main() {
         // compute
         let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
-            rand.gen_range(1..10),
-            rand.gen_range(1..8),
-            rand.gen_range(1..4) * 1024,
+            rand.gen_range(1..=10),
+            rand.gen_range(1..=8),
+            rand.gen_range(1..=4) * 1024,
             sim.create_context(&compute_name),
         )));
         sim.add_handler(compute_name, compute.clone());
@@ -123,13 +137,13 @@ fn main() {
     for i in 0..task_count {
         let task = TaskRequest {
             id: i,
-            flops: rand.gen_range(100..1000),
-            memory: rand.gen_range(1..8) * 128,
+            flops: rand.gen_range(100..=1000),
+            memory: rand.gen_range(1..=8) * 128,
             min_cores: 1,
             max_cores: 1,
             cores_dependency: CoresDependency::Linear,
-            input_size: rand.gen_range(100..1000),
-            output_size: rand.gen_range(10..100),
+            input_size: rand.gen_range(100..=1000),
+            output_size: rand.gen_range(10..=100),
         };
         client.emit_now(task, master_id);
     }
@@ -137,17 +151,21 @@ fn main() {
     // run until completion
     let t = Instant::now();
     sim.step_until_no_events();
+    let duration = t.elapsed().as_secs_f64();
     println!(
-        "Processed {} tasks in {:.2}s ({:.0} task/sec)",
+        "Processed {} tasks on {} hosts in {:.2}s ({:.2} tasks/s)",
         task_count,
+        host_count,
         sim.time(),
         task_count as f64 / sim.time()
     );
+    println!("Elapsed time: {:.2}s", duration);
+    println!("Scheduling time: {:.2}s", master.borrow().scheduling_time);
+    println!("Simulation speedup: {:.2}", sim.time() / duration);
     println!(
-        "Processed {} events in {:.2?} ({:.0} events/sec)",
+        "Processed {} events in {:.2?}s ({:.0} events/s)",
         sim.event_count(),
-        t.elapsed(),
-        sim.event_count() as f64 / t.elapsed().as_secs_f64()
+        duration,
+        sim.event_count() as f64 / duration
     );
-    println!("Time compression: {:.2}", sim.time() / t.elapsed().as_secs_f64());
 }

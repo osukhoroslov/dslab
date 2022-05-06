@@ -66,6 +66,7 @@ pub struct Master {
     cpus_available: u32,
     memory_total: u64,
     memory_available: u64,
+    pub scheduling_time: f64,
     ctx: SimulationContext,
 }
 
@@ -83,6 +84,7 @@ impl Master {
             cpus_available: 0,
             memory_total: 0,
             memory_available: 0,
+            scheduling_time: 0.,
             ctx,
         }
     }
@@ -134,9 +136,15 @@ impl Master {
         self.memory_available += task.req.memory;
         self.worker_queue.push(worker.id, worker.score());
         self.completed_tasks.insert(task_id, task);
+        if self.assigned_tasks.len() == 0 {
+            self.schedule_tasks();
+        }
     }
 
     fn schedule_tasks(&mut self) {
+        if self.unassigned_tasks.len() == 0 {
+            return;
+        }
         log_trace!(self.ctx, "scheduling tasks");
         let t = Instant::now();
         let mut assigned_tasks = HashSet::new();
@@ -179,12 +187,14 @@ impl Master {
             let task = self.unassigned_tasks.remove(&task_id).unwrap();
             self.assigned_tasks.insert(task_id, task);
         }
+        let schedule_duration = t.elapsed();
         log_info!(
             self.ctx,
             "schedule_tasks: assigned {} tasks in {:.2?}",
             assigned_count,
-            t.elapsed()
+            schedule_duration
         );
+        self.scheduling_time += schedule_duration.as_secs_f64();
         if self.is_active() {
             self.ctx.emit_self(ScheduleTasks {}, 10.);
         }

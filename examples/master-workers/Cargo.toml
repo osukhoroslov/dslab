@@ -8,7 +8,7 @@ simcore = { path = "../../crates/simcore" }
 compute = { path = "../../crates/compute" }
 storage = { path = "../../crates/storage" }
 network = { path = "../../crates/network" }
-clap = { version = "3.0.14", features = ["cargo"] }
+clap = { version = "3.1.12", features = ["cargo", "derive"] }
 log = "0.4.14"
 env_logger = "0.9.0"
 rand = "0.8.4"
