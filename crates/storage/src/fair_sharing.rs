@@ -1,4 +1,3 @@
-use serde::Serialize;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -69,7 +68,7 @@ pub struct FairThroughputSharingModel<T> {
     next_id: u64,
 }
 
-impl<T: Serialize> FairThroughputSharingModel<T> {
+impl<T> FairThroughputSharingModel<T> {
     pub fn new(throughput: f64) -> Self {
         FairThroughputSharingModel {
             throughput,
@@ -114,7 +113,7 @@ impl<T: Serialize> FairThroughputSharingModel<T> {
         }
     }
 
-    pub fn peek(&mut self) -> Option<(f64, &T)> {
-        self.items.peek().map(|x| (self.time_fn.at(x.position), &x.item))
+    pub fn next_time(&self) -> Option<f64> {
+        self.items.peek().map(|x| self.time_fn.at(x.position))
     }
 }
