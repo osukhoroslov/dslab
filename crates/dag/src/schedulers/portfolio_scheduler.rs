@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use network::network::Network;
 use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
-use crate::scheduler::{Action, Scheduler};
+use crate::scheduler::{Action, Config, Scheduler};
 use crate::task::*;
 
 struct Resource {
@@ -17,6 +19,7 @@ enum TaskCriterion {
     ComputationSize,
 }
 
+#[derive(PartialEq)]
 enum ClusterCriterion {
     TaskData,
     IdleCores,
@@ -33,10 +36,11 @@ pub struct PortfolioScheduler {
     task_criterion: TaskCriterion,
     cluster_criterion: ClusterCriterion,
     cores_criterion: CoresCriterion,
+    data_location: HashMap<usize, usize>,
 }
 
 impl PortfolioScheduler {
-    pub fn new(algo: i32) -> Self {
+    pub fn new(algo: usize) -> Self {
         PortfolioScheduler {
             task_criterion: match algo / 9 {
                 0 => TaskCriterion::BottomLevel,
@@ -66,6 +70,7 @@ impl PortfolioScheduler {
                     std::process::exit(1);
                 }
             },
+            data_location: HashMap::new(),
         }
     }
 
@@ -131,10 +136,22 @@ impl PortfolioScheduler {
         });
 
         for task in ready_tasks.into_iter() {
+            let mut total_task_data: HashMap<usize, u64> = HashMap::new();
+            if self.cluster_criterion == ClusterCriterion::TaskData {
+                for input in dag.get_task(task).inputs.iter() {
+                    if let Some(location) = self.data_location.get(input) {
+                        *total_task_data.entry(*location).or_default() += dag.get_data_item(*input).size;
+                    }
+                }
+            }
+
             let best_resource = (0..resources.len() as usize)
                 .filter(|&r| resources[r].cores_available > 0)
                 .min_by(|&a, &b| match self.cluster_criterion {
-                    ClusterCriterion::TaskData => resources[b].speed.cmp(&resources[a].speed), // not actually supported
+                    ClusterCriterion::TaskData => total_task_data
+                        .get(&b)
+                        .unwrap_or(&(0 as u64))
+                        .cmp(&total_task_data.get(&a).unwrap_or(&(0 as u64))),
                     ClusterCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
                     ClusterCriterion::Speed => resources[b].speed.cmp(&resources[a].speed),
                 });
@@ -166,6 +183,9 @@ impl PortfolioScheduler {
                 resource: best_resource,
                 cores,
             });
+            for &data_item in dag.get_task(task).outputs.iter() {
+                self.data_location.insert(data_item, best_resource);
+            }
         }
         result
     }
@@ -177,6 +197,7 @@ impl Scheduler for PortfolioScheduler {
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
         _network: &Network,
+        _config: Config,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
         self.schedule(dag, resources)

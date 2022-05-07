@@ -1,9 +1,10 @@
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::rc::Rc;
 use std::time::Instant;
 
-use clap::{command, Arg, ArgEnum};
+use clap::{command, Arg, ArgEnum, ArgMatches};
 
 use sugars::{rc, refcell};
 
@@ -16,8 +17,8 @@ use compute::multicore::*;
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
 use dag::network::load_network;
-use dag::scheduler::Scheduler;
-use dag::schedulers::heft::{DataTransferMode, DataTransferStrategy, HeftScheduler};
+use dag::scheduler::{Config, DataTransferMode, Scheduler};
+use dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
 use dag::schedulers::simple_scheduler::SimpleScheduler;
 
 #[derive(ArgEnum, Clone, Debug)]
@@ -26,30 +27,7 @@ pub enum ArgScheduler {
     Heft,
 }
 
-fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
-    let matches = command!()
-        .arg(
-            Arg::new("trace-log")
-                .long("trace-log")
-                .help("Save trace_log to file")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("scheduler")
-                .long("scheduler")
-                .help(
-                    format!(
-                        "Scheduler {}",
-                        format!("{:?}", ArgScheduler::value_variants()).to_lowercase()
-                    )
-                    .as_str(),
-                )
-                .validator(|s| ArgScheduler::from_str(s, true))
-                .default_value("heft")
-                .takes_value(true),
-        )
-        .get_matches();
-
+fn run_simulation(matches: &ArgMatches, dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
     let network_model = load_network(network_file);
 
     let enable_trace_log = matches.is_present("trace-log");
@@ -57,13 +35,21 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
         match ArgScheduler::from_str(matches.value_of("scheduler").unwrap(), true).unwrap() {
             ArgScheduler::Simple => rc!(refcell!(SimpleScheduler::new())),
             ArgScheduler::Heft => {
-                rc!(refcell!(HeftScheduler::new()
-                    .with_data_transfer_mode(DataTransferMode::ViaMasterNode)
-                    .with_data_transfer_strategy(DataTransferStrategy::Lazy)))
+                rc!(refcell!(
+                    HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Lazy)
+                ))
             }
         };
 
-    let mut sim = DagSimulation::new(123, network_model, scheduler);
+    let data_transfer_mode = match matches.value_of("data-transfer-mode").unwrap() {
+        "via-master-node" => DataTransferMode::ViaMasterNode,
+        "direct" => DataTransferMode::Direct,
+        _ => {
+            eprintln!("Wrong data-transfer-mode");
+            std::process::exit(1);
+        }
+    };
+    let mut sim = DagSimulation::new(123, network_model, scheduler, Config { data_transfer_mode });
     sim.load_resources(resources_file);
 
     let runner = sim.init(dag);
@@ -85,7 +71,7 @@ fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, trace_file
     println!();
 }
 
-fn map_reduce() {
+fn map_reduce(matches: &ArgMatches) {
     let mut dag = DAG::new();
 
     let data_part1 = dag.add_data_item("part1", 128);
@@ -127,6 +113,7 @@ fn map_reduce() {
     dag.add_task_output(reduce4, "result4", 32);
 
     run_simulation(
+        matches,
         dag,
         "resources/cluster1.yaml",
         "networks/network1.yaml",
@@ -134,8 +121,9 @@ fn map_reduce() {
     );
 }
 
-fn epigenomics() {
+fn epigenomics(matches: &ArgMatches) {
     run_simulation(
+        matches,
         DAG::from_dax("graphs/Epigenomics_100.xml", 1000.),
         "resources/cluster2.yaml",
         "networks/network2.yaml",
@@ -143,8 +131,9 @@ fn epigenomics() {
     );
 }
 
-fn montage() {
+fn montage(matches: &ArgMatches) {
     run_simulation(
+        matches,
         DAG::from_dot("graphs/Montage.dot"),
         "resources/cluster2.yaml",
         "networks/network3.yaml",
@@ -152,8 +141,9 @@ fn montage() {
     );
 }
 
-fn diamond() {
+fn diamond(matches: &ArgMatches) {
     run_simulation(
+        matches,
         DAG::from_yaml("graphs/diamond.yaml"),
         "resources/cluster3.yaml",
         "networks/network4.yaml",
@@ -161,7 +151,7 @@ fn diamond() {
     );
 }
 
-fn reuse_files() {
+fn reuse_files(matches: &ArgMatches) {
     let mut dag = DAG::new();
 
     let input = dag.add_data_item("input", 128);
@@ -190,6 +180,7 @@ fn reuse_files() {
     }
 
     run_simulation(
+        matches,
         dag,
         "resources/cluster1.yaml",
         "networks/network1.yaml",
@@ -202,9 +193,57 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    map_reduce();
-    epigenomics(); // dax
-    montage(); // dot
-    diamond(); // yaml
-    reuse_files();
+    let matches = command!()
+        .arg(
+            Arg::new("run-one")
+                .long("run-one")
+                .help("Run only one experiment")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("trace-log")
+                .long("trace-log")
+                .help("Save trace_log to file")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("scheduler")
+                .long("scheduler")
+                .help(
+                    format!(
+                        "Scheduler {}",
+                        format!("{:?}", ArgScheduler::value_variants()).to_lowercase()
+                    )
+                    .as_str(),
+                )
+                .validator(|s| ArgScheduler::from_str(s, true))
+                .default_value("heft")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("data-transfer-mode")
+                .long("data-transfer-mode")
+                .help("Data transfer mode (via-master-node or direct)")
+                .default_value("via-master-node")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let mut experiments: BTreeMap<String, fn(&ArgMatches)> = BTreeMap::new();
+    experiments.insert("map_reduce".to_string(), map_reduce);
+    experiments.insert("epigenomics".to_string(), epigenomics); // dax
+    experiments.insert("montage".to_string(), montage); // dot
+    experiments.insert("diamond".to_string(), diamond); // yaml
+    experiments.insert("reuse_files".to_string(), reuse_files);
+
+    if matches.is_present("run-one") {
+        let name = matches.value_of("run-one").unwrap();
+        println!("Running {}", name);
+        experiments.get(name).unwrap()(&matches);
+    } else {
+        for (name, experiment) in experiments.into_iter() {
+            println!("Running {}", name);
+            experiment(&matches);
+        }
+    }
 }

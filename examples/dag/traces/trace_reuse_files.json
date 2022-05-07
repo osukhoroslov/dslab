@@ -695,18 +695,9 @@
     {
       "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 8,
-      "data_name": "a0_out",
-      "task_id": 0
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 9,
+      "data_id": 8,
       "data_name": "input",
       "task_id": 7
     },
@@ -728,18 +719,9 @@
     {
       "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 10,
-      "data_name": "a1_out",
-      "task_id": 1
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 11,
+      "data_id": 9,
       "data_name": "input",
       "task_id": 8
     },
@@ -761,18 +743,9 @@
     {
       "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 12,
-      "data_name": "a2_out",
-      "task_id": 2
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 13,
+      "data_id": 10,
       "data_name": "input",
       "task_id": 9
     },
@@ -792,73 +765,10 @@
       "task_name": "a3"
     },
     {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 14,
-      "data_name": "a3_out",
-      "task_id": 3
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 8,
-      "data_name": "a0_out",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 10,
-      "data_name": "a1_out",
-      "task_id": 1
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 12,
-      "data_name": "a2_out",
-      "task_id": 2
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 14,
-      "data_name": "a3_out",
-      "task_id": 3
-    },
-    {
       "time": 17.9,
       "type": "task_completed",
       "task_id": 4,
       "task_name": "a4"
-    },
-    {
-      "time": 17.9,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 15,
-      "data_name": "a4_out",
-      "task_id": 4
-    },
-    {
-      "time": 19.0,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 15,
-      "data_name": "a4_out",
-      "task_id": 4
     },
     {
       "time": 22.9,
@@ -869,11 +779,29 @@
     {
       "time": 22.9,
       "type": "start_uploading",
+      "from": "compute3",
+      "to": "compute3",
+      "data_id": 11,
+      "data_name": "a0_out",
+      "task_id": 10
+    },
+    {
+      "time": 22.9,
+      "type": "start_uploading",
       "from": "compute1",
-      "to": "scheduler",
-      "data_id": 16,
+      "to": "compute3",
+      "data_id": 12,
       "data_name": "a5_out",
-      "task_id": 5
+      "task_id": 10
+    },
+    {
+      "time": 22.9,
+      "type": "task_scheduled",
+      "task_id": 10,
+      "task_name": "b0",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
     },
     {
       "time": 22.9,
@@ -884,77 +812,23 @@
     {
       "time": 22.9,
       "type": "start_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 17,
-      "data_name": "a6_out",
-      "task_id": 6
-    },
-    {
-      "time": 24.0,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 16,
-      "data_name": "a5_out",
-      "task_id": 5
-    },
-    {
-      "time": 24.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 18,
-      "data_name": "a0_out",
-      "task_id": 10
-    },
-    {
-      "time": 24.0,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 19,
-      "data_name": "a5_out",
-      "task_id": 10
-    },
-    {
-      "time": 24.0,
-      "type": "task_scheduled",
-      "task_id": 10,
-      "task_name": "b0",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 24.0,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "scheduler",
-      "data_id": 17,
-      "data_name": "a6_out",
-      "task_id": 6
-    },
-    {
-      "time": 24.0,
-      "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute2",
-      "data_id": 20,
+      "data_id": 13,
       "data_name": "a0_out",
       "task_id": 15
     },
     {
-      "time": 24.0,
+      "time": 22.9,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute2",
-      "data_id": 21,
+      "data_id": 14,
       "data_name": "a6_out",
       "task_id": 15
     },
     {
-      "time": 24.0,
+      "time": 22.9,
       "type": "task_scheduled",
       "task_id": 15,
       "task_name": "b5",
@@ -963,97 +837,97 @@
       "memory": 128
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 18,
+      "data_id": 11,
       "data_name": "a0_out",
       "task_id": 10
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 19,
+      "data_id": 12,
       "data_name": "a5_out",
       "task_id": 10
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "task_started",
       "task_id": 10,
       "task_name": "b0"
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 20,
+      "data_id": 13,
       "data_name": "a0_out",
       "task_id": 15
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 21,
+      "data_id": 14,
       "data_name": "a6_out",
       "task_id": 15
     },
     {
-      "time": 25.1,
+      "time": 24.0,
       "type": "task_started",
       "task_id": 15,
       "task_name": "b5"
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "task_completed",
       "task_id": 10,
       "task_name": "b0"
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 22,
+      "data_id": 15,
       "data_name": "b0_out",
       "task_id": 10
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 23,
+      "data_id": 16,
       "data_name": "a2_out",
       "task_id": 19
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute3",
-      "data_id": 24,
+      "data_id": 17,
       "data_name": "a5_out",
       "task_id": 19
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute3",
-      "data_id": 25,
+      "data_id": 18,
       "data_name": "a6_out",
       "task_id": 19
     },
     {
-      "time": 28.433333333333334,
+      "time": 27.333333333333332,
       "type": "task_scheduled",
       "task_id": 19,
       "task_name": "b9",
@@ -1062,27 +936,84 @@
       "memory": 128
     },
     {
+      "time": 28.433333333333334,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 15,
+      "data_name": "b0_out",
+      "task_id": 10
+    },
+    {
+      "time": 28.433333333333334,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 16,
+      "data_name": "a2_out",
+      "task_id": 19
+    },
+    {
+      "time": 28.433333333333334,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 17,
+      "data_name": "a5_out",
+      "task_id": 19
+    },
+    {
+      "time": 28.433333333333334,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 18,
+      "data_name": "a6_out",
+      "task_id": 19
+    },
+    {
+      "time": 28.433333333333334,
+      "type": "task_started",
+      "task_id": 19,
+      "task_name": "b9"
+    },
+    {
+      "time": 29.0,
+      "type": "task_completed",
+      "task_id": 15,
+      "task_name": "b5"
+    },
+    {
+      "time": 29.0,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "scheduler",
+      "data_id": 19,
+      "data_name": "b5_out",
+      "task_id": 15
+    },
+    {
+      "time": 29.133333333333336,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 8,
+      "data_name": "input",
+      "task_id": 7
+    },
+    {
+      "time": 29.133333333333336,
+      "type": "task_started",
+      "task_id": 7,
+      "task_name": "a7"
+    },
+    {
       "time": 29.133333333333336,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
       "data_id": 9,
       "data_name": "input",
-      "task_id": 7
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "task_started",
-      "task_id": 7,
-      "task_name": "a7"
-    },
-    {
-      "time": 29.133333333333336,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 11,
-      "data_name": "input",
       "task_id": 8
     },
     {
@@ -1096,7 +1027,7 @@
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 13,
+      "data_id": 10,
       "data_name": "input",
       "task_id": 9
     },
@@ -1107,169 +1038,64 @@
       "task_name": "a9"
     },
     {
-      "time": 29.533333333333335,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 22,
-      "data_name": "b0_out",
-      "task_id": 10
-    },
-    {
-      "time": 29.533333333333335,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 23,
-      "data_name": "a2_out",
-      "task_id": 19
-    },
-    {
-      "time": 29.533333333333335,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 24,
-      "data_name": "a5_out",
-      "task_id": 19
-    },
-    {
-      "time": 29.533333333333335,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 25,
-      "data_name": "a6_out",
-      "task_id": 19
-    },
-    {
-      "time": 29.533333333333335,
-      "type": "task_started",
-      "task_id": 19,
-      "task_name": "b9"
-    },
-    {
       "time": 30.1,
-      "type": "task_completed",
-      "task_id": 15,
-      "task_name": "b5"
-    },
-    {
-      "time": 30.1,
-      "type": "start_uploading",
+      "type": "finish_uploading",
       "from": "compute2",
       "to": "scheduler",
-      "data_id": 26,
+      "data_id": 19,
       "data_name": "b5_out",
       "task_id": 15
     },
     {
-      "time": 31.200000000000003,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "scheduler",
-      "data_id": 26,
-      "data_name": "b5_out",
-      "task_id": 15
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "task_completed",
-      "task_id": 7,
-      "task_name": "a7"
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 27,
-      "data_name": "a7_out",
-      "task_id": 7
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "task_completed",
-      "task_id": 8,
-      "task_name": "a8"
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 28,
-      "data_name": "a8_out",
-      "task_id": 8
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "task_completed",
-      "task_id": 9,
-      "task_name": "a9"
-    },
-    {
-      "time": 32.46666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 29,
-      "data_name": "a9_out",
-      "task_id": 9
-    },
-    {
-      "time": 32.86666666666667,
+      "time": 31.766666666666666,
       "type": "task_completed",
       "task_id": 19,
       "task_name": "b9"
     },
     {
-      "time": 32.86666666666667,
+      "time": 31.766666666666666,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 30,
+      "data_id": 20,
       "data_name": "b9_out",
       "task_id": 19
     },
     {
-      "time": 33.56666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 27,
-      "data_name": "a7_out",
-      "task_id": 7
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 7,
+      "task_name": "a7"
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute2",
-      "data_id": 31,
+      "data_id": 21,
       "data_name": "a2_out",
       "task_id": 16
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute2",
-      "data_id": 32,
+      "data_id": 22,
       "data_name": "a6_out",
       "task_id": 16
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute2",
-      "data_id": 33,
+      "data_id": 23,
       "data_name": "a7_out",
       "task_id": 16
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "task_scheduled",
       "task_id": 16,
       "task_name": "b6",
@@ -1278,34 +1104,34 @@
       "memory": 128
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 34,
+      "data_id": 24,
       "data_name": "a0_out",
       "task_id": 11
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute2",
       "to": "compute3",
-      "data_id": 35,
+      "data_id": 25,
       "data_name": "a4_out",
       "task_id": 11
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 36,
+      "data_id": 26,
       "data_name": "a7_out",
       "task_id": 11
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "task_scheduled",
       "task_id": 11,
       "task_name": "b1",
@@ -1314,70 +1140,34 @@
       "memory": 128
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 37,
-      "data_name": "a3_out",
-      "task_id": 12
-    },
-    {
-      "time": 33.56666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 38,
-      "data_name": "a4_out",
-      "task_id": 12
-    },
-    {
-      "time": 33.56666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 39,
-      "data_name": "a7_out",
-      "task_id": 12
-    },
-    {
-      "time": 33.56666666666667,
-      "type": "task_scheduled",
-      "task_id": 12,
-      "task_name": "b2",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 33.56666666666667,
-      "type": "start_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 40,
+      "data_id": 27,
       "data_name": "a1_out",
       "task_id": 14
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 41,
+      "data_id": 28,
       "data_name": "a2_out",
       "task_id": 14
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 42,
+      "data_id": 29,
       "data_name": "a7_out",
       "task_id": 14
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "task_scheduled",
       "task_id": 14,
       "task_name": "b4",
@@ -1386,43 +1176,91 @@
       "memory": 128
     },
     {
-      "time": 33.56666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 28,
-      "data_name": "a8_out",
-      "task_id": 8
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 8,
+      "task_name": "a8"
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 43,
+      "data_id": 30,
+      "data_name": "a3_out",
+      "task_id": 12
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "compute3",
+      "data_id": 31,
+      "data_name": "a4_out",
+      "task_id": 12
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "compute3",
+      "data_id": 32,
+      "data_name": "a7_out",
+      "task_id": 12
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "task_scheduled",
+      "task_id": 12,
+      "task_name": "b2",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "task_completed",
+      "task_id": 9,
+      "task_name": "a9"
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 33,
+      "data_name": "a9_out",
+      "task_id": 9
+    },
+    {
+      "time": 32.46666666666667,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "compute3",
+      "data_id": 34,
       "data_name": "a4_out",
       "task_id": 13
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute3",
-      "data_id": 44,
+      "data_id": 35,
       "data_name": "a5_out",
       "task_id": 13
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 45,
+      "data_id": 36,
       "data_name": "a8_out",
       "task_id": 13
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.46666666666667,
       "type": "task_scheduled",
       "task_id": 13,
       "task_name": "b3",
@@ -1431,232 +1269,232 @@
       "memory": 128
     },
     {
-      "time": 33.56666666666667,
+      "time": 32.86666666666667,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 29,
-      "data_name": "a9_out",
-      "task_id": 9
-    },
-    {
-      "time": 33.96666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 30,
+      "data_id": 20,
       "data_name": "b9_out",
       "task_id": 19
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 31,
+      "data_id": 21,
       "data_name": "a2_out",
       "task_id": 16
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 32,
+      "data_id": 22,
       "data_name": "a6_out",
       "task_id": 16
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute2",
-      "data_id": 33,
+      "data_id": 23,
       "data_name": "a7_out",
       "task_id": 16
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "task_started",
       "task_id": 16,
       "task_name": "b6"
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 34,
+      "data_id": 24,
       "data_name": "a0_out",
       "task_id": 11
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 35,
+      "data_id": 25,
       "data_name": "a4_out",
       "task_id": 11
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 36,
+      "data_id": 26,
       "data_name": "a7_out",
       "task_id": 11
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "task_started",
       "task_id": 11,
       "task_name": "b1"
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 37,
-      "data_name": "a3_out",
-      "task_id": 12
-    },
-    {
-      "time": 34.66666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 38,
-      "data_name": "a4_out",
-      "task_id": 12
-    },
-    {
-      "time": 34.66666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 39,
-      "data_name": "a7_out",
-      "task_id": 12
-    },
-    {
-      "time": 34.66666666666667,
-      "type": "task_started",
-      "task_id": 12,
-      "task_name": "b2"
-    },
-    {
-      "time": 34.66666666666667,
-      "type": "finish_uploading",
-      "from": "scheduler",
-      "to": "compute3",
-      "data_id": 40,
+      "data_id": 27,
       "data_name": "a1_out",
       "task_id": 14
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 41,
+      "data_id": 28,
       "data_name": "a2_out",
       "task_id": 14
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 42,
+      "data_id": 29,
       "data_name": "a7_out",
       "task_id": 14
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "task_started",
       "task_id": 14,
       "task_name": "b4"
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 43,
+      "data_id": 30,
+      "data_name": "a3_out",
+      "task_id": 12
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 31,
+      "data_name": "a4_out",
+      "task_id": 12
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 32,
+      "data_name": "a7_out",
+      "task_id": 12
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "task_started",
+      "task_id": 12,
+      "task_name": "b2"
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 33,
+      "data_name": "a9_out",
+      "task_id": 9
+    },
+    {
+      "time": 33.56666666666667,
+      "type": "finish_uploading",
+      "from": "scheduler",
+      "to": "compute3",
+      "data_id": 34,
       "data_name": "a4_out",
       "task_id": 13
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 44,
+      "data_id": 35,
       "data_name": "a5_out",
       "task_id": 13
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 45,
+      "data_id": 36,
       "data_name": "a8_out",
       "task_id": 13
     },
     {
-      "time": 34.66666666666667,
+      "time": 33.56666666666667,
       "type": "task_started",
       "task_id": 13,
       "task_name": "b3"
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "task_completed",
       "task_id": 11,
       "task_name": "b1"
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 46,
+      "data_id": 37,
       "data_name": "b1_out",
       "task_id": 11
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute3",
-      "data_id": 47,
+      "data_id": 38,
       "data_name": "a5_out",
       "task_id": 17
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute1",
       "to": "compute3",
-      "data_id": 48,
+      "data_id": 39,
       "data_name": "a6_out",
       "task_id": 17
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 49,
+      "data_id": 40,
       "data_name": "a7_out",
       "task_id": 17
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "task_scheduled",
       "task_id": 17,
       "task_name": "b7",
@@ -1665,40 +1503,55 @@
       "memory": 128
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
+      "type": "task_completed",
+      "task_id": 14,
+      "task_name": "b4"
+    },
+    {
+      "time": 36.900000000000006,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 41,
+      "data_name": "b4_out",
+      "task_id": 14
+    },
+    {
+      "time": 36.900000000000006,
       "type": "task_completed",
       "task_id": 12,
       "task_name": "b2"
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 50,
+      "data_id": 42,
       "data_name": "b2_out",
       "task_id": 12
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 51,
+      "data_id": 43,
       "data_name": "a3_out",
       "task_id": 18
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "compute3",
       "to": "compute3",
-      "data_id": 52,
+      "data_id": 44,
       "data_name": "a7_out",
       "task_id": 18
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "task_scheduled",
       "task_id": 18,
       "task_name": "b8",
@@ -1707,197 +1560,182 @@
       "memory": 128
     },
     {
-      "time": 38.00000000000001,
-      "type": "task_completed",
-      "task_id": 14,
-      "task_name": "b4"
-    },
-    {
-      "time": 38.00000000000001,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 53,
-      "data_name": "b4_out",
-      "task_id": 14
-    },
-    {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "task_completed",
       "task_id": 13,
       "task_name": "b3"
     },
     {
-      "time": 38.00000000000001,
+      "time": 36.900000000000006,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 54,
+      "data_id": 45,
       "data_name": "b3_out",
       "task_id": 13
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 46,
+      "data_id": 37,
       "data_name": "b1_out",
       "task_id": 11
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 47,
+      "data_id": 38,
       "data_name": "a5_out",
       "task_id": 17
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 48,
+      "data_id": 39,
       "data_name": "a6_out",
       "task_id": 17
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 49,
+      "data_id": 40,
       "data_name": "a7_out",
       "task_id": 17
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "task_started",
       "task_id": 17,
       "task_name": "b7"
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 50,
+      "data_id": 41,
+      "data_name": "b4_out",
+      "task_id": 14
+    },
+    {
+      "time": 38.00000000000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "scheduler",
+      "data_id": 42,
       "data_name": "b2_out",
       "task_id": 12
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 51,
+      "data_id": 43,
       "data_name": "a3_out",
       "task_id": 18
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "scheduler",
       "to": "compute3",
-      "data_id": 52,
+      "data_id": 44,
       "data_name": "a7_out",
       "task_id": 18
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "task_started",
       "task_id": 18,
       "task_name": "b8"
     },
     {
-      "time": 39.10000000000001,
+      "time": 38.00000000000001,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 53,
-      "data_name": "b4_out",
-      "task_id": 14
-    },
-    {
-      "time": 39.10000000000001,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 54,
+      "data_id": 45,
       "data_name": "b3_out",
       "task_id": 13
     },
     {
-      "time": 39.66666666666667,
+      "time": 38.56666666666667,
       "type": "task_completed",
       "task_id": 16,
       "task_name": "b6"
     },
     {
-      "time": 39.66666666666667,
+      "time": 38.56666666666667,
       "type": "start_uploading",
       "from": "compute2",
       "to": "scheduler",
-      "data_id": 55,
+      "data_id": 46,
       "data_name": "b6_out",
       "task_id": 16
     },
     {
-      "time": 40.76666666666667,
+      "time": 39.66666666666667,
       "type": "finish_uploading",
       "from": "compute2",
       "to": "scheduler",
-      "data_id": 55,
+      "data_id": 46,
       "data_name": "b6_out",
       "task_id": 16
     },
     {
-      "time": 42.433333333333344,
+      "time": 41.33333333333334,
       "type": "task_completed",
       "task_id": 17,
       "task_name": "b7"
     },
     {
-      "time": 42.433333333333344,
+      "time": 41.33333333333334,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 56,
+      "data_id": 47,
       "data_name": "b7_out",
       "task_id": 17
     },
     {
-      "time": 42.433333333333344,
+      "time": 41.33333333333334,
       "type": "task_completed",
       "task_id": 18,
       "task_name": "b8"
     },
     {
-      "time": 42.433333333333344,
+      "time": 41.33333333333334,
       "type": "start_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 57,
+      "data_id": 48,
       "data_name": "b8_out",
       "task_id": 18
     },
     {
-      "time": 43.533333333333346,
+      "time": 42.433333333333344,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 56,
+      "data_id": 47,
       "data_name": "b7_out",
       "task_id": 17
     },
     {
-      "time": 43.533333333333346,
+      "time": 42.433333333333344,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "scheduler",
-      "data_id": 57,
+      "data_id": 48,
       "data_name": "b8_out",
       "task_id": 18
     }

@@ -9,22 +9,29 @@ use simcore::simulation::Simulation;
 use crate::dag::DAG;
 use crate::resource::{load_resources, Resource};
 use crate::runner::{DAGRunner, Start};
-use crate::scheduler::Scheduler;
+use crate::scheduler::{Config, Scheduler};
 
 pub struct DagSimulation {
     pub sim: Simulation,
     resources: Vec<Resource>,
     network_model: Rc<RefCell<dyn NetworkModel>>,
     scheduler: Rc<RefCell<dyn Scheduler>>,
+    config: Config,
 }
 
 impl DagSimulation {
-    pub fn new(seed: u64, network_model: Rc<RefCell<dyn NetworkModel>>, scheduler: Rc<RefCell<dyn Scheduler>>) -> Self {
+    pub fn new(
+        seed: u64,
+        network_model: Rc<RefCell<dyn NetworkModel>>,
+        scheduler: Rc<RefCell<dyn Scheduler>>,
+        config: Config,
+    ) -> Self {
         DagSimulation {
             sim: Simulation::new(seed),
             resources: Vec::new(),
             network_model,
             scheduler,
+            config,
         }
     }
 
@@ -61,6 +68,7 @@ impl DagSimulation {
             network,
             self.resources.clone(),
             self.scheduler.clone(),
+            self.config.clone(),
             self.sim.create_context("runner"),
         )));
         let runner_id = self.sim.add_handler("runner", runner.clone());

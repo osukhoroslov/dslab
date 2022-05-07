@@ -20,7 +20,7 @@ use simcore::{log_error, log_info};
 use crate::dag::DAG;
 use crate::data_item::DataItemState;
 use crate::resource::Resource;
-use crate::scheduler::{Action, Scheduler};
+use crate::scheduler::{Action, Config, DataTransferMode, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 
@@ -47,6 +47,8 @@ pub struct DAGRunner {
     computations: HashMap<u64, usize>,
     task_location: HashMap<usize, usize>,
     data_transfers: HashMap<usize, DataTransfer>,
+    data_location: HashMap<usize, Id>,
+    outputs: HashSet<usize>,
     task_cores: HashMap<usize, Vec<u32>>,
     task_inputs: HashMap<usize, HashSet<usize>>,
     trace_log: TraceLog,
@@ -57,6 +59,7 @@ pub struct DAGRunner {
     resource_queue: Vec<Vec<VecDeque<QueuedTask>>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
+    config: Config,
     ctx: SimulationContext,
 }
 
@@ -66,6 +69,7 @@ impl DAGRunner {
         network: Rc<RefCell<Network>>,
         resources: Vec<Resource>,
         scheduler: Rc<RefCell<dyn Scheduler>>,
+        config: Config,
         ctx: SimulationContext,
     ) -> Self {
         let resource_queue = resources
@@ -88,6 +92,8 @@ impl DAGRunner {
             computations: HashMap::new(),
             task_location: HashMap::new(),
             data_transfers: HashMap::new(),
+            data_location: HashMap::new(),
+            outputs: HashSet::new(),
             task_cores: HashMap::new(),
             task_inputs: HashMap::new(),
             trace_log: TraceLog::new(),
@@ -98,6 +104,7 @@ impl DAGRunner {
             resource_queue,
             available_cores,
             trace_log_enabled: true,
+            config,
             ctx,
         }
     }
@@ -107,6 +114,25 @@ impl DAGRunner {
     }
 
     pub fn start(&mut self) {
+        for (i, _) in self
+            .dag
+            .get_data_items()
+            .iter()
+            .enumerate()
+            .filter(|(_, data_item)| data_item.state == DataItemState::Ready)
+        {
+            self.data_location.insert(i, self.id);
+        }
+        self.outputs = self
+            .dag
+            .get_tasks()
+            .iter()
+            .flat_map(|task| task.outputs.iter().cloned())
+            .collect();
+        for input in self.dag.get_tasks().iter().flat_map(|task| task.inputs.iter()) {
+            self.outputs.remove(input);
+        }
+
         log_info!(
             self.ctx,
             "started DAG execution: total {} resources, {} tasks, {} data items",
@@ -119,6 +145,7 @@ impl DAGRunner {
             &self.dag,
             &self.resources,
             &self.network.borrow(),
+            self.config.clone(),
             &self.ctx,
         ));
         self.process_actions();
@@ -267,14 +294,18 @@ impl DAGRunner {
                 let mut resource = &mut self.resources[resource_idx];
                 resource.cores_available -= need_cores;
                 resource.memory_available -= task.memory;
+                let resource = &self.resources[resource_idx];
                 self.task_inputs.insert(task_id, task.inputs.iter().cloned().collect());
                 self.task_cores.insert(task_id, ready_cores);
                 for &data_id in task.inputs.iter() {
                     let data_item = self.dag.get_data_item(data_id);
-                    let data_event_id =
-                        self.network
-                            .borrow_mut()
-                            .transfer_data(self.id, resource.id, data_item.size as f64, self.id);
+                    let data_location = *self.data_location.get(&data_id).unwrap();
+                    let data_event_id = self.network.borrow_mut().transfer_data(
+                        data_location,
+                        resource.id,
+                        data_item.size as f64,
+                        self.id,
+                    );
                     self.data_transfers.insert(
                         data_event_id,
                         DataTransfer {
@@ -290,7 +321,7 @@ impl DAGRunner {
                             json!({
                                 "time": self.ctx.time(),
                                 "type": "start_uploading",
-                                "from": "scheduler",
+                                "from": self.lookup_name(data_location),
                                 "to": resource.name.clone(),
                                 "data_id": data_event_id,
                                 "data_name": data_item.name.clone(),
@@ -351,7 +382,13 @@ impl DAGRunner {
         }
         self.resources[location].memory_available += self.dag.get_task(task_id).memory;
         let data_items = self.dag.update_task_state(task_id, TaskState::Done);
+
         for &data_item_id in data_items.iter() {
+            if self.config.data_transfer_mode == DataTransferMode::Direct && !self.outputs.contains(&data_item_id) {
+                // upload to runner only graph outputs
+                continue;
+            }
+
             let data_item = self.dag.get_data_item(data_item_id);
             let data_id = self.network.borrow_mut().transfer_data(
                 self.resources[location].id,
@@ -381,6 +418,26 @@ impl DAGRunner {
                         "task_id": task_id,
                     }),
                 );
+            }
+        }
+
+        if self.config.data_transfer_mode == DataTransferMode::Direct {
+            for &data_item_id in data_items.iter() {
+                self.data_location.insert(data_item_id, self.resources[location].id);
+                for (task, state) in self
+                    .dag
+                    .update_data_item_state(data_item_id, DataItemState::Ready)
+                    .into_iter()
+                {
+                    self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
+                        task,
+                        state,
+                        &self.dag,
+                        &self.resources,
+                        &self.ctx,
+                    ));
+                    self.process_actions();
+                }
             }
         }
 
@@ -428,29 +485,9 @@ impl DAGRunner {
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
         let task_id = data_transfer.task_id;
-        if data_transfer.from == self.id {
-            let location = *self.task_location.get(&task_id).unwrap();
-            if self.trace_log_enabled {
-                self.trace_log.log_event(
-                    &self.ctx,
-                    json!({
-                        "time": self.ctx.time(),
-                        "type": "finish_uploading",
-                        "from": "scheduler",
-                        "to": self.resources[location].name.clone(),
-                        "data_id": data_event_id,
-                        "data_name": data_item.name.clone(),
-                        "task_id": task_id,
-                    }),
-                );
-            }
+        if data_transfer.to == self.id {
+            // uploaded data to runner
 
-            let left_inputs = self.task_inputs.get_mut(&task_id).unwrap();
-            left_inputs.remove(&data_id);
-            if left_inputs.is_empty() {
-                self.start_task(task_id);
-            }
-        } else {
             if self.trace_log_enabled {
                 self.trace_log.log_event(
                     &self.ctx,
@@ -465,6 +502,7 @@ impl DAGRunner {
                     }),
                 );
             }
+            self.data_location.insert(data_id, self.id);
             for (task, state) in self
                 .dag
                 .update_data_item_state(data_id, DataItemState::Ready)
@@ -479,6 +517,30 @@ impl DAGRunner {
                 ));
                 self.process_actions();
             }
+        } else {
+            // downloaded data from runner or another resource
+
+            let location = *self.task_location.get(&task_id).unwrap();
+            if self.trace_log_enabled {
+                self.trace_log.log_event(
+                    &self.ctx,
+                    json!({
+                        "time": self.ctx.time(),
+                        "type": "finish_uploading",
+                        "from": self.lookup_name(data_transfer.from.clone()),
+                        "to": self.resources[location].name.clone(),
+                        "data_id": data_event_id,
+                        "data_name": data_item.name.clone(),
+                        "task_id": task_id,
+                    }),
+                );
+            }
+
+            let left_inputs = self.task_inputs.get_mut(&task_id).unwrap();
+            left_inputs.remove(&data_id);
+            if left_inputs.is_empty() {
+                self.start_task(task_id);
+            }
         }
 
         self.check_and_log_completed();
@@ -487,6 +549,14 @@ impl DAGRunner {
     fn check_and_log_completed(&self) {
         if self.dag.is_completed() && self.data_transfers.is_empty() {
             log_info!(self.ctx, "finished DAG execution");
+        }
+    }
+
+    fn lookup_name(&self, id: Id) -> String {
+        if id == self.id {
+            "scheduler".to_string()
+        } else {
+            self.ctx.lookup_name(id)
         }
     }
 

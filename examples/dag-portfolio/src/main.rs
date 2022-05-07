@@ -26,6 +26,7 @@ use threadpool::ThreadPool;
 use compute::multicore::*;
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
+use dag::scheduler::{Config, DataTransferMode};
 use dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
 
@@ -118,7 +119,7 @@ fn run_experiments(matches: &ArgMatches) {
     let run_one = matches.value_of("run-one").map(|s| {
         let mut s = s.split('-');
         (
-            s.next().unwrap().parse::<i32>().unwrap(),
+            s.next().unwrap().parse::<usize>().unwrap(),
             s.next().unwrap().parse::<usize>().unwrap(),
             s.next().unwrap().parse::<usize>().unwrap(),
         )
@@ -127,16 +128,14 @@ fn run_experiments(matches: &ArgMatches) {
     let num_threads: usize = matches.value_of_t("threads").unwrap();
     let pool = ThreadPool::new(num_threads);
 
-    // one criterion picks cluster based on the data already available there,
-    // such algorithms are skipped since direct data transfer between nodes is not supported yet
-    let algos = (0..36).filter(|&algo| algo % 9 / 3 != 0).collect::<Vec<_>>();
+    let algos = 36;
 
-    let total_runs = algos.len() * dags.len() * platform_configs.len();
+    let total_runs = algos * dags.len() * platform_configs.len();
     let finished_runs = Arc::new(AtomicUsize::new(0));
 
-    let results = Arc::new(Mutex::new(Vec::<(i32, usize, usize, f64)>::new()));
+    let results = Arc::new(Mutex::new(Vec::<(usize, usize, usize, f64)>::new()));
 
-    for algo in algos.into_iter() {
+    for algo in 0..algos {
         for dag_id in 0..dags.len() {
             for platform_id in 0..platform_configs.len() {
                 if let Some((one_algo, one_dag, one_platform)) = run_one {
@@ -157,7 +156,14 @@ fn run_experiments(matches: &ArgMatches) {
 
                     let scheduler = PortfolioScheduler::new(algo);
 
-                    let mut sim = DagSimulation::new(123, network_model, rc!(refcell!(scheduler)));
+                    let mut sim = DagSimulation::new(
+                        123,
+                        network_model,
+                        rc!(refcell!(scheduler)),
+                        Config {
+                            data_transfer_mode: DataTransferMode::Direct,
+                        },
+                    );
                     let mut create_resource = |speed: i32, cluster: usize, node: usize| {
                         let name = format!("compute-{}-{}", cluster, node);
                         let speed = speed as u64 * 1_000_000_000 as u64;
