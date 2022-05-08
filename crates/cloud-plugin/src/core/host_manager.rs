@@ -10,6 +10,7 @@ use simcore::handler::EventHandler;
 use simcore::log_debug;
 
 use crate::core::common::AllocationVerdict;
+use crate::core::common::VmStatus;
 use crate::core::config::SimulationConfig;
 use crate::core::energy_manager::EnergyManager;
 use crate::core::events::allocation::{
@@ -36,8 +37,9 @@ pub struct HostManager {
     allow_vm_overcommit: bool,
     allocs: HashMap<u32, Allocation>,
     vms: HashMap<u32, VirtualMachine>,
-    previously_added_vms: Vec<u32>,
-    previously_removed_vms: Vec<u32>,
+    recently_added_vms: Vec<u32>,
+    recently_removed_vms: Vec<u32>,
+    recent_vm_status_changes: HashMap<u32, VmStatus>,
     energy_manager: EnergyManager,
     monitoring_id: u32,
     placement_store_id: u32,
@@ -67,8 +69,9 @@ impl HostManager {
             allow_vm_overcommit,
             allocs: HashMap::new(),
             vms: HashMap::new(),
-            previously_added_vms: Vec::new(),
-            previously_removed_vms: Vec::new(),
+            recently_added_vms: Vec::new(),
+            recently_removed_vms: Vec::new(),
+            recent_vm_status_changes: HashMap::new(),
             energy_manager: EnergyManager::new(),
             monitoring_id,
             placement_store_id,
@@ -107,7 +110,7 @@ impl HostManager {
 
         self.allocs.insert(alloc.id, alloc.clone());
         self.vms.insert(alloc.id, vm);
-        self.previously_added_vms.push(alloc.id);
+        self.recently_added_vms.push(alloc.id);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
@@ -127,7 +130,7 @@ impl HostManager {
         }
         self.allocs.remove(&alloc.id);
         self.vms.remove(&alloc.id);
-        self.previously_removed_vms.push(alloc.id);
+        self.recently_removed_vms.push(alloc.id);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
@@ -207,6 +210,9 @@ impl HostManager {
                 alloc.id,
                 self.id
             );
+            let local_vm = self.vms.get_mut(&alloc.id).unwrap();
+            (*local_vm).set_new_status(VmStatus::Migrating);
+            self.recent_vm_status_changes.insert(alloc.id, VmStatus::Migrating);
 
             let migration_duration = (alloc.memory_usage as f64) / (self.sim_config.network_throughput as f64);
 
@@ -240,7 +246,11 @@ impl HostManager {
 
     fn on_vm_started(&mut self, alloc: Allocation) {
         log_debug!(self.ctx, "vm #{} started and running", alloc.id);
-        let vm = self.vms.get(&alloc.id).unwrap();
+
+        let vm = self.vms.get_mut(&alloc.id).unwrap();
+        (*vm).set_new_status(VmStatus::Running);
+        self.recent_vm_status_changes.insert(alloc.id, VmStatus::Running);
+
         self.ctx.emit_self(AllocationReleaseRequest { alloc }, vm.lifetime());
     }
 
@@ -259,22 +269,24 @@ impl HostManager {
 
     fn send_host_state(&mut self) {
         log_debug!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
-        let added = self.previously_added_vms.to_vec();
-        let removed = self.previously_removed_vms.to_vec();
+        let added = self.recently_added_vms.to_vec();
+        let removed = self.recently_removed_vms.to_vec();
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id,
                 cpu_load: self.get_cpu_load(self.ctx.time()),
                 memory_load: self.get_memory_load(self.ctx.time()),
-                previously_added_vms: added,
-                previously_removed_vms: removed,
+                recently_added_vms: added,
+                recently_removed_vms: removed,
+                recent_vm_status_changes: self.recent_vm_status_changes.clone(),
             },
             self.monitoring_id,
             self.sim_config.message_delay,
         );
 
-        self.previously_added_vms.clear();
-        self.previously_removed_vms.clear();
+        self.recently_added_vms.clear();
+        self.recently_removed_vms.clear();
+        self.recent_vm_status_changes.clear();
         self.ctx.emit_self(SendHostState {}, self.sim_config.send_stats_period);
     }
 }

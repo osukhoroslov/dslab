@@ -174,8 +174,8 @@ impl DecreaseLoadModel {
 }
 
 impl LoadModel for DecreaseLoadModel {
-    fn get_resource_load(&self, _time: f64, time_from_start: f64) -> f64 {
-        let linear = 1. - (time_from_start - 50.) / 50.;
+    fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
+        let linear = (50. - time) / 50.;
         linear.max(0.)
     }
 }
@@ -190,9 +190,9 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
 
     cloud_sim.spawn_vm_now(
         0,
-        20,
-        20,
-        20.0,
+        12,
+        12,
+        50.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
@@ -200,21 +200,44 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
 
     cloud_sim.spawn_vm_now(
         1,
-        20,
-        20,
-        20.0,
+        12,
+        12,
+        50.0,
+        Box::new(DecreaseLoadModel::new()),
+        Box::new(DecreaseLoadModel::new()),
+        scheduler_id,
+    );
+
+    cloud_sim.spawn_vm_now(
+        2,
+        12,
+        12,
+        50.0,
+        Box::new(DecreaseLoadModel::new()),
+        Box::new(DecreaseLoadModel::new()),
+        scheduler_id,
+    );
+
+    cloud_sim.spawn_vm_now(
+        3,
+        12,
+        12,
+        50.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
     );
 
     let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");
-    migrator
-        .borrow_mut()
-        .patch_custom_args(1., cloud_sim.monitoring().clone());
+    migrator.borrow_mut().patch_custom_args(
+        5.,
+        cloud_sim.monitoring().clone(),
+        cloud_sim.allocations().clone(),
+        cloud_sim.vms().clone(),
+    );
     migrator.borrow_mut().init();
 
-    cloud_sim.step_for_duration(10.);
+    cloud_sim.step_for_duration(55.);
 
     let end_time = cloud_sim.current_time();
     info!(
@@ -230,8 +253,9 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
 fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
+    let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
     simulation_two_best_fit_schedulers(config.clone());
-    simulation_one_thresholded_scheduler(config.clone());
-    simulation_migration_simple(config.clone());
-    simulation_migration_component(config);
+    simulation_one_thresholded_scheduler(config_with_overcommit.clone());
+    simulation_migration_simple(config);
+    simulation_migration_component(config_with_overcommit);
 }

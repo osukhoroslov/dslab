@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+use crate::core::common::VmStatus;
 use crate::core::config::SimulationConfig;
 use crate::core::load_model::LoadModel;
 
@@ -9,6 +10,7 @@ use crate::core::load_model::LoadModel;
 pub struct VirtualMachine {
     pub lifetime: f64,
     pub start_time: f64,
+    pub status: VmStatus,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
     sim_config: Rc<SimulationConfig>,
@@ -38,6 +40,7 @@ impl VirtualMachine {
             cpu_load_model,
             memory_load_model,
             sim_config,
+            status: VmStatus::Initializing,
         }
     }
 
@@ -55,6 +58,10 @@ impl VirtualMachine {
 
     pub fn set_start_time(&mut self, time: f64) {
         self.start_time = time;
+    }
+
+    pub fn set_new_status(&mut self, status: VmStatus) {
+        self.status = status;
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {

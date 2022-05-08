@@ -121,7 +121,6 @@ impl PlacementStore {
 
     fn on_allocation_released(&mut self, alloc: Allocation, host_id: u32) {
         self.pool_state.release(&alloc, host_id);
-
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationReleased {

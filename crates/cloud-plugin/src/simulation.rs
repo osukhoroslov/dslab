@@ -26,8 +26,8 @@ pub struct CloudSimulation {
     placement_store: Rc<RefCell<PlacementStore>>,
     placement_store_id: u32,
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
-    vms: BTreeMap<u32, VirtualMachine>,
-    allocations: HashMap<u32, Allocation>,
+    vms: Rc<RefCell<BTreeMap<u32, VirtualMachine>>>,
+    allocations: Rc<RefCell<HashMap<u32, Allocation>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     sim: Simulation,
@@ -52,8 +52,8 @@ impl CloudSimulation {
             placement_store,
             placement_store_id,
             hosts: BTreeMap::new(),
-            vms: BTreeMap::new(),
-            allocations: HashMap::new(),
+            vms: rc!(refcell!(BTreeMap::new())),
+            allocations: rc!(refcell!(HashMap::new())),
             schedulers: HashMap::new(),
             components: HashMap::new(),
             sim,
@@ -123,8 +123,8 @@ impl CloudSimulation {
         };
         let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
 
-        self.vms.insert(id, vm.clone());
-        self.allocations.insert(id, alloc.clone());
+        self.vms.borrow_mut().insert(id, vm.clone());
+        self.allocations.borrow_mut().insert(id, alloc.clone());
 
         self.ctx
             .emit_now(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id);
@@ -148,24 +148,23 @@ impl CloudSimulation {
         };
         let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
 
-        self.vms.insert(id, vm.clone());
-        self.allocations.insert(id, alloc.clone());
+        self.vms.borrow_mut().insert(id, vm.clone());
+        self.allocations.borrow_mut().insert(id, alloc.clone());
 
         self.ctx
             .emit(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id, delay);
     }
 
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, destination_host_id: u32) {
-        let alloc = self.allocations.get(&vm_id).unwrap();
-        let mut vm = self.vms.get_mut(&vm_id).unwrap();
-        vm.lifetime -= self.ctx.time() - vm.start_time;
+        let start_time = self.vms.borrow_mut().get_mut(&vm_id).unwrap().start_time;
+        self.vms.borrow_mut().get_mut(&vm_id).unwrap().lifetime -= self.ctx.time() - start_time;
         let source_host = self.monitoring.borrow_mut().find_host_by_vm(vm_id);
 
         self.ctx.emit(
             MigrationRequest {
                 source_host: source_host.clone(),
-                alloc: alloc.clone(),
-                vm: vm.clone(),
+                alloc: self.allocations.borrow().get(&vm_id).unwrap().clone(),
+                vm: self.vms.borrow_mut().get_mut(&vm_id).unwrap().clone(),
             },
             destination_host_id,
             self.sim_config.message_delay,
@@ -208,5 +207,13 @@ impl CloudSimulation {
 
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
+    }
+
+    pub fn allocations(&self) -> Rc<RefCell<HashMap<u32, Allocation>>> {
+        self.allocations.clone()
+    }
+
+    pub fn vms(&self) -> Rc<RefCell<BTreeMap<u32, VirtualMachine>>> {
+        self.vms.clone()
     }
 }

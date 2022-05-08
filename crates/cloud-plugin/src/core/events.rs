@@ -77,14 +77,19 @@ pub mod vm {
 // MONITORING EVENTS ///////////////////////////////////////////////////////////////////////////////
 
 pub mod monitoring {
+    use std::collections::HashMap;
+
     use serde::Serialize;
+
+    use crate::core::common::VmStatus;
 
     #[derive(Serialize)]
     pub struct HostStateUpdate {
         pub host_id: u32,
         pub cpu_load: f64,
         pub memory_load: f64,
-        pub previously_added_vms: Vec<u32>,
-        pub previously_removed_vms: Vec<u32>,
+        pub recently_added_vms: Vec<u32>,
+        pub recently_removed_vms: Vec<u32>,
+        pub recent_vm_status_changes: HashMap<u32, VmStatus>,
     }
 }

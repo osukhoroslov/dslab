@@ -8,9 +8,10 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
+use crate::core::common::VmStatus;
 use crate::core::events::monitoring::HostStateUpdate;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HostState {
     pub cpu_load: f64,
     pub memory_load: f64,
@@ -21,6 +22,8 @@ pub struct HostState {
 pub struct Monitoring {
     host_states: BTreeMap<u32, HostState>,
     vm_locations: HashMap<u32, u32>,
+    host_vms: BTreeMap<u32, Vec<u32>>,
+    vm_statuses: HashMap<u32, VmStatus>,
     ctx: SimulationContext,
 }
 
@@ -40,6 +43,8 @@ impl Monitoring {
         Self {
             host_states: BTreeMap::new(),
             vm_locations: HashMap::new(),
+            host_vms: BTreeMap::new(),
+            vm_statuses: HashMap::new(),
             ctx,
         }
     }
@@ -52,13 +57,22 @@ impl Monitoring {
         self.host_states.keys()
     }
 
+    pub fn get_host_vms(&self, host: u32) -> Vec<u32> {
+        self.host_vms[&host].clone()
+    }
+
     pub fn add_host(&mut self, host_id: u32, cpu_total: u32, memory_total: u64) {
         self.host_states
             .insert(host_id, HostState::new(cpu_total, memory_total));
+        self.host_vms.insert(host_id, Vec::<u32>::new());
     }
 
     pub fn find_host_by_vm(&mut self, vm_id: u32) -> u32 {
         return *self.vm_locations.get(&vm_id).unwrap();
+    }
+
+    pub fn vm_status(&self, vm_id: u32) -> VmStatus {
+        return self.vm_statuses.get(&vm_id).unwrap().clone();
     }
 
     fn update_host_state(
@@ -66,8 +80,9 @@ impl Monitoring {
         host_id: u32,
         cpu_load: f64,
         memory_load: f64,
-        previously_added_vms: Vec<u32>,
-        previously_removed_vms: Vec<u32>,
+        recently_added_vms: Vec<u32>,
+        recently_removed_vms: Vec<u32>,
+        recent_vm_status_changes: HashMap<u32, VmStatus>,
     ) {
         log_debug!(self.ctx, "monitoring received stats from host #{}", host_id);
         self.host_states.get_mut(&host_id).map(|host| {
@@ -75,13 +90,23 @@ impl Monitoring {
             host.memory_load = memory_load;
         });
 
-        for vm_id in previously_added_vms {
-            self.vm_locations.insert(vm_id, host_id);
+        for vm in recent_vm_status_changes {
+            self.vm_statuses.insert(vm.0, vm.1);
         }
-        for vm_id in previously_removed_vms {
+        for vm_id in recently_added_vms {
+            self.vm_locations.insert(vm_id, host_id);
+            self.host_vms.get_mut(&host_id).map(|host| {
+                host.push(vm_id);
+            });
+        }
+        for vm_id in recently_removed_vms {
             if self.vm_locations.get(&vm_id) == Some(&host_id) {
                 self.vm_locations.remove(&vm_id);
             }
+            self.host_vms.get_mut(&host_id).map(|host| {
+                host.retain(|&x| x != vm_id);
+            });
+            self.vm_statuses.remove(&vm_id);
         }
     }
 }
@@ -93,15 +118,17 @@ impl EventHandler for Monitoring {
                 host_id,
                 cpu_load,
                 memory_load,
-                previously_added_vms,
-                previously_removed_vms,
+                recently_added_vms,
+                recently_removed_vms,
+                recent_vm_status_changes,
             } => {
                 self.update_host_state(
                     host_id,
                     cpu_load,
                     memory_load,
-                    previously_added_vms,
-                    previously_removed_vms,
+                    recently_added_vms,
+                    recently_removed_vms,
+                    recent_vm_status_changes,
                 );
             }
         })
