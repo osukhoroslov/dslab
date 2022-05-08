@@ -175,8 +175,15 @@ impl DecreaseLoadModel {
 
 impl LoadModel for DecreaseLoadModel {
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
-        let linear = (50. - time) / 50.;
-        linear.max(0.)
+        // linear drop from 100% to zero within first 50 time points
+        // then linear growth back from zero to 100% during next 50 time points
+        if time <= 50. {
+            let linear = (50. - time) / 50.;
+            return linear.max(0.);
+        } else {
+            let linear = (time - 50.) / 50.;
+            return linear.min(1.);
+        }
     }
 }
 
@@ -192,7 +199,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         0,
         12,
         12,
-        50.0,
+        100.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
@@ -202,7 +209,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         1,
         12,
         12,
-        50.0,
+        100.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
@@ -212,7 +219,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         2,
         12,
         12,
-        50.0,
+        100.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
@@ -222,7 +229,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         3,
         12,
         12,
-        50.0,
+        100.0,
         Box::new(DecreaseLoadModel::new()),
         Box::new(DecreaseLoadModel::new()),
         scheduler_id,
@@ -237,7 +244,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     );
     migrator.borrow_mut().init();
 
-    cloud_sim.step_for_duration(55.);
+    cloud_sim.step_for_duration(105.);
 
     let end_time = cloud_sim.current_time();
     info!(

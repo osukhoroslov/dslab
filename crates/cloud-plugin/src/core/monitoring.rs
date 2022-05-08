@@ -11,7 +11,7 @@ use simcore::log_debug;
 use crate::core::common::VmStatus;
 use crate::core::events::monitoring::HostStateUpdate;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct HostState {
     pub cpu_load: f64,
     pub memory_load: f64,

@@ -98,7 +98,7 @@ impl VmMigrator {
         let mut vms_to_migrate = Vec::<u32>::new();
         let mut min_load: f64 = 1.;
         for host in host_states.clone() {
-            let state = &host_states[&host.0];
+            let mut state = *host_states.get(&host.0).unwrap();
             if state.cpu_load == 0. {
                 // host turned off
                 continue;
@@ -113,19 +113,46 @@ impl VmMigrator {
                     vms_to_migrate.push(vm_id);
                 }
 
-                let new_state = HostState {
+                let state = HostState {
                     cpu_load: 0.,
                     memory_load: 0.,
                     cpu_total: state.cpu_total,
                     memory_total: state.memory_total,
                 };
-                host_states.insert(host.0, new_state);
+                host_states.insert(host.0, state);
+            }
+
+            if state.cpu_load > self.overload_threshold || state.memory_load > self.overload_threshold {
+                let mut vms = self.monitoring.clone().unwrap().borrow().get_host_vms(host.0);
+                while state.cpu_load > self.overload_threshold || state.memory_load > self.overload_threshold {
+                    let vm_id = vms[0];
+                    vms.remove(0);
+                    let vm_status = self.monitoring.clone().unwrap().borrow().vm_status(vm_id);
+                    if vm_status != VmStatus::Running {
+                        continue;
+                    }
+                    vms_to_migrate.push(vm_id);
+
+                    let cpu_usage = state.cpu_load * (state.cpu_total as f64);
+                    let memory_usage = state.memory_load * (state.memory_total as f64);
+                    let cpu_load_new = (cpu_usage - (allocations[&vm_id].cpu_usage as f64)) / (state.cpu_total as f64);
+                    let memory_load_new =
+                        (memory_usage - (allocations[&vm_id].memory_usage as f64)) / (state.memory_total as f64);
+
+                    state = HostState {
+                        cpu_load: cpu_load_new,
+                        memory_load: memory_load_new,
+                        cpu_total: state.cpu_total,
+                        memory_total: state.memory_total,
+                    };
+                }
+                host_states.insert(host.0, state);
             }
         }
 
         // build migration schema using Best Fit ===============================
 
-        // target hosts, cannot migrate from them if they are underloaded
+        // target hosts, cannot migrate from them as some VM(s) are migrating and wiil increase their load rate
         let mut target_hosts = HashSet::<u32>::new();
 
         for vm_id in vms_to_migrate {
@@ -144,7 +171,7 @@ impl VmMigrator {
                 }
 
                 let state = self.monitoring.clone().unwrap().borrow().get_host_state(host.0).clone();
-                if state.cpu_load < min_load && state.memory_load < min_load {
+                if min_load < 1. && (state.cpu_load < min_load && state.memory_load < min_load) {
                     continue;
                 }
 
@@ -164,14 +191,14 @@ impl VmMigrator {
 
             if best_host.is_some() {
                 let state = &host_states[&best_host.unwrap()];
-                let new_state = HostState {
+                let state = HostState {
                     cpu_load: best_cpu_load,
                     memory_load: best_memory_load,
                     cpu_total: state.cpu_total,
                     memory_total: state.memory_total,
                 };
 
-                host_states.insert(best_host.unwrap(), new_state);
+                host_states.insert(best_host.unwrap(), state);
                 target_hosts.insert(best_host.unwrap());
                 self.schedule_migration(vm_id, best_host.unwrap());
             }
