@@ -35,7 +35,12 @@ struct ApplicationRecord {
     pub cold_start: f64,
 }
 
-type Trace = (Vec<TraceRecord>, Vec<FunctionRecord>, Vec<ApplicationRecord>);
+#[derive(Default, Clone)]
+struct Trace {
+    pub trace_records: Vec<TraceRecord>,
+    pub function_records: Vec<FunctionRecord>,
+    pub app_records: Vec<ApplicationRecord>,
+}
 
 fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
     let p = gen.gen_range(0.0..1.0);
@@ -101,13 +106,14 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             panic!("error while reading trace dir: {}", e);
         }
     }
+    // values: (id, coldstart_latency, memory)
     let mut app_data = HashMap::<String, (usize, f64, u64)>::new();
     let mut fn_id = HashMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mem_percent = vec![0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99, 1.];
     let limit = invocations_limit / parts.len();
     for part in parts.iter() {
-        let mut now = 0;
+        let mut invocations_count = 0;
         let mut mem_file = ReaderBuilder::new()
             .from_path(mem.get(part).unwrap().as_path())
             .unwrap();
@@ -171,10 +177,11 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
         let mut apps = Vec::<(String, u64)>::from_iter(app_popularity.iter().map(|x| (x.0.to_string(), *x.1)));
         apps.sort_by_key(|x: &(String, u64)| -> u64 { x.1 });
         apps.reverse();
+        //median popularity apps
         let mid = apps.len() / 2 - 40;
         let day = usize::from_str(&part[1..]).unwrap() - 1;
         for (app, _) in apps.drain(mid..) {
-            if now == limit {
+            if invocations_count == limit {
                 break;
             }
             if !mem_dist.contains_key(&app) {
@@ -182,9 +189,9 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             }
             let mem_vec = mem_dist.get(&app).unwrap();
             let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
-            app_data.insert(app.clone(), (app_data.len(), 0.0, mem as u64));
+            app_data.insert(app.clone(), (app_data.len(), 0.1, mem as u64));
             for func in app_funcs.get_mut(&app).unwrap().drain() {
-                if now == limit {
+                if invocations_count == limit {
                     break;
                 }
                 let curr_id = fn_id.len();
@@ -202,13 +209,13 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
                             time: second,
                             dur: gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001,
                         };
-                        now += 1;
+                        invocations_count += 1;
                         trace.push(record);
-                        if now == limit {
+                        if invocations_count == limit {
                             break;
                         }
                     }
-                    if now == limit {
+                    if invocations_count == limit {
                         break;
                     }
                 }
@@ -230,12 +237,16 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
         };
     }
     trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.partial_cmp(&y.time).unwrap());
-    (trace, funcs, apps)
+    Trace {
+        trace_records: trace,
+        function_records: funcs,
+        app_records: apps,
+    }
 }
 
 fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) -> Stats {
     let mut time_range = 0.0;
-    for req in trace.0.iter() {
+    for req in trace.trace_records.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
     let sim = Simulation::new(1);
@@ -244,14 +255,14 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
         let mem = serverless.create_resource("mem", 4096 * 4);
         serverless.add_host(None, ResourceProvider::new(vec![mem]));
     }
-    for app in trace.2.iter() {
+    for app in trace.app_records.iter() {
         let mem = serverless.create_resource_requirement("mem", app.mem);
         serverless.add_app(Application::new(16, app.cold_start, ResourceConsumer::new(vec![mem])));
     }
-    for func in trace.1.iter() {
+    for func in trace.function_records.iter() {
         serverless.add_function(Function::new(func.app_id));
     }
-    for req in trace.0.iter() {
+    for req in trace.trace_records.iter() {
         serverless.send_invocation_request(req.id as u64, req.dur, req.time);
     }
     serverless.set_simulation_end(time_range);
@@ -259,7 +270,7 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     serverless.get_stats()
 }
 
-fn describe(stats: Stats, name: &str) {
+fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
     println!("{} successful invocations", stats.invocations);
     println!(
@@ -272,16 +283,22 @@ fn describe(stats: Stats, name: &str) {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let trace = process_azure_trace(Path::new(&args[1]), 200000);
-    println!("trace processed successfully, {} invocations", trace.0.len());
-    describe(
+    println!(
+        "trace processed successfully, {} invocations",
+        trace.trace_records.len()
+    );
+    print_results(
         test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(1000000000.0, 0.0)))),
+            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(
+                f64::MAX / 10.0,
+                0.0,
+            )))),
             &trace,
         ),
         "No unloading",
     );
     for len in vec![20.0, 45.0, 60.0, 90.0, 120.0] {
-        describe(
+        print_results(
             test_policy(
                 Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)))),
                 &trace,
@@ -290,7 +307,7 @@ fn main() {
         );
     }
     for len in vec![2.0, 3.0, 4.0] {
-        describe(
+        print_results(
             test_policy(
                 Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
                     3600.0 * len,
