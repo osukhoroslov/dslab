@@ -6,3 +6,4 @@ This crate reproduces the experiments with keepalive policies from [Serverless i
 - run `serverless_in_the_wild %path_to_dataset%`
 
 It is recommended to build strictly in release mode and leave only one day out of 14 since the dataset is really large.
+Note that the last two days in the dataset have no memory percentiles. Such days are ignored.

@@ -113,6 +113,9 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     let mem_percent = vec![0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99, 1.];
     let limit = invocations_limit / parts.len();
     for part in parts.iter() {
+        if !mem.contains_key(part) {
+            continue;
+        }
         let mut invocations_count = 0;
         let mut mem_file = ReaderBuilder::new()
             .from_path(mem.get(part).unwrap().as_path())
