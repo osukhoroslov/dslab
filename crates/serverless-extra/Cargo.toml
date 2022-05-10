@@ -1,0 +1,10 @@
+[package]
+name = "serverless-extra"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+arima = "0.2"
+num = "0.2.0"
+rand = "0.8"
+serverless = { path = "../serverless" }
