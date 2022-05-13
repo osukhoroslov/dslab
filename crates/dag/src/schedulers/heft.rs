@@ -3,34 +3,17 @@ use std::collections::{BTreeSet, HashSet};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 
 use network::network::Network;
-use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
 
 use crate::dag::DAG;
+use crate::runner::{Config, DataTransferMode};
 use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
-
-pub enum DataTransferMode {
-    ViaMasterNode,
-    #[allow(dead_code)]
-    Direct,
-}
 
 pub enum DataTransferStrategy {
     Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
     Lazy,  // data transfer starts only when the destination node is ready to execute the task
-}
-
-impl DataTransferMode {
-    fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
-        match self {
-            DataTransferMode::ViaMasterNode => {
-                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
-            }
-            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +35,9 @@ impl ScheduledTask {
 
 impl PartialOrd for ScheduledTask {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.start_time.partial_cmp(&other.start_time)
+        self.start_time
+            .partial_cmp(&other.start_time)
+            .map(|ord| ord.then(self.end_time.partial_cmp(&other.end_time).unwrap()))
     }
 }
 
@@ -71,21 +56,14 @@ impl PartialEq for ScheduledTask {
 impl Eq for ScheduledTask {}
 
 pub struct HeftScheduler {
-    data_transfer_mode: DataTransferMode,
     data_transfer_strategy: DataTransferStrategy,
 }
 
 impl HeftScheduler {
     pub fn new() -> Self {
         HeftScheduler {
-            data_transfer_mode: DataTransferMode::ViaMasterNode,
             data_transfer_strategy: DataTransferStrategy::Eager,
         }
-    }
-
-    pub fn with_data_transfer_mode(mut self, data_transfer_mode: DataTransferMode) -> Self {
-        self.data_transfer_mode = data_transfer_mode;
-        self
     }
 
     pub fn with_data_transfer_strategy(mut self, data_transfer_strategy: DataTransferStrategy) -> Self {
@@ -131,6 +109,7 @@ impl Scheduler for HeftScheduler {
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
         network: &Network,
+        config: Config,
         ctx: &SimulationContext,
     ) -> Vec<Action> {
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
@@ -140,6 +119,8 @@ impl Scheduler for HeftScheduler {
             );
         }
 
+        let data_transfer_mode = config.data_transfer_mode;
+
         // average time over all resources for executing one flop
         let avg_flop_time = resources.iter().map(|r| 1. / r.speed as f64).sum::<f64>() / resources.len() as f64;
 
@@ -148,7 +129,7 @@ impl Scheduler for HeftScheduler {
             .map(|r1| {
                 resources
                     .iter()
-                    .map(|r2| self.data_transfer_mode.net_time(network, r1.id, r2.id, ctx.id()))
+                    .map(|r2| data_transfer_mode.net_time(network, r1.id, r2.id, ctx.id()))
                     .sum::<f64>()
             })
             .sum::<f64>()
@@ -213,7 +194,7 @@ impl Scheduler for HeftScheduler {
                 DataTransferStrategy::Lazy => pred[task]
                     .iter()
                     .map(|&(task, weight)| {
-                        let data_upload_time = match self.data_transfer_mode {
+                        let data_upload_time = match data_transfer_mode {
                             DataTransferMode::ViaMasterNode => weight * avg_upload_net_time,
                             DataTransferMode::Direct => 0.,
                         };
@@ -253,7 +234,7 @@ impl Scheduler for HeftScheduler {
                         .get_task(task)
                         .inputs
                         .iter()
-                        .map(|&f| match self.data_transfer_mode {
+                        .map(|&f| match data_transfer_mode {
                             DataTransferMode::ViaMasterNode => dag.get_data_item(f).size as f64 * cur_net_time,
                             DataTransferMode::Direct => {
                                 if outputs.contains(&f) {

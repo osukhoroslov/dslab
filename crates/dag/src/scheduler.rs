@@ -3,6 +3,7 @@ use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::resource::Resource;
+use crate::runner::Config;
 use crate::task::TaskState;
 
 #[derive(Debug)]
@@ -25,6 +26,7 @@ pub trait Scheduler {
         dag: &DAG,
         resources: &Vec<Resource>,
         network: &Network,
+        config: Config,
         ctx: &SimulationContext,
     ) -> Vec<Action>;
     fn on_task_state_changed(

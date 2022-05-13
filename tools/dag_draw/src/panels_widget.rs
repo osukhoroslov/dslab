@@ -421,7 +421,7 @@ impl Widget<AppData> for PanelsWidget {
             ctx,
             data,
             Point::new(size.width / 2., BLOCK_Y_PADDING),
-            "scheduler",
+            "runner",
             None,
             Some(&data.scheduler_files.borrow()),
         );

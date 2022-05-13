@@ -88,7 +88,7 @@ impl AppData {
                         .entry(event["data_id"].as_u64().unwrap())
                         .or_insert(Vec::new())
                         .push(event.clone());
-                    if event["from"].as_str().unwrap() == "scheduler" {
+                    if event["from"].as_str().unwrap() == "runner" {
                         present_scheduler_files.insert(event["data_name"].as_str().unwrap().to_string());
                     }
                 }
@@ -147,7 +147,7 @@ impl AppData {
                 task,
             });
 
-            if source == "scheduler" {
+            if source == "runner" {
                 compute.borrow_mut()[*compute_index.get(&destination).unwrap()]
                     .files
                     .push(File {

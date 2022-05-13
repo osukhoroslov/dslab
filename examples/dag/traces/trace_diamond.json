@@ -117,7 +117,7 @@
     {
       "time": 0.0,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 1,
       "data_name": "A-input",
@@ -135,7 +135,7 @@
     {
       "time": 5.1,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 1,
       "data_name": "A-input",
@@ -183,7 +183,7 @@
     {
       "time": 7.199999999999999,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 4,
       "data_name": "A-output-0",
@@ -210,7 +210,7 @@
     {
       "time": 7.699999999999999,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 5,
       "data_name": "A-output-1",
@@ -228,7 +228,7 @@
     {
       "time": 8.799999999999999,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 4,
       "data_name": "A-output-0",
@@ -243,7 +243,7 @@
     {
       "time": 9.799999999999999,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 5,
       "data_name": "A-output-1",
@@ -306,7 +306,7 @@
     {
       "time": 13.649999999999999,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 8,
       "data_name": "B-output-0",
@@ -315,7 +315,7 @@
     {
       "time": 13.649999999999999,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 9,
       "data_name": "C-output-0",
@@ -333,7 +333,7 @@
     {
       "time": 16.25,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 8,
       "data_name": "B-output-0",
@@ -342,7 +342,7 @@
     {
       "time": 16.25,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 9,
       "data_name": "C-output-0",

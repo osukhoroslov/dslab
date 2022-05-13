@@ -2459,7 +2459,7 @@
     {
       "time": 0.0,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 1,
       "data_name": "chr210.sfq",
@@ -2477,7 +2477,7 @@
     {
       "time": 2359.67975,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 1,
       "data_name": "chr210.sfq",
@@ -2723,7 +2723,7 @@
     {
       "time": 3567.8182533333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 26,
       "data_name": "chr21.0.18.sfq",
@@ -2750,7 +2750,7 @@
     {
       "time": 3567.9410233333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 27,
       "data_name": "chr21.0.12.sfq",
@@ -2777,7 +2777,7 @@
     {
       "time": 3568.4489433333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 28,
       "data_name": "chr21.0.16.sfq",
@@ -2804,7 +2804,7 @@
     {
       "time": 3580.418093333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 29,
       "data_name": "chr21.0.21.sfq",
@@ -2831,7 +2831,7 @@
     {
       "time": 3585.8019833333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 30,
       "data_name": "chr21.0.6.sfq",
@@ -2858,7 +2858,7 @@
     {
       "time": 3587.0653733333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 31,
       "data_name": "chr21.0.23.sfq",
@@ -2885,7 +2885,7 @@
     {
       "time": 3601.787463333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 32,
       "data_name": "chr21.0.13.sfq",
@@ -2912,7 +2912,7 @@
     {
       "time": 3609.204563333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 33,
       "data_name": "chr21.0.9.sfq",
@@ -2939,7 +2939,7 @@
     {
       "time": 3611.027023333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 34,
       "data_name": "chr21.0.4.sfq",
@@ -2966,7 +2966,7 @@
     {
       "time": 3616.445263333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 35,
       "data_name": "chr21.0.22.sfq",
@@ -2984,7 +2984,7 @@
     {
       "time": 3617.6234233333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 26,
       "data_name": "chr21.0.18.sfq",
@@ -2999,7 +2999,7 @@
     {
       "time": 3617.8689633333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 27,
       "data_name": "chr21.0.12.sfq",
@@ -3014,7 +3014,7 @@
     {
       "time": 3618.8848033333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 28,
       "data_name": "chr21.0.16.sfq",
@@ -3038,7 +3038,7 @@
     {
       "time": 3619.587633333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 36,
       "data_name": "chr21.0.3.sfq",
@@ -3074,7 +3074,7 @@
     {
       "time": 3626.1002633333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 37,
       "data_name": "chr21.0.7.sfq",
@@ -3101,7 +3101,7 @@
     {
       "time": 3626.4047633333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 38,
       "data_name": "chr21.0.1.sfq",
@@ -3194,7 +3194,7 @@
     {
       "time": 3638.1234233333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 43,
       "data_name": "chr21.0.2.sfq",
@@ -3212,7 +3212,7 @@
     {
       "time": 3642.823103333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 29,
       "data_name": "chr21.0.21.sfq",
@@ -3254,7 +3254,7 @@
     {
       "time": 3651.444663333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 44,
       "data_name": "chr21.0.19.sfq",
@@ -3272,7 +3272,7 @@
     {
       "time": 3653.5908833333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 30,
       "data_name": "chr21.0.6.sfq",
@@ -3287,7 +3287,7 @@
     {
       "time": 3656.1176633333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 31,
       "data_name": "chr21.0.23.sfq",
@@ -3344,7 +3344,7 @@
     {
       "time": 3664.825983333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 47,
       "data_name": "chr21.0.16.nocontam.sfq",
@@ -3389,7 +3389,7 @@
     {
       "time": 3668.9891833333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 48,
       "data_name": "chr21.0.18.nocontam.sfq",
@@ -3464,7 +3464,7 @@
     {
       "time": 3685.561843333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 32,
       "data_name": "chr21.0.13.sfq",
@@ -3488,7 +3488,7 @@
     {
       "time": 3695.767163333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 47,
       "data_name": "chr21.0.16.nocontam.sfq",
@@ -3512,7 +3512,7 @@
     {
       "time": 3699.8549433333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 48,
       "data_name": "chr21.0.18.nocontam.sfq",
@@ -3536,7 +3536,7 @@
     {
       "time": 3700.396043333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 33,
       "data_name": "chr21.0.9.sfq",
@@ -3575,7 +3575,7 @@
     {
       "time": 3704.040963333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 34,
       "data_name": "chr21.0.4.sfq",
@@ -3605,7 +3605,7 @@
     {
       "time": 3704.188276666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 55,
       "data_name": "chr21.0.21.nocontam.sfq",
@@ -3641,7 +3641,7 @@
     {
       "time": 3709.4535633333335,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 56,
       "data_name": "chr21.0.6.nocontam.sfq",
@@ -3692,7 +3692,7 @@
     {
       "time": 3713.1176633333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 59,
       "data_name": "chr21.0.20.sfq",
@@ -3710,7 +3710,7 @@
     {
       "time": 3714.877443333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 35,
       "data_name": "chr21.0.22.sfq",
@@ -3725,7 +3725,7 @@
     {
       "time": 3721.162183333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 36,
       "data_name": "chr21.0.3.sfq",
@@ -3749,7 +3749,7 @@
     {
       "time": 3728.433253333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 60,
       "data_name": "chr21.0.16.nocontam.fq",
@@ -3791,7 +3791,7 @@
     {
       "time": 3731.7076299999994,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 63,
       "data_name": "chr21.0.12.nocontam.sfq",
@@ -3818,7 +3818,7 @@
     {
       "time": 3731.818766666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 64,
       "data_name": "chr21.0.18.nocontam.fq",
@@ -3836,7 +3836,7 @@
     {
       "time": 3734.1874433333332,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 37,
       "data_name": "chr21.0.7.sfq",
@@ -3851,7 +3851,7 @@
     {
       "time": 3734.7964433333336,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 38,
       "data_name": "chr21.0.1.sfq",
@@ -3875,7 +3875,7 @@
     {
       "time": 3741.6115666666674,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 55,
       "data_name": "chr21.0.21.nocontam.sfq",
@@ -3929,7 +3929,7 @@
     {
       "time": 3748.3162433333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 56,
       "data_name": "chr21.0.6.nocontam.sfq",
@@ -3968,7 +3968,7 @@
     {
       "time": 3753.0993433333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 60,
       "data_name": "chr21.0.16.nocontam.fq",
@@ -3992,7 +3992,7 @@
     {
       "time": 3757.9035933333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 43,
       "data_name": "chr21.0.2.sfq",
@@ -4007,7 +4007,7 @@
     {
       "time": 3759.449256666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 64,
       "data_name": "chr21.0.18.nocontam.fq",
@@ -4037,7 +4037,7 @@
     {
       "time": 3762.4886399999996,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 63,
       "data_name": "chr21.0.12.nocontam.sfq",
@@ -4076,7 +4076,7 @@
     {
       "time": 3773.749423333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 71,
       "data_name": "chr21.BS.bfa",
@@ -4085,7 +4085,7 @@
     {
       "time": 3773.749423333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 72,
       "data_name": "chr21.0.16.nocontam.bfq",
@@ -4112,7 +4112,7 @@
     {
       "time": 3780.173336666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 73,
       "data_name": "chr21.0.21.nocontam.fq",
@@ -4139,7 +4139,7 @@
     {
       "time": 3782.7520899999995,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 74,
       "data_name": "chr21.0.4.nocontam.sfq",
@@ -4166,7 +4166,7 @@
     {
       "time": 3784.876243333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 44,
       "data_name": "chr21.0.19.sfq",
@@ -4190,7 +4190,7 @@
     {
       "time": 3785.2983666666673,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 75,
       "data_name": "chr21.0.6.nocontam.fq",
@@ -4232,7 +4232,7 @@
     {
       "time": 3785.561843333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 78,
       "data_name": "chr21.0.23.nocontam.sfq",
@@ -4250,7 +4250,7 @@
     {
       "time": 3787.399503333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 72,
       "data_name": "chr21.0.16.nocontam.bfq",
@@ -4283,7 +4283,7 @@
     {
       "time": 3791.779793333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 80,
       "data_name": "chr21.0.9.nocontam.sfq",
@@ -4310,7 +4310,7 @@
     {
       "time": 3792.2753799999996,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 81,
       "data_name": "chr21.0.12.nocontam.fq",
@@ -4370,7 +4370,7 @@
     {
       "time": 3813.735106666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 73,
       "data_name": "chr21.0.21.nocontam.fq",
@@ -4409,7 +4409,7 @@
     {
       "time": 3816.0621199999996,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 81,
       "data_name": "chr21.0.12.nocontam.fq",
@@ -4424,7 +4424,7 @@
     {
       "time": 3817.9471566666675,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 75,
       "data_name": "chr21.0.6.nocontam.fq",
@@ -4454,7 +4454,7 @@
     {
       "time": 3825.656173333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 78,
       "data_name": "chr21.0.23.nocontam.sfq",
@@ -4502,7 +4502,7 @@
     {
       "time": 3831.5665133333328,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 89,
       "data_name": "chr21.0.13.nocontam.sfq",
@@ -4544,7 +4544,7 @@
     {
       "time": 3833.7965499999996,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 74,
       "data_name": "chr21.0.4.nocontam.sfq",
@@ -4583,7 +4583,7 @@
     {
       "time": 3838.831806666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 92,
       "data_name": "chr21.BS.bfa",
@@ -4592,7 +4592,7 @@
     {
       "time": 3838.831806666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 93,
       "data_name": "chr21.0.21.nocontam.bfq",
@@ -4610,7 +4610,7 @@
     {
       "time": 3841.163543333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 80,
       "data_name": "chr21.0.9.nocontam.sfq",
@@ -4664,7 +4664,7 @@
     {
       "time": 3848.8626166666677,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 96,
       "data_name": "chr21.BS.bfa",
@@ -4673,7 +4673,7 @@
     {
       "time": 3848.8626166666677,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 97,
       "data_name": "chr21.0.6.nocontam.bfq",
@@ -4700,7 +4700,7 @@
     {
       "time": 3853.928506666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 93,
       "data_name": "chr21.0.21.nocontam.bfq",
@@ -4742,7 +4742,7 @@
     {
       "time": 3865.495403333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 99,
       "data_name": "chr21.0.22.nocontam.sfq",
@@ -4760,7 +4760,7 @@
     {
       "time": 3865.778076666668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 97,
       "data_name": "chr21.0.6.nocontam.bfq",
@@ -4811,7 +4811,7 @@
     {
       "time": 3872.996893333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 102,
       "data_name": "chr21.0.3.nocontam.sfq",
@@ -4853,7 +4853,7 @@
     {
       "time": 3877.5711833333326,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 89,
       "data_name": "chr21.0.13.nocontam.sfq",
@@ -4877,7 +4877,7 @@
     {
       "time": 3878.6160199999995,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 105,
       "data_name": "chr21.0.4.nocontam.fq",
@@ -4904,7 +4904,7 @@
     {
       "time": 3880.048473333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 106,
       "data_name": "chr21.0.23.nocontam.fq",
@@ -4979,7 +4979,7 @@
     {
       "time": 3895.450153333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 110,
       "data_name": "chr21.0.2.nocontam.sfq",
@@ -4997,7 +4997,7 @@
     {
       "time": 3902.0478433333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 59,
       "data_name": "chr21.0.20.sfq",
@@ -5021,7 +5021,7 @@
     {
       "time": 3908.319613333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 111,
       "data_name": "chr21.0.9.nocontam.fq",
@@ -5039,7 +5039,7 @@
     {
       "time": 3912.440773333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 106,
       "data_name": "chr21.0.23.nocontam.fq",
@@ -5054,7 +5054,7 @@
     {
       "time": 3914.4354899999994,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 105,
       "data_name": "chr21.0.4.nocontam.fq",
@@ -5069,7 +5069,7 @@
     {
       "time": 3921.113363333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 99,
       "data_name": "chr21.0.22.nocontam.sfq",
@@ -5093,7 +5093,7 @@
     {
       "time": 3921.3966433333326,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 112,
       "data_name": "chr21.0.13.nocontam.fq",
@@ -5144,7 +5144,7 @@
     {
       "time": 3930.533753333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 114,
       "data_name": "chr21.0.7.nocontam.sfq",
@@ -5162,7 +5162,7 @@
     {
       "time": 3930.831603333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 102,
       "data_name": "chr21.0.3.nocontam.sfq",
@@ -5210,7 +5210,7 @@
     {
       "time": 3937.440773333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 116,
       "data_name": "chr21.0.1.nocontam.sfq",
@@ -5237,7 +5237,7 @@
     {
       "time": 3939.951306666666,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 117,
       "data_name": "chr21.BS.bfa",
@@ -5246,7 +5246,7 @@
     {
       "time": 3939.951306666666,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 118,
       "data_name": "chr21.0.4.nocontam.bfq",
@@ -5273,7 +5273,7 @@
     {
       "time": 3953.2221033333326,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 112,
       "data_name": "chr21.0.13.nocontam.fq",
@@ -5303,7 +5303,7 @@
     {
       "time": 3954.113363333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 120,
       "data_name": "chr21.0.5.sfq",
@@ -5321,7 +5321,7 @@
     {
       "time": 3956.800456666666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 118,
       "data_name": "chr21.0.4.nocontam.bfq",
@@ -5330,7 +5330,7 @@
     {
       "time": 3960.475683333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 111,
       "data_name": "chr21.0.9.nocontam.fq",
@@ -5354,7 +5354,7 @@
     {
       "time": 3962.996713333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 110,
       "data_name": "chr21.0.2.nocontam.sfq",
@@ -5378,7 +5378,7 @@
     {
       "time": 3966.236193333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 121,
       "data_name": "chr21.0.19.nocontam.sfq",
@@ -5426,7 +5426,7 @@
     {
       "time": 3989.880063333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 114,
       "data_name": "chr21.0.7.nocontam.sfq",
@@ -5456,7 +5456,7 @@
     {
       "time": 3994.419963333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 116,
       "data_name": "chr21.0.1.nocontam.sfq",
@@ -5504,7 +5504,7 @@
     {
       "time": 4008.927933333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 126,
       "data_name": "chr21.0.22.nocontam.fq",
@@ -5531,7 +5531,7 @@
     {
       "time": 4020.365233333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 127,
       "data_name": "chr21.BS.bfa",
@@ -5540,7 +5540,7 @@
     {
       "time": 4020.365233333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 128,
       "data_name": "chr21.0.9.nocontam.bfq",
@@ -5597,7 +5597,7 @@
     {
       "time": 4027.474003333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 131,
       "data_name": "chr21.0.2.nocontam.fq",
@@ -5624,7 +5624,7 @@
     {
       "time": 4033.086183333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 132,
       "data_name": "chr21.0.3.nocontam.fq",
@@ -5642,7 +5642,7 @@
     {
       "time": 4039.596143333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 121,
       "data_name": "chr21.0.19.nocontam.sfq",
@@ -5657,7 +5657,7 @@
     {
       "time": 4040.254783333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 128,
       "data_name": "chr21.0.9.nocontam.bfq",
@@ -5666,7 +5666,7 @@
     {
       "time": 4063.742503333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 126,
       "data_name": "chr21.0.22.nocontam.fq",
@@ -5690,7 +5690,7 @@
     {
       "time": 4070.708653333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 133,
       "data_name": "chr21.0.7.nocontam.fq",
@@ -5717,7 +5717,7 @@
     {
       "time": 4071.773753333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 134,
       "data_name": "chr21.0.1.nocontam.fq",
@@ -5735,7 +5735,7 @@
     {
       "time": 4071.9512933333326,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 131,
       "data_name": "chr21.0.2.nocontam.fq",
@@ -5750,7 +5750,7 @@
     {
       "time": 4079.1297333333328,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 120,
       "data_name": "chr21.0.5.sfq",
@@ -5780,7 +5780,7 @@
     {
       "time": 4093.3407633333327,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 132,
       "data_name": "chr21.0.3.nocontam.fq",
@@ -5819,7 +5819,7 @@
     {
       "time": 4111.257503333332,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 137,
       "data_name": "chr21.BS.bfa",
@@ -5828,7 +5828,7 @@
     {
       "time": 4111.257503333332,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 138,
       "data_name": "chr21.0.2.nocontam.bfq",
@@ -5846,7 +5846,7 @@
     {
       "time": 4117.537243333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 133,
       "data_name": "chr21.0.7.nocontam.fq",
@@ -5861,7 +5861,7 @@
     {
       "time": 4123.127543333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 134,
       "data_name": "chr21.0.1.nocontam.fq",
@@ -5876,7 +5876,7 @@
     {
       "time": 4129.563713333332,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 138,
       "data_name": "chr21.0.2.nocontam.bfq",
@@ -5909,7 +5909,7 @@
     {
       "time": 4158.591523333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 140,
       "data_name": "chr21.BS.bfa",
@@ -5918,7 +5918,7 @@
     {
       "time": 4158.591523333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 141,
       "data_name": "chr21.0.22.nocontam.bfq",
@@ -5945,7 +5945,7 @@
     {
       "time": 4163.236153333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 142,
       "data_name": "chr21.0.19.nocontam.fq",
@@ -5993,7 +5993,7 @@
     {
       "time": 4179.440543333332,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 141,
       "data_name": "chr21.0.22.nocontam.bfq",
@@ -6026,7 +6026,7 @@
     {
       "time": 4185.129733333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 147,
       "data_name": "chr21.BS.bfa",
@@ -6035,7 +6035,7 @@
     {
       "time": 4185.129733333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 148,
       "data_name": "chr21.0.12.nocontam.bfq",
@@ -6077,7 +6077,7 @@
     {
       "time": 4198.016023333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 148,
       "data_name": "chr21.0.12.nocontam.bfq",
@@ -6095,7 +6095,7 @@
     {
       "time": 4198.433453333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 150,
       "data_name": "chr21.BS.bfa",
@@ -6104,7 +6104,7 @@
     {
       "time": 4198.433453333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 151,
       "data_name": "chr21.0.1.nocontam.bfq",
@@ -6131,7 +6131,7 @@
     {
       "time": 4217.876163333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 142,
       "data_name": "chr21.0.19.nocontam.fq",
@@ -6146,7 +6146,7 @@
     {
       "time": 4218.739363333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 151,
       "data_name": "chr21.0.1.nocontam.bfq",
@@ -6179,7 +6179,7 @@
     {
       "time": 4228.047843333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 154,
       "data_name": "chr21.0.17.sfq",
@@ -6215,7 +6215,7 @@
     {
       "time": 4254.583923333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 155,
       "data_name": "chr21.0.5.nocontam.sfq",
@@ -6257,7 +6257,7 @@
     {
       "time": 4320.632703333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 157,
       "data_name": "chr21.BS.bfa",
@@ -6266,7 +6266,7 @@
     {
       "time": 4320.632703333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 158,
       "data_name": "chr21.0.19.nocontam.bfq",
@@ -6293,7 +6293,7 @@
     {
       "time": 4323.164273333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 159,
       "data_name": "chr21.0.20.nocontam.sfq",
@@ -6311,7 +6311,7 @@
     {
       "time": 4324.038113333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 155,
       "data_name": "chr21.0.5.nocontam.sfq",
@@ -6335,7 +6335,7 @@
     {
       "time": 4341.389243333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 158,
       "data_name": "chr21.0.19.nocontam.bfq",
@@ -6359,7 +6359,7 @@
     {
       "time": 4362.038113333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 161,
       "data_name": "chr21.0.10.sfq",
@@ -6377,7 +6377,7 @@
     {
       "time": 4392.911313333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 154,
       "data_name": "chr21.0.17.sfq",
@@ -6401,7 +6401,7 @@
     {
       "time": 4406.213263333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 162,
       "data_name": "chr21.0.5.nocontam.fq",
@@ -6419,7 +6419,7 @@
     {
       "time": 4418.280703333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 159,
       "data_name": "chr21.0.20.nocontam.sfq",
@@ -6434,7 +6434,7 @@
     {
       "time": 4450.388413333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 162,
       "data_name": "chr21.0.5.nocontam.fq",
@@ -6464,7 +6464,7 @@
     {
       "time": 4489.834053333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 161,
       "data_name": "chr21.0.10.sfq",
@@ -6518,7 +6518,7 @@
     {
       "time": 4515.911313333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 167,
       "data_name": "chr21.0.14.sfq",
@@ -6545,7 +6545,7 @@
     {
       "time": 4516.555253333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 168,
       "data_name": "chr21.BS.bfa",
@@ -6554,7 +6554,7 @@
     {
       "time": 4516.555253333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 169,
       "data_name": "chr21.0.5.nocontam.bfq",
@@ -6572,7 +6572,7 @@
     {
       "time": 4534.722093333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 169,
       "data_name": "chr21.0.5.nocontam.bfq",
@@ -6614,7 +6614,7 @@
     {
       "time": 4596.870293333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 172,
       "data_name": "chr21.0.20.nocontam.fq",
@@ -6641,7 +6641,7 @@
     {
       "time": 4601.977393333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 173,
       "data_name": "chr21.0.17.nocontam.sfq",
@@ -6686,7 +6686,7 @@
     {
       "time": 4688.043473333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 173,
       "data_name": "chr21.0.17.nocontam.sfq",
@@ -6701,7 +6701,7 @@
     {
       "time": 4722.459883333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 172,
       "data_name": "chr21.0.20.nocontam.fq",
@@ -6731,7 +6731,7 @@
     {
       "time": 4739.289513333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 167,
       "data_name": "chr21.0.14.sfq",
@@ -6755,7 +6755,7 @@
     {
       "time": 4778.985863333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 175,
       "data_name": "chr21.0.17.nocontam.fq",
@@ -6773,7 +6773,7 @@
     {
       "time": 4831.9282533333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 175,
       "data_name": "chr21.0.17.nocontam.fq",
@@ -6812,7 +6812,7 @@
     {
       "time": 4910.041993333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 177,
       "data_name": "chr21.BS.bfa",
@@ -6821,7 +6821,7 @@
     {
       "time": 4910.041993333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 178,
       "data_name": "chr21.0.17.nocontam.bfq",
@@ -6854,7 +6854,7 @@
     {
       "time": 4931.155733333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 178,
       "data_name": "chr21.0.17.nocontam.bfq",
@@ -6872,7 +6872,7 @@
     {
       "time": 4963.691243333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 180,
       "data_name": "chr21.BS.bfa",
@@ -6881,7 +6881,7 @@
     {
       "time": 4963.691243333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 181,
       "data_name": "chr21.0.20.nocontam.bfq",
@@ -6923,7 +6923,7 @@
     {
       "time": 4975.289513333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 184,
       "data_name": "chr21.0.10.nocontam.sfq",
@@ -6941,7 +6941,7 @@
     {
       "time": 5005.9226033333325,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 181,
       "data_name": "chr21.0.20.nocontam.bfq",
@@ -6950,7 +6950,7 @@
     {
       "time": 5045.122993333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 184,
       "data_name": "chr21.0.10.nocontam.sfq",
@@ -6998,7 +6998,7 @@
     {
       "time": 5093.384503333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 186,
       "data_name": "chr21.0.14.nocontam.sfq",
@@ -7025,7 +7025,7 @@
     {
       "time": 5211.479493333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 186,
       "data_name": "chr21.0.14.nocontam.sfq",
@@ -7064,7 +7064,7 @@
     {
       "time": 5394.992993333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 188,
       "data_name": "chr21.0.14.nocontam.fq",
@@ -7082,7 +7082,7 @@
     {
       "time": 5505.506493333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 188,
       "data_name": "chr21.0.14.nocontam.fq",
@@ -7121,7 +7121,7 @@
     {
       "time": 5666.947733333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 190,
       "data_name": "chr21.BS.bfa",
@@ -7130,7 +7130,7 @@
     {
       "time": 5666.947733333333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 191,
       "data_name": "chr21.0.14.nocontam.bfq",
@@ -7148,7 +7148,7 @@
     {
       "time": 5699.3889733333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 191,
       "data_name": "chr21.0.14.nocontam.bfq",
@@ -7157,7 +7157,7 @@
     {
       "time": 56793.225913333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 71,
       "data_name": "chr21.BS.bfa",
@@ -7172,7 +7172,7 @@
     {
       "time": 56858.30829666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 92,
       "data_name": "chr21.BS.bfa",
@@ -7187,7 +7187,7 @@
     {
       "time": 56868.339106666666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 96,
       "data_name": "chr21.BS.bfa",
@@ -7202,7 +7202,7 @@
     {
       "time": 56959.42779666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 117,
       "data_name": "chr21.BS.bfa",
@@ -7217,7 +7217,7 @@
     {
       "time": 57039.84172333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 127,
       "data_name": "chr21.BS.bfa",
@@ -7232,7 +7232,7 @@
     {
       "time": 57130.733993333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 137,
       "data_name": "chr21.BS.bfa",
@@ -7247,7 +7247,7 @@
     {
       "time": 57178.06801333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 140,
       "data_name": "chr21.BS.bfa",
@@ -7262,7 +7262,7 @@
     {
       "time": 57204.606223333336,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 147,
       "data_name": "chr21.BS.bfa",
@@ -7277,7 +7277,7 @@
     {
       "time": 57217.90994333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 150,
       "data_name": "chr21.BS.bfa",
@@ -7292,7 +7292,7 @@
     {
       "time": 57340.10919333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 157,
       "data_name": "chr21.BS.bfa",
@@ -7307,7 +7307,7 @@
     {
       "time": 57536.03174333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 168,
       "data_name": "chr21.BS.bfa",
@@ -7322,7 +7322,7 @@
     {
       "time": 57929.51848333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 177,
       "data_name": "chr21.BS.bfa",
@@ -7337,7 +7337,7 @@
     {
       "time": 57983.167733333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 180,
       "data_name": "chr21.BS.bfa",
@@ -7352,7 +7352,7 @@
     {
       "time": 58686.424223333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 190,
       "data_name": "chr21.BS.bfa",
@@ -7382,7 +7382,7 @@
     {
       "time": 735197.76113,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 193,
       "data_name": "chr21.BS.bfa",
@@ -7391,7 +7391,7 @@
     {
       "time": 735197.76113,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 194,
       "data_name": "chr21.0.13.nocontam.bfq",
@@ -7409,7 +7409,7 @@
     {
       "time": 735211.82315,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 194,
       "data_name": "chr21.0.13.nocontam.bfq",
@@ -7442,7 +7442,7 @@
     {
       "time": 768106.2259133334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 196,
       "data_name": "chr21.BS.bfa",
@@ -7451,7 +7451,7 @@
     {
       "time": 768106.2259133334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 197,
       "data_name": "chr21.0.7.nocontam.bfq",
@@ -7478,7 +7478,7 @@
     {
       "time": 768125.3745333333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 197,
       "data_name": "chr21.0.7.nocontam.bfq",
@@ -7487,7 +7487,7 @@
     {
       "time": 788217.23762,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 193,
       "data_name": "chr21.BS.bfa",
@@ -7502,7 +7502,7 @@
     {
       "time": 821125.7024033334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 196,
       "data_name": "chr21.BS.bfa",
@@ -7532,7 +7532,7 @@
     {
       "time": 838727.9749633333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 199,
       "data_name": "chr21.BS.bfa",
@@ -7541,7 +7541,7 @@
     {
       "time": 838727.9749633333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 200,
       "data_name": "chr21.0.3.nocontam.bfq",
@@ -7568,7 +7568,7 @@
     {
       "time": 838747.9392233334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 200,
       "data_name": "chr21.0.3.nocontam.bfq",
@@ -7592,7 +7592,7 @@
     {
       "time": 842584.67244,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 202,
       "data_name": "chr21.BS.bfa",
@@ -7601,7 +7601,7 @@
     {
       "time": 842584.67244,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 203,
       "data_name": "chr21.0.18.nocontam.bfq",
@@ -7619,7 +7619,7 @@
     {
       "time": 842598.84866,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 203,
       "data_name": "chr21.0.18.nocontam.bfq",
@@ -7637,7 +7637,7 @@
     {
       "time": 891747.4514533334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 199,
       "data_name": "chr21.BS.bfa",
@@ -7652,7 +7652,7 @@
     {
       "time": 895604.14893,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 202,
       "data_name": "chr21.BS.bfa",
@@ -7682,7 +7682,7 @@
     {
       "time": 1049743.8417233333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 205,
       "data_name": "chr21.0.10.nocontam.fq",
@@ -7709,7 +7709,7 @@
     {
       "time": 1049798.2991333334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 205,
       "data_name": "chr21.0.10.nocontam.fq",
@@ -7748,7 +7748,7 @@
     {
       "time": 1049852.0767733334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 207,
       "data_name": "chr21.BS.bfa",
@@ -7757,7 +7757,7 @@
     {
       "time": 1049852.0767733334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 208,
       "data_name": "chr21.0.10.nocontam.bfq",
@@ -7775,7 +7775,7 @@
     {
       "time": 1049872.3544133333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 208,
       "data_name": "chr21.0.10.nocontam.bfq",
@@ -7799,7 +7799,7 @@
     {
       "time": 1054620.7339933333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 210,
       "data_name": "chr21.0.8.sfq",
@@ -7826,7 +7826,7 @@
     {
       "time": 1054768.3561833333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 210,
       "data_name": "chr21.0.8.sfq",
@@ -7883,7 +7883,7 @@
     {
       "time": 1054942.3513333334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 213,
       "data_name": "chr21.0.8.nocontam.sfq",
@@ -7901,7 +7901,7 @@
     {
       "time": 1055021.3464833335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 213,
       "data_name": "chr21.0.8.nocontam.sfq",
@@ -7940,7 +7940,7 @@
     {
       "time": 1055120.6080733335,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 215,
       "data_name": "chr21.0.8.nocontam.fq",
@@ -7958,7 +7958,7 @@
     {
       "time": 1055196.8696633335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 215,
       "data_name": "chr21.0.8.nocontam.fq",
@@ -7997,7 +7997,7 @@
     {
       "time": 1055272.1317233336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 217,
       "data_name": "chr21.BS.bfa",
@@ -8006,7 +8006,7 @@
     {
       "time": 1055272.1317233336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 218,
       "data_name": "chr21.0.8.nocontam.bfq",
@@ -8024,7 +8024,7 @@
     {
       "time": 1055296.3937833337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 218,
       "data_name": "chr21.0.8.nocontam.bfq",
@@ -8033,7 +8033,7 @@
     {
       "time": 1102871.5532633334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 207,
       "data_name": "chr21.BS.bfa",
@@ -8048,7 +8048,7 @@
     {
       "time": 1108291.6082133336,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 217,
       "data_name": "chr21.BS.bfa",
@@ -8078,7 +8078,7 @@
     {
       "time": 1424982.0357366668,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 220,
       "data_name": "chr21.0.0.sfq",
@@ -8105,7 +8105,7 @@
     {
       "time": 1425092.0372466668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 220,
       "data_name": "chr21.0.0.sfq",
@@ -8162,7 +8162,7 @@
     {
       "time": 1425188.9944333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 223,
       "data_name": "chr21.0.0.nocontam.sfq",
@@ -8180,7 +8180,7 @@
     {
       "time": 1425249.2849533337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 223,
       "data_name": "chr21.0.0.nocontam.sfq",
@@ -8219,7 +8219,7 @@
     {
       "time": 1425321.0250233337,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 225,
       "data_name": "chr21.0.0.nocontam.fq",
@@ -8237,7 +8237,7 @@
     {
       "time": 1425373.7650933338,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 225,
       "data_name": "chr21.0.0.nocontam.fq",
@@ -8276,7 +8276,7 @@
     {
       "time": 1425423.364386667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 227,
       "data_name": "chr21.BS.bfa",
@@ -8285,7 +8285,7 @@
     {
       "time": 1425423.364386667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 228,
       "data_name": "chr21.0.0.nocontam.bfq",
@@ -8303,7 +8303,7 @@
     {
       "time": 1425443.630346667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 228,
       "data_name": "chr21.0.0.nocontam.bfq",
@@ -8327,7 +8327,7 @@
     {
       "time": 1427072.4242233334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 230,
       "data_name": "chr21.0.11.sfq",
@@ -8354,7 +8354,7 @@
     {
       "time": 1427181.6002533333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 230,
       "data_name": "chr21.0.11.sfq",
@@ -8411,7 +8411,7 @@
     {
       "time": 1427387.9290833334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 233,
       "data_name": "chr21.0.11.nocontam.sfq",
@@ -8429,7 +8429,7 @@
     {
       "time": 1427449.2579133334,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 233,
       "data_name": "chr21.0.11.nocontam.sfq",
@@ -8468,7 +8468,7 @@
     {
       "time": 1427526.8396233334,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 235,
       "data_name": "chr21.0.11.nocontam.fq",
@@ -8486,7 +8486,7 @@
     {
       "time": 1427568.4213333335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 235,
       "data_name": "chr21.0.11.nocontam.fq",
@@ -8516,7 +8516,7 @@
     {
       "time": 1427609.4213333335,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 237,
       "data_name": "chr21.0.15.sfq",
@@ -8543,7 +8543,7 @@
     {
       "time": 1427715.2248833335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 237,
       "data_name": "chr21.0.15.sfq",
@@ -8600,7 +8600,7 @@
     {
       "time": 1427876.0935933336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 240,
       "data_name": "chr21.0.15.nocontam.sfq",
@@ -8618,7 +8618,7 @@
     {
       "time": 1427934.9623033337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 240,
       "data_name": "chr21.0.15.nocontam.sfq",
@@ -8657,7 +8657,7 @@
     {
       "time": 1428014.0263233336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 242,
       "data_name": "chr21.0.15.nocontam.fq",
@@ -8675,7 +8675,7 @@
     {
       "time": 1428058.0903433335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute1",
       "data_id": 242,
       "data_name": "chr21.0.15.nocontam.fq",
@@ -8729,7 +8729,7 @@
     {
       "time": 1433158.23762,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 245,
       "data_name": "chr21.BS.bfa",
@@ -8738,7 +8738,7 @@
     {
       "time": 1433158.23762,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 246,
       "data_name": "chr21.0.23.nocontam.bfq",
@@ -8765,7 +8765,7 @@
     {
       "time": 1433173.69578,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 246,
       "data_name": "chr21.0.23.nocontam.bfq",
@@ -8822,7 +8822,7 @@
     {
       "time": 1478442.840876667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 227,
       "data_name": "chr21.BS.bfa",
@@ -8852,7 +8852,7 @@
     {
       "time": 1478911.1489300001,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 250,
       "data_name": "chr21.BS.bfa",
@@ -8861,7 +8861,7 @@
     {
       "time": 1478911.1489300001,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 251,
       "data_name": "chr21.0.11.nocontam.bfq",
@@ -8888,7 +8888,7 @@
     {
       "time": 1478928.4032500002,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 251,
       "data_name": "chr21.0.11.nocontam.bfq",
@@ -8897,7 +8897,7 @@
     {
       "time": 1486177.71411,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 245,
       "data_name": "chr21.BS.bfa",
@@ -8927,7 +8927,7 @@
     {
       "time": 1493682.4514533333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 253,
       "data_name": "chr21.BS.bfa",
@@ -8936,7 +8936,7 @@
     {
       "time": 1493682.4514533333,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 254,
       "data_name": "chr21.0.15.nocontam.bfq",
@@ -8954,7 +8954,7 @@
     {
       "time": 1493700.7575133333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 254,
       "data_name": "chr21.0.15.nocontam.bfq",
@@ -8996,7 +8996,7 @@
     {
       "time": 1531930.6254200002,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 250,
       "data_name": "chr21.BS.bfa",
@@ -9011,7 +9011,7 @@
     {
       "time": 1546701.9279433333,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 253,
       "data_name": "chr21.BS.bfa",
@@ -9266,7 +9266,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 266,
       "data_name": "chr21.0.0.nocontam.map",
@@ -9275,7 +9275,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 267,
       "data_name": "chr21.0.1.nocontam.map",
@@ -9284,7 +9284,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 268,
       "data_name": "chr21.0.2.nocontam.map",
@@ -9293,7 +9293,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 269,
       "data_name": "chr21.0.3.nocontam.map",
@@ -9302,7 +9302,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 270,
       "data_name": "chr21.0.4.nocontam.map",
@@ -9311,7 +9311,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 271,
       "data_name": "chr21.0.5.nocontam.map",
@@ -9320,7 +9320,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 272,
       "data_name": "chr21.0.6.nocontam.map",
@@ -9329,7 +9329,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 273,
       "data_name": "chr21.0.7.nocontam.map",
@@ -9338,7 +9338,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 274,
       "data_name": "chr21.0.8.nocontam.map",
@@ -9347,7 +9347,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 275,
       "data_name": "chr21.0.9.nocontam.map",
@@ -9356,7 +9356,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 276,
       "data_name": "chr21.0.10.nocontam.map",
@@ -9365,7 +9365,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 277,
       "data_name": "chr21.0.11.nocontam.map",
@@ -9374,7 +9374,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 278,
       "data_name": "chr21.0.12.nocontam.map",
@@ -9383,7 +9383,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 279,
       "data_name": "chr21.0.13.nocontam.map",
@@ -9392,7 +9392,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 280,
       "data_name": "chr21.0.14.nocontam.map",
@@ -9401,7 +9401,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 281,
       "data_name": "chr21.0.15.nocontam.map",
@@ -9410,7 +9410,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 282,
       "data_name": "chr21.0.16.nocontam.map",
@@ -9419,7 +9419,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 283,
       "data_name": "chr21.0.17.nocontam.map",
@@ -9428,7 +9428,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 284,
       "data_name": "chr21.0.18.nocontam.map",
@@ -9437,7 +9437,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 285,
       "data_name": "chr21.0.19.nocontam.map",
@@ -9446,7 +9446,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 286,
       "data_name": "chr21.0.20.nocontam.map",
@@ -9455,7 +9455,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 287,
       "data_name": "chr21.0.21.nocontam.map",
@@ -9464,7 +9464,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 288,
       "data_name": "chr21.0.22.nocontam.map",
@@ -9473,7 +9473,7 @@
     {
       "time": 1919536.3135566667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 289,
       "data_name": "chr21.0.23.nocontam.map",
@@ -9491,7 +9491,7 @@
     {
       "time": 1919549.4508266668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 278,
       "data_name": "chr21.0.12.nocontam.map",
@@ -9500,7 +9500,7 @@
     {
       "time": 1919550.2810266668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 282,
       "data_name": "chr21.0.16.nocontam.map",
@@ -9509,7 +9509,7 @@
     {
       "time": 1919550.7287866666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 279,
       "data_name": "chr21.0.13.nocontam.map",
@@ -9518,7 +9518,7 @@
     {
       "time": 1919550.8529166668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 284,
       "data_name": "chr21.0.18.nocontam.map",
@@ -9527,7 +9527,7 @@
     {
       "time": 1919551.8534466666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 287,
       "data_name": "chr21.0.21.nocontam.map",
@@ -9536,7 +9536,7 @@
     {
       "time": 1919552.2463366666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 289,
       "data_name": "chr21.0.23.nocontam.map",
@@ -9545,7 +9545,7 @@
     {
       "time": 1919553.7582766667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 270,
       "data_name": "chr21.0.4.nocontam.map",
@@ -9554,7 +9554,7 @@
     {
       "time": 1919553.8303566668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 272,
       "data_name": "chr21.0.6.nocontam.map",
@@ -9563,7 +9563,7 @@
     {
       "time": 1919554.1986866668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 277,
       "data_name": "chr21.0.11.nocontam.map",
@@ -9572,7 +9572,7 @@
     {
       "time": 1919555.1905566668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 271,
       "data_name": "chr21.0.5.nocontam.map",
@@ -9581,7 +9581,7 @@
     {
       "time": 1919555.3418766668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 281,
       "data_name": "chr21.0.15.nocontam.map",
@@ -9590,7 +9590,7 @@
     {
       "time": 1919555.3420366668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 268,
       "data_name": "chr21.0.2.nocontam.map",
@@ -9599,7 +9599,7 @@
     {
       "time": 1919556.2577066668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 273,
       "data_name": "chr21.0.7.nocontam.map",
@@ -9608,7 +9608,7 @@
     {
       "time": 1919557.0630666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 275,
       "data_name": "chr21.0.9.nocontam.map",
@@ -9617,7 +9617,7 @@
     {
       "time": 1919557.1442666666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 269,
       "data_name": "chr21.0.3.nocontam.map",
@@ -9626,7 +9626,7 @@
     {
       "time": 1919557.4722066668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 266,
       "data_name": "chr21.0.0.nocontam.map",
@@ -9635,7 +9635,7 @@
     {
       "time": 1919557.4848966666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 276,
       "data_name": "chr21.0.10.nocontam.map",
@@ -9644,7 +9644,7 @@
     {
       "time": 1919557.5156266668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 267,
       "data_name": "chr21.0.1.nocontam.map",
@@ -9653,7 +9653,7 @@
     {
       "time": 1919558.0054466666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 285,
       "data_name": "chr21.0.19.nocontam.map",
@@ -9662,7 +9662,7 @@
     {
       "time": 1919558.1059666667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 288,
       "data_name": "chr21.0.22.nocontam.map",
@@ -9671,7 +9671,7 @@
     {
       "time": 1919558.3937066668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 283,
       "data_name": "chr21.0.17.nocontam.map",
@@ -9680,7 +9680,7 @@
     {
       "time": 1919561.8157866667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 274,
       "data_name": "chr21.0.8.nocontam.map",
@@ -9689,7 +9689,7 @@
     {
       "time": 1919570.7062066668,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 280,
       "data_name": "chr21.0.14.nocontam.map",
@@ -9698,7 +9698,7 @@
     {
       "time": 1919581.3476366666,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 286,
       "data_name": "chr21.0.20.nocontam.map",
@@ -9773,7 +9773,7 @@
     {
       "time": 1920193.8969666667,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 293,
       "data_name": "chr21.nocontam.map",
@@ -9791,7 +9791,7 @@
     {
       "time": 1920442.4462966667,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 293,
       "data_name": "chr21.nocontam.map",
@@ -9830,7 +9830,7 @@
     {
       "time": 1920457.3426933335,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 295,
       "data_name": "chr21.BSnull.bfa",
@@ -9839,7 +9839,7 @@
     {
       "time": 1920457.3426933335,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 296,
       "data_name": "chr21.nocontam.chr.map",
@@ -9857,7 +9857,7 @@
     {
       "time": 1920471.5724233335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 296,
       "data_name": "chr21.nocontam.chr.map",
@@ -9866,7 +9866,7 @@
     {
       "time": 1973476.8191833335,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 295,
       "data_name": "chr21.BSnull.bfa",

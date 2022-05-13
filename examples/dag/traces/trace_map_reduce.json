@@ -207,7 +207,7 @@
     {
       "time": 0.0,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 1,
       "data_name": "part2",
@@ -225,7 +225,7 @@
     {
       "time": 0.0,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 2,
       "data_name": "part1",
@@ -243,7 +243,7 @@
     {
       "time": 6.5,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 1,
       "data_name": "part2",
@@ -336,7 +336,7 @@
     {
       "time": 12.9,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 2,
       "data_name": "part1",
@@ -402,7 +402,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 11,
       "data_name": "map1_out1",
@@ -411,7 +411,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 12,
       "data_name": "map2_out1",
@@ -438,7 +438,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 13,
       "data_name": "map1_out2",
@@ -447,7 +447,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 14,
       "data_name": "map2_out2",
@@ -474,7 +474,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 15,
       "data_name": "map1_out3",
@@ -483,7 +483,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 16,
       "data_name": "map2_out3",
@@ -510,7 +510,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 17,
       "data_name": "map1_out4",
@@ -519,7 +519,7 @@
     {
       "time": 17.333333333333336,
       "type": "start_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 18,
       "data_name": "map2_out4",
@@ -537,7 +537,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 11,
       "data_name": "map1_out1",
@@ -546,7 +546,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 12,
       "data_name": "map2_out1",
@@ -561,7 +561,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 13,
       "data_name": "map1_out2",
@@ -570,7 +570,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute2",
       "data_id": 14,
       "data_name": "map2_out2",
@@ -585,7 +585,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 15,
       "data_name": "map1_out3",
@@ -594,7 +594,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 16,
       "data_name": "map2_out3",
@@ -609,7 +609,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 17,
       "data_name": "map1_out4",
@@ -618,7 +618,7 @@
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
-      "from": "scheduler",
+      "from": "runner",
       "to": "compute3",
       "data_id": 18,
       "data_name": "map2_out4",
