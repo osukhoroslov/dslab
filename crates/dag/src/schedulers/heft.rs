@@ -7,7 +7,8 @@ use simcore::context::SimulationContext;
 use simcore::{log_debug, log_error, log_info, log_warn};
 
 use crate::dag::DAG;
-use crate::scheduler::{Action, Config, DataTransferMode, Scheduler};
+use crate::runner::{Config, DataTransferMode};
+use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
 pub enum DataTransferStrategy {

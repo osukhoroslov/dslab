@@ -2,7 +2,8 @@ use network::network::Network;
 use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
-use crate::scheduler::{Action, Config, Scheduler};
+use crate::runner::Config;
+use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
 struct Resource {

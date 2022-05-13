@@ -1,9 +1,9 @@
 use network::network::Network;
-use simcore::component::Id;
 use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::resource::Resource;
+use crate::runner::Config;
 use crate::task::TaskState;
 
 #[derive(Debug)]
@@ -18,28 +18,6 @@ pub enum Action {
         resource: usize,
         cores: Vec<u32>,
     },
-}
-
-#[derive(Clone, PartialEq)]
-pub enum DataTransferMode {
-    ViaMasterNode,
-    Direct,
-}
-
-impl DataTransferMode {
-    pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
-        match self {
-            DataTransferMode::ViaMasterNode => {
-                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
-            }
-            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Config {
-    pub data_transfer_mode: DataTransferMode,
 }
 
 pub trait Scheduler {

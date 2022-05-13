@@ -8,8 +8,8 @@ use simcore::simulation::Simulation;
 
 use crate::dag::DAG;
 use crate::resource::{load_resources, Resource};
-use crate::runner::{DAGRunner, Start};
-use crate::scheduler::{Config, Scheduler};
+use crate::runner::{Config, DAGRunner, Start};
+use crate::scheduler::Scheduler;
 
 pub struct DagSimulation {
     pub sim: Simulation,

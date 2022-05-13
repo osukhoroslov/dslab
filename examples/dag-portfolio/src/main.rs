@@ -9,7 +9,7 @@ use std::time::Instant;
 
 extern crate reqwest;
 
-use clap::{command, Arg, ArgMatches};
+use clap::Parser;
 
 use sugars::{rc, refcell};
 
@@ -26,9 +26,29 @@ use threadpool::ThreadPool;
 use compute::multicore::*;
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
-use dag::scheduler::{Config, DataTransferMode};
+use dag::runner::{Config, DataTransferMode};
 use dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use network::constant_bandwidth_model::ConstantBandwidthNetwork;
+
+#[derive(Parser, Debug)]
+#[clap(about, long_about = None)]
+struct Args {
+    /// Run only one experiment (algo-dag-platform)
+    #[clap(long = "run-one")]
+    run_one: Option<String>,
+
+    /// Save trace_log to a file
+    #[clap(long = "trace-log")]
+    trace_log: bool,
+
+    /// Load result from data/results.txt without running simulation
+    #[clap(long = "load-results")]
+    load_results: bool,
+
+    /// Number of threads
+    #[clap(long, default_value = "8")]
+    threads: usize,
+}
 
 struct RunResult {
     algo: usize,
@@ -37,7 +57,7 @@ struct RunResult {
     time: f64,
 }
 
-fn run_experiments(matches: &ArgMatches) {
+fn run_experiments(args: &Args) {
     let graphs_folder = "data/graphs/";
     if !Path::new(graphs_folder).exists() {
         eprint!("No directory with workflows found. Download them from github? [y/n] ");
@@ -109,14 +129,14 @@ fn run_experiments(matches: &ArgMatches) {
         vec![(32, 100, 300), (32, 200, 200), (32, 300, 100)],
         vec![(32, 100, 300), (32, 200, 100), (32, 300, 200)],
     ];
-    let enable_trace_log = matches.is_present("trace-log");
+    let enable_trace_log = args.trace_log;
     let traces_folder = "data/traces/";
 
     if enable_trace_log {
         std::fs::create_dir_all(traces_folder).unwrap();
     }
 
-    let run_one = matches.value_of("run-one").map(|s| {
+    let run_one = args.run_one.as_ref().map(|s| {
         let mut s = s.split('-');
         (
             s.next().unwrap().parse::<usize>().unwrap(),
@@ -125,8 +145,7 @@ fn run_experiments(matches: &ArgMatches) {
         )
     });
 
-    let num_threads: usize = matches.value_of_t("threads").unwrap();
-    let pool = ThreadPool::new(num_threads);
+    let pool = ThreadPool::new(args.threads);
 
     let algos = 36;
 
@@ -310,40 +329,13 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let matches = command!()
-        .arg(
-            Arg::new("trace-log")
-                .long("trace-log")
-                .help("Save trace_log to file")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("load-results")
-                .long("load-results")
-                .help("Load result from data/results.txt without running simulation")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("threads")
-                .long("threads")
-                .help("Number of threads")
-                .default_value("8"),
-        )
-        .arg(
-            Arg::new("run-one")
-                .long("run-one")
-                .help("Run only one experiment (algo-dag-platform)")
-                .takes_value(true),
-        )
-        .get_matches();
+    let args = Args::parse();
 
-    let load_results = matches.is_present("load-results");
-
-    if !load_results {
-        run_experiments(&matches);
+    if !args.load_results {
+        run_experiments(&args);
     }
 
-    if matches.is_present("run-one") {
+    if args.run_one.is_some() {
         return;
     }
 

@@ -20,9 +20,31 @@ use simcore::{log_error, log_info};
 use crate::dag::DAG;
 use crate::data_item::DataItemState;
 use crate::resource::Resource;
-use crate::scheduler::{Action, Config, DataTransferMode, Scheduler};
+use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
+
+#[derive(Clone, PartialEq)]
+pub enum DataTransferMode {
+    ViaMasterNode,
+    Direct,
+}
+
+impl DataTransferMode {
+    pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
+        match self {
+            DataTransferMode::ViaMasterNode => {
+                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
+            }
+            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Config {
+    pub data_transfer_mode: DataTransferMode,
+}
 
 struct DataTransfer {
     data_id: usize,
@@ -114,23 +136,13 @@ impl DAGRunner {
     }
 
     pub fn start(&mut self) {
-        for (i, _) in self
-            .dag
-            .get_data_items()
-            .iter()
-            .enumerate()
-            .filter(|(_, data_item)| data_item.state == DataItemState::Ready)
-        {
-            self.data_location.insert(i, self.id);
-        }
-        self.outputs = self
-            .dag
-            .get_tasks()
-            .iter()
-            .flat_map(|task| task.outputs.iter().cloned())
-            .collect();
-        for input in self.dag.get_tasks().iter().flat_map(|task| task.inputs.iter()) {
-            self.outputs.remove(input);
+        for (id, data_item) in self.dag.get_data_items().iter().enumerate() {
+            if data_item.state == DataItemState::Ready {
+                assert!(data_item.is_input, "Non-input data item has Ready state");
+                self.data_location.insert(id, self.id);
+            } else if data_item.consumers.len() == 0 {
+                self.outputs.insert(id);
+            }
         }
 
         log_info!(
@@ -309,7 +321,7 @@ impl DAGRunner {
                     self.data_transfers.insert(
                         data_event_id,
                         DataTransfer {
-                            data_id: data_id,
+                            data_id,
                             task_id,
                             from: self.id,
                             to: resource.id,
@@ -321,7 +333,7 @@ impl DAGRunner {
                             json!({
                                 "time": self.ctx.time(),
                                 "type": "start_uploading",
-                                "from": self.lookup_name(data_location),
+                                "from": self.ctx.lookup_name(data_location),
                                 "to": resource.name.clone(),
                                 "data_id": data_event_id,
                                 "data_name": data_item.name.clone(),
@@ -385,7 +397,7 @@ impl DAGRunner {
 
         for &data_item_id in data_items.iter() {
             if self.config.data_transfer_mode == DataTransferMode::Direct && !self.outputs.contains(&data_item_id) {
-                // upload to runner only graph outputs
+                // upload to runner only DAG outputs
                 continue;
             }
 
@@ -424,20 +436,7 @@ impl DAGRunner {
         if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
                 self.data_location.insert(data_item_id, self.resources[location].id);
-                for (task, state) in self
-                    .dag
-                    .update_data_item_state(data_item_id, DataItemState::Ready)
-                    .into_iter()
-                {
-                    self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
-                        task,
-                        state,
-                        &self.dag,
-                        &self.resources,
-                        &self.ctx,
-                    ));
-                    self.process_actions();
-                }
+                self.on_data_item_is_ready(data_item_id);
             }
         }
 
@@ -503,20 +502,7 @@ impl DAGRunner {
                 );
             }
             self.data_location.insert(data_id, self.id);
-            for (task, state) in self
-                .dag
-                .update_data_item_state(data_id, DataItemState::Ready)
-                .into_iter()
-            {
-                self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
-                    task,
-                    state,
-                    &self.dag,
-                    &self.resources,
-                    &self.ctx,
-                ));
-                self.process_actions();
-            }
+            self.on_data_item_is_ready(data_id);
         } else {
             // downloaded data from runner or another resource
 
@@ -527,7 +513,7 @@ impl DAGRunner {
                     json!({
                         "time": self.ctx.time(),
                         "type": "finish_uploading",
-                        "from": self.lookup_name(data_transfer.from.clone()),
+                        "from": self.ctx.lookup_name(data_transfer.from.clone()),
                         "to": self.resources[location].name.clone(),
                         "data_id": data_event_id,
                         "data_name": data_item.name.clone(),
@@ -552,14 +538,6 @@ impl DAGRunner {
         }
     }
 
-    fn lookup_name(&self, id: Id) -> String {
-        if id == self.id {
-            "scheduler".to_string()
-        } else {
-            self.ctx.lookup_name(id)
-        }
-    }
-
     pub fn validate_completed(&self) {
         if !self.dag.is_completed() {
             let mut states: Vec<String> = Vec::new();
@@ -575,6 +553,23 @@ impl DAGRunner {
                 }
             }
             log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
+        }
+    }
+
+    fn on_data_item_is_ready(&mut self, data_id: usize) {
+        for (task, state) in self
+            .dag
+            .update_data_item_state(data_id, DataItemState::Ready)
+            .into_iter()
+        {
+            self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
+                task,
+                state,
+                &self.dag,
+                &self.resources,
+                &self.ctx,
+            ));
+            self.process_actions();
         }
     }
 }
