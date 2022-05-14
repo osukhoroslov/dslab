@@ -1,5 +1,3 @@
-#include <random>
-#include <stdlib.h>
 #include <boost/format.hpp>
 #include <simgrid/s4u.hpp>
 #include <xbt/random.hpp>
@@ -131,8 +129,7 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
 
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
-    simgrid::xbt::random::XbtRandom random;
-    random.set_seed(123);
+    simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 7, "Usage: %s PROC_COUNT PEER_COUNT ASYMMETRIC DISTRIBUTED ITERATIONS platform_file.xml", argv[0]);
     long proc_count = strtol(argv[1], NULL, 10);

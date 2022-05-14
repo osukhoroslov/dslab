@@ -1,6 +1,4 @@
-#include <random>
-#include <stdlib.h>
-#include <boost/format.hpp>
+#include <unordered_set>
 #include <simgrid/s4u.hpp>
 #include <xbt/random.hpp>
 
@@ -34,13 +32,13 @@ struct WorkerRegister {
     std::string name;
     int speed;
     int cpus_total;
-    int memory_total;
+    double memory_total;
 };
 
 struct TaskRequest {
     int id;
     int flops;
-    int memory;
+    double memory;
     int cores;
     double input_size;
     double output_size;
@@ -79,37 +77,30 @@ struct WorkerInfo {
     int speed;
     int cpus_total;
     int cpus_available;
-    int memory_total;
-    int memory_available;
+    double memory_total;
+    double memory_available;
     sg4::Mailbox* mb;
-};
-
-struct WorkerInfoCompare {
-    bool operator()(WorkerInfo* w1, WorkerInfo* w2) {
-        return std::tie(w1->memory_available, w1->cpus_available, w1->speed, w1->id)
-                > std::tie(w2->memory_available, w2->cpus_available, w2->speed, w2->id);
-    }
 };
 
 class Master {
     int task_count = 0;
     bool blocking = true;
     sg4::Mailbox* mb = nullptr;
-    double cpus_total = 0;
-    double cpus_available = 0;
+    int cpus_total = 0;
+    int cpus_available = 0;
     double memory_total = 0;
     double memory_available = 0;
-    std::map<std::string, WorkerInfo*> workers;
+    std::unordered_map<std::string, WorkerInfo*> workers;
     std::vector<WorkerInfo*> idle_workers;
     std::map<int, TaskInfo> unassigned_tasks;
-    std::map<int, TaskInfo> assigned_tasks;
-    std::map<int, TaskInfo> completed_tasks;
+    std::unordered_map<int, TaskInfo> assigned_tasks;
+    std::unordered_map<int, TaskInfo> completed_tasks;
     double next_schedule_time = 10;
     double next_report_time = 10;
-    double* scheduling_time = 0;
+    double& scheduling_time;
 
 public:
-    explicit Master(std::string name, int task_count, bool blocking, double* scheduling_time)
+    explicit Master(std::string name, int task_count, bool blocking, double& scheduling_time)
             : task_count(task_count), blocking(blocking), scheduling_time(scheduling_time) {
         mb = sg4::Mailbox::by_name(name);
     }
@@ -160,7 +151,7 @@ public:
             }
             if (now >= next_schedule_time
                     || unassigned_tasks.size() == task_count
-                    || (completed_tasks.size() > 0 && assigned_tasks.size() == 0)) {
+                    || (completed_tasks.size() > 0 && assigned_tasks.empty())) {
                 schedule_tasks();
                 next_schedule_time = now + SCHEDULE_PERIOD;
             }
@@ -224,7 +215,7 @@ private:
             reg->memory_total, reg->memory_total,
             worker_mb
         };
-        workers.insert({reg->name, info});
+        workers.emplace(reg->name, info);
         idle_workers.push_back(info);
         cpus_total += info->cpus_total;
         cpus_available += info->cpus_available;
@@ -234,7 +225,7 @@ private:
 
     void on_task_request(TaskRequest* req) {
         XBT_DEBUG("Task %d", req->id);
-        unassigned_tasks.insert({req->id, TaskInfo{req, TaskState::NEW}});
+        unassigned_tasks.emplace(req->id, TaskInfo{req, TaskState::NEW});
     }
 
     void on_task_completed(TaskCompleted* msg, sg4::Mailbox* worker_mb) {
@@ -242,7 +233,7 @@ private:
         XBT_DEBUG("Completed task %d", task_id);
         auto& task = assigned_tasks[task_id];
         task.state = TaskState::COMPLETED;
-        completed_tasks.insert({task_id, task});
+        completed_tasks.emplace(task_id, task);
         assigned_tasks.erase(task_id);
 
         auto* worker = workers[worker_mb->get_name()];
@@ -259,7 +250,7 @@ private:
         if (unassigned_tasks.size() == 0) return;
         auto start = std::chrono::steady_clock::now();
         XBT_DEBUG(">> Available resources: %f %f", cpus_available, memory_available);
-        std::set<int> assigned;
+        std::unordered_set<int> assigned;
         for (auto& [task_id, task] : unassigned_tasks) {
             //XBT_DEBUG("- %d: %d flops, %d cores, %d memory", task_id, task.req->flops, task.req->cores, task.req->memory);
             if (idle_workers.size() == 0) {
@@ -268,7 +259,13 @@ private:
             if (cpus_available < task.req->cores || memory_available < task.req->memory) {
                 continue;
             }
-            std::sort(idle_workers.begin(), idle_workers.end(), WorkerInfoCompare());
+            std::sort(
+                idle_workers.begin(), idle_workers.end(),
+                [](WorkerInfo* w1, WorkerInfo* w2) {
+                    return std::tie(w1->memory_available, w1->cpus_available, w1->speed, w1->id)
+                           > std::tie(w2->memory_available, w2->cpus_available, w2->speed, w2->id);
+                }
+            );
             for (auto it = idle_workers.begin(); it != idle_workers.end(); ) {
                 WorkerInfo* worker = *it;
                 //XBT_DEBUG("-- w %s: %d %d %d", worker->id.c_str(), worker->cpus_available, worker->memory_available, worker->speed);
@@ -295,13 +292,13 @@ private:
         for (auto const& task_id : assigned) {
             auto& task = unassigned_tasks[task_id];
             task.state = TaskState::ASSIGNED;
-            assigned_tasks.insert({task_id, task});
+            assigned_tasks.emplace(task_id, task);
             unassigned_tasks.erase(task_id);
         }
         auto stop = std::chrono::steady_clock::now();
         double duration = (double)(std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()) / 1000;
         XBT_INFO("schedule tasks: assigned %d tasks in %.2f ms", assigned.size(), duration);
-        *scheduling_time += duration / 1000;
+        scheduling_time += duration / 1000;
     }
 
     void report_status() {
@@ -317,17 +314,17 @@ class Worker {
     std::string name;
     int speed;
     int cores;
-    int memory;
+    double memory;
     bool async_mode = true;
-    std::map<int, TaskInfo> tasks;
+    std::unordered_map<int, TaskInfo> tasks;
     sg4::Mailbox* mb = nullptr;
     sg4::Mailbox* master_mb = nullptr;
     sg4::Host* master_host = nullptr;
     std::vector<sg4::ActivityPtr> pending_activities;
-    std::map<std::string, int> activity_tasks;
+    std::unordered_map<std::string, int> activity_tasks;
 
 public:
-    explicit Worker(std::string name, int speed, int cores, int memory, bool async_mode,
+    explicit Worker(const std::string& name, int speed, int cores, double memory, bool async_mode,
                     sg4::Mailbox* master_mb, sg4::Host* master_host)
             : name(name), speed(speed), cores(cores), memory(memory), async_mode(async_mode),
                     master_mb(master_mb), master_host(master_host) {
@@ -350,7 +347,7 @@ public:
             if (changed_pos != -1) {
                 auto* completed = pending_activities[changed_pos].get();
                 XBT_DEBUG("Completed %s", completed->get_cname());
-                std::string completed_name = completed->get_name();
+                const std::string& completed_name = completed->get_name();
                 int task_id = -1;
                 if (completed_name != "unnamed") {
                     task_id = activity_tasks[completed_name];
@@ -384,10 +381,10 @@ public:
                             pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
                         }
                     // data download completed
-                    } else if (completed_name.starts_with(std::string_view("download-"))) {
+                    } else if (completed_name.starts_with("download-")) {
                         on_data_download_completed(task_id);
                     // data upload completed
-                    } else if (completed_name.starts_with(std::string_view("upload-"))) {
+                    } else if (completed_name.starts_with("upload-")) {
                         on_data_upload_completed(task_id);
                     }
                 // task execution completed
@@ -396,10 +393,10 @@ public:
                 // disk I/O completed
                 } else if (dynamic_cast<sg4::Io*>(completed)) {
                     // disk read completed
-                    if (completed_name.starts_with(std::string_view("read-"))) {
+                    if (completed_name.starts_with("read-")) {
                         on_data_read_completed(task_id);
                     // disk write completed
-                    } else if (completed_name.starts_with(std::string_view("write-"))) {
+                    } else if (completed_name.starts_with("write-")) {
                         on_data_write_completed(task_id);
                     }
                 }
@@ -419,7 +416,7 @@ private:
     // Synchronous version of task processing (slow, since it processes only a single task at time)
     void on_task_request_sync(TaskRequest* req) {
         XBT_DEBUG("Task %d: received", req->id);
-        tasks.insert({req->id, TaskInfo{req, TaskState::DOWNLOADING}});
+        tasks.emplace(req->id, TaskInfo{req, TaskState::DOWNLOADING});
 
         // download task input data from master
         sg4::Comm::sendto(master_host, sg4::this_actor::get_host(), req->input_size);
@@ -453,12 +450,12 @@ private:
     void on_task_request_async(TaskRequest* req) {
         int task_id = req->id;
         XBT_DEBUG("Task %d: received", task_id);
-        tasks.insert({req->id, TaskInfo{req, TaskState::DOWNLOADING}});
+        tasks.emplace(req->id, TaskInfo{req, TaskState::DOWNLOADING});
         // download task input data asynchronously
         auto comm = sg4::Comm::sendto_async(master_host, sg4::this_actor::get_host(), req->output_size);
         comm->set_name("download-" + std::to_string(task_id));
         pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
-        activity_tasks.insert({comm->get_name(), task_id});
+        activity_tasks.emplace(comm->get_name(), task_id);
     }
 
     void on_data_download_completed(int task_id) {
@@ -468,7 +465,7 @@ private:
         auto io = sg4::Host::current()->get_disks().front()->read_async(task.req->input_size);
         io->set_name("read-" + std::to_string(task_id));
         pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
-        activity_tasks.insert({io->get_name(), task_id});
+        activity_tasks.emplace(io->get_name(), task_id);
     }
 
     void on_data_read_completed(int task_id) {
@@ -478,7 +475,7 @@ private:
         auto exec = sg4::this_actor::exec_async(task.req->flops);
         exec->set_name("exec-" + std::to_string(task_id));
         pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(exec));
-        activity_tasks.insert({exec->get_name(), task_id});
+        activity_tasks.emplace(exec->get_name(), task_id);
     }
 
     void on_task_exec_completed(int task_id) {
@@ -488,7 +485,7 @@ private:
         auto io = sg4::Host::current()->get_disks().front()->write_async(task.req->output_size);
         io->set_name("write-" + std::to_string(task_id));
         pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
-        activity_tasks.insert({io->get_name(), task_id});
+        activity_tasks.emplace(io->get_name(), task_id);
     }
 
     void on_data_write_completed(int task_id) {
@@ -498,7 +495,7 @@ private:
         auto comm = sg4::Comm::sendto_async(sg4::this_actor::get_host(), master_host, task.req->output_size);
         comm->set_name("upload-" + std::to_string(task_id));
         pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
-        activity_tasks.insert({comm->get_name(), task_id});
+        activity_tasks.emplace(comm->get_name(), task_id);
     }
 
     void on_data_upload_completed(int task_id) {
@@ -528,7 +525,7 @@ public:
         // generate and submit tasks to master
         for (int i=0; i < task_count; i++) {
             int flops = random->uniform_int(100, 1000);
-            int memory = random->uniform_int(1, 8) * 128;
+            double memory = random->uniform_int(1, 8) * 128;
             int cores = 1;
             double input_size = random->uniform_int(100, 1000) * 10e6;
             double output_size = random->uniform_int(10, 100) * 10e6;
@@ -544,8 +541,7 @@ public:
 
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
-    simgrid::xbt::random::XbtRandom random;
-    random.set_seed(123);
+    simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 3, "Usage: %s HOST_COUNT TASK_COUNT", argv[0]);
     long host_count = strtol(argv[1], NULL, 10);
@@ -554,12 +550,12 @@ int main(int argc, char* argv[]) {
     // build platform and create actors
     auto* zone = sg4::create_full_zone("net");
     sg4::Mailbox* master_mailbox = sg4::Mailbox::by_name("master");
-    double* scheduling_time = new double(0);
+    double scheduling_time = 0;
     for (int i=0; i < host_count; i++) {
         std::string hostname = "host-" + std::to_string(i);
         double speed = (double)random.uniform_int(1, 10);
         int cores = random.uniform_int(1, 8);
-        int memory = random.uniform_int(1, 4) * 1024;
+        double memory = random.uniform_int(1, 4) * 1024;
         auto host = zone->create_host(hostname, speed);
         host->set_core_count(cores);
         auto disk = host->create_disk(hostname + "-fs", "1GBps", "1GBps");
@@ -603,7 +599,7 @@ int main(int argc, char* argv[]) {
     printf("Processed %d tasks on %d hosts in %.2fs (%.2f tasks/s)\n",
             task_count, host_count, e.get_clock(), task_count / e.get_clock());
     printf("Elapsed time: %.2fs\n", duration);
-    printf("Scheduling time: %.2fs\n", *scheduling_time);
+    printf("Scheduling time: %.2fs\n", scheduling_time);
     printf("Simulation speedup: %.2f\n", e.get_clock() / duration);
 
     return 0;
