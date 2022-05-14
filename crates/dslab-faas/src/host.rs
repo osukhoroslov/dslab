@@ -58,12 +58,19 @@ impl Host {
         self.container_manager.can_allocate(resources)
     }
 
-    pub fn can_invoke(&self, app: &Application) -> bool {
-        self.container_manager.get_possible_containers(app).next().is_some()
+    pub fn can_invoke(&self, app: &Application, allow_deploying: bool) -> bool {
+        self.container_manager
+            .get_possible_containers(app, allow_deploying)
+            .next()
+            .is_some()
     }
 
     pub fn get_active_invocations(&self) -> u64 {
         self.container_manager.get_active_invocations()
+    }
+
+    pub fn get_total_resource(&self, id: usize) -> u64 {
+        self.container_manager.get_total_resource(id)
     }
 
     pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {

@@ -49,7 +49,7 @@ impl BasicInvoker {
         let app = fr.get_app_by_function(request.id).unwrap();
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
-        for c in cm.get_possible_containers(app) {
+        for c in cm.get_possible_containers(app, true) {
             let delay = if c.status == ContainerStatus::Deploying {
                 c.deployment_time + c.last_change - time
             } else {

@@ -70,6 +70,10 @@ impl ContainerManager {
         self.resources.can_allocate(resources)
     }
 
+    pub fn get_total_resource(&self, id: usize) -> u64 {
+        self.resources.get_resource(id).unwrap().get_available()
+    }
+
     pub fn dec_active_invocations(&mut self) {
         self.active_invocations -= 1;
     }
@@ -94,13 +98,19 @@ impl ContainerManager {
         &mut self.containers
     }
 
-    pub fn get_possible_containers(&self, app: &Application) -> PossibleContainerIterator<'_> {
+    pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
         let id = app.id;
         let limit = app.get_concurrent_invocations();
         if let Some(set) = self.containers_by_app.get(&id) {
-            return PossibleContainerIterator::new(Some(set.iter()), &self.containers, &self.reservations, limit);
+            return PossibleContainerIterator::new(
+                Some(set.iter()),
+                &self.containers,
+                &self.reservations,
+                limit,
+                allow_deploying,
+            );
         }
-        PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit)
+        PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit, allow_deploying)
     }
 
     pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
@@ -159,6 +169,7 @@ pub struct PossibleContainerIterator<'a> {
     containers: &'a HashMap<u64, Container>,
     reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
     limit: usize,
+    allow_deploying: bool,
 }
 
 impl<'a> PossibleContainerIterator<'a> {
@@ -167,12 +178,14 @@ impl<'a> PossibleContainerIterator<'a> {
         containers: &'a HashMap<u64, Container>,
         reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
         limit: usize,
+        allow_deploying: bool,
     ) -> Self {
         Self {
             inner,
             containers,
             reserve,
             limit,
+            allow_deploying,
         }
     }
 }
@@ -187,6 +200,7 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
                     return Some(c);
                 }
                 if c.status == ContainerStatus::Deploying
+                    && self.allow_deploying
                     && (!self.reserve.contains_key(&id) || self.reserve.get(&id).unwrap().len() < self.limit)
                 {
                     return Some(c);
