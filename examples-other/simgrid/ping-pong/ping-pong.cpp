@@ -67,6 +67,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
     bool stopped = false;
     while (!stopped) {
         if (pings_to_send > 0 && !wait_reply) {
+            // select ping target (avoiding calling random for single peer seems to give slight speed improvement)
             sg4::Mailbox* out = (peer_count == 1) ? peers[0] : peers[random.uniform_int(0, peer_count-1)];
             auto* ping = new Message(MessageType::PING, in);
             out->put_init(ping, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
