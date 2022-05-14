@@ -6,8 +6,9 @@ namespace sg4 = simgrid::s4u;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(master_workers_app, "Master-workers example");
 
-const int SCHEDULE_PERIOD = 10;
-const int REPORT_STATUS_PERIOD = 100;
+static const int SCHEDULE_PERIOD = 10;
+static const int REPORT_STATUS_PERIOD = 100;
+static const int MESSAGE_PAYLOAD_SIZE = 10;
 
 // MESSAGES + COMMON STRUCTS ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -19,13 +20,12 @@ enum MessageType {
     STOP
 };
 
-class Message {
-public:
+struct Message {
     MessageType type;
     void* data;
     sg4::Mailbox* from = nullptr;
 
-    explicit Message(MessageType type, void* data, sg4::Mailbox* from) : type(type), data(data), from(from) {};
+    explicit Message(MessageType type, void* data, sg4::Mailbox* from) : type(type), data(data), from(from) {}
 };
 
 struct WorkerRegister {
@@ -116,7 +116,7 @@ public:
         // stop all workers
         for (auto& [worker_id, worker] : workers) {
             auto* msg = new Message(MessageType::STOP, nullptr, mb);
-            worker->mb->put(msg, 10);
+            worker->mb->put(msg, MESSAGE_PAYLOAD_SIZE);
         }
         XBT_DEBUG("Exiting");
     }
@@ -141,6 +141,8 @@ public:
                     on_task_completed((TaskCompleted*)msg->data, msg->from);
                     break;
                 }
+                default:
+                    std::abort();
             }
             delete msg;
             // execute periodic activities
@@ -181,6 +183,8 @@ public:
                         on_task_completed((TaskCompleted*)msg->data, msg->from);
                         break;
                     }
+                    default:
+                        std::abort();
                 }
                 delete msg;
                 comm_completed = true;
@@ -276,12 +280,11 @@ private:
                     cpus_available -= task.req->cores;
                     memory_available -= task.req->memory;
                     auto* msg = new Message(MessageType::TASK_REQUEST, task.req, mb);
-                    worker->mb->put_init(msg, 10)->detach();
+                    worker->mb->put_init(msg, MESSAGE_PAYLOAD_SIZE)->detach();
                     assigned.insert(task_id);
-                    if (worker->cpus_available > 0 && worker->memory_available > 0) {
-                        it++;
-                    } else {
-                        it = idle_workers.erase(it);
+                    if (worker->cpus_available == 0 || worker->memory_available == 0) {
+                        std::swap(*it, idle_workers.back());
+                        idle_workers.pop_back();
                     }
                     break;
                 } else {
@@ -338,7 +341,7 @@ public:
         // start message receive activity
         Message* msg;
         auto comm = mb->get_async<Message>(&msg);
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
+        pending_activities.push_back(comm);
 
         bool stopped = false;
         while (!stopped) {
@@ -373,12 +376,14 @@ public:
                                 stopped = true;
                                 break;
                             }
+                            default:
+                                std::abort();
                         }
                         delete msg;
                         // start next message receive activity
                         if (!stopped) {
                             comm = mb->get_async<Message>(&msg);
-                            pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
+                            pending_activities.push_back(comm);
                         }
                     // data download completed
                     } else if (completed_name.starts_with("download-")) {
@@ -400,7 +405,8 @@ public:
                         on_data_write_completed(task_id);
                     }
                 }
-                pending_activities.erase(pending_activities.begin() + changed_pos);
+                std::swap(pending_activities[changed_pos], pending_activities.back());
+                pending_activities.pop_back();
             }
         }
         XBT_DEBUG("Exiting");
@@ -410,7 +416,7 @@ private:
     void register_on_master() {
         auto* reg = new WorkerRegister{name, speed, cores, memory};
         auto* msg = new Message(MessageType::WORKER_REGISTER, reg, mb);
-        master_mb->put(msg, 10);
+        master_mb->put(msg, MESSAGE_PAYLOAD_SIZE);
     }
 
     // Synchronous version of task processing (slow, since it processes only a single task at time)
@@ -444,7 +450,7 @@ private:
 
         tasks[req->id].state = TaskState::COMPLETED;
         auto* msg = new Message(MessageType::TASK_COMPLETED, new TaskCompleted{req-> id}, mb);
-        master_mb->put(msg, 10);
+        master_mb->put(msg, MESSAGE_PAYLOAD_SIZE);
     }
 
     void on_task_request_async(TaskRequest* req) {
@@ -454,7 +460,7 @@ private:
         // download task input data asynchronously
         auto comm = sg4::Comm::sendto_async(master_host, sg4::this_actor::get_host(), req->output_size);
         comm->set_name("download-" + std::to_string(task_id));
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
+        pending_activities.push_back(comm);
         activity_tasks.emplace(comm->get_name(), task_id);
     }
 
@@ -464,7 +470,7 @@ private:
         // read data from disk asynchronously
         auto io = sg4::Host::current()->get_disks().front()->read_async(task.req->input_size);
         io->set_name("read-" + std::to_string(task_id));
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
+        pending_activities.push_back(io);
         activity_tasks.emplace(io->get_name(), task_id);
     }
 
@@ -474,7 +480,7 @@ private:
         // execute task asynchronously
         auto exec = sg4::this_actor::exec_async(task.req->flops);
         exec->set_name("exec-" + std::to_string(task_id));
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(exec));
+        pending_activities.push_back(exec);
         activity_tasks.emplace(exec->get_name(), task_id);
     }
 
@@ -484,7 +490,7 @@ private:
         // write data to disk asynchronously
         auto io = sg4::Host::current()->get_disks().front()->write_async(task.req->output_size);
         io->set_name("write-" + std::to_string(task_id));
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(io));
+        pending_activities.push_back(io);
         activity_tasks.emplace(io->get_name(), task_id);
     }
 
@@ -494,7 +500,7 @@ private:
         // upload task output data asynchronously
         auto comm = sg4::Comm::sendto_async(sg4::this_actor::get_host(), master_host, task.req->output_size);
         comm->set_name("upload-" + std::to_string(task_id));
-        pending_activities.push_back(boost::dynamic_pointer_cast<sg4::Activity>(comm));
+        pending_activities.push_back(comm);
         activity_tasks.emplace(comm->get_name(), task_id);
     }
 
@@ -503,7 +509,7 @@ private:
         task.state = TaskState::COMPLETED;
         // report task completion to master
         auto* msg = new Message(MessageType::TASK_COMPLETED, new TaskCompleted{task_id}, mb);
-        master_mb->put(msg, 10);
+        master_mb->put(msg, MESSAGE_PAYLOAD_SIZE);
     }
 };
 
@@ -531,7 +537,7 @@ public:
             double output_size = random->uniform_int(10, 100) * 10e6;
             auto* req = new TaskRequest{i, flops, memory, cores, input_size, output_size};
             auto* msg = new Message(MessageType::TASK_REQUEST, req, mb);
-            master_mb->put(msg, 10);
+            master_mb->put(msg, MESSAGE_PAYLOAD_SIZE);
         }
         XBT_DEBUG("Exiting");
     }

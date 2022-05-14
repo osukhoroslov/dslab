@@ -12,6 +12,10 @@ find_package(SimGrid 3.31 REQUIRED)
 
 include_directories(${SimGrid_INCLUDE_DIR})
 
+message(STATUS "SimGrid_PATH: ${SimGrid_PATH}")
+message(STATUS "SimGrid_INCLUDE_DIR: ${SimGrid_INCLUDE_DIR}")
+message(STATUS "SimGrid_LIBRARY: ${SimGrid_LIBRARY}")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_executable(ping-pong ping-pong.cpp)

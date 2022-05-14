@@ -6,6 +6,8 @@ namespace sg4 = simgrid::s4u;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(ping_pong_app, "Ping-pong example");
 
+static const int MESSAGE_PAYLOAD_SIZE = 10;
+
 enum class MessageType {
     START,
     PING,
@@ -14,12 +16,11 @@ enum class MessageType {
     STOP
 };
 
-class Message {
-public:
+struct Message {
     MessageType type;
     sg4::Mailbox* from = nullptr;
 
-    explicit Message(MessageType type, sg4::Mailbox* from) : type(type), from(from) {};
+    explicit Message(MessageType type, sg4::Mailbox* from) : type(type), from(from) {}
 
     static void destroy(void* message);
 };
@@ -29,7 +30,7 @@ void Message::destroy(void* message) {
 }
 
 static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes, bool asymmetric) {
-    long active_proc_count = process_mailboxes.size();
+    int active_proc_count = process_mailboxes.size();
     for(auto const& mailbox: process_mailboxes) {
         auto* start = new Message(MessageType::START, in);
         mailbox->put_init(start, 1)->detach(Message::destroy);
@@ -39,7 +40,7 @@ static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes,
             auto* msg = in->get<Message>();
             xbt_assert(msg->type == MessageType::COMPLETED);
             delete msg;
-            active_proc_count -= 1;
+            --active_proc_count;
         }
         for(auto const& mailbox: process_mailboxes) {
             auto* stop = new Message(MessageType::STOP, in);
@@ -48,8 +49,8 @@ static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes,
     }
 }
 
-static void process(long id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, long iterations) {
-    // in->set_receiver(sg4::Actor::self()); // has negative effect on performance
+static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, int iterations) {
+    in->set_receiver(sg4::Actor::self());
     simgrid::xbt::random::XbtRandom random;
     random.set_seed(id);
 
@@ -60,15 +61,15 @@ static void process(long id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers,
     delete msg;
     XBT_DEBUG("Started");
 
-    long peer_count = peers.size();
-    long pings_to_send = iterations;
+    int peer_count = peers.size();
+    int pings_to_send = iterations;
     bool wait_reply = false;
     bool stopped = false;
     while (!stopped) {
         if (pings_to_send > 0 && !wait_reply) {
             sg4::Mailbox* out = (peer_count == 1) ? peers[0] : peers[random.uniform_int(0, peer_count-1)];
             auto* ping = new Message(MessageType::PING, in);
-            out->put_init(ping, 10)->detach(Message::destroy); // out->put_async is very slow
+            out->put_init(ping, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
             XBT_DEBUG("Sent PING");
             pings_to_send -= 1;
             wait_reply = true;
@@ -78,7 +79,7 @@ static void process(long id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers,
         if (msg->type == MessageType::PING) {
             XBT_DEBUG("Received PING");
             auto* pong = new Message(MessageType::PONG, in);
-            msg->from->put_init(pong, 10)->detach(Message::destroy); // out->put_async is very slow
+            msg->from->put_init(pong, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
             XBT_DEBUG("Sent PONG");
         } else if (msg->type == MessageType::PONG) {
             XBT_DEBUG("Received PONG");
@@ -94,12 +95,12 @@ static void process(long id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers,
         }
         delete msg;
     }
-    // in->set_receiver(nullptr);
     xbt_assert(pings_to_send == 0);
     XBT_DEBUG("Stopped");
 }
 
-static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* out, long iterations) {
+static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* out, int iterations) {
+    in->set_receiver(sg4::Actor::self());
     // wait for Start message
     auto* msg = in->get<Message>();
     xbt_assert(msg->type == MessageType::START);
@@ -109,7 +110,7 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
     while (iterations > 0) {
         if (is_pinger) {
             auto* ping = new Message(MessageType::PING, in);
-            out->put(ping, 10);
+            out->put(ping, MESSAGE_PAYLOAD_SIZE);
             XBT_DEBUG("Sent PING");
             auto* pong = in->get<Message>();
             XBT_DEBUG("Received PONG");
@@ -119,10 +120,10 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
             auto* ping = in->get<Message>();
             XBT_DEBUG("Received PING");
             auto* pong = new Message(MessageType::PONG, in);
-            ping->from->put(pong, 10);
+            ping->from->put(pong, MESSAGE_PAYLOAD_SIZE);
             XBT_DEBUG("Sent PONG");
             delete ping;
-            iterations -= 1;
+            --iterations;
         }
     }
 }
@@ -132,11 +133,11 @@ int main(int argc, char* argv[]) {
     simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 7, "Usage: %s PROC_COUNT PEER_COUNT ASYMMETRIC DISTRIBUTED ITERATIONS platform_file.xml", argv[0]);
-    long proc_count = strtol(argv[1], NULL, 10);
-    long peer_count = strtol(argv[2], NULL, 10);
-    bool asymmetric = strtol(argv[3], NULL, 10);
-    bool distributed = strtol(argv[4], NULL, 10);
-    long iterations = strtol(argv[5], NULL, 10);
+    int proc_count = std::stoi(argv[1]);
+    int peer_count = std::stoi(argv[2]);
+    bool asymmetric = std::stoi(argv[3]);
+    bool distributed = std::stoi(argv[4]);
+    int iterations = std::stoi(argv[5]);
     xbt_assert(peer_count > 0, "PEER_COUNT should be positive");
     xbt_assert(iterations > 0, "ITERATIONS should be positive");
     xbt_assert(!asymmetric || proc_count % 2 == 0, "ASYMMETRIC case is supported only for even PROC_COUNT");
