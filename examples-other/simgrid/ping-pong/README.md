@@ -5,14 +5,14 @@
 If SimGrid is installed in `/opt/simgrid`:
 
 ```
-cmake .
+cmake -DCMAKE_BUILD_TYPE=Release .
 make
 ```
 
 If SimGrid is installed somewhere else:
 
 ```
-cmake -DSimGrid_PATH=/where/to/simgrid .
+cmake -DSimGrid_PATH=/where/to/simgrid -DCMAKE_BUILD_TYPE=Release .
 make
 ```
 

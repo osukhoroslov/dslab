@@ -61,7 +61,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
     delete msg;
     XBT_DEBUG("Started");
 
-    int peer_count = peers.size();
+    unsigned int peer_count = peers.size();
     int pings_to_send = iterations;
     bool wait_reply = false;
     bool stopped = false;
@@ -133,11 +133,11 @@ int main(int argc, char* argv[]) {
     simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 7, "Usage: %s PROC_COUNT PEER_COUNT ASYMMETRIC DISTRIBUTED ITERATIONS platform_file.xml", argv[0]);
-    int proc_count = std::stoi(argv[1]);
-    int peer_count = std::stoi(argv[2]);
+    unsigned int proc_count = std::stoi(argv[1]);
+    unsigned int peer_count = std::stoi(argv[2]);
     bool asymmetric = std::stoi(argv[3]);
     bool distributed = std::stoi(argv[4]);
-    int iterations = std::stoi(argv[5]);
+    unsigned int iterations = std::stoi(argv[5]);
     xbt_assert(peer_count > 0, "PEER_COUNT should be positive");
     xbt_assert(iterations > 0, "ITERATIONS should be positive");
     xbt_assert(!asymmetric || proc_count % 2 == 0, "ASYMMETRIC case is supported only for even PROC_COUNT");
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::string> process_names;
     std::vector<sg4::Mailbox*> process_mailboxes;
-    for (auto i = 1; i <= proc_count; i++) {
+    for (unsigned int i = 1; i <= proc_count; i++) {
         auto proc_name = (boost::format("proc%1%") % i).str();
         process_names.push_back(proc_name);
         process_mailboxes.push_back(sg4::Mailbox::by_name(proc_name));
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
         process_mailboxes,
         asymmetric
     );
-    for (auto i = 1; i <= proc_count; i++) {
+    for (unsigned int i = 1; i <= proc_count; i++) {
         auto host_name = distributed ? (boost::format("host%1%") % (2 - i % 2)).str() : "host1";
         std::vector<sg4::Mailbox*> peers;
         if (peer_count == 1) {
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
             peers.push_back(process_mailboxes[peer_id-1]);
         } else {
              while (peers.size() < peer_count) {
-                auto peer_id = random.uniform_int(1, proc_count);
+                unsigned int peer_id = random.uniform_int(1, proc_count);
                 if (peer_id != i) {
                     peers.push_back(process_mailboxes[peer_id-1]);
                 }

@@ -83,7 +83,7 @@ struct WorkerInfo {
 };
 
 class Master {
-    int task_count = 0;
+    unsigned int task_count = 0;
     bool blocking = true;
     sg4::Mailbox* mb = nullptr;
     int cpus_total = 0;
@@ -100,7 +100,7 @@ class Master {
     double& scheduling_time;
 
 public:
-    explicit Master(std::string name, int task_count, bool blocking, double& scheduling_time)
+    explicit Master(std::string name, unsigned int task_count, bool blocking, double& scheduling_time)
             : task_count(task_count), blocking(blocking), scheduling_time(scheduling_time) {
         mb = sg4::Mailbox::by_name(name);
     }
@@ -253,7 +253,7 @@ private:
     void schedule_tasks() {
         if (unassigned_tasks.size() == 0) return;
         auto start = std::chrono::steady_clock::now();
-        XBT_DEBUG(">> Available resources: %f %f", cpus_available, memory_available);
+        XBT_DEBUG(">> Available resources: %d %f", cpus_available, memory_available);
         std::unordered_set<int> assigned;
         for (auto& [task_id, task] : unassigned_tasks) {
             //XBT_DEBUG("- %d: %d flops, %d cores, %d memory", task_id, task.req->flops, task.req->cores, task.req->memory);
@@ -300,12 +300,12 @@ private:
         }
         auto stop = std::chrono::steady_clock::now();
         double duration = (double)(std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()) / 1000;
-        XBT_INFO("schedule tasks: assigned %d tasks in %.2f ms", assigned.size(), duration);
+        XBT_INFO("schedule tasks: assigned %ld tasks in %.2f ms", assigned.size(), duration);
         scheduling_time += duration / 1000;
     }
 
     void report_status() {
-        XBT_INFO("CPU: %f / MEMORY: %f / UNASSIGNED: %d / ASSIGNED: %d / COMPLETED: %d",
+        XBT_INFO("CPU: %d / MEMORY: %f / UNASSIGNED: %ld / ASSIGNED: %ld / COMPLETED: %ld",
                 (cpus_total - cpus_available) / cpus_total, (memory_total - memory_available) / memory_total,
                 unassigned_tasks.size(), assigned_tasks.size(), completed_tasks.size());
     }
@@ -516,26 +516,27 @@ private:
 // CLIENT //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class Client {
-    long task_count = 0;
+    unsigned int task_count = 0;
     sg4::Mailbox* mb = nullptr;
     sg4::Mailbox* master_mb = nullptr;
     simgrid::xbt::random::XbtRandom* random = nullptr;
 
 public:
-    explicit Client(std::string name, int task_count, sg4::Mailbox* master_mb, simgrid::xbt::random::XbtRandom* random)
-            : task_count(task_count), master_mb(master_mb), random(random) {
+    explicit Client(std::string name, unsigned int task_count, sg4::Mailbox* master_mb,
+                    simgrid::xbt::random::XbtRandom* random):
+                    task_count(task_count), master_mb(master_mb), random(random) {
         mb = sg4::Mailbox::by_name(name);
     };
 
     void operator()() {
         // generate and submit tasks to master
-        for (int i=0; i < task_count; i++) {
+        for (unsigned int i=0; i < task_count; i++) {
             int flops = random->uniform_int(100, 1000);
             double memory = random->uniform_int(1, 8) * 128;
             int cores = 1;
             double input_size = random->uniform_int(100, 1000) * 10e6;
             double output_size = random->uniform_int(10, 100) * 10e6;
-            auto* req = new TaskRequest{i, flops, memory, cores, input_size, output_size};
+            auto* req = new TaskRequest{(int)i, flops, memory, cores, input_size, output_size};
             auto* msg = new Message(MessageType::TASK_REQUEST, req, mb);
             master_mb->put(msg, MESSAGE_PAYLOAD_SIZE);
         }
@@ -550,14 +551,14 @@ int main(int argc, char* argv[]) {
     simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 3, "Usage: %s HOST_COUNT TASK_COUNT", argv[0]);
-    long host_count = strtol(argv[1], NULL, 10);
-    long task_count = strtol(argv[2], NULL, 10);
+    unsigned int host_count = std::stoi(argv[1]);
+    unsigned int task_count = std::stoi(argv[2]);
 
     // build platform and create actors
     auto* zone = sg4::create_full_zone("net");
     sg4::Mailbox* master_mailbox = sg4::Mailbox::by_name("master");
     double scheduling_time = 0;
-    for (int i=0; i < host_count; i++) {
+    for (unsigned int i=0; i < host_count; i++) {
         std::string hostname = "host-" + std::to_string(i);
         double speed = (double)random.uniform_int(1, 10);
         int cores = random.uniform_int(1, 8);
@@ -587,9 +588,9 @@ int main(int argc, char* argv[]) {
                                 ->set_latency("10us")
                                 ->seal();
     sg4::LinkInRoute backbone(link);
-    for (int i=0; i < host_count; i++) {
+    for (unsigned int i=0; i < host_count; i++) {
         std::string host1 = "host-" + std::to_string(i);
-        for (int j=i+1; j < host_count; j++) {
+        for (unsigned int j=i+1; j < host_count; j++) {
             std::string host2 = "host-" + std::to_string(j);
             zone->add_route(e.host_by_name(host1)->get_netpoint(), e.host_by_name(host2)->get_netpoint(),
                             nullptr, nullptr, {backbone});
