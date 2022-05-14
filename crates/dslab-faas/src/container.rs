@@ -44,6 +44,7 @@ impl Container {
 }
 
 pub struct ContainerManager {
+    active_invocations: u64,
     resources: ResourceProvider,
     containers: HashMap<u64, Container>,
     containers_by_app: HashMap<u64, HashSet<u64>>,
@@ -55,6 +56,7 @@ pub struct ContainerManager {
 impl ContainerManager {
     pub fn new(resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self {
+            active_invocations: 0,
             resources,
             containers: HashMap::new(),
             containers_by_app: HashMap::new(),
@@ -66,6 +68,18 @@ impl ContainerManager {
 
     pub fn can_allocate(&self, resources: &ResourceConsumer) -> bool {
         self.resources.can_allocate(resources)
+    }
+
+    pub fn dec_active_invocations(&mut self) {
+        self.active_invocations -= 1;
+    }
+
+    pub fn inc_active_invocations(&mut self) {
+        self.active_invocations += 1;
+    }
+
+    pub fn get_active_invocations(&self) -> u64 {
+        self.active_invocations
     }
 
     pub fn get_container(&self, id: u64) -> Option<&Container> {
