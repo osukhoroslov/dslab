@@ -62,6 +62,10 @@ impl Host {
         self.container_manager.get_possible_containers(app).next().is_some()
     }
 
+    pub fn get_active_invocations(&self) -> u64 {
+        self.container_manager.get_active_invocations()
+    }
+
     pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
         let status = self.invoker.invoke(
             request,
@@ -158,6 +162,7 @@ impl Host {
         self.coldstart
             .borrow_mut()
             .update(invocation, self.function_registry.borrow().get_app(app_id).unwrap());
+        self.container_manager.dec_active_invocations();
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         let expect = container.started_invocations;

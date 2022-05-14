@@ -96,6 +96,7 @@ impl Invoker for BasicInvoker {
         cm: &mut ContainerManager,
         time: f64,
     ) -> InvocationStatus {
+        cm.inc_active_invocations();
         let status = self.try_invoke(request, fr, cm, time);
         if status == InvocationStatus::Rejected {
             self.queue.push(request);
