@@ -52,6 +52,10 @@ impl Resource {
     pub fn release(&mut self, req: &ResourceRequirement) {
         self.consumed -= req.quantity;
     }
+
+    pub fn get_available(&self) -> u64 {
+        self.available
+    }
 }
 
 #[derive(Clone)]
@@ -109,6 +113,10 @@ impl ResourceProvider {
         for (id, req) in consumer.iter() {
             self.resources.get_mut(id).unwrap().release(req);
         }
+    }
+
+    pub fn get_resource(&self, id: usize) -> Option<&Resource> {
+        self.resources.get(&id)
     }
 }
 

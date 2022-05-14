@@ -10,6 +10,7 @@ use serverless::scheduler::Scheduler;
 use serverless::simulation::ServerlessSimulation;
 use serverless::stats::Stats;
 use serverless_extra::azure_experiment::{process_azure_trace, Trace};
+use serverless_extra::hermes::HermesScheduler;
 use serverless_extra::simple_schedulers::*;
 use simcore::simulation::Simulation;
 
@@ -26,12 +27,18 @@ fn test_scheduler(scheduler: Option<Box<dyn Scheduler>>, trace: &Trace) -> Stats
         scheduler,
     );
     for _ in 0..1000 {
+        let cpu = serverless.create_resource("cpu", 16);
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]));
+        serverless.add_host(None, ResourceProvider::new(vec![cpu, mem]));
     }
     for app in trace.app_records.iter() {
+        let cpu = serverless.create_resource_requirement("cpu", 1);
         let mem = serverless.create_resource_requirement("mem", app.mem);
-        serverless.add_app(Application::new(16, app.cold_start, ResourceConsumer::new(vec![mem])));
+        serverless.add_app(Application::new(
+            16,
+            app.cold_start,
+            ResourceConsumer::new(vec![cpu, mem]),
+        ));
     }
     for func in trace.function_records.iter() {
         serverless.add_function(Function::new(func.app_id));
@@ -51,7 +58,8 @@ fn print_results(stats: Stats, name: &str) {
         "cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
-    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!("wasted cpu time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&1).unwrap());
 }
 
 fn main() {
@@ -72,5 +80,13 @@ fn main() {
     print_results(
         test_scheduler(Some(Box::new(LeastLoadedScheduler {})), &trace),
         "Least-loaded",
+    );
+    print_results(
+        test_scheduler(Some(Box::new(RoundRobinScheduler::new())), &trace),
+        "Round Robin",
+    );
+    print_results(
+        test_scheduler(Some(Box::new(HermesScheduler::new(0))), &trace),
+        "Hermes",
     );
 }

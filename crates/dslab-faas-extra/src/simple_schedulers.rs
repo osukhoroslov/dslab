@@ -27,7 +27,7 @@ impl Scheduler for LocalityBasedScheduler {
         let mut cycle = false;
         let mut idx = init;
         while !cycle {
-            if hosts[idx].borrow().can_invoke(app) {
+            if hosts[idx].borrow().can_invoke(app, false) {
                 break;
             }
             idx = (idx + self.step) % hosts.len();
@@ -75,5 +75,24 @@ impl Scheduler for LeastLoadedScheduler {
             }
         }
         best
+    }
+}
+
+pub struct RoundRobinScheduler {
+    index: usize,
+}
+
+impl RoundRobinScheduler {
+    pub fn new() -> Self {
+        Self { index: 0 }
+    }
+}
+
+impl Scheduler for RoundRobinScheduler {
+    fn select_host(&mut self, _app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+        self.index %= hosts.len();
+        let chosen = self.index;
+        self.index += 1;
+        chosen
     }
 }
