@@ -136,20 +136,20 @@ impl Master {
         self.memory_available += task.req.memory;
         self.worker_queue.push(worker.id, worker.score());
         self.completed_tasks.insert(task_id, task);
-        if self.assigned_tasks.len() == 0 {
+        if self.assigned_tasks.is_empty() {
             self.schedule_tasks();
         }
     }
 
     fn schedule_tasks(&mut self) {
-        if self.unassigned_tasks.len() == 0 {
+        if self.unassigned_tasks.is_empty() {
             return;
         }
         log_trace!(self.ctx, "scheduling tasks");
         let t = Instant::now();
         let mut assigned_tasks = HashSet::new();
         for (task_id, task) in self.unassigned_tasks.iter_mut() {
-            if self.worker_queue.len() == 0 {
+            if self.worker_queue.is_empty() {
                 break;
             }
             if task.req.min_cores > self.cpus_available || task.req.memory > self.memory_available {

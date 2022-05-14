@@ -153,7 +153,7 @@ public:
             }
             if (now >= next_schedule_time
                     || unassigned_tasks.size() == task_count
-                    || (completed_tasks.size() > 0 && assigned_tasks.empty())) {
+                    || (!completed_tasks.empty() && assigned_tasks.empty())) {
                 schedule_tasks();
                 next_schedule_time = now + SCHEDULE_PERIOD;
             }
@@ -198,7 +198,7 @@ public:
             }
             if (now >= next_schedule_time
                     || unassigned_tasks.size() == task_count
-                    || (completed_tasks.size() > 0 && assigned_tasks.size() == 0)) {
+                    || (!completed_tasks.empty() && assigned_tasks.empty())) {
                 schedule_tasks();
                 next_schedule_time = now + SCHEDULE_PERIOD;
             }
@@ -251,13 +251,13 @@ private:
     }
 
     void schedule_tasks() {
-        if (unassigned_tasks.size() == 0) return;
+        if (unassigned_tasks.empty()) return;
         auto start = std::chrono::steady_clock::now();
         XBT_DEBUG(">> Available resources: %d %f", cpus_available, memory_available);
         std::unordered_set<int> assigned;
         for (auto& [task_id, task] : unassigned_tasks) {
             //XBT_DEBUG("- %d: %d flops, %d cores, %d memory", task_id, task.req->flops, task.req->cores, task.req->memory);
-            if (idle_workers.size() == 0) {
+            if (idle_workers.empty()) {
                 break;
             }
             if (cpus_available < task.req->cores || memory_available < task.req->memory) {
@@ -305,8 +305,8 @@ private:
     }
 
     void report_status() {
-        XBT_INFO("CPU: %d / MEMORY: %f / UNASSIGNED: %ld / ASSIGNED: %ld / COMPLETED: %ld",
-                (cpus_total - cpus_available) / cpus_total, (memory_total - memory_available) / memory_total,
+        XBT_INFO("CPU: %f / MEMORY: %f / UNASSIGNED: %ld / ASSIGNED: %ld / COMPLETED: %ld",
+                (double)(cpus_total - cpus_available) / cpus_total, (memory_total - memory_available) / memory_total,
                 unassigned_tasks.size(), assigned_tasks.size(), completed_tasks.size());
     }
 };
@@ -560,7 +560,7 @@ int main(int argc, char* argv[]) {
     double scheduling_time = 0;
     for (unsigned int i=0; i < host_count; i++) {
         std::string hostname = "host-" + std::to_string(i);
-        double speed = (double)random.uniform_int(1, 10);
+        double speed = random.uniform_int(1, 10);
         int cores = random.uniform_int(1, 8);
         double memory = random.uniform_int(1, 4) * 1024;
         auto host = zone->create_host(hostname, speed);

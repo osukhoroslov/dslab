@@ -41,11 +41,7 @@ impl Process {
 
     fn on_start(&mut self) {
         if self.is_pinger {
-            let peer = if self.peer_count > 1 {
-                self.peers[self.ctx.gen_range(0..self.peer_count)]
-            } else {
-                self.peers[0]
-            };
+            let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
             self.send(Ping {}, peer);
         }
     }
@@ -119,11 +115,7 @@ impl NetworkProcess {
 
     fn on_start(&mut self) {
         if self.is_pinger {
-            let peer = if self.peer_count > 1 {
-                self.peers[self.ctx.gen_range(0..self.peer_count)]
-            } else {
-                self.peers[0]
-            };
+            let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
             self.net.borrow_mut().send_event(Ping {}, self.id, peer);
         }
     }
