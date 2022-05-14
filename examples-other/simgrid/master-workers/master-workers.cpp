@@ -351,54 +351,48 @@ public:
                 auto* completed = pending_activities[changed_pos].get();
                 XBT_DEBUG("Completed %s", completed->get_cname());
                 const std::string& completed_name = completed->get_name();
-                int task_id = -1;
-                if (completed_name != "unnamed") {
-                    task_id = activity_tasks[completed_name];
+                // message received
+                if (completed_name == "unnamed") {
+                    switch(msg->type) {
+                        case MessageType::TASK_REQUEST: {
+                            if (async_mode) {
+                                // process task asynchronously
+                                on_task_request_async((TaskRequest*)msg->data);
+                            } else {
+                                // process task synchronously
+                                on_task_request_sync((TaskRequest*)msg->data);
+                            }
+                            break;
+                        }
+                        case MessageType::STOP: {
+                            XBT_DEBUG("Got STOP");
+                            stopped = true;
+                            break;
+                        }
+                        default:
+                            std::abort();
+                    }
+                    delete msg;
+                    // start next message receive activity
+                    if (!stopped) {
+                        comm = mb->get_async<Message>(&msg);
+                        pending_activities.push_back(comm);
+                    }
+                // task-related activities
+                } else {
+                    int task_id = activity_tasks[completed_name];
                     activity_tasks.erase(completed_name);
-                }
-                // communication completed
-                if (dynamic_cast<sg4::Comm*>(completed)) {
-                    // message received
-                    if (task_id == -1) {
-                        switch(msg->type) {
-                            case MessageType::TASK_REQUEST: {
-                                if (async_mode) {
-                                    // process task asynchronously
-                                    on_task_request_async((TaskRequest*)msg->data);
-                                } else {
-                                    // process task synchronously
-                                    on_task_request_sync((TaskRequest*)msg->data);
-                                }
-                                break;
-                            }
-                            case MessageType::STOP: {
-                                XBT_DEBUG("Got STOP");
-                                stopped = true;
-                                break;
-                            }
-                            default:
-                                std::abort();
-                        }
-                        delete msg;
-                        // start next message receive activity
-                        if (!stopped) {
-                            comm = mb->get_async<Message>(&msg);
-                            pending_activities.push_back(comm);
-                        }
                     // data download completed
-                    } else if (completed_name.starts_with("download-")) {
+                    if (completed_name.starts_with("download-")) {
                         on_data_download_completed(task_id);
                     // data upload completed
                     } else if (completed_name.starts_with("upload-")) {
                         on_data_upload_completed(task_id);
-                    }
-                // task execution completed
-                } else if (dynamic_cast<sg4::Exec*>(completed)) {
-                    on_task_exec_completed(task_id);
-                // disk I/O completed
-                } else if (dynamic_cast<sg4::Io*>(completed)) {
+                    // task execution completed
+                    } else if (completed_name.starts_with("exec-")) {
+                        on_task_exec_completed(task_id);
                     // disk read completed
-                    if (completed_name.starts_with("read-")) {
+                    } else if (completed_name.starts_with("read-")) {
                         on_data_read_completed(task_id);
                     // disk write completed
                     } else if (completed_name.starts_with("write-")) {
