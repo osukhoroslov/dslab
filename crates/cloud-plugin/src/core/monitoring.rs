@@ -1,5 +1,6 @@
 use std::collections::btree_map::Keys;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 use simcore::cast;
@@ -22,7 +23,7 @@ pub struct HostState {
 pub struct Monitoring {
     host_states: BTreeMap<u32, HostState>,
     vm_locations: HashMap<u32, u32>,
-    host_vms: BTreeMap<u32, Vec<u32>>,
+    host_vms: BTreeMap<u32, BTreeSet<u32>>,
     vm_statuses: HashMap<u32, VmStatus>,
     ctx: SimulationContext,
 }
@@ -57,17 +58,21 @@ impl Monitoring {
         self.host_states.keys()
     }
 
-    pub fn get_host_vms(&self, host: u32) -> Vec<u32> {
+    pub fn get_host_vms(&self, host: u32) -> BTreeSet<u32> {
         self.host_vms[&host].clone()
+    }
+
+    pub fn get_host_states(&self) -> &BTreeMap<u32, HostState> {
+        &self.host_states
     }
 
     pub fn add_host(&mut self, host_id: u32, cpu_total: u32, memory_total: u64) {
         self.host_states
             .insert(host_id, HostState::new(cpu_total, memory_total));
-        self.host_vms.insert(host_id, Vec::<u32>::new());
+        self.host_vms.insert(host_id, BTreeSet::<u32>::new());
     }
 
-    pub fn find_host_by_vm(&mut self, vm_id: u32) -> u32 {
+    pub fn find_host_by_vm(&self, vm_id: u32) -> u32 {
         return *self.vm_locations.get(&vm_id).unwrap();
     }
 
@@ -90,22 +95,18 @@ impl Monitoring {
             host.memory_load = memory_load;
         });
 
-        for vm in recent_vm_status_changes {
-            self.vm_statuses.insert(vm.0, vm.1);
+        for (vm_id, status) in recent_vm_status_changes {
+            self.vm_statuses.insert(vm_id, status);
         }
         for vm_id in recently_added_vms {
             self.vm_locations.insert(vm_id, host_id);
-            self.host_vms.get_mut(&host_id).map(|host| {
-                host.push(vm_id);
-            });
+            self.host_vms.get_mut(&host_id).unwrap().insert(vm_id);
         }
         for vm_id in recently_removed_vms {
             if self.vm_locations.get(&vm_id) == Some(&host_id) {
                 self.vm_locations.remove(&vm_id);
             }
-            self.host_vms.get_mut(&host_id).map(|host| {
-                host.retain(|&x| x != vm_id);
-            });
+            self.host_vms.get_mut(&host_id).unwrap().remove(&vm_id);
             self.vm_statuses.remove(&vm_id);
         }
     }

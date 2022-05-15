@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::mem;
 use std::rc::Rc;
 
 use serde::Serialize;
@@ -211,7 +212,7 @@ impl HostManager {
                 self.id
             );
             let local_vm = self.vms.get_mut(&alloc.id).unwrap();
-            (*local_vm).set_new_status(VmStatus::Migrating);
+            local_vm.set_new_status(VmStatus::Migrating);
             self.recent_vm_status_changes.insert(alloc.id, VmStatus::Migrating);
 
             let migration_duration = (alloc.memory_usage as f64) / (self.sim_config.network_throughput as f64);
@@ -248,7 +249,8 @@ impl HostManager {
         log_debug!(self.ctx, "vm #{} started and running", alloc.id);
 
         let vm = self.vms.get_mut(&alloc.id).unwrap();
-        (*vm).set_new_status(VmStatus::Running);
+        vm.set_new_status(VmStatus::Running);
+        vm.start_time = self.ctx.time();
         self.recent_vm_status_changes.insert(alloc.id, VmStatus::Running);
 
         self.ctx.emit_self(AllocationReleaseRequest { alloc }, vm.lifetime());
@@ -269,24 +271,19 @@ impl HostManager {
 
     fn send_host_state(&mut self) {
         log_debug!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
-        let added = self.recently_added_vms.to_vec();
-        let removed = self.recently_removed_vms.to_vec();
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id,
                 cpu_load: self.get_cpu_load(self.ctx.time()),
                 memory_load: self.get_memory_load(self.ctx.time()),
-                recently_added_vms: added,
-                recently_removed_vms: removed,
-                recent_vm_status_changes: self.recent_vm_status_changes.clone(),
+                recently_added_vms: mem::take(&mut self.recently_added_vms),
+                recently_removed_vms: mem::take(&mut self.recently_removed_vms),
+                recent_vm_status_changes: mem::take(&mut self.recent_vm_status_changes),
             },
             self.monitoring_id,
             self.sim_config.message_delay,
         );
 
-        self.recently_added_vms.clear();
-        self.recently_removed_vms.clear();
-        self.recent_vm_status_changes.clear();
         self.ctx.emit_self(SendHostState {}, self.sim_config.send_stats_period);
     }
 }

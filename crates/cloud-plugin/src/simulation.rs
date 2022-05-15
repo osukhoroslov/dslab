@@ -156,15 +156,15 @@ impl CloudSimulation {
     }
 
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, destination_host_id: u32) {
-        let start_time = self.vms.borrow_mut().get_mut(&vm_id).unwrap().start_time;
-        self.vms.borrow_mut().get_mut(&vm_id).unwrap().lifetime -= self.ctx.time() - start_time;
+        let mut vms = self.vms.borrow_mut();
+        let mut vm = vms.get_mut(&vm_id).unwrap();
+        vm.lifetime -= self.ctx.time() - vm.start_time;
         let source_host = self.monitoring.borrow_mut().find_host_by_vm(vm_id);
-
         self.ctx.emit(
             MigrationRequest {
                 source_host: source_host.clone(),
                 alloc: self.allocations.borrow().get(&vm_id).unwrap().clone(),
-                vm: self.vms.borrow_mut().get_mut(&vm_id).unwrap().clone(),
+                vm: vm.clone(),
             },
             destination_host_id,
             self.sim_config.message_delay,
@@ -215,5 +215,9 @@ impl CloudSimulation {
 
     pub fn vms(&self) -> Rc<RefCell<BTreeMap<u32, VirtualMachine>>> {
         self.vms.clone()
+    }
+
+    pub fn sim_config(&self) -> Rc<SimulationConfig> {
+        self.sim_config.clone()
     }
 }
