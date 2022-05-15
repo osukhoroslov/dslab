@@ -58,9 +58,6 @@ public class Benchmark {
     /** Indicates Host power consumption (in Watts) during shutdown. */
     private static final double HOST_SHUT_DOWN_POWER = 3;
 
-    private static final int VMS = 5000;
-    private static final int VM_PES = 1;
-
     /**
      * Defines the power a Host uses, even if it's idle (in Watts).
      */
@@ -128,9 +125,9 @@ public class Benchmark {
             peList.add(new PeSimple(1000));
         }
 
-        final long ram = 4096; //in Megabytes
-        final long bw = 20000; //in Megabits/s
-        final long storage = 200000; //in Megabytes
+        final long ram = 204800; //in Megabytes
+        final long bw = 100000; //in Megabits/s
+        final long storage = 2000000; //in Megabytes
         final var vmScheduler = new VmSchedulerTimeShared();
 
         final var host = new HostSimple(ram, bw, storage, peList);
