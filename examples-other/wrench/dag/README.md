@@ -21,3 +21,5 @@ command time -f '%Mkb\n%es' ./wrench-example-real-workflow cloud_batch_platform.
 ```
 
 More workflows can be generated using https://docs.wfcommons.org/en/latest/generating_workflows.html.
+
+Use `--wrench-mailbox-pool-size=1000000` to increase maximum allowed number of mailboxes to prevent Wrench from failing on large graphs.
