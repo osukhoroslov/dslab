@@ -57,10 +57,10 @@ impl VmMigrator {
     }
 
     fn schedule_migration(&mut self, vm_id: u32, source_host: u32, target_host: u32) {
-        let vm = self.vms.borrow_mut().get_mut(&vm_id).unwrap().clone();
-        self.vms.borrow_mut().get_mut(&vm_id).unwrap().lifetime -= self.ctx.time() - vm.start_time;
-        self.vms.borrow_mut().get_mut(&vm_id).unwrap().start_time =
-            self.ctx.time() + vm.start_duration() + self.sim_config.as_ref().unwrap().message_delay;
+        let mut vms = self.vms.borrow_mut();
+        let mut vm = vms.get_mut(&vm_id).unwrap();
+        vm.lifetime -= self.ctx.time() - vm.start_time;
+        vm.start_time = self.ctx.time() + vm.start_duration() + self.sim_config.as_ref().unwrap().message_delay;
 
         log_info!(
             self.ctx,
@@ -154,7 +154,7 @@ impl VmMigrator {
                 continue;
             }
 
-            let mut best_host: Option<u32> = None;
+            let mut best_host_opt: Option<u32> = None;
             let mut best_cpu_load = 0.;
 
             for host in host_states.clone() {
@@ -175,14 +175,14 @@ impl VmMigrator {
                 if cpu_load_new < self.overload_threshold && memory_load_new < self.overload_threshold {
                     if cpu_load_new > best_cpu_load {
                         best_cpu_load = cpu_load_new;
-                        best_host = Some(host.0);
+                        best_host_opt = Some(host.0);
                     }
                 }
             }
 
-            if let Some(_host) = best_host {
-                target_hosts.insert(best_host.unwrap());
-                self.schedule_migration(vm_id, mon.find_host_by_vm(vm_id), best_host.unwrap());
+            if let Some(best_host) = best_host_opt {
+                target_hosts.insert(best_host);
+                self.schedule_migration(vm_id, mon.find_host_by_vm(vm_id), best_host);
             }
         }
 
