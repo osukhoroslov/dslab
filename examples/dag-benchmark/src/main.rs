@@ -8,6 +8,7 @@ use sugars::{rc, refcell};
 use dag::dag::DAG;
 use dag::dag_simulation::DagSimulation;
 use dag::network::load_network;
+use dag::runner::{Config, DataTransferMode};
 use dag::schedulers::simple_scheduler::SimpleScheduler;
 
 fn main() {
@@ -31,7 +32,14 @@ fn main() {
 
     let enable_trace_log = matches.is_present("trace-log");
 
-    let mut sim = DagSimulation::new(123, load_network(system_file), rc!(refcell!(SimpleScheduler::new())));
+    let mut sim = DagSimulation::new(
+        123,
+        load_network(system_file),
+        rc!(refcell!(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::ViaMasterNode,
+        },
+    );
     sim.load_resources(system_file);
 
     let dag = DAG::from_wfcommons(dag_file, 1.0e11);
@@ -50,7 +58,7 @@ fn main() {
     println!("Processed {} tasks in {:.3} (simulation time)", total_tasks, sim.time());
     runner.borrow().validate_completed();
     if enable_trace_log {
-        runner.borrow().trace_log().save_to_file("data/trace.json").unwrap();
+        runner.borrow().trace_log().save_to_file("trace.json").unwrap();
     }
 
     println!();

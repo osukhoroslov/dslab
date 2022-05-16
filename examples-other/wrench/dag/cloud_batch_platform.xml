@@ -12,7 +12,7 @@
         <host id="CloudNode2" speed="60Gf" core="4"/>
         
         <host id="WMSHost" speed="10Gf" core="1">
-            <disk id="large_disk" read_bw="50MBps" write_bw="50MBps">
+            <disk id="large_disk" read_bw="50000MBps" write_bw="50000MBps">
                 <prop id="size" value="5000GiB"/>
                 <prop id="mount" value="/"/>
             </disk>

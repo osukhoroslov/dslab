@@ -1,35 +1,45 @@
+cmake_minimum_required(VERSION 3.2)
+message(STATUS "Cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
-# Add source to this project's executable.
-add_executable(wrench-example-real-workflow
-        EXCLUDE_FROM_ALL
-        ./SimpleWMS.h
-        ./SimpleWMS.cpp
-        ./SimpleWorkflowSimulator.cpp)
+project(wrench-example-real-workflow)
 
-add_custom_target(
-        wrench-example-real-workflow-files
-        COMMAND /bin/sh -c "if [ '${CMAKE_CURRENT_SOURCE_DIR}' != '${CMAKE_CURRENT_BINARY_DIR}' ]; then /bin/cp -f ${CMAKE_CURRENT_SOURCE_DIR}/cloud_batch_platform.xml ${CMAKE_CURRENT_BINARY_DIR}/cloud_batch_platform.xml ; fi ;"
-        COMMAND /bin/sh -c "if [ '${CMAKE_CURRENT_SOURCE_DIR}' != '${CMAKE_CURRENT_BINARY_DIR}' ]; then /bin/cp -f ${CMAKE_CURRENT_SOURCE_DIR}/1000genome-chameleon-2ch-100k-001.json ${CMAKE_CURRENT_BINARY_DIR}/1000genome-chameleon-2ch-100k-001.json ; fi ;"
-        VERBATIM
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+find_package(Boost REQUIRED)
+find_package(SimGrid 3.31 REQUIRED)
+
+find_library(WRENCH_LIBRARY NAMES wrench)
+find_library(WRENCH_WFCOMMONS_WORKFLOW_PARSER_LIBRARY NAMES wrenchwfcommonsworkflowparser)
+
+include_directories(${SimGrid_INCLUDE_DIR})
+include_directories(/usr/local/include)
+include_directories(/usr/local/include/wrench)
+
+message(STATUS "SimGrid_PATH: ${SimGrid_PATH}")
+message(STATUS "SimGrid_INCLUDE_DIR: ${SimGrid_INCLUDE_DIR}")
+message(STATUS "SimGrid_LIBRARY: ${SimGrid_LIBRARY}")
+
+set(SOURCE_FILES
+    SimpleWMS.h
+    SimpleWMS.cpp
+    SimpleWorkflowSimulator.cpp
 )
 
-add_dependencies(wrench-example-real-workflow wrench-example-real-workflow-files)
-add_dependencies(wrench-example-real-workflow wrenchwfcommonsworkflowparser)
+add_executable(wrench-example-real-workflow ${SOURCE_FILES})
 
 if (ENABLE_BATSCHED)
     target_link_libraries(wrench-example-real-workflow
-            wrench
-            wrenchwfcommonsworkflowparser
+            ${WRENCH_LIBRARY}
+            ${WRENCH_WFCOMMONS_WORKFLOW_PARSER_LIBRARY}
             ${SimGrid_LIBRARY}
             ${Boost_LIBRARIES}
-            ${ZMQ_LIBRARY}
-            )
+            -lzmq )
 else()
     target_link_libraries(wrench-example-real-workflow
-            wrench
-            wrenchwfcommonsworkflowparser
+            ${WRENCH_LIBRARY}
+            ${WRENCH_WFCOMMONS_WORKFLOW_PARSER_LIBRARY}
             ${SimGrid_LIBRARY}
             ${Boost_LIBRARIES}
             )

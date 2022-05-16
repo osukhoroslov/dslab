@@ -38,6 +38,7 @@ struct Task {
 struct Workflow {
     jobs: Option<Vec<Task>>,  // v1.2
     tasks: Option<Vec<Task>>, // v1.3
+    #[serde(default = "Vec::new")]
     machines: Vec<Machine>,
 }
 
