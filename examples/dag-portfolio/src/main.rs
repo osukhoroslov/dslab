@@ -123,11 +123,11 @@ fn run_experiments(args: &Args) {
         vec![(48, 50, 100), (48, 150, 100)],
         vec![(48, 50, 100), (48, 400, 10)],
         vec![(32, 100, 100), (32, 200, 200), (32, 300, 300)],
-        vec![(32, 100, 100), (32, 200, 300), (32, 300, 200)],
-        vec![(32, 100, 200), (32, 200, 100), (32, 300, 300)],
-        vec![(32, 100, 200), (32, 200, 300), (32, 300, 100)],
-        vec![(32, 100, 300), (32, 200, 200), (32, 300, 100)],
-        vec![(32, 100, 300), (32, 200, 100), (32, 300, 200)],
+        // vec![(32, 100, 100), (32, 200, 300), (32, 300, 200)],
+        // vec![(32, 100, 200), (32, 200, 100), (32, 300, 300)],
+        // vec![(32, 100, 200), (32, 200, 300), (32, 300, 100)],
+        // vec![(32, 100, 300), (32, 200, 200), (32, 300, 100)],
+        // vec![(32, 100, 300), (32, 200, 100), (32, 300, 200)],
     ];
     let enable_trace_log = args.trace_log;
     let traces_folder = "data/traces/";
@@ -316,10 +316,12 @@ fn process_results() {
 
     println!("| algo | average place | average ratio to best | number of first places |");
     println!("|------|---------------|-----------------------|------------------------|");
+    algos.sort_by(|&a, &b| avg_ratio_to_best[a].partial_cmp(&avg_ratio_to_best[b]).unwrap());
     for i in 0..algos.len() {
+        let algo_ind = *algo_ind.get(&algos[i]).unwrap();
         println!(
             "| {: >4} | {: >13.3} | {: >21.3} | {: >22.3} |",
-            algos[i], avg_place[i], avg_ratio_to_best[i], first_places_cnt[i],
+            algos[i], avg_place[algo_ind], avg_ratio_to_best[algo_ind], first_places_cnt[algo_ind],
         );
     }
 }
