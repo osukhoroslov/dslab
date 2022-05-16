@@ -58,8 +58,8 @@ struct RunResult {
 }
 
 fn run_experiments(args: &Args) {
-    let graphs_folder = "data/graphs/";
-    if !Path::new(graphs_folder).exists() {
+    let dags_folder = "data/dags/";
+    if !Path::new(dags_folder).exists() {
         eprint!("No directory with workflows found. Download them from github? [y/n] ");
         let mut buffer = String::new();
         std::io::stdin().read_line(&mut buffer).unwrap();
@@ -67,7 +67,7 @@ fn run_experiments(args: &Args) {
             return;
         }
 
-        std::fs::create_dir_all(graphs_folder).unwrap();
+        std::fs::create_dir_all(dags_folder).unwrap();
 
         let prefix = "https://raw.githubusercontent.com/wrench-project/jsspp2022_submission_data/main/workflows/";
         let workflows = vec![
@@ -82,7 +82,7 @@ fn run_experiments(args: &Args) {
         ];
 
         for (i, (name, file)) in workflows.into_iter().enumerate() {
-            let filename = format!("{}{}-{}.json", graphs_folder, i + 1, name);
+            let filename = format!("{}{}-{}.json", dags_folder, i + 1, name);
             eprintln!("Downloading {} to {}...", name, filename);
             let url = [prefix, file].concat();
             let mut resp = reqwest::blocking::get(url).expect("Request to github failed");
@@ -90,13 +90,13 @@ fn run_experiments(args: &Args) {
             std::io::copy(&mut resp, &mut out).unwrap();
         }
 
-        eprintln!("All workflows saved to folder data/graphs");
+        eprintln!("All workflows saved to folder data/dags");
     }
 
     let mut dags: Vec<DAG> = Vec::new();
     let mut rng = Pcg64::seed_from_u64(456);
 
-    let mut filenames = std::fs::read_dir(graphs_folder)
+    let mut filenames = std::fs::read_dir(dags_folder)
         .unwrap()
         .map(|path| path.unwrap().file_name().into_string().unwrap())
         .collect::<Vec<_>>();
@@ -104,7 +104,7 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(&format!("{}{}", graphs_folder, filename), 1.0e+10);
+        let mut dag = DAG::from_wfcommons(&format!("{}{}", dags_folder, filename), 1.0e11);
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);

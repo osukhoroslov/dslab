@@ -142,7 +142,7 @@ fn map_reduce(args: &Args) {
 fn epigenomics(args: &Args) {
     run_simulation(
         args,
-        DAG::from_dax("graphs/Epigenomics_100.xml", 1000.),
+        DAG::from_dax("dags/Epigenomics_100.xml", 1000.),
         "resources/cluster2.yaml",
         "networks/network2.yaml",
         "traces/trace_epigenomics.json",
@@ -152,7 +152,7 @@ fn epigenomics(args: &Args) {
 fn montage(args: &Args) {
     run_simulation(
         args,
-        DAG::from_dot("graphs/Montage.dot"),
+        DAG::from_dot("dags/Montage.dot"),
         "resources/cluster2.yaml",
         "networks/network3.yaml",
         "traces/trace_montage.json",
@@ -162,7 +162,7 @@ fn montage(args: &Args) {
 fn diamond(args: &Args) {
     run_simulation(
         args,
-        DAG::from_yaml("graphs/diamond.yaml"),
+        DAG::from_yaml("dags/diamond.yaml"),
         "resources/cluster3.yaml",
         "networks/network4.yaml",
         "traces/trace_diamond.json",

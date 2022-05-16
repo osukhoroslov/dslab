@@ -1,0 +1,13 @@
+[package]
+name = "dag-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+simcore = { path = "../../crates/simcore" }
+compute = { path = "../../crates/compute" }
+network = { path = "../../crates/network" }
+dag = { path = "../../crates/dag" }
+sugars = "3.0.0"
+env_logger = "0.9.0"
+clap = { version = "3.0.14", features = ["cargo", "derive"] }
