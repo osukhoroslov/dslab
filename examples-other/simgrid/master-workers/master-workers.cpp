@@ -582,13 +582,11 @@ int main(int argc, char* argv[]) {
                                 ->set_latency("10us")
                                 ->seal();
     sg4::LinkInRoute backbone(link);
-    for (unsigned int i=0; i < host_count; i++) {
-        std::string host1 = "host-" + std::to_string(i);
-        for (unsigned int j=i+1; j < host_count; j++) {
-            std::string host2 = "host-" + std::to_string(j);
-            zone->add_route(e.host_by_name(host1)->get_netpoint(), e.host_by_name(host2)->get_netpoint(),
-                            nullptr, nullptr, {backbone});
-        }
+    auto master_host = e.host_by_name("host-0");
+    for (unsigned int i=1; i < host_count; i++) {
+        std::string host = "host-" + std::to_string(i);
+        zone->add_route(master_host->get_netpoint(), e.host_by_name(host)->get_netpoint(),
+                        nullptr, nullptr, {backbone});
     }
     zone->seal();
 
