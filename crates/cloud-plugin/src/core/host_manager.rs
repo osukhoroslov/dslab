@@ -8,7 +8,7 @@ use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-use simcore::log_debug;
+use simcore::{log_debug, log_trace};
 
 use crate::core::common::AllocationVerdict;
 use crate::core::common::VmStatus;
@@ -270,7 +270,7 @@ impl HostManager {
     }
 
     fn send_host_state(&mut self) {
-        log_debug!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
+        log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id,
