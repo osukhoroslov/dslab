@@ -1,8 +1,9 @@
 use simcore::component::Id;
 use simcore::context::SimulationContext;
 
+use throughput_model::throughput_model::ThroughputModel;
+
 use crate::model::*;
-use crate::throughput_model::ThroughputModel;
 
 pub struct SharedBandwidthNetwork {
     bandwidth: f64,

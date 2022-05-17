@@ -5,5 +5,6 @@ edition = "2021"
 
 [dependencies]
 simcore = { path = "../simcore" }
+throughput_model = { path = "../throughput-model" }
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }

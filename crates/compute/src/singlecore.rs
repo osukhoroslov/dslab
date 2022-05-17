@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use serde::Serialize;
 
 use simcore::cast;
@@ -7,6 +5,23 @@ use simcore::component::Id;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
+
+use throughput_model::throughput_model::ThroughputModel;
+
+// STRUCTS //////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Serialize, Clone)]
+struct RunningComputation {
+    id: u64,
+    memory: u64,
+    requester: Id,
+}
+
+impl RunningComputation {
+    pub fn new(id: u64, memory: u64, requester: Id) -> Self {
+        Self { id, memory, requester }
+    }
+}
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -29,6 +44,11 @@ pub struct CompStarted {
 }
 
 #[derive(Serialize)]
+struct InternalCompFinished {
+    computation: RunningComputation,
+}
+
+#[derive(Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
@@ -41,33 +61,14 @@ pub struct CompFailed {
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
-struct RunningComputation {
-    memory: u64,
-    finish_event_id: u64,
-    requester: Id,
-    last_update_time: f64,
-    left_time: f64,
-}
-
-impl RunningComputation {
-    pub fn new(memory: u64, finish_event_id: u64, requester: Id, last_update_time: f64, left_time: f64) -> Self {
-        Self {
-            memory,
-            finish_event_id,
-            requester,
-            last_update_time,
-            left_time,
-        }
-    }
-}
-
 pub struct Compute {
+    #[allow(dead_code)]
     speed: u64,
     #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
-    computations: BTreeMap<u64, RunningComputation>,
+    throughput_model: ThroughputModel<RunningComputation>,
+    next_event: u64,
     ctx: SimulationContext,
 }
 
@@ -77,23 +78,9 @@ impl Compute {
             speed,
             memory_total: memory,
             memory_available: memory,
-            computations: BTreeMap::new(),
+            throughput_model: ThroughputModel::new(speed as f64),
+            next_event: 0,
             ctx,
-        }
-    }
-
-    fn update_computation_time(&mut self, prev_size: usize, new_size: usize) {
-        for (&id, mut running_computation) in self.computations.iter_mut() {
-            self.ctx.cancel_event(running_computation.finish_event_id);
-
-            running_computation.left_time = (running_computation.left_time
-                - (self.ctx.time() - running_computation.last_update_time))
-                / prev_size as f64
-                * new_size as f64;
-            running_computation.last_update_time = self.ctx.time();
-
-            running_computation.finish_event_id =
-                self.ctx.emit_self(CompFinished { id }, running_computation.left_time);
         }
     }
 
@@ -127,28 +114,39 @@ impl EventHandler for Compute {
                     );
                 } else {
                     self.memory_available -= memory;
-                    self.ctx.emit(CompStarted { id: event.id }, requester, 0.);
-                    let compute_time = flops as f64 / self.speed as f64 * (self.computations.len() + 1) as f64;
-                    let finish_event_id = self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
-
-                    self.update_computation_time(self.computations.len(), self.computations.len() + 1);
-
-                    self.computations.insert(
-                        event.id,
-                        RunningComputation::new(memory, finish_event_id, requester, self.ctx.time(), compute_time),
+                    self.ctx.cancel_event(self.next_event);
+                    self.throughput_model.insert(
+                        self.ctx.time(),
+                        flops as f64,
+                        RunningComputation::new(event.id, memory, requester),
                     );
+                    if let Some((time, computation)) = self.throughput_model.peek() {
+                        self.next_event = self.ctx.emit_self(
+                            InternalCompFinished {
+                                computation: computation.clone(),
+                            },
+                            time - self.ctx.time(),
+                        );
+                    }
                 }
             }
-            CompFinished { id } => {
-                let running_computation = self
-                    .computations
-                    .get(&id)
-                    .expect("Unexpected CompFinished event in Compute");
-                self.ctx.emit_now(CompFinished { id }, running_computation.requester);
-                self.memory_available += running_computation.memory;
-
-                self.computations.remove(&id).unwrap();
-                self.update_computation_time(self.computations.len() + 1, self.computations.len());
+            InternalCompFinished { computation } => {
+                let (_, next_computation) = self.throughput_model.pop().unwrap();
+                assert!(
+                    computation.id == next_computation.id,
+                    "Got unexpected InternalCompFinished event"
+                );
+                self.memory_available += computation.memory;
+                self.ctx
+                    .emit_now(CompFinished { id: computation.id }, computation.requester);
+                if let Some((time, computation)) = self.throughput_model.peek() {
+                    self.next_event = self.ctx.emit_self(
+                        InternalCompFinished {
+                            computation: computation.clone(),
+                        },
+                        time - self.ctx.time(),
+                    );
+                }
             }
         })
     }
