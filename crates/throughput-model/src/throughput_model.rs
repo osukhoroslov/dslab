@@ -68,7 +68,7 @@ pub struct ThroughputModel<T> {
     next_id: u64,
 }
 
-impl<T: std::fmt::Debug> ThroughputModel<T> {
+impl<T> ThroughputModel<T> {
     pub fn new(throughput: f64) -> Self {
         ThroughputModel {
             throughput,
