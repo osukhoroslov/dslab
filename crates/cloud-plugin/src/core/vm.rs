@@ -9,6 +9,7 @@ use crate::core::load_model::LoadModel;
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub lifetime: f64,
+    pub creation_time: f64,
     pub start_time: f64,
     pub status: VmStatus,
     cpu_load_model: Box<dyn LoadModel>,
@@ -36,6 +37,7 @@ impl VirtualMachine {
     ) -> Self {
         Self {
             lifetime,
+            creation_time: 0.,
             start_time: 0.,
             cpu_load_model,
             memory_load_model,
@@ -54,6 +56,10 @@ impl VirtualMachine {
 
     pub fn stop_duration(&self) -> f64 {
         self.sim_config.vm_stop_duration
+    }
+
+    pub fn set_creation_time(&mut self, time: f64) {
+        self.creation_time = time;
     }
 
     pub fn set_start_time(&mut self, time: f64) {

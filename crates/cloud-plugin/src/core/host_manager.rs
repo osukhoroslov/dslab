@@ -95,7 +95,7 @@ impl HostManager {
     }
 
     fn allocate(&mut self, time: f64, alloc: &Allocation, mut vm: VirtualMachine) {
-        vm.set_start_time(time);
+        vm.set_creation_time(time);
         if self.cpu_available < alloc.cpu_usage {
             self.cpu_overcommit += alloc.cpu_usage - self.cpu_available;
             self.cpu_available = 0;
@@ -154,6 +154,9 @@ impl HostManager {
     pub fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for (vm_id, alloc) in &self.allocs {
+            if self.vms.get(&alloc.id).unwrap().status != VmStatus::Running {
+                continue;
+            }
             cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_cpu_load(time);
         }
         return cpu_used / self.cpu_total as f64;
@@ -236,24 +239,31 @@ impl HostManager {
 
     fn on_allocation_release_request(&mut self, alloc: Allocation) {
         log_debug!(self.ctx, "release resources from vm #{} on host #{}", alloc.id, self.id);
-        let vm = self.vms.get(&alloc.id);
-        if vm.is_none() {
+        if self.vms.get(&alloc.id).is_none() {
             log_debug!(self.ctx, "do not release, probably VM was migrated to other host");
             return;
         }
 
-        self.ctx.emit_self(VMDeleted { alloc }, vm.unwrap().stop_duration());
+        self.vms
+            .get_mut(&alloc.id)
+            .unwrap()
+            .set_new_status(VmStatus::Deactivated);
+        self.ctx.emit_self(
+            VMDeleted { alloc: alloc.clone() },
+            self.vms.get_mut(&alloc.id).unwrap().stop_duration(),
+        );
     }
 
     fn on_vm_started(&mut self, alloc: Allocation) {
         log_debug!(self.ctx, "vm #{} started and running", alloc.id);
-
-        let vm = self.vms.get_mut(&alloc.id).unwrap();
-        vm.set_new_status(VmStatus::Running);
-        vm.start_time = self.ctx.time();
+        self.vms.get_mut(&alloc.id).unwrap().set_new_status(VmStatus::Running);
+        self.vms.get_mut(&alloc.id).unwrap().set_start_time(self.ctx.time());
         self.recent_vm_status_changes.insert(alloc.id, VmStatus::Running);
 
-        self.ctx.emit_self(AllocationReleaseRequest { alloc }, vm.lifetime());
+        self.ctx.emit_self(
+            AllocationReleaseRequest { alloc: alloc.clone() },
+            self.vms.get(&alloc.id).unwrap().lifetime(),
+        );
     }
 
     fn on_vm_deleted(&mut self, alloc: Allocation) {
@@ -271,6 +281,9 @@ impl HostManager {
 
     fn send_host_state(&mut self) {
         log_debug!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
+        self.energy_manager
+            .update_energy(self.ctx.time(), self.get_energy_load(self.ctx.time()));
+
         self.ctx.emit(
             HostStateUpdate {
                 host_id: self.id,

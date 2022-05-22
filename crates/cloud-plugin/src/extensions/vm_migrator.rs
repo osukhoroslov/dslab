@@ -57,11 +57,6 @@ impl VmMigrator {
     }
 
     fn schedule_migration(&mut self, vm_id: u32, source_host: u32, target_host: u32) {
-        let vm = self.vms.borrow_mut().get_mut(&vm_id).unwrap().clone();
-        self.vms.borrow_mut().get_mut(&vm_id).unwrap().lifetime -= self.ctx.time() - vm.start_time;
-        self.vms.borrow_mut().get_mut(&vm_id).unwrap().start_time =
-            self.ctx.time() + vm.start_duration() + self.sim_config.as_ref().unwrap().message_delay;
-
         log_info!(
             self.ctx,
             "schedule migration of vm {} from host {} to host {}",
@@ -74,7 +69,7 @@ impl VmMigrator {
             MigrationRequest {
                 source_host: source_host.clone(),
                 alloc: self.allocations.borrow().get(&vm_id).unwrap().clone(),
-                vm: vm.clone(),
+                vm: self.vms.borrow_mut().get_mut(&vm_id).unwrap().clone(),
             },
             target_host,
             self.sim_config.as_ref().unwrap().message_delay,
@@ -91,7 +86,7 @@ impl VmMigrator {
         log_debug!(self.ctx, "perform migrations");
         let mon_rc = self.monitoring.clone().unwrap();
         let mon = mon_rc.borrow_mut();
-        let host_states = mon.get_host_states().clone();
+        let mut host_states = mon.get_host_states().clone();
         let allocations_rc = self.allocations.clone();
         let allocations = allocations_rc.borrow();
 
@@ -114,6 +109,13 @@ impl VmMigrator {
                     }
                     vms_to_migrate.push(vm_id);
                 }
+
+                state = HostState {
+                    cpu_load: 0.,
+                    memory_load: 0.,
+                    cpu_total: state.cpu_total,
+                    memory_total: state.memory_total,
+                };
             }
 
             if state.cpu_load > self.overload_threshold || state.memory_load > self.overload_threshold {
@@ -147,6 +149,7 @@ impl VmMigrator {
 
         // target hosts, cannot migrate from them as some VM(s) are migrating and will increase their load rate
         let mut target_hosts = HashSet::<u32>::new();
+        let mut source_hosts = HashSet::<u32>::new();
 
         for vm_id in vms_to_migrate {
             let current_host = mon.find_host_by_vm(vm_id);
@@ -161,8 +164,11 @@ impl VmMigrator {
                 if host.0 == current_host {
                     continue;
                 }
+                if source_hosts.contains(&host.0) {
+                    continue;
+                }
 
-                let state = *host_states.get(&host.0).unwrap();
+                let state = host_states.get_mut(&host.0).unwrap();
                 if min_load < 1. && (state.cpu_load < min_load && state.memory_load < min_load) {
                     continue;
                 }
@@ -181,8 +187,23 @@ impl VmMigrator {
             }
 
             if let Some(_host) = best_host {
+                source_hosts.insert(current_host);
                 target_hosts.insert(best_host.unwrap());
                 self.schedule_migration(vm_id, mon.find_host_by_vm(vm_id), best_host.unwrap());
+
+                let target_host_state = host_states.get_mut(&best_host.unwrap()).unwrap();
+                let cpu_usage = target_host_state.cpu_load * (target_host_state.cpu_total as f64);
+                let memory_usage = target_host_state.memory_load * (target_host_state.memory_total as f64);
+                let cpu_load_new =
+                    (cpu_usage + (allocations[&vm_id].cpu_usage as f64)) / (target_host_state.cpu_total as f64);
+                let memory_load_new = (memory_usage + (allocations[&vm_id].memory_usage as f64))
+                    / (target_host_state.memory_total as f64);
+                *target_host_state = HostState {
+                    cpu_load: cpu_load_new,
+                    memory_load: memory_load_new,
+                    cpu_total: target_host_state.cpu_total,
+                    memory_total: target_host_state.memory_total,
+                };
             }
         }
 

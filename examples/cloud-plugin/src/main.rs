@@ -177,11 +177,11 @@ impl LoadModel for DecreaseLoadModel {
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
         // linear drop from 100% to zero within first 50 time points
         // then linear growth back from zero to 100% during next 50 time points
-        if time <= 50. {
-            let linear = (50. - time) / 50.;
+        if time <= 500. {
+            let linear = (500. - time) / 500.;
             return linear.max(0.);
         } else {
-            let linear = (time - 50.) / 50.;
+            let linear = (time - 500.) / 500.;
             return linear.min(1.);
         }
     }
@@ -191,49 +191,23 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    let h1 = cloud_sim.add_host("h1", 30, 30);
-    let h2 = cloud_sim.add_host("h2", 30, 30);
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        0,
-        12,
-        12,
-        100.0,
-        Box::new(DecreaseLoadModel::new()),
-        Box::new(DecreaseLoadModel::new()),
-        scheduler_id,
-    );
+    for i in 0..10 {
+        cloud_sim.add_host(&format!("h{}", i), 50, 50);
+    }
 
-    cloud_sim.spawn_vm_now(
-        1,
-        12,
-        12,
-        100.0,
-        Box::new(DecreaseLoadModel::new()),
-        Box::new(DecreaseLoadModel::new()),
-        scheduler_id,
-    );
-
-    cloud_sim.spawn_vm_now(
-        2,
-        12,
-        12,
-        100.0,
-        Box::new(DecreaseLoadModel::new()),
-        Box::new(DecreaseLoadModel::new()),
-        scheduler_id,
-    );
-
-    cloud_sim.spawn_vm_now(
-        3,
-        12,
-        12,
-        100.0,
-        Box::new(DecreaseLoadModel::new()),
-        Box::new(DecreaseLoadModel::new()),
-        scheduler_id,
-    );
+    for i in 0..10 {
+        cloud_sim.spawn_vm_now(
+            i,
+            30,
+            30,
+            1000.0,
+            Box::new(DecreaseLoadModel::new()),
+            Box::new(DecreaseLoadModel::new()),
+            scheduler_id,
+        );
+    }
 
     let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");
     migrator.borrow_mut().patch_custom_args(
@@ -245,17 +219,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     );
     migrator.borrow_mut().init();
 
-    cloud_sim.step_for_duration(105.);
-
-    let end_time = cloud_sim.current_time();
-    info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
-    );
-    info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
-    );
+    cloud_sim.step_for_duration(1005.);
 }
 
 fn main() {
