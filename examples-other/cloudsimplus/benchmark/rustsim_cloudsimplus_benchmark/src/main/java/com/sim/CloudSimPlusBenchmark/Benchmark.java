@@ -1,4 +1,4 @@
-package com.vetand_cloudsimplus_benchmark.app;
+package com.sim.CloudSimPlusBenchmark;
 
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
 import org.cloudbus.cloudsim.brokers.DatacenterBrokerSimple;
@@ -43,8 +43,10 @@ public class Benchmark {
      * to keep Hosts CPU utilization history records.
      */
     private static final int SCHEDULING_INTERVAL = 10;
-    private static final int HOSTS = 1000;
+    private static final int HOSTS = 500;
     private static final int HOST_PES = 144;
+
+    private static final int VMS = 18000;
 
     /** Indicates the time (in seconds) the Host takes to start up. */
     private static final double HOST_START_UP_DELAY = 5;
@@ -154,13 +156,13 @@ public class Benchmark {
         final Random random = new Random();
         random.setSeed(47);
       
-        final var vmPesDistribution = new int[] {1, 2, 4, 8, 16};
+        final var vmPesDistribution = new int[] {1, 2, 4, 8};
         final var vmRamDistribution = new int[] {128, 256, 512};
         final var vmBwDistribution = new int[] {250, 500, 1000, 2000};
         final var vmSizeDistribution = new int[] {2500, 5000, 10000, 20000};
 
         for (int i = 0; i < VMS; i++) {
-            final var vmPes = vmPesDistribution[random.nextInt(5)];
+            final var vmPes = vmPesDistribution[random.nextInt(4)];
             final var vmRam = vmRamDistribution[random.nextInt(3)];
             final var vmBw = vmBwDistribution[random.nextInt(4)];
             final var vmSize = vmSizeDistribution[random.nextInt(4)];
