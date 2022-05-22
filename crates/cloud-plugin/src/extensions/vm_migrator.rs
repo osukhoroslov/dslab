@@ -19,8 +19,8 @@ use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-use simcore::log_debug;
 use simcore::log_info;
+use simcore::log_trace;
 use simcore::log_warn;
 
 #[derive(Serialize)]
@@ -83,7 +83,7 @@ impl VmMigrator {
             return;
         }
 
-        log_debug!(self.ctx, "perform migrations");
+        log_trace!(self.ctx, "perform migrations");
         let mon_rc = self.monitoring.clone().unwrap();
         let mon = mon_rc.borrow_mut();
         let mut host_states = mon.get_host_states().clone();
@@ -94,15 +94,14 @@ impl VmMigrator {
 
         let mut vms_to_migrate = Vec::<u32>::new();
         let mut min_load: f64 = 1.;
-        for host in mon.get_hosts_list() {
-            let mut state = *host_states.get(&host).unwrap();
+        for (&host, state) in host_states.iter_mut() {
             if state.cpu_load == 0. {
                 // host turned off
                 continue;
             }
             if state.cpu_load < self.underload_threshold || state.memory_load < self.underload_threshold {
                 min_load = min_load.min(state.cpu_load).min(state.memory_load);
-                for vm_id in mon.get_host_vms(*host) {
+                for vm_id in mon.get_host_vms(host) {
                     let vm_status = mon.vm_status(vm_id);
                     if vm_status != VmStatus::Running {
                         continue;
@@ -119,7 +118,7 @@ impl VmMigrator {
             }
 
             if state.cpu_load > self.overload_threshold || state.memory_load > self.overload_threshold {
-                let mut vms = mon.get_host_vms(*host);
+                let mut vms = mon.get_host_vms(host);
                 while state.cpu_load > self.overload_threshold || state.memory_load > self.overload_threshold {
                     let vm_id = *vms.iter().next().unwrap();
                     vms.remove(&vm_id);
@@ -135,7 +134,7 @@ impl VmMigrator {
                     let memory_load_new =
                         (memory_usage - (allocations[&vm_id].memory_usage as f64)) / (state.memory_total as f64);
 
-                    state = HostState {
+                    *state = HostState {
                         cpu_load: cpu_load_new,
                         memory_load: memory_load_new,
                         cpu_total: state.cpu_total,
@@ -157,11 +156,11 @@ impl VmMigrator {
                 continue;
             }
 
-            let mut best_host: Option<u32> = None;
+            let mut best_host_opt: Option<u32> = None;
             let mut best_cpu_load = 0.;
 
-            for host in host_states.clone() {
-                if host.0 == current_host {
+            for (&host, state) in host_states.iter() {
+                if host == current_host {
                     continue;
                 }
                 if source_hosts.contains(&host.0) {
@@ -181,7 +180,7 @@ impl VmMigrator {
                 if cpu_load_new < self.overload_threshold && memory_load_new < self.overload_threshold {
                     if cpu_load_new > best_cpu_load {
                         best_cpu_load = cpu_load_new;
-                        best_host = Some(host.0);
+                        best_host_opt = Some(host);
                     }
                 }
             }

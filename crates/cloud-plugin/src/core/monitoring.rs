@@ -7,7 +7,7 @@ use simcore::cast;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
-use simcore::log_debug;
+use simcore::log_trace;
 
 use crate::core::common::VmStatus;
 use crate::core::events::monitoring::HostStateUpdate;
@@ -89,7 +89,7 @@ impl Monitoring {
         recently_removed_vms: Vec<u32>,
         recent_vm_status_changes: HashMap<u32, VmStatus>,
     ) {
-        log_debug!(self.ctx, "monitoring received stats from host #{}", host_id);
+        log_trace!(self.ctx, "monitoring received stats from host #{}", host_id);
         self.host_states.get_mut(&host_id).map(|host| {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;
