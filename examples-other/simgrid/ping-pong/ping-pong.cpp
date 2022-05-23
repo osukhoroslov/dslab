@@ -18,9 +18,10 @@ enum class MessageType {
 
 struct Message {
     MessageType type;
+    double payload; // current sender time is used as a message payload
     sg4::Mailbox* from = nullptr;
 
-    explicit Message(MessageType type, sg4::Mailbox* from) : type(type), from(from) {}
+    explicit Message(MessageType type, double payload, sg4::Mailbox* from) : type(type), payload(payload), from(from) {}
 
     static void destroy(void* message);
 };
@@ -32,7 +33,7 @@ void Message::destroy(void* message) {
 static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes, bool asymmetric) {
     int active_proc_count = process_mailboxes.size();
     for(auto const& mailbox: process_mailboxes) {
-        auto* start = new Message(MessageType::START, in);
+        auto* start = new Message(MessageType::START, sg4::Engine::get_clock(), in);
         mailbox->put_init(start, 1)->detach(Message::destroy);
     }
     if (!asymmetric) {
@@ -43,7 +44,7 @@ static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes,
             --active_proc_count;
         }
         for(auto const& mailbox: process_mailboxes) {
-            auto* stop = new Message(MessageType::STOP, in);
+            auto* stop = new Message(MessageType::STOP, sg4::Engine::get_clock(), in);
             mailbox->put_init(stop, 1)->detach(Message::destroy);
         }
     }
@@ -69,7 +70,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
         if (pings_to_send > 0 && !wait_reply) {
             // select ping target (avoiding calling random for single peer seems to give slight speed improvement)
             sg4::Mailbox* out = (peer_count == 1) ? peers[0] : peers[random.uniform_int(0, peer_count-1)];
-            auto* ping = new Message(MessageType::PING, in);
+            auto* ping = new Message(MessageType::PING, sg4::Engine::get_clock(), in);
             out->put_init(ping, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
             XBT_DEBUG("Sent PING");
             pings_to_send -= 1;
@@ -79,7 +80,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
         msg = in->get<Message>();
         if (msg->type == MessageType::PING) {
             XBT_DEBUG("Received PING");
-            auto* pong = new Message(MessageType::PONG, in);
+            auto* pong = new Message(MessageType::PONG, sg4::Engine::get_clock(), in);
             msg->from->put_init(pong, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
             XBT_DEBUG("Sent PONG");
         } else if (msg->type == MessageType::PONG) {
@@ -87,7 +88,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
             wait_reply = false;
             if (pings_to_send == 0) {
                 XBT_DEBUG("Completed");
-                auto* completed = new Message(MessageType::COMPLETED, in);
+                auto* completed = new Message(MessageType::COMPLETED, sg4::Engine::get_clock(), in);
                 root->put(completed, 1);
             }
         } else if (msg->type == MessageType::STOP) {
@@ -110,7 +111,7 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
 
     while (iterations > 0) {
         if (is_pinger) {
-            auto* ping = new Message(MessageType::PING, in);
+            auto* ping = new Message(MessageType::PING, sg4::Engine::get_clock(), in);
             out->put(ping, MESSAGE_PAYLOAD_SIZE);
             XBT_DEBUG("Sent PING");
             auto* pong = in->get<Message>();
@@ -120,7 +121,7 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
         } else {
             auto* ping = in->get<Message>();
             XBT_DEBUG("Received PING");
-            auto* pong = new Message(MessageType::PONG, in);
+            auto* pong = new Message(MessageType::PONG, sg4::Engine::get_clock(), in);
             ping->from->put(pong, MESSAGE_PAYLOAD_SIZE);
             XBT_DEBUG("Sent PONG");
             delete ping;

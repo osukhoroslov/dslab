@@ -13,10 +13,14 @@ use simcore::handler::EventHandler;
 pub struct Start {}
 
 #[derive(Serialize)]
-pub struct Ping {}
+pub struct Ping {
+    payload: f64,
+}
 
 #[derive(Serialize)]
-pub struct Pong {}
+pub struct Pong {
+    payload: f64,
+}
 
 pub struct Process {
     peer_count: usize,
@@ -42,12 +46,22 @@ impl Process {
     fn on_start(&mut self) {
         if self.is_pinger {
             let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
-            self.send(Ping {}, peer);
+            self.send(
+                Ping {
+                    payload: self.ctx.time(),
+                },
+                peer,
+            );
         }
     }
 
     fn on_ping(&mut self, from: Id) {
-        self.send(Pong {}, from);
+        self.send(
+            Pong {
+                payload: self.ctx.time(),
+            },
+            from,
+        );
     }
 
     fn on_pong(&mut self, from: Id) {
@@ -58,7 +72,12 @@ impl Process {
             } else {
                 from
             };
-            self.send(Ping {}, peer);
+            self.send(
+                Ping {
+                    payload: self.ctx.time(),
+                },
+                peer,
+            );
         }
     }
 
@@ -74,10 +93,10 @@ impl EventHandler for Process {
             Start {} => {
                 self.on_start();
             }
-            Ping {} => {
+            Ping { payload: _ } => {
                 self.on_ping(event.src);
             }
-            Pong {} => {
+            Pong { payload: _ } => {
                 self.on_pong(event.src);
             }
         })
@@ -116,12 +135,24 @@ impl NetworkProcess {
     fn on_start(&mut self) {
         if self.is_pinger {
             let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
-            self.net.borrow_mut().send_event(Ping {}, self.id, peer);
+            self.net.borrow_mut().send_event(
+                Ping {
+                    payload: self.ctx.time(),
+                },
+                self.id,
+                peer,
+            );
         }
     }
 
     fn on_ping(&mut self, from: Id) {
-        self.net.borrow_mut().send_event(Pong {}, self.id, from);
+        self.net.borrow_mut().send_event(
+            Pong {
+                payload: self.ctx.time(),
+            },
+            self.id,
+            from,
+        );
     }
 
     fn on_pong(&mut self, from: Id) {
@@ -132,7 +163,13 @@ impl NetworkProcess {
             } else {
                 from
             };
-            self.net.borrow_mut().send_event(Ping {}, self.id, peer);
+            self.net.borrow_mut().send_event(
+                Ping {
+                    payload: self.ctx.time(),
+                },
+                self.id,
+                peer,
+            );
         }
     }
 }
@@ -143,10 +180,10 @@ impl EventHandler for NetworkProcess {
             Start {} => {
                 self.on_start();
             }
-            Ping {} => {
+            Ping { payload: _ } => {
                 self.on_ping(event.src);
             }
-            Pong {} => {
+            Pong { payload: _ } => {
                 self.on_pong(event.src);
             }
         })
