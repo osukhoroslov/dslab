@@ -6,7 +6,8 @@ use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
 
-use throughput_model::throughput_model::ThroughputModel;
+use throughput_model::model::ThroughputModel;
+use throughput_model::fair_sharing::FairThroughputSharingModel;
 
 // STRUCTS //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -67,7 +68,7 @@ pub struct Compute {
     #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
-    throughput_model: ThroughputModel<RunningComputation>,
+    throughput_model: FairThroughputSharingModel<RunningComputation>,
     next_event: u64,
     ctx: SimulationContext,
 }
@@ -78,7 +79,7 @@ impl Compute {
             speed,
             memory_total: memory,
             memory_available: memory,
-            throughput_model: ThroughputModel::new(speed as f64),
+            throughput_model: FairThroughputSharingModel::with_fixed_throughput(speed as f64),
             next_event: 0,
             ctx,
         }
@@ -120,7 +121,7 @@ impl EventHandler for Compute {
                         flops as f64,
                         RunningComputation::new(event.id, memory, requester),
                     );
-                    if let Some((time, computation)) = self.throughput_model.peek() {
+                    if let Some((time, computation)) = self.throughput_model.next_time() {
                         self.next_event = self.ctx.emit_self(
                             InternalCompFinished {
                                 computation: computation.clone(),
@@ -139,7 +140,7 @@ impl EventHandler for Compute {
                 self.memory_available += computation.memory;
                 self.ctx
                     .emit_now(CompFinished { id: computation.id }, computation.requester);
-                if let Some((time, computation)) = self.throughput_model.peek() {
+                if let Some((time, computation)) = self.throughput_model.next_time() {
                     self.next_event = self.ctx.emit_self(
                         InternalCompFinished {
                             computation: computation.clone(),

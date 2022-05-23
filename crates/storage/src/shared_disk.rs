@@ -6,8 +6,11 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
+use sugars::boxed;
+
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use crate::fair_sharing::*;
+use throughput_model::fair_sharing::FairThroughputSharingModel;
+use throughput_model::model::ThroughputModel;
 
 #[derive(Clone)]
 struct DiskActivity {
@@ -34,12 +37,18 @@ pub struct SharedDisk {
 }
 
 impl SharedDisk {
-    pub fn new(capacity: u64, read_bandwidth: u64, write_bandwidth: u64, ctx: SimulationContext) -> Self {
+    pub fn new(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(read_bandwidth as f64),
-            write_throughput_model: FairThroughputSharingModel::new(write_bandwidth as f64),
+            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(move |n| {
+                if n < 2 {
+                    read_bandwidth / n as f64
+                } else {
+                    0.5 * read_bandwidth / n as f64
+                }
+            })),
+            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -131,13 +140,13 @@ impl SharedDisk {
     }
 
     fn schedule_next_read_event(&mut self) {
-        if let Some(time) = self.read_throughput_model.next_time() {
+        if let Some((time, _)) = self.read_throughput_model.next_time() {
             self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
         }
     }
 
     fn schedule_next_write_event(&mut self) {
-        if let Some(time) = self.read_throughput_model.next_time() {
+        if let Some((time, _)) = self.read_throughput_model.next_time() {
             self.next_write_event = self
                 .ctx
                 .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());

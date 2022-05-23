@@ -23,8 +23,8 @@ const DISK_NAME: &str = "SharedDisk";
 const USER_NAME: &str = "User";
 
 const DISK_CAPACITY: u64 = 1000;
-const DISK_READ_BW: u64 = 100;
-const DISK_WRITE_BW: u64 = 100;
+const DISK_READ_BW: f64 = 100.;
+const DISK_WRITE_BW: f64 = 100.;
 
 struct User {
     disk: Rc<RefCell<SharedDisk>>,
