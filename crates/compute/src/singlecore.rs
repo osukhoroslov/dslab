@@ -6,8 +6,8 @@ use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
 
-use throughput_model::model::ThroughputModel;
 use throughput_model::fair_sharing::FairThroughputSharingModel;
+use throughput_model::model::ThroughputModel;
 
 // STRUCTS //////////////////////////////////////////////////////////////////////////////////////////
 
