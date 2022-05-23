@@ -542,6 +542,8 @@ public:
 
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
+    // disabling cross-traffic significantly improves simulation speed for large cases
+    sg4::Engine::set_config("network/crosstraffic:0");
     simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 3, "Usage: %s HOST_COUNT TASK_COUNT", argv[0]);
