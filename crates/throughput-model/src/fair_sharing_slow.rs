@@ -12,9 +12,9 @@ struct FairThroughputSharingSlowModelEntry<T> {
 }
 
 impl<T> FairThroughputSharingSlowModelEntry<T> {
-    fn new(remaining_size: f64, id: u64, item: T) -> Self {
-        FairThroughputSharingSlowModelEntry {
-            remaining_volume: remaining_size,
+    fn new(remaining_volume: f64, id: u64, item: T) -> Self {
+        Self {
+            remaining_volume,
             id,
             item,
         }
