@@ -13,7 +13,7 @@ struct FairThroughputSharingModelEntry<T> {
 
 impl<T> FairThroughputSharingModelEntry<T> {
     fn new(position: f64, id: u64, item: T) -> Self {
-        FairThroughputSharingModelEntry { position, id, item }
+        Self { position, id, item }
     }
 }
 
