@@ -581,6 +581,7 @@ int main(int argc, char* argv[]) {
     // single backbone link is used for inter-host communication
     const sg4::Link* link = zone->create_link("backbone", "10GBps")
                                 ->set_sharing_policy(sg4::Link::SharingPolicy::FATPIPE) // transfers use full bandwidth
+                                //->set_sharing_policy(sg4::Link::SharingPolicy::SHARED) // transfers share bandwidth
                                 ->set_latency("10us")
                                 ->seal();
     sg4::LinkInRoute backbone(link);
