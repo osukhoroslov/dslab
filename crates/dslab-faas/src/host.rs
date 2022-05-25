@@ -8,6 +8,7 @@ use dslab_core::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{ContainerManager, ContainerStatus};
+use crate::cpu::{ShareManager, CPU};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
@@ -20,6 +21,7 @@ pub struct Host {
     id: u64,
     invoker: Box<dyn Invoker>,
     container_manager: ContainerManager,
+    cpu: CPU,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
@@ -31,6 +33,8 @@ pub struct Host {
 impl Host {
     pub fn new(
         id: u64,
+        cores: u32,
+        share_manager: Option<Box<dyn ShareManager>>,
         resources: ResourceProvider,
         invoker: Box<dyn Invoker>,
         function_registry: Rc<RefCell<FunctionRegistry>>,
@@ -45,6 +49,7 @@ impl Host {
             id,
             invoker,
             container_manager: ContainerManager::new(resources, ctx.clone()),
+            cpu: CPU::new(cores, share_manager, ctx.clone(), id),
             function_registry,
             invocation_registry,
             coldstart,
@@ -88,7 +93,7 @@ impl Host {
                 self.start_invocation(id, request, time);
             }
             InvocationStatus::Cold((id, delay)) => {
-                stats.cold_starts_total_time += delay;
+                stats.cold_start_latency.add(delay);
                 stats.cold_starts += 1;
                 drop(stats);
                 self.container_manager.reserve_container(id, request);
@@ -117,7 +122,7 @@ impl Host {
         let inv_id = self
             .invocation_registry
             .borrow_mut()
-            .new_invocation(request, self.id, cont_id);
+            .new_invocation(request, self.id, cont_id, time);
         let stats = self.stats.clone();
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         if container.status == ContainerStatus::Idle {
@@ -127,9 +132,11 @@ impl Host {
         container.last_change = time;
         container.status = ContainerStatus::Running;
         container.start_invocation(inv_id);
-        self.ctx
-            .borrow_mut()
-            .emit_self(InvocationEndEvent { id: inv_id }, request.duration);
+        let mut ir = self.invocation_registry.borrow_mut();
+        let invocation = ir.get_invocation_mut(inv_id).unwrap();
+        self.cpu
+            .progress_computer
+            .on_new_invocation(invocation, container, time);
     }
 
     fn on_container_start(&mut self, id: u64, time: f64) {
@@ -162,7 +169,7 @@ impl Host {
         let mut invocation_registry = ir.borrow_mut();
         let function_registry = fr.borrow();
         invocation_registry.get_invocation_mut(id).unwrap().finished = Some(time);
-        let invocation = invocation_registry.get_invocation(id).unwrap();
+        let invocation = invocation_registry.get_invocation_mut(id).unwrap();
         let func_id = invocation.request.id;
         let cont_id = invocation.container_id;
         let app_id = function_registry.get_function(func_id).unwrap().app_id;
@@ -172,6 +179,10 @@ impl Host {
         self.container_manager.dec_active_invocations();
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
+        self.stats.borrow_mut().update_invocation_stats(invocation);
+        self.cpu
+            .progress_computer
+            .on_invocation_end(invocation, container, time);
         let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {

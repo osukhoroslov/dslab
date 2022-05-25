@@ -6,6 +6,7 @@ pub struct Application {
     pub id: u64,
     concurrent_invocations: usize,
     container_deployment_time: f64,
+    container_cpu_share: f64,
     container_resources: ResourceConsumer,
 }
 
@@ -13,12 +14,14 @@ impl Application {
     pub fn new(
         concurrent_invocations: usize,
         container_deployment_time: f64,
+        container_cpu_share: f64,
         container_resources: ResourceConsumer,
     ) -> Self {
         Self {
             id: u64::MAX,
             concurrent_invocations,
             container_deployment_time,
+            container_cpu_share,
             container_resources,
         }
     }
@@ -29,6 +32,10 @@ impl Application {
 
     pub fn get_deployment_time(&self) -> f64 {
         self.container_deployment_time
+    }
+
+    pub fn get_cpu_share(&self) -> f64 {
+        self.container_cpu_share
     }
 
     pub fn get_resources(&self) -> &ResourceConsumer {

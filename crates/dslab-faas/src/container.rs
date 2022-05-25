@@ -26,6 +26,7 @@ pub struct Container {
     pub resources: ResourceConsumer,
     pub started_invocations: u64,
     pub last_change: f64,
+    pub cpu_share: f64,
 }
 
 impl Container {
@@ -150,6 +151,7 @@ impl ContainerManager {
             resources: app.get_resources().clone(),
             started_invocations: 0u64,
             last_change: time,
+            cpu_share: app.get_cpu_share(),
         };
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);

@@ -70,15 +70,19 @@ fn main() {
         trace.trace_records.len()
     );
     print_results(
-        test_scheduler(Some(Box::new(LocalityBasedScheduler::new(None, None))), &trace),
-        "Locality-based",
+        test_scheduler(Some(Box::new(LocalityBasedScheduler::new(None, None, true))), &trace),
+        "Locality-based, warm only",
+    );
+    print_results(
+        test_scheduler(Some(Box::new(LocalityBasedScheduler::new(None, None, false))), &trace),
+        "Locality-based, allow cold",
     );
     print_results(
         test_scheduler(Some(Box::new(RandomScheduler::new(1))), &trace),
         "Random",
     );
     print_results(
-        test_scheduler(Some(Box::new(LeastLoadedScheduler {})), &trace),
+        test_scheduler(Some(Box::new(LeastLoadedScheduler::new(true))), &trace),
         "Least-loaded",
     );
     print_results(

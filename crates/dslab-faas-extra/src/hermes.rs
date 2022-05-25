@@ -15,7 +15,7 @@ pub struct HermesScheduler {
 impl HermesScheduler {
     pub fn new(cpu_resource_id: usize) -> Self {
         Self {
-            high_load: LeastLoadedScheduler {},
+            high_load: LeastLoadedScheduler::new(true),
             cpu_resource_id,
         }
     }

@@ -20,11 +20,16 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     let mut serverless = ServerlessSimulation::new(sim, None, policy, None);
     for _ in 0..1000 {
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]));
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 16, None);
     }
     for app in trace.app_records.iter() {
         let mem = serverless.create_resource_requirement("mem", app.mem);
-        serverless.add_app(Application::new(16, app.cold_start, ResourceConsumer::new(vec![mem])));
+        serverless.add_app(Application::new(
+            16,
+            app.cold_start,
+            1.0,
+            ResourceConsumer::new(vec![mem]),
+        ));
     }
     for func in trace.function_records.iter() {
         serverless.add_function(Function::new(func.app_id));
@@ -45,6 +50,7 @@ fn print_results(stats: Stats, name: &str) {
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
     println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!("rel slowdown = {}", stats.rel_slowdown.mean());
 }
 
 fn main() {
