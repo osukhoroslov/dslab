@@ -82,7 +82,7 @@ impl Process {
     }
 
     fn send<T: EventData>(&mut self, event: T, to: Id) {
-        let delay = if self.rand_delay { self.ctx.rand() } else { 0. };
+        let delay = if self.rand_delay { self.ctx.rand() } else { 1. };
         self.ctx.emit(event, to, delay);
     }
 }
