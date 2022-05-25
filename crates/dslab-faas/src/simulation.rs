@@ -6,6 +6,7 @@ use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::controller::Controller;
+use crate::cpu::ShareManager;
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
@@ -82,12 +83,20 @@ impl ServerlessSimulation {
         self.stats.borrow().clone()
     }
 
-    pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider) {
+    pub fn add_host(
+        &mut self,
+        invoker: Option<Box<dyn Invoker>>,
+        resources: ResourceProvider,
+        cores: u32,
+        share_manager: Option<Box<dyn ShareManager>>,
+    ) {
         let id = self.host_ctr.next();
         let real_invoker = invoker.unwrap_or(Box::new(BasicInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,
+            cores,
+            share_manager,
             resources,
             real_invoker,
             self.function_registry.clone(),

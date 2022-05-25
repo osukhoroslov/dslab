@@ -13,9 +13,11 @@ pub struct InvocationRequest {
 
 #[derive(Copy, Clone)]
 pub struct Invocation {
+    pub id: u64,
     pub request: InvocationRequest,
     pub host_id: u64,
     pub container_id: u64,
+    pub started: f64,
     pub finished: Option<f64>,
 }
 
@@ -26,12 +28,14 @@ pub struct InvocationRegistry {
 }
 
 impl InvocationRegistry {
-    pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64) -> u64 {
+    pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64, time: f64) -> u64 {
         let id = self.invocation_ctr.next();
         let invocation = Invocation {
+            id,
             request,
             host_id,
             container_id,
+            started: time,
             finished: None,
         };
         self.invocations.insert(id, invocation);

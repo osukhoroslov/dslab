@@ -8,16 +8,23 @@ use serverless::function::Application;
 use serverless::host::Host;
 use serverless::scheduler::Scheduler;
 
+/// LocalityBasedScheduler picks a host based on appication hash.
+/// In case host number i can't invoke, the scheduler considers host number (i + step)%hosts.len().
 pub struct LocalityBasedScheduler {
     hasher: fn(u64) -> u64,
     step: usize,
+    warm_only: bool,
 }
 
 impl LocalityBasedScheduler {
-    pub fn new(hasher: Option<fn(u64) -> u64>, step: Option<usize>) -> Self {
+    pub fn new(hasher: Option<fn(u64) -> u64>, step: Option<usize>, warm_only: bool) -> Self {
         let f = hasher.unwrap_or(|a| a);
         let s = step.unwrap_or(1);
-        Self { hasher: f, step: s }
+        Self {
+            hasher: f,
+            step: s,
+            warm_only,
+        }
     }
 }
 
@@ -28,6 +35,9 @@ impl Scheduler for LocalityBasedScheduler {
         let mut idx = init;
         while !cycle {
             if hosts[idx].borrow().can_invoke(app, false) {
+                break;
+            }
+            if !self.warm_only && hosts[idx].borrow().can_allocate(app.get_resources()) {
                 break;
             }
             idx = (idx + self.step) % hosts.len();
@@ -43,6 +53,7 @@ impl Scheduler for LocalityBasedScheduler {
     }
 }
 
+/// RandomScheduler picks a host uniformly at random.
 pub struct RandomScheduler {
     rng: Pcg64,
 }
@@ -61,17 +72,34 @@ impl Scheduler for RandomScheduler {
     }
 }
 
-pub struct LeastLoadedScheduler {}
+/// LeastLoadedScheduler chooses a host with the least number of active (running and queued) invocations.
+pub struct LeastLoadedScheduler {
+    /// break ties by preferring instances with warm containers
+    prefer_warm: bool,
+}
+
+impl LeastLoadedScheduler {
+    pub fn new(prefer_warm: bool) -> Self {
+        Self { prefer_warm }
+    }
+}
 
 impl Scheduler for LeastLoadedScheduler {
-    fn select_host(&mut self, _app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
         let mut best = 0;
         let mut best_load = u64::MAX;
+        let mut warm = false;
         for (i, host) in hosts.iter().enumerate() {
             let load = host.borrow().get_active_invocations();
             if load < best_load {
                 best_load = load;
                 best = i;
+                if self.prefer_warm {
+                    warm = host.borrow().can_invoke(app, false);
+                }
+            } else if load == best_load && self.prefer_warm && !warm && host.borrow().can_invoke(app, false) {
+                best = i;
+                warm = true;
             }
         }
         best

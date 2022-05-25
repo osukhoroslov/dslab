@@ -1,6 +1,7 @@
 pub mod coldstart;
 pub mod container;
 pub mod controller;
+pub mod cpu;
 pub mod deployer;
 pub mod event;
 pub mod function;
