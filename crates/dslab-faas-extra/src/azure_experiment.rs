@@ -168,7 +168,7 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             mem_dist.insert(id, perc);
         }
         let mut apps = Vec::<(String, u64)>::from_iter(app_popularity.iter().map(|x| (x.0.to_string(), *x.1)));
-        apps.sort_by_key(|x: &(String, u64)| -> u64 { x.1 });
+        apps.sort_by_key(|x: &(String, u64)| -> (u64, String) { (x.1, x.0.clone()) });
         apps.reverse();
         //median popularity apps
         let mid = apps.len() / 2 - 40;
@@ -183,7 +183,12 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             let mem_vec = mem_dist.get(&app).unwrap();
             let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
             app_data.insert(app.clone(), (app_data.len(), 0.1, mem as u64));
-            for func in app_funcs.get_mut(&app).unwrap().drain() {
+            let mut funcs = Vec::new();
+            for f in app_funcs.get_mut(&app).unwrap().drain() {
+                funcs.push(f);
+            }
+            funcs.sort();
+            for func in funcs.drain(..) {
                 if invocations_count == limit {
                     break;
                 }
@@ -197,12 +202,14 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
                 for i in 0..1440 {
                     for _ in 0..inv_vec[i] {
                         let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
-                        let record = TraceRecord {
+                        let mut record = TraceRecord {
                             id: curr_id,
                             time: second,
-                            dur: gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001,
+                            dur: f64::max(0.001, gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001),
                         };
                         invocations_count += 1;
+                        record.dur = (record.dur * 1000000.).round() / 1000000.;
+                        record.time = (record.time * 1000000.).round() / 1000000.;
                         trace.push(record);
                         if invocations_count == limit {
                             break;

@@ -26,18 +26,17 @@ fn test_scheduler(scheduler: Option<Box<dyn Scheduler>>, trace: &Trace) -> Stats
         Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)))),
         scheduler,
     );
-    for _ in 0..1000 {
-        let cpu = serverless.create_resource("cpu", 16);
+    for _ in 0..10 {
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![cpu, mem]));
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4, None);
     }
     for app in trace.app_records.iter() {
-        let cpu = serverless.create_resource_requirement("cpu", 1);
         let mem = serverless.create_resource_requirement("mem", app.mem);
         serverless.add_app(Application::new(
-            16,
+            1,
             app.cold_start,
-            ResourceConsumer::new(vec![cpu, mem]),
+            1.,
+            ResourceConsumer::new(vec![mem]),
         ));
     }
     for func in trace.function_records.iter() {
@@ -58,13 +57,23 @@ fn print_results(stats: Stats, name: &str) {
         "cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
-    println!("wasted cpu time = {}", *stats.wasted_resource_time.get(&0).unwrap());
-    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&1).unwrap());
+    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!("mean relative slowdown = {}", stats.rel_slowdown.mean());
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let trace = process_azure_trace(Path::new(&args[1]), 200000);
+    let trace2 = process_azure_trace(Path::new(&args[1]), 200000);
+    assert!(trace.app_records.len() == trace2.app_records.len());
+    for i in 0..trace.app_records.len() {
+        let a = trace.app_records[i].clone();
+        let b = trace2.app_records[i].clone();
+        if a.mem != b.mem {
+            println!("mismatch {} {}", a.mem, b.mem);
+            break;
+        }
+    }
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
@@ -89,8 +98,5 @@ fn main() {
         test_scheduler(Some(Box::new(RoundRobinScheduler::new())), &trace),
         "Round Robin",
     );
-    print_results(
-        test_scheduler(Some(Box::new(HermesScheduler::new(0))), &trace),
-        "Hermes",
-    );
+    print_results(test_scheduler(Some(Box::new(HermesScheduler::new())), &trace), "Hermes");
 }
