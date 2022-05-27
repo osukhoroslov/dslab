@@ -20,7 +20,7 @@ fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) 
     let mut serverless = ServerlessSimulation::new(sim, None, policy, None);
     for _ in 0..1000 {
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 16, None);
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 8, None);
     }
     for app in trace.app_records.iter() {
         let mem = serverless.create_resource_requirement("mem", app.mem);

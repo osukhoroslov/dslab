@@ -84,7 +84,7 @@ impl InvNode {
 fn inv_node_split(mut node: Option<Box<InvNode>>, id: u64) -> (Option<Box<InvNode>>, Option<Box<InvNode>>) {
     if let Some(mut v) = node.take() {
         v.push();
-        if v.id < id {
+        if id <= v.id {
             let (x, y) = inv_node_split(v.l, id);
             v.l = y;
             v.recalc();
@@ -149,7 +149,7 @@ impl ProgressComputer {
             self.end_event = Some(
                 self.ctx
                     .borrow_mut()
-                    .emit_self(InvocationEndEvent { id }, t * self.load),
+                    .emit_self(InvocationEndEvent { id }, t * f64::max(self.cores, self.load)),
             );
         } else {
             self.end_event = None;
@@ -179,7 +179,7 @@ impl ProgressComputer {
 
     fn shift_time(&mut self, time: f64) {
         if let Some(v) = &mut self.treap {
-            v.shift_time((time - self.last_update) / self.load);
+            v.shift_time((time - self.last_update) / f64::max(self.cores, self.load));
         }
     }
 
@@ -198,8 +198,11 @@ impl ProgressComputer {
         }
         self.insert_invocation(
             invocation.id,
-            self.transform_time(invocation.request.duration, container.cpu_share, true)
-                / (container.invocations.len() as f64),
+            self.transform_time(
+                invocation.request.duration,
+                container.cpu_share / (container.invocations.len() as f64),
+                true,
+            ),
         );
         self.last_update = time;
         self.reschedule_end();
