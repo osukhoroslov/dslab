@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include <simgrid/s4u.hpp>
+#include <xbt/random.hpp>
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(client, "Client");
 

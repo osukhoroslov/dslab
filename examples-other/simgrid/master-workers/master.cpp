@@ -4,9 +4,6 @@
 
 #include <simgrid/s4u.hpp>
 #include <xbt/random.hpp>
-#include <simgrid/s4u/Mailbox.hpp>
-
-#include "common.h"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(master, "Master");
 

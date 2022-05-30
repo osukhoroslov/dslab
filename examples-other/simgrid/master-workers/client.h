@@ -2,7 +2,9 @@
 
 #include "common.h"
 
-#include <xbt/random.hpp>
+namespace simgrid::xbt::random {
+class XbtRandom;
+}
 
 class Client {
 public:

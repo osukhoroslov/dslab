@@ -1,8 +1,9 @@
 #pragma once
 
-#include "common.h"
+#include <unordered_map>
+#include <vector>
 
-#include <simgrid/s4u/Mailbox.hpp>
+#include "common.h"
 
 class Worker {
 public:

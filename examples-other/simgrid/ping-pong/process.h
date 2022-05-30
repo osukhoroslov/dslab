@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fwd.h"
+#include <simgrid/forward.h>
 
 #include <vector>
 
