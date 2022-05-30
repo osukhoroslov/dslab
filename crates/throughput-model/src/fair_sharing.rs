@@ -5,7 +5,7 @@ use sugars::boxed;
 
 use simcore::component::Fractional;
 
-use crate::model::*;
+use crate::model::ThroughputModel;
 
 struct FairThroughputSharingModelEntry<T> {
     position: Fractional,

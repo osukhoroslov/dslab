@@ -3,8 +3,9 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::*;
 use simcore::component::Fractional;
+
+use crate::model::ThroughputModel;
 
 struct FairThroughputSharingSlowModelEntry<T> {
     remaining_volume: Fractional,

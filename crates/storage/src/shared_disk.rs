@@ -6,9 +6,10 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
-use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use throughput_model::fair_sharing::FairThroughputSharingModel;
 use throughput_model::model::ThroughputModel;
+
+use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 #[derive(Clone)]
 struct DiskActivity {
