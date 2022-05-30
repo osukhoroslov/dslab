@@ -16,15 +16,5 @@ message(STATUS "SimGrid_LIBRARY: ${SimGrid_LIBRARY}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_executable(master-workers 
-    master-workers/master-workers.cpp
-    master-workers/master.cpp
-    master-workers/worker.cpp
-    master-workers/client.cpp
-)
-target_link_libraries(master-workers ${SimGrid_LIBRARY})
-target_include_directories(master-workers PUBLIC SYSTEM ${SimGrid_INCLUDE_DIR})
-
-add_executable(ping-pong ping-pong/ping-pong.cpp)
-target_link_libraries(ping-pong ${SimGrid_LIBRARY})
-target_include_directories(ping-pong PUBLIC SYSTEM ${SimGrid_INCLUDE_DIR})
+add_subdirectory(master-workers)
+add_subdirectory(ping-pong)

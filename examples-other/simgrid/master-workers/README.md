@@ -1,4 +1,4 @@
-# Master-workers example on SimGri
+# Master-workers example on SimGrid
 
 ## Run Examples
 
