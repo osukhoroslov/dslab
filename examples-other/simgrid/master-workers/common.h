@@ -1,14 +1,12 @@
 #pragma once
 
+#include "fwd.h"
+
 #include <string>
 
 static inline constexpr int kSchedulePeriod = 10;
 static inline constexpr int kReportStatusPeriod = 100;
 static inline constexpr int kMessagePayloadSize = 10;
-
-namespace simgrid::s4u {
-class Mailbox;
-}
 
 namespace sg4 = simgrid::s4u;
 
