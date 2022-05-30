@@ -7,7 +7,7 @@ use simcore::handler::EventHandler;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use throughput_model::fair_sharing_slow::FairThroughputSharingSlowModel;
+use throughput_model::fair_sharing::FairThroughputSharingModel;
 use throughput_model::model::ThroughputModel;
 
 #[derive(Clone)]
@@ -26,8 +26,8 @@ pub struct DiskWriteActivityCompleted {}
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
-    read_throughput_model: FairThroughputSharingSlowModel<DiskActivity>,
-    write_throughput_model: FairThroughputSharingSlowModel<DiskActivity>,
+    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -39,8 +39,8 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingSlowModel::with_fixed_throughput(read_bandwidth),
-            write_throughput_model: FairThroughputSharingSlowModel::with_fixed_throughput(write_bandwidth),
+            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth),
+            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,

@@ -1,7 +1,7 @@
 use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 
-use throughput_model::fair_sharing_slow::FairThroughputSharingSlowModel;
+use throughput_model::fair_sharing::FairThroughputSharingModel;
 use throughput_model::model::ThroughputModel;
 
 use crate::model::*;
@@ -9,7 +9,7 @@ use crate::model::*;
 pub struct SharedBandwidthNetwork {
     bandwidth: Fractional,
     latency: Fractional,
-    throughput_model: FairThroughputSharingSlowModel<Data>,
+    throughput_model: FairThroughputSharingModel<Data>,
     next_event: u64,
 }
 
@@ -18,7 +18,7 @@ impl SharedBandwidthNetwork {
         return SharedBandwidthNetwork {
             bandwidth,
             latency,
-            throughput_model: FairThroughputSharingSlowModel::with_fixed_throughput(bandwidth),
+            throughput_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
             next_event: 0,
         };
     }
