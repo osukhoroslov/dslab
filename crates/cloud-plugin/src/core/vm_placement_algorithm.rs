@@ -1,6 +1,6 @@
+use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
-use crate::core::resource_pool::Allocation;
 use crate::core::resource_pool::ResourcePoolState;
 
 pub trait VMPlacementAlgorithm {

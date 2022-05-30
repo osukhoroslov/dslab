@@ -6,13 +6,13 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
-use crate::core::common::AllocationVerdict;
+use crate::core::common::{Allocation, AllocationVerdict};
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
-use crate::core::resource_pool::{Allocation, ResourcePoolState};
+use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm::VirtualMachine;
 
 pub struct PlacementStore {

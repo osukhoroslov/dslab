@@ -10,8 +10,8 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::{log_debug, log_trace};
 
+use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
-use crate::core::common::VmStatus;
 use crate::core::config::SimulationConfig;
 use crate::core::energy_manager::EnergyManager;
 use crate::core::events::allocation::{
@@ -19,8 +19,7 @@ use crate::core::events::allocation::{
 };
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
-use crate::core::resource_pool::Allocation;
-use crate::core::vm::VirtualMachine;
+use crate::core::vm::{VirtualMachine, VmStatus};
 
 pub struct HostManager {
     pub id: u32,
@@ -38,9 +37,9 @@ pub struct HostManager {
     allow_vm_overcommit: bool,
     allocs: HashMap<u32, Allocation>,
     vms: HashMap<u32, VirtualMachine>,
-    recently_added_vms: Vec<u32>,
+    recently_added_vms: Vec<(Allocation, VirtualMachine)>,
     recently_removed_vms: Vec<u32>,
-    recent_vm_status_changes: HashMap<u32, VmStatus>,
+    recent_vm_status_changes: HashMap<u32, (VmStatus, f64)>,
     energy_manager: EnergyManager,
     monitoring_id: u32,
     placement_store_id: u32,
@@ -94,8 +93,7 @@ impl HostManager {
         return AllocationVerdict::Success;
     }
 
-    fn allocate(&mut self, time: f64, alloc: &Allocation, mut vm: VirtualMachine) {
-        vm.set_creation_time(time);
+    fn allocate(&mut self, time: f64, alloc: Allocation, vm: VirtualMachine) {
         if self.cpu_available < alloc.cpu_usage {
             self.cpu_overcommit += alloc.cpu_usage - self.cpu_available;
             self.cpu_available = 0;
@@ -108,14 +106,14 @@ impl HostManager {
         } else {
             self.memory_available -= alloc.memory_usage;
         }
-
-        self.allocs.insert(alloc.id, alloc.clone());
+        self.recently_added_vms.push((alloc.clone(), vm.clone()));
         self.vms.insert(alloc.id, vm);
-        self.recently_added_vms.push(alloc.id);
+        self.allocs.insert(alloc.id, alloc);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
-    fn release(&mut self, time: f64, alloc: &Allocation) {
+    fn release(&mut self, time: f64, alloc_id: u32) -> Allocation {
+        let alloc = self.allocs.remove(&alloc_id).unwrap();
         if self.cpu_overcommit >= alloc.cpu_usage {
             self.cpu_overcommit -= alloc.cpu_usage;
         } else {
@@ -129,10 +127,10 @@ impl HostManager {
             self.memory_available += alloc.memory_usage - self.memory_overcommit;
             self.memory_overcommit = 0;
         }
-        self.allocs.remove(&alloc.id);
         self.vms.remove(&alloc.id);
         self.recently_removed_vms.push(alloc.id);
         self.energy_manager.update_energy(time, self.get_energy_load(time));
+        alloc
     }
 
     pub fn get_cpu_allocated(&self) -> f64 {
@@ -154,9 +152,6 @@ impl HostManager {
     pub fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for (vm_id, alloc) in &self.allocs {
-            if self.vms.get(&alloc.id).unwrap().status != VmStatus::Running {
-                continue;
-            }
             cpu_used += alloc.cpu_usage as f64 * self.vms[vm_id].get_cpu_load(time);
         }
         return cpu_used / self.cpu_total as f64;
@@ -165,7 +160,7 @@ impl HostManager {
     pub fn get_memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for (vm_id, alloc) in &self.allocs {
-            memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_cpu_load(time);
+            memory_used += alloc.memory_usage as f64 * self.vms[vm_id].get_memory_load(time);
         }
         return memory_used / self.memory_total as f64;
     }
@@ -185,10 +180,13 @@ impl HostManager {
 
     fn on_allocation_request(&mut self, alloc: Allocation, vm: VirtualMachine) -> bool {
         if self.can_allocate(&alloc) == AllocationVerdict::Success {
+            let alloc_id = alloc.id;
             let start_duration = vm.start_duration();
-            self.allocate(self.ctx.time(), &alloc, vm);
-            log_debug!(self.ctx, "vm #{} allocated on host #{}", alloc.id, self.id);
-            self.ctx.emit_self(VMStarted { alloc }, start_duration);
+            self.allocate(self.ctx.time(), alloc, vm);
+            self.recent_vm_status_changes
+                .insert(alloc_id, (VmStatus::Initializing, self.ctx.time()));
+            log_debug!(self.ctx, "vm #{} allocated on host #{}", alloc_id, self.id);
+            self.ctx.emit_self(VMStarted { id: alloc_id }, start_duration);
             true
         } else {
             log_debug!(self.ctx, "not enough space for vm #{} on host #{}", alloc.id, self.id);
@@ -206,27 +204,26 @@ impl HostManager {
 
     fn on_migration_request(&mut self, source_host: u32, alloc: Allocation, vm: VirtualMachine) {
         if self.can_allocate(&alloc) == AllocationVerdict::Success {
+            let alloc_id = alloc.id;
+            let migration_duration = (alloc.memory_usage as f64) / (self.sim_config.network_throughput as f64);
             let start_duration = vm.start_duration();
-            self.allocate(self.ctx.time(), &alloc, vm);
+
+            self.allocate(self.ctx.time(), alloc, vm);
             log_debug!(
                 self.ctx,
                 "vm #{} allocated on host #{}, start migration",
-                alloc.id,
+                alloc_id,
                 self.id
             );
-            let local_vm = self.vms.get_mut(&alloc.id).unwrap();
-            local_vm.set_new_status(VmStatus::Migrating);
-            self.recent_vm_status_changes.insert(alloc.id, VmStatus::Migrating);
-
-            let migration_duration = (alloc.memory_usage as f64) / (self.sim_config.network_throughput as f64);
+            let local_vm = self.vms.get_mut(&alloc_id).unwrap();
+            local_vm.set_status(VmStatus::Migrating);
+            self.recent_vm_status_changes
+                .insert(alloc_id, (VmStatus::Migrating, self.ctx.time()));
 
             self.ctx
-                .emit_self(VMStarted { alloc: alloc.clone() }, migration_duration + start_duration);
-            self.ctx.emit(
-                AllocationReleaseRequest { alloc: alloc.clone() },
-                source_host,
-                migration_duration,
-            );
+                .emit_self(VMStarted { id: alloc_id }, migration_duration + start_duration);
+            self.ctx
+                .emit(AllocationReleaseRequest { alloc_id }, source_host, migration_duration);
         } else {
             log_debug!(
                 self.ctx,
@@ -237,46 +234,46 @@ impl HostManager {
         }
     }
 
-    fn on_allocation_release_request(&mut self, alloc: Allocation) {
-        log_debug!(self.ctx, "release resources from vm #{} on host #{}", alloc.id, self.id);
-        if self.vms.get(&alloc.id).is_none() {
-            log_debug!(self.ctx, "do not release, probably VM was migrated to other host");
-            return;
+    fn on_allocation_release_request(&mut self, alloc_id: u32) {
+        if self.allocs.contains_key(&alloc_id) {
+            log_debug!(self.ctx, "release resources from vm #{} on host #{}", alloc_id, self.id);
+            self.vms.get_mut(&alloc_id).unwrap().set_status(VmStatus::Deactivated);
+            self.ctx.emit_self(
+                VMDeleted { id: alloc_id },
+                self.vms.get_mut(&alloc_id).unwrap().stop_duration(),
+            );
+        } else {
+            log_trace!(self.ctx, "do not release, probably VM was migrated to other host");
         }
+    }
 
-        self.vms
-            .get_mut(&alloc.id)
-            .unwrap()
-            .set_new_status(VmStatus::Deactivated);
+    fn on_vm_started(&mut self, vm_id: u32) {
+        log_debug!(self.ctx, "vm #{} started and running", vm_id);
+        let vm = self.vms.get_mut(&vm_id).unwrap();
+        vm.set_status(VmStatus::Running);
+        vm.set_start_time(self.ctx.time());
+        self.recent_vm_status_changes
+            .insert(vm_id, (VmStatus::Running, self.ctx.time()));
         self.ctx.emit_self(
-            VMDeleted { alloc: alloc.clone() },
-            self.vms.get_mut(&alloc.id).unwrap().stop_duration(),
+            AllocationReleaseRequest { alloc_id: vm_id },
+            // keep lifetime correct after migrations!
+            vm.lifetime() - (self.ctx.time() - vm.start_time()),
         );
     }
 
-    fn on_vm_started(&mut self, alloc: Allocation) {
-        log_debug!(self.ctx, "vm #{} started and running", alloc.id);
-        self.vms.get_mut(&alloc.id).unwrap().set_new_status(VmStatus::Running);
-        self.vms.get_mut(&alloc.id).unwrap().set_start_time(self.ctx.time());
-        self.recent_vm_status_changes.insert(alloc.id, VmStatus::Running);
-
-        self.ctx.emit_self(
-            AllocationReleaseRequest { alloc: alloc.clone() },
-            self.vms.get(&alloc.id).unwrap().lifetime(),
-        );
-    }
-
-    fn on_vm_deleted(&mut self, alloc: Allocation) {
-        log_debug!(self.ctx, "vm #{} deleted", alloc.id);
-        self.release(self.ctx.time(), &alloc);
-        self.ctx.emit(
-            AllocationReleased {
-                alloc,
-                host_id: self.id,
-            },
-            self.placement_store_id,
-            self.sim_config.message_delay,
-        );
+    fn on_vm_deleted(&mut self, vm_id: u32) {
+        if self.vms.contains_key(&vm_id) {
+            log_debug!(self.ctx, "vm #{} deleted", vm_id);
+            let alloc = self.release(self.ctx.time(), vm_id);
+            self.ctx.emit(
+                AllocationReleased {
+                    alloc,
+                    host_id: self.id,
+                },
+                self.placement_store_id,
+                self.sim_config.message_delay,
+            );
+        }
     }
 
     fn send_host_state(&mut self) {
@@ -313,14 +310,14 @@ impl EventHandler for HostManager {
             MigrationRequest { source_host, alloc, vm } => {
                 self.on_migration_request(source_host, alloc, vm);
             }
-            AllocationReleaseRequest { alloc } => {
-                self.on_allocation_release_request(alloc);
+            AllocationReleaseRequest { alloc_id } => {
+                self.on_allocation_release_request(alloc_id);
             }
-            VMStarted { alloc } => {
-                self.on_vm_started(alloc);
+            VMStarted { id } => {
+                self.on_vm_started(id);
             }
-            VMDeleted { alloc } => {
-                self.on_vm_deleted(alloc);
+            VMDeleted { id } => {
+                self.on_vm_deleted(id);
             }
             SendHostState {} => {
                 self.send_host_state();

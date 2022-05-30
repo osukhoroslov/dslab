@@ -1,5 +1,11 @@
 use serde::Serialize;
-use std::fmt::{Display, Formatter, Result};
+
+#[derive(Serialize, Clone)]
+pub struct Allocation {
+    pub id: u32,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+}
 
 #[derive(PartialEq)]
 pub enum AllocationVerdict {
@@ -7,23 +13,4 @@ pub enum AllocationVerdict {
     NotEnoughMemory,
     Success,
     HostNotFound,
-}
-
-#[derive(Clone, PartialEq, Serialize)]
-pub enum VmStatus {
-    Initializing,
-    Running,
-    Deactivated,
-    Migrating,
-}
-
-impl Display for VmStatus {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        match self {
-            VmStatus::Initializing => write!(f, "initializing"),
-            VmStatus::Running => write!(f, "running"),
-            VmStatus::Deactivated => write!(f, "deactivated"),
-            VmStatus::Migrating => write!(f, "migrating"),
-        }
-    }
 }

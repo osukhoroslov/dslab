@@ -1,15 +1,6 @@
 use std::collections::BTreeMap;
 
-use serde::Serialize;
-
-use crate::core::common::AllocationVerdict;
-
-#[derive(Serialize, Clone)]
-pub struct Allocation {
-    pub id: u32,
-    pub cpu_usage: u32,
-    pub memory_usage: u64,
-}
+use crate::core::common::{Allocation, AllocationVerdict};
 
 #[derive(Clone)]
 pub struct HostInfo {

@@ -7,13 +7,14 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
+use crate::core::common::Allocation;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
 use crate::core::monitoring::Monitoring;
-use crate::core::resource_pool::{Allocation, ResourcePoolState};
+use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm::VirtualMachine;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
