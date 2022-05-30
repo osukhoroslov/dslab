@@ -1,8 +1,9 @@
+use std::time::Instant;
+
 use clap::Parser;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use std::time::Instant;
 
 use cloud_plugin::core::config::SimulationConfig;
 use cloud_plugin::core::load_model::ConstLoadModel;
@@ -12,7 +13,7 @@ use simcore::log_info;
 use simcore::simulation::Simulation;
 
 const CPU_CAPACITY: u32 = 144;
-const RAM_CAPACITY: u64 = 2048000;
+const RAM_CAPACITY: u64 = 204800;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -48,7 +49,7 @@ fn simulation(sim_config: SimulationConfig) {
 
     let mut rng = StdRng::seed_from_u64(47);
     let vm_cpu_distribution = [1, 2, 4, 8];
-    let vm_ram_distribution = [128, 256, 512];
+    let vm_ram_distribution = [512, 1024, 2048];
 
     for i in 1..=args.num_vms {
         cloud_sim.spawn_vm_now(
