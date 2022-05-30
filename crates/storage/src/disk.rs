@@ -1,6 +1,6 @@
 use sugars::boxed;
 
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::{context::SimulationContext, log_debug, log_error};
 
 use crate::bandwidth::{BWModel, ConstantBWModel};
@@ -11,7 +11,7 @@ pub struct Disk {
     used: u64,
     read_bw_model: Box<dyn BWModel>,
     write_bw_model: Box<dyn BWModel>,
-    ready_time: f64,
+    ready_time: Fractional,
     next_request_id: u64,
     ctx: SimulationContext,
 }
@@ -28,7 +28,7 @@ impl Disk {
             used: 0,
             read_bw_model,
             write_bw_model,
-            ready_time: 0.,
+            ready_time: Fractional::zero(),
             next_request_id: 0,
             ctx,
         }
@@ -67,7 +67,8 @@ impl Disk {
         } else {
             let bw = self.read_bw_model.get_bandwidth(size, &mut self.ctx);
             log_debug!(self.ctx, "Read bandwidth: {}", bw);
-            let read_time = size as f64 / bw as f64;
+            let read_time =
+                Fractional::from_integer(size.try_into().unwrap()) / Fractional::from_integer(bw.try_into().unwrap());
             self.ready_time = self.ready_time.max(self.ctx.time()) + read_time;
             self.ctx.emit(
                 DataReadCompleted { request_id, size },
@@ -95,7 +96,8 @@ impl Disk {
             self.used += size;
             let bw = self.write_bw_model.get_bandwidth(size, &mut self.ctx);
             log_debug!(self.ctx, "Write bandwidth: {}", bw);
-            let write_time = size as f64 / bw as f64;
+            let write_time =
+                Fractional::from_integer(size.try_into().unwrap()) / Fractional::from_integer(bw.try_into().unwrap());
             self.ready_time = self.ready_time.max(self.ctx.time()) + write_time;
             self.ctx.emit(
                 DataWriteCompleted { request_id, size },

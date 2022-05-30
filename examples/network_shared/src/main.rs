@@ -10,7 +10,7 @@ use sugars::{rc, refcell};
 use network::model::DataTransferCompleted;
 use network::network::Network;
 use network::shared_bandwidth_model::SharedBandwidthNetwork;
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
@@ -19,7 +19,7 @@ use simcore::{cast, log_info};
 
 #[derive(Serialize)]
 pub struct Start {
-    size: f64,
+    size: Fractional,
     receiver_id: Id,
 }
 
@@ -64,7 +64,7 @@ impl EventHandler for DataReceiver {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             DataTransferCompleted { data } => {
-                let new_size = 1000.0 - data.size;
+                let new_size = Fractional::from_integer(1000) - data.size;
                 self.net
                     .borrow_mut()
                     .transfer_data(self.ctx.id(), data.src, new_size, data.src);
@@ -88,7 +88,10 @@ fn main() {
     let sender_id = 1;
     let receiver_id = 2;
 
-    let shared_network_model = rc!(refcell!(SharedBandwidthNetwork::new(10.0, 0.1)));
+    let shared_network_model = rc!(refcell!(SharedBandwidthNetwork::new(
+        Fractional::from_integer(10),
+        Fractional::one() / Fractional::from_integer(10)
+    )));
     let shared_network = rc!(refcell!(Network::new(shared_network_model, sim.create_context("net"))));
     sim.add_handler("net", shared_network.clone());
 
@@ -97,13 +100,13 @@ fn main() {
 
         shared_network
             .borrow_mut()
-            .transfer_data(sender_id, receiver_id, 100.0, sender_id);
+            .transfer_data(sender_id, receiver_id, Fractional::from_integer(100), sender_id);
         shared_network
             .borrow_mut()
-            .transfer_data(sender_id, receiver_id, 1000.0, sender_id);
+            .transfer_data(sender_id, receiver_id, Fractional::from_integer(1000), sender_id);
         shared_network
             .borrow_mut()
-            .transfer_data(sender_id, receiver_id, 5.0, sender_id);
+            .transfer_data(sender_id, receiver_id, Fractional::from_integer(5), sender_id);
 
         shared_network
             .borrow_mut()
@@ -116,9 +119,12 @@ fn main() {
         info!("Data order check");
 
         for _i in 1..10 {
-            shared_network
-                .borrow_mut()
-                .transfer_data(sender_id, receiver_id, 1000.0, sender_id);
+            shared_network.borrow_mut().transfer_data(
+                sender_id,
+                receiver_id,
+                Fractional::from_integer(1000),
+                sender_id,
+            );
         }
         shared_network
             .borrow_mut()
@@ -145,14 +151,14 @@ fn main() {
         }
 
         let mut client = sim.create_context("client");
-        for i in 1..10 {
+        for i in 1..10_usize {
             client.emit(
                 Start {
-                    size: (i as f64) * 100.0,
+                    size: Fractional::from_integer(i.try_into().unwrap()) * Fractional::from_integer(100),
                     receiver_id: receivers[i - 1],
                 },
                 senders[i - 1],
-                0.0,
+                Fractional::zero(),
             );
         }
 
@@ -164,14 +170,18 @@ fn main() {
         let mut distant_receivers = Vec::new();
         let mut local_receivers = Vec::new();
 
-        shared_network.borrow_mut().add_node("localhost", 1000.0, 0.0);
+        shared_network
+            .borrow_mut()
+            .add_node("localhost", Fractional::from_integer(1000), Fractional::zero());
 
         for i in 1..10 {
             let receiver_name = format!("receiver_{}", i);
             let receiver = DataReceiver::new(shared_network.clone(), sim.create_context(&receiver_name));
             let receiver_id = sim.add_handler(&receiver_name, rc!(refcell!(receiver)));
             let receiver_host = format!("host_{}", &receiver_name);
-            shared_network.borrow_mut().add_node(&receiver_host, 1000.0, 0.0);
+            shared_network
+                .borrow_mut()
+                .add_node(&receiver_host, Fractional::from_integer(1000), Fractional::zero());
             shared_network.borrow_mut().set_location(receiver_id, &receiver_host);
             distant_receivers.push(receiver_id);
 
@@ -191,19 +201,19 @@ fn main() {
         for i in 1..10 {
             client.emit(
                 Start {
-                    size: 100.0,
+                    size: Fractional::from_integer(100),
                     receiver_id: distant_receivers[i - 1],
                 },
                 sender_id,
-                0.0,
+                Fractional::zero(),
             );
             client.emit(
                 Start {
-                    size: 100.0,
+                    size: Fractional::from_integer(100),
                     receiver_id: local_receivers[i - 1],
                 },
                 sender_id,
-                0.0,
+                Fractional::zero(),
             );
         }
 

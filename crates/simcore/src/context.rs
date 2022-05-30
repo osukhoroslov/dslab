@@ -4,7 +4,7 @@ use std::rc::Rc;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
-use crate::component::Id;
+use crate::component::{Fractional, Id};
 use crate::event::{EventData, EventId};
 use crate::state::SimulationState;
 
@@ -33,7 +33,7 @@ impl SimulationContext {
         &self.name
     }
 
-    pub fn time(&self) -> f64 {
+    pub fn time(&self) -> Fractional {
         self.sim_state.borrow().time()
     }
 
@@ -53,7 +53,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().sample_from_distribution(dist)
     }
 
-    pub fn emit<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
+    pub fn emit<T>(&mut self, data: T, dest: Id, delay: Fractional) -> EventId
     where
         T: EventData,
     {
@@ -64,10 +64,12 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id.clone(), dest, 0.)
+        self.sim_state
+            .borrow_mut()
+            .add_event(data, self.id.clone(), dest, Fractional::zero())
     }
 
-    pub fn emit_self<T>(&mut self, data: T, delay: f64) -> EventId
+    pub fn emit_self<T>(&mut self, data: T, delay: Fractional) -> EventId
     where
         T: EventData,
     {
@@ -78,10 +80,12 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
+        self.sim_state
+            .borrow_mut()
+            .add_event(data, self.id, self.id, Fractional::zero())
     }
 
-    pub fn emit_as<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn emit_as<T>(&mut self, data: T, src: Id, dest: Id, delay: Fractional) -> EventId
     where
         T: EventData,
     {

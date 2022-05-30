@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 use simcore::event::{Event, EventData};
 use simcore::handler::EventHandler;
@@ -30,7 +30,7 @@ impl Network {
         }
     }
 
-    pub fn add_node(&mut self, node_id: &str, local_bandwidth: f64, local_latency: f64) {
+    pub fn add_node(&mut self, node_id: &str, local_bandwidth: Fractional, local_latency: Fractional) {
         self.topology.add_node(node_id, local_bandwidth, local_latency)
     }
 
@@ -73,7 +73,7 @@ impl Network {
         self.ctx.emit_as(data, src, dest, latency);
     }
 
-    pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
+    pub fn transfer_data(&mut self, src: Id, dest: Id, size: Fractional, notification_dest: Id) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
             id: data_id,
@@ -86,7 +86,7 @@ impl Network {
         data_id
     }
 
-    pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
+    pub fn bandwidth(&self, src: Id, dest: Id) -> Fractional {
         self.network_model.borrow().bandwidth(src, dest)
     }
 }

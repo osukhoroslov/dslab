@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
@@ -10,7 +10,7 @@ pub struct Data {
     pub id: usize,
     pub src: Id,
     pub dest: Id,
-    pub size: f64,
+    pub size: Fractional,
     pub notification_dest: Id,
 }
 
@@ -67,8 +67,8 @@ pub trait DataOperation {
 }
 
 pub trait NetworkConfiguration {
-    fn latency(&self, src: Id, dst: Id) -> f64;
-    fn bandwidth(&self, src: Id, dst: Id) -> f64;
+    fn latency(&self, src: Id, dst: Id) -> Fractional;
+    fn bandwidth(&self, src: Id, dst: Id) -> Fractional;
 }
 
 pub trait NetworkModel: DataOperation + NetworkConfiguration {}

@@ -1,25 +1,25 @@
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 
 use crate::model::*;
 
 pub struct ConstantBandwidthNetwork {
-    bandwidth: f64,
-    latency: f64,
+    bandwidth: Fractional,
+    latency: Fractional,
 }
 
 impl ConstantBandwidthNetwork {
-    pub fn new(bandwidth: f64, latency: f64) -> ConstantBandwidthNetwork {
+    pub fn new(bandwidth: Fractional, latency: Fractional) -> ConstantBandwidthNetwork {
         return ConstantBandwidthNetwork { bandwidth, latency };
     }
 }
 
 impl NetworkConfiguration for ConstantBandwidthNetwork {
-    fn latency(&self, _src: Id, _dest: Id) -> f64 {
+    fn latency(&self, _src: Id, _dest: Id) -> Fractional {
         self.latency
     }
 
-    fn bandwidth(&self, _src: Id, _dest: Id) -> f64 {
+    fn bandwidth(&self, _src: Id, _dest: Id) -> Fractional {
         self.bandwidth
     }
 }

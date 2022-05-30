@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use downcast_rs::{impl_downcast, Downcast};
 use serde::ser::Serialize;
 
-use crate::component::Id;
+use crate::component::{Fractional, Id};
 
 pub type EventId = u64;
 
@@ -17,7 +17,7 @@ impl<T: Serialize + 'static> EventData for T {}
 
 pub struct Event {
     pub id: EventId,
-    pub time: f64,
+    pub time: Fractional,
     pub src: Id,
     pub dest: Id,
     pub data: Box<dyn EventData>,

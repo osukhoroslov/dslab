@@ -4,11 +4,11 @@ use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use crate::component::Id;
+use crate::component::{Fractional, Id};
 use crate::event::{Event, EventData, EventId};
 
 pub struct SimulationState {
-    clock: f64,
+    clock: Fractional,
     rand: Pcg64,
     events: BinaryHeap<Event>,
     canceled_events: HashSet<EventId>,
@@ -18,7 +18,7 @@ pub struct SimulationState {
 impl SimulationState {
     pub fn new(seed: u64) -> Self {
         Self {
-            clock: 0.0,
+            clock: Fractional::zero(),
             rand: Pcg64::seed_from_u64(seed),
             events: BinaryHeap::new(),
             canceled_events: HashSet::new(),
@@ -26,7 +26,7 @@ impl SimulationState {
         }
     }
 
-    pub fn time(&self) -> f64 {
+    pub fn time(&self) -> Fractional {
         self.clock
     }
 
@@ -46,7 +46,7 @@ impl SimulationState {
         dist.sample(&mut self.rand)
     }
 
-    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: Fractional) -> EventId
     where
         T: EventData,
     {

@@ -8,6 +8,7 @@ use serde::Serialize;
 use sugars::{rc, refcell};
 
 use simcore::cast;
+use simcore::component::Fractional;
 use simcore::context::SimulationContext;
 use simcore::event::Event;
 use simcore::handler::EventHandler;
@@ -23,8 +24,8 @@ const DISK_NAME: &str = "SharedDisk";
 const USER_NAME: &str = "User";
 
 const DISK_CAPACITY: u64 = 1000;
-const DISK_READ_BW: f64 = 100.;
-const DISK_WRITE_BW: f64 = 100.;
+const DISK_READ_BW: i64 = 100;
+const DISK_WRITE_BW: i64 = 100;
 
 struct User {
     disk: Rc<RefCell<SharedDisk>>,
@@ -102,8 +103,8 @@ fn main() {
 
     let disk = rc!(refcell!(SharedDisk::new(
         DISK_CAPACITY,
-        DISK_READ_BW,
-        DISK_WRITE_BW,
+        Fractional::from_integer(DISK_READ_BW),
+        Fractional::from_integer(DISK_WRITE_BW),
         sim.create_context(DISK_NAME),
     )));
     sim.add_handler(DISK_NAME, disk.clone());

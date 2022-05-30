@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+simcore = { path = "../simcore" }
 sugars = "3.0.0"

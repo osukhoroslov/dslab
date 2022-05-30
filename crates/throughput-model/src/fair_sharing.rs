@@ -3,16 +3,18 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::ThroughputModel;
+use simcore::component::Fractional;
+
+use crate::model::*;
 
 struct FairThroughputSharingModelEntry<T> {
-    position: f64,
+    position: Fractional,
     id: u64,
     item: T,
 }
 
 impl<T> FairThroughputSharingModelEntry<T> {
-    fn new(position: f64, id: u64, item: T) -> Self {
+    fn new(position: Fractional, id: u64, item: T) -> Self {
         Self { position, id, item }
     }
 }
@@ -42,58 +44,61 @@ impl<T> PartialEq for FairThroughputSharingModelEntry<T> {
 impl<T> Eq for FairThroughputSharingModelEntry<T> {}
 
 struct TimeFunction {
-    k: f64,
-    b: f64,
+    k: Fractional,
+    b: Fractional,
 }
 
 impl TimeFunction {
     fn ident() -> Self {
-        Self { k: 1., b: 0. }
+        Self {
+            k: Fractional::one(),
+            b: Fractional::zero(),
+        }
     }
 
-    fn at(&self, time: f64) -> f64 {
+    fn at(&self, time: Fractional) -> Fractional {
         self.k * time + self.b
     }
 
     fn inversed(&self) -> Self {
         Self {
-            k: 1. / self.k,
+            k: Fractional::one() / self.k,
             b: -self.b / self.k,
         }
     }
 
-    fn update(&mut self, current_time: f64, throughput_ratio: f64) {
+    fn update(&mut self, current_time: Fractional, throughput_ratio: Fractional) {
         self.k *= throughput_ratio;
-        self.b = self.b * throughput_ratio + current_time * (1. - throughput_ratio);
+        self.b = self.b * throughput_ratio + current_time * (Fractional::one() - throughput_ratio);
     }
 }
 
 pub struct FairThroughputSharingModel<T> {
-    throughput_function: Box<dyn Fn(usize) -> f64>,
+    throughput_function: Box<dyn Fn(usize) -> Fractional>,
     time_fn: TimeFunction,
     entries: BinaryHeap<FairThroughputSharingModelEntry<T>>,
     next_id: u64,
-    last_throughput_per_item: f64,
+    last_throughput_per_item: Fractional,
 }
 
 impl<T> FairThroughputSharingModel<T> {
-    pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |n| throughput / n as f64))
+    pub fn with_fixed_throughput(throughput: Fractional) -> Self {
+        Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
-    pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> f64>) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> Fractional>) -> Self {
         Self {
             throughput_function,
             time_fn: TimeFunction::ident(),
             entries: BinaryHeap::new(),
             next_id: 0,
-            last_throughput_per_item: 0.,
+            last_throughput_per_item: Fractional::zero(),
         }
     }
 }
 
 impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, current_time: Fractional, volume: Fractional, item: T) {
         if self.entries.is_empty() {
             self.last_throughput_per_item = (self.throughput_function)(1);
             let finish_time = current_time + volume / self.last_throughput_per_item;
@@ -104,7 +109,9 @@ impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
                 item,
             ));
         } else {
-            let new_throughput_per_item = (self.throughput_function)(self.entries.len() + 1);
+            let new_count = self.entries.len() + 1;
+            let new_throughput_per_item =
+                (self.throughput_function)(new_count) / Fractional::from_integer(new_count.try_into().unwrap());
             self.time_fn
                 .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
             self.last_throughput_per_item = new_throughput_per_item;
@@ -118,19 +125,26 @@ impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
         self.next_id += 1;
     }
 
-    fn pop(&mut self) -> Option<(f64, T)> {
+    fn pop(&mut self) -> Option<(Fractional, T)> {
         if let Some(entry) = self.entries.pop() {
             let current_time = self.time_fn.at(entry.position);
-            let new_throughput_per_item = (self.throughput_function)(self.entries.len());
-            self.time_fn
-                .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
-            self.last_throughput_per_item = new_throughput_per_item;
+            let new_count = self.entries.len();
+            if new_count > 0 {
+                let new_throughput_per_item =
+                    (self.throughput_function)(new_count) / Fractional::from_integer(new_count.try_into().unwrap());
+                self.time_fn
+                    .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
+                self.last_throughput_per_item = new_throughput_per_item;
+            } else {
+                self.time_fn = TimeFunction::ident();
+                self.last_throughput_per_item = Fractional::zero();
+            }
             return Some((current_time, entry.item));
         }
         None
     }
 
-    fn next_time(&self) -> Option<(f64, &T)> {
+    fn next_time(&self) -> Option<(Fractional, &T)> {
         self.entries
             .peek()
             .map(|entry| (self.time_fn.at(entry.position), &entry.item))

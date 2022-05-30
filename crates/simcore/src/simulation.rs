@@ -7,7 +7,7 @@ use log::{debug, log_enabled, trace};
 use serde_json::json;
 use serde_type_name::type_name;
 
-use crate::component::Id;
+use crate::component::{Fractional, Id};
 use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
@@ -85,7 +85,7 @@ impl Simulation {
         id
     }
 
-    pub fn time(&self) -> f64 {
+    pub fn time(&self) -> Fractional {
         self.sim_state.borrow().time()
     }
 
@@ -132,7 +132,7 @@ impl Simulation {
         while self.step() {}
     }
 
-    pub fn step_for_duration(&mut self, duration: f64) {
+    pub fn step_for_duration(&mut self, duration: Fractional) {
         let end_time = self.sim_state.borrow().time() + duration;
         loop {
             if let Some(event) = self.sim_state.borrow().peek_event() {

@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use simcore::component::Id;
+use simcore::component::{Fractional, Id};
 use simcore::context::SimulationContext;
 
 use crate::model::*;
@@ -23,7 +23,7 @@ impl Topology {
         }
     }
 
-    pub fn add_node(&mut self, node_id: &str, local_bandwidth: f64, local_latency: f64) {
+    pub fn add_node(&mut self, node_id: &str, local_bandwidth: Fractional, local_latency: Fractional) {
         let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
         self.nodes.insert(
             node_id.to_string(),
@@ -75,7 +75,7 @@ impl Topology {
             .send_data(data, ctx)
     }
 
-    pub fn get_local_latency(&mut self, src: Id, dst: Id) -> f64 {
+    pub fn get_local_latency(&mut self, src: Id, dst: Id) -> Fractional {
         let node = self.get_location(src).unwrap();
         self.get_node_info(node).unwrap().local_network.latency(src, dst)
     }
