@@ -10,8 +10,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 find_package(SimGrid 3.31 REQUIRED)
 
-include_directories(${SimGrid_INCLUDE_DIR})
-
 message(STATUS "SimGrid_PATH: ${SimGrid_PATH}")
 message(STATUS "SimGrid_INCLUDE_DIR: ${SimGrid_INCLUDE_DIR}")
 message(STATUS "SimGrid_LIBRARY: ${SimGrid_LIBRARY}")
