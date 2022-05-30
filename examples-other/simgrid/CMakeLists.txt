@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
-project(MasterWorkers)
+project(SimGridExamples)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -18,5 +18,10 @@ message(STATUS "SimGrid_LIBRARY: ${SimGrid_LIBRARY}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_executable(master-workers master-workers.cpp)
+add_executable(master-workers master-workers/master-workers.cpp)
 target_link_libraries(master-workers ${SimGrid_LIBRARY})
+target_include_directories(master-workers PUBLIC ${SimGrid_INCLUDE_DIR})
+
+add_executable(ping-pong ping-pong/ping-pong.cpp)
+target_link_libraries(ping-pong ${SimGrid_LIBRARY})
+target_include_directories(ping-pong PUBLIC ${SimGrid_INCLUDE_DIR})
