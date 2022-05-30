@@ -21,25 +21,25 @@ make
 2 processes with 1 peer, local, 1 iteration:
 
 ```
-bin/ping-pong 2 1 0 0 1 platform.xml --log=ping_pong_app.thres:debug
+bin/ping-pong 2 1 0 0 1 platform.xml --log=ping_pong_app.thres:info
 ```
 
 2 processes with 1 peer, local, asymmetric mode, 1 iteration:
 
 ```
-bin/ping-pong 2 1 1 0 1 platform.xml --log=ping_pong_app.thres:debug
+bin/ping-pong 2 1 1 0 1 platform.xml --log=ping_pong_app.thres:info
 ```
 
 2 processes with 1 peer, distributed, 1 iteration:
 
 ```
-bin/ping-pong 2 1 0 1 1 platform.xml --log=ping_pong_app.thres:debug
+bin/ping-pong 2 1 0 1 1 platform.xml --log=ping_pong_app.thres:info
 ```
 
 2 processes with 1 peer, asymmetric mode, distributed, 1 iteration:
 
 ```
-bin/ping-pong 2 1 1 1 1 platform.xml --log=ping_pong_app.thres:debug
+bin/ping-pong 2 1 1 1 1 platform.xml --log=ping_pong_app.thres:info
 ```
 
 1000 processes with 10 random peers, local, 100 iterations:

@@ -5,15 +5,10 @@
         <host id="host1" speed="1Gf" />
         <host id="host2" speed="1Gf" />
 
-        <link id="loopback1" latency="0" bandwidth="100GBps"/>
-        <link id="loopback2" latency="0" bandwidth="100GBps"/>
-        <!-- FATPIPE is slower!
         <link id="loopback1" latency="0" bandwidth="100GBps" sharing_policy="FATPIPE"/>
         <link id="loopback2" latency="0" bandwidth="100GBps" sharing_policy="FATPIPE"/>
-        -->
-        <link id="netlink" latency="10ms" bandwidth="100Gbps" />
+        <link id="netlink" latency="10ms" bandwidth="100Gbps" sharing_policy="FATPIPE"/>
 
-        <!-- Loopback links significantly improve local mode performance -->
         <route src="host1" dst="host1">
             <link_ctn id="loopback1" />
         </route>

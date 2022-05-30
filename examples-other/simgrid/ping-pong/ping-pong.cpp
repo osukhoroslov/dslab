@@ -31,6 +31,7 @@ void Message::destroy(void* message) {
 }
 
 static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes, bool asymmetric) {
+    in->set_receiver(sg4::Actor::self());
     int active_proc_count = process_mailboxes.size();
     for(auto const& mailbox: process_mailboxes) {
         auto* start = new Message(MessageType::START, sg4::Engine::get_clock(), in);
@@ -40,12 +41,14 @@ static void root(sg4::Mailbox* in, std::vector<sg4::Mailbox*> process_mailboxes,
         while (active_proc_count > 0) {
             auto* msg = in->get<Message>();
             xbt_assert(msg->type == MessageType::COMPLETED);
+            XBT_INFO("Received COMPLETED");
             delete msg;
             --active_proc_count;
         }
         for(auto const& mailbox: process_mailboxes) {
             auto* stop = new Message(MessageType::STOP, sg4::Engine::get_clock(), in);
             mailbox->put_init(stop, 1)->detach(Message::destroy);
+            XBT_INFO("Sent STOP");
         }
     }
 }
@@ -60,7 +63,7 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
     xbt_assert(msg->type == MessageType::START);
     sg4::Mailbox* root = msg->from;
     delete msg;
-    XBT_DEBUG("Started");
+    XBT_INFO("Started");
 
     unsigned int peer_count = peers.size();
     int pings_to_send = iterations;
@@ -72,33 +75,33 @@ static void process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers, 
             sg4::Mailbox* out = (peer_count == 1) ? peers[0] : peers[random.uniform_int(0, peer_count-1)];
             auto* ping = new Message(MessageType::PING, sg4::Engine::get_clock(), in);
             out->put_init(ping, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
-            XBT_DEBUG("Sent PING");
+            XBT_INFO("Sent PING");
             pings_to_send -= 1;
             wait_reply = true;
         }
 
         msg = in->get<Message>();
         if (msg->type == MessageType::PING) {
-            XBT_DEBUG("Received PING");
+            XBT_INFO("Received PING");
             auto* pong = new Message(MessageType::PONG, sg4::Engine::get_clock(), in);
             msg->from->put_init(pong, MESSAGE_PAYLOAD_SIZE)->detach(Message::destroy); // out->put_async is very slow
-            XBT_DEBUG("Sent PONG");
+            XBT_INFO("Sent PONG");
         } else if (msg->type == MessageType::PONG) {
-            XBT_DEBUG("Received PONG");
+            XBT_INFO("Received PONG");
             wait_reply = false;
             if (pings_to_send == 0) {
-                XBT_DEBUG("Completed");
+                XBT_INFO("Completed");
                 auto* completed = new Message(MessageType::COMPLETED, sg4::Engine::get_clock(), in);
                 root->put(completed, 1);
             }
         } else if (msg->type == MessageType::STOP) {
-            XBT_DEBUG("Received STOP");
+            XBT_INFO("Received STOP");
             stopped = true;
         }
         delete msg;
     }
     xbt_assert(pings_to_send == 0);
-    XBT_DEBUG("Stopped");
+    XBT_INFO("Stopped");
 }
 
 static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* out, int iterations) {
@@ -107,23 +110,23 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
     auto* msg = in->get<Message>();
     xbt_assert(msg->type == MessageType::START);
     delete msg;
-    XBT_DEBUG("Started");
+    XBT_INFO("Started");
 
     while (iterations > 0) {
         if (is_pinger) {
             auto* ping = new Message(MessageType::PING, sg4::Engine::get_clock(), in);
             out->put(ping, MESSAGE_PAYLOAD_SIZE);
-            XBT_DEBUG("Sent PING");
+            XBT_INFO("Sent PING");
             auto* pong = in->get<Message>();
-            XBT_DEBUG("Received PONG");
+            XBT_INFO("Received PONG");
             delete pong;
             iterations -= 1;
         } else {
             auto* ping = in->get<Message>();
-            XBT_DEBUG("Received PING");
+            XBT_INFO("Received PING");
             auto* pong = new Message(MessageType::PONG, sg4::Engine::get_clock(), in);
             ping->from->put(pong, MESSAGE_PAYLOAD_SIZE);
-            XBT_DEBUG("Sent PONG");
+            XBT_INFO("Sent PONG");
             delete ping;
             --iterations;
         }
@@ -132,6 +135,12 @@ static void process_asymmetric(bool is_pinger, sg4::Mailbox* in, sg4::Mailbox* o
 
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
+    // use simple network config
+    sg4::Engine::set_config("network/latency-factor:1");
+    sg4::Engine::set_config("network/bandwidth-factor:1");
+    sg4::Engine::set_config("network/weight-S:0.0");
+    // disabling cross-traffic significantly improves simulation speed for large cases
+    sg4::Engine::set_config("network/crosstraffic:0");
     simgrid::xbt::random::XbtRandom random(123);
 
     xbt_assert(argc == 7, "Usage: %s PROC_COUNT PEER_COUNT ASYMMETRIC DISTRIBUTED ITERATIONS platform_file.xml", argv[0]);
