@@ -6,13 +6,13 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::log_debug;
 
-use crate::core::common::AllocationVerdict;
+use crate::core::common::{Allocation, AllocationVerdict};
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
-use crate::core::resource_pool::{Allocation, ResourcePoolState};
+use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm::VirtualMachine;
 
 pub struct PlacementStore {
@@ -121,7 +121,6 @@ impl PlacementStore {
 
     fn on_allocation_released(&mut self, alloc: Allocation, host_id: u32) {
         self.pool_state.release(&alloc, host_id);
-
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationReleased {
