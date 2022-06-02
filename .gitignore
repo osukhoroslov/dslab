@@ -11,3 +11,6 @@ Cargo.lock
 # Traces
 examples/cloud-plugin-traces/vm_instances.csv
 examples/cloud-plugin-traces/vm_types.csv
+
+# Maven
+examples-other/vetand_cloudsim_benchmark/target
