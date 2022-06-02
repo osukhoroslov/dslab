@@ -7,6 +7,7 @@ use sugars::{rc, refcell};
 use simcore::context::SimulationContext;
 use simcore::simulation::Simulation;
 
+use crate::core::common::Allocation;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
@@ -14,9 +15,8 @@ use crate::core::host_manager::SendHostState;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
-use crate::core::resource_pool::Allocation;
 use crate::core::scheduler::Scheduler;
-use crate::core::vm::VirtualMachine;
+use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 
@@ -26,8 +26,6 @@ pub struct CloudSimulation {
     placement_store: Rc<RefCell<PlacementStore>>,
     placement_store_id: u32,
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
-    vms: BTreeMap<u32, VirtualMachine>,
-    allocations: HashMap<u32, Allocation>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     sim: Simulation,
@@ -52,8 +50,6 @@ impl CloudSimulation {
             placement_store,
             placement_store_id,
             hosts: BTreeMap::new(),
-            vms: BTreeMap::new(),
-            allocations: HashMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
             sim,
@@ -122,12 +118,7 @@ impl CloudSimulation {
             memory_usage,
         };
         let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
-
-        self.vms.insert(id, vm.clone());
-        self.allocations.insert(id, alloc.clone());
-
-        self.ctx
-            .emit_now(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id);
+        self.ctx.emit_now(AllocationRequest { alloc, vm }, scheduler_id);
     }
 
     pub fn spawn_vm_with_delay(
@@ -147,27 +138,18 @@ impl CloudSimulation {
             memory_usage,
         };
         let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
-
-        self.vms.insert(id, vm.clone());
-        self.allocations.insert(id, alloc.clone());
-
-        self.ctx
-            .emit(AllocationRequest { alloc, vm: vm.clone() }, scheduler_id, delay);
+        self.ctx.emit(AllocationRequest { alloc, vm }, scheduler_id, delay);
     }
 
-    pub fn migrate_vm_to_host(&mut self, vm_id: u32, destination_host_id: u32) {
-        let alloc = self.allocations.get(&vm_id).unwrap();
-        let mut vm = self.vms.get_mut(&vm_id).unwrap();
-        vm.lifetime -= self.ctx.time() - vm.start_time;
-        let source_host = self.monitoring.borrow_mut().find_host_by_vm(vm_id);
-
+    pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
+        let mon = self.monitoring.borrow();
+        let source_host = mon.find_host_by_vm(vm_id);
+        let mut vm = mon.get_vm(source_host, vm_id);
+        let alloc = mon.get_allocation(source_host, vm_id);
+        vm.set_status(VmStatus::Initializing);
         self.ctx.emit(
-            MigrationRequest {
-                source_host: source_host.clone(),
-                alloc: alloc.clone(),
-                vm: vm.clone(),
-            },
-            destination_host_id,
+            MigrationRequest { source_host, alloc, vm },
+            target_host,
             self.sim_config.message_delay,
         );
     }
@@ -208,5 +190,9 @@ impl CloudSimulation {
 
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
+    }
+
+    pub fn sim_config(&self) -> Rc<SimulationConfig> {
+        self.sim_config.clone()
     }
 }
