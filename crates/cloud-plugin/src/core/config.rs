@@ -9,6 +9,8 @@ pub struct SimulationConfig {
     pub vm_stop_duration: f64,        // vm deallocation duration
     pub allow_vm_overcommit: bool,    // pack VM by real resource consumption, not SLA
     pub network_throughput: u64,      // to define VM migration duration
+    pub simulation_length: f64,       // length of simulation (for public datasets only)
+    pub number_of_hosts: u32,         // number of hosts in datacenter (for public datasets only)
 }
 
 impl SimulationConfig {
@@ -21,6 +23,8 @@ impl SimulationConfig {
             vm_stop_duration: 0.5,
             allow_vm_overcommit: false,
             network_throughput: 1,
+            simulation_length: 0.,
+            number_of_hosts: 1,
         }
     }
 
@@ -36,6 +40,8 @@ impl SimulationConfig {
             vm_stop_duration: data.vm_stop_duration,
             allow_vm_overcommit: data.allow_vm_overcommit,
             network_throughput: data.network_throughput,
+            simulation_length: data.simulation_length,
+            number_of_hosts: data.number_of_hosts,
         }
     }
 }

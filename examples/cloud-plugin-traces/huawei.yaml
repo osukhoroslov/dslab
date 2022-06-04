@@ -5,3 +5,5 @@ vm_start_duration: 120
 vm_stop_duration: 60
 allow_vm_overcommit: false
 network_throughput: 10
+simulation_length: 432000.0
+number_of_hosts: 60

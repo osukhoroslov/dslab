@@ -12,6 +12,7 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
+use crate::core::load_model::ConstLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
@@ -19,6 +20,7 @@ use crate::core::scheduler::Scheduler;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
+use crate::extensions::dataset_reader::DatasetReader;
 
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
@@ -162,6 +164,27 @@ impl CloudSimulation {
         let id = self.sim.add_handler(name, component.clone());
         self.components.insert(id, component.clone());
         component
+    }
+
+    pub fn spawn_vms_from_dataset(&mut self, scheduler_id: u32, dataset: &mut dyn DatasetReader) {
+        loop {
+            let request_opt = dataset.get_next_vm();
+            if request_opt.is_none() {
+                break;
+            }
+            let request = request_opt.unwrap();
+
+            self.spawn_vm_with_delay(
+                request.id,
+                request.cpu_usage,
+                request.memory_usage,
+                request.lifetime,
+                Box::new(ConstLoadModel::new(1.0)),
+                Box::new(ConstLoadModel::new(1.0)),
+                scheduler_id,
+                request.start_time,
+            );
+        }
     }
 
     pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {

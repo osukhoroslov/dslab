@@ -11,6 +11,7 @@ Cargo.lock
 # Traces
 examples/cloud-plugin-traces/vm_instances.csv
 examples/cloud-plugin-traces/vm_types.csv
+examples/cloud-plugin-traces/Huawei-East-1.csv
 
 # Maven
 examples-other/vetand_cloudsim_benchmark/target
