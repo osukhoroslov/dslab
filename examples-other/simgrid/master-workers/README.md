@@ -20,9 +20,8 @@ CM02 network model:
 bin/master-workers 100 10000 --log=root.thres:critical --cfg=network/model:CM02
 ```
 
-Constant network model (requires commenting all code related to links):
+Constant network model (all transfers take 1 time unit, requires commenting all code related to links!):
 
 ```
 bin/master-workers 100 10000 --log=root.thres:critical --cfg=network/model:Constant
 ```
-

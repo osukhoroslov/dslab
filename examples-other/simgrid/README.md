@@ -54,4 +54,3 @@ perf script | ~/tools/FlameGraph/stackcollapse-perf.pl > out.perf-folded
 ```
 ~/tools/FlameGraph/flamegraph.pl out.perf-folded > flamegraph.svg
 ```
-

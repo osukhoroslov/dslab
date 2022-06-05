@@ -32,7 +32,7 @@ bin/ping-pong 2 1 1 1 1 ../../ping-pong/platform.xml --log=ping_pong_app.thres:i
 bin/ping-pong 1000 10 0 0 100 ../../ping-pong/platform.xml
 ```
 
-Constant network model:
+Constant network model (all communications take 1 time unit):
 
 ```
 bin/ping-pong 1000 10 0 0 1000 ../../ping-pong/platform-constant.xml --log=root.thres:critical --cfg=network/model:Constant
