@@ -1,0 +1,8 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
+<platform version="4.1">
+    <zone id="zone0" routing="None">
+        <host id="host1" speed="1Gf" />
+        <host id="host2" speed="1Gf" />
+    </zone>
+</platform>
