@@ -49,7 +49,7 @@ impl Host {
             id,
             invoker,
             container_manager: ContainerManager::new(resources, ctx.clone()),
-            cpu: CPU::new(cores, share_manager, ctx.clone(), id),
+            cpu: CPU::new(cores, share_manager, ctx.clone()),
             function_registry,
             invocation_registry,
             coldstart,

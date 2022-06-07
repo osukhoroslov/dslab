@@ -1,6 +1,7 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+
+use indexmap::{IndexMap, IndexSet};
 
 use dslab_core::context::SimulationContext;
 
@@ -22,7 +23,7 @@ pub struct Container {
     pub id: u64,
     pub deployment_time: f64,
     pub app_id: u64,
-    pub invocations: HashSet<u64>,
+    pub invocations: IndexSet<u64>,
     pub resources: ResourceConsumer,
     pub started_invocations: u64,
     pub last_change: f64,
@@ -47,10 +48,10 @@ impl Container {
 pub struct ContainerManager {
     active_invocations: u64,
     resources: ResourceProvider,
-    containers: HashMap<u64, Container>,
-    containers_by_app: HashMap<u64, HashSet<u64>>,
+    containers: IndexMap<u64, Container>,
+    containers_by_app: IndexMap<u64, IndexSet<u64>>,
     container_counter: Counter,
-    reservations: HashMap<u64, Vec<InvocationRequest>>,
+    reservations: IndexMap<u64, Vec<InvocationRequest>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -59,10 +60,10 @@ impl ContainerManager {
         Self {
             active_invocations: 0,
             resources,
-            containers: HashMap::new(),
-            containers_by_app: HashMap::new(),
+            containers: IndexMap::new(),
+            containers_by_app: IndexMap::new(),
             container_counter: Counter::default(),
-            reservations: HashMap::new(),
+            reservations: IndexMap::new(),
             ctx,
         }
     }
@@ -95,7 +96,7 @@ impl ContainerManager {
         self.containers.get_mut(&id)
     }
 
-    pub fn get_containers(&mut self) -> &mut HashMap<u64, Container> {
+    pub fn get_containers(&mut self) -> &mut IndexMap<u64, Container> {
         &mut self.containers
     }
 
@@ -156,7 +157,7 @@ impl ContainerManager {
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);
         if !self.containers_by_app.contains_key(&app.id) {
-            self.containers_by_app.insert(app.id, HashSet::new());
+            self.containers_by_app.insert(app.id, IndexSet::new());
         }
         self.containers_by_app.get_mut(&app.id).unwrap().insert(cont_id);
         self.ctx
@@ -167,18 +168,18 @@ impl ContainerManager {
 }
 
 pub struct PossibleContainerIterator<'a> {
-    inner: Option<std::collections::hash_set::Iter<'a, u64>>,
-    containers: &'a HashMap<u64, Container>,
-    reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
+    inner: Option<indexmap::set::Iter<'a, u64>>,
+    containers: &'a IndexMap<u64, Container>,
+    reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
     limit: usize,
     allow_deploying: bool,
 }
 
 impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
-        inner: Option<std::collections::hash_set::Iter<'a, u64>>,
-        containers: &'a HashMap<u64, Container>,
-        reserve: &'a HashMap<u64, Vec<InvocationRequest>>,
+        inner: Option<indexmap::set::Iter<'a, u64>>,
+        containers: &'a IndexMap<u64, Container>,
+        reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
         limit: usize,
         allow_deploying: bool,
     ) -> Self {
@@ -197,13 +198,13 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(inner) = self.inner.as_mut() {
             while let Some(id) = inner.next() {
-                let c = self.containers.get(&id).unwrap();
+                let c = self.containers.get(id).unwrap();
                 if c.status != ContainerStatus::Deploying && c.invocations.len() < self.limit {
                     return Some(c);
                 }
                 if c.status == ContainerStatus::Deploying
                     && self.allow_deploying
-                    && (!self.reserve.contains_key(&id) || self.reserve.get(&id).unwrap().len() < self.limit)
+                    && (!self.reserve.contains_key(id) || self.reserve.get(id).unwrap().len() < self.limit)
                 {
                     return Some(c);
                 }

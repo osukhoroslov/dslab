@@ -5,10 +5,9 @@
 /// We assume that CPU sharing is fair: each invocation makes progress according to its share.
 use std::boxed::Box;
 use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
-
-use rand::prelude::*;
-use rand_pcg::Pcg64;
 
 use simcore::context::SimulationContext;
 use simcore::event::EventId;
@@ -16,125 +15,45 @@ use simcore::event::EventId;
 use crate::container::{Container, ContainerManager};
 use crate::event::InvocationEndEvent;
 use crate::invocation::Invocation;
+use crate::util::KahanSum;
 
-/// treap node that contains invocation workload
-/// workload is defined as duration * share / cores
-/// and workload completion speed is defined as share / max(sum share, cores)
-struct InvNode {
-    /// invocation id
-    pub id: u64,
-    /// workload/share of this invocation
-    pub remain: f64,
-    /// minimum workload/share of whole subtree
-    pub next: (f64, u64),
-    /// time delta to push into children
-    pub push: f64,
-    /// treap priority
-    pub prior: u64,
-    pub l: Option<Box<InvNode>>,
-    pub r: Option<Box<InvNode>>,
+#[derive(Clone)]
+pub struct WorkItem {
+    finish: f64,
+    id: u64,
 }
 
-impl InvNode {
-    pub fn new(id: u64, remain: f64, prior: u64) -> Self {
-        Self {
-            id,
-            remain,
-            next: (remain, id),
-            push: 0.,
-            prior,
-            l: None,
-            r: None,
-        }
-    }
-
-    pub fn shift_time(&mut self, t: f64) {
-        self.remain -= t;
-        self.next.0 -= t;
-        self.push += t;
-    }
-
-    pub fn push(&mut self) {
-        if self.push > 0.0 {
-            if let Some(l) = &mut self.l {
-                l.shift_time(self.push);
-            }
-            if let Some(r) = &mut self.r {
-                r.shift_time(self.push);
-            }
-            self.push = 0.0;
-        }
-    }
-
-    pub fn recalc(&mut self) {
-        self.next = (self.remain, self.id);
-        if let Some(l) = &self.l {
-            if l.next.0 < self.next.0 {
-                self.next = l.next;
-            }
-        }
-        if let Some(r) = &self.r {
-            if r.next.0 < self.next.0 {
-                self.next = r.next;
-            }
-        }
+impl PartialEq for WorkItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.finish == other.finish && self.id == other.id
     }
 }
 
-fn inv_node_split(mut node: Option<Box<InvNode>>, id: u64) -> (Option<Box<InvNode>>, Option<Box<InvNode>>) {
-    if let Some(mut v) = node.take() {
-        v.push();
-        if id <= v.id {
-            let (x, y) = inv_node_split(v.l, id);
-            v.l = y;
-            v.recalc();
-            return (x, Some(v));
-        } else {
-            let (x, y) = inv_node_split(v.r, id);
-            v.r = x;
-            v.recalc();
-            return (Some(v), y);
-        }
+impl Eq for WorkItem {}
+
+impl PartialOrd for WorkItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
-    (None, None)
 }
 
-fn inv_node_merge(mut l: Option<Box<InvNode>>, mut r: Option<Box<InvNode>>) -> Option<Box<InvNode>> {
-    if let Some(v) = &mut l {
-        v.push();
-    }
-    if let Some(v) = &mut r {
-        v.push();
-    }
-    if l.is_none() || r.is_none() {
-        if let Some(v) = l {
-            return Some(v);
-        }
-        if let Some(v) = r {
-            return Some(v);
-        }
-        return None;
-    }
-    let mut v = l.unwrap();
-    let mut u = r.unwrap();
-    if v.prior > u.prior {
-        v.r = inv_node_merge(v.r, Some(u));
-        v.recalc();
-        Some(v)
-    } else {
-        u.l = inv_node_merge(Some(v), u.l);
-        u.recalc();
-        Some(u)
+impl Ord for WorkItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.finish
+            .partial_cmp(&other.finish)
+            .unwrap()
+            .then(self.id.cmp(&other.id))
     }
 }
 
 /// ProgressComputer computes invocation progress
 pub struct ProgressComputer {
-    treap: Option<Box<InvNode>>,
-    treap_rng: Pcg64,
+    work_tree: BTreeSet<WorkItem>,
+    work_map: HashMap<u64, WorkItem>,
+    work_total: KahanSum,
     cores: f64,
     ctx: Rc<RefCell<SimulationContext>>,
-    load: f64,
+    load: KahanSum,
     last_update: f64,
     end_event: Option<EventId>,
 }
@@ -144,29 +63,32 @@ impl ProgressComputer {
         if let Some(evt) = self.end_event {
             self.ctx.borrow_mut().cancel_event(evt);
         }
-        if let Some(v) = &self.treap {
-            let (t, id) = v.next.clone();
-            self.end_event = Some(
-                self.ctx
-                    .borrow_mut()
-                    .emit_self(InvocationEndEvent { id }, t * f64::max(self.cores, self.load)),
-            );
+        if !self.work_tree.is_empty() {
+            let it = self.work_tree.iter().next().unwrap().clone();
+            let delta = it.finish - self.work_total.get();
+            self.end_event = Some(self.ctx.borrow_mut().emit_self(
+                InvocationEndEvent { id: it.id },
+                delta * f64::max(self.cores, self.load.get()),
+            ));
         } else {
             self.end_event = None;
         }
     }
 
     fn remove_invocation(&mut self, id: u64) -> f64 {
-        let (l, tmp) = inv_node_split(self.treap.take(), id);
-        let (v, r) = inv_node_split(tmp, id + 1);
-        self.treap = inv_node_merge(l, r);
-        v.unwrap().remain
+        let it = self.work_map.remove(&id).unwrap();
+        self.work_tree.remove(&it);
+        let delta = it.finish - self.work_total.get();
+        delta
     }
 
     fn insert_invocation(&mut self, id: u64, remain: f64) {
-        let (l, r) = inv_node_split(self.treap.take(), id);
-        let v = Box::new(InvNode::new(id, remain, self.treap_rng.gen::<u64>()));
-        self.treap = inv_node_merge(inv_node_merge(l, Some(v)), r);
+        let it = WorkItem {
+            finish: self.work_total.get() + remain,
+            id,
+        };
+        self.work_map.insert(id, it.clone());
+        self.work_tree.insert(it);
     }
 
     fn transform_time(&self, time: f64, share: f64, forward: bool) -> f64 {
@@ -178,9 +100,8 @@ impl ProgressComputer {
     }
 
     fn shift_time(&mut self, time: f64) {
-        if let Some(v) = &mut self.treap {
-            v.shift_time((time - self.last_update) / f64::max(self.cores, self.load));
-        }
+        self.work_total
+            .add((time - self.last_update) / f64::max(self.cores, self.load.get()));
     }
 
     pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
@@ -194,7 +115,7 @@ impl ProgressComputer {
                 }
             }
         } else {
-            self.load += container.cpu_share;
+            self.load.add(container.cpu_share);
         }
         self.insert_invocation(
             invocation.id,
@@ -210,8 +131,8 @@ impl ProgressComputer {
 
     pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
         self.end_event = None;
-        self.remove_invocation(invocation.id);
         self.shift_time(time);
+        self.remove_invocation(invocation.id);
         if container.invocations.len() > 0 {
             let cnt = container.invocations.len() as f64;
             for i in container.invocations.iter().copied() {
@@ -219,7 +140,7 @@ impl ProgressComputer {
                 self.insert_invocation(i, remain * cnt / (cnt + 1.0))
             }
         } else {
-            self.load -= container.cpu_share;
+            self.load.add(-container.cpu_share);
         }
         self.last_update = time;
         self.reschedule_end();
@@ -246,18 +167,14 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(
-        cores: u32,
-        share_manager: Option<Box<dyn ShareManager>>,
-        ctx: Rc<RefCell<SimulationContext>>,
-        random_seed: u64,
-    ) -> Self {
+    pub fn new(cores: u32, share_manager: Option<Box<dyn ShareManager>>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         let progress_computer = ProgressComputer {
-            treap: None,
-            treap_rng: Pcg64::seed_from_u64(random_seed),
+            work_tree: Default::default(),
+            work_map: Default::default(),
+            work_total: Default::default(),
             cores: cores as f64,
             ctx,
-            load: 0.,
+            load: Default::default(),
             last_update: 0.,
             end_event: None,
         };
