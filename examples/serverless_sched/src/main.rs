@@ -58,22 +58,13 @@ fn print_results(stats: Stats, name: &str) {
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
     println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!("mean absolute slowdown = {}", stats.abs_slowdown.mean());
     println!("mean relative slowdown = {}", stats.rel_slowdown.mean());
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let trace = process_azure_trace(Path::new(&args[1]), 200000);
-    let trace2 = process_azure_trace(Path::new(&args[1]), 200000);
-    assert!(trace.app_records.len() == trace2.app_records.len());
-    for i in 0..trace.app_records.len() {
-        let a = trace.app_records[i].clone();
-        let b = trace2.app_records[i].clone();
-        if a.mem != b.mem {
-            println!("mismatch {} {}", a.mem, b.mem);
-            break;
-        }
-    }
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
