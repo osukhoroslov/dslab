@@ -145,11 +145,8 @@ impl VmMigrator {
 
                 let source_state = host_states.get(&source_host).unwrap();
                 let cpu_usage_source = source_state.cpu_load * (source_state.cpu_total as f64);
-                let memory_usage_source = source_state.memory_load * (source_state.memory_total as f64);
                 let cpu_load_new_source =
                     (cpu_usage_source - allocation.cpu_usage as f64) / (source_state.cpu_total as f64);
-                let memory_load_new_source =
-                    (memory_usage_source - allocation.memory_usage as f64) / (source_state.memory_total as f64);
 
                 let cpu_usage_target = state.cpu_load * (state.cpu_total as f64);
                 let memory_usage_target = state.memory_load * (state.memory_total as f64);
