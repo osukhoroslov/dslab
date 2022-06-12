@@ -39,29 +39,25 @@ impl HuaweiDatasetReader {
         }
     }
 
-    fn parse_vm_events(&mut self, file_name: &str) {
-        let mut rdr = csv::Reader::from_reader(File::open(file_name).unwrap());
-        for record in rdr.deserialize() {
-            let vm_event: VMEvent = record.unwrap();
+    pub fn parse(&mut self, vm_events_file_name: String) {
+        let mut reader = csv::Reader::from_reader(File::open(vm_events_file_name).unwrap());
+        let mut active_vms_count = 0;
+        let mut end_times = HashMap::new();
 
-            if vm_event.is_finish == 0 && vm_event.time > self.simulation_length {
+        for record in reader.deserialize() {
+            let vm_event: VMEvent = record.unwrap();
+            if vm_event.time > self.simulation_length {
                 continue;
+            }
+            if vm_event.is_finish == 0 {
+                active_vms_count += 1;
+            }
+            if vm_event.is_finish == 1 {
+                end_times.insert(vm_event.vm_id, vm_event.time);
             }
             self.vm_events.push(vm_event);
         }
-
-        info!("Got {} active VMs", self.vm_events.len() / 2);
-    }
-
-    pub fn parse(&mut self, vm_events_file_name: &str) {
-        self.parse_vm_events(vm_events_file_name);
-
-        let mut end_times = HashMap::new();
-        for event in &self.vm_events {
-            if event.is_finish == 1 {
-                end_times.insert(event.vm_id, event.time);
-            }
-        }
+        info!("Read {} VM instances", active_vms_count);
 
         for event in &self.vm_events {
             if event.is_finish == 0 {
@@ -79,13 +75,11 @@ impl HuaweiDatasetReader {
 
 impl DatasetReader for HuaweiDatasetReader {
     fn get_next_vm(&mut self) -> Option<VMRequest> {
-        loop {
-            if self.current_vm >= self.vm_requests.len() {
-                return None;
-            }
-            self.current_vm += 1;
-
-            return Some(self.vm_requests[self.current_vm - 1].clone());
+        if self.current_vm >= self.vm_requests.len() {
+            return None;
         }
+        self.current_vm += 1;
+
+        return Some(self.vm_requests[self.current_vm - 1].clone());
     }
 }

@@ -51,19 +51,23 @@ impl AzureDatasetReader {
         }
     }
 
-    fn parse_vm_types(&mut self, file_name: &str) {
-        let mut rdr = csv::Reader::from_reader(File::open(file_name).unwrap());
-        for record in rdr.deserialize() {
+    pub fn parse(&mut self, vm_types_file_name: String, vm_instances_file_name: String) {
+        self.parse_vm_types(vm_types_file_name);
+        self.parse_vm_instances(vm_instances_file_name);
+    }
+
+    fn parse_vm_types(&mut self, file_name: String) {
+        let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
+        for record in reader.deserialize() {
             let vm_type: VMType = record.unwrap();
             self.vm_types.insert(vm_type.vm_type_id.clone(), vm_type);
         }
     }
 
-    fn parse_vm_instances(&mut self, file_name: &str) {
-        let mut rdr = csv::Reader::from_reader(File::open(file_name).unwrap());
-        for record in rdr.deserialize() {
+    fn parse_vm_instances(&mut self, file_name: String) {
+        let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
+        for record in reader.deserialize() {
             let vm_instance: VMInstance = record.unwrap();
-
             if vm_instance.start_time < 0. {
                 continue;
             }
@@ -73,38 +77,31 @@ impl AzureDatasetReader {
             self.vm_instances.push(vm_instance);
         }
 
-        info!("Got {} active VMs", self.vm_instances.len());
-    }
-
-    pub fn parse(&mut self, vm_types_file_name: &str, vm_instances_file_name: &str) {
-        self.parse_vm_types(vm_types_file_name);
-        self.parse_vm_instances(vm_instances_file_name);
+        info!("Read {} VM instances", self.vm_instances.len());
     }
 }
 
 impl DatasetReader for AzureDatasetReader {
     fn get_next_vm(&mut self) -> Option<VMRequest> {
-        loop {
-            if self.current_vm >= self.vm_instances.len() {
-                return None;
-            }
-
-            let raw_vm = &self.vm_instances[self.current_vm];
-            let start_time = raw_vm.start_time.max(0.) * 86400.;
-            let vm_params = self.vm_types.get(&raw_vm.vm_type_id).unwrap();
-            let cpu_usage = (self.host_cpu_capacity * vm_params.core) as u32;
-            let memory_usage = (self.host_memory_capacity * vm_params.memory) as u64;
-            self.current_vm += 1;
-
-            let end_time = raw_vm.end_time.map(|t| t * 86400.).unwrap_or(self.simulation_length);
-            let lifetime = end_time - start_time;
-            return Some(VMRequest {
-                id: raw_vm.vm_id.clone(),
-                cpu_usage,
-                memory_usage,
-                lifetime,
-                start_time,
-            });
+        if self.current_vm >= self.vm_instances.len() {
+            return None;
         }
+
+        let raw_vm = self.vm_instances.get(self.current_vm).unwrap();
+        let start_time = raw_vm.start_time.max(0.) * 86400.;
+        let vm_params = self.vm_types.get(&raw_vm.vm_type_id).unwrap();
+        let cpu_usage = (self.host_cpu_capacity * vm_params.core) as u32;
+        let memory_usage = (self.host_memory_capacity * vm_params.memory) as u64;
+        self.current_vm += 1;
+
+        let end_time = raw_vm.end_time.map(|t| t * 86400.).unwrap_or(self.simulation_length);
+        let lifetime = end_time - start_time;
+        return Some(VMRequest {
+            id: raw_vm.vm_id.clone(),
+            cpu_usage,
+            memory_usage,
+            lifetime,
+            start_time,
+        });
     }
 }

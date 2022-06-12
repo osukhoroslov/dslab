@@ -1,4 +1,8 @@
+use std::str::FromStr;
 use std::time::Instant;
+
+use clap::Parser;
+use log::warn;
 
 use cloud_plugin::core::config::SimulationConfig;
 use cloud_plugin::core::vm_placement_algorithm::FirstFit;
@@ -8,12 +12,6 @@ use cloud_plugin::extensions::huawei_dataset_reader::HuaweiDatasetReader;
 use cloud_plugin::simulation::CloudSimulation;
 use simcore::log_info;
 use simcore::simulation::Simulation;
-
-pub static NUMBER_OF_HOSTS: u32 = 3000;
-pub static HOST_CPU_CAPACITY: f64 = 192.;
-pub static HOST_MEMORY_CAPACITY: f64 = 320.;
-pub static SIMULATION_LENGTH: f64 = 8640.;
-pub static STEP_DURATION: f64 = 600.;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -29,6 +27,20 @@ pub enum DatasetType {
     Huawei,
 }
 
+impl FromStr for DatasetType {
+    type Err = ();
+    fn from_str(input: &str) -> Result<DatasetType, Self::Err> {
+        if input != "azure" && input != "huawei" {
+            warn!("Cannot parse dataset type, use azure as default");
+        }
+        match input {
+            "azure" => Ok(DatasetType::Azure),
+            "huawei" => Ok(DatasetType::Huawei),
+            _ => Ok(DatasetType::Azure),
+        }
+    }
+}
+
 fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn DatasetReader) {
     let initialization_start = Instant::now();
     let sim = Simulation::new(123);
@@ -37,7 +49,11 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     let mut hosts: Vec<u32> = Vec::new();
     for i in 1..sim_config.number_of_hosts {
         let host_name = &format!("h{}", i);
-        let host_id = cloud_sim.add_host(host_name, HOST_CPU_CAPACITY as u32, HOST_MEMORY_CAPACITY as u64);
+        let host_id = cloud_sim.add_host(
+            host_name,
+            sim_config.host_cpu_capacity as u32,
+            sim_config.host_memory_capacity as u64,
+        );
         hosts.push(host_id);
     }
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
@@ -51,7 +67,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     cloud_sim.spawn_vms_from_dataset(scheduler_id, dataset);
 
     loop {
-        cloud_sim.step_for_duration(STEP_DURATION);
+        cloud_sim.step_for_duration(sim_config.step_duration);
 
         let mut sum_cpu_load = 0.;
         let mut sum_memory_load = 0.;
@@ -76,8 +92,8 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
                 "CPU allocation rate: {:.2?}, memory allocation rate: {:.2?},",
                 " CPU load rate: {:.2?}, memory load rate: {:.2?}"
             ),
-            sum_cpu_allocated / (HOST_CPU_CAPACITY * hosts.len() as f64),
-            sum_memory_allocated / (HOST_MEMORY_CAPACITY * hosts.len() as f64),
+            sum_cpu_allocated / (sim_config.host_cpu_capacity * hosts.len() as f64),
+            sum_memory_allocated / (sim_config.host_memory_capacity * hosts.len() as f64),
             sum_cpu_load / (hosts.len() as f64),
             sum_memory_load / (hosts.len() as f64)
         );
@@ -103,19 +119,38 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     );
 }
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap(long)]
+    dataset_type: String,
+
+    #[clap(long)]
+    dataset_path: Option<String>,
+}
+
 fn main() {
     init_logger();
-    let dataset_type = DatasetType::Huawei;
+    let args = Args::parse();
+    let dataset_type = DatasetType::from_str(&args.dataset_type).unwrap();
+    let dataset_path = args.dataset_path.unwrap_or(".".to_string());
 
     if dataset_type == DatasetType::Azure {
         let config = SimulationConfig::from_file("azure.yaml");
-        let mut dataset = AzureDatasetReader::new(config.simulation_length, HOST_CPU_CAPACITY, HOST_MEMORY_CAPACITY);
-        dataset.parse("vm_types.csv", "vm_instances.csv");
+        let mut dataset = AzureDatasetReader::new(
+            config.simulation_length,
+            config.host_cpu_capacity,
+            config.host_memory_capacity,
+        );
+        dataset.parse(
+            format!("{}/vm_types.csv", dataset_path),
+            format!("{}/vm_instances.csv", dataset_path),
+        );
         simulation_with_traces(config.clone(), &mut dataset);
     } else if dataset_type == DatasetType::Huawei {
         let config = SimulationConfig::from_file("huawei.yaml");
         let mut dataset = HuaweiDatasetReader::new(config.simulation_length);
-        dataset.parse("Huawei-East-1.csv");
+        dataset.parse(format!("{}/Huawei-East-1.csv", dataset_path));
         simulation_with_traces(config.clone(), &mut dataset);
     }
 }
