@@ -99,11 +99,7 @@ impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
             self.last_throughput_per_item = (self.throughput_function)(1);
             let finish_time = current_time + volume / self.last_throughput_per_item;
             self.time_fn = TimeFunction::ident();
-            self.entries.push(Activity::<T>::new(
-                finish_time,
-                self.next_id,
-                item,
-            ));
+            self.entries.push(Activity::<T>::new(finish_time, self.next_id, item));
         } else {
             let new_throughput_per_item = (self.throughput_function)(self.entries.len() + 1);
             self.time_fn

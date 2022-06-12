@@ -73,11 +73,7 @@ impl<T> FairThroughputSharingSlowModel<T> {
         let processed_volume = (current_time - self.last_recalculation_time) * self.last_throughput_per_item;
         while let Some(entry) = self.entries.pop() {
             let remaining_volume = entry.remaining_volume - processed_volume;
-            new_entries.push(Activity::<T>::new(
-                remaining_volume,
-                entry.id,
-                entry.item,
-            ));
+            new_entries.push(Activity::<T>::new(remaining_volume, entry.id, entry.item));
         }
         self.entries = new_entries;
         self.last_throughput_per_item = throughput_per_item;
@@ -88,11 +84,7 @@ impl<T> FairThroughputSharingSlowModel<T> {
 impl<T> ThroughputModel<T> for FairThroughputSharingSlowModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         self.recalculate(current_time, (self.throughput_function)(self.entries.len() + 1));
-        self.entries.push(Activity::<T>::new(
-            volume,
-            self.next_id,
-            item,
-        ));
+        self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }
 
