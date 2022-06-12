@@ -140,13 +140,13 @@ impl SharedDisk {
     }
 
     fn schedule_next_read_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.next_time() {
+        if let Some((time, _)) = self.read_throughput_model.peek() {
             self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
         }
     }
 
     fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.next_time() {
+        if let Some((time, _)) = self.read_throughput_model.peek() {
             self.next_write_event = self
                 .ctx
                 .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());

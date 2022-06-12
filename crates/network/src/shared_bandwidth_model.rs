@@ -38,14 +38,14 @@ impl DataOperation for SharedBandwidthNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         ctx.cancel_event(self.next_event);
         self.throughput_model.insert(ctx.time(), data.size, data.clone());
-        if let Some((time, data)) = self.throughput_model.next_time() {
+        if let Some((time, data)) = self.throughput_model.peek() {
             self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
         }
     }
 
     fn receive_data(&mut self, _data: Data, ctx: &mut SimulationContext) {
         self.throughput_model.pop().unwrap();
-        if let Some((time, data)) = self.throughput_model.next_time() {
+        if let Some((time, data)) = self.throughput_model.peek() {
             self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
         }
     }

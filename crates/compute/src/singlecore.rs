@@ -121,7 +121,7 @@ impl EventHandler for Compute {
                         flops as f64,
                         RunningComputation::new(event.id, memory, requester),
                     );
-                    if let Some((time, computation)) = self.throughput_model.next_time() {
+                    if let Some((time, computation)) = self.throughput_model.peek() {
                         self.next_event = self.ctx.emit_self(
                             InternalCompFinished {
                                 computation: computation.clone(),
@@ -140,7 +140,7 @@ impl EventHandler for Compute {
                 self.memory_available += computation.memory;
                 self.ctx
                     .emit_now(CompFinished { id: computation.id }, computation.requester);
-                if let Some((time, computation)) = self.throughput_model.next_time() {
+                if let Some((time, computation)) = self.throughput_model.peek() {
                     self.next_event = self.ctx.emit_self(
                         InternalCompFinished {
                             computation: computation.clone(),
