@@ -1,0 +1,16 @@
+[package]
+name = "dslab-dag"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../dslab-core" }
+dslab-compute = { path = "../dslab-compute" }
+dslab-network = { path = "../dslab-network" }
+log = "0.4"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde-xml-rs = "0.5.1"
+dot-parser = "0.1.0"
+serde_yaml = "0.8"
+enum-iterator = "0.7.0"

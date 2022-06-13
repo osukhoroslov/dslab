@@ -23,12 +23,12 @@ use env_logger::Builder;
 
 use threadpool::ThreadPool;
 
-use compute::multicore::*;
-use dag::dag::DAG;
-use dag::dag_simulation::DagSimulation;
-use dag::runner::{Config, DataTransferMode};
-use dag::schedulers::portfolio_scheduler::PortfolioScheduler;
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
+use dslab_compute::multicore::*;
+use dslab_dag::dag::DAG;
+use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
+use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]

@@ -1,0 +1,10 @@
+[package]
+name = "network-simple-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-network = { path = "../../crates/dslab-network" }
+env_logger = "0.8.4"
+sugars = "3.0.0"

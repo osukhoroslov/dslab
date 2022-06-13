@@ -1,0 +1,13 @@
+[package]
+name = "dslab-storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../dslab-core" }
+dslab-models = { path = "../dslab-models" }
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+rand = "0.8.4"
+rand_pcg = "0.3.1"
+sugars = "3.0.0"

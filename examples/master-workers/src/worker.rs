@@ -4,16 +4,16 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use compute::multicore::*;
-use network::model::*;
-use network::network::Network;
-use simcore::component::Id;
-use simcore::context::SimulationContext;
-use simcore::event::Event;
-use simcore::handler::EventHandler;
-use simcore::{cast, log_debug};
-use storage::disk::Disk;
-use storage::events::{DataReadCompleted, DataWriteCompleted};
+use dslab_compute::multicore::*;
+use dslab_core::component::Id;
+use dslab_core::context::SimulationContext;
+use dslab_core::event::Event;
+use dslab_core::handler::EventHandler;
+use dslab_core::{cast, log_debug};
+use dslab_network::model::*;
+use dslab_network::network::Network;
+use dslab_storage::disk::Disk;
+use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
 use crate::common::Start;
 use crate::task::*;

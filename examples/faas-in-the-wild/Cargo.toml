@@ -1,0 +1,12 @@
+[package]
+name = "faas-in-the-wild"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../../crates/dslab-core" }
+csv = "1.1"
+rand = "0.8.4"
+rand_pcg = "0.3.1"
+dslab-faas = { path = "../../crates/dslab-faas" }
+dslab-faas-extra = { path = "../../crates/dslab-faas-extra" }

@@ -14,13 +14,13 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
-use compute::multicore::{Compute, CoresDependency};
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::model::NetworkModel;
-use network::network::Network;
-use network::shared_bandwidth_model::SharedBandwidthNetwork;
-use simcore::simulation::Simulation;
-use storage::disk::Disk;
+use dslab_compute::multicore::{Compute, CoresDependency};
+use dslab_core::simulation::Simulation;
+use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
+use dslab_network::model::NetworkModel;
+use dslab_network::network::Network;
+use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
+use dslab_storage::disk::Disk;
 
 use crate::common::Start;
 use crate::master::Master;

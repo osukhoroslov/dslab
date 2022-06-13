@@ -13,14 +13,14 @@ use rand_pcg::Pcg64;
 
 use env_logger::Builder;
 
-use compute::multicore::*;
-use dag::dag::DAG;
-use dag::dag_simulation::DagSimulation;
-use dag::network::load_network;
-use dag::runner::{Config, DataTransferMode};
-use dag::scheduler::Scheduler;
-use dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
-use dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_compute::multicore::*;
+use dslab_dag::dag::DAG;
+use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::network::load_network;
+use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::scheduler::Scheduler;
+use dslab_dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
+use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]

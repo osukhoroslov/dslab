@@ -8,9 +8,9 @@ use clap::Parser;
 use env_logger::Builder;
 use sugars::{rc, refcell};
 
-use network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use network::network::Network;
-use simcore::simulation::Simulation;
+use dslab_core::simulation::Simulation;
+use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
+use dslab_network::network::Network;
 
 use crate::process::{NetworkProcess, Process, Start};
 

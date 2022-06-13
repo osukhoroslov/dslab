@@ -1,0 +1,9 @@
+[package]
+name = "dslab-compute"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../dslab-core" }
+dslab-models = { path = "../dslab-models" }
+serde = { version = "1.0", features = ["derive"] }

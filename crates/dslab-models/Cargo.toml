@@ -1,0 +1,7 @@
+[package]
+name = "dslab-models"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sugars = "3.0.0"

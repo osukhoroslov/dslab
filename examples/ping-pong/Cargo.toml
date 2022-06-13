@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-simcore = { path = "../../crates/simcore" }
-network = { path = "../../crates/network" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-network = { path = "../../crates/dslab-network" }
 clap = { version = "3.1.12", features = ["cargo", "derive"] }
 log = "0.4.14"
 env_logger = "0.9.0"

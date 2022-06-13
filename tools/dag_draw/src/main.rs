@@ -16,7 +16,7 @@ use druid::widget::{
 use druid::Color;
 use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
 
-use dag::trace_log::TraceLog;
+use dslab_dag::trace_log::TraceLog;
 
 use crate::app_data::AppData;
 use crate::draw_utils::*;

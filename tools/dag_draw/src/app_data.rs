@@ -5,7 +5,7 @@ use std::rc::Rc;
 use druid::{Color, Data, Lens};
 use serde_json::Value;
 
-use dag::trace_log::{Graph, TraceLog};
+use dslab_dag::trace_log::{Graph, TraceLog};
 
 use crate::data::*;
 
