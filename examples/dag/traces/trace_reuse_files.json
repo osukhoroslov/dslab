@@ -855,6 +855,24 @@
     },
     {
       "time": 17.333333333333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 16,
+      "data_item_id": 1,
+      "data_name": "a0_out"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 17,
+      "data_item_id": 1,
+      "data_name": "a0_out"
+    },
+    {
+      "time": 17.333333333333336,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
@@ -867,6 +885,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 18,
+<<<<<<< HEAD
+=======
+      "data_item_id": 2,
+>>>>>>> Fix
       "data_name": "a1_out"
     },
     {
@@ -883,6 +905,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 19,
+<<<<<<< HEAD
+=======
+      "data_item_id": 3,
+>>>>>>> Fix
       "data_name": "a2_out"
     },
     {
@@ -891,6 +917,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 20,
+<<<<<<< HEAD
+=======
+      "data_item_id": 3,
+>>>>>>> Fix
       "data_name": "a2_out"
     },
     {
@@ -899,6 +929,10 @@
       "from": "runner",
       "to": "compute2",
       "data_id": 21,
+<<<<<<< HEAD
+=======
+      "data_item_id": 3,
+>>>>>>> Fix
       "data_name": "a2_out"
     },
     {
@@ -915,6 +949,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 22,
+<<<<<<< HEAD
+=======
+      "data_item_id": 4,
+>>>>>>> Fix
       "data_name": "a3_out"
     },
     {
@@ -923,6 +961,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 23,
+<<<<<<< HEAD
+=======
+      "data_item_id": 4,
+>>>>>>> Fix
       "data_name": "a3_out"
     },
     {
@@ -937,6 +979,10 @@
       "from": "compute2",
       "to": "runner",
       "data_id": 24,
+<<<<<<< HEAD
+=======
+      "data_item_id": 5,
+>>>>>>> Fix
       "data_name": "a4_out"
     },
     {
@@ -977,6 +1023,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 19,
+<<<<<<< HEAD
       "data_name": "a2_out"
     },
     {
@@ -993,6 +1040,8 @@
       "from": "runner",
       "to": "compute2",
       "data_id": 21,
+=======
+>>>>>>> Fix
       "data_name": "a2_out"
     },
     {
@@ -1000,6 +1049,25 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
+=======
+      "data_id": 20,
+      "data_name": "a2_out"
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 21,
+      "data_name": "a2_out"
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+>>>>>>> Fix
       "data_id": 22,
       "data_name": "a3_out"
     },
@@ -1025,6 +1093,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 25,
+<<<<<<< HEAD
+=======
+      "data_item_id": 5,
+>>>>>>> Fix
       "data_name": "a4_out"
     },
     {
@@ -1033,6 +1105,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 26,
+<<<<<<< HEAD
+=======
+      "data_item_id": 5,
+>>>>>>> Fix
       "data_name": "a4_out"
     },
     {
@@ -1041,6 +1117,10 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 27,
+<<<<<<< HEAD
+=======
+      "data_item_id": 5,
+>>>>>>> Fix
       "data_name": "a4_out"
     },
     {
@@ -1055,6 +1135,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 28,
+<<<<<<< HEAD
+=======
+      "data_item_id": 8,
+>>>>>>> Fix
       "data_name": "a7_out"
     },
     {
@@ -1069,6 +1153,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 29,
+<<<<<<< HEAD
+=======
+      "data_item_id": 9,
+>>>>>>> Fix
       "data_name": "a8_out"
     },
     {
@@ -1083,6 +1171,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 30,
+<<<<<<< HEAD
+=======
+      "data_item_id": 10,
+>>>>>>> Fix
       "data_name": "a9_out"
     },
     {
@@ -1091,37 +1183,9 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 25,
+<<<<<<< HEAD
+=======
       "data_name": "a4_out"
-    },
-    {
-      "time": 20.1,
-      "type": "task_scheduled",
-      "task_id": 11,
-      "task_name": "b1",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 20.1,
-      "type": "task_started",
-      "task_id": 11,
-      "task_name": "b1"
-    },
-    {
-      "time": 20.1,
-      "type": "task_scheduled",
-      "task_id": 12,
-      "task_name": "b2",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 20.1,
-      "type": "task_started",
-      "task_id": 12,
-      "task_name": "b2"
     },
     {
       "time": 20.1,
@@ -1129,6 +1193,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 26,
+>>>>>>> Fix
       "data_name": "a4_out"
     },
     {
@@ -1153,6 +1218,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 31,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1161,6 +1227,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 32,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1169,6 +1236,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 33,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1177,6 +1245,7 @@
       "from": "runner",
       "to": "compute2",
       "data_id": 34,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1185,6 +1254,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 35,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1193,6 +1263,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 36,
+      "data_item_id": 8,
       "data_name": "a7_out"
     },
     {
@@ -1209,6 +1280,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 37,
+      "data_item_id": 9,
       "data_name": "a8_out"
     },
     {
@@ -1224,6 +1296,166 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+      "data_id": 31,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "task_scheduled",
+      "task_id": 11,
+      "task_name": "b1",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "task_started",
+      "task_id": 11,
+      "task_name": "b1"
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "task_scheduled",
+      "task_id": 12,
+      "task_name": "b2",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "task_started",
+      "task_id": 12,
+      "task_name": "b2"
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+<<<<<<< HEAD
+      "data_id": 26,
+      "data_name": "a4_out"
+=======
+      "data_id": 32,
+      "data_name": "a7_out"
+>>>>>>> Fix
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+<<<<<<< HEAD
+      "data_id": 27,
+      "data_name": "a4_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 28,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 31,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 32,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+=======
+>>>>>>> Fix
+      "data_id": 33,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 34,
+<<<<<<< HEAD
+      "data_name": "a7_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 35,
+      "data_name": "a7_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 36,
+=======
+>>>>>>> Fix
+      "data_name": "a7_out"
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+<<<<<<< HEAD
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 29,
+      "data_name": "a8_out"
+    },
+    {
+      "time": 20.666666666666668,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 37,
+      "data_name": "a8_out"
+=======
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 35,
+      "data_name": "a7_out"
+>>>>>>> Fix
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+<<<<<<< HEAD
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 30,
+      "data_name": "a9_out"
+=======
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 36,
+      "data_name": "a7_out"
+>>>>>>> Fix
+    },
+    {
+      "time": 21.76666666666667,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+<<<<<<< HEAD
       "data_id": 31,
       "data_name": "a7_out"
     },
@@ -1258,6 +1490,10 @@
       "to": "compute3",
       "data_id": 35,
       "data_name": "a7_out"
+=======
+      "data_id": 37,
+      "data_name": "a8_out"
+>>>>>>> Fix
     },
     {
       "time": 21.76666666666667,
@@ -1287,6 +1523,10 @@
       "from": "compute1",
       "to": "runner",
       "data_id": 38,
+<<<<<<< HEAD
+=======
+      "data_item_id": 6,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1301,6 +1541,7 @@
       "from": "compute1",
       "to": "runner",
       "data_id": 39,
+<<<<<<< HEAD
       "data_name": "a6_out"
     },
     {
@@ -1347,6 +1588,12 @@
       "task_name": "b8"
     },
     {
+=======
+      "data_item_id": 7,
+      "data_name": "a6_out"
+    },
+    {
+>>>>>>> Fix
       "time": 24.0,
       "type": "finish_uploading",
       "from": "compute1",
@@ -1359,7 +1606,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 42,
+=======
+      "data_id": 40,
+      "data_item_id": 6,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1367,7 +1619,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 43,
+=======
+      "data_id": 41,
+      "data_item_id": 6,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1375,7 +1632,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 44,
+=======
+      "data_id": 42,
+      "data_item_id": 6,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1383,7 +1645,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 45,
+=======
+      "data_id": 43,
+      "data_item_id": 6,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1399,7 +1666,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute2",
+<<<<<<< HEAD
       "data_id": 46,
+=======
+      "data_id": 44,
+      "data_item_id": 7,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1407,7 +1679,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 47,
+=======
+      "data_id": 45,
+      "data_item_id": 7,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1415,7 +1692,12 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute2",
+<<<<<<< HEAD
       "data_id": 48,
+=======
+      "data_id": 46,
+      "data_item_id": 7,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1423,31 +1705,77 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 49,
+=======
+      "data_id": 47,
+      "data_item_id": 7,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
-      "time": 24.533333333333335,
-      "type": "finish_uploading",
+      "time": 25.1,
+      "type": "task_completed",
+      "task_id": 11,
+      "task_name": "b1"
+    },
+    {
+      "time": 25.1,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
+<<<<<<< HEAD
       "data_id": 40,
+=======
+      "data_id": 48,
+      "data_item_id": 12,
+>>>>>>> Fix
       "data_name": "b1_out"
     },
     {
-      "time": 24.533333333333335,
-      "type": "finish_uploading",
+      "time": 25.1,
+      "type": "task_completed",
+      "task_id": 12,
+      "task_name": "b2"
+    },
+    {
+      "time": 25.1,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
+<<<<<<< HEAD
       "data_id": 41,
+=======
+      "data_id": 49,
+      "data_item_id": 13,
+>>>>>>> Fix
       "data_name": "b2_out"
+    },
+    {
+      "time": 25.1,
+      "type": "task_scheduled",
+      "task_id": 18,
+      "task_name": "b8",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 25.1,
+      "type": "task_started",
+      "task_id": 18,
+      "task_name": "b8"
     },
     {
       "time": 25.1,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 42,
+=======
+      "data_id": 40,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1485,7 +1813,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 43,
+=======
+      "data_id": 41,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1493,7 +1825,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 44,
+=======
+      "data_id": 42,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1501,7 +1837,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 45,
+=======
+      "data_id": 43,
+>>>>>>> Fix
       "data_name": "a5_out"
     },
     {
@@ -1509,7 +1849,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute2",
+<<<<<<< HEAD
       "data_id": 46,
+=======
+      "data_id": 44,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1532,7 +1876,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 47,
+=======
+      "data_id": 45,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1555,7 +1903,11 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute2",
+<<<<<<< HEAD
       "data_id": 48,
+=======
+      "data_id": 46,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
@@ -1563,21 +1915,42 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
+<<<<<<< HEAD
       "data_id": 49,
+=======
+      "data_id": 47,
+>>>>>>> Fix
       "data_name": "a6_out"
     },
     {
-      "time": 26.766666666666666,
+      "time": 26.200000000000003,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 48,
+      "data_name": "b1_out"
+    },
+    {
+      "time": 26.200000000000003,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 49,
+      "data_name": "b2_out"
+    },
+    {
+      "time": 28.433333333333334,
       "type": "task_completed",
       "task_id": 18,
       "task_name": "b8"
     },
     {
-      "time": 26.766666666666666,
+      "time": 28.433333333333334,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 50,
+<<<<<<< HEAD
       "data_name": "b8_out"
     },
     {
@@ -1589,6 +1962,12 @@
       "data_name": "b8_out"
     },
     {
+=======
+      "data_item_id": 19,
+      "data_name": "b8_out"
+    },
+    {
+>>>>>>> Fix
       "time": 28.433333333333334,
       "type": "task_completed",
       "task_id": 10,
@@ -1600,6 +1979,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 51,
+<<<<<<< HEAD
+=======
+      "data_item_id": 11,
+>>>>>>> Fix
       "data_name": "b0_out"
     },
     {
@@ -1629,6 +2012,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 52,
+<<<<<<< HEAD
+=======
+      "data_item_id": 14,
+>>>>>>> Fix
       "data_name": "b3_out"
     },
     {
@@ -1643,6 +2030,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 53,
+<<<<<<< HEAD
+=======
+      "data_item_id": 18,
+>>>>>>> Fix
       "data_name": "b7_out"
     },
     {
@@ -1650,6 +2041,17 @@
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
+<<<<<<< HEAD
+=======
+      "data_id": 50,
+      "data_name": "b8_out"
+    },
+    {
+      "time": 29.533333333333335,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+>>>>>>> Fix
       "data_id": 51,
       "data_name": "b0_out"
     },
@@ -1681,6 +2083,10 @@
       "from": "compute2",
       "to": "runner",
       "data_id": 54,
+<<<<<<< HEAD
+=======
+      "data_item_id": 16,
+>>>>>>> Fix
       "data_name": "b5_out"
     },
     {
@@ -1718,6 +2124,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 55,
+<<<<<<< HEAD
+=======
+      "data_item_id": 20,
+>>>>>>> Fix
       "data_name": "b9_out"
     },
     {
@@ -1755,6 +2165,10 @@
       "from": "compute2",
       "to": "runner",
       "data_id": 56,
+<<<<<<< HEAD
+=======
+      "data_item_id": 17,
+>>>>>>> Fix
       "data_name": "b6_out"
     },
     {
@@ -1769,6 +2183,10 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 57,
+<<<<<<< HEAD
+=======
+      "data_item_id": 15,
+>>>>>>> Fix
       "data_name": "b4_out"
     },
     {

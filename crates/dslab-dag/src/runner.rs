@@ -367,7 +367,6 @@ impl DAGRunner {
     }
 
     fn transfer_data(&mut self, data_item_id: usize, from: Id, to: Id) {
-        assert!(self.data_items.get(&from).unwrap().contains(&data_item_id));
         let data_item = self.dag.get_data_item(data_item_id);
         let data_id = self
             .network
@@ -432,17 +431,15 @@ impl DAGRunner {
         self.dag.update_task_state(task_id, TaskState::Done);
         let data_items = self.dag.get_task(task_id).outputs.clone();
 
-        for &data_item_id in data_items.iter() {
-            self.data_items
-                .entry(self.resources[location].id)
-                .or_default()
-                .insert(data_item_id);
-            if self.config.data_transfer_mode == DataTransferMode::Direct {
+        if self.config.data_transfer_mode == DataTransferMode::Direct {
+            for &data_item_id in data_items.iter() {
+                self.data_items
+                    .entry(self.resources[location].id)
+                    .or_default()
+                    .insert(data_item_id);
                 self.data_location.insert(data_item_id, self.resources[location].id);
             }
-        }
 
-        if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
                 for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
                     if let Some(consumer_location) = self.task_location.get(&consumer) {
@@ -462,7 +459,7 @@ impl DAGRunner {
                 continue;
             }
 
-            self.add_data_transfer_task(data_item_id, self.resources[location].id, self.id);
+            self.transfer_data(data_item_id, self.resources[location].id, self.id);
         }
 
         self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
