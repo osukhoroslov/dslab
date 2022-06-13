@@ -210,11 +210,26 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 1,
-      "data_name": "part2",
-      "task_id": 1
+      "data_name": "part2"
     },
     {
       "time": 0.0,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 2,
+      "data_name": "part1"
+    },
+    {
+      "time": 6.5,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 1,
+      "data_name": "part2"
+    },
+    {
+      "time": 6.5,
       "type": "task_scheduled",
       "task_id": 1,
       "task_name": "map2",
@@ -223,16 +238,155 @@
       "memory": 512
     },
     {
-      "time": 0.0,
+      "time": 6.5,
+      "type": "task_started",
+      "task_id": 1,
+      "task_name": "map2"
+    },
+    {
+      "time": 8.5,
+      "type": "task_completed",
+      "task_id": 1,
+      "task_name": "map2"
+    },
+    {
+      "time": 8.5,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 3,
+      "data_name": "map2_out1"
+    },
+    {
+      "time": 8.5,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 4,
+      "data_name": "map2_out2"
+    },
+    {
+      "time": 8.5,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 5,
+      "data_name": "map2_out3"
+    },
+    {
+      "time": 8.5,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 6,
+      "data_name": "map2_out4"
+    },
+    {
+      "time": 9.6,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 3,
+      "data_name": "map2_out1"
+    },
+    {
+      "time": 9.6,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 2,
-      "data_name": "part1",
-      "task_id": 0
+      "data_id": 7,
+      "data_name": "map2_out1"
     },
     {
-      "time": 0.0,
+      "time": 9.6,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 4,
+      "data_name": "map2_out2"
+    },
+    {
+      "time": 9.6,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 8,
+      "data_name": "map2_out2"
+    },
+    {
+      "time": 9.6,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 5,
+      "data_name": "map2_out3"
+    },
+    {
+      "time": 9.6,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 9,
+      "data_name": "map2_out3"
+    },
+    {
+      "time": 9.6,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 6,
+      "data_name": "map2_out4"
+    },
+    {
+      "time": 9.6,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 10,
+      "data_name": "map2_out4"
+    },
+    {
+      "time": 10.7,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 7,
+      "data_name": "map2_out1"
+    },
+    {
+      "time": 10.7,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 8,
+      "data_name": "map2_out2"
+    },
+    {
+      "time": 10.7,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 9,
+      "data_name": "map2_out3"
+    },
+    {
+      "time": 10.7,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 10,
+      "data_name": "map2_out4"
+    },
+    {
+      "time": 12.9,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 2,
+      "data_name": "part1"
+    },
+    {
+      "time": 12.9,
       "type": "task_scheduled",
       "task_id": 0,
       "task_name": "map1",
@@ -241,108 +395,6 @@
       "memory": 512
     },
     {
-      "time": 6.5,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 1,
-      "data_name": "part2",
-      "task_id": 1
-    },
-    {
-      "time": 6.5,
-      "type": "task_started",
-      "task_id": 1,
-      "task_name": "map2"
-    },
-    {
-      "time": 8.5,
-      "type": "task_completed",
-      "task_id": 1,
-      "task_name": "map2"
-    },
-    {
-      "time": 8.5,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 3,
-      "data_name": "map2_out1",
-      "task_id": 1
-    },
-    {
-      "time": 8.5,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 4,
-      "data_name": "map2_out2",
-      "task_id": 1
-    },
-    {
-      "time": 8.5,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 5,
-      "data_name": "map2_out3",
-      "task_id": 1
-    },
-    {
-      "time": 8.5,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 6,
-      "data_name": "map2_out4",
-      "task_id": 1
-    },
-    {
-      "time": 9.6,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 3,
-      "data_name": "map2_out1",
-      "task_id": 1
-    },
-    {
-      "time": 9.6,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 4,
-      "data_name": "map2_out2",
-      "task_id": 1
-    },
-    {
-      "time": 9.6,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 5,
-      "data_name": "map2_out3",
-      "task_id": 1
-    },
-    {
-      "time": 9.6,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 6,
-      "data_name": "map2_out4",
-      "task_id": 1
-    },
-    {
-      "time": 12.9,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 2,
-      "data_name": "part1",
-      "task_id": 0
-    },
-    {
       "time": 12.9,
       "type": "task_started",
       "task_id": 0,
@@ -358,175 +410,36 @@
       "time": 16.233333333333334,
       "type": "start_uploading",
       "from": "compute3",
-      "to": "scheduler",
-      "data_id": 7,
-      "data_name": "map1_out1",
-      "task_id": 0
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 8,
-      "data_name": "map1_out2",
-      "task_id": 0
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 9,
-      "data_name": "map1_out3",
-      "task_id": 0
-    },
-    {
-      "time": 16.233333333333334,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 10,
-      "data_name": "map1_out4",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 7,
-      "data_name": "map1_out1",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
+      "to": "runner",
       "data_id": 11,
-      "data_name": "map1_out1",
-      "task_id": 2
+      "data_name": "map1_out1"
     },
     {
-      "time": 17.333333333333336,
+      "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
+      "from": "compute3",
+      "to": "runner",
       "data_id": 12,
-      "data_name": "map2_out1",
-      "task_id": 2
+      "data_name": "map1_out2"
     },
     {
-      "time": 17.333333333333336,
-      "type": "task_scheduled",
-      "task_id": 2,
-      "task_name": "reduce1",
-      "location": "compute3",
-      "cores": 2,
-      "memory": 128
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 8,
-      "data_name": "map1_out2",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
+      "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
+      "from": "compute3",
+      "to": "runner",
       "data_id": 13,
-      "data_name": "map1_out2",
-      "task_id": 3
+      "data_name": "map1_out3"
     },
     {
-      "time": 17.333333333333336,
+      "time": 16.233333333333334,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
+      "from": "compute3",
+      "to": "runner",
       "data_id": 14,
-      "data_name": "map2_out2",
-      "task_id": 3
+      "data_name": "map1_out4"
     },
     {
-      "time": 17.333333333333336,
-      "type": "task_scheduled",
-      "task_id": 3,
-      "task_name": "reduce2",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 9,
-      "data_name": "map1_out3",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 15,
-      "data_name": "map1_out3",
-      "task_id": 4
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 16,
-      "data_name": "map2_out3",
-      "task_id": 4
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "task_scheduled",
-      "task_id": 4,
-      "task_name": "reduce3",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 10,
-      "data_name": "map1_out4",
-      "task_id": 0
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 17,
-      "data_name": "map1_out4",
-      "task_id": 5
-    },
-    {
-      "time": 17.333333333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 18,
-      "data_name": "map2_out4",
-      "task_id": 5
-    },
-    {
-      "time": 17.333333333333336,
+      "time": 16.233333333333334,
       "type": "task_scheduled",
       "task_id": 5,
       "task_name": "reduce4",
@@ -535,61 +448,118 @@
       "memory": 128
     },
     {
-      "time": 18.433333333333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 11,
-      "data_name": "map1_out1",
-      "task_id": 2
+      "time": 16.233333333333334,
+      "type": "task_started",
+      "task_id": 5,
+      "task_name": "reduce4"
     },
     {
-      "time": 18.433333333333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 12,
-      "data_name": "map2_out1",
-      "task_id": 2
+      "time": 16.233333333333334,
+      "type": "task_scheduled",
+      "task_id": 4,
+      "task_name": "reduce3",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 128
     },
     {
-      "time": 18.433333333333337,
+      "time": 16.233333333333334,
+      "type": "task_started",
+      "task_id": 4,
+      "task_name": "reduce3"
+    },
+    {
+      "time": 16.233333333333334,
+      "type": "task_scheduled",
+      "task_id": 2,
+      "task_name": "reduce1",
+      "location": "compute3",
+      "cores": 2,
+      "memory": 128
+    },
+    {
+      "time": 16.233333333333334,
       "type": "task_started",
       "task_id": 2,
       "task_name": "reduce1"
     },
     {
-      "time": 18.433333333333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 13,
-      "data_name": "map1_out2",
-      "task_id": 3
+      "time": 17.233333333333334,
+      "type": "task_completed",
+      "task_id": 2,
+      "task_name": "reduce1"
     },
     {
-      "time": 18.433333333333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 14,
-      "data_name": "map2_out2",
-      "task_id": 3
+      "time": 17.233333333333334,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 15,
+      "data_name": "result1"
     },
     {
-      "time": 18.433333333333337,
-      "type": "task_started",
-      "task_id": 3,
-      "task_name": "reduce2"
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 11,
+      "data_name": "map1_out1"
     },
     {
-      "time": 18.433333333333337,
-      "type": "finish_uploading",
+      "time": 17.333333333333336,
+      "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 15,
-      "data_name": "map1_out3",
-      "task_id": 4
+      "data_id": 16,
+      "data_name": "map1_out1"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 12,
+      "data_name": "map1_out2"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 17,
+      "data_name": "map1_out2"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 13,
+      "data_name": "map1_out3"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 18,
+      "data_name": "map1_out3"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 14,
+      "data_name": "map1_out4"
+    },
+    {
+      "time": 17.333333333333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 19,
+      "data_name": "map1_out4"
     },
     {
       "time": 18.433333333333337,
@@ -597,23 +567,30 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 16,
-      "data_name": "map2_out3",
-      "task_id": 4
-    },
-    {
-      "time": 18.433333333333337,
-      "type": "task_started",
-      "task_id": 4,
-      "task_name": "reduce3"
+      "data_name": "map1_out1"
     },
     {
       "time": 18.433333333333337,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 17,
-      "data_name": "map1_out4",
-      "task_id": 5
+      "data_name": "map1_out2"
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "task_scheduled",
+      "task_id": 3,
+      "task_name": "reduce2",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "task_started",
+      "task_id": 3,
+      "task_name": "reduce2"
     },
     {
       "time": 18.433333333333337,
@@ -621,29 +598,51 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 18,
-      "data_name": "map2_out4",
-      "task_id": 5
+      "data_name": "map1_out3"
     },
     {
       "time": 18.433333333333337,
-      "type": "task_started",
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 19,
+      "data_name": "map1_out4"
+    },
+    {
+      "time": 19.566666666666666,
+      "type": "task_completed",
+      "task_id": 4,
+      "task_name": "reduce3"
+    },
+    {
+      "time": 19.566666666666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 20,
+      "data_name": "result3"
+    },
+    {
+      "time": 19.900000000000002,
+      "type": "task_completed",
       "task_id": 5,
       "task_name": "reduce4"
     },
     {
-      "time": 19.433333333333337,
-      "type": "task_completed",
-      "task_id": 2,
-      "task_name": "reduce1"
-    },
-    {
-      "time": 19.433333333333337,
+      "time": 19.900000000000002,
       "type": "start_uploading",
       "from": "compute3",
-      "to": "scheduler",
-      "data_id": 19,
-      "data_name": "result1",
-      "task_id": 2
+      "to": "runner",
+      "data_id": 21,
+      "data_name": "result4"
+    },
+    {
+      "time": 20.533333333333335,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 15,
+      "data_name": "result1"
     },
     {
       "time": 20.933333333333337,
@@ -655,76 +654,33 @@
       "time": 20.933333333333337,
       "type": "start_uploading",
       "from": "compute2",
-      "to": "scheduler",
-      "data_id": 20,
-      "data_name": "result2",
-      "task_id": 3
-    },
-    {
-      "time": 21.76666666666667,
-      "type": "task_completed",
-      "task_id": 4,
-      "task_name": "reduce3"
-    },
-    {
-      "time": 21.76666666666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 21,
-      "data_name": "result3",
-      "task_id": 4
-    },
-    {
-      "time": 22.100000000000005,
-      "type": "task_completed",
-      "task_id": 5,
-      "task_name": "reduce4"
-    },
-    {
-      "time": 22.100000000000005,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "scheduler",
+      "to": "runner",
       "data_id": 22,
-      "data_name": "result4",
-      "task_id": 5
+      "data_name": "result2"
     },
     {
-      "time": 22.733333333333338,
+      "time": 22.866666666666667,
       "type": "finish_uploading",
       "from": "compute3",
-      "to": "scheduler",
-      "data_id": 19,
-      "data_name": "result1",
-      "task_id": 2
+      "to": "runner",
+      "data_id": 20,
+      "data_name": "result3"
+    },
+    {
+      "time": 23.200000000000003,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 21,
+      "data_name": "result4"
     },
     {
       "time": 24.233333333333338,
       "type": "finish_uploading",
       "from": "compute2",
-      "to": "scheduler",
-      "data_id": 20,
-      "data_name": "result2",
-      "task_id": 3
-    },
-    {
-      "time": 25.06666666666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
-      "data_id": 21,
-      "data_name": "result3",
-      "task_id": 4
-    },
-    {
-      "time": 25.400000000000006,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "scheduler",
+      "to": "runner",
       "data_id": 22,
-      "data_name": "result4",
-      "task_id": 5
+      "data_name": "result2"
     }
   ]
 }

@@ -48,7 +48,6 @@ pub struct Config {
 
 struct DataTransfer {
     data_id: usize,
-    task_id: usize,
     from: Id,
     #[allow(dead_code)]
     to: Id,
@@ -66,6 +65,7 @@ pub struct DAGRunner {
     dag: DAG,
     network: Rc<RefCell<Network>>,
     resources: Vec<Resource>,
+    resource_by_id: HashMap<Id, usize>,
     computations: HashMap<u64, usize>,
     task_location: HashMap<usize, usize>,
     data_transfers: HashMap<usize, DataTransfer>,
@@ -79,6 +79,8 @@ pub struct DAGRunner {
     action_id: usize,
     scheduled_actions: HashSet<usize>,
     resource_queue: Vec<Vec<VecDeque<QueuedTask>>>,
+    data_transfer_tasks: HashMap<Id, HashMap<usize, Vec<Id>>>,
+    data_items: HashMap<Id, BTreeSet<usize>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
     config: Config,
@@ -102,6 +104,11 @@ impl DAGRunner {
                     .collect()
             })
             .collect();
+        let resource_by_id = resources
+            .iter()
+            .enumerate()
+            .map(|(idx, resource)| (resource.id, idx))
+            .collect();
         let available_cores = resources
             .iter()
             .map(|resource| (0..resource.compute.borrow().cores_total()).collect())
@@ -111,6 +118,7 @@ impl DAGRunner {
             dag,
             network,
             resources,
+            resource_by_id,
             computations: HashMap::new(),
             task_location: HashMap::new(),
             data_transfers: HashMap::new(),
@@ -124,6 +132,8 @@ impl DAGRunner {
             action_id: 0 as usize,
             scheduled_actions: HashSet::new(),
             resource_queue,
+            data_transfer_tasks: HashMap::new(),
+            data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
             config,
@@ -140,6 +150,7 @@ impl DAGRunner {
             if data_item.state == DataItemState::Ready {
                 assert!(data_item.is_input, "Non-input data item has Ready state");
                 self.data_location.insert(id, self.id);
+                self.data_items.entry(self.id).or_default().insert(id);
             } else if data_item.consumers.len() == 0 {
                 self.outputs.insert(id);
             }
@@ -218,6 +229,19 @@ impl DAGRunner {
             log_error!(self.ctx, "Can't schedule task with state {:?}", task.state);
             return;
         }
+        let data_items = self.dag.get_task(task_id).inputs.clone();
+        self.task_location.insert(task_id, resource);
+        if self.config.data_transfer_mode == DataTransferMode::ViaMasterNode {
+            for &data_item_id in data_items.iter() {
+                self.add_data_transfer_task(data_item_id, self.id, self.resources[resource].id);
+            }
+        } else if self.config.data_transfer_mode == DataTransferMode::Direct {
+            for &data_item_id in data_items.iter() {
+                if let Some(location) = self.data_location.get(&data_item_id) {
+                    self.add_data_transfer_task(data_item_id, *location, self.resources[resource].id);
+                }
+            }
+        }
         for core in allowed_cores.into_iter() {
             self.resource_queue[resource][core as usize].push_back(QueuedTask {
                 task_id,
@@ -280,7 +304,12 @@ impl DAGRunner {
                 if task.memory > self.resources[resource_idx].memory_available {
                     continue;
                 }
-                if task.state != TaskState::Runnable {
+                if !task.inputs.iter().all(|x| {
+                    self.data_items
+                        .entry(self.resources[resource_idx].id)
+                        .or_default()
+                        .contains(x)
+                }) {
                     continue;
                 }
 
@@ -309,40 +338,6 @@ impl DAGRunner {
                 let resource = &self.resources[resource_idx];
                 self.task_inputs.insert(task_id, task.inputs.iter().cloned().collect());
                 self.task_cores.insert(task_id, ready_cores);
-                for &data_id in task.inputs.iter() {
-                    let data_item = self.dag.get_data_item(data_id);
-                    let data_location = *self.data_location.get(&data_id).unwrap();
-                    let data_event_id = self.network.borrow_mut().transfer_data(
-                        data_location,
-                        resource.id,
-                        data_item.size as f64,
-                        self.id,
-                    );
-                    self.data_transfers.insert(
-                        data_event_id,
-                        DataTransfer {
-                            data_id,
-                            task_id,
-                            from: self.id,
-                            to: resource.id,
-                        },
-                    );
-                    if self.trace_log_enabled {
-                        self.trace_log.log_event(
-                            &self.ctx,
-                            json!({
-                                "time": self.ctx.time(),
-                                "type": "start_uploading",
-                                "from": self.ctx.lookup_name(data_location),
-                                "to": resource.name.clone(),
-                                "data_id": data_event_id,
-                                "data_name": data_item.name.clone(),
-                                "task_id": task_id,
-                            }),
-                        );
-                    }
-                }
-                self.task_location.insert(task_id, resource_idx);
                 if self.trace_log_enabled {
                     self.trace_log.log_event(
                         &self.ctx,
@@ -359,9 +354,7 @@ impl DAGRunner {
                 }
                 self.dag.update_task_state(task_id, TaskState::Running);
 
-                if self.task_inputs.get(&task_id).unwrap().is_empty() {
-                    self.start_task(task_id);
-                }
+                self.start_task(task_id);
 
                 something_scheduled = true;
                 self.scheduled_actions.insert(action_id);
@@ -370,6 +363,49 @@ impl DAGRunner {
             if !something_scheduled {
                 break;
             }
+        }
+    }
+
+    fn transfer_data(&mut self, data_item_id: usize, from: Id, to: Id) {
+        assert!(self.data_items.get(&from).unwrap().contains(&data_item_id));
+        let data_item = self.dag.get_data_item(data_item_id);
+        let data_id = self
+            .network
+            .borrow_mut()
+            .transfer_data(from, to, data_item.size as f64, self.id);
+        self.data_transfers.insert(
+            data_id,
+            DataTransfer {
+                data_id: data_item_id,
+                from,
+                to,
+            },
+        );
+        if self.trace_log_enabled {
+            self.trace_log.log_event(
+                &self.ctx,
+                json!({
+                    "time": self.ctx.time(),
+                    "type": "start_uploading",
+                    "from": self.ctx.lookup_name(from),
+                    "to": self.ctx.lookup_name(to),
+                    "data_id": data_id,
+                    "data_name": data_item.name.clone(),
+                }),
+            );
+        }
+    }
+
+    fn add_data_transfer_task(&mut self, data_item_id: usize, from: Id, to: Id) {
+        if self.data_items.entry(from).or_default().contains(&data_item_id) {
+            self.transfer_data(data_item_id, from, to);
+        } else {
+            self.data_transfer_tasks
+                .entry(from)
+                .or_default()
+                .entry(data_item_id)
+                .or_default()
+                .push(to);
         }
     }
 
@@ -386,14 +422,39 @@ impl DAGRunner {
                 }),
             );
         }
-        let location = self.task_location.remove(&task_id).unwrap();
+        let location = *self.task_location.get(&task_id).unwrap();
         let task_cores = self.task_cores.get(&task_id).unwrap();
         self.resources[location].cores_available += task_cores.len() as u32;
         for &core in task_cores.iter() {
             self.available_cores[location].insert(core);
         }
         self.resources[location].memory_available += self.dag.get_task(task_id).memory;
-        let data_items = self.dag.update_task_state(task_id, TaskState::Done);
+        self.dag.update_task_state(task_id, TaskState::Done);
+        let data_items = self.dag.get_task(task_id).outputs.clone();
+
+        for &data_item_id in data_items.iter() {
+            self.data_items
+                .entry(self.resources[location].id)
+                .or_default()
+                .insert(data_item_id);
+            if self.config.data_transfer_mode == DataTransferMode::Direct {
+                self.data_location.insert(data_item_id, self.resources[location].id);
+            }
+        }
+
+        if self.config.data_transfer_mode == DataTransferMode::Direct {
+            for &data_item_id in data_items.iter() {
+                for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
+                    if let Some(consumer_location) = self.task_location.get(&consumer) {
+                        self.add_data_transfer_task(
+                            data_item_id,
+                            self.resources[location].id,
+                            self.resources[*consumer_location].id,
+                        );
+                    }
+                }
+            }
+        }
 
         for &data_item_id in data_items.iter() {
             if self.config.data_transfer_mode == DataTransferMode::Direct && !self.outputs.contains(&data_item_id) {
@@ -401,43 +462,7 @@ impl DAGRunner {
                 continue;
             }
 
-            let data_item = self.dag.get_data_item(data_item_id);
-            let data_id = self.network.borrow_mut().transfer_data(
-                self.resources[location].id,
-                self.id,
-                data_item.size as f64,
-                self.id,
-            );
-            self.data_transfers.insert(
-                data_id,
-                DataTransfer {
-                    data_id: data_item_id,
-                    task_id,
-                    from: self.resources[location].id,
-                    to: self.id,
-                },
-            );
-            if self.trace_log_enabled {
-                self.trace_log.log_event(
-                    &self.ctx,
-                    json!({
-                        "time": self.ctx.time(),
-                        "type": "start_uploading",
-                        "from": self.resources[location].name.clone(),
-                        "to": "scheduler",
-                        "data_id": data_id,
-                        "data_name": data_item.name.clone(),
-                        "task_id": task_id,
-                    }),
-                );
-            }
-        }
-
-        if self.config.data_transfer_mode == DataTransferMode::Direct {
-            for &data_item_id in data_items.iter() {
-                self.data_location.insert(data_item_id, self.resources[location].id);
-                self.on_data_item_is_ready(data_item_id);
-            }
+            self.add_data_transfer_task(data_item_id, self.resources[location].id, self.id);
         }
 
         self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
@@ -483,50 +508,36 @@ impl DAGRunner {
         let data_transfer = self.data_transfers.remove(&data_event_id).unwrap();
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
-        let task_id = data_transfer.task_id;
-        if data_transfer.to == self.id {
-            // uploaded data to runner
 
-            if self.trace_log_enabled {
-                self.trace_log.log_event(
-                    &self.ctx,
-                    json!({
-                        "time": self.ctx.time(),
-                        "type": "finish_uploading",
-                        "from": self.ctx.lookup_name(data_transfer.from.clone()),
-                        "to": "scheduler",
-                        "data_id": data_event_id,
-                        "data_name": data_item.name.clone(),
-                        "task_id": task_id,
-                    }),
-                );
-            }
-            self.data_location.insert(data_id, self.id);
-            self.on_data_item_is_ready(data_id);
-        } else {
-            // downloaded data from runner or another resource
+        if self.trace_log_enabled {
+            self.trace_log.log_event(
+                &self.ctx,
+                json!({
+                    "time": self.ctx.time(),
+                    "type": "finish_uploading",
+                    "from": self.ctx.lookup_name(data_transfer.from.clone()),
+                    "to": self.ctx.lookup_name(data_transfer.to),
+                    "data_id": data_event_id,
+                    "data_name": data_item.name.clone(),
+                }),
+            );
+        }
 
-            let location = *self.task_location.get(&task_id).unwrap();
-            if self.trace_log_enabled {
-                self.trace_log.log_event(
-                    &self.ctx,
-                    json!({
-                        "time": self.ctx.time(),
-                        "type": "finish_uploading",
-                        "from": self.ctx.lookup_name(data_transfer.from.clone()),
-                        "to": self.resources[location].name.clone(),
-                        "data_id": data_event_id,
-                        "data_name": data_item.name.clone(),
-                        "task_id": task_id,
-                    }),
-                );
-            }
+        self.data_items.entry(data_transfer.to).or_default().insert(data_id);
 
-            let left_inputs = self.task_inputs.get_mut(&task_id).unwrap();
-            left_inputs.remove(&data_id);
-            if left_inputs.is_empty() {
-                self.start_task(task_id);
+        if let Some(targets) = self
+            .data_transfer_tasks
+            .entry(data_transfer.to)
+            .or_default()
+            .remove(&data_id)
+        {
+            for target in targets.into_iter() {
+                self.transfer_data(data_id, data_transfer.to, target);
             }
+        }
+
+        if let Some(resource_idx) = self.resource_by_id.get(&data_transfer.to) {
+            self.process_resource_queue(*resource_idx);
         }
 
         self.check_and_log_completed();
@@ -553,23 +564,6 @@ impl DAGRunner {
                 }
             }
             log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
-        }
-    }
-
-    fn on_data_item_is_ready(&mut self, data_id: usize) {
-        for (task, state) in self
-            .dag
-            .update_data_item_state(data_id, DataItemState::Ready)
-            .into_iter()
-        {
-            self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
-                task,
-                state,
-                &self.dag,
-                &self.resources,
-                &self.ctx,
-            ));
-            self.process_actions();
         }
     }
 }
