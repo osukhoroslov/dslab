@@ -35,6 +35,9 @@ struct User {
 #[derive(Serialize)]
 struct Start {}
 
+#[derive(Serialize)]
+struct Ticker {}
+
 impl User {
     fn new(disk: Rc<RefCell<SharedDisk>>, ctx: SimulationContext) -> Self {
         Self {
@@ -49,11 +52,26 @@ impl EventHandler for User {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
-                log_debug!(self.ctx, "Test #0: Reading 200 bytes...");
-                self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 0);
-
-                log_debug!(self.ctx, "Test #1: Read 400 bytes more...");
-                self.requests.insert(self.disk.borrow_mut().read(400, self.ctx.id()), 1);
+                self.ctx.emit_self(Ticker {}, 0.);
+            }
+            Ticker {} => {
+                let time = self.ctx.time();
+                if time.eq(&0.) {
+                    log_debug!(self.ctx, "Test #0: Single 100 byte read, expected to end at t=1");
+                    self.requests.insert(self.disk.borrow_mut().read(100, self.ctx.id()), 0);
+                } else if time.eq(&1.) {
+                    log_debug!(self.ctx, "Test #1: Two 50 byte reads, expected to end at t=2");
+                    self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
+                    self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
+                } else if time.eq(&2.) {
+                    log_debug!(self.ctx, "Test #2: Starting 1st 200 byte read, expected to end at t=5");
+                    self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 2);
+                } else if time.eq(&3.) {
+                    log_debug!(self.ctx, "Test #2: Starting 2nd 200 byte read, expected to end at t=6");
+                    self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 2);
+                    return;
+                }
+                self.ctx.emit_self(Ticker {}, 1.);
             }
             DataReadCompleted { request_id, size } => {
                 log_debug!(
