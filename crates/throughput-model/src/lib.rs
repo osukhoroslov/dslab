@@ -33,7 +33,7 @@ mod tests {
         fn insert_and_compare(&mut self, current_time: f64, volume: f64, item: u32) {
             self.fast_model.insert(current_time, volume, item);
             self.slow_model.insert(current_time, volume, item);
-            // assert_eq!(self.fast_model.peek(), self.slow_model.peek());
+            assert_eq!(self.fast_model.peek(), self.slow_model.peek());
         }
 
         fn pop_all_and_compare(&mut self) -> Vec<(f64, u32)> {
@@ -45,7 +45,7 @@ mod tests {
             while let Some((time, item)) = self.slow_model.pop() {
                 slow_model_plan.push((time, item));
             }
-            // assert_eq!(fast_model_plan, slow_model_plan);
+            assert_eq!(fast_model_plan, slow_model_plan);
             return fast_model_plan;
         }
     }
