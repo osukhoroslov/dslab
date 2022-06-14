@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::ThroughputModel;
+use crate::model::ThroughputSharingModel;
 
 struct Activity<T> {
     position: f64,
@@ -79,7 +79,7 @@ pub struct FairThroughputSharingModel<T> {
 
 impl<T> FairThroughputSharingModel<T> {
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |n| throughput / n as f64))
+        Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
     pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> f64>) -> Self {
@@ -93,7 +93,7 @@ impl<T> FairThroughputSharingModel<T> {
     }
 }
 
-impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
+impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         if self.entries.is_empty() {
             self.last_throughput_per_item = (self.throughput_function)(1);
@@ -101,7 +101,8 @@ impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
             self.time_fn = TimeFunction::ident();
             self.entries.push(Activity::<T>::new(finish_time, self.next_id, item));
         } else {
-            let new_throughput_per_item = (self.throughput_function)(self.entries.len() + 1);
+            let new_count = self.entries.len() + 1;
+            let new_throughput_per_item = (self.throughput_function)(new_count) / new_count as f64;
             self.time_fn
                 .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
             self.last_throughput_per_item = new_throughput_per_item;
@@ -118,10 +119,16 @@ impl<T> ThroughputModel<T> for FairThroughputSharingModel<T> {
     fn pop(&mut self) -> Option<(f64, T)> {
         if let Some(entry) = self.entries.pop() {
             let current_time = self.time_fn.at(entry.position);
-            let new_throughput_per_item = (self.throughput_function)(self.entries.len());
-            self.time_fn
-                .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
-            self.last_throughput_per_item = new_throughput_per_item;
+            let new_count = self.entries.len();
+            if new_count > 0 {
+                let new_throughput_per_item = (self.throughput_function)(new_count) / new_count as f64;
+                self.time_fn
+                    .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
+                self.last_throughput_per_item = new_throughput_per_item;
+            } else {
+                self.time_fn = TimeFunction::ident();
+                self.last_throughput_per_item = 0.;
+            }
             return Some((current_time, entry.item));
         }
         None

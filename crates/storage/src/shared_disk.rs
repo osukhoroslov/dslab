@@ -6,11 +6,9 @@ use simcore::event::Event;
 use simcore::handler::EventHandler;
 use simcore::{context::SimulationContext, log_debug, log_error};
 
-use sugars::boxed;
-
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use throughput_model::fair_sharing::FairThroughputSharingModel;
-use throughput_model::model::ThroughputModel;
+use throughput_model::model::ThroughputSharingModel;
 
 #[derive(Clone)]
 struct DiskActivity {
@@ -41,13 +39,7 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(move |n| {
-                if n < 2 {
-                    read_bandwidth / n as f64
-                } else {
-                    0.5 * read_bandwidth / n as f64
-                }
-            })),
+            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth as f64),
             write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
             next_request_id: 0,
             next_read_event: 0,

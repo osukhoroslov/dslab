@@ -2,7 +2,7 @@ use simcore::component::Id;
 use simcore::context::SimulationContext;
 
 use throughput_model::fair_sharing::FairThroughputSharingModel;
-use throughput_model::model::ThroughputModel;
+use throughput_model::model::ThroughputSharingModel;
 
 use crate::model::*;
 

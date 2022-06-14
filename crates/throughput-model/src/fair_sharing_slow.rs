@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::ThroughputModel;
+use crate::model::ThroughputSharingModel;
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -55,7 +55,7 @@ pub struct FairThroughputSharingSlowModel<T> {
 
 impl<T> FairThroughputSharingSlowModel<T> {
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |n| throughput / n as f64))
+        Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
     pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> f64>) -> Self {
@@ -81,9 +81,10 @@ impl<T> FairThroughputSharingSlowModel<T> {
     }
 }
 
-impl<T> ThroughputModel<T> for FairThroughputSharingSlowModel<T> {
+impl<T> ThroughputSharingModel<T> for FairThroughputSharingSlowModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
-        self.recalculate(current_time, (self.throughput_function)(self.entries.len() + 1));
+        let new_count = self.entries.len() + 1;
+        self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);
         self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }
@@ -95,7 +96,8 @@ impl<T> ThroughputModel<T> for FairThroughputSharingSlowModel<T> {
                 self.last_recalculation_time = complete_time;
                 self.last_throughput_per_item = 0.;
             } else {
-                self.recalculate(complete_time, (self.throughput_function)(self.entries.len()));
+                let new_count = self.entries.len();
+                self.recalculate(complete_time, (self.throughput_function)(new_count) / new_count as f64);
             }
             return Some((complete_time, entry.item));
         }
