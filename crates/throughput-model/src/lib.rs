@@ -82,6 +82,18 @@ mod tests {
     }
 
     #[test]
+    fn correct_state_after_no_activities() {
+        let mut tester = ModelsTester::with_fixed_throughput(100.);
+        tester.insert_and_compare(0., 500., 0);
+        tester.insert_and_compare(1., 100., 1);
+        assert_eq!(tester.pop_all_and_compare(), vec![(3., 1), (6., 0)]);
+
+        tester.insert_and_compare(10., 500., 0);
+        tester.insert_and_compare(11., 100., 1);
+        assert_eq!(tester.pop_all_and_compare(), vec![(13., 1), (16., 0)]);
+    }
+
+    #[test]
     fn fractional_times() {
         let mut tester = ModelsTester::with_fixed_throughput(100.);
         tester.insert_and_compare(0., 10., 0);
