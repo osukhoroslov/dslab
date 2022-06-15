@@ -31,16 +31,16 @@ impl ModelsTester {
     }
 
     fn pop_all_and_compare(&mut self) -> Vec<(f64, u32)> {
-        let mut fast_model_plan = vec![];
+        let mut fast_model_result = vec![];
         while let Some((time, item)) = self.fast_model.pop() {
-            fast_model_plan.push((time, item));
+            fast_model_result.push((time, item));
         }
-        let mut slow_model_plan = vec![];
+        let mut slow_model_result = vec![];
         while let Some((time, item)) = self.slow_model.pop() {
-            slow_model_plan.push((time, item));
+            slow_model_result.push((time, item));
         }
-        assert_eq!(fast_model_plan, slow_model_plan);
-        return fast_model_plan;
+        assert_eq!(fast_model_result, slow_model_result);
+        return fast_model_result;
     }
 }
 
@@ -103,10 +103,10 @@ fn fairness() {
         let start_time = i as f64;
         tester.insert_and_compare(start_time, 1000., i as u32);
     }
-    let results = tester.pop_all_and_compare();
-    assert_eq!(results.len(), activities_count);
+    let result = tester.pop_all_and_compare();
+    assert_eq!(result.len(), activities_count);
     for i in 0..activities_count {
-        assert_eq!(results[i].1, i as u32);
+        assert_eq!(result[i].1, i as u32);
     }
 }
 
@@ -114,12 +114,12 @@ fn fairness() {
 fn equal_activities_ordering() {
     let activities_count: u32 = 7; // inserting more than 7 activities leads to problems with accuracy
     let mut tester = ModelsTester::with_fixed_throughput(activities_count as f64);
-    let mut expected = vec![];
+    let mut expected_result = vec![];
     for i in 0..activities_count {
         tester.insert_and_compare(0., activities_count as f64, i);
-        expected.push((activities_count as f64, i));
+        expected_result.push((activities_count as f64, i));
     }
-    assert_eq!(tester.pop_all_and_compare(), expected);
+    assert_eq!(tester.pop_all_and_compare(), expected_result);
 }
 
 #[test]
@@ -133,18 +133,18 @@ fn dynamic_throughput() {
     }
 
     let mut tester = ModelsTester::with_dynamic_throughput(throughput_function);
-    let mut expected = vec![];
+    let mut expected_result = vec![];
     for i in 0..3 {
         tester.insert_and_compare(0., 100., i);
-        expected.push((3., i));
+        expected_result.push((3., i));
     }
-    assert_eq!(tester.pop_all_and_compare(), expected);
+    assert_eq!(tester.pop_all_and_compare(), expected_result);
 
     tester = ModelsTester::with_dynamic_throughput(throughput_function);
-    expected.clear();
+    expected_result.clear();
     for i in 0..4 {
         tester.insert_and_compare(0., 100., i);
-        expected.push((4. * 2., i));
+        expected_result.push((4. * 2., i));
     }
-    assert_eq!(tester.pop_all_and_compare(), expected);
+    assert_eq!(tester.pop_all_and_compare(), expected_result);
 }
