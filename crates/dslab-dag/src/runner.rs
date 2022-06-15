@@ -65,7 +65,7 @@ pub struct DAGRunner {
     dag: DAG,
     network: Rc<RefCell<Network>>,
     resources: Vec<Resource>,
-    resource_by_id: HashMap<Id, usize>,
+    resource_indexes: HashMap<Id, usize>,
     computations: HashMap<u64, usize>,
     task_location: HashMap<usize, usize>,
     data_transfers: HashMap<usize, DataTransfer>,
@@ -79,8 +79,9 @@ pub struct DAGRunner {
     action_id: usize,
     scheduled_actions: HashSet<usize>,
     resource_queue: Vec<Vec<VecDeque<QueuedTask>>>,
+    // data_transfer_tasks[x][y] -- set of actors where we should send data_item y from actor x
     data_transfer_tasks: HashMap<Id, HashMap<usize, Vec<Id>>>,
-    data_items: HashMap<Id, BTreeSet<usize>>,
+    resource_data_items: HashMap<Id, BTreeSet<usize>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
     config: Config,
@@ -104,7 +105,7 @@ impl DAGRunner {
                     .collect()
             })
             .collect();
-        let resource_by_id = resources
+        let resource_indexes = resources
             .iter()
             .enumerate()
             .map(|(idx, resource)| (resource.id, idx))
@@ -118,7 +119,7 @@ impl DAGRunner {
             dag,
             network,
             resources,
-            resource_by_id,
+            resource_indexes,
             computations: HashMap::new(),
             task_location: HashMap::new(),
             data_transfers: HashMap::new(),
@@ -133,7 +134,7 @@ impl DAGRunner {
             scheduled_actions: HashSet::new(),
             resource_queue,
             data_transfer_tasks: HashMap::new(),
-            data_items: HashMap::new(),
+            resource_data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
             config,
@@ -150,7 +151,7 @@ impl DAGRunner {
             if data_item.state == DataItemState::Ready {
                 assert!(data_item.is_input, "Non-input data item has Ready state");
                 self.data_location.insert(id, self.id);
-                self.data_items.entry(self.id).or_default().insert(id);
+                self.resource_data_items.entry(self.id).or_default().insert(id);
             } else if data_item.consumers.len() == 0 {
                 self.outputs.insert(id);
             }
@@ -237,8 +238,8 @@ impl DAGRunner {
             }
         } else if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
-                if let Some(location) = self.data_location.get(&data_item_id) {
-                    self.add_data_transfer_task(data_item_id, *location, self.resources[resource].id);
+                if let Some(location) = self.data_location.get(&data_item_id).cloned() {
+                    self.add_data_transfer_task(data_item_id, location, self.resources[resource].id);
                 }
             }
         }
@@ -305,7 +306,7 @@ impl DAGRunner {
                     continue;
                 }
                 if !task.inputs.iter().all(|x| {
-                    self.data_items
+                    self.resource_data_items
                         .entry(self.resources[resource_idx].id)
                         .or_default()
                         .contains(x)
@@ -396,7 +397,12 @@ impl DAGRunner {
     }
 
     fn add_data_transfer_task(&mut self, data_item_id: usize, from: Id, to: Id) {
-        if self.data_items.entry(from).or_default().contains(&data_item_id) {
+        if self
+            .resource_data_items
+            .entry(from)
+            .or_default()
+            .contains(&data_item_id)
+        {
             self.transfer_data(data_item_id, from, to);
         } else {
             self.data_transfer_tasks
@@ -433,7 +439,7 @@ impl DAGRunner {
 
         if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
-                self.data_items
+                self.resource_data_items
                     .entry(self.resources[location].id)
                     .or_default()
                     .insert(data_item_id);
@@ -442,11 +448,11 @@ impl DAGRunner {
 
             for &data_item_id in data_items.iter() {
                 for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
-                    if let Some(consumer_location) = self.task_location.get(&consumer) {
+                    if let Some(consumer_location) = self.task_location.get(&consumer).cloned() {
                         self.add_data_transfer_task(
                             data_item_id,
                             self.resources[location].id,
-                            self.resources[*consumer_location].id,
+                            self.resources[consumer_location].id,
                         );
                     }
                 }
@@ -501,7 +507,7 @@ impl DAGRunner {
         }
     }
 
-    fn on_data_transfered(&mut self, data_event_id: usize) {
+    fn on_data_transfer_completed(&mut self, data_event_id: usize) {
         let data_transfer = self.data_transfers.remove(&data_event_id).unwrap();
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
@@ -520,7 +526,10 @@ impl DAGRunner {
             );
         }
 
-        self.data_items.entry(data_transfer.to).or_default().insert(data_id);
+        self.resource_data_items
+            .entry(data_transfer.to)
+            .or_default()
+            .insert(data_id);
 
         if let Some(targets) = self
             .data_transfer_tasks
@@ -533,8 +542,8 @@ impl DAGRunner {
             }
         }
 
-        if let Some(resource_idx) = self.resource_by_id.get(&data_transfer.to) {
-            self.process_resource_queue(*resource_idx);
+        if let Some(resource_idx) = self.resource_indexes.get(&data_transfer.to).cloned() {
+            self.process_resource_queue(resource_idx);
         }
 
         self.check_and_log_completed();
@@ -580,7 +589,7 @@ impl EventHandler for DAGRunner {
                 self.on_task_completed(task_id);
             }
             DataTransferCompleted { data } => {
-                self.on_data_transfered(data.id);
+                self.on_data_transfer_completed(data.id);
             }
         })
     }
