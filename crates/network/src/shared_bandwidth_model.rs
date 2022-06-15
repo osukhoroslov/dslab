@@ -1,14 +1,15 @@
 use simcore::component::Id;
 use simcore::context::SimulationContext;
 
-use throughput_model::throughput_model::ThroughputModel;
+use throughput_model::fair_sharing::FairThroughputSharingModel;
+use throughput_model::model::ThroughputSharingModel;
 
 use crate::model::*;
 
 pub struct SharedBandwidthNetwork {
     bandwidth: f64,
     latency: f64,
-    throughput_model: ThroughputModel<Data>,
+    throughput_model: FairThroughputSharingModel<Data>,
     next_event: u64,
 }
 
@@ -17,7 +18,7 @@ impl SharedBandwidthNetwork {
         return SharedBandwidthNetwork {
             bandwidth,
             latency,
-            throughput_model: ThroughputModel::new(bandwidth),
+            throughput_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
             next_event: 0,
         };
     }
