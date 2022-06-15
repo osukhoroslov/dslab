@@ -45,7 +45,7 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
-pub struct FairThroughputSharingSlowModel<T> {
+pub struct SlowFairThroughputSharingModel<T> {
     throughput_function: Box<dyn Fn(usize) -> f64>,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
@@ -53,7 +53,7 @@ pub struct FairThroughputSharingSlowModel<T> {
     last_recalculation_time: f64,
 }
 
-impl<T> FairThroughputSharingSlowModel<T> {
+impl<T> SlowFairThroughputSharingModel<T> {
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
@@ -81,7 +81,7 @@ impl<T> FairThroughputSharingSlowModel<T> {
     }
 }
 
-impl<T> ThroughputSharingModel<T> for FairThroughputSharingSlowModel<T> {
+impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         let new_count = self.entries.len() + 1;
         self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);

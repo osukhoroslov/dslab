@@ -1,26 +1,26 @@
 use sugars::boxed;
 
 use crate::fair_sharing::FairThroughputSharingModel;
-use crate::fair_sharing_slow::FairThroughputSharingSlowModel;
+use crate::fair_sharing_slow::SlowFairThroughputSharingModel;
 use crate::model::ThroughputSharingModel;
 
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
-    slow_model: FairThroughputSharingSlowModel<u32>,
+    slow_model: SlowFairThroughputSharingModel<u32>,
 }
 
 impl ModelsTester {
     fn with_fixed_throughput(bandwidth: f64) -> Self {
         Self {
             fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
-            slow_model: FairThroughputSharingSlowModel::with_fixed_throughput(bandwidth),
+            slow_model: SlowFairThroughputSharingModel::with_fixed_throughput(bandwidth),
         }
     }
 
     pub fn with_dynamic_throughput(throughput_function: fn(usize) -> f64) -> Self {
         Self {
             fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
-            slow_model: FairThroughputSharingSlowModel::with_dynamic_throughput(boxed!(throughput_function)),
+            slow_model: SlowFairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
         }
     }
 
