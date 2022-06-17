@@ -1,9 +1,0 @@
-[package]
-name = "compute"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-simcore = { path = "../simcore" }
-throughput_model = { path = "../throughput-model" }
-serde = { version = "1.0", features = ["derive"] }

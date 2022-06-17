@@ -1,0 +1,11 @@
+[package]
+name = "dag-draw"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+druid = "0.7.0"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+dslab-dag = { path = "../../crates/dslab-dag" }

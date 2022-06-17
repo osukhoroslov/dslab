@@ -1,13 +1,14 @@
 [package]
-name = "dag_portfolio"
+name = "dag-portfolio"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-simcore = { path = "../../crates/simcore" }
-compute = { path = "../../crates/compute" }
-network = { path = "../../crates/network" }
-dag = { path = "../../crates/dag" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-compute = { path = "../../crates/dslab-compute" }
+dslab-network = { path = "../../crates/dslab-network" }
+dslab-dag = { path = "../../crates/dslab-dag" }
 sugars = "3.0.0"
 rand = "0.8.4"
 rand_pcg = "0.3.1"

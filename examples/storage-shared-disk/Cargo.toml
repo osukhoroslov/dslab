@@ -1,11 +1,12 @@
 [package]
-name = "shared-disk-example"
+name = "storage-shared-disk-example"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-simcore = { path = "../../crates/simcore" }
-storage = { path = "../../crates/storage" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-storage = { path = "../../crates/dslab-storage" }
 sugars = "3.0.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4.14"

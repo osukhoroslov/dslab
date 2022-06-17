@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use compute::multicore::CoresDependency;
+use dslab_compute::multicore::CoresDependency;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct TaskRequest {

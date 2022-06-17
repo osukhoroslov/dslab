@@ -5,11 +5,11 @@ use clap::{arg, command, Arg};
 use env_logger::Builder;
 use sugars::{rc, refcell};
 
-use dag::dag::DAG;
-use dag::dag_simulation::DagSimulation;
-use dag::network::load_network;
-use dag::runner::{Config, DataTransferMode};
-use dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_dag::dag::DAG;
+use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::network::load_network;
+use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 fn main() {
     Builder::from_default_env()

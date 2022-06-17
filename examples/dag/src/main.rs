@@ -13,14 +13,14 @@ use rand_pcg::Pcg64;
 
 use env_logger::Builder;
 
-use compute::multicore::*;
-use dag::dag::DAG;
-use dag::dag_simulation::DagSimulation;
-use dag::network::load_network;
-use dag::runner::{Config, DataTransferMode};
-use dag::scheduler::Scheduler;
-use dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
-use dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_compute::multicore::*;
+use dslab_dag::dag::DAG;
+use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::network::load_network;
+use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::scheduler::Scheduler;
+use dslab_dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
+use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
@@ -149,15 +149,16 @@ fn epigenomics(args: &Args) {
     );
 }
 
-fn montage(args: &Args) {
-    run_simulation(
-        args,
-        DAG::from_dot("dags/Montage.dot"),
-        "resources/cluster2.yaml",
-        "networks/network3.yaml",
-        "traces/trace_montage.json",
-    );
-}
+// dot format is not supported currently
+// fn montage(args: &Args) {
+//     run_simulation(
+//         args,
+//         DAG::from_dot("dags/Montage.dot"),
+//         "resources/cluster2.yaml",
+//         "networks/network3.yaml",
+//         "traces/trace_montage.json",
+//     );
+// }
 
 fn diamond(args: &Args) {
     run_simulation(
@@ -216,7 +217,9 @@ fn main() {
     let mut experiments: BTreeMap<String, fn(&Args)> = BTreeMap::new();
     experiments.insert("map_reduce".to_string(), map_reduce);
     experiments.insert("epigenomics".to_string(), epigenomics); // dax
-    experiments.insert("montage".to_string(), montage); // dot
+
+    //experiments.insert("montage".to_string(), montage); // dot (not supported currently)
+
     experiments.insert("diamond".to_string(), diamond); // yaml
     experiments.insert("reuse_files".to_string(), reuse_files);
 

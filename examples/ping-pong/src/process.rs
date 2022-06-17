@@ -2,12 +2,12 @@ use serde::Serialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use network::network::Network;
-use simcore::cast;
-use simcore::component::Id;
-use simcore::context::SimulationContext;
-use simcore::event::{Event, EventData};
-use simcore::handler::EventHandler;
+use dslab_core::cast;
+use dslab_core::component::Id;
+use dslab_core::context::SimulationContext;
+use dslab_core::event::{Event, EventData};
+use dslab_core::handler::EventHandler;
+use dslab_network::network::Network;
 
 #[derive(Serialize)]
 pub struct Start {}
