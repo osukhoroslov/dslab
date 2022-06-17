@@ -1,5 +1,6 @@
-use dslab_core::context::SimulationContext;
 use rand::distributions::{Distribution, Uniform, WeightedError, WeightedIndex};
+
+use dslab_core::context::SimulationContext;
 
 pub trait BWModel {
     // will be called each time when bandwidth is needed

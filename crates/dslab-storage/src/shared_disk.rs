@@ -1,14 +1,15 @@
 use serde::Serialize;
 
-use simcore::cast;
-use simcore::component::Id;
-use simcore::event::Event;
-use simcore::handler::EventHandler;
-use simcore::{context::SimulationContext, log_debug, log_error};
+use dslab_core::cast;
+use dslab_core::component::Id;
+use dslab_core::event::Event;
+use dslab_core::handler::EventHandler;
+use dslab_core::{context::SimulationContext, log_debug, log_error};
+
+use dslab_models::fair_sharing::FairThroughputSharingModel;
+use dslab_models::model::ThroughputSharingModel;
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use throughput_model::fair_sharing::FairThroughputSharingModel;
-use throughput_model::model::ThroughputSharingModel;
 
 #[derive(Clone)]
 struct DiskActivity {

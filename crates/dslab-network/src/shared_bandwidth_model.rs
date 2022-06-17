@@ -1,8 +1,8 @@
-use simcore::component::Id;
-use simcore::context::SimulationContext;
+use dslab_core::component::Id;
+use dslab_core::context::SimulationContext;
 
-use throughput_model::fair_sharing::FairThroughputSharingModel;
-use throughput_model::model::ThroughputSharingModel;
+use dslab_models::fair_sharing::FairThroughputSharingModel;
+use dslab_models::model::ThroughputSharingModel;
 
 use crate::model::*;
 
