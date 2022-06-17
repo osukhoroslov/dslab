@@ -149,15 +149,16 @@ fn epigenomics(args: &Args) {
     );
 }
 
-fn montage(args: &Args) {
-    run_simulation(
-        args,
-        DAG::from_dot("dags/Montage.dot"),
-        "resources/cluster2.yaml",
-        "networks/network3.yaml",
-        "traces/trace_montage.json",
-    );
-}
+// dot format is not supported currently
+// fn montage(args: &Args) {
+//     run_simulation(
+//         args,
+//         DAG::from_dot("dags/Montage.dot"),
+//         "resources/cluster2.yaml",
+//         "networks/network3.yaml",
+//         "traces/trace_montage.json",
+//     );
+// }
 
 fn diamond(args: &Args) {
     run_simulation(
@@ -216,7 +217,9 @@ fn main() {
     let mut experiments: BTreeMap<String, fn(&Args)> = BTreeMap::new();
     experiments.insert("map_reduce".to_string(), map_reduce);
     experiments.insert("epigenomics".to_string(), epigenomics); // dax
-    experiments.insert("montage".to_string(), montage); // dot
+
+    //experiments.insert("montage".to_string(), montage); // dot (not supported currently)
+
     experiments.insert("diamond".to_string(), diamond); // yaml
     experiments.insert("reuse_files".to_string(), reuse_files);
 
