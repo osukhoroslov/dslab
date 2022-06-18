@@ -1,9 +1,10 @@
 [package]
 name = "faas-opendc-benchmark"
 version = "0.0.1"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-simcore = { path = "../../crates/simcore" }
-serverless = { path = "../../crates/serverless" }
-serverless-extra = { path = "../../crates/serverless-extra" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-faas = { path = "../../crates/dslab-faas" }
+dslab-faas-extra = { path = "../../crates/dslab-faas-extra" }

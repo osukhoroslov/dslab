@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use serverless::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use serverless::function::{Application, Function};
-use serverless::resource::{ResourceConsumer, ResourceProvider};
-use serverless::simulation::ServerlessSimulation;
-use serverless_extra::opendc_trace::process_opendc_trace;
-use simcore::simulation::Simulation;
+use dslab_core::simulation::Simulation;
+use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
+use dslab_faas::function::{Application, Function};
+use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
+use dslab_faas::simulation::ServerlessSimulation;
+use dslab_faas_extra::opendc_trace::process_opendc_trace;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
