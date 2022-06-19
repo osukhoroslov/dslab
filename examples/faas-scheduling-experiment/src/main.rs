@@ -3,16 +3,16 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use serverless::coldstart::FixedTimeColdStartPolicy;
-use serverless::function::{Application, Function};
-use serverless::resource::{ResourceConsumer, ResourceProvider};
-use serverless::scheduler::Scheduler;
-use serverless::simulation::ServerlessSimulation;
-use serverless::stats::Stats;
-use serverless_extra::azure_experiment::{process_azure_trace, Trace};
-use serverless_extra::hermes::HermesScheduler;
-use serverless_extra::simple_schedulers::*;
-use simcore::simulation::Simulation;
+use dslab_core::simulation::Simulation;
+use dslab_faas::coldstart::FixedTimeColdStartPolicy;
+use dslab_faas::function::{Application, Function};
+use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
+use dslab_faas::scheduler::Scheduler;
+use dslab_faas::simulation::ServerlessSimulation;
+use dslab_faas::stats::Stats;
+use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
+use dslab_faas_extra::hermes::HermesScheduler;
+use dslab_faas_extra::simple_schedulers::*;
 
 fn test_scheduler(scheduler: Option<Box<dyn Scheduler>>, trace: &Trace) -> Stats {
     let mut time_range = 0.0;

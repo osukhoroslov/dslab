@@ -1,9 +1,0 @@
-[package]
-name = "serverless_sched"
-version = "0.0.1"
-edition = "2021"
-
-[dependencies]
-simcore = { path = "../../crates/simcore" }
-serverless = { path = "../../crates/serverless" }
-serverless-extra = { path = "../../crates/serverless-extra" }
