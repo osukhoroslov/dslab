@@ -46,7 +46,7 @@ impl Ord for WorkItem {
     }
 }
 
-/// ProgressComputer computes invocation progress
+/// ProgressComputer computes invocation progress and manages invocation end events.
 pub struct ProgressComputer {
     work_tree: BTreeSet<WorkItem>,
     work_map: HashMap<u64, WorkItem>,
