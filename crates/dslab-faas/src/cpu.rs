@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
 
-use simcore::context::SimulationContext;
-use simcore::event::EventId;
+use dslab_core::context::SimulationContext;
+use dslab_core::event::EventId;
 
 use crate::container::{Container, ContainerManager};
 use crate::event::InvocationEndEvent;

@@ -4,9 +4,9 @@ use std::rc::Rc;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use serverless::function::Application;
-use serverless::host::Host;
-use serverless::scheduler::Scheduler;
+use dslab_faas::function::Application;
+use dslab_faas::host::Host;
+use dslab_faas::scheduler::Scheduler;
 
 /// LocalityBasedScheduler picks a host based on appication hash.
 /// In case host number i can't invoke, the scheduler considers host number (i + step)%hosts.len().

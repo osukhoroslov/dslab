@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use serverless::function::Application;
-use serverless::host::Host;
-use serverless::scheduler::Scheduler;
+use dslab_faas::function::Application;
+use dslab_faas::host::Host;
+use dslab_faas::scheduler::Scheduler;
 
 use crate::simple_schedulers::LeastLoadedScheduler;
 
