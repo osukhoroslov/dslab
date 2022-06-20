@@ -24,7 +24,7 @@ const SEED: u64 = 16;
 const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
-const DISK_CAPACITY: u64 = 10000000000;
+const DISK_CAPACITY: u64 = 10u64.pow(10);
 const DISK_READ_BW: f64 = 100.;
 const DISK_WRITE_BW: f64 = 100.;
 

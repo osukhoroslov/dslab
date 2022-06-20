@@ -1,5 +1,5 @@
-const A: u64 = 8213228977;
-const B: u64 = 1969342019;
+const A: u64 = 737687;
+const B: u64 = 65916437;
 const MOD: u64 = 1000000007;
 
 pub struct CustomRandom {
