@@ -35,8 +35,7 @@ where
     T: AddAssign + Copy + Zero + ToPrimitive,
 {
     pub fn mean(&self) -> f64 {
-        let sum = self.sum();
-        sum.to_f64().unwrap() / (self.data.len() as f64)
+        self.sum().to_f64().unwrap() / (self.data.len() as f64)
     }
 }
 
@@ -45,7 +44,7 @@ pub struct Stats {
     pub invocations: u64,
     pub cold_starts: u64,
     pub cold_start_latency: SampleMetric<f64>,
-    pub wasted_resource_time: HashMap<usize, f64>,
+    pub wasted_resource_time: HashMap<usize, SampleMetric<f64>>,
     pub abs_slowdown: SampleMetric<f64>,
     pub rel_slowdown: SampleMetric<f64>,
 }
@@ -62,9 +61,11 @@ impl Stats {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
             if let Some(old) = self.wasted_resource_time.get_mut(&req.id) {
-                *old += delta;
+                old.add(delta);
             } else {
-                self.wasted_resource_time.insert(req.id, delta);
+                let mut metric: SampleMetric<f64> = Default::default();
+                metric.add(delta);
+                self.wasted_resource_time.insert(req.id, metric);
             }
         }
     }

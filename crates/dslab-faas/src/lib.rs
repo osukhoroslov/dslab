@@ -1,4 +1,5 @@
 pub mod coldstart;
+pub mod config;
 pub mod container;
 pub mod controller;
 pub mod cpu;

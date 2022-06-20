@@ -1,9 +1,8 @@
-/// A brief description of CPU sharing model used in this simulator.
+/// This file contains the CPU sharing model used in the simulator.
 /// We use something similar to CPUShares in cgroups, but instead of shares we operate with (shares/core_shares),
 /// i. e. if the container has 512 shares and each core amounts to 1024 shares, we say that the share of the container equals 0.5.
 /// If the container allows concurrent invocations, each invocation gets an equal part of the container share.
 /// We assume that CPU sharing is fair: each invocation makes progress according to its share.
-use std::boxed::Box;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
@@ -12,7 +11,7 @@ use std::rc::Rc;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::EventId;
 
-use crate::container::{Container, ContainerManager};
+use crate::container::Container;
 use crate::event::InvocationEndEvent;
 use crate::invocation::Invocation;
 use crate::util::KahanSum;
@@ -48,6 +47,7 @@ impl Ord for WorkItem {
 
 /// ProgressComputer computes invocation progress and manages invocation end events.
 pub struct ProgressComputer {
+    disable_contention: bool,
     work_tree: BTreeSet<WorkItem>,
     work_map: HashMap<u64, WorkItem>,
     work_total: KahanSum,
@@ -65,10 +65,10 @@ impl ProgressComputer {
         }
         if !self.work_tree.is_empty() {
             let it = self.work_tree.iter().next().unwrap().clone();
-            let delta = it.finish - self.work_total.get();
+            let delta = it.finish - *self.work_total;
             self.end_event = Some(self.ctx.borrow_mut().emit_self(
                 InvocationEndEvent { id: it.id },
-                delta * f64::max(self.cores, self.load.get()),
+                delta * f64::max(self.cores, *self.load),
             ));
         } else {
             self.end_event = None;
@@ -78,13 +78,13 @@ impl ProgressComputer {
     fn remove_invocation(&mut self, id: u64) -> f64 {
         let it = self.work_map.remove(&id).unwrap();
         self.work_tree.remove(&it);
-        let delta = it.finish - self.work_total.get();
+        let delta = it.finish - *self.work_total;
         delta
     }
 
     fn insert_invocation(&mut self, id: u64, remain: f64) {
         let it = WorkItem {
-            finish: self.work_total.get() + remain,
+            finish: *self.work_total + remain,
             id,
         };
         self.work_map.insert(id, it.clone());
@@ -100,11 +100,16 @@ impl ProgressComputer {
     }
 
     fn shift_time(&mut self, time: f64) {
-        self.work_total
-            .add((time - self.last_update) / f64::max(self.cores, self.load.get()));
+        self.work_total += (time - self.last_update) / f64::max(self.cores, *self.load);
     }
 
     pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+        if self.disable_contention {
+            self.ctx
+                .borrow_mut()
+                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.request.duration);
+            return;
+        }
         self.shift_time(time);
         if container.invocations.len() > 1 {
             let cnt = container.invocations.len() as f64;
@@ -115,7 +120,7 @@ impl ProgressComputer {
                 }
             }
         } else {
-            self.load.add(container.cpu_share);
+            self.load += container.cpu_share;
         }
         self.insert_invocation(
             invocation.id,
@@ -130,6 +135,9 @@ impl ProgressComputer {
     }
 
     pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+        if self.disable_contention {
+            return;
+        }
         self.end_event = None;
         self.shift_time(time);
         self.remove_invocation(invocation.id);
@@ -140,35 +148,22 @@ impl ProgressComputer {
                 self.insert_invocation(i, remain * cnt / (cnt + 1.0))
             }
         } else {
-            self.load.add(-container.cpu_share);
+            self.load -= container.cpu_share;
         }
         self.last_update = time;
         self.reschedule_end();
     }
 }
 
-/// ShareManager dynamically manages CPU share of running containers.
-pub trait ShareManager {
-    /// Redistribute CPU share among running containers.
-    fn redistribute(&mut self, mgr: &mut ContainerManager);
-}
-
-/// ConstantShareManager does not redistribute CPU share.
-pub struct ConstantShareManager {}
-
-impl ShareManager for ConstantShareManager {
-    fn redistribute(&mut self, mgr: &mut ContainerManager) {}
-}
-
 pub struct CPU {
     pub cores: u32,
-    pub share_manager: Box<dyn ShareManager>,
     pub progress_computer: ProgressComputer,
 }
 
 impl CPU {
-    pub fn new(cores: u32, share_manager: Option<Box<dyn ShareManager>>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
+    pub fn new(cores: u32, disable_contention: bool, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         let progress_computer = ProgressComputer {
+            disable_contention,
             work_tree: Default::default(),
             work_map: Default::default(),
             work_total: Default::default(),
@@ -180,7 +175,6 @@ impl CPU {
         };
         Self {
             cores,
-            share_manager: share_manager.unwrap_or(Box::new(ConstantShareManager {})),
             progress_computer,
         }
     }

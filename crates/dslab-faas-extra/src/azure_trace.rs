@@ -1,3 +1,4 @@
+/// This file contains functions responsible for parsing Azure functions trace.
 use std::collections::{HashMap, HashSet};
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
@@ -63,6 +64,7 @@ fn app_id(id: &str) -> String {
     id0
 }
 
+/// This function parses Azure trace and generates experiment.
 pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     let mut gen = Pcg64::seed_from_u64(1);
     let mut trace = Vec::new();

@@ -12,10 +12,10 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
     let sim = Simulation::new(1);
-    let mut serverless = ServerlessSimulation::new(sim, None, None, None);
+    let mut serverless = ServerlessSimulation::new(sim, Default::default());
     for _ in 0..2 {
         let mem = serverless.create_resource("mem", 2);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4, None);
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4);
     }
     let fast_mem = serverless.create_resource_requirement("mem", 1);
     let fast =
@@ -34,6 +34,9 @@ fn main() {
         stats.cold_starts,
         stats.cold_start_latency.mean()
     );
-    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!(
+        "wasted memory time = {}",
+        stats.wasted_resource_time.get(&0).unwrap().sum()
+    );
     println!("mean abs slowdown = {}", stats.abs_slowdown.mean());
 }
