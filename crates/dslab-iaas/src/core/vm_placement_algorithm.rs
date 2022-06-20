@@ -41,12 +41,12 @@ impl BestFit {
 impl VMPlacementAlgorithm for BestFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
-        let mut best_cpu_load: f64 = 0.;
+        let mut best_free_space: u32 = 0;
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                if result.is_none() || best_cpu_load < pool_state.get_cpu_load(host) {
-                    best_cpu_load = pool_state.get_cpu_load(host);
+                if result.is_none() || best_free_space > pool_state.get_available_cpu(host) {
+                    best_free_space = pool_state.get_available_cpu(host);
                     result = Some(host);
                 }
             }
@@ -68,12 +68,12 @@ impl WorstFit {
 impl VMPlacementAlgorithm for WorstFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
-        let mut best_cpu_load: f64 = 0.;
+        let mut best_free_space: u32 = 0;
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                if result.is_none() || best_cpu_load > pool_state.get_cpu_load(host) {
-                    best_cpu_load = pool_state.get_cpu_load(host);
+                if result.is_none() || best_free_space < pool_state.get_available_cpu(host) {
+                    best_free_space = pool_state.get_available_cpu(host);
                     result = Some(host);
                 }
             }
