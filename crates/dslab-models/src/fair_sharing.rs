@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::ThroughputSharingModel;
+use crate::model::{ThroughputFunction, ThroughputSharingModel};
 
 struct Activity<T> {
     position: f64,
@@ -70,7 +70,7 @@ impl TimeFunction {
 }
 
 pub struct FairThroughputSharingModel<T> {
-    throughput_function: Box<dyn Fn(usize) -> f64>,
+    throughput_function: ThroughputFunction,
     time_fn: TimeFunction,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
@@ -82,7 +82,7 @@ impl<T> FairThroughputSharingModel<T> {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
-    pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> f64>) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,
             time_fn: TimeFunction::ident(),

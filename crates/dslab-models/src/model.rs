@@ -3,3 +3,5 @@ pub trait ThroughputSharingModel<T> {
     fn pop(&mut self) -> Option<(f64, T)>;
     fn peek(&self) -> Option<(f64, &T)>;
 }
+
+pub type ThroughputFunction = Box<dyn Fn(usize) -> f64>;

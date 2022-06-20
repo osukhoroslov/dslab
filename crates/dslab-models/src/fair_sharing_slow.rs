@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::ThroughputSharingModel;
+use crate::model::{ThroughputFunction, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -46,7 +46,7 @@ impl<T> PartialEq for Activity<T> {
 impl<T> Eq for Activity<T> {}
 
 pub struct SlowFairThroughputSharingModel<T> {
-    throughput_function: Box<dyn Fn(usize) -> f64>,
+    throughput_function: ThroughputFunction,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
     last_throughput_per_item: f64,
@@ -58,7 +58,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
-    pub fn with_dynamic_throughput(throughput_function: Box<dyn Fn(usize) -> f64>) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,
             entries: BinaryHeap::new(),

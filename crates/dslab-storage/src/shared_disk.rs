@@ -7,7 +7,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use dslab_models::fair_sharing::FairThroughputSharingModel;
-use dslab_models::model::ThroughputSharingModel;
+use dslab_models::model::{ThroughputFunction, ThroughputSharingModel};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
@@ -36,12 +36,30 @@ pub struct SharedDisk {
 }
 
 impl SharedDisk {
-    pub fn new(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
+    pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
             used: 0,
             read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth as f64),
             write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
+            next_request_id: 0,
+            next_read_event: 0,
+            next_write_event: 0,
+            ctx,
+        }
+    }
+
+    pub fn new(
+        capacity: u64,
+        read_tf: ThroughputFunction,
+        write_tf: ThroughputFunction,
+        ctx: SimulationContext,
+    ) -> Self {
+        Self {
+            capacity,
+            used: 0,
+            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(read_tf),
+            write_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(write_tf),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,

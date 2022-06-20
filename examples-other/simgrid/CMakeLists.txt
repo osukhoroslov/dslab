@@ -18,3 +18,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(master-workers)
 add_subdirectory(ping-pong)
+add_subdirectory(storage)
