@@ -195,20 +195,25 @@ fn test_overcommit() {
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.47);
 }
 
-
 pub struct BadScheduler {
+    choice: u32,
 }
 
 impl BadScheduler {
-  pub fn new() -> Self {
-      Self { }
-  }
+    pub fn new(choice: u32) -> Self {
+        Self { choice }
+    }
 }
 
 impl VMPlacementAlgorithm for BadScheduler {
-  fn select_host(&self, alloc: &Allocation, _pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
-      return Some(2);
-  }
+    fn select_host(
+        &self,
+        _alloc: &Allocation,
+        _pool_state: &ResourcePoolState,
+        _monitoring: &Monitoring,
+    ) -> Option<u32> {
+        return Some(self.choice);
+    }
 }
 
 #[test]
@@ -238,7 +243,7 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 5.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
 
-    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new()));
+    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(3)));
     cloud_sim.spawn_vm_now(
         2,
         100,
@@ -254,4 +259,40 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+
+    // now host does not exist
+    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(5)));
+    cloud_sim.spawn_vm_now(
+        3,
+        100,
+        100,
+        1000.0,
+        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstLoadModel::new(1.)),
+        bad_s2,
+    );
+    cloud_sim.step_for_duration(5.);
+    current_time = cloud_sim.current_time();
+
+    assert_eq!(current_time, 15.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+
+    // finally right decision
+    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(4)));
+    cloud_sim.spawn_vm_now(
+        3,
+        100,
+        100,
+        1000.0,
+        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstLoadModel::new(1.)),
+        fine_s,
+    );
+    cloud_sim.step_for_duration(5.);
+    current_time = cloud_sim.current_time();
+
+    assert_eq!(current_time, 20.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 1.);
 }
