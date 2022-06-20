@@ -50,7 +50,7 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "simple" => rc!(refcell!(SimpleScheduler::new())),
         "heft" => {
             rc!(refcell!(
-                HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Lazy)
+                HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
             ))
         }
         _ => {

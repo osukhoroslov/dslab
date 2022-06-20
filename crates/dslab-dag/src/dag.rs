@@ -91,7 +91,7 @@ impl DAG {
         }
     }
 
-    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) -> Vec<usize> {
+    pub fn update_task_state(&mut self, task_id: usize, state: TaskState) {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
         if task.state != TaskState::Ready {
@@ -100,18 +100,19 @@ impl DAG {
         match task.state {
             TaskState::Done => {
                 self.completed_task_count += 1;
-                task.outputs.clone()
+                for &data_item in task.outputs.clone().iter() {
+                    self.update_data_item_state(data_item, DataItemState::Ready);
+                }
             }
-            _ => Vec::new(),
+            _ => {}
         }
     }
 
-    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) -> Vec<(usize, TaskState)> {
+    pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         match data_item.state {
             DataItemState::Ready => {
-                let mut result = Vec::new();
                 for t in data_item.consumers.iter() {
                     let mut consumer = self.tasks.get_mut(*t).unwrap();
                     consumer.ready_inputs += 1;
@@ -123,18 +124,15 @@ impl DAG {
                             consumer.state = TaskState::Runnable;
                         } else {
                             panic!(
-                                "Error: task reached needed number of ready inputs in state {:?}",
-                                consumer.state
+                                "Error: task {} reached needed number of ready inputs in state {:?}",
+                                consumer.name, consumer.state
                             );
                         }
-                        result.push((*t, consumer.state));
                     }
                 }
-                return result;
             }
             _ => {}
         };
-        Vec::new()
     }
 
     pub fn is_completed(&self) -> bool {
