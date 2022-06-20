@@ -1,3 +1,5 @@
+/// This file contains the implementation of hybrid histogram policy from
+/// https://www.usenix.org/conference/atc20/presentation/shahrad
 use std::collections::HashMap;
 
 use rand::prelude::*;

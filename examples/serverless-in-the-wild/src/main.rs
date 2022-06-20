@@ -4,23 +4,26 @@ use std::rc::Rc;
 
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
+use dslab_faas::config::Config;
 use dslab_faas::function::{Application, Function};
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::simulation::ServerlessSimulation;
 use dslab_faas::stats::Stats;
-use dslab_faas_extra::azure_experiment::{process_azure_trace, Trace};
+use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
 use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
 
-fn test_policy(policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>, trace: &Trace) -> Stats {
+fn test_policy(policy: Rc<RefCell<dyn ColdStartPolicy>>, trace: &Trace) -> Stats {
     let mut time_range = 0.0;
     for req in trace.trace_records.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
     let sim = Simulation::new(1);
-    let mut serverless = ServerlessSimulation::new(sim, None, policy, None);
+    let mut config: Config = Default::default();
+    config.coldstart_policy = policy;
+    let mut serverless = ServerlessSimulation::new(sim, config);
     for _ in 0..1000 {
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 8, None);
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 8);
     }
     for app in trace.app_records.iter() {
         let mem = serverless.create_resource_requirement("mem", app.mem);
@@ -49,7 +52,10 @@ fn print_results(stats: Stats, name: &str) {
         "cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
-    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!(
+        "wasted memory time = {}",
+        stats.wasted_resource_time.get(&0).unwrap().sum()
+    );
     println!("rel slowdown = {}", stats.rel_slowdown.mean());
 }
 
@@ -62,10 +68,7 @@ fn main() {
     );
     print_results(
         test_policy(
-            Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(
-                f64::MAX / 10.0,
-                0.0,
-            )))),
+            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0))),
             &trace,
         ),
         "No unloading",
@@ -73,7 +76,7 @@ fn main() {
     for len in vec![20.0, 45.0, 60.0, 90.0, 120.0] {
         print_results(
             test_policy(
-                Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)))),
+                Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))),
                 &trace,
             ),
             &format!("{}-minute keepalive", len),
@@ -82,14 +85,14 @@ fn main() {
     for len in vec![2.0, 3.0, 4.0] {
         print_results(
             test_policy(
-                Some(Rc::new(RefCell::new(HybridHistogramPolicy::new(
+                Rc::new(RefCell::new(HybridHistogramPolicy::new(
                     3600.0 * len,
                     60.0,
                     2.0,
                     0.5,
                     0.15,
                     0.1,
-                )))),
+                ))),
                 &trace,
             ),
             &format!("Hybrid Histogram policy, {} hours bound", len),

@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
+use dslab_faas::config::Config;
 use dslab_faas::function::{Application, Function};
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::scheduler::Scheduler;
@@ -14,21 +15,19 @@ use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
 use dslab_faas_extra::hermes::HermesScheduler;
 use dslab_faas_extra::simple_schedulers::*;
 
-fn test_scheduler(scheduler: Option<Box<dyn Scheduler>>, trace: &Trace) -> Stats {
+fn test_scheduler(scheduler: Box<dyn Scheduler>, trace: &Trace) -> Stats {
     let mut time_range = 0.0;
     for req in trace.trace_records.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
     let sim = Simulation::new(1);
-    let mut serverless = ServerlessSimulation::new(
-        sim,
-        None,
-        Some(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)))),
-        scheduler,
-    );
+    let mut config: Config = Default::default();
+    config.scheduler = scheduler;
+    config.coldstart_policy = Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)));
+    let mut serverless = ServerlessSimulation::new(sim, config);
     for _ in 0..10 {
         let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4, None);
+        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4);
     }
     for app in trace.app_records.iter() {
         let mem = serverless.create_resource_requirement("mem", app.mem);
@@ -57,7 +56,10 @@ fn print_results(stats: Stats, name: &str) {
         "cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
-    println!("wasted memory time = {}", *stats.wasted_resource_time.get(&0).unwrap());
+    println!(
+        "wasted memory time = {}",
+        stats.wasted_resource_time.get(&0).unwrap().sum()
+    );
     println!("mean absolute slowdown = {}", stats.abs_slowdown.mean());
     println!("mean relative slowdown = {}", stats.rel_slowdown.mean());
 }
@@ -70,24 +72,21 @@ fn main() {
         trace.trace_records.len()
     );
     print_results(
-        test_scheduler(Some(Box::new(LocalityBasedScheduler::new(None, None, true))), &trace),
+        test_scheduler(Box::new(LocalityBasedScheduler::new(None, None, true)), &trace),
         "Locality-based, warm only",
     );
     print_results(
-        test_scheduler(Some(Box::new(LocalityBasedScheduler::new(None, None, false))), &trace),
+        test_scheduler(Box::new(LocalityBasedScheduler::new(None, None, false)), &trace),
         "Locality-based, allow cold",
     );
+    print_results(test_scheduler(Box::new(RandomScheduler::new(1)), &trace), "Random");
     print_results(
-        test_scheduler(Some(Box::new(RandomScheduler::new(1))), &trace),
-        "Random",
-    );
-    print_results(
-        test_scheduler(Some(Box::new(LeastLoadedScheduler::new(true))), &trace),
+        test_scheduler(Box::new(LeastLoadedScheduler::new(true)), &trace),
         "Least-loaded",
     );
     print_results(
-        test_scheduler(Some(Box::new(RoundRobinScheduler::new())), &trace),
+        test_scheduler(Box::new(RoundRobinScheduler::new()), &trace),
         "Round Robin",
     );
-    print_results(test_scheduler(Some(Box::new(HermesScheduler::new())), &trace), "Hermes");
+    print_results(test_scheduler(Box::new(HermesScheduler::new()), &trace), "Hermes");
 }

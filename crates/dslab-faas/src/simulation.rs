@@ -4,17 +4,15 @@ use std::rc::Rc;
 use dslab_core::context::SimulationContext;
 use dslab_core::simulation::Simulation;
 
-use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
+use crate::coldstart::ColdStartPolicy;
+use crate::config::Config;
 use crate::controller::Controller;
-use crate::cpu::ShareManager;
-use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
-use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::stats::Stats;
 use crate::util::Counter;
 
@@ -24,6 +22,7 @@ pub struct ServerlessSimulation {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
     controller_id: HandlerId,
+    disable_contention: bool,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     host_ctr: Counter,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
@@ -34,29 +33,22 @@ pub struct ServerlessSimulation {
 }
 
 impl ServerlessSimulation {
-    pub fn new(
-        mut sim: Simulation,
-        idle_deployer: Option<Box<dyn IdleDeployer>>,
-        coldstart_policy: Option<Rc<RefCell<dyn ColdStartPolicy>>>,
-        scheduler: Option<Box<dyn Scheduler>>,
-    ) -> Self {
-        let coldstart = coldstart_policy.unwrap_or(Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(0.0, 0.0))));
+    pub fn new(mut sim: Simulation, config: Config) -> Self {
         let stats = Rc::new(RefCell::new(Default::default()));
         let ctx = sim.create_context("entry point");
-        let deployer = idle_deployer.unwrap_or(Box::new(BasicDeployer {}));
-        let real_scheduler = scheduler.unwrap_or(Box::new(BasicScheduler {}));
         let function_registry: Rc<RefCell<FunctionRegistry>> = Rc::new(RefCell::new(Default::default()));
         let invocation_registry: Rc<RefCell<InvocationRegistry>> = Rc::new(RefCell::new(Default::default()));
         let controller = Rc::new(RefCell::new(Controller::new(
             function_registry.clone(),
-            deployer,
-            real_scheduler,
+            config.idle_deployer,
+            config.scheduler,
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
         Self {
-            coldstart,
+            coldstart: config.coldstart_policy,
             controller,
             controller_id,
+            disable_contention: config.disable_contention,
             function_registry,
             host_ctr: Default::default(),
             invocation_registry,
@@ -83,20 +75,14 @@ impl ServerlessSimulation {
         self.stats.borrow().clone()
     }
 
-    pub fn add_host(
-        &mut self,
-        invoker: Option<Box<dyn Invoker>>,
-        resources: ResourceProvider,
-        cores: u32,
-        share_manager: Option<Box<dyn ShareManager>>,
-    ) {
+    pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {
         let id = self.host_ctr.next();
         let real_invoker = invoker.unwrap_or(Box::new(BasicInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,
             cores,
-            share_manager,
+            self.disable_contention,
             resources,
             real_invoker,
             self.function_registry.clone(),

@@ -7,6 +7,7 @@ use dslab_faas::scheduler::Scheduler;
 
 use crate::simple_schedulers::LeastLoadedScheduler;
 
+/// Refer to https://arxiv.org/abs/2111.07226
 pub struct HermesScheduler {
     high_load: LeastLoadedScheduler,
 }

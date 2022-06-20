@@ -106,6 +106,7 @@ impl Scheduler for LeastLoadedScheduler {
     }
 }
 
+/// RoundRobinScheduler chooses hosts in a circular fashion.
 pub struct RoundRobinScheduler {
     index: usize,
 }
