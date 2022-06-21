@@ -119,7 +119,14 @@ impl CloudSimulation {
             cpu_usage,
             memory_usage,
         };
-        let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
+        let vm = VirtualMachine::new(
+            id,
+            self.ctx.time(),
+            lifetime,
+            cpu_load_model,
+            memory_load_model,
+            self.sim_config.clone(),
+        );
         self.ctx.emit_now(AllocationRequest { alloc, vm }, scheduler_id);
     }
 
@@ -139,14 +146,21 @@ impl CloudSimulation {
             cpu_usage,
             memory_usage,
         };
-        let vm = VirtualMachine::new(lifetime, cpu_load_model, memory_load_model, self.sim_config.clone());
+        let vm = VirtualMachine::new(
+            id,
+            self.ctx.time(),
+            lifetime,
+            cpu_load_model,
+            memory_load_model,
+            self.sim_config.clone(),
+        );
         self.ctx.emit(AllocationRequest { alloc, vm }, scheduler_id, delay);
     }
 
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let mon = self.monitoring.borrow();
         let source_host = mon.find_host_by_vm(vm_id);
-        let mut vm = mon.get_vm(source_host, vm_id);
+        let mut vm = mon.get_vm(vm_id);
         let alloc = mon.get_allocation(source_host, vm_id);
         vm.set_status(VmStatus::Initializing);
         self.ctx.emit(
@@ -213,6 +227,14 @@ impl CloudSimulation {
 
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
+    }
+
+    pub fn vm(&self, vm_id: u32) -> Rc<RefCell<VirtualMachine>> {
+        rc!(refcell!(self.monitoring.borrow().get_vm(vm_id).clone()))
+    }
+
+    pub fn vm_status(&self, vm_id: u32) -> VmStatus {
+        self.monitoring.borrow().get_vm_status(vm_id).clone()
     }
 
     pub fn sim_config(&self) -> Rc<SimulationConfig> {

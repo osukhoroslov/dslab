@@ -237,7 +237,7 @@ impl HostManager {
     fn on_allocation_release_request(&mut self, alloc_id: u32) {
         if self.allocs.contains_key(&alloc_id) {
             log_debug!(self.ctx, "release resources from vm #{} on host #{}", alloc_id, self.id);
-            self.vms.get_mut(&alloc_id).unwrap().set_status(VmStatus::Deactivated);
+            self.vms.get_mut(&alloc_id).unwrap().set_status(VmStatus::Finished);
             self.ctx.emit_self(
                 VMDeleted { id: alloc_id },
                 self.vms.get_mut(&alloc_id).unwrap().stop_duration(),

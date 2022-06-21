@@ -16,6 +16,7 @@ use crate::core::events::allocation::{
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm::VirtualMachine;
+use crate::core::vm::VmStatus;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct Scheduler {
@@ -53,7 +54,13 @@ impl Scheduler {
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
-    fn on_allocation_request(&mut self, alloc: Allocation, vm: VirtualMachine) {
+    fn on_allocation_request(&mut self, alloc: Allocation, mut vm: VirtualMachine) {
+        if self.ctx.time() > vm.scheduling_start_time + self.sim_config.vm_allocation_timeout {
+            vm.set_status(VmStatus::FailedToAllocate);
+            self.monitoring.borrow_mut().insert_vm(vm);
+            return;
+        }
+
         if let Some(host) = self
             .vm_placement_algorithm
             .select_host(&alloc, &self.pool_state, &self.monitoring.borrow())

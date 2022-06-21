@@ -5,6 +5,7 @@ use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
+use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
 use dslab_iaas::core::vm_placement_algorithm::FirstFit;
@@ -231,7 +232,7 @@ fn test_wrong_decision() {
         1,
         100,
         100,
-        1000.0,
+        100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
         s,
@@ -242,13 +243,14 @@ fn test_wrong_decision() {
     let mut current_time = cloud_sim.current_time();
     assert_eq!(current_time, 5.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
+    assert_eq!(cloud_sim.vm_status(1), VmStatus::Running);
 
     let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(3)));
     cloud_sim.spawn_vm_now(
         2,
         100,
         100,
-        1000.0,
+        100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
         bad_s,
@@ -259,6 +261,7 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+    assert_eq!(cloud_sim.vm_status(2), VmStatus::Initializing);
 
     // now host does not exist
     let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(5)));
@@ -266,7 +269,7 @@ fn test_wrong_decision() {
         3,
         100,
         100,
-        1000.0,
+        100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
         bad_s2,
@@ -277,14 +280,15 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 15.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+    assert_eq!(cloud_sim.vm_status(3), VmStatus::Initializing);
 
     // finally right decision
     let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(4)));
     cloud_sim.spawn_vm_now(
-        3,
+        4,
         100,
         100,
-        1000.0,
+        100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
         fine_s,
@@ -295,4 +299,11 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 20.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 1.);
+    assert_eq!(cloud_sim.vm_status(4), VmStatus::Running);
+
+    cloud_sim.step_for_duration(100.);
+    assert_eq!(cloud_sim.vm_status(1), VmStatus::Finished);
+    assert_eq!(cloud_sim.vm_status(2), VmStatus::FailedToAllocate);
+    assert_eq!(cloud_sim.vm_status(3), VmStatus::FailedToAllocate);
+    assert_eq!(cloud_sim.vm_status(4), VmStatus::Finished);
 }

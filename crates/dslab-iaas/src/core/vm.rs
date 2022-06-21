@@ -7,12 +7,13 @@ use serde::Serialize;
 use crate::core::config::SimulationConfig;
 use crate::core::load_model::LoadModel;
 
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum VmStatus {
     Initializing,
     Running,
-    Deactivated,
+    Finished,
     Migrating,
+    FailedToAllocate,
 }
 
 impl Display for VmStatus {
@@ -20,14 +21,17 @@ impl Display for VmStatus {
         match self {
             VmStatus::Initializing => write!(f, "initializing"),
             VmStatus::Running => write!(f, "running"),
-            VmStatus::Deactivated => write!(f, "deactivated"),
+            VmStatus::Finished => write!(f, "Finished"),
             VmStatus::Migrating => write!(f, "migrating"),
+            VmStatus::FailedToAllocate => write!(f, "failed_to_allocate"),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct VirtualMachine {
+    pub id: u32,
+    pub scheduling_start_time: f64,
     lifetime: f64,
     start_time: f64,
     status: VmStatus,
@@ -49,12 +53,16 @@ impl Serialize for VirtualMachine {
 
 impl VirtualMachine {
     pub fn new(
+        id: u32,
+        scheduling_start_time: f64,
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
+            id,
+            scheduling_start_time,
             lifetime,
             start_time: -1.,
             cpu_load_model,
@@ -72,8 +80,8 @@ impl VirtualMachine {
         self.start_time
     }
 
-    pub fn status(&self) -> &VmStatus {
-        &self.status
+    pub fn status(&self) -> VmStatus {
+        self.status.clone()
     }
 
     pub fn start_duration(&self) -> f64 {
