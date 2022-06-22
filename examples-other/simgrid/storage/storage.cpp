@@ -35,13 +35,13 @@ std::unique_ptr<DiskWrapper> MakeDiskWithDegradation(sg4::Host* host) {
 
 template <typename F>
 void RunWithTimeMeasure(F&& f) {
-    XBT_INFO("Starting");
+    XBT_WARN("Starting");
     auto start_time = std::chrono::steady_clock::now();
     f();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::steady_clock::now() - start_time)
                        .count();
-    XBT_INFO("Done. Elapsed %.10g ms", static_cast<double>(elapsed));
+    XBT_WARN("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
 }
 
 int main(int argc, char** argv) {

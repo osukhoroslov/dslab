@@ -6,7 +6,7 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 
-use dslab_models::fair_sharing::FairThroughputSharingModel;
+use dslab_models::fair_sharing::FairThroughputSharingModel as ThroughputSharingModelImpl;
 use dslab_models::model::{ThroughputFunction, ThroughputSharingModel};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
@@ -27,8 +27,8 @@ pub struct DiskWriteActivityCompleted {}
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
-    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
-    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    read_throughput_model: ThroughputSharingModelImpl<DiskActivity>,
+    write_throughput_model: ThroughputSharingModelImpl<DiskActivity>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -40,8 +40,8 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth as f64),
-            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
+            read_throughput_model: ThroughputSharingModelImpl::with_fixed_throughput(read_bandwidth as f64),
+            write_throughput_model: ThroughputSharingModelImpl::with_fixed_throughput(write_bandwidth as f64),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -58,8 +58,8 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(read_tf),
-            write_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(write_tf),
+            read_throughput_model: ThroughputSharingModelImpl::with_dynamic_throughput(read_tf),
+            write_throughput_model: ThroughputSharingModelImpl::with_dynamic_throughput(write_tf),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -165,8 +165,7 @@ impl SharedDisk {
     }
 
     fn on_read_completed(&mut self) {
-        let (time, activity) = self.read_throughput_model.pop().unwrap();
-        assert_eq!(time, self.ctx.time());
+        let (_, activity) = self.read_throughput_model.pop().unwrap();
         self.ctx.emit_now(
             DataReadCompleted {
                 request_id: activity.request_id,
@@ -178,8 +177,7 @@ impl SharedDisk {
     }
 
     fn on_write_completed(&mut self) {
-        let (time, activity) = self.write_throughput_model.pop().unwrap();
-        assert_eq!(time, self.ctx.time());
+        let (_, activity) = self.write_throughput_model.pop().unwrap();
         self.ctx.emit_now(
             DataWriteCompleted {
                 request_id: activity.request_id,

@@ -59,7 +59,7 @@ void DiskWrapper::ApplyAndSeal() {
 }
 
 void DiskWrapper::Run(size_t activities_count) {
-    XBT_INFO("Starting disk benchmark");
+    XBT_WARN("Starting disk benchmark");
 
     std::vector<sg4::IoPtr> activities;
     activities.reserve(activities_count);
@@ -67,14 +67,17 @@ void DiskWrapper::Run(size_t activities_count) {
     CustomRandom rnd(16);
     for (size_t i = 0; i < activities_count; ++i) {
         uint64_t size = rnd.Next();
-        XBT_DEBUG("Starting read of size %lu", size);
+        XBT_INFO("Starting read of size %lu", size);
         activities.push_back(disk_->read_async(size));
     }
 
-    XBT_INFO("Started %lu activities. Waiting for complete...", activities_count);
+    XBT_WARN("Started %lu activities. Waiting for complete...", activities_count);
 
-    for (const auto& activity : activities) {
-        activity->wait();
+    for (size_t i = 0; i < activities_count; ++i) {
+        size_t finished_idx = sg4::Io::wait_any(activities);
+        XBT_INFO("Completed reading size = %llu", activities[finished_idx]->get_performed_ioops());
+        std::swap(activities[finished_idx], activities.back());
+        activities.pop_back();
     }
 }
 

@@ -14,7 +14,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
-use dslab_core::{cast, log_error, log_info};
+use dslab_core::{cast, log_debug, log_error, log_info};
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
 use dslab_storage::shared_disk::SharedDisk;
@@ -67,8 +67,9 @@ impl EventHandler for User {
                     activities_count
                 );
             }
-            DataReadCompleted { request_id: _, size: _ } => {
+            DataReadCompleted { request_id: _, size } => {
                 self.activities_count -= 1;
+                log_debug!(self.ctx, "Completed reading size = {}", size,);
                 if self.activities_count == 0 {
                     log_info!(self.ctx, "Done.");
                 }
@@ -109,8 +110,8 @@ fn main() {
 
     let t = Instant::now();
     sim.step_until_no_events();
-    let elapsed = t.elapsed().as_secs_f64();
-    println!("Processed {} iterations in {:.2?}s", ACTIVITIES_COUNT, elapsed,);
+    let elapsed = t.elapsed().as_millis();
+    println!("Processed {} iterations in {} ms", ACTIVITIES_COUNT, elapsed,);
 
     println!("Finish");
 }
