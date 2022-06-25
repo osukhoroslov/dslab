@@ -1,6 +1,7 @@
 # This file creates big function traces from small function traces.
 # It requires a function trace in OpenDC format.
-# Some function traces can be found here: https://github.com/JOUNAIDSoufiane/OpenDC-Serverless/tree/master/experiment-analysis/resources/lambda/traces
+# Some function traces can be found here:
+# https://github.com/JOUNAIDSoufiane/OpenDC-Serverless/tree/master/experiment-analysis/resources/lambda/traces
 import argparse
 import sys
 

@@ -1,4 +1,4 @@
-// Slightly modified https://github.com/atlarge-research/opendc/blob/prod/opendc-experiments/opendc-experiments-serverless20/src/main/kotlin/org/opendc/experiments/serverless/ServerlessExperiment.kt
+// Slightly modified https://github.com/atlarge-research/opendc/blob/6d2b140311057e54622fdcd6cf7f8850c370414c/opendc-experiments/opendc-experiments-serverless20/src/main/kotlin/org/opendc/experiments/serverless/ServerlessExperiment.kt
 package org.opendc.experiments.serverless
 
 import com.typesafe.config.ConfigFactory

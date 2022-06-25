@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use csv::ReaderBuilder;
 
-pub struct FunctionRow {
+pub struct FunctionSample {
     pub time: u64,
     pub invocations: usize,
     pub exec: u32,
@@ -14,7 +14,7 @@ pub struct FunctionRow {
     pub alloc_mem: usize,
 }
 
-pub type FunctionTrace = Vec<FunctionRow>;
+pub type FunctionTrace = Vec<FunctionSample>;
 pub type OpenDCTrace = Vec<FunctionTrace>;
 
 pub fn process_opendc_trace(path: &Path) -> OpenDCTrace {
@@ -40,7 +40,7 @@ pub fn process_opendc_trace(path: &Path) -> OpenDCTrace {
         let mut file = ReaderBuilder::new().from_path(f.as_path()).unwrap();
         for rec in file.records() {
             let record = rec.unwrap();
-            let row = FunctionRow {
+            let row = FunctionSample {
                 time: u64::from_str(&record[0]).unwrap(),
                 invocations: usize::from_str(&record[1]).unwrap(),
                 exec: u32::from_str(&record[2]).unwrap(),
