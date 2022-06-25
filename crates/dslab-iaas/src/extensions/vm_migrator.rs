@@ -72,7 +72,7 @@ impl VmMigrator {
                 );
                 min_load = min_load.min(state.cpu_load).min(state.memory_load);
                 for (vm_id, vm) in state.vms.iter() {
-                    if vm.status() != VmStatus::Running {
+                    if *vm.status() != VmStatus::Running {
                         continue;
                     }
                     vms_to_migrate.push((*vm_id, *host));
@@ -91,7 +91,7 @@ impl VmMigrator {
                 let mut cpu_usage = state.cpu_load * (state.cpu_total as f64);
                 let mut memory_usage = state.memory_load * (state.memory_total as f64);
                 for (vm_id, vm) in state.vms.iter() {
-                    if vm.status() != VmStatus::Running {
+                    if *vm.status() != VmStatus::Running {
                         continue;
                     }
                     vms_to_migrate.push((*vm_id, *host));

@@ -77,12 +77,12 @@ impl Monitoring {
             .clone()
     }
 
-    pub fn get_vm_status(&self, vm_id: u32) -> VmStatus {
+    pub fn get_vm_status(&self, vm_id: u32) -> &VmStatus {
         let vm_opt = self.vms.get(&vm_id);
         if vm_opt.is_none() {
-            return VmStatus::Initializing; // has not placed on host yet
+            return &VmStatus::Initializing; // has not placed on host yet
         }
-        vm_opt.unwrap().clone().status()
+        vm_opt.unwrap().status()
     }
 
     pub fn get_vm(&self, vm_id: u32) -> VirtualMachine {

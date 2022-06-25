@@ -55,7 +55,7 @@ impl Scheduler {
     }
 
     fn on_allocation_request(&mut self, alloc: Allocation, mut vm: VirtualMachine) {
-        if self.ctx.time() > vm.scheduling_start_time + self.sim_config.vm_allocation_timeout {
+        if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
             vm.set_status(VmStatus::FailedToAllocate);
             self.monitoring.borrow_mut().insert_vm(vm);
             return;

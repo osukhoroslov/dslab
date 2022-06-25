@@ -51,9 +51,8 @@ fn simulation(sim_config: SimulationConfig) {
     let vm_cpu_distribution = [1, 2, 4, 8];
     let vm_ram_distribution = [512, 1024, 2048];
 
-    for i in 1..=args.num_vms {
+    for _i in 1..=args.num_vms {
         cloud_sim.spawn_vm_now(
-            i as u32,
             vm_cpu_distribution[rng.gen_range(0..4)],
             vm_ram_distribution[rng.gen_range(0..3)],
             100.0,

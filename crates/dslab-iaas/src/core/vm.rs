@@ -31,7 +31,7 @@ impl Display for VmStatus {
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub id: u32,
-    pub scheduling_start_time: f64,
+    pub allocation_start_time: f64,
     lifetime: f64,
     start_time: f64,
     status: VmStatus,
@@ -54,7 +54,7 @@ impl Serialize for VirtualMachine {
 impl VirtualMachine {
     pub fn new(
         id: u32,
-        scheduling_start_time: f64,
+        allocation_start_time: f64,
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
@@ -62,7 +62,7 @@ impl VirtualMachine {
     ) -> Self {
         Self {
             id,
-            scheduling_start_time,
+            allocation_start_time,
             lifetime,
             start_time: -1.,
             cpu_load_model,
@@ -80,8 +80,8 @@ impl VirtualMachine {
         self.start_time
     }
 
-    pub fn status(&self) -> VmStatus {
-        self.status.clone()
+    pub fn status(&self) -> &VmStatus {
+        &self.status
     }
 
     pub fn start_duration(&self) -> f64 {

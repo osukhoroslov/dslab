@@ -13,7 +13,7 @@ use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::simulation::CloudSimulation;
 
 fn name_wrapper(file_name: &str) -> String {
-    format!("tests/static/{}", file_name)
+    format!("test-configs/{}", file_name)
 }
 
 #[test]
@@ -29,7 +29,6 @@ fn test_energy_consumption() {
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     cloud_sim.spawn_vm_now(
-        1,
         10,
         10,
         2.0,
@@ -57,9 +56,8 @@ fn test_first_fit() {
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
     cloud_sim.spawn_vm_now(
-        1,
         20,
-        20,
+        10,
         100.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
@@ -72,9 +70,10 @@ fn test_first_fit() {
     assert_eq!(current_time, 5.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.2);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.1);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.);
 
     cloud_sim.spawn_vm_now(
-        2,
         20,
         20,
         100.0,
@@ -89,10 +88,12 @@ fn test_first_fit() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.4);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.3);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.);
 }
 
 #[test]
-// Best fit selects the host with the least free space lest
+// Best fit selects the host with the least free space left
 fn test_best_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -103,7 +104,6 @@ fn test_best_fit() {
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     cloud_sim.spawn_vm_now(
-        1,
         20,
         20,
         100.0,
@@ -118,9 +118,10 @@ fn test_best_fit() {
     assert_eq!(current_time, 5.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.25);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.25);
 
     cloud_sim.spawn_vm_now(
-        2,
         20,
         20,
         100.0,
@@ -135,10 +136,12 @@ fn test_best_fit() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.5);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.5);
 }
 
 #[test]
-// No enough space for 11th VM, resources will be allocated on host №2
+// Not enough space for 11th VM, resources will be allocated on host 2
 fn test_no_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -148,9 +151,8 @@ fn test_no_overcommit() {
     let h2 = cloud_sim.add_host("h2", 100, 100);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    for i in 1..12 {
+    for _i in 1..12 {
         cloud_sim.spawn_vm_now(
-            i,
             10,
             10,
             100.0,
@@ -165,6 +167,8 @@ fn test_no_overcommit() {
     assert_eq!(current_time, 55.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.0);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.1);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.0);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.1);
 }
 
 #[test]
@@ -177,9 +181,8 @@ fn test_overcommit() {
     let h = cloud_sim.add_host("h", 200, 200);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
 
-    for i in 1..95 {
+    for _i in 1..95 {
         cloud_sim.spawn_vm_now(
-            i,
             100,
             100,
             1000.0,
@@ -194,6 +197,7 @@ fn test_overcommit() {
     let current_time = cloud_sim.current_time();
     assert_eq!(current_time, 99.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.47);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_load(current_time), 0.47);
 }
 
 pub struct BadScheduler {
@@ -228,8 +232,7 @@ fn test_wrong_decision() {
     let h2 = cloud_sim.add_host("h2", 100, 100);
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        1,
+    let first_vm = cloud_sim.spawn_vm_now(
         100,
         100,
         100.0,
@@ -243,11 +246,11 @@ fn test_wrong_decision() {
     let mut current_time = cloud_sim.current_time();
     assert_eq!(current_time, 5.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
-    assert_eq!(cloud_sim.vm_status(1), VmStatus::Running);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
+    assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Running);
 
     let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(3)));
-    cloud_sim.spawn_vm_now(
-        2,
+    let second_vm = cloud_sim.spawn_vm_now(
         100,
         100,
         100.0,
@@ -261,12 +264,13 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
-    assert_eq!(cloud_sim.vm_status(2), VmStatus::Initializing);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.);
+    assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::Initializing);
 
     // now host does not exist
     let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(5)));
-    cloud_sim.spawn_vm_now(
-        3,
+    let third_vm = cloud_sim.spawn_vm_now(
         100,
         100,
         100.0,
@@ -280,12 +284,13 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 15.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.);
-    assert_eq!(cloud_sim.vm_status(3), VmStatus::Initializing);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.);
+    assert_eq!(cloud_sim.vm_status(third_vm), VmStatus::Initializing);
 
     // finally right decision
     let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(4)));
-    cloud_sim.spawn_vm_now(
-        4,
+    let fourth_vm = cloud_sim.spawn_vm_now(
         100,
         100,
         100.0,
@@ -299,11 +304,66 @@ fn test_wrong_decision() {
     assert_eq!(current_time, 20.);
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 1.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 1.);
-    assert_eq!(cloud_sim.vm_status(4), VmStatus::Running);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 1.);
+    assert_eq!(cloud_sim.vm_status(fourth_vm), VmStatus::Running);
 
     cloud_sim.step_for_duration(100.);
-    assert_eq!(cloud_sim.vm_status(1), VmStatus::Finished);
-    assert_eq!(cloud_sim.vm_status(2), VmStatus::FailedToAllocate);
-    assert_eq!(cloud_sim.vm_status(3), VmStatus::FailedToAllocate);
-    assert_eq!(cloud_sim.vm_status(4), VmStatus::Finished);
+    assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Finished);
+    assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::FailedToAllocate);
+    assert_eq!(cloud_sim.vm_status(third_vm), VmStatus::FailedToAllocate);
+    assert_eq!(cloud_sim.vm_status(fourth_vm), VmStatus::Finished);
+}
+
+#[test]
+// Migrate a VM from host 1 to host 2
+// Network throughput is 10, then the migration of the VM with memory size 100 will take 10 seconds
+fn test_migration_simple() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 200, 200);
+    let h2 = cloud_sim.add_host("h2", 200, 200);
+    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+
+    // VM spawns on host 1
+    let vm = cloud_sim.spawn_vm_now(
+        100,
+        100,
+        1000.0,
+        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstLoadModel::new(1.)),
+        s,
+    );
+
+    cloud_sim.step_for_duration(5.);
+    let mut current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 5.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.5);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.5);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    cloud_sim.migrate_vm_to_host(vm, h2);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    cloud_sim.step_for_duration(1.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Migrating);
+
+    cloud_sim.step_for_duration(5.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Migrating);
+
+    // Message delay 0.2 seconds makes the migration process little longer than 10 seconds
+    cloud_sim.step_for_duration(5.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Migrating);
+
+    cloud_sim.step_for_duration(1.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 17.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_cpu_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.5);
+    assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.5);
 }

@@ -33,6 +33,7 @@ pub struct CloudSimulation {
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
+    vm_counter: u32,
 }
 
 impl CloudSimulation {
@@ -57,6 +58,7 @@ impl CloudSimulation {
             sim,
             ctx,
             sim_config: rc!(sim_config),
+            vm_counter: 0,
         }
     }
 
@@ -104,16 +106,21 @@ impl CloudSimulation {
         id
     }
 
+    fn generate_vm_id(&mut self) -> u32 {
+        self.vm_counter += 1;
+        self.vm_counter
+    }
+
     pub fn spawn_vm_now(
         &mut self,
-        id: u32,
         cpu_usage: u32,
         memory_usage: u64,
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
         scheduler_id: u32,
-    ) {
+    ) -> u32 {
+        let id = self.generate_vm_id();
         let alloc = Allocation {
             id,
             cpu_usage,
@@ -128,11 +135,11 @@ impl CloudSimulation {
             self.sim_config.clone(),
         );
         self.ctx.emit_now(AllocationRequest { alloc, vm }, scheduler_id);
+        id
     }
 
     pub fn spawn_vm_with_delay(
         &mut self,
-        id: u32,
         cpu_usage: u32,
         memory_usage: u64,
         lifetime: f64,
@@ -141,6 +148,7 @@ impl CloudSimulation {
         scheduler_id: u32,
         delay: f64,
     ) {
+        let id = self.generate_vm_id();
         let alloc = Allocation {
             id,
             cpu_usage,
@@ -148,7 +156,7 @@ impl CloudSimulation {
         };
         let vm = VirtualMachine::new(
             id,
-            self.ctx.time(),
+            self.ctx.time() + delay,
             lifetime,
             cpu_load_model,
             memory_load_model,
@@ -189,7 +197,6 @@ impl CloudSimulation {
             let request = request_opt.unwrap();
 
             self.spawn_vm_with_delay(
-                request.id,
                 request.cpu_usage,
                 request.memory_usage,
                 request.lifetime,
