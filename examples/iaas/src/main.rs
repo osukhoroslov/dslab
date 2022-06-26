@@ -205,7 +205,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");
     migrator
         .borrow_mut()
-        .patch_custom_args(5., cloud_sim.monitoring(), cloud_sim.sim_config());
+        .patch_custom_args(5., cloud_sim.monitoring(), cloud_sim.vm_api(), cloud_sim.sim_config());
     migrator.borrow_mut().init();
 
     cloud_sim.step_for_duration(1005.);

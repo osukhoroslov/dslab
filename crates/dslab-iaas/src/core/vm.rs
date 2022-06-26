@@ -31,6 +31,8 @@ impl Display for VmStatus {
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub id: u32,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
     pub allocation_start_time: f64,
     lifetime: f64,
     start_time: f64,
@@ -54,6 +56,8 @@ impl Serialize for VirtualMachine {
 impl VirtualMachine {
     pub fn new(
         id: u32,
+        cpu_usage: u32,
+        memory_usage: u64,
         allocation_start_time: f64,
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
@@ -62,6 +66,8 @@ impl VirtualMachine {
     ) -> Self {
         Self {
             id,
+            cpu_usage,
+            memory_usage,
             allocation_start_time,
             lifetime,
             start_time: -1.,
@@ -104,18 +110,18 @@ impl VirtualMachine {
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {
-        if self.status == VmStatus::Running {
-            self.cpu_load_model.get_resource_load(time, time - self.start_time)
-        } else {
-            0.
-        }
+        //if self.status == VmStatus::Running {
+        self.cpu_load_model.get_resource_load(time, time - self.start_time)
+        //} else {
+        //    0.
+        //}
     }
 
     pub fn get_memory_load(&self, time: f64) -> f64 {
-        if self.status == VmStatus::Running {
-            self.memory_load_model.get_resource_load(time, time - self.start_time)
-        } else {
-            0.
-        }
+        //if self.status == VmStatus::Running {
+        self.memory_load_model.get_resource_load(time, time - self.start_time)
+        //} else {
+        //    0.
+        //}
     }
 }

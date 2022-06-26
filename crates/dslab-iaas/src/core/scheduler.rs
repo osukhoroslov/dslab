@@ -13,10 +13,11 @@ use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
+use crate::core::events::vm_api::VmStatusChanged;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm::VirtualMachine;
 use crate::core::vm::VmStatus;
+use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 pub struct Scheduler {
@@ -24,6 +25,8 @@ pub struct Scheduler {
     pool_state: ResourcePoolState,
     placement_store_id: u32,
     monitoring: Rc<RefCell<Monitoring>>,
+    vm_api: Rc<RefCell<VmAPI>>,
+    vm_api_id: u32,
     vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -33,6 +36,8 @@ impl Scheduler {
     pub fn new(
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
+        vm_api: Rc<RefCell<VmAPI>>,
+        vm_api_id: u32,
         placement_store_id: u32,
         vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
@@ -43,6 +48,8 @@ impl Scheduler {
             pool_state: snapshot,
             placement_store_id,
             monitoring,
+            vm_api,
+            vm_api_id,
             vm_placement_algorithm,
             ctx,
             sim_config,
@@ -54,10 +61,23 @@ impl Scheduler {
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
-    fn on_allocation_request(&mut self, alloc: Allocation, mut vm: VirtualMachine) {
+    fn on_allocation_request(&mut self, vm_id: u32) {
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let alloc = Allocation {
+            id: vm_id,
+            cpu_usage: vm.cpu_usage,
+            memory_usage: vm.memory_usage,
+        };
+
         if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
-            vm.set_status(VmStatus::FailedToAllocate);
-            self.monitoring.borrow_mut().insert_vm(vm);
+            self.ctx.emit(
+                VmStatusChanged {
+                    vm_id,
+                    status: VmStatus::FailedToAllocate,
+                },
+                self.vm_api_id,
+                self.sim_config.message_delay,
+            );
             return;
         }
 
@@ -75,34 +95,54 @@ impl Scheduler {
             self.pool_state.allocate(&alloc, host);
 
             self.ctx.emit(
-                AllocationCommitRequest {
-                    alloc,
-                    vm,
-                    host_id: host,
-                },
+                AllocationCommitRequest { vm_id, host_id: host },
                 self.placement_store_id,
                 self.sim_config.message_delay,
             );
         } else {
-            log_debug!(self.ctx, "scheduler #{} failed to pack vm #{}", self.id, alloc.id,);
+            log_debug!(self.ctx, "scheduler #{} failed to pack vm #{}", self.id, vm_id,);
             self.ctx
-                .emit_self(AllocationRequest { alloc, vm }, self.sim_config.allocation_retry_period);
+                .emit_self(AllocationRequest { vm_id }, self.sim_config.allocation_retry_period);
         }
     }
 
-    fn on_allocation_commit_succeeded(&mut self, alloc: Allocation, host_id: u32) {
+    fn on_allocation_commit_succeeded(&mut self, vm_id: u32, host_id: u32) {
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let alloc = Allocation {
+            id: vm_id,
+            cpu_usage: vm.cpu_usage,
+            memory_usage: vm.memory_usage,
+        };
         self.pool_state.allocate(&alloc, host_id);
     }
 
-    fn on_allocation_commit_failed(&mut self, alloc: Allocation, host_id: u32) {
+    fn on_allocation_commit_failed(&mut self, vm_id: u32, host_id: u32) {
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let alloc = Allocation {
+            id: vm_id,
+            cpu_usage: vm.cpu_usage,
+            memory_usage: vm.memory_usage,
+        };
         self.pool_state.release(&alloc, host_id);
     }
 
-    fn on_allocation_released(&mut self, alloc: Allocation, host_id: u32) {
+    fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let alloc = Allocation {
+            id: vm_id,
+            cpu_usage: vm.cpu_usage,
+            memory_usage: vm.memory_usage,
+        };
         self.pool_state.release(&alloc, host_id);
     }
 
-    fn on_allocation_failed(&mut self, alloc: Allocation, host_id: u32) {
+    fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let alloc = Allocation {
+            id: vm_id,
+            cpu_usage: vm.cpu_usage,
+            memory_usage: vm.memory_usage,
+        };
         self.pool_state.release(&alloc, host_id);
     }
 }
@@ -110,20 +150,20 @@ impl Scheduler {
 impl EventHandler for Scheduler {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            AllocationRequest { alloc, vm } => {
-                self.on_allocation_request(alloc, vm);
+            AllocationRequest { vm_id } => {
+                self.on_allocation_request(vm_id);
             }
-            AllocationCommitSucceeded { alloc, host_id } => {
-                self.on_allocation_commit_succeeded(alloc, host_id);
+            AllocationCommitSucceeded { vm_id, host_id } => {
+                self.on_allocation_commit_succeeded(vm_id, host_id);
             }
-            AllocationCommitFailed { alloc, host_id } => {
-                self.on_allocation_commit_failed(alloc, host_id);
+            AllocationCommitFailed { vm_id, host_id } => {
+                self.on_allocation_commit_failed(vm_id, host_id);
             }
-            AllocationReleased { alloc, host_id } => {
-                self.on_allocation_released(alloc, host_id);
+            AllocationReleased { vm_id, host_id } => {
+                self.on_allocation_released(vm_id, host_id);
             }
-            AllocationFailed { alloc, host_id } => {
-                self.on_allocation_failed(alloc, host_id);
+            AllocationFailed { vm_id, host_id } => {
+                self.on_allocation_failed(vm_id, host_id);
             }
         })
     }

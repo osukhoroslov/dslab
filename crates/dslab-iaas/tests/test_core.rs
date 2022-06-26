@@ -19,7 +19,6 @@ fn name_wrapper(file_name: &str) -> String {
 #[test]
 // Default enegrgy consumption function is 0.4 + 0.6 * CPU load
 // Host is loaded by 1/3 then energy load is 0.4 + 0.6 / 3 = 0.6
-// VM is running for two time points, then the total energy consumption is 1.2
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -37,11 +36,11 @@ fn test_energy_consumption() {
         s,
     );
 
-    cloud_sim.step_for_duration(5.);
+    cloud_sim.step_for_duration(10.);
     let end_time = cloud_sim.current_time();
 
-    assert_eq!(end_time, 5.);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_total_consumed(end_time), 1.2);
+    assert_eq!(end_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_total_consumed(end_time), 2.1);
 }
 
 #[test]
@@ -249,7 +248,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
     assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Running);
 
-    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(3)));
+    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(4)));
     let second_vm = cloud_sim.spawn_vm_now(
         100,
         100,
@@ -269,7 +268,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::Initializing);
 
     // now host does not exist
-    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(5)));
+    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(47)));
     let third_vm = cloud_sim.spawn_vm_now(
         100,
         100,
@@ -289,7 +288,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(third_vm), VmStatus::Initializing);
 
     // finally right decision
-    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(4)));
+    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(5)));
     let fourth_vm = cloud_sim.spawn_vm_now(
         100,
         100,

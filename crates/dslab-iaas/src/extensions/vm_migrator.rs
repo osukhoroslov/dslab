@@ -8,6 +8,7 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::MigrationRequest;
 use crate::core::monitoring::Monitoring;
 use crate::core::vm::VmStatus;
+use crate::core::vm_api::VmAPI;
 use crate::custom_component::CustomComponent;
 use dslab_core::cast;
 use dslab_core::context::SimulationContext;
@@ -23,6 +24,7 @@ pub struct VmMigrator {
     overload_threshold: f64,
     underload_threshold: f64,
     monitoring: Option<Rc<RefCell<Monitoring>>>,
+    vm_api: Option<Rc<RefCell<VmAPI>>>,
     sim_config: Option<Rc<SimulationConfig>>,
     ctx: SimulationContext,
 }
@@ -32,16 +34,22 @@ impl VmMigrator {
         &mut self,
         interval: f64,
         monitoring: Rc<RefCell<Monitoring>>,
+        vm_api: Rc<RefCell<VmAPI>>,
         sim_config: Rc<SimulationConfig>,
     ) {
         self.interval = interval;
         self.monitoring = Some(monitoring);
+        self.vm_api = Some(vm_api);
         self.sim_config = Some(sim_config);
     }
 
     fn perform_migrations(&mut self) {
         if self.monitoring.is_none() {
             log_warn!(self.ctx, "cannot perform migrations as there is no monitoring");
+            self.ctx.emit_self(PerformMigrations {}, self.interval);
+            return;
+        } else if self.vm_api.is_none() {
+            log_warn!(self.ctx, "cannot perform migrations as there is no VM API");
             self.ctx.emit_self(PerformMigrations {}, self.interval);
             return;
         } else {
@@ -71,7 +79,8 @@ impl VmMigrator {
                     state.vms.len()
                 );
                 min_load = min_load.min(state.cpu_load).min(state.memory_load);
-                for (vm_id, vm) in state.vms.iter() {
+                for vm_id in state.vms.iter() {
+                    let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(*vm_id);
                     if *vm.status() != VmStatus::Running {
                         continue;
                     }
@@ -90,15 +99,16 @@ impl VmMigrator {
                 overloaded_hosts.push(*host);
                 let mut cpu_usage = state.cpu_load * (state.cpu_total as f64);
                 let mut memory_usage = state.memory_load * (state.memory_total as f64);
-                for (vm_id, vm) in state.vms.iter() {
+
+                for vm_id in state.vms.iter() {
+                    let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(*vm_id);
                     if *vm.status() != VmStatus::Running {
                         continue;
                     }
                     vms_to_migrate.push((*vm_id, *host));
 
-                    let allocation = state.allocations.get(&vm_id).unwrap();
-                    cpu_usage -= allocation.cpu_usage as f64;
-                    memory_usage -= allocation.memory_usage as f64;
+                    cpu_usage -= vm.cpu_usage as f64;
+                    memory_usage -= vm.memory_usage as f64;
                     let new_cpu_load = cpu_usage / (state.cpu_total as f64);
                     let new_memory_load = memory_usage / (state.memory_total as f64);
 
@@ -125,7 +135,7 @@ impl VmMigrator {
             }
             let mut target_host_opt: Option<u32> = None;
             let mut best_cpu_load = 0.;
-            let allocation = mon.get_allocation(source_host, vm_id);
+            let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(vm_id);
 
             for (host, state) in host_states.iter() {
                 if *host == source_host {
@@ -145,14 +155,13 @@ impl VmMigrator {
 
                 let source_state = host_states.get(&source_host).unwrap();
                 let cpu_usage_source = source_state.cpu_load * (source_state.cpu_total as f64);
-                let cpu_load_new_source =
-                    (cpu_usage_source - allocation.cpu_usage as f64) / (source_state.cpu_total as f64);
+                let cpu_load_new_source = (cpu_usage_source - vm.cpu_usage as f64) / (source_state.cpu_total as f64);
 
                 let cpu_usage_target = state.cpu_load * (state.cpu_total as f64);
                 let memory_usage_target = state.memory_load * (state.memory_total as f64);
-                let cpu_load_new_target = (cpu_usage_target + allocation.cpu_usage as f64) / (state.cpu_total as f64);
+                let cpu_load_new_target = (cpu_usage_target + vm.cpu_usage as f64) / (state.cpu_total as f64);
                 let memory_load_new_target =
-                    (memory_usage_target + allocation.memory_usage as f64) / (state.memory_total as f64);
+                    (memory_usage_target + vm.memory_usage as f64) / (state.memory_total as f64);
 
                 if !overloaded_hosts.contains(&source_host)
                     && source_state.cpu_load > state.cpu_load
@@ -181,13 +190,11 @@ impl VmMigrator {
                     source_host,
                     target_host
                 );
-                let mut vm = mon.get_vm(vm_id);
-                vm.set_status(VmStatus::Initializing);
+                let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(vm_id);
                 self.ctx.emit(
                     MigrationRequest {
                         source_host,
-                        alloc: allocation.clone(),
-                        vm,
+                        vm_id: vm.id,
                     },
                     target_host,
                     self.sim_config.as_ref().unwrap().message_delay,
@@ -197,9 +204,8 @@ impl VmMigrator {
                 let source_state = host_states.get_mut(&source_host).unwrap();
                 let cpu_usage = source_state.cpu_load * (source_state.cpu_total as f64);
                 let memory_usage = source_state.memory_load * (source_state.memory_total as f64);
-                let cpu_load_new = (cpu_usage - allocation.cpu_usage as f64) / (source_state.cpu_total as f64);
-                let memory_load_new =
-                    (memory_usage + allocation.memory_usage as f64) / (source_state.memory_total as f64);
+                let cpu_load_new = (cpu_usage - vm.cpu_usage as f64) / (source_state.cpu_total as f64);
+                let memory_load_new = (memory_usage + vm.memory_usage as f64) / (source_state.memory_total as f64);
                 source_state.cpu_load = cpu_load_new;
                 source_state.memory_load = memory_load_new;
 
@@ -207,9 +213,8 @@ impl VmMigrator {
                 let target_state = host_states.get_mut(&target_host).unwrap();
                 let cpu_usage = target_state.cpu_load * (target_state.cpu_total as f64);
                 let memory_usage = target_state.memory_load * (target_state.memory_total as f64);
-                let cpu_load_new = (cpu_usage + allocation.cpu_usage as f64) / (target_state.cpu_total as f64);
-                let memory_load_new =
-                    (memory_usage + allocation.memory_usage as f64) / (target_state.memory_total as f64);
+                let cpu_load_new = (cpu_usage + vm.cpu_usage as f64) / (target_state.cpu_total as f64);
+                let memory_load_new = (memory_usage + vm.memory_usage as f64) / (target_state.memory_total as f64);
                 target_state.cpu_load = cpu_load_new;
                 target_state.memory_load = memory_load_new;
             } else {
@@ -234,6 +239,7 @@ impl CustomComponent for VmMigrator {
             overload_threshold: 0.8,
             underload_threshold: 0.4,
             monitoring: None,
+            vm_api: None,
             sim_config: None,
             ctx,
         }
