@@ -136,7 +136,7 @@ impl AppData {
             let name = events[0]["data_name"].as_str().unwrap().to_string();
             let start_time = events[0]["time"].as_f64().unwrap();
             let finish_time = events[1]["time"].as_f64().unwrap();
-            let task = events[0]["task_id"].as_u64().unwrap() as usize;
+            let data_item_id = events[0]["data_item_id"].as_u64().unwrap() as usize;
 
             transfers.borrow_mut().push(Transfer {
                 start: start_time,
@@ -144,7 +144,7 @@ impl AppData {
                 from: source.clone(),
                 to: destination.clone(),
                 name: name.clone(),
-                task,
+                data_item_id,
             });
 
             if source == "runner" {

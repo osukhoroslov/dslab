@@ -7,6 +7,7 @@ use druid::{Color, Rect};
 use druid::{Point, Size};
 
 use crate::app_data::*;
+use crate::data::Transfer;
 use crate::draw_utils::*;
 
 const X_PADDING: f64 = 30.0;
@@ -180,6 +181,20 @@ impl TimelineWidget {
             }
         }
     }
+
+    fn transfer_selected(&self, transfer: &Transfer, data: &AppData) -> bool {
+        if data.selected_task.is_none() {
+            return false;
+        }
+        let task = &data.graph.borrow().tasks[data.selected_task.unwrap()];
+        if task.inputs.iter().any(|&x| x == transfer.data_item_id) {
+            return true;
+        }
+        if task.outputs.iter().any(|&x| x == transfer.data_item_id) {
+            return true;
+        }
+        return false;
+    }
 }
 
 impl Widget<AppData> for TimelineWidget {
@@ -257,7 +272,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if data.selected_task.is_some() && data.selected_task.unwrap() == transfer.task {
+                            if self.transfer_selected(&transfer, &data) {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY
@@ -365,7 +380,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if data.selected_task.is_some() && data.selected_task.unwrap() == transfer.task {
+                            if self.transfer_selected(&transfer, &data) {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY

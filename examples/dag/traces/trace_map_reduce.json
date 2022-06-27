@@ -210,6 +210,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 1,
+      "data_item_id": 1,
       "data_name": "part2"
     },
     {
@@ -218,6 +219,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 2,
+      "data_item_id": 0,
       "data_name": "part1"
     },
     {
@@ -255,6 +257,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 3,
+      "data_item_id": 6,
       "data_name": "map2_out1"
     },
     {
@@ -263,6 +266,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 4,
+      "data_item_id": 7,
       "data_name": "map2_out2"
     },
     {
@@ -271,6 +275,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 5,
+      "data_item_id": 8,
       "data_name": "map2_out3"
     },
     {
@@ -279,6 +284,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 6,
+      "data_item_id": 9,
       "data_name": "map2_out4"
     },
     {
@@ -295,6 +301,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 7,
+      "data_item_id": 6,
       "data_name": "map2_out1"
     },
     {
@@ -311,6 +318,7 @@
       "from": "runner",
       "to": "compute2",
       "data_id": 8,
+      "data_item_id": 7,
       "data_name": "map2_out2"
     },
     {
@@ -327,6 +335,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 9,
+      "data_item_id": 8,
       "data_name": "map2_out3"
     },
     {
@@ -343,6 +352,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 10,
+      "data_item_id": 9,
       "data_name": "map2_out4"
     },
     {
@@ -412,6 +422,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 11,
+      "data_item_id": 2,
       "data_name": "map1_out1"
     },
     {
@@ -420,6 +431,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 12,
+      "data_item_id": 3,
       "data_name": "map1_out2"
     },
     {
@@ -428,6 +440,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 13,
+      "data_item_id": 4,
       "data_name": "map1_out3"
     },
     {
@@ -436,6 +449,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 14,
+      "data_item_id": 5,
       "data_name": "map1_out4"
     },
     {
@@ -452,6 +466,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 15,
+      "data_item_id": 2,
       "data_name": "map1_out1"
     },
     {
@@ -468,6 +483,7 @@
       "from": "runner",
       "to": "compute2",
       "data_id": 16,
+      "data_item_id": 3,
       "data_name": "map1_out2"
     },
     {
@@ -484,6 +500,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 17,
+      "data_item_id": 4,
       "data_name": "map1_out3"
     },
     {
@@ -500,6 +517,7 @@
       "from": "runner",
       "to": "compute3",
       "data_id": 18,
+      "data_item_id": 5,
       "data_name": "map1_out4"
     },
     {
@@ -606,6 +624,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 19,
+      "data_item_id": 10,
       "data_name": "result1"
     },
     {
@@ -620,6 +639,7 @@
       "from": "compute2",
       "to": "runner",
       "data_id": 20,
+      "data_item_id": 11,
       "data_name": "result2"
     },
     {
@@ -634,6 +654,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 21,
+      "data_item_id": 12,
       "data_name": "result3"
     },
     {
@@ -648,6 +669,7 @@
       "from": "compute3",
       "to": "runner",
       "data_id": 22,
+      "data_item_id": 13,
       "data_name": "result4"
     },
     {
