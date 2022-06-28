@@ -390,6 +390,7 @@ impl DAGRunner {
                     "from": self.ctx.lookup_name(from),
                     "to": self.ctx.lookup_name(to),
                     "data_id": data_id,
+                    "data_item_id": data_item_id,
                     "data_name": data_item.name.clone(),
                 }),
             );

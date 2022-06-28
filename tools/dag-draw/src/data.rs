@@ -25,7 +25,7 @@ pub struct Transfer {
     pub from: String,
     pub to: String,
     pub name: String,
-    pub task: usize,
+    pub data_item_id: usize,
 }
 
 #[derive(Debug)]
