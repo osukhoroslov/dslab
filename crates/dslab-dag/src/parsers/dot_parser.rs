@@ -114,7 +114,7 @@ impl DAG {
                     from: token1.iter().collect(),
                     to: token2.iter().collect(),
                     label: params.remove("label"),
-                    size: params.get("size").map(|x| x.parse::<f64>().unwrap_or(0.)).unwrap_or(0.),
+                    size: params.get("size").map(|x| x.parse::<f64>().unwrap()).unwrap(),
                 });
             } else {
                 // node
@@ -136,7 +136,7 @@ impl DAG {
                 nodes.push(Node {
                     name: token1.iter().collect(),
                     label: params.remove("label"),
-                    size: params.get("size").map(|x| x.parse::<f64>().unwrap_or(0.)).unwrap_or(0.),
+                    size: params.get("size").map(|x| x.parse::<f64>().unwrap()).unwrap(),
                 });
             }
         }
