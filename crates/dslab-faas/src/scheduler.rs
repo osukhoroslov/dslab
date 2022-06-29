@@ -22,7 +22,7 @@ pub struct BasicScheduler {}
 impl Scheduler for BasicScheduler {
     fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
         for (i, host) in hosts.iter().enumerate() {
-            if host.borrow().can_invoke(app) {
+            if host.borrow().can_invoke(app, true) {
                 return i;
             }
         }
