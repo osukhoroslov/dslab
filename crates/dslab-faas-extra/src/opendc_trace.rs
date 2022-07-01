@@ -8,10 +8,10 @@ pub struct FunctionSample {
     pub time: u64,
     pub invocations: usize,
     pub exec: u32,
-    pub cpu: usize,
-    pub mem: usize,
-    pub alloc_cpu: usize,
-    pub alloc_mem: usize,
+    pub cpu_provisioned: usize,
+    pub mem_provisioned: usize,
+    pub cpu_used: usize,
+    pub mem_used: usize,
 }
 
 pub type FunctionTrace = Vec<FunctionSample>;
@@ -44,10 +44,10 @@ pub fn process_opendc_trace(path: &Path) -> OpenDCTrace {
                 time: u64::from_str(&record[0]).unwrap(),
                 invocations: usize::from_str(&record[1]).unwrap(),
                 exec: u32::from_str(&record[2]).unwrap(),
-                cpu: usize::from_str(&record[3]).unwrap(),
-                mem: usize::from_str(&record[4]).unwrap(),
-                alloc_cpu: usize::from_str(&record[5]).unwrap(),
-                alloc_mem: usize::from_str(&record[6]).unwrap(),
+                cpu_provisioned: usize::from_str(&record[3]).unwrap(),
+                mem_provisioned: usize::from_str(&record[4]).unwrap(),
+                cpu_used: usize::from_str(&record[5]).unwrap(),
+                mem_used: usize::from_str(&record[6]).unwrap(),
             };
             fun_trace.push(row);
         }

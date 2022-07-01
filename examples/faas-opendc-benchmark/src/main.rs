@@ -23,7 +23,7 @@ fn main() {
     for app in trace.iter() {
         let mut max_mem = 0;
         for sample in app.iter() {
-            max_mem = usize::max(max_mem, sample.mem);
+            max_mem = usize::max(max_mem, sample.mem_provisioned);
         }
         let mem = sim.create_resource_requirement("mem", max_mem as u64);
         let app_id = sim.add_app(Application::new(1, 0.5, ResourceConsumer::new(vec![mem])));
