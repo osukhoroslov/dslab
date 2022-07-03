@@ -37,6 +37,10 @@ struct Args {
     #[clap(long, default_value_t = 1)]
     activities: u64,
 
+    /// Number of disks (>= 1)
+    #[clap(long, default_value_t = 1)]
+    disks_count: u64,
+
     /// Maximal size (>= 1)
     #[clap(long, default_value_t = 10u64.pow(9) + 6)]
     max_size: u64,
@@ -47,7 +51,7 @@ struct Args {
 }
 
 struct Runner {
-    disk: Rc<RefCell<SharedDisk>>,
+    disks: Vec<Rc<RefCell<SharedDisk>>>,
     ctx: SimulationContext,
     random: CustomRandom,
     activities_count: u64,
@@ -60,9 +64,9 @@ struct TimerFired {
 }
 
 impl Runner {
-    fn new(disk: Rc<RefCell<SharedDisk>>, ctx: SimulationContext) -> Self {
+    fn new(disks: Vec<Rc<RefCell<SharedDisk>>>, ctx: SimulationContext) -> Self {
         Self {
-            disk,
+            disks,
             ctx,
             random: CustomRandom::new(SEED),
             activities_count: 0,
@@ -84,7 +88,13 @@ impl Runner {
 
     fn on_timer_fired(&mut self, iteration: u64) {
         let size = self.random.next() % (self.max_size + 1);
-        self.disk.borrow_mut().read(size, self.ctx.id());
+        let disk_idx = self.random.next() % self.disks.len() as u64;
+
+        self.disks
+            .get(disk_idx as usize)
+            .unwrap()
+            .borrow_mut()
+            .read(size, self.ctx.id());
 
         if iteration == self.activities_count {
             log_info!(
@@ -125,16 +135,21 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(SharedDisk::new_simple(
-        DISK_CAPACITY,
-        DISK_READ_BW,
-        DISK_WRITE_BW,
-        sim.create_context(DISK_NAME),
-    )));
+    let mut disks = vec![];
 
-    sim.add_handler(DISK_NAME, disk.clone());
+    for i in 0..args.disks_count {
+        let disk_name = DISK_NAME.to_owned() + "-" + &i.to_string();
+        let disk = rc!(refcell!(SharedDisk::new_simple(
+            DISK_CAPACITY,
+            DISK_READ_BW,
+            DISK_WRITE_BW,
+            sim.create_context(disk_name.clone()),
+        )));
+        sim.add_handler(disk_name, disk.clone());
+        disks.push(disk);
+    }
 
-    let user = rc!(refcell!(Runner::new(disk, sim.create_context(USER_NAME))));
+    let user = rc!(refcell!(Runner::new(disks, sim.create_context(USER_NAME))));
     sim.add_handler(USER_NAME, user.clone());
 
     user.borrow_mut().run(args.activities, args.max_size, args.max_delay);
@@ -143,10 +158,16 @@ fn main() {
     sim.step_until_no_events();
     let elapsed = t.elapsed().as_millis();
     println!(
-        "Processed {} iterations in {:.2?} ms, {:.0} events/s",
+        "Processed {} activities in {:.2?} ms ({:.0} act/s)",
         args.activities,
         elapsed,
         args.activities as f64 / elapsed as f64 * 1000.
+    );
+    println!(
+        "Processed {} events in {:.2?} ms ({:.0} events/s)",
+        sim.event_count(),
+        elapsed,
+        sim.event_count() as f64 / elapsed as f64 * 1000.
     );
 
     println!("Finish");
