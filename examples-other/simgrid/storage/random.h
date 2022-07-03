@@ -1,10 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 
 class CustomRandom {
 public:
     CustomRandom(uint64_t seed) : seed_(seed) {
+        std::cerr << "Created linear random engine with parameters:" << std::endl;
+        std::cerr << "A     = " << kA << std::endl;
+        std::cerr << "B     = " << kB << std::endl;
+        std::cerr << "MOD   = " << kMod << std::endl;
+        std::cerr << "SEED  = " << seed << std::endl;
     }
 
     uint64_t Next() {

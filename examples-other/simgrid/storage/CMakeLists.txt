@@ -3,5 +3,5 @@ add_executable(storage
     disk.cpp
 )
 
-target_link_libraries(storage ${SimGrid_LIBRARY})
+target_link_libraries(storage ${SimGrid_LIBRARY} argparse::argparse)
 target_include_directories(storage PUBLIC SYSTEM ${SimGrid_INCLUDE_DIR})

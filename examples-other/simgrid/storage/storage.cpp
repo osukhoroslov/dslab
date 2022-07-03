@@ -1,5 +1,7 @@
 #include "disk.h"
 
+#include <argparse/argparse.hpp>
+
 #include <xbt/log.h>
 #include <simgrid/s4u.hpp>
 
@@ -11,7 +13,10 @@ namespace sg4 = simgrid::s4u;
 
 static constexpr uint64_t kReadBw = 100;
 static constexpr uint64_t kWriteBw = 100;
-static constexpr uint64_t kActivitiesCount = 10000;
+
+static constexpr uint64_t kDefaultActivitiesCount = 1;
+static constexpr uint64_t kDefaultMaxSize = 1e9 + 6;
+static constexpr uint64_t kDefaultMaxDelay = 0;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(disk_test, "Disk example");
 
@@ -47,13 +52,48 @@ void RunWithTimeMeasure(F&& f) {
 int main(int argc, char** argv) {
     sg4::Engine e(&argc, argv);
 
+    argparse::ArgumentParser parser("simulator");
+
+    parser.add_argument("--activities")
+        .help("Number of activities (>= 1)")
+        .nargs(1)
+        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .default_value(kDefaultActivitiesCount);
+
+    parser.add_argument("--max-size")
+        .help("Maximal size (>= 1)")
+        .nargs(1)
+        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .default_value(kDefaultMaxSize);
+
+    parser.add_argument("--max-delay")
+        .help("Maximal delay between activities start (0 by default, so all will start at 0)")
+        .nargs(1)
+        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .default_value(kDefaultMaxDelay);
+
+    uint64_t activities_count = kDefaultActivitiesCount, max_size = kDefaultMaxSize,
+             max_delay = kDefaultMaxDelay;
+    try {
+        parser.parse_args(argc, argv);
+
+        activities_count = parser.get<uint64_t>("--activities");
+        max_size = parser.get<uint64_t>("--max-size");
+        max_delay = parser.get<uint64_t>("--max-delay");
+    } catch (const std::runtime_error& re) {
+        std::cerr << "Argument parse error: " << re.what() << "\n";
+        std::cerr << parser << "\n";
+        std::exit(1);
+    }
+
     auto* zone = sg4::create_full_zone("sample_zone");
     auto* host = zone->create_host("sample_host", 1e6);
 
     auto dt = MakeSimpleDisk(host);
 
     zone->seal();
-    sg4::Actor::create("sample_actor", host, [&dt]() { dt->Run(kActivitiesCount); });
+    sg4::Actor::create("sample_actor", host,
+                       [&]() { dt->Run(activities_count, max_size, max_delay); });
 
     RunWithTimeMeasure([&e] { e.run(); });
 }

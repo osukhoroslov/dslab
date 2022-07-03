@@ -2,6 +2,7 @@
 
 #include <simgrid/forward.h>
 
+#include <cstdint>
 #include <functional>
 
 namespace dslab::simgrid_examples {
@@ -22,7 +23,7 @@ public:
     void SetWriteBandwidthFunction(BandwidthFunction bf);
 
     void ApplyAndSeal();
-    void Run(size_t activities_count);
+    void Run(uint64_t activities_count, uint64_t max_size, uint64_t max_delay);
 
 private:
     DegradationRule read_degradation_rule_, write_degradation_rule_;

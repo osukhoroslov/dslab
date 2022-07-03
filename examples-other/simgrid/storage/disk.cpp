@@ -58,7 +58,7 @@ void DiskWrapper::ApplyAndSeal() {
     disk_->seal();
 }
 
-void DiskWrapper::Run(size_t activities_count) {
+void DiskWrapper::Run(uint64_t activities_count, uint64_t max_size, [[maybe_unused]] uint64_t max_delay) {
     XBT_WARN("Starting disk benchmark");
 
     std::vector<sg4::IoPtr> activities;
@@ -66,7 +66,7 @@ void DiskWrapper::Run(size_t activities_count) {
 
     CustomRandom rnd(16);
     for (size_t i = 0; i < activities_count; ++i) {
-        uint64_t size = rnd.Next();
+        uint64_t size = rnd.Next() % (max_size + 1);
         XBT_INFO("Starting read of size %lu", size);
         activities.push_back(disk_->read_async(size));
     }
