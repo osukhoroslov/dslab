@@ -8,6 +8,12 @@ pub struct CustomRandom {
 
 impl CustomRandom {
     pub fn new(seed: u64) -> Self {
+        println!("Created linear random engine with parameters:");
+        println!("A     = {}", A);
+        println!("B     = {}", B);
+        println!("MOD   = {}", MOD);
+        println!("SEED  = {}", seed);
+
         Self { state: seed }
     }
 
