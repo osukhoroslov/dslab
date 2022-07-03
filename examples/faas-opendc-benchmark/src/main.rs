@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::time::Instant;
 
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
@@ -37,7 +38,15 @@ fn main() {
             }
         }
     }
+    let t = Instant::now();
     sim.step_until_no_events();
+    let elapsed = t.elapsed().as_secs_f64();
     let stats = sim.get_stats();
-    println!("processed {} invocations", stats.invocations);
+    println!(
+        "processed {} invocations and {} events in {:.2} seconds ({:.2} events per sec)",
+        stats.invocations,
+        sim.event_count(),
+        elapsed,
+        (sim.event_count() as f64) / elapsed
+    );
 }

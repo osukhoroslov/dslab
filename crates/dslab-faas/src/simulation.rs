@@ -146,4 +146,8 @@ impl ServerlessSimulation {
     pub fn step_until_no_events(&mut self) {
         self.sim.step_until_no_events();
     }
+
+    pub fn event_count(&self) -> u64 {
+        self.sim.event_count()
+    }
 }
