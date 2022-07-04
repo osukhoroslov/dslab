@@ -182,7 +182,8 @@ fn main() {
     let user = rc!(refcell!(Runner::new(disks, sim.create_context(USER_NAME))));
     sim.add_handler(USER_NAME, user.clone());
 
-    user.borrow_mut().run(args.activities, args.max_size, args.max_start_time);
+    user.borrow_mut()
+        .run(args.activities, args.max_size, args.max_start_time);
 
     let t = Instant::now();
     sim.step_until_no_events();
