@@ -38,8 +38,8 @@ def get_dslab_data(lines):
     return data
 
 
-def compare_data(x, y):
-    if len(x) != len(x):
+def compare_data(x, y, expected_size):
+    if not (len(x) == len(y) == expected_size):
         print("Sizes not equal")
         return False
 
@@ -69,7 +69,7 @@ def main():
     args = ap.parse_args()
 
     def run(binary, additional_args):
-        command = [os.getenv("SIM_PROJECT_BASE_DIR", "") + "/" + binary, "--activities", str(args.activities),
+        command = [os.getenv("DSLAB_BASE_DIR", "") + "/" + binary, "--activities", str(args.activities),
                    "--disks", str(args.disks), "--max-size", str(args.max_size), "--max-start-time", str(args.max_start_time)]
         if additional_args:
             command.append(additional_args)
@@ -85,7 +85,8 @@ def main():
 
     if not compare_data(
         get_dslab_data(run(DSLAB_BINARY_PATH, DSLAB_ADDITIONAL_ARGS)),
-        get_simgrid_data(run(SIMGRID_BINARY_PATH, SIMGRID_ADDITIONAL_ARGS))
+        get_simgrid_data(run(SIMGRID_BINARY_PATH, SIMGRID_ADDITIONAL_ARGS)),
+        args.activities
     ):
         exit(1)
 

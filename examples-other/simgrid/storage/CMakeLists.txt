@@ -1,5 +1,5 @@
 add_executable(storage
-    storage.cpp
+    main.cpp
     disk.cpp
 )
 
