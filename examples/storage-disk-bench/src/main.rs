@@ -22,7 +22,7 @@ use dslab_storage::shared_disk::SharedDisk;
 
 const SEED: u64 = 16;
 
-const DISK_NAME: &str = "Disk";
+const DISK_NAME: &str = "disk";
 const USER_NAME: &str = "User";
 
 const DISK_CAPACITY: u64 = 10u64.pow(10);
@@ -39,28 +39,64 @@ struct Args {
 
     /// Number of disks (>= 1)
     #[clap(long, default_value_t = 1)]
-    disks_count: u64,
+    disks: u64,
 
     /// Maximal size (>= 1)
     #[clap(long, default_value_t = 10u64.pow(9) + 6)]
     max_size: u64,
 
-    /// Maximal delay between activities start (0 by default, so all will start at 0)
+    /// Maximal activity start time (0 by default, so all will start at 0)
     #[clap(long, default_value_t = 0)]
-    max_delay: u64,
+    max_start_time: u64,
 }
 
 struct Runner {
     disks: Vec<Rc<RefCell<SharedDisk>>>,
     ctx: SimulationContext,
-    random: CustomRandom,
     activities_count: u64,
     max_size: u64,
 }
 
 #[derive(Serialize)]
 struct TimerFired {
-    iteration: u64,
+    disk_idx: usize,
+    size: u64,
+}
+
+struct DiskRequest {
+    pub disk_idx: usize,
+    pub start_time: u64,
+    pub size: u64,
+}
+
+impl DiskRequest {
+    fn new(disk_idx: usize, start_time: u64, size: u64) -> Self {
+        Self {
+            disk_idx,
+            start_time,
+            size,
+        }
+    }
+}
+
+fn generate_plan(disks_count: u64, activities_count: u64, max_size: u64, max_start_time: u64) -> Vec<DiskRequest> {
+    let mut rnd = CustomRandom::new(SEED);
+
+    let mut plan = vec![];
+
+    // For technical reasons (in SimGrid) first activity should start at time = 0
+    let first_disk_idx = rnd.next() % disks_count;
+    let first_size = rnd.next() % (max_size + 1);
+    plan.push(DiskRequest::new(first_disk_idx as usize, 0, first_size));
+
+    for _ in 0..activities_count - 1 {
+        let disk_idx = rnd.next() % disks_count;
+        let start_time = rnd.next() % (max_start_time + 1);
+        let size = rnd.next() % (max_size + 1);
+        plan.push(DiskRequest::new(disk_idx as usize, start_time, size));
+    }
+
+    plan
 }
 
 impl Runner {
@@ -68,41 +104,33 @@ impl Runner {
         Self {
             disks,
             ctx,
-            random: CustomRandom::new(SEED),
             activities_count: 0,
             max_size: 0,
         }
     }
 
-    fn run(&mut self, activities_count: u64, max_size: u64, max_delay: u64) {
+    fn run(&mut self, activities_count: u64, max_size: u64, max_start_time: u64) {
         log_info!(self.ctx, "Starting disk benchmark");
+
+        let plan = generate_plan(self.disks.len() as u64, activities_count, max_size, max_start_time);
 
         self.activities_count = activities_count;
         self.max_size = max_size;
 
-        for iteration in 0..self.activities_count {
-            let delay = self.random.next() % (max_delay + 1);
-            self.ctx.emit_self(TimerFired { iteration }, delay as f64);
+        for idx in 0..self.activities_count {
+            let request = plan.get(idx as usize).unwrap();
+            self.ctx.emit_self(
+                TimerFired {
+                    disk_idx: request.disk_idx,
+                    size: request.size,
+                },
+                request.start_time as f64,
+            );
         }
     }
 
-    fn on_timer_fired(&mut self, iteration: u64) {
-        let size = self.random.next() % (self.max_size + 1);
-        let disk_idx = self.random.next() % self.disks.len() as u64;
-
-        self.disks
-            .get(disk_idx as usize)
-            .unwrap()
-            .borrow_mut()
-            .read(size, self.ctx.id());
-
-        if iteration == self.activities_count {
-            log_info!(
-                self.ctx,
-                "Started {} activities. Waiting for complete...",
-                self.activities_count
-            );
-        }
+    fn on_timer_fired(&mut self, disk_idx: usize, size: u64) {
+        self.disks.get(disk_idx).unwrap().borrow_mut().read(size, self.ctx.id());
     }
 }
 
@@ -111,16 +139,18 @@ impl EventHandler for Runner {
         cast!(match event.data {
             DataReadCompleted { request_id: _, size } => {
                 self.activities_count -= 1;
-                log_debug!(self.ctx, "Completed reading size = {}", size,);
-                if self.activities_count == 0 {
-                    log_info!(self.ctx, "Done.");
-                }
+                log_debug!(
+                    self.ctx,
+                    "Completed reading from {}, size = {}",
+                    self.ctx.lookup_name(event.src),
+                    size,
+                );
             }
             DataReadFailed { request_id: _, error } => {
                 log_error!(self.ctx, "Unexpected error: {}", error);
             }
-            TimerFired { iteration } => {
-                self.on_timer_fired(iteration);
+            TimerFired { disk_idx, size } => {
+                self.on_timer_fired(disk_idx, size);
             }
         })
     }
@@ -137,7 +167,7 @@ fn main() {
 
     let mut disks = vec![];
 
-    for i in 0..args.disks_count {
+    for i in 0..args.disks {
         let disk_name = DISK_NAME.to_owned() + "-" + &i.to_string();
         let disk = rc!(refcell!(SharedDisk::new_simple(
             DISK_CAPACITY,
@@ -152,7 +182,7 @@ fn main() {
     let user = rc!(refcell!(Runner::new(disks, sim.create_context(USER_NAME))));
     sim.add_handler(USER_NAME, user.clone());
 
-    user.borrow_mut().run(args.activities, args.max_size, args.max_delay);
+    user.borrow_mut().run(args.activities, args.max_size, args.max_start_time);
 
     let t = Instant::now();
     sim.step_until_no_events();
