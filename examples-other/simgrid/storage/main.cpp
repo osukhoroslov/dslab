@@ -77,8 +77,8 @@ std::vector<DiskReadRequest> GeneratePlan(uint64_t disks_count, uint64_t activit
     plan.emplace_back(first_disk_idx, 0, first_size);
 
     for (size_t i = 0; i < activities_count - 1; ++i) {
-        uint64_t disk_idx = rnd.Next() % disks_count, start_time = rnd.Next() % (max_start_time + 1),
-                 size = rnd.Next() % (max_size + 1);
+        uint64_t disk_idx = rnd.Next() % disks_count,
+                 start_time = rnd.Next() % (max_start_time + 1), size = rnd.Next() % (max_size + 1);
         plan.emplace_back(disk_idx, start_time, size);
     }
 
@@ -92,28 +92,32 @@ int main(int argc, char** argv) {
 
     argparse::ArgumentParser parser("simulator");
 
+    auto str_to_ull = [](const std::string& value) {
+        return static_cast<uint64_t>(std::stoull(value));
+    };
+
     parser.add_argument("--activities")
         .help("Number of activities (>= 1)")
         .nargs(1)
-        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .action(str_to_ull)
         .default_value(kDefaultActivitiesCount);
 
     parser.add_argument("--disks")
         .help("Number of disks (>= 1)")
         .nargs(1)
-        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .action(str_to_ull)
         .default_value(kDefaultDisksCount);
 
     parser.add_argument("--max-size")
         .help("Maximal size (>= 1)")
         .nargs(1)
-        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .action(str_to_ull)
         .default_value(kDefaultMaxSize);
 
     parser.add_argument("--max-start-time")
         .help("Maximal activity start time (0 by default, so all will start at 0)")
         .nargs(1)
-        .action([](const std::string& value) { return static_cast<uint64_t>(std::stoull(value)); })
+        .action(str_to_ull)
         .default_value(kDefaultMaxStartTime);
 
     uint64_t activities_count = kDefaultActivitiesCount, disks_count = kDefaultDisksCount,
