@@ -13,7 +13,7 @@ use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::{log_error, log_info};
+use dslab_core::{log_debug, log_error, log_info};
 use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 
@@ -28,6 +28,7 @@ use crate::trace_log::TraceLog;
 pub enum DataTransferMode {
     ViaMasterNode,
     Direct,
+    Manual,
 }
 
 impl DataTransferMode {
@@ -37,6 +38,7 @@ impl DataTransferMode {
                 1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
             }
             DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
+            DataTransferMode::Manual => 0.,
         }
     }
 }
@@ -152,7 +154,7 @@ impl DAGRunner {
                 assert!(data_item.is_input, "Non-input data item has Ready state");
                 self.data_location.insert(id, self.id);
                 self.resource_data_items.entry(self.id).or_default().insert(id);
-            } else if data_item.consumers.len() == 0 {
+            } else if data_item.consumers.is_empty() {
                 self.outputs.insert(id);
             }
         }
@@ -258,6 +260,7 @@ impl DAGRunner {
             self.process_resource_queue(i);
         }
         while !self.actions.is_empty() {
+            log_debug!(self.ctx, "Got action: {:?}", self.actions.front().unwrap());
             match self.actions.pop_front().unwrap() {
                 Action::Schedule { task, resource, cores } => {
                     let allowed_cores =
@@ -275,6 +278,9 @@ impl DAGRunner {
                         return;
                     }
                     self.process_schedule_action(task, resource, cores.len() as u32, cores);
+                }
+                Action::SendData { from, to, data_item } => {
+                    self.add_data_transfer_task(data_item, from, to);
                 }
             };
             self.action_id += 1;
@@ -438,12 +444,28 @@ impl DAGRunner {
         self.dag.update_task_state(task_id, TaskState::Done);
         let data_items = self.dag.get_task(task_id).outputs.clone();
 
-        if self.config.data_transfer_mode == DataTransferMode::Direct {
+        if self.config.data_transfer_mode != DataTransferMode::ViaMasterNode {
             for &data_item_id in data_items.iter() {
                 self.resource_data_items
                     .entry(self.resources[location].id)
                     .or_default()
                     .insert(data_item_id);
+
+                if let Some(targets) = self
+                    .data_transfer_tasks
+                    .entry(self.resources[location].id)
+                    .or_default()
+                    .remove(&data_item_id)
+                {
+                    for target in targets.into_iter() {
+                        self.transfer_data(data_item_id, self.resources[location].id, target);
+                    }
+                }
+            }
+        }
+
+        if self.config.data_transfer_mode == DataTransferMode::Direct {
+            for &data_item_id in data_items.iter() {
                 self.data_location.insert(data_item_id, self.resources[location].id);
             }
 
@@ -460,13 +482,15 @@ impl DAGRunner {
             }
         }
 
-        for &data_item_id in data_items.iter() {
-            if self.config.data_transfer_mode == DataTransferMode::Direct && !self.outputs.contains(&data_item_id) {
-                // upload to runner only DAG outputs
-                continue;
-            }
+        if self.config.data_transfer_mode != DataTransferMode::Manual {
+            for &data_item_id in data_items.iter() {
+                if self.config.data_transfer_mode == DataTransferMode::Direct && !self.outputs.contains(&data_item_id) {
+                    // upload to runner only DAG outputs
+                    continue;
+                }
 
-            self.transfer_data(data_item_id, self.resources[location].id, self.id);
+                self.transfer_data(data_item_id, self.resources[location].id, self.id);
+            }
         }
 
         self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
@@ -550,14 +574,23 @@ impl DAGRunner {
         self.check_and_log_completed();
     }
 
+    fn is_completed(&self) -> bool {
+        self.dag.is_completed()
+            && self.outputs.iter().all(|data_item| {
+                self.resource_data_items
+                    .get(&self.id)
+                    .map_or_else(|| false, |items| items.contains(data_item))
+            })
+    }
+
     fn check_and_log_completed(&self) {
-        if self.dag.is_completed() && self.data_transfers.is_empty() {
+        if self.is_completed() {
             log_info!(self.ctx, "finished DAG execution");
         }
     }
 
     pub fn validate_completed(&self) {
-        if !self.dag.is_completed() {
+        if !self.is_completed() {
             let mut states: Vec<String> = Vec::new();
             for task_state in TaskState::into_enum_iter() {
                 let cnt = self

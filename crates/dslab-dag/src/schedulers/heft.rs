@@ -197,6 +197,7 @@ impl Scheduler for HeftScheduler {
                         let data_upload_time = match data_transfer_mode {
                             DataTransferMode::ViaMasterNode => weight * avg_upload_net_time,
                             DataTransferMode::Direct => 0.,
+                            DataTransferMode::Manual => 0.,
                         };
                         eft[task] + data_upload_time
                     })
@@ -243,6 +244,7 @@ impl Scheduler for HeftScheduler {
                                     dag.get_data_item(f).size as f64 * cur_net_time
                                 }
                             }
+                            DataTransferMode::Manual => 0.,
                         })
                         .max_by(|a, b| a.partial_cmp(&b).unwrap())
                         .unwrap_or(0.),

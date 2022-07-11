@@ -1,3 +1,4 @@
+use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;
 
@@ -17,6 +18,11 @@ pub enum Action {
         task: usize,
         resource: usize,
         cores: Vec<u32>,
+    },
+    SendData {
+        from: Id,
+        to: Id,
+        data_item: usize,
     },
 }
 
