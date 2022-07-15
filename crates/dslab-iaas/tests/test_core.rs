@@ -250,7 +250,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
     assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Running);
 
-    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(4)));
+    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(h1)));
     let second_vm = cloud_sim.spawn_vm_now(
         100,
         100,
@@ -270,7 +270,8 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::Initializing);
 
     // now host does not exist
-    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(47)));
+    let random_wrong_id = 47;
+    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(random_wrong_id)));
     let third_vm = cloud_sim.spawn_vm_now(
         100,
         100,
@@ -290,7 +291,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(third_vm), VmStatus::Initializing);
 
     // finally right decision
-    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(5)));
+    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(h2)));
     let fourth_vm = cloud_sim.spawn_vm_now(
         100,
         100,
