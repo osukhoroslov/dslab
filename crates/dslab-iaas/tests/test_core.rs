@@ -19,6 +19,8 @@ fn name_wrapper(file_name: &str) -> String {
 #[test]
 // Default enegrgy consumption function is 0.4 + 0.6 * CPU load
 // Host is loaded by 1/3 then energy load is 0.4 + 0.6 / 3 = 0.6
+// VM lifetime is 2 seconds + 1 second of initializing + 0.5 seconds of shutdown
+// Thus, overall energy consumption is (2 + 1 + 0.5) * 0.6 = 2.1
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));

@@ -36,7 +36,6 @@ pub struct VirtualMachine {
     pub allocation_start_time: f64,
     lifetime: f64,
     start_time: f64,
-    status: VmStatus,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
     sim_config: Rc<SimulationConfig>,
@@ -74,7 +73,6 @@ impl VirtualMachine {
             cpu_load_model,
             memory_load_model,
             sim_config,
-            status: VmStatus::Initializing,
         }
     }
 
@@ -84,10 +82,6 @@ impl VirtualMachine {
 
     pub fn start_time(&self) -> f64 {
         self.start_time
-    }
-
-    pub fn status(&self) -> &VmStatus {
-        &self.status
     }
 
     pub fn start_duration(&self) -> f64 {
@@ -105,23 +99,11 @@ impl VirtualMachine {
         }
     }
 
-    pub fn set_status(&mut self, status: VmStatus) {
-        self.status = status;
-    }
-
     pub fn get_cpu_load(&self, time: f64) -> f64 {
-        //if self.status == VmStatus::Running {
         self.cpu_load_model.get_resource_load(time, time - self.start_time)
-        //} else {
-        //    0.
-        //}
     }
 
     pub fn get_memory_load(&self, time: f64) -> f64 {
-        //if self.status == VmStatus::Running {
         self.memory_load_model.get_resource_load(time, time - self.start_time)
-        //} else {
-        //    0.
-        //}
     }
 }

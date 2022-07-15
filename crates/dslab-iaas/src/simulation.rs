@@ -176,8 +176,6 @@ impl CloudSimulation {
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let mon = self.monitoring.borrow();
         let source_host = mon.find_host_by_vm(vm_id);
-        let mut vm = self.vm_api.borrow().get_vm(vm_id);
-        vm.set_status(VmStatus::Initializing);
         self.ctx.emit(
             MigrationRequest { source_host, vm_id },
             target_host,
