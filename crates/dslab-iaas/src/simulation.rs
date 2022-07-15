@@ -253,6 +253,10 @@ impl CloudSimulation {
         self.vm_api.borrow().get_vm_status(vm_id).clone()
     }
 
+    pub fn vm_location(&self, vm_id: u32) -> u32 {
+        self.vm_api.borrow().find_host_by_vm(vm_id).clone()
+    }
+
     pub fn sim_config(&self) -> Rc<SimulationConfig> {
         self.sim_config.clone()
     }

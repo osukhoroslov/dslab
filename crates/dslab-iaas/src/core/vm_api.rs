@@ -31,8 +31,10 @@ impl VmAPI {
     }
 
     fn update_vm_status(&mut self, vm_id: u32, status: VmStatus, host_id: u32) {
-        self.vm_status.insert(vm_id, status);
-        self.vm_location.insert(vm_id, host_id);
+        self.vm_status.insert(vm_id, status.clone());
+        if status == VmStatus::Running {
+            self.vm_location.insert(vm_id, host_id);
+        }
     }
 
     pub fn get_vm_status(&self, vm_id: u32) -> VmStatus {
