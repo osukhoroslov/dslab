@@ -152,7 +152,7 @@ fn test_no_overcommit() {
     let h2 = cloud_sim.add_host("h2", 100, 100);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    for _i in 1..12 {
+    for _ in 1..12 {
         cloud_sim.spawn_vm_now(
             10,
             10,
@@ -182,7 +182,7 @@ fn test_overcommit() {
     let h = cloud_sim.add_host("h", 200, 200);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
 
-    for _i in 1..95 {
+    for _ in 1..95 {
         cloud_sim.spawn_vm_now(
             100,
             100,
