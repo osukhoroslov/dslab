@@ -21,17 +21,19 @@ use crate::core::events::allocation::{
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
-use crate::core::vm::VmStatus;
+use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 
 pub struct HostManager {
     pub id: u32,
 
     cpu_total: u32,
+    cpu_allocated: u32,
     cpu_available: u32,
 
     #[allow(dead_code)]
     memory_total: u64,
+    memory_allocated: u64,
     memory_available: u64,
 
     cpu_overcommit: u32,
@@ -69,6 +71,8 @@ impl HostManager {
             id: ctx.id(),
             cpu_total,
             memory_total,
+            cpu_allocated: 0,
+            memory_allocated: 0,
             cpu_available: cpu_total,
             memory_available: memory_total,
             cpu_overcommit: 0,
@@ -89,7 +93,7 @@ impl HostManager {
     }
 
     fn can_allocate(&self, vm_id: u32) -> AllocationVerdict {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
         if self.allow_vm_overcommit {
             return AllocationVerdict::Success;
         }
@@ -102,19 +106,23 @@ impl HostManager {
         return AllocationVerdict::Success;
     }
 
-    fn allocate(&mut self, time: f64, vm_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
+    fn allocate(&mut self, time: f64, vm_ref: Rc<RefCell<VirtualMachine>>) {
+        let vm = vm_ref.borrow();
         if self.cpu_available < vm.cpu_usage {
             self.cpu_overcommit += vm.cpu_usage - self.cpu_available;
             self.cpu_available = 0;
+            self.cpu_allocated = self.cpu_total;
         } else {
             self.cpu_available -= vm.cpu_usage;
+            self.cpu_allocated += vm.cpu_usage;
         }
         if self.memory_available < vm.memory_usage {
             self.memory_overcommit += vm.memory_usage - self.memory_available;
             self.memory_available = 0;
+            self.memory_allocated = self.memory_total;
         } else {
             self.memory_available -= vm.memory_usage;
+            self.memory_allocated += vm.memory_usage;
         }
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
@@ -122,11 +130,12 @@ impl HostManager {
     }
 
     fn release(&mut self, time: f64, vm_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
         if self.cpu_overcommit >= vm.cpu_usage {
             self.cpu_overcommit -= vm.cpu_usage;
         } else {
             self.cpu_available += vm.cpu_usage - self.cpu_overcommit;
+            self.cpu_allocated -= vm.cpu_usage - self.cpu_overcommit;
             self.cpu_overcommit = 0;
         }
 
@@ -134,6 +143,7 @@ impl HostManager {
             self.memory_overcommit -= vm.memory_usage;
         } else {
             self.memory_available += vm.memory_usage - self.memory_overcommit;
+            self.memory_allocated -= vm.memory_usage - self.memory_overcommit;
             self.memory_overcommit = 0;
         }
         self.vms.remove(&vm.id);
@@ -142,27 +152,17 @@ impl HostManager {
     }
 
     pub fn get_cpu_allocated(&self) -> f64 {
-        let mut cpu_used = 0.;
-        for vm_id in &self.vms {
-            let vm = self.vm_api.borrow().get_vm(*vm_id);
-            cpu_used += vm.cpu_usage as f64;
-        }
-        return cpu_used;
+        self.cpu_allocated as f64
     }
 
     pub fn get_memory_allocated(&self) -> f64 {
-        let mut memory_used = 0.;
-        for vm_id in &self.vms {
-            let vm = self.vm_api.borrow().get_vm(*vm_id);
-            memory_used += vm.memory_usage as f64;
-        }
-        return memory_used;
+        self.memory_allocated as f64
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for vm_id in &self.vms {
-            let vm = self.vm_api.borrow().get_vm(*vm_id);
+            let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             cpu_used += vm.cpu_usage as f64 * vm.get_cpu_load(time);
         }
         return cpu_used / self.cpu_total as f64;
@@ -171,7 +171,7 @@ impl HostManager {
     pub fn get_memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for vm_id in &self.vms {
-            let vm = self.vm_api.borrow().get_vm(*vm_id);
+            let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             memory_used += vm.memory_usage as f64 * vm.get_memory_load(time);
         }
         return memory_used / self.memory_total as f64;
@@ -193,8 +193,8 @@ impl HostManager {
     fn on_allocation_request(&mut self, vm_id: u32) -> bool {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
-            let start_duration = vm.start_duration();
-            self.allocate(self.ctx.time(), vm_id);
+            let start_duration = vm.borrow().start_duration();
+            self.allocate(self.ctx.time(), vm.clone());
             self.recent_vm_status_changes
                 .insert(vm_id, (VmStatus::Initializing, self.ctx.time()));
             log_debug!(self.ctx, "vm #{} allocated on host #{}", vm_id, self.id);
@@ -217,10 +217,10 @@ impl HostManager {
     fn on_migration_request(&mut self, source_host: u32, vm_id: u32) {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
-            let migration_duration = (vm.memory_usage as f64) / (self.sim_config.network_throughput as f64);
-            let start_duration = vm.start_duration();
+            let migration_duration = (vm.borrow().memory_usage as f64) / (self.sim_config.network_throughput as f64);
+            let start_duration = vm.borrow().start_duration();
 
-            self.allocate(self.ctx.time(), vm_id);
+            self.allocate(self.ctx.time(), vm);
             log_debug!(
                 self.ctx,
                 "vm #{} allocated on host #{}, start migration",
@@ -257,7 +257,7 @@ impl HostManager {
                 self.recent_vm_status_changes
                     .insert(vm_id, (VmStatus::Finished, self.ctx.time()));
             }
-            let vm = self.vm_api.borrow().get_vm(vm_id);
+            let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
             self.ctx.emit_self(VMDeleted { vm_id }, vm.stop_duration());
         } else {
             log_trace!(self.ctx, "do not release, probably VM was migrated to other host");
@@ -266,8 +266,16 @@ impl HostManager {
 
     fn on_vm_started(&mut self, vm_id: u32) {
         log_debug!(self.ctx, "vm #{} started and running", vm_id);
-        let mut vm = self.vm_api.borrow().get_vm(vm_id);
-        vm.set_start_time(self.ctx.time());
+        let vm = self.vm_api.borrow().get_vm(vm_id);
+        let start_time = vm.borrow().start_time();
+
+        if start_time != -1. {
+            // reduce lifetime due to migration
+            let new_lifetime = vm.borrow().lifetime() - (self.ctx.time() - start_time);
+            vm.borrow_mut().set_lifetime(new_lifetime);
+        }
+
+        vm.borrow_mut().set_start_time(self.ctx.time());
         self.recent_vm_status_changes
             .insert(vm_id, (VmStatus::Running, self.ctx.time()));
         self.ctx.emit_self(
@@ -275,8 +283,7 @@ impl HostManager {
                 vm_id,
                 is_migrating: false,
             },
-            // keep lifetime correct after migrations!
-            vm.lifetime() - (self.ctx.time() - vm.start_time()),
+            vm.borrow().lifetime(),
         );
     }
 
@@ -311,17 +318,13 @@ impl HostManager {
             self.monitoring_id,
             self.sim_config.message_delay,
         );
-        for item in &self.recent_vm_status_changes {
+        for (vm_id, (status, _)) in self.recent_vm_status_changes.drain() {
             self.ctx.emit(
-                VmStatusChanged {
-                    vm_id: *item.0,
-                    status: item.1 .0.clone(),
-                },
+                VmStatusChanged { vm_id, status },
                 self.vm_api_id,
                 self.sim_config.message_delay,
             );
         }
-        self.recent_vm_status_changes.clear();
         self.ctx.emit_self(SendHostState {}, self.sim_config.send_stats_period);
     }
 }

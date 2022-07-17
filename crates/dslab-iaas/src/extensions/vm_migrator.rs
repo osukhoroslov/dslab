@@ -56,6 +56,7 @@ impl VmMigrator {
             log_trace!(self.ctx, "perform migrations");
         }
 
+        let vm_api = self.vm_api.as_ref().unwrap().borrow();
         let mon = self.monitoring.as_ref().unwrap().borrow();
         let mut host_states = mon.get_host_states().clone();
 
@@ -80,7 +81,7 @@ impl VmMigrator {
                 );
                 min_load = min_load.min(state.cpu_load).min(state.memory_load);
                 for vm_id in state.vms.iter() {
-                    let status = self.vm_api.as_ref().unwrap().borrow().get_vm_status(*vm_id);
+                    let status = vm_api.get_vm_status(*vm_id);
                     if status != VmStatus::Running {
                         continue;
                     }
@@ -101,8 +102,8 @@ impl VmMigrator {
                 let mut memory_usage = state.memory_load * (state.memory_total as f64);
 
                 for vm_id in state.vms.iter() {
-                    let status = self.vm_api.as_ref().unwrap().borrow().get_vm_status(*vm_id);
-                    let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(*vm_id);
+                    let status = vm_api.get_vm_status(*vm_id);
+                    let vm = vm_api.get_vm(*vm_id).borrow().clone();
                     if status != VmStatus::Running {
                         continue;
                     }
@@ -136,7 +137,7 @@ impl VmMigrator {
             }
             let mut target_host_opt: Option<u32> = None;
             let mut best_cpu_load = 0.;
-            let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(vm_id);
+            let vm = vm_api.get_vm(vm_id).borrow().clone();
 
             for (host, state) in host_states.iter() {
                 if *host == source_host {
@@ -191,7 +192,7 @@ impl VmMigrator {
                     source_host,
                     target_host
                 );
-                let vm = self.vm_api.as_ref().unwrap().borrow().get_vm(vm_id);
+                let vm = vm_api.get_vm(vm_id).borrow().clone();
                 self.ctx.emit(
                     MigrationRequest {
                         source_host,

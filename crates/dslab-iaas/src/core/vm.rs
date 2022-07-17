@@ -21,7 +21,7 @@ impl Display for VmStatus {
         match self {
             VmStatus::Initializing => write!(f, "initializing"),
             VmStatus::Running => write!(f, "running"),
-            VmStatus::Finished => write!(f, "Finished"),
+            VmStatus::Finished => write!(f, "finished"),
             VmStatus::Migrating => write!(f, "migrating"),
             VmStatus::FailedToAllocate => write!(f, "failed_to_allocate"),
         }
@@ -93,10 +93,11 @@ impl VirtualMachine {
     }
 
     pub fn set_start_time(&mut self, time: f64) {
-        // VM start time is set only once!
-        if self.start_time == -1. {
-            self.start_time = time;
-        }
+        self.start_time = time;
+    }
+
+    pub fn set_lifetime(&mut self, lifetime: f64) {
+        self.lifetime = lifetime;
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {

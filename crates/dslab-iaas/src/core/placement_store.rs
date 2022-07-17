@@ -8,7 +8,7 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
-use crate::core::common::{Allocation, AllocationVerdict};
+use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
@@ -18,6 +18,7 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
 
 pub struct PlacementStore {
+    id: u32,
     allow_vm_overcommit: bool,
     pool_state: ResourcePoolState,
     schedulers: HashSet<u32>,
@@ -34,6 +35,7 @@ impl PlacementStore {
         sim_config: SimulationConfig,
     ) -> Self {
         Self {
+            id: 0,
             allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
@@ -41,6 +43,14 @@ impl PlacementStore {
             ctx,
             sim_config,
         }
+    }
+
+    pub fn set_id(&mut self, id: u32) {
+        self.id = id;
+    }
+
+    pub fn get_id(&self) -> u32 {
+        self.id
     }
 
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
@@ -57,12 +67,7 @@ impl PlacementStore {
     }
 
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
@@ -105,13 +110,7 @@ impl PlacementStore {
     }
 
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
-
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
@@ -123,13 +122,7 @@ impl PlacementStore {
     }
 
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
-
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(

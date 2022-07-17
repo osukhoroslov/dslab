@@ -24,26 +24,26 @@ use crate::extensions::dataset_reader::DatasetReader;
 
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
-    monitoring_id: u32,
     vm_api: Rc<RefCell<VmAPI>>,
-    vm_api_id: u32,
     placement_store: Rc<RefCell<PlacementStore>>,
-    placement_store_id: u32,
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
-    vm_counter: u32,
 }
 
 impl CloudSimulation {
     pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         let monitoring_id = sim.add_handler("monitoring", monitoring.clone());
+        monitoring.borrow_mut().set_id(monitoring_id);
+
         let vm_api = rc!(refcell!(VmAPI::new(sim.create_context("vm_api"))));
         let vm_api_id = sim.add_handler("vm_api", vm_api.clone());
+        vm_api.borrow_mut().set_id(vm_api_id);
+
         let placement_store = rc!(refcell!(PlacementStore::new(
             sim_config.allow_vm_overcommit,
             vm_api.clone(),
@@ -51,21 +51,19 @@ impl CloudSimulation {
             sim_config.clone(),
         )));
         let placement_store_id = sim.add_handler("placement_store", placement_store.clone());
+        placement_store.borrow_mut().set_id(placement_store_id);
+
         let ctx = sim.create_context("simulation");
         Self {
             monitoring,
-            monitoring_id,
             vm_api,
-            vm_api_id,
             placement_store,
-            placement_store_id,
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
             sim,
             ctx,
             sim_config: rc!(sim_config),
-            vm_counter: 1,
         }
     }
 
@@ -74,10 +72,10 @@ impl CloudSimulation {
         let host = rc!(refcell!(HostManager::new(
             cpu_total,
             memory_total,
-            self.monitoring_id,
-            self.placement_store_id,
+            self.monitoring.borrow().get_id(),
+            self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
-            self.vm_api_id,
+            self.vm_api.borrow().get_id(),
             self.sim_config.allow_vm_overcommit,
             self.sim.create_context(name),
             self.sim_config.clone(),
@@ -104,8 +102,7 @@ impl CloudSimulation {
             pool_state,
             self.monitoring.clone(),
             self.vm_api.clone(),
-            self.vm_api_id,
-            self.placement_store_id,
+            self.placement_store.borrow().get_id(),
             vm_placement_algorithm,
             self.sim.create_context(name),
             self.sim_config.clone(),
@@ -117,11 +114,6 @@ impl CloudSimulation {
         id
     }
 
-    fn generate_vm_id(&mut self) -> u32 {
-        self.vm_counter += 1;
-        self.vm_counter
-    }
-
     pub fn spawn_vm_now(
         &mut self,
         cpu_usage: u32,
@@ -129,9 +121,10 @@ impl CloudSimulation {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
+        vm_id: Option<u32>,
         scheduler_id: u32,
     ) -> u32 {
-        let id = self.generate_vm_id();
+        let id = vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
             cpu_usage,
@@ -154,10 +147,11 @@ impl CloudSimulation {
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
+        vm_id: Option<u32>,
         scheduler_id: u32,
         delay: f64,
     ) -> u32 {
-        let id = self.generate_vm_id();
+        let id = vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
             cpu_usage,
@@ -207,6 +201,7 @@ impl CloudSimulation {
                 request.lifetime,
                 Box::new(ConstLoadModel::new(1.0)),
                 Box::new(ConstLoadModel::new(1.0)),
+                Some(request.id),
                 scheduler_id,
                 request.start_time,
             );
@@ -246,7 +241,7 @@ impl CloudSimulation {
     }
 
     pub fn vm(&self, vm_id: u32) -> Rc<RefCell<VirtualMachine>> {
-        rc!(refcell!(self.vm_api.borrow().get_vm(vm_id).clone()))
+        self.vm_api.borrow().get_vm(vm_id).clone()
     }
 
     pub fn vm_status(&self, vm_id: u32) -> VmStatus {
@@ -254,7 +249,7 @@ impl CloudSimulation {
     }
 
     pub fn vm_location(&self, vm_id: u32) -> u32 {
-        self.vm_api.borrow().find_host_by_vm(vm_id).clone()
+        self.vm_api.borrow().find_host_by_vm(vm_id)
     }
 
     pub fn sim_config(&self) -> Rc<SimulationConfig> {

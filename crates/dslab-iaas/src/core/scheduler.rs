@@ -7,7 +7,6 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
-use crate::core::common::Allocation;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
@@ -23,10 +22,9 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 pub struct Scheduler {
     pub id: u32,
     pool_state: ResourcePoolState,
-    placement_store_id: u32,
     monitoring: Rc<RefCell<Monitoring>>,
     vm_api: Rc<RefCell<VmAPI>>,
-    vm_api_id: u32,
+    placement_store_id: u32,
     vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -37,7 +35,6 @@ impl Scheduler {
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
         vm_api: Rc<RefCell<VmAPI>>,
-        vm_api_id: u32,
         placement_store_id: u32,
         vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>,
         ctx: SimulationContext,
@@ -46,10 +43,9 @@ impl Scheduler {
         Self {
             id: ctx.id(),
             pool_state: snapshot,
-            placement_store_id,
             monitoring,
             vm_api,
-            vm_api_id,
+            placement_store_id,
             vm_placement_algorithm,
             ctx,
             sim_config,
@@ -62,12 +58,8 @@ impl Scheduler {
     }
 
     fn on_allocation_request(&mut self, vm_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
 
         if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
             self.ctx.emit(
@@ -75,7 +67,7 @@ impl Scheduler {
                     vm_id,
                     status: VmStatus::FailedToAllocate,
                 },
-                self.vm_api_id,
+                self.vm_api.borrow().get_id(),
                 self.sim_config.message_delay,
             );
             return;
@@ -107,42 +99,22 @@ impl Scheduler {
     }
 
     fn on_allocation_commit_succeeded(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.allocate(&alloc, host_id);
     }
 
     fn on_allocation_commit_failed(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
     }
 
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
     }
 
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id);
-        let alloc = Allocation {
-            id: vm_id,
-            cpu_usage: vm.cpu_usage,
-            memory_usage: vm.memory_usage,
-        };
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
     }
 }

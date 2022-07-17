@@ -35,6 +35,7 @@ fn test_energy_consumption() {
         2.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
+        None,
         s,
     );
 
@@ -62,6 +63,7 @@ fn test_first_fit() {
         100.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
+        None,
         s,
     );
 
@@ -80,6 +82,7 @@ fn test_first_fit() {
         100.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
+        None,
         s,
     );
 
@@ -110,6 +113,7 @@ fn test_best_fit() {
         100.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
+        None,
         s,
     );
 
@@ -128,6 +132,7 @@ fn test_best_fit() {
         100.0,
         Box::new(ConstLoadModel::new(1.0)),
         Box::new(ConstLoadModel::new(1.0)),
+        None,
         s,
     );
 
@@ -159,6 +164,7 @@ fn test_no_overcommit() {
             100.0,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
+            None,
             s,
         );
         cloud_sim.step_for_duration(5.);
@@ -189,6 +195,7 @@ fn test_overcommit() {
             1000.0,
             Box::new(ConstLoadModel::new(0.01)),
             Box::new(ConstLoadModel::new(0.01)),
+            None,
             s,
         );
         cloud_sim.step_for_duration(1.);
@@ -239,6 +246,7 @@ fn test_wrong_decision() {
         100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
+        None,
         s,
     );
     cloud_sim.step_for_duration(5.);
@@ -257,6 +265,7 @@ fn test_wrong_decision() {
         100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
+        None,
         bad_s,
     );
     cloud_sim.step_for_duration(5.);
@@ -278,6 +287,7 @@ fn test_wrong_decision() {
         100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
+        None,
         bad_s2,
     );
     cloud_sim.step_for_duration(5.);
@@ -298,6 +308,7 @@ fn test_wrong_decision() {
         100.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
+        None,
         fine_s,
     );
     cloud_sim.step_for_duration(5.);
@@ -320,6 +331,7 @@ fn test_wrong_decision() {
 #[test]
 // Migrate a VM from host 1 to host 2
 // Network throughput is 10, then the migration of the VM with memory size 100 will take 10 seconds
+// The VM will finish at moment 22. 20 seconds of lifetime + 2 seconds of double initialization
 fn test_migration_simple() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -333,9 +345,10 @@ fn test_migration_simple() {
     let vm = cloud_sim.spawn_vm_now(
         100,
         100,
-        1000.0,
+        20.0,
         Box::new(ConstLoadModel::new(1.)),
         Box::new(ConstLoadModel::new(1.)),
+        None,
         s,
     );
 
@@ -374,4 +387,50 @@ fn test_migration_simple() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.5);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.5);
+
+    cloud_sim.step_for_duration(5.);
+    current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 22.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
+}
+
+#[test]
+// Despite two migrations the VM will end at moment 103
+fn test_double_migration() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 200, 200);
+    let h2 = cloud_sim.add_host("h2", 200, 200);
+    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+
+    // VM spawns on host 1
+    let vm = cloud_sim.spawn_vm_now(
+        100,
+        100,
+        100.0,
+        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstLoadModel::new(1.)),
+        None,
+        s,
+    );
+
+    // migration 1
+    cloud_sim.step_for_duration(20.);
+    cloud_sim.migrate_vm_to_host(vm, h2);
+
+    // migration 2
+    cloud_sim.step_for_duration(20.);
+    cloud_sim.migrate_vm_to_host(vm, h1);
+
+    cloud_sim.step_for_duration(60.);
+    let mut current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 100.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    cloud_sim.step_for_duration(3.);
+    current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 103.);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
