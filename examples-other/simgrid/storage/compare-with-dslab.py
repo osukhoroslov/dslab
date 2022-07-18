@@ -52,7 +52,7 @@ def compare_data(x, y, expected_size):
 
     time_diff = np.array(time_diff)
 
-    print("Time series analysis:")
+    print("Time diff series analysis:")
     print(f"Avg: {np.average(time_diff)}")
     print(f"Max: {np.max(time_diff)}")
     print(f"Std: {np.std(time_diff)}")
