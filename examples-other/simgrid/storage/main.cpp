@@ -167,6 +167,7 @@ int main(int argc, char** argv) {
 
         size_t next_activity_to_start = 0;
         std::vector<size_t> activities_to_requests;
+        activities_to_requests.push_back(0); // dummy
 
         for (size_t i = 0; i < 2 * requests_count; ++i) {
             if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
