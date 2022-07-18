@@ -7,7 +7,7 @@ import re
 import numpy as np
 
 
-DSLAB_BINARY_PATH = "target/release/storage-disk-bench"
+DSLAB_BINARY_PATH = "target/release/storage-disk-benchmark"
 DSLAB_ADDITIONAL_ARGS = None
 
 SIMGRID_BINARY_PATH = "examples-other/simgrid/build/relwithdebinfo/bin/storage"
@@ -69,7 +69,7 @@ def main():
     args = ap.parse_args()
 
     def run(binary, additional_args):
-        command = [os.getenv("DSLAB_BASE_DIR", "") + "/" + binary, "--requests", str(args.activities),
+        command = [os.getenv("DSLAB_BASE_DIR", "") + "/" + binary, "--requests", str(args.requests),
                    "--disks", str(args.disks), "--max-size", str(args.max_size), "--max-start-time", str(args.max_start_time)]
         if additional_args:
             command.append(additional_args)
@@ -86,7 +86,7 @@ def main():
     if not compare_data(
         get_dslab_data(run(DSLAB_BINARY_PATH, DSLAB_ADDITIONAL_ARGS)),
         get_simgrid_data(run(SIMGRID_BINARY_PATH, SIMGRID_ADDITIONAL_ARGS)),
-        args.activities
+        args.requests
     ):
         exit(1)
 
