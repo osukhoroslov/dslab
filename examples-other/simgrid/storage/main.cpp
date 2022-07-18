@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
         .help("Number of requests (>= 1)")
         .nargs(1)
         .action(str_to_ull)
-        .default_value(kDefaultActivitiesCount);
+        .default_value(kDefaultRequestsCount);
 
     parser.add_argument("--disks")
         .help("Number of disks (>= 1)")
