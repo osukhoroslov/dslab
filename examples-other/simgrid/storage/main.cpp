@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 
     sg4::Actor::create("starter", host, [&] {
         for (const auto& req : requests) {
-            simgrid::s4u::this_actor::sleep_until(req.start_time);
+            sg4::this_actor::sleep_until(req.start_time);
             mb->put(new int, 0);
         }
     });
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
 
         for (size_t i = 0; i < 2 * requests_count; ++i) {
             if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
-                // Time to run next disk activity
+                // Time to start next disk activity
                 auto& req = requests[next_activity_to_start];
                 activities.emplace_back(disks_suit->ReadAsync(req.disk_idx, req.size));
                 activities_to_requests.push_back(next_activity_to_start);
