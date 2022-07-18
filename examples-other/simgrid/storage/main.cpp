@@ -6,6 +6,8 @@
 #include <xbt/log.h>
 #include <xbt/asserts.h>
 
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+
 #include <simgrid/s4u.hpp>
 #include <simgrid/kernel/Timer.hpp>
 
@@ -48,13 +50,13 @@ std::unique_ptr<DisksSuit> MakeSimpleDisks(sg4::Host* host, uint64_t count) {
 
 template <typename F>
 void RunWithTimeMeasure(F&& f) {
-    XBT_WARN("Starting");
+    XBT_INFO("Starting");
     auto start_time = std::chrono::steady_clock::now();
     f();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::steady_clock::now() - start_time)
                        .count();
-    XBT_WARN("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
+    XBT_INFO("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
 }
 
 struct DiskReadRequest {
@@ -72,11 +74,7 @@ std::vector<DiskReadRequest> GeneratePlan(uint64_t disks_count, uint64_t activit
     std::vector<DiskReadRequest> plan;
     plan.reserve(activities_count);
 
-    // For technical reasons first activity should start at time = 0
-    uint64_t first_disk_idx = rnd.Next() % disks_count, first_size = rnd.Next() % (max_size + 1);
-    plan.emplace_back(first_disk_idx, 0, first_size);
-
-    for (size_t i = 0; i < activities_count - 1; ++i) {
+    for (size_t i = 0; i < activities_count; ++i) {
         uint64_t disk_idx = rnd.Next() % disks_count,
                  start_time = rnd.Next() % (max_start_time + 1), size = rnd.Next() % (max_size + 1);
         plan.emplace_back(disk_idx, start_time, size);
@@ -142,43 +140,51 @@ int main(int argc, char** argv) {
 
     zone->seal();
 
-    sg4::Actor::create("runner", host, [&]() {
+    auto* mb = sg4::Mailbox::by_name("");
+
+    auto plan = GeneratePlan(disks_count, activities_count, max_size, max_start_time);
+
+    std::sort(plan.begin(), plan.end(), [](const DiskReadRequest& lhs, const DiskReadRequest& rhs) {
+        return std::tie(lhs.start_time, lhs.disk_idx, lhs.size) <
+               std::tie(rhs.start_time, rhs.disk_idx, rhs.size);
+    });
+
+    sg4::Actor::create("starter", host, [&] {
+        for (const auto& req : plan) {
+            simgrid::s4u::this_actor::sleep_until(req.start_time);
+            mb->put(new int, 0);
+        }
+    });
+
+    sg4::Actor::create("runner", host, [&] {
         XBT_INFO("Starting disk benchmark");
 
         std::vector<sg4::ActivityPtr> activities;
-        activities.reserve(activities_count);
+        int* dummy = nullptr;
+        activities.push_back(mb->get_async<int>(&dummy));
 
-        std::vector<size_t> activities_order_remapping;
-        activities_order_remapping.reserve(activities_count);
+        size_t next_activity_to_start = 0;
+        std::vector<size_t> activities_remapping;
 
-        auto plan = GeneratePlan(disks_count, activities_count, max_size, max_start_time);
-
-        // For technical reasons first activity should start at time = 0
-        xbt_assert(!plan.empty());
-        xbt_assert(plan[0].start_time == 0);
-        activities.push_back(disks_suit->ReadAsync(plan[0].disk_idx, plan[0].size));
-        activities_order_remapping.push_back(0);
-
-        // Other activities are pushed by timer
-        for (size_t i = 1; i < activities_count; ++i) {
-            simgrid::kernel::timer::Timer::set(plan[i].start_time, [&, i]() {
-                XBT_INFO("Starting read with from disk-%lu, size = %lu", plan[i].disk_idx,
-                         plan[i].size);
-                activities.push_back(disks_suit->ReadAsync(plan[i].disk_idx, plan[i].size));
-                activities_order_remapping.push_back(i);
-            });
+        for (size_t i = 0; i < 2 * activities_count; ++i) {
+            if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
+                // Time to run next disk activity
+                auto& req = plan[next_activity_to_start];
+                activities.emplace_back(disks_suit->ReadAsync(req.disk_idx, req.size));
+                activities_remapping.push_back(next_activity_to_start);
+                ++next_activity_to_start;
+                activities[0] = mb->get_async<int>(&dummy);
+            } else {
+                // Some disk activity completed
+                auto& req = plan[activities_remapping[finished_idx]];
+                XBT_INFO("Completed reading from disk-%lu, size = %lu", req.disk_idx, req.size);
+                std::swap(activities[finished_idx], activities.back());
+                std::swap(activities_remapping[finished_idx], activities_remapping.back());
+                activities.pop_back();
+                activities_remapping.pop_back();
+            }
         }
-
-        for (size_t i = 0; i < activities_count; ++i) {
-            size_t finished_idx = sg4::Activity::wait_any(activities);
-            const auto& request = plan[activities_order_remapping[finished_idx]];
-            XBT_INFO("Completed reading from disk-%lu, size = %lu", request.disk_idx, request.size);
-
-            std::swap(activities[finished_idx], activities.back());
-            activities.pop_back();
-            std::swap(activities_order_remapping[finished_idx], activities_order_remapping.back());
-            activities_order_remapping.pop_back();
-        }
+        XBT_INFO("Exit");
     });
 
     RunWithTimeMeasure([&e] { e.run(); });

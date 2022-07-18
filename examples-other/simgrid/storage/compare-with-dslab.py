@@ -16,7 +16,7 @@ SIMGRID_ADDITIONAL_ARGS = "--log=root.thres:info"
 
 def get_simgrid_data(lines):
     regex = re.compile(
-        "\[sample\_host:runner:\(1\) ([\d\.]+)\] \[disk\_test\/INFO\] Completed reading from disk\-([\d]+), size = ([\d]+)")
+        "\[sample\_host:runner:\(2\) ([\d\.]+)\] \[disk\_test\/INFO\] Completed reading from disk\-([\d]+), size = ([\d]+)")
     data = []
     for line in lines:
         m = regex.match(line)

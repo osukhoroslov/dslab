@@ -81,15 +81,9 @@ impl DiskRequest {
 
 fn generate_plan(disks_count: u64, activities_count: u64, max_size: u64, max_start_time: u64) -> Vec<DiskRequest> {
     let mut rnd = CustomRandom::new(SEED);
-
     let mut plan = vec![];
 
-    // For technical reasons (in SimGrid) first activity should start at time = 0
-    let first_disk_idx = rnd.next() % disks_count;
-    let first_size = rnd.next() % (max_size + 1);
-    plan.push(DiskRequest::new(first_disk_idx as usize, 0, first_size));
-
-    for _ in 0..activities_count - 1 {
+    for _ in 0..activities_count {
         let disk_idx = rnd.next() % disks_count;
         let start_time = rnd.next() % (max_start_time + 1);
         let size = rnd.next() % (max_size + 1);
