@@ -1,3 +1,5 @@
+//! Simulation configuration and execution.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -13,6 +15,7 @@ use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 
+/// Represents a simulation, provides methods for its configuration and execution.
 pub struct Simulation {
     sim_state: Rc<RefCell<SimulationState>>,
     name_to_id: HashMap<String, Id>,
@@ -21,6 +24,7 @@ pub struct Simulation {
 }
 
 impl Simulation {
+    /// Creates a new simulation with specified random seed.
     pub fn new(seed: u64) -> Self {
         Self {
             sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
@@ -41,14 +45,17 @@ impl Simulation {
         id
     }
 
+    /// Returns the identifier of component by its name.
     pub fn lookup_id(&self, name: &str) -> Id {
         *self.name_to_id.get(name).unwrap()
     }
 
+    /// Returns the name of component by its identifier.
     pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
     }
 
+    /// Creates a new simulation context with specified name.
     pub fn create_context<S>(&mut self, name: S) -> SimulationContext
     where
         S: AsRef<str>,
@@ -69,6 +76,7 @@ impl Simulation {
         ctx
     }
 
+    /// Registers the event handler implementation for component with specified name.
     pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> Id
     where
         S: AsRef<str>,
@@ -85,10 +93,12 @@ impl Simulation {
         id
     }
 
+    /// Returns the current simulation time.
     pub fn time(&self) -> f64 {
         self.sim_state.borrow().time()
     }
 
+    /// Performs a single step through the simulation.
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
@@ -119,6 +129,7 @@ impl Simulation {
         }
     }
 
+    /// Performs the specified number of steps through the simulation.
     pub fn steps(&mut self, step_count: u64) -> bool {
         for _i in 0..step_count {
             if !self.step() {
@@ -128,10 +139,12 @@ impl Simulation {
         true
     }
 
+    /// Steps through the simulation until there are no unprocessed events.
     pub fn step_until_no_events(&mut self) {
         while self.step() {}
     }
 
+    /// Steps through the simulation with duration limit.
     pub fn step_for_duration(&mut self, duration: f64) {
         let end_time = self.sim_state.borrow().time() + duration;
         loop {
@@ -146,6 +159,7 @@ impl Simulation {
         }
     }
 
+    /// Returns the total number of created events.
     pub fn event_count(&self) -> u64 {
         self.sim_state.borrow().event_count()
     }

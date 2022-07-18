@@ -1,3 +1,6 @@
+#![warn(missing_docs)]
+#![doc = include_str!("../readme.md")]
+
 pub mod component;
 pub mod context;
 pub mod event;
@@ -7,3 +10,8 @@ pub mod simulation;
 mod state;
 
 pub use colored;
+pub use component::Id;
+pub use context::SimulationContext;
+pub use event::Event;
+pub use handler::EventHandler;
+pub use simulation::Simulation;
