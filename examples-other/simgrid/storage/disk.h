@@ -14,9 +14,9 @@ using DegradationRule = sg4::NonLinearResourceCb;
 
 using BandwidthFunction = std::function<double(sg_size_t)>;
 
-class DisksSuit {
+class DisksSuite {
 public:
-    DisksSuit(sg4::Host* host, std::string name_prefix, double read_bw, double write_bw);
+    DisksSuite(sg4::Host* host, std::string name_prefix, double read_bw, double write_bw);
 
     void SetReadCapacityDegradation(DegradationRule rule);
     void SetWriteCapacityDegradation(DegradationRule rule);

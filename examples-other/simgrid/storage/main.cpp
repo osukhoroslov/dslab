@@ -14,7 +14,7 @@
 #include <random>
 #include <iostream>
 
-using dslab::simgrid_examples::DisksSuit;
+using dslab::simgrid_examples::DisksSuite;
 namespace sg4 = simgrid::s4u;
 
 static constexpr uint64_t kReadBw = 100;
@@ -29,17 +29,17 @@ XBT_LOG_NEW_DEFAULT_CATEGORY(disk_test, "Disk example");
 
 namespace {
 
-std::unique_ptr<DisksSuit> MakeSimpleDisks(sg4::Host* host, uint64_t count) {
-    auto suit = std::make_unique<DisksSuit>(host, "simple-disk", kReadBw, kWriteBw);
+std::unique_ptr<DisksSuite> MakeSimpleDisks(sg4::Host* host, uint64_t count) {
+    auto suit = std::make_unique<DisksSuite>(host, "simple-disk", kReadBw, kWriteBw);
     suit->MakeDisks(count);
     return suit;
 }
 
-[[maybe_unused]] std::unique_ptr<DisksSuit> MakeDisksWithDegradation(sg4::Host* host,
-                                                                     uint64_t count) {
-    auto suit = std::make_unique<DisksSuit>(host, "dedrading-disk", kReadBw, kWriteBw);
-    suit->SetReadCapacityDegradation([]([[maybe_unused]] double capacity, int n_activities) {
-        if (n_activities > 1000) {
+[[maybe_unused]] std::unique_ptr<DisksSuite> MakeDisksWithDegradation(sg4::Host* host,
+                                                                      uint64_t count) {
+    auto suit = std::make_unique<DisksSuite>(host, "dedrading-disk", kReadBw, kWriteBw);
+    suit->SetReadCapacityDegradation([]([[maybe_unused]] double capacity, int n_requests) {
+        if (n_requests > 1000) {
             return capacity / 2;
         }
         return capacity;
@@ -67,20 +67,20 @@ struct DiskReadRequest {
     uint64_t disk_idx, start_time, size;
 };
 
-std::vector<DiskReadRequest> GeneratePlan(uint64_t disks_count, uint64_t activities_count,
-                                          uint64_t max_size, uint64_t max_start_time) {
+std::vector<DiskReadRequest> GenerateRequests(uint64_t disks_count, uint64_t requests_count,
+                                              uint64_t max_size, uint64_t max_start_time) {
     CustomRandom rnd(16);
 
-    std::vector<DiskReadRequest> plan;
-    plan.reserve(activities_count);
+    std::vector<DiskReadRequest> requests;
+    requests.reserve(requests_count);
 
-    for (size_t i = 0; i < activities_count; ++i) {
+    for (size_t i = 0; i < requests_count; ++i) {
         uint64_t disk_idx = rnd.Next() % disks_count,
                  start_time = rnd.Next() % (max_start_time + 1), size = rnd.Next() % (max_size + 1);
-        plan.emplace_back(disk_idx, start_time, size);
+        requests.emplace_back(disk_idx, start_time, size);
     }
 
-    return plan;
+    return requests;
 }
 
 }  // namespace
@@ -94,8 +94,8 @@ int main(int argc, char** argv) {
         return static_cast<uint64_t>(std::stoull(value));
     };
 
-    parser.add_argument("--activities")
-        .help("Number of activities (>= 1)")
+    parser.add_argument("--requests")
+        .help("Number of requests (>= 1)")
         .nargs(1)
         .action(str_to_ull)
         .default_value(kDefaultActivitiesCount);
@@ -118,12 +118,12 @@ int main(int argc, char** argv) {
         .action(str_to_ull)
         .default_value(kDefaultMaxStartTime);
 
-    uint64_t activities_count = kDefaultActivitiesCount, disks_count = kDefaultDisksCount,
+    uint64_t requests_count = kDefaultActivitiesCount, disks_count = kDefaultDisksCount,
              max_size = kDefaultMaxSize, max_start_time = kDefaultMaxStartTime;
     try {
         parser.parse_args(argc, argv);
 
-        activities_count = parser.get<uint64_t>("--activities");
+        requests_count = parser.get<uint64_t>("--requests");
         disks_count = parser.get<uint64_t>("--disks");
         max_size = parser.get<uint64_t>("--max-size");
         max_start_time = parser.get<uint64_t>("--max-start-time");
@@ -142,15 +142,16 @@ int main(int argc, char** argv) {
 
     auto* mb = sg4::Mailbox::by_name("");
 
-    auto plan = GeneratePlan(disks_count, activities_count, max_size, max_start_time);
+    auto requests = GenerateRequests(disks_count, requests_count, max_size, max_start_time);
 
-    std::sort(plan.begin(), plan.end(), [](const DiskReadRequest& lhs, const DiskReadRequest& rhs) {
-        return std::tie(lhs.start_time, lhs.disk_idx, lhs.size) <
-               std::tie(rhs.start_time, rhs.disk_idx, rhs.size);
-    });
+    std::sort(requests.begin(), requests.end(),
+              [](const DiskReadRequest& lhs, const DiskReadRequest& rhs) {
+                  return std::tie(lhs.start_time, lhs.disk_idx, lhs.size) <
+                         std::tie(rhs.start_time, rhs.disk_idx, rhs.size);
+              });
 
     sg4::Actor::create("starter", host, [&] {
-        for (const auto& req : plan) {
+        for (const auto& req : requests) {
             simgrid::s4u::this_actor::sleep_until(req.start_time);
             mb->put(new int, 0);
         }
@@ -164,24 +165,24 @@ int main(int argc, char** argv) {
         activities.push_back(mb->get_async<int>(&dummy));
 
         size_t next_activity_to_start = 0;
-        std::vector<size_t> activities_remapping;
+        std::vector<size_t> activities_to_requests;
 
-        for (size_t i = 0; i < 2 * activities_count; ++i) {
+        for (size_t i = 0; i < 2 * requests_count; ++i) {
             if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
                 // Time to run next disk activity
-                auto& req = plan[next_activity_to_start];
+                auto& req = requests[next_activity_to_start];
                 activities.emplace_back(disks_suit->ReadAsync(req.disk_idx, req.size));
-                activities_remapping.push_back(next_activity_to_start);
+                activities_to_requests.push_back(next_activity_to_start);
                 ++next_activity_to_start;
                 activities[0] = mb->get_async<int>(&dummy);
             } else {
                 // Some disk activity completed
-                auto& req = plan[activities_remapping[finished_idx]];
+                auto& req = requests[activities_to_requests[finished_idx]];
                 XBT_INFO("Completed reading from disk-%lu, size = %lu", req.disk_idx, req.size);
                 std::swap(activities[finished_idx], activities.back());
-                std::swap(activities_remapping[finished_idx], activities_remapping.back());
+                std::swap(activities_to_requests[finished_idx], activities_to_requests.back());
                 activities.pop_back();
-                activities_remapping.pop_back();
+                activities_to_requests.pop_back();
             }
         }
         XBT_INFO("Exit");

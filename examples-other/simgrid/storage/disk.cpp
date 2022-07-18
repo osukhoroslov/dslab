@@ -4,27 +4,27 @@
 
 namespace dslab::simgrid_examples {
 
-DisksSuit::DisksSuit(sg4::Host* host, std::string name_prefix, double read_bw, double write_bw)
+DisksSuite::DisksSuite(sg4::Host* host, std::string name_prefix, double read_bw, double write_bw)
     : host_(host), name_prefix_(std::move(name_prefix)), read_bw_(read_bw), write_bw_(write_bw) {
 }
 
-void DisksSuit::SetReadCapacityDegradation(DegradationRule rule) {
+void DisksSuite::SetReadCapacityDegradation(DegradationRule rule) {
     read_degradation_rule_ = std::move(rule);
 }
 
-void DisksSuit::SetWriteCapacityDegradation(DegradationRule rule) {
+void DisksSuite::SetWriteCapacityDegradation(DegradationRule rule) {
     write_degradation_rule_ = std::move(rule);
 }
 
-void DisksSuit::SetReadBandwidthFunction(BandwidthFunction bf) {
+void DisksSuite::SetReadBandwidthFunction(BandwidthFunction bf) {
     read_bf_ = std::move(bf);
 }
 
-void DisksSuit::SetWriteBandwidthFunction(BandwidthFunction bf) {
+void DisksSuite::SetWriteBandwidthFunction(BandwidthFunction bf) {
     write_bf_ = std::move(bf);
 }
 
-void DisksSuit::MakeDisks(uint64_t count) {
+void DisksSuite::MakeDisks(uint64_t count) {
     disks_.reserve(count);
 
     for (size_t idx = 1; idx <= count; ++idx) {
@@ -61,7 +61,7 @@ void DisksSuit::MakeDisks(uint64_t count) {
     }
 }
 
-sg4::IoPtr DisksSuit::ReadAsync(uint64_t disk_idx, uint64_t size) {
+sg4::IoPtr DisksSuite::ReadAsync(uint64_t disk_idx, uint64_t size) {
     return disks_[disk_idx]->read_async(size);
 }
 

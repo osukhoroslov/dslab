@@ -21,10 +21,6 @@ use dslab_storage::events::{DataReadCompleted, DataReadFailed};
 use dslab_storage::shared_disk::SharedDisk;
 
 const SEED: u64 = 16;
-
-const DISK_NAME: &str = "disk";
-const USER_NAME: &str = "User";
-
 const DISK_CAPACITY: u64 = 10u64.pow(10);
 const DISK_READ_BW: f64 = 100.;
 const DISK_WRITE_BW: f64 = 100.;
@@ -33,9 +29,9 @@ const DISK_WRITE_BW: f64 = 100.;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Number of activities (>= 1)
+    /// Number of requests (>= 1)
     #[clap(long, default_value_t = 1)]
-    activities: u64,
+    requests: u64,
 
     /// Number of disks (>= 1)
     #[clap(long, default_value_t = 1)]
@@ -53,7 +49,7 @@ struct Args {
 struct Runner {
     disks: Vec<Rc<RefCell<SharedDisk>>>,
     ctx: SimulationContext,
-    activities_count: u64,
+    requests_count: u64,
     max_size: u64,
 }
 
@@ -79,18 +75,16 @@ impl DiskRequest {
     }
 }
 
-fn generate_plan(disks_count: u64, activities_count: u64, max_size: u64, max_start_time: u64) -> Vec<DiskRequest> {
+fn generate_requests(disks_count: u64, requests_count: u64, max_size: u64, max_start_time: u64) -> Vec<DiskRequest> {
     let mut rnd = CustomRandom::new(SEED);
-    let mut plan = vec![];
-
-    for _ in 0..activities_count {
+    let mut requests = vec![];
+    for _ in 0..requests_count {
         let disk_idx = rnd.next() % disks_count;
         let start_time = rnd.next() % (max_start_time + 1);
         let size = rnd.next() % (max_size + 1);
-        plan.push(DiskRequest::new(disk_idx as usize, start_time, size));
+        requests.push(DiskRequest::new(disk_idx as usize, start_time, size));
     }
-
-    plan
+    requests
 }
 
 impl Runner {
@@ -98,21 +92,19 @@ impl Runner {
         Self {
             disks,
             ctx,
-            activities_count: 0,
+            requests_count: 0,
             max_size: 0,
         }
     }
 
-    fn run(&mut self, activities_count: u64, max_size: u64, max_start_time: u64) {
+    fn start(&mut self, requests_count: u64, max_size: u64, max_start_time: u64) {
         log_info!(self.ctx, "Starting disk benchmark");
-
-        let plan = generate_plan(self.disks.len() as u64, activities_count, max_size, max_start_time);
-
-        self.activities_count = activities_count;
+        let requests = generate_requests(self.disks.len() as u64, requests_count, max_size, max_start_time);
+        self.requests_count = requests_count;
         self.max_size = max_size;
 
-        for idx in 0..self.activities_count {
-            let request = plan.get(idx as usize).unwrap();
+        for idx in 0..self.requests_count {
+            let request = requests.get(idx as usize).unwrap();
             self.ctx.emit_self(
                 TimerFired {
                     disk_idx: request.disk_idx,
@@ -132,7 +124,7 @@ impl EventHandler for Runner {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             DataReadCompleted { request_id: _, size } => {
-                self.activities_count -= 1;
+                self.requests_count -= 1;
                 log_debug!(
                     self.ctx,
                     "Completed reading from {}, size = {}",
@@ -158,11 +150,10 @@ fn main() {
         .init();
 
     let mut sim = Simulation::new(SEED);
-
     let mut disks = vec![];
 
     for i in 0..args.disks {
-        let disk_name = DISK_NAME.to_owned() + "-" + &i.to_string();
+        let disk_name = format!("disk-{}", i);
         let disk = rc!(refcell!(SharedDisk::new_simple(
             DISK_CAPACITY,
             DISK_READ_BW,
@@ -173,20 +164,20 @@ fn main() {
         disks.push(disk);
     }
 
-    let user = rc!(refcell!(Runner::new(disks, sim.create_context(USER_NAME))));
-    sim.add_handler(USER_NAME, user.clone());
-
-    user.borrow_mut()
-        .run(args.activities, args.max_size, args.max_start_time);
+    let runner = rc!(refcell!(Runner::new(disks, sim.create_context("runner"))));
+    sim.add_handler("runner", runner.clone());
+    runner
+        .borrow_mut()
+        .start(args.requests, args.max_size, args.max_start_time);
 
     let t = Instant::now();
     sim.step_until_no_events();
     let elapsed = t.elapsed().as_millis();
     println!(
-        "Processed {} activities in {:.2?} ms ({:.0} act/s)",
-        args.activities,
+        "Processed {} requests in {:.2?} ms ({:.0} act/s)",
+        args.requests,
         elapsed,
-        args.activities as f64 / elapsed as f64 * 1000.
+        args.requests as f64 / elapsed as f64 * 1000.
     );
     println!(
         "Processed {} events in {:.2?} ms ({:.0} events/s)",
@@ -194,6 +185,5 @@ fn main() {
         elapsed,
         sim.event_count() as f64 / elapsed as f64 * 1000.
     );
-
     println!("Finish");
 }
