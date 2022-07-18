@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
         .default_value(kDefaultMaxSize);
 
     parser.add_argument("--max-start-time")
-        .help("Maximal activity start time (0 by default, so all will start at 0)")
+        .help("Maximal request start time (0 by default, so all will start at 0)")
         .nargs(1)
         .action(str_to_ull)
         .default_value(kDefaultMaxStartTime);
