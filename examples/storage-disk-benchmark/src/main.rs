@@ -41,7 +41,7 @@ struct Args {
     #[clap(long, default_value_t = 10u64.pow(9) + 6)]
     max_size: u64,
 
-    /// Maximal activity start time (0 by default, so all will start at 0)
+    /// Maximal request start time (0 by default, so all will start at 0)
     #[clap(long, default_value_t = 0)]
     max_start_time: u64,
 }
