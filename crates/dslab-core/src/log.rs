@@ -1,3 +1,5 @@
+//! Logging facilities.
+
 use atty::Stream;
 use colored::{Color, ColoredString, Colorize};
 use log::error;
@@ -6,6 +8,7 @@ use serde_type_name::type_name;
 
 use crate::event::Event;
 
+/// Applies the color to the string if stderr (log) goes to console.
 pub fn get_colored(s: &str, color: Color) -> ColoredString {
     if atty::is(Stream::Stderr) {
         s.color(color)
@@ -14,6 +17,7 @@ pub fn get_colored(s: &str, color: Color) -> ColoredString {
     }
 }
 
+/// Logs a message at the info level.
 #[macro_export]
 macro_rules! log_info {
     ($ctx:expr, $msg:expr) => (
@@ -32,6 +36,7 @@ macro_rules! log_info {
     );
 }
 
+/// Logs a message at the debug level.
 #[macro_export]
 macro_rules! log_debug {
     ($ctx:expr, $msg:expr) => (
@@ -50,6 +55,7 @@ macro_rules! log_debug {
     );
 }
 
+/// Logs a message at the trace level.
 #[macro_export]
 macro_rules! log_trace {
     ($ctx:expr, $msg:expr) => (
@@ -68,6 +74,7 @@ macro_rules! log_trace {
     );
 }
 
+/// Logs a message at the error level.
 #[macro_export]
 macro_rules! log_error {
     ($ctx:expr, $msg:expr) => (
@@ -86,6 +93,7 @@ macro_rules! log_error {
     );
 }
 
+/// Logs a message at the warn level.
 #[macro_export]
 macro_rules! log_warn {
     ($ctx:expr, $msg:expr) => (
@@ -104,6 +112,7 @@ macro_rules! log_warn {
     );
 }
 
+/// Logs an unhandled event.
 pub fn log_unhandled_event(event: Event) {
     error!(
         target: "simulation",
@@ -114,6 +123,7 @@ pub fn log_unhandled_event(event: Event) {
     );
 }
 
+/// Logs an undelivered event.
 pub(crate) fn log_undelivered_event(event: Event) {
     error!(
         target: "simulation",

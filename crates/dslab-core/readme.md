@@ -1,0 +1,15 @@
+# DSLab Simulation Core
+
+A compact library for discrete-event simulation. 
+
+This library provides a generic discrete-event simulation engine. It can be used to implement arbitrary simulations consisting of user-defined _components_ producing and consuming user-defined _events_. It serves as a foundation for other parts of DSLab framework. Being generic and versatile, it can also be used outside DSLab and distributed systems domain.
+
+The simulation is configured and managed via [`Simulation`], which includes methods for registering simulation components, stepping through the simulation, obtaining the current simulation time, etc. The library manages simulation state, which includes clock, event queue and random number generator. The latter is initialized with user-defined seed to ensure deterministic execution and reproduction of results. 
+
+It is possible to use any user-defined Rust types as simulation components. The components access simulation state and produce events via [`SimulationContext`]. Each component typically uses a unique simulation context, which allows to differentiate events produced by different components. To be able to consume events, the component should implement the [`EventHandler`] trait, which is invoked to pass events to the component. Each simulation component is registered with unique name and identifier, which can be used for specifying the event source or destination, logging purposes, etc.
+
+The simulation represents a sequence of events. Each event has a unique identifier, timestamp, source, destination and user-defined payload. The library supports using arbitrary serializable types as event payloads, the structure of payload is opaque
+to the library. The events are processed in their timestamp order by retrieving the next event from the event queue, advancing the simulation clock to the event time and invoking the EventHandler implementation of component specified as the event destination. When processing the event, the component can create and emit new events with arbitrary future timestamps via its SimulationContext. It is also possible to cancel the previously emitted events before they are processed.
+
+The library also provides convenient facilities for logging of events or arbitrary
+messages during the simulation with inclusion of component names, logging levels, etc.
