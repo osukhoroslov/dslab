@@ -20,7 +20,7 @@ namespace sg4 = simgrid::s4u;
 static constexpr uint64_t kReadBw = 100;
 static constexpr uint64_t kWriteBw = 100;
 
-static constexpr uint64_t kDefaultActivitiesCount = 1;
+static constexpr uint64_t kDefaultRequestsCount = 1;
 static constexpr uint64_t kDefaultDisksCount = 1;
 static constexpr uint64_t kDefaultMaxSize = 1e9 + 6;
 static constexpr uint64_t kDefaultMaxStartTime = 0;
