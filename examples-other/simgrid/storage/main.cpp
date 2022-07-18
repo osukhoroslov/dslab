@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
         .action(str_to_ull)
         .default_value(kDefaultMaxStartTime);
 
-    uint64_t requests_count = kDefaultActivitiesCount, disks_count = kDefaultDisksCount,
+    uint64_t requests_count = kDefaultRequestsCount, disks_count = kDefaultDisksCount,
              max_size = kDefaultMaxSize, max_start_time = kDefaultMaxStartTime;
     try {
         parser.parse_args(argc, argv);
