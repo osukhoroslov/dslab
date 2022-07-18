@@ -13,7 +13,7 @@ Run `make storage` from build directory.
 | `--requests`       | Number of requests (>= 1)   | `1`                         |
 | `--disks`          | Number of disks (>= 1)      | `1`                         |
 | `--max-size`       | Maximal size (>= 1)         | `1000000006`                |
-| `--max-start-time` | Maximal activity start time | `0`, so all will start at `0` |
+| `--max-start-time` | Maximal request start time | `0`, so all will start at `0` |
 
 ## Run
 
