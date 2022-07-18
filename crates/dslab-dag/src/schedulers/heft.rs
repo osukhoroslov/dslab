@@ -35,9 +35,11 @@ impl ScheduledTask {
 
 impl PartialOrd for ScheduledTask {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.start_time
-            .partial_cmp(&other.start_time)
-            .map(|ord| ord.then(self.end_time.total_cmp(&other.end_time)))
+        Some(
+            self.start_time
+                .total_cmp(&other.start_time)
+                .then(self.end_time.total_cmp(&other.end_time)),
+        )
     }
 }
 
