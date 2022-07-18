@@ -239,7 +239,7 @@ fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             app_id: app_data.get(&app).unwrap().0 as u64,
         };
     }
-    trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.partial_cmp(&y.time).unwrap());
+    trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.total_cmp(&y.time));
     Trace {
         trace_records: trace,
         function_records: funcs,

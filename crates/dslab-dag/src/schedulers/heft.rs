@@ -37,7 +37,7 @@ impl PartialOrd for ScheduledTask {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.start_time
             .partial_cmp(&other.start_time)
-            .map(|ord| ord.then(self.end_time.partial_cmp(&other.end_time).unwrap()))
+            .map(|ord| ord.then(self.end_time.total_cmp(&other.end_time)))
     }
 }
 
@@ -157,7 +157,7 @@ impl Scheduler for HeftScheduler {
         }
 
         let mut tasks = (0..total_tasks).collect::<Vec<_>>();
-        tasks.sort_by(|&a, &b| rank[b].partial_cmp(&rank[a]).unwrap());
+        tasks.sort_by(|&a, &b| rank[b].total_cmp(&rank[a]));
 
         let mut scheduled_tasks = resources
             .iter()
@@ -189,7 +189,7 @@ impl Scheduler for HeftScheduler {
                 DataTransferStrategy::Eager => pred[task]
                     .iter()
                     .map(|&(task, weight)| eft[task] + weight * avg_net_time)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .max_by(|a, b| a.total_cmp(&b))
                     .unwrap_or(0.),
                 DataTransferStrategy::Lazy => pred[task]
                     .iter()
@@ -200,7 +200,7 @@ impl Scheduler for HeftScheduler {
                         };
                         eft[task] + data_upload_time
                     })
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                    .max_by(|a, b| a.total_cmp(&b))
                     .unwrap_or(0.),
             };
 
@@ -217,7 +217,7 @@ impl Scheduler for HeftScheduler {
                         .iter()
                         .filter(|f| !outputs.contains(f))
                         .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .max_by(|a, b| a.total_cmp(&b))
                         .unwrap_or(0.),
                     DataTransferStrategy::Lazy => 0.,
                 };
@@ -244,7 +244,7 @@ impl Scheduler for HeftScheduler {
                                 }
                             }
                         })
-                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .max_by(|a, b| a.total_cmp(&b))
                         .unwrap_or(0.),
                 };
                 let time = dag.get_task(task).flops as f64
@@ -258,7 +258,7 @@ impl Scheduler for HeftScheduler {
                     .filter(|&a| a >= est)
                     .collect::<Vec<_>>();
                 possible_starts.push(est);
-                possible_starts.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                possible_starts.sort_by(|a, b| a.total_cmp(&b));
                 possible_starts.dedup();
 
                 let mut cores: Vec<u32> = Vec::new();
@@ -356,18 +356,18 @@ impl Scheduler for HeftScheduler {
                                         .iter()
                                         .filter(|f| !inputs.contains(f))
                                         .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-                                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                                        .max_by(|a, b| a.total_cmp(&b))
                                         .unwrap_or(0.)
                             })
                         })
-                        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                        .max_by(|a, b| a.total_cmp(&b))
                         .unwrap_or(0.)
                 })
-                .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                .max_by(|a, b| a.total_cmp(&b))
                 .unwrap_or(0.)
         );
 
-        result.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result.into_iter().map(|(_, b)| b).collect()
     }
 

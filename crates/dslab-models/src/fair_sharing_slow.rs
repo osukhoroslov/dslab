@@ -31,8 +31,7 @@ impl<T> Ord for Activity<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         other
             .remaining_volume
-            .partial_cmp(&self.remaining_volume)
-            .unwrap()
+            .total_cmp(&self.remaining_volume)
             .then(other.id.cmp(&self.id))
     }
 }

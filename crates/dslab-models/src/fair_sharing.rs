@@ -25,11 +25,7 @@ impl<T> PartialOrd for Activity<T> {
 
 impl<T> Ord for Activity<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        other
-            .position
-            .partial_cmp(&self.position)
-            .unwrap()
-            .then(other.id.cmp(&self.id))
+        other.position.total_cmp(&self.position).then(other.id.cmp(&self.id))
     }
 }
 
