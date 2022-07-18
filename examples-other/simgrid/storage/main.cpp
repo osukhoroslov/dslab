@@ -144,6 +144,7 @@ int main(int argc, char** argv) {
 
     auto requests = GenerateRequests(disks_count, requests_count, max_size, max_start_time);
 
+    // Need to sort for sequental awaiting in `starter` actor
     std::sort(requests.begin(), requests.end(),
               [](const DiskReadRequest& lhs, const DiskReadRequest& rhs) {
                   return std::tie(lhs.start_time, lhs.disk_idx, lhs.size) <

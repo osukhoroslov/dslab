@@ -84,6 +84,9 @@ fn generate_requests(disks_count: u64, requests_count: u64, max_size: u64, max_s
         let size = rnd.next() % (max_size + 1);
         requests.push(DiskRequest::new(disk_idx as usize, start_time, size));
     }
+    // Need to sort for equality to SimGrid, where this order is needed
+    requests
+        .sort_by(|lhs, rhs| (lhs.start_time, lhs.disk_idx, lhs.size).cmp(&(rhs.start_time, rhs.disk_idx, rhs.size)));
     requests
 }
 
