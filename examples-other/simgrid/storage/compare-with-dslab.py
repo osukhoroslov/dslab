@@ -62,14 +62,14 @@ def compare_data(x, y, expected_size):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--activities", type=int, required=True)
+    ap.add_argument("--requests", type=int, required=True)
     ap.add_argument("--disks", type=int, required=True)
     ap.add_argument("--max-size", type=int, required=True)
     ap.add_argument("--max-start-time", type=int, required=True)
     args = ap.parse_args()
 
     def run(binary, additional_args):
-        command = [os.getenv("DSLAB_BASE_DIR", "") + "/" + binary, "--activities", str(args.activities),
+        command = [os.getenv("DSLAB_BASE_DIR", "") + "/" + binary, "--requests", str(args.activities),
                    "--disks", str(args.disks), "--max-size", str(args.max_size), "--max-start-time", str(args.max_start_time)]
         if additional_args:
             command.append(additional_args)
