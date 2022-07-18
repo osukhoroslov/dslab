@@ -131,7 +131,7 @@ impl Simulation {
 
     /// Performs the specified number of steps through the simulation.
     pub fn steps(&mut self, step_count: u64) -> bool {
-        for _i in 0..step_count {
+        for _ in 0..step_count {
             if !self.step() {
                 return false;
             }
