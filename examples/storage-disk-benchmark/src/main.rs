@@ -177,7 +177,7 @@ fn main() {
     sim.step_until_no_events();
     let elapsed = t.elapsed().as_millis();
     println!(
-        "Processed {} requests in {:.2?} ms ({:.0} act/s)",
+        "Processed {} requests in {:.2?} ms ({:.0} requests/s)",
         args.requests,
         elapsed,
         args.requests as f64 / elapsed as f64 * 1000.
