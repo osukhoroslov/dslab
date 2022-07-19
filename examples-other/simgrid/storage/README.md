@@ -28,6 +28,6 @@ Example:
     --max-start-time 100
 ```
 
-## Comparing script
+## Comparing results with DSLab
 
 There is a [script](./compare-with-dslab.py) for running both SimGrid and DSLab implementations and comparing their results. Argument format is the same as for examples. You should set environment variable `DSLAB_BASE_DIR` before using and build both DSLab and SimGrid examples.
