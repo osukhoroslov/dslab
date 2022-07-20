@@ -118,7 +118,7 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(SharedDisk::new(
+    let disk = rc!(refcell!(SharedDisk::new_simple(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,
