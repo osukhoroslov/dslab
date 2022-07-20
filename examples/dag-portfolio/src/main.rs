@@ -298,7 +298,7 @@ fn process_results() {
         for platform in 0..platforms {
             let mut results: Vec<(usize, f64)> =
                 (0..algos.len()).map(|algo| (algo, data[algo][dag][platform])).collect();
-            results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+            results.sort_by(|a, b| a.1.total_cmp(&b.1));
             let best_time = results[0].1;
             first_places_cnt[results[0].0] += 1;
             for (i, (algo, tm)) in results.into_iter().enumerate() {
@@ -316,7 +316,7 @@ fn process_results() {
 
     println!("| algo | average place | average ratio to best | number of first places |");
     println!("|------|---------------|-----------------------|------------------------|");
-    algos.sort_by(|&a, &b| avg_ratio_to_best[a].partial_cmp(&avg_ratio_to_best[b]).unwrap());
+    algos.sort_by(|&a, &b| avg_ratio_to_best[a].total_cmp(&avg_ratio_to_best[b]));
     for i in 0..algos.len() {
         let algo_ind = *algo_ind.get(&algos[i]).unwrap();
         println!(

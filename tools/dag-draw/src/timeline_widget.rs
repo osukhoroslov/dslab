@@ -80,7 +80,7 @@ impl TimelineWidget {
             }
         }
         events.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap().then(a.1.cmp(&b.1)).then(
+            a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(
                 // for non-empty tasks order doesn't matter at this point
                 // for empty tasks:
                 // if these are different tasks, then order them by id, otherwise start comes before end
@@ -138,7 +138,7 @@ impl TimelineWidget {
             events.push(item.start);
             events.push(item.end);
         }
-        events.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        events.sort_by(|a, b| a.total_cmp(b));
         events.dedup();
         for i in 0..events.len() - 1 {
             let left = events[i];

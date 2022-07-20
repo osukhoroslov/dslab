@@ -130,7 +130,7 @@ impl PortfolioScheduler {
 
         let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<Vec<usize>>();
         ready_tasks.sort_by(|&a, &b| match self.task_criterion {
-            TaskCriterion::BottomLevel => rank[b].partial_cmp(&rank[a]).unwrap(),
+            TaskCriterion::BottomLevel => rank[b].total_cmp(&rank[a]),
             TaskCriterion::ChildrenCount => dag.get_task(b).outputs.len().cmp(&dag.get_task(a).outputs.len()),
             TaskCriterion::DataSize => get_data_size(b).cmp(&get_data_size(a)),
             TaskCriterion::ComputationSize => dag.get_task(b).flops.cmp(&dag.get_task(a).flops),
