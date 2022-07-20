@@ -50,13 +50,13 @@ std::unique_ptr<DisksSuite> MakeSimpleDisks(sg4::Host* host, uint64_t count) {
 
 template <typename F>
 void RunWithTimeMeasure(F&& f) {
-    XBT_INFO("Starting");
+    XBT_WARN("Starting");
     auto start_time = std::chrono::steady_clock::now();
     f();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::steady_clock::now() - start_time)
                        .count();
-    XBT_INFO("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
+    XBT_WARN("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
 }
 
 struct DiskReadRequest {
