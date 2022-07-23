@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -49,8 +49,8 @@ impl Network {
             .add_node(node_id, local_bandwidth, local_latency)
     }
 
-    pub fn add_link(&mut self, node_1: &str, node_2: &str, latency: f64, bandwidth: f64) {
-        self.topology.borrow_mut().add_link(node_1, node_2, latency, bandwidth);
+    pub fn add_link(&mut self, node1: &str, node2: &str, latency: f64, bandwidth: f64) {
+        self.topology.borrow_mut().add_link(node1, node2, latency, bandwidth);
         self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
     }
 
@@ -58,12 +58,8 @@ impl Network {
         self.topology.borrow_mut().init();
     }
 
-    pub fn set_location(&mut self, id: Id, node_id: &str) {
-        self.topology.borrow_mut().set_location(id, node_id)
-    }
-
-    pub fn get_location(&self, id: Id) -> Ref<String> {
-        Ref::map(self.topology.borrow(), |t| t.get_location(id).unwrap())
+    pub fn set_location(&mut self, id: Id, node_name: &str) {
+        self.topology.borrow_mut().set_location(id, node_name)
     }
 
     pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {

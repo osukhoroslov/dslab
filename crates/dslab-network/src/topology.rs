@@ -1,29 +1,35 @@
 use std::collections::{BTreeMap, HashMap};
 
+use indexmap::IndexMap;
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 use crate::shared_bandwidth_model::SharedBandwidthNetwork;
 use crate::topology_resolver::TopologyResolver;
-use crate::topology_structures::{Link, LinkID, LinksMap, Node};
+use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
 pub struct Topology {
     link_id_counter: usize,
-    nodes: BTreeMap<String, Node>,
+    node_id_counter: usize,
+    nodes_name_map: IndexMap<String, NodeId>,
+    nodes: BTreeMap<NodeId, Node>,
     links: BTreeMap<LinkID, Link>,
-    component_nodes: HashMap<Id, String>,
-    node_links_map: LinksMap,
+    component_nodes: HashMap<Id, NodeId>,
+    node_links_map: NodeLinksMap,
     resolver: Option<TopologyResolver>,
-    bandwidth_cache: HashMap<String, HashMap<String, f64>>,
-    latency_cache: HashMap<String, HashMap<String, f64>>,
-    path_cache: HashMap<String, HashMap<String, Vec<LinkID>>>,
+    bandwidth_cache: HashMap<(NodeId, NodeId), f64>,
+    latency_cache: HashMap<(NodeId, NodeId), f64>,
+    path_cache: HashMap<(NodeId, NodeId), Vec<LinkID>>,
 }
 
 impl Topology {
     pub fn new() -> Self {
         Self {
-            link_id_counter: 1,
+            link_id_counter: 0,
+            node_id_counter: 0,
+            nodes_name_map: IndexMap::new(),
             nodes: BTreeMap::new(),
             links: BTreeMap::new(),
             component_nodes: HashMap::new(),
@@ -35,38 +41,45 @@ impl Topology {
         }
     }
 
-    pub fn add_node(&mut self, node_id: &str, local_bandwidth: f64, local_latency: f64) {
+    fn get_node_id(&self, node_name: &str) -> usize {
+        if let Some(node_id) = self.nodes_name_map.get(node_name) {
+            return *node_id;
+        }
+        panic!("Node with name {} doesn't exists", node_name)
+    }
+
+    pub fn add_node(&mut self, node_name: &str, local_bandwidth: f64, local_latency: f64) {
         let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
+        let new_node_id = self.node_id_counter;
+        self.node_id_counter += 1;
+        self.nodes_name_map.insert(node_name.to_string(), new_node_id);
         self.nodes.insert(
-            node_id.to_string(),
+            new_node_id,
             Node {
                 local_network: Box::new(local_network),
             },
         );
-        self.node_links_map.insert(node_id.to_string(), BTreeMap::new());
+        self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 
-    pub fn add_link(&mut self, node1: &str, node2: &str, latency: f64, bandwidth: f64) {
+    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, latency: f64, bandwidth: f64) {
         assert!(bandwidth > 0.0, "Link bandwidth must be > 0");
-        self.check_node_exists(node1);
-        self.check_node_exists(node2);
+        let node1 = self.get_node_id(node1_name);
+        let node2 = self.get_node_id(node2_name);
+        self.check_node_exists(&node1);
+        self.check_node_exists(&node2);
         let link_id = self.link_id_counter;
         self.link_id_counter += 1;
         self.links.insert(link_id, Link::new(latency, bandwidth));
-        self.node_links_map
-            .get_mut(node1)
-            .unwrap()
-            .insert(node2.to_string(), link_id);
-        self.node_links_map
-            .get_mut(node2)
-            .unwrap()
-            .insert(node1.to_string(), link_id);
+        self.node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
+        self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
         self.on_topology_change();
     }
 
     fn on_topology_change(&mut self) {
         self.bandwidth_cache.clear();
         self.latency_cache.clear();
+        self.path_cache.clear();
         self.resolve_topology();
     }
 
@@ -85,11 +98,12 @@ impl Topology {
         self.resolve_topology();
     }
 
-    pub fn set_location(&mut self, id: Id, node_id: &str) {
-        self.component_nodes.insert(id, node_id.to_string());
+    pub fn set_location(&mut self, id: Id, node_name: &str) {
+        let node_id = self.get_node_id(node_name);
+        self.component_nodes.insert(id, node_id);
     }
 
-    pub fn get_location(&self, id: Id) -> Option<&String> {
+    pub fn get_location(&self, id: Id) -> Option<&NodeId> {
         self.component_nodes.get(&id)
     }
 
@@ -104,14 +118,14 @@ impl Topology {
     }
 
     pub fn get_nodes(&self) -> Vec<String> {
-        self.nodes.keys().cloned().collect()
+        self.nodes_name_map.keys().cloned().collect()
     }
 
-    pub fn get_node_info(&self, id: &String) -> Option<&Node> {
+    pub fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
         return self.nodes.get(id);
     }
 
-    pub fn get_node_info_mut(&mut self, id: &String) -> Option<&mut Node> {
+    pub fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         return self.nodes.get_mut(id);
     }
 
@@ -140,7 +154,7 @@ impl Topology {
         self.links.get(link_id)
     }
 
-    pub fn get_link_between(&self, src: &str, dst: &str) -> Option<&Link> {
+    pub fn get_link_between(&self, src: &NodeId, dst: &NodeId) -> Option<&Link> {
         let link_id = self.node_links_map.get(src).unwrap().get(dst);
         match link_id {
             None => None,
@@ -148,35 +162,24 @@ impl Topology {
         }
     }
 
-    pub fn get_node_links_map(&self) -> &LinksMap {
+    pub fn get_node_links_map(&self) -> &NodeLinksMap {
         &self.node_links_map
     }
 
-    pub fn get_path(&mut self, src: &str, dst: &str) -> Option<Vec<LinkID>> {
-        if let Some(nested_map) = self.path_cache.get(src) {
-            if let Some(path) = nested_map.get(dst) {
-                return Some(path.clone());
-            }
+    pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkID>> {
+        if let Some(path) = self.path_cache.get(&(*src, *dst)) {
+            return Some(path.clone());
         }
 
-        if let Some(nested_map) = self.path_cache.get(dst) {
-            if let Some(path) = nested_map.get(src) {
-                return Some(path.clone());
-            }
+        if let Some(path) = self.path_cache.get(&(*dst, *src)) {
+            return Some(path.clone());
         }
 
         if let Some(resolver) = &self.resolver {
             let path_opt = resolver.get_path(src, dst, &self.node_links_map);
 
             if let Some(path) = path_opt {
-                if !self.path_cache.contains_key(src) {
-                    self.path_cache.insert(src.to_string(), HashMap::new());
-                }
-                self.path_cache
-                    .get_mut(src)
-                    .unwrap()
-                    .insert(dst.to_string(), path.clone());
-
+                self.path_cache.insert((*src, *dst), path.clone());
                 return Some(path);
             }
         }
@@ -184,16 +187,9 @@ impl Topology {
         None
     }
 
-    pub fn get_latency(&mut self, src: &str, dst: &str) -> f64 {
-        if let Some(nested_map) = self.latency_cache.get(src) {
-            if let Some(latency) = nested_map.get(dst) {
-                return *latency;
-            }
-        }
-        if let Some(nested_map) = self.latency_cache.get(dst) {
-            if let Some(latency) = nested_map.get(src) {
-                return *latency;
-            }
+    pub fn get_latency(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
+        if let Some(latency) = self.latency_cache.get(&(*src, *dst)) {
+            return *latency;
         }
 
         if let Some(path) = self.get_path(src, dst) {
@@ -201,31 +197,16 @@ impl Topology {
             for link_id in &path {
                 latency += self.get_link(link_id).unwrap().latency;
             }
-
-            if !self.latency_cache.contains_key(src) {
-                self.latency_cache.insert(src.to_string(), HashMap::new());
-            }
-            self.latency_cache
-                .get_mut(src)
-                .unwrap()
-                .insert(dst.to_string(), latency);
-
+            self.latency_cache.insert((*src, *dst), latency);
+            self.latency_cache.insert((*dst, *src), latency);
             return latency;
         }
         return f64::INFINITY;
     }
 
-    pub fn get_bandwidth(&mut self, src: &str, dst: &str) -> f64 {
-        if let Some(nested_map) = self.bandwidth_cache.get(src) {
-            if let Some(bandwidth) = nested_map.get(dst) {
-                return *bandwidth;
-            }
-        }
-
-        if let Some(nested_map) = self.bandwidth_cache.get(dst) {
-            if let Some(bandwidth) = nested_map.get(src) {
-                return *bandwidth;
-            }
+    pub fn get_bandwidth(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
+        if let Some(bandwidth) = self.bandwidth_cache.get(&(*src, *dst)) {
+            return *bandwidth;
         }
 
         if let Some(path) = self.get_path(src, dst) {
@@ -241,20 +222,15 @@ impl Topology {
                 .unwrap();
             let bandwidth = self.get_link(&min_bandwidth_link).unwrap().bandwidth;
 
-            if !self.bandwidth_cache.contains_key(src) {
-                self.bandwidth_cache.insert(src.to_string(), HashMap::new());
-            }
-            self.bandwidth_cache
-                .get_mut(src)
-                .unwrap()
-                .insert(dst.to_string(), bandwidth);
+            self.latency_cache.insert((*src, *dst), bandwidth);
+            self.latency_cache.insert((*dst, *src), bandwidth);
 
             return bandwidth;
         }
         return 0.0;
     }
 
-    fn check_node_exists(&self, node_id: &str) {
+    fn check_node_exists(&self, node_id: &NodeId) {
         assert!(self.nodes.contains_key(node_id))
     }
 }

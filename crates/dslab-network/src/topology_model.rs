@@ -9,7 +9,7 @@ use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 use crate::topology::Topology;
-use crate::topology_structures::LinkID;
+use crate::topology_structures::{LinkID, NodeId};
 
 #[derive(Debug)]
 struct DataTransfer {}
@@ -85,13 +85,13 @@ impl TopologyNetwork {
         };
     }
 
-    fn get_location(&self, node: Id) -> String {
+    fn get_location(&self, node: Id) -> NodeId {
         let topology = self.topology.borrow();
         let node1 = topology.get_location(node);
         if node1.is_none() {
             panic!("Invalid host")
         }
-        node1.unwrap().to_string()
+        *node1.unwrap()
     }
 
     fn get_path(&self, from: Id, to: Id) -> Option<Vec<LinkID>> {
