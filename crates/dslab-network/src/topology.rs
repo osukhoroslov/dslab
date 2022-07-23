@@ -222,8 +222,8 @@ impl Topology {
                 .unwrap();
             let bandwidth = self.get_link(&min_bandwidth_link).unwrap().bandwidth;
 
-            self.latency_cache.insert((*src, *dst), bandwidth);
-            self.latency_cache.insert((*dst, *src), bandwidth);
+            self.bandwidth_cache.insert((*src, *dst), bandwidth);
+            self.bandwidth_cache.insert((*dst, *src), bandwidth);
 
             return bandwidth;
         }
