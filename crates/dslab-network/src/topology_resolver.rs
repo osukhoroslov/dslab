@@ -1,26 +1,97 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::topology_structures::{Link, LinkID, LinksMap, Node, NodeId};
+use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
+
+#[derive(PartialEq)]
+enum TopologyResolveType {
+    Dijkstra,
+    FloydWarshall,
+}
 
 pub struct TopologyResolver {
-    parent_path: HashMap<NodeId, HashMap<NodeId, NodeId>>,
+    resolve_type: TopologyResolveType,
+    parent_path: Vec<Vec<NodeId>>,
 }
 
 impl TopologyResolver {
     pub fn new() -> TopologyResolver {
         return TopologyResolver {
-            parent_path: HashMap::new(),
+            resolve_type: TopologyResolveType::FloydWarshall,
+            parent_path: Vec::new(),
         };
     }
 
-    pub fn update_latencies_for_node(
+    pub fn resolve_topology(
         &mut self,
-        node: &NodeId,
+        nodes: &BTreeMap<NodeId, Node>,
         links: &BTreeMap<LinkID, Link>,
-        node_links_map: &LinksMap,
+        node_links_map: &NodeLinksMap,
     ) {
+        self.parent_path = vec![vec![INVALID_NODE_ID; nodes.len()]; nodes.len()];
+
+        if self.resolve_type == TopologyResolveType::Dijkstra {
+            for node in nodes.keys() {
+                self.dijkstra_for_node(node, &links, &node_links_map);
+            }
+        }
+
+        if self.resolve_type == TopologyResolveType::FloydWarshall {
+            self.resolve_with_floyd_warshall(&nodes, &links, &node_links_map)
+        }
+    }
+
+    pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkID>> {
+        let mut path = Vec::new();
+        let mut cur_node = dst.clone();
+        while cur_node != *src {
+            if self.parent_path[*src][cur_node] == INVALID_NODE_ID {
+                return None;
+            }
+            let link_id = node_links_map[&cur_node][&self.parent_path[*src][cur_node]];
+            path.push(link_id);
+            cur_node = self.parent_path[*src][cur_node];
+        }
+        path.reverse();
+        Some(path)
+    }
+
+    fn resolve_with_floyd_warshall(
+        &mut self,
+        nodes: &BTreeMap<NodeId, Node>,
+        links: &BTreeMap<LinkID, Link>,
+        node_links_map: &NodeLinksMap,
+    ) {
+        let mut current_paths = vec![vec![f64::INFINITY; nodes.len()]; nodes.len()];
+        for node in nodes.keys() {
+            current_paths[*node][*node] = 0.0;
+            self.parent_path[*node][*node] = *node;
+        }
+
+        for (node1, intermap) in node_links_map {
+            for (node2, link_id) in intermap {
+                current_paths[*node1][*node2] = links.get(link_id).unwrap().latency;
+                self.parent_path[*node1][*node2] = *node1;
+            }
+        }
+
+        for k in 0..nodes.len() {
+            for i in 0..nodes.len() {
+                for j in 0..nodes.len() {
+                    if current_paths[i][k] < f64::INFINITY
+                        && current_paths[k][j] < f64::INFINITY
+                        && current_paths[i][k] + current_paths[k][j] < current_paths[i][j]
+                    {
+                        current_paths[i][j] = current_paths[i][k] + current_paths[k][j];
+                        let prev = self.parent_path[k][j];
+                        self.parent_path[i][j] = prev;
+                    }
+                }
+            }
+        }
+    }
+
+    fn dijkstra_for_node(&mut self, node: &NodeId, links: &BTreeMap<LinkID, Link>, node_links_map: &NodeLinksMap) {
         let mut latency: HashMap<NodeId, f64> = HashMap::new();
-        let mut parent: HashMap<NodeId, NodeId> = HashMap::new();
         for n in node_links_map.keys() {
             latency.insert(*n, f64::INFINITY);
         }
@@ -44,37 +115,10 @@ impl TopologyResolver {
                 let link = links.get(link_id).unwrap();
                 if latency[&relax_node] + link.latency < latency[node_to] {
                     latency.insert(*node_to, latency[&relax_node] + link.latency);
-                    parent.insert(*node_to, relax_node);
+                    self.parent_path[*node][*node_to] = relax_node;
                 }
             }
             visited.insert(relax_node);
         }
-        self.parent_path.insert(*node, parent);
-    }
-
-    pub fn resolve_topology(
-        &mut self,
-        nodes: &BTreeMap<NodeId, Node>,
-        links: &BTreeMap<LinkID, Link>,
-        node_links_map: &LinksMap,
-    ) {
-        for node in nodes.keys() {
-            self.update_latencies_for_node(node, &links, &node_links_map);
-        }
-    }
-
-    pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &LinksMap) -> Option<Vec<LinkID>> {
-        let mut path = Vec::new();
-        let mut cur_node = dst.clone();
-        while cur_node != *src {
-            if !self.parent_path[src].contains_key(&cur_node) {
-                return None;
-            }
-            let link_id = node_links_map[&cur_node][&self.parent_path[src][&cur_node]];
-            path.push(link_id);
-            cur_node = *self.parent_path[src].get(&cur_node).unwrap();
-        }
-        path.reverse();
-        Some(path)
     }
 }
