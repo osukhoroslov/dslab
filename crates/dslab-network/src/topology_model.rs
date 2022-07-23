@@ -15,6 +15,7 @@ use crate::topology_structures::{LinkID, NodeId};
 struct DataTransfer {}
 
 pub struct LinkUsage {
+    pub link_id: usize,
     pub transfers_count: usize,
     pub left_bandwidth: f64,
 }
@@ -30,9 +31,9 @@ impl Ord for LinkUsage {
         if self.transfers_count == 0 || other.transfers_count == 0 {
             panic!("Invalid cmp for Link usage")
         }
-        (self.left_bandwidth / self.transfers_count as f64)
-            .partial_cmp(&(other.left_bandwidth / other.transfers_count as f64))
-            .unwrap()
+        self.get_path_bandwidth()
+            .total_cmp(&(other.get_path_bandwidth()))
+            .then(self.link_id.cmp(&other.link_id))
     }
 }
 
@@ -44,7 +45,7 @@ impl PartialOrd for LinkUsage {
 
 impl PartialEq for LinkUsage {
     fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
+        return self.link_id == other.link_id;
     }
 }
 
@@ -131,6 +132,7 @@ impl TopologyNetwork {
                     link_data.insert(
                         *link_id,
                         LinkUsage {
+                            link_id: *link_id,
                             transfers_count: 0,
                             left_bandwidth: link_bandwidth,
                         },
@@ -144,17 +146,18 @@ impl TopologyNetwork {
 
         let mut current_link_usage = DoublePriorityQueue::new();
         // Init current link uisage
-        for link in link_data {
-            current_link_usage.push(link.0, link.1);
+        for (link_id, link_usage) in link_data {
+            current_link_usage.push(link_id, link_usage);
         }
 
         let mut assigned_path = vec![false; paths.len()];
         // Calculate transfer bandwidths
         while current_link_usage.len() != 0 {
-            let link_with_minimal_bandwidth = current_link_usage.pop_min().unwrap();
+            let (link_with_minimal_bandwidth_id, link_with_minimal_bandwidth_usage) =
+                current_link_usage.pop_min().unwrap();
             let mut links_decrease_paths = HashMap::new();
-            let bandwidth = link_with_minimal_bandwidth.1.get_path_bandwidth();
-            for path_idx in link_paths.get(&link_with_minimal_bandwidth.0).unwrap() {
+            let bandwidth = link_with_minimal_bandwidth_usage.get_path_bandwidth();
+            for path_idx in link_paths.get(&link_with_minimal_bandwidth_id).unwrap() {
                 if assigned_path[*path_idx] {
                     continue;
                 }
@@ -167,15 +170,15 @@ impl TopologyNetwork {
                     *links_decrease_paths.get_mut(&link).unwrap() += 1;
                 }
             }
-            for link in links_decrease_paths {
-                if link.0 != link_with_minimal_bandwidth.0 {
-                    if current_link_usage.get(&link.0).unwrap().1.transfers_count == link.1 {
-                        current_link_usage.remove(&link.0);
+            for (link_id, uses_amount) in links_decrease_paths {
+                if link_id != link_with_minimal_bandwidth_id {
+                    if current_link_usage.get(&link_id).unwrap().1.transfers_count == uses_amount {
+                        current_link_usage.remove(&link_id);
                         continue;
                     }
-                    current_link_usage.change_priority_by(&link.0, |link_usage: &mut LinkUsage| {
-                        link_usage.transfers_count -= link.1;
-                        link_usage.left_bandwidth -= bandwidth;
+                    current_link_usage.change_priority_by(&link_id, |link_usage: &mut LinkUsage| {
+                        link_usage.transfers_count -= uses_amount;
+                        link_usage.left_bandwidth -= bandwidth * uses_amount as f64;
                     })
                 }
             }
@@ -185,11 +188,7 @@ impl TopologyNetwork {
             .current_transfers
             .iter()
             .enumerate()
-            .min_by(|x, y| {
-                (x.1.size_left / x.1.throughput)
-                    .partial_cmp(&(y.1.size_left / y.1.throughput))
-                    .unwrap()
-            })
+            .min_by(|x, y| (x.1.size_left / x.1.throughput).total_cmp(&(y.1.size_left / y.1.throughput)))
             .unwrap();
 
         self.next_event_index = Some(next_event_index);
