@@ -64,6 +64,7 @@ pub struct DataTransferCompleted {
 pub trait DataOperation {
     fn send_data(&mut self, data: Data, ctx: &mut SimulationContext);
     fn receive_data(&mut self, data: Data, ctx: &mut SimulationContext);
+    fn recalculate_operations(&mut self, ctx: &mut SimulationContext);
 }
 
 pub trait NetworkConfiguration {
