@@ -1,8 +1,11 @@
 use crate::model::NetworkModel;
 use std::collections::BTreeMap;
 
+pub type NodeId = usize;
 pub type LinkID = usize;
-pub type LinksMap = BTreeMap<String, BTreeMap<String, LinkID>>;
+pub type NodeLinksMap = BTreeMap<NodeId, BTreeMap<NodeId, LinkID>>;
+
+pub const INVALID_NODE_ID: usize = usize::MAX;
 
 pub struct Link {
     pub latency: f64,
