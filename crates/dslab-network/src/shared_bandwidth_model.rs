@@ -49,6 +49,8 @@ impl DataOperation for SharedBandwidthNetwork {
             self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
         }
     }
+
+    fn recalculate_operations(&mut self, _ctx: &mut SimulationContext) {}
 }
 
 impl NetworkModel for SharedBandwidthNetwork {}
