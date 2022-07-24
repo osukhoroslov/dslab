@@ -1,6 +1,7 @@
 mod random;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 use std::time::Instant;
@@ -11,11 +12,12 @@ use random::CustomRandom;
 use serde::Serialize;
 use sugars::{rc, refcell};
 
+use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
-use dslab_core::{cast, log_debug, log_error, log_info};
+use dslab_core::{cast, log_error, log_info};
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
 use dslab_storage::shared_disk::SharedDisk;
@@ -47,16 +49,17 @@ struct Args {
 }
 
 struct Runner {
-    disks: Vec<Rc<RefCell<SharedDisk>>>,
+    disks: Vec<(Id, Rc<RefCell<SharedDisk>>)>,
     ctx: SimulationContext,
     requests_count: u64,
     max_size: u64,
+    requests: Vec<DiskRequest>,
+    request_start_times: HashMap<(Id, u64), f64>, // (disk_id, disk_request_id) -> disk_request_start_time
 }
 
 #[derive(Serialize)]
 struct TimerFired {
-    disk_idx: usize,
-    size: u64,
+    request_idx: usize,
 }
 
 struct DiskRequest {
@@ -91,55 +94,65 @@ fn generate_requests(disks_count: u64, requests_count: u64, max_size: u64, max_s
 }
 
 impl Runner {
-    fn new(disks: Vec<Rc<RefCell<SharedDisk>>>, ctx: SimulationContext) -> Self {
+    fn new(disks: Vec<(Id, Rc<RefCell<SharedDisk>>)>, ctx: SimulationContext) -> Self {
         Self {
             disks,
             ctx,
             requests_count: 0,
             max_size: 0,
+            requests: Vec::new(),
+            request_start_times: HashMap::new(),
         }
     }
 
     fn start(&mut self, requests_count: u64, max_size: u64, max_start_time: u64) {
         log_info!(self.ctx, "Starting disk benchmark");
-        let requests = generate_requests(self.disks.len() as u64, requests_count, max_size, max_start_time);
+        self.requests = generate_requests(self.disks.len() as u64, requests_count, max_size, max_start_time);
         self.requests_count = requests_count;
         self.max_size = max_size;
 
-        for idx in 0..self.requests_count {
-            let request = requests.get(idx as usize).unwrap();
-            self.ctx.emit_self(
-                TimerFired {
-                    disk_idx: request.disk_idx,
-                    size: request.size,
-                },
-                request.start_time as f64,
-            );
+        for request_idx in 0..self.requests_count as usize {
+            let request = self.requests.get(request_idx).unwrap();
+            self.ctx
+                .emit_self(TimerFired { request_idx }, request.start_time as f64);
         }
     }
 
-    fn on_timer_fired(&mut self, disk_idx: usize, size: u64) {
-        self.disks.get(disk_idx).unwrap().borrow_mut().read(size, self.ctx.id());
+    fn on_timer_fired(&mut self, request_idx: usize) {
+        let req = self.requests.get(request_idx).unwrap();
+        let (disk_id, disk) = self.disks.get(req.disk_idx).unwrap();
+        let disk_request_id = disk.borrow_mut().read(req.size, self.ctx.id());
+        self.request_start_times
+            .insert((*disk_id, disk_request_id), self.ctx.time());
+        log_info!(
+            self.ctx,
+            "Starting read from disk-{}, size = {}, expected start time = {:.3}",
+            req.disk_idx,
+            req.size,
+            req.start_time as f64
+        )
     }
 }
 
 impl EventHandler for Runner {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            DataReadCompleted { request_id: _, size } => {
+            DataReadCompleted { request_id, size } => {
                 self.requests_count -= 1;
-                log_debug!(
+                let start_time = self.request_start_times.get(&(event.src, request_id)).unwrap();
+                log_info!(
                     self.ctx,
-                    "Completed reading from {}, size = {}",
+                    "Completed reading from {}, size = {}, elapsed simulation time = {:.3}",
                     self.ctx.lookup_name(event.src),
                     size,
+                    self.ctx.time() - start_time,
                 );
             }
             DataReadFailed { request_id: _, error } => {
                 log_error!(self.ctx, "Unexpected error: {}", error);
             }
-            TimerFired { disk_idx, size } => {
-                self.on_timer_fired(disk_idx, size);
+            TimerFired { request_idx } => {
+                self.on_timer_fired(request_idx);
             }
         })
     }
@@ -163,8 +176,7 @@ fn main() {
             DISK_WRITE_BW,
             sim.create_context(disk_name.clone()),
         )));
-        sim.add_handler(disk_name, disk.clone());
-        disks.push(disk);
+        disks.push((sim.add_handler(disk_name, disk.clone()), disk));
     }
 
     let runner = rc!(refcell!(Runner::new(disks, sim.create_context("runner"))));

@@ -1,5 +1,6 @@
 #include "disk.h"
 #include "random.h"
+#include "simgrid/s4u/Engine.hpp"
 
 #include <argparse/argparse.hpp>
 
@@ -50,13 +51,13 @@ std::unique_ptr<DisksSuite> MakeSimpleDisks(sg4::Host* host, uint64_t count) {
 
 template <typename F>
 void RunWithTimeMeasure(F&& f) {
-    XBT_WARN("Starting");
+    std::cout << "Starting" << std::endl;
     auto start_time = std::chrono::steady_clock::now();
     f();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::steady_clock::now() - start_time)
                        .count();
-    XBT_WARN("Done. Elapsed %zu ms", static_cast<size_t>(elapsed));
+    std::cout << "Done. Elapsed " << static_cast<size_t>(elapsed) << " ms" << std::endl;
 }
 
 struct DiskReadRequest {
@@ -167,20 +168,35 @@ int main(int argc, char** argv) {
 
         size_t next_activity_to_start = 0;
         std::vector<size_t> activities_to_requests;
-        activities_to_requests.push_back(0); // dummy
+        activities_to_requests.push_back(0);  // dummy
+
+        std::vector<double> real_start_times;
+        real_start_times.resize(requests_count);
 
         for (size_t i = 0; i < 2 * requests_count; ++i) {
             if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
                 // Time to start next disk activity
                 auto& req = requests[next_activity_to_start];
+
                 activities.emplace_back(disks_suit->ReadAsync(req.disk_idx, req.size));
                 activities_to_requests.push_back(next_activity_to_start);
+                real_start_times[next_activity_to_start] = sg4::Engine::get_clock();
+
+                XBT_INFO("Starting read from disk-%lu, size = %lu, expected start time = %.3f",
+                         req.disk_idx, req.size, static_cast<double>(req.start_time));
                 ++next_activity_to_start;
+
                 activities[0] = mb->get_async<int>(&dummy);
             } else {
                 // Some disk activity completed
-                auto& req = requests[activities_to_requests[finished_idx]];
-                XBT_INFO("Completed reading from disk-%lu, size = %lu", req.disk_idx, req.size);
+                size_t request_id = activities_to_requests[finished_idx];
+                auto& req = requests[request_id];
+
+                double elapsed_time = sg4::Engine::get_clock() - real_start_times[request_id];
+                XBT_INFO(
+                    "Completed reading from disk-%lu, size = %lu, elapsed simulation time = %.3f",
+                    req.disk_idx, req.size, elapsed_time);
+
                 std::swap(activities[finished_idx], activities.back());
                 std::swap(activities_to_requests[finished_idx], activities_to_requests.back());
                 activities.pop_back();
@@ -189,6 +205,5 @@ int main(int argc, char** argv) {
         }
         XBT_INFO("Exit");
     });
-
     RunWithTimeMeasure([&e] { e.run(); });
 }
