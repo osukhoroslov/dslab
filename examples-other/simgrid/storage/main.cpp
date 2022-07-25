@@ -1,6 +1,5 @@
 #include "disk.h"
 #include "random.h"
-#include "simgrid/s4u/Engine.hpp"
 
 #include <argparse/argparse.hpp>
 
@@ -10,7 +9,6 @@
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
 #include <simgrid/s4u.hpp>
-#include <simgrid/kernel/Timer.hpp>
 
 #include <random>
 #include <iostream>
@@ -182,8 +180,11 @@ int main(int argc, char** argv) {
                 activities_to_requests.push_back(next_activity_to_start);
                 real_start_times[next_activity_to_start] = sg4::Engine::get_clock();
 
-                XBT_INFO("Starting read from disk-%lu, size = %lu, expected start time = %.3f",
-                         req.disk_idx, req.size, static_cast<double>(req.start_time));
+                XBT_INFO(
+                    "Starting request #%lu: read from disk-%lu, size = %lu, expected start time = "
+                    "%.3f",
+                    next_activity_to_start, req.disk_idx, req.size,
+                    static_cast<double>(req.start_time));
                 ++next_activity_to_start;
 
                 activities[0] = mb->get_async<int>(&dummy);
@@ -194,8 +195,9 @@ int main(int argc, char** argv) {
 
                 double elapsed_time = sg4::Engine::get_clock() - real_start_times[request_id];
                 XBT_INFO(
-                    "Completed reading from disk-%lu, size = %lu, elapsed simulation time = %.3f",
-                    req.disk_idx, req.size, elapsed_time);
+                    "Completed request #%lu: read from disk-%lu, size = %lu, elapsed simulation "
+                    "time = %.3f",
+                    request_id, req.disk_idx, req.size, elapsed_time);
 
                 std::swap(activities[finished_idx], activities.back());
                 std::swap(activities_to_requests[finished_idx], activities_to_requests.back());

@@ -54,7 +54,7 @@ struct Runner {
     requests_count: u64,
     max_size: u64,
     requests: Vec<DiskRequest>,
-    request_start_times: HashMap<(Id, u64), f64>, // (disk_id, disk_request_id) -> disk_request_start_time
+    request_start_times: HashMap<(Id, u64), (f64, usize)>, // (disk_id, disk_request_id) -> (disk_request_start_time, runner_request_id)
 }
 
 #[derive(Serialize)]
@@ -123,10 +123,11 @@ impl Runner {
         let (disk_id, disk) = self.disks.get(req.disk_idx).unwrap();
         let disk_request_id = disk.borrow_mut().read(req.size, self.ctx.id());
         self.request_start_times
-            .insert((*disk_id, disk_request_id), self.ctx.time());
+            .insert((*disk_id, disk_request_id), (self.ctx.time(), request_idx));
         log_info!(
             self.ctx,
-            "Starting read from disk-{}, size = {}, expected start time = {:.3}",
+            "Starting request #{}: read from disk-{}, size = {}, expected start time = {:.3}",
+            request_idx,
             req.disk_idx,
             req.size,
             req.start_time as f64
@@ -139,10 +140,11 @@ impl EventHandler for Runner {
         cast!(match event.data {
             DataReadCompleted { request_id, size } => {
                 self.requests_count -= 1;
-                let start_time = self.request_start_times.get(&(event.src, request_id)).unwrap();
+                let (start_time, request_idx) = self.request_start_times.get(&(event.src, request_id)).unwrap();
                 log_info!(
                     self.ctx,
-                    "Completed reading from {}, size = {}, elapsed simulation time = {:.3}",
+                    "Completed request #{}: read from {}, size = {}, elapsed simulation time = {:.3}",
+                    request_idx,
                     self.ctx.lookup_name(event.src),
                     size,
                     self.ctx.time() - start_time,
