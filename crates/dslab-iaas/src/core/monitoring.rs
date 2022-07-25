@@ -20,7 +20,6 @@ pub struct HostState {
 }
 
 pub struct Monitoring {
-    id: u32,
     host_states: BTreeMap<u32, HostState>,
     ctx: SimulationContext,
 }
@@ -40,18 +39,13 @@ impl HostState {
 impl Monitoring {
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
-            id: 0,
             host_states: BTreeMap::new(),
             ctx,
         }
     }
 
-    pub fn set_id(&mut self, id: u32) {
-        self.id = id;
-    }
-
     pub fn get_id(&self) -> u32 {
-        self.id
+        self.ctx.id()
     }
 
     pub fn get_host_state(&self, host: u32) -> &HostState {

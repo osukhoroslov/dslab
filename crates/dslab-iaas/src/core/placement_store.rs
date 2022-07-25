@@ -18,7 +18,6 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
 
 pub struct PlacementStore {
-    id: u32,
     allow_vm_overcommit: bool,
     pool_state: ResourcePoolState,
     schedulers: HashSet<u32>,
@@ -35,7 +34,6 @@ impl PlacementStore {
         sim_config: SimulationConfig,
     ) -> Self {
         Self {
-            id: 0,
             allow_vm_overcommit,
             pool_state: ResourcePoolState::new(),
             schedulers: HashSet::new(),
@@ -45,12 +43,8 @@ impl PlacementStore {
         }
     }
 
-    pub fn set_id(&mut self, id: u32) {
-        self.id = id;
-    }
-
     pub fn get_id(&self) -> u32 {
-        self.id
+        self.ctx.id()
     }
 
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {

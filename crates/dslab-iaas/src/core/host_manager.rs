@@ -44,12 +44,11 @@ pub struct HostManager {
     vms: HashSet<u32>,
     recently_added_vms: Vec<u32>,
     recently_removed_vms: Vec<u32>,
-    recent_vm_status_changes: HashMap<u32, (VmStatus, f64)>,
+    recent_vm_status_changes: HashMap<u32, VmStatus>,
     energy_manager: EnergyManager,
     monitoring_id: u32,
     placement_store_id: u32,
     vm_api: Rc<RefCell<VmAPI>>,
-    vm_api_id: u32,
 
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -62,7 +61,6 @@ impl HostManager {
         monitoring_id: u32,
         placement_store_id: u32,
         vm_api: Rc<RefCell<VmAPI>>,
-        vm_api_id: u32,
         allow_vm_overcommit: bool,
         ctx: SimulationContext,
         sim_config: Rc<SimulationConfig>,
@@ -86,7 +84,6 @@ impl HostManager {
             monitoring_id,
             placement_store_id,
             vm_api,
-            vm_api_id,
             ctx,
             sim_config,
         }
@@ -195,8 +192,7 @@ impl HostManager {
             let vm = self.vm_api.borrow().get_vm(vm_id);
             let start_duration = vm.borrow().start_duration();
             self.allocate(self.ctx.time(), vm.clone());
-            self.recent_vm_status_changes
-                .insert(vm_id, (VmStatus::Initializing, self.ctx.time()));
+            self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
             log_debug!(self.ctx, "vm #{} allocated on host #{}", vm_id, self.id);
             self.ctx.emit_self(VMStarted { vm_id }, start_duration);
             true
@@ -227,8 +223,7 @@ impl HostManager {
                 vm_id,
                 self.id
             );
-            self.recent_vm_status_changes
-                .insert(vm_id, (VmStatus::Migrating, self.ctx.time()));
+            self.recent_vm_status_changes.insert(vm_id, VmStatus::Migrating);
 
             self.ctx
                 .emit_self(VMStarted { vm_id }, migration_duration + start_duration);
@@ -254,8 +249,7 @@ impl HostManager {
         if self.vms.contains(&vm_id) {
             log_debug!(self.ctx, "release resources from vm #{} on host #{}", vm_id, self.id);
             if !is_migrating {
-                self.recent_vm_status_changes
-                    .insert(vm_id, (VmStatus::Finished, self.ctx.time()));
+                self.recent_vm_status_changes.insert(vm_id, VmStatus::Finished);
             }
             let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
             self.ctx.emit_self(VMDeleted { vm_id }, vm.stop_duration());
@@ -276,8 +270,7 @@ impl HostManager {
         }
 
         vm.borrow_mut().set_start_time(self.ctx.time());
-        self.recent_vm_status_changes
-            .insert(vm_id, (VmStatus::Running, self.ctx.time()));
+        self.recent_vm_status_changes.insert(vm_id, VmStatus::Running);
         self.ctx.emit_self(
             AllocationReleaseRequest {
                 vm_id,
@@ -318,10 +311,10 @@ impl HostManager {
             self.monitoring_id,
             self.sim_config.message_delay,
         );
-        for (vm_id, (status, _)) in self.recent_vm_status_changes.drain() {
+        for (vm_id, status) in self.recent_vm_status_changes.drain() {
             self.ctx.emit(
                 VmStatusChanged { vm_id, status },
-                self.vm_api_id,
+                self.vm_api.borrow().get_id(),
                 self.sim_config.message_delay,
             );
         }

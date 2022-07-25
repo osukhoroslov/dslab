@@ -37,12 +37,10 @@ pub struct CloudSimulation {
 impl CloudSimulation {
     pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
-        let monitoring_id = sim.add_handler("monitoring", monitoring.clone());
-        monitoring.borrow_mut().set_id(monitoring_id);
+        sim.add_handler("monitoring", monitoring.clone());
 
         let vm_api = rc!(refcell!(VmAPI::new(sim.create_context("vm_api"))));
-        let vm_api_id = sim.add_handler("vm_api", vm_api.clone());
-        vm_api.borrow_mut().set_id(vm_api_id);
+        sim.add_handler("vm_api", vm_api.clone());
 
         let placement_store = rc!(refcell!(PlacementStore::new(
             sim_config.allow_vm_overcommit,
@@ -50,8 +48,7 @@ impl CloudSimulation {
             sim.create_context("placement_store"),
             sim_config.clone(),
         )));
-        let placement_store_id = sim.add_handler("placement_store", placement_store.clone());
-        placement_store.borrow_mut().set_id(placement_store_id);
+        sim.add_handler("placement_store", placement_store.clone());
 
         let ctx = sim.create_context("simulation");
         Self {
@@ -75,7 +72,6 @@ impl CloudSimulation {
             self.monitoring.borrow().get_id(),
             self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
-            self.vm_api.borrow().get_id(),
             self.sim_config.allow_vm_overcommit,
             self.sim.create_context(name),
             self.sim_config.clone(),
@@ -135,7 +131,7 @@ impl CloudSimulation {
             memory_load_model,
             self.sim_config.clone(),
         );
-        self.vm_api.borrow_mut().register_new_vm(vm.clone());
+        self.vm_api.borrow_mut().register_new_vm(vm);
         self.ctx.emit_now(AllocationRequest { vm_id: id }, scheduler_id);
         id
     }
@@ -162,7 +158,7 @@ impl CloudSimulation {
             memory_load_model,
             self.sim_config.clone(),
         );
-        self.vm_api.borrow_mut().register_new_vm(vm.clone());
+        self.vm_api.borrow_mut().register_new_vm(vm);
         self.ctx.emit(AllocationRequest { vm_id: id }, scheduler_id, delay);
         id
     }
@@ -241,11 +237,11 @@ impl CloudSimulation {
     }
 
     pub fn vm(&self, vm_id: u32) -> Rc<RefCell<VirtualMachine>> {
-        self.vm_api.borrow().get_vm(vm_id).clone()
+        self.vm_api.borrow().get_vm(vm_id)
     }
 
     pub fn vm_status(&self, vm_id: u32) -> VmStatus {
-        self.vm_api.borrow().get_vm_status(vm_id).clone()
+        self.vm_api.borrow().get_vm_status(vm_id)
     }
 
     pub fn vm_location(&self, vm_id: u32) -> u32 {

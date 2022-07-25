@@ -14,38 +14,31 @@ use crate::core::events::vm_api::VmStatusChanged;
 use crate::core::vm::{VirtualMachine, VmStatus};
 
 pub struct VmAPI {
-    id: u32,
     vms: HashMap<u32, Rc<RefCell<VirtualMachine>>>,
     vm_status: HashMap<u32, VmStatus>,
     vm_location: HashMap<u32, u32>,
     vm_counter: u32,
-    #[allow(dead_code)]
     ctx: SimulationContext,
 }
 
 impl VmAPI {
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
-            id: 0,
             vms: HashMap::new(),
             vm_status: HashMap::new(),
             vm_location: HashMap::new(),
             vm_counter: 1,
-            ctx: ctx,
+            ctx,
         }
     }
 
-    pub fn set_id(&mut self, id: u32) {
-        self.id = id;
-    }
-
     pub fn get_id(&self) -> u32 {
-        self.id
+        self.ctx.id()
     }
 
     pub fn register_new_vm(&mut self, vm: VirtualMachine) {
         self.vm_status.insert(vm.id, VmStatus::Initializing);
-        self.vms.insert(vm.id, rc!(refcell!(vm.clone())));
+        self.vms.insert(vm.id, rc!(refcell!(vm)));
     }
 
     fn update_vm_status(&mut self, vm_id: u32, status: VmStatus, host_id: u32) {
