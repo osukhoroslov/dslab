@@ -9,20 +9,20 @@ use crate::task::TaskState;
 
 #[derive(Debug)]
 pub enum Action {
-    Schedule {
+    ScheduleTask {
         task: usize,
         resource: usize,
         cores: u32,
     },
-    ScheduleOnCores {
+    ScheduleTaskOnCores {
         task: usize,
         resource: usize,
         cores: Vec<u32>,
     },
-    SendData {
+    TransferData {
+        data_item: usize,
         from: Id,
         to: Id,
-        data_item: usize,
     },
 }
 

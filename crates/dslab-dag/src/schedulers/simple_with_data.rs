@@ -54,21 +54,21 @@ impl SimpleDataScheduler {
                 for &data_item in task.inputs.iter() {
                     if let Some(location) = self.data_location.get(&data_item) {
                         if *location != resource.id {
-                            result.push(Action::SendData {
+                            result.push(Action::TransferData {
+                                data_item,
                                 from: *location,
                                 to: resource.id,
-                                data_item,
                             });
                         }
                     } else {
-                        result.push(Action::SendData {
+                        result.push(Action::TransferData {
+                            data_item,
                             from: ctx.id(),
                             to: resource.id,
-                            data_item,
                         });
                     }
                 }
-                result.push(Action::Schedule {
+                result.push(Action::ScheduleTask {
                     task: task_id,
                     resource: i,
                     cores,
@@ -76,10 +76,10 @@ impl SimpleDataScheduler {
                 for &data_item in task.outputs.iter() {
                     self.data_location.insert(data_item, resource.id);
                     if dag.get_data_item(data_item).consumers.is_empty() {
-                        result.push(Action::SendData {
+                        result.push(Action::TransferData {
+                            data_item,
                             from: resource.id,
                             to: ctx.id(),
-                            data_item,
                         })
                     }
                 }

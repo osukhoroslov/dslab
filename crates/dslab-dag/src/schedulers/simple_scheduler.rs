@@ -37,7 +37,7 @@ impl SimpleScheduler {
                 let cores = resource.cores_available.min(task.max_cores);
                 resource.cores_available -= cores;
                 resource.memory_available -= task.memory;
-                result.push(Action::Schedule {
+                result.push(Action::ScheduleTask {
                     task: task_id,
                     resource: i,
                     cores,

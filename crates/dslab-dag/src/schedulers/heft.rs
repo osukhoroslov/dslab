@@ -331,7 +331,7 @@ impl Scheduler for HeftScheduler {
             eft[task] = best_finish;
             result.push((
                 best_finish - best_time,
-                Action::ScheduleOnCores {
+                Action::ScheduleTaskOnCores {
                     task,
                     resource: best_resource,
                     cores: best_cores,

@@ -179,7 +179,7 @@ impl PortfolioScheduler {
             };
 
             resources[best_resource].cores_available -= cores;
-            result.push(Action::Schedule {
+            result.push(Action::ScheduleTask {
                 task,
                 resource: best_resource,
                 cores,

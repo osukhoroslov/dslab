@@ -262,12 +262,12 @@ impl DAGRunner {
         while !self.actions.is_empty() {
             log_debug!(self.ctx, "Got action: {:?}", self.actions.front().unwrap());
             match self.actions.pop_front().unwrap() {
-                Action::Schedule { task, resource, cores } => {
+                Action::ScheduleTask { task, resource, cores } => {
                     let allowed_cores =
                         (0..self.resources[resource].compute.borrow().cores_total()).collect::<Vec<_>>();
                     self.process_schedule_action(task, resource, cores, allowed_cores);
                 }
-                Action::ScheduleOnCores {
+                Action::ScheduleTaskOnCores {
                     task,
                     resource,
                     mut cores,
@@ -279,7 +279,7 @@ impl DAGRunner {
                     }
                     self.process_schedule_action(task, resource, cores.len() as u32, cores);
                 }
-                Action::SendData { from, to, data_item } => {
+                Action::TransferData { data_item, from, to } => {
                     self.add_data_transfer_task(data_item, from, to);
                 }
             };
@@ -575,12 +575,7 @@ impl DAGRunner {
     }
 
     fn is_completed(&self) -> bool {
-        self.dag.is_completed()
-            && self.outputs.iter().all(|data_item| {
-                self.resource_data_items
-                    .get(&self.id)
-                    .map_or_else(|| false, |items| items.contains(data_item))
-            })
+        self.dag.is_completed() && self.data_transfers.is_empty()
     }
 
     fn check_and_log_completed(&self) {
