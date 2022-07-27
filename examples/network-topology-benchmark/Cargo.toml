@@ -1,0 +1,12 @@
+[package]
+name = "network-topology-benchmark-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-network = { path = "../../crates/dslab-network" }
+log = "0.4"
+env_logger = "0.8.4"
+serde = { version = "1.0", features = ["derive"] }
+sugars = "3.0.0"
