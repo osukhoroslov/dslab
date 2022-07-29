@@ -115,7 +115,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().cancel_event(id);
     }
 
-    /// Lookup component name by its identifier.
+    /// Returns component name by its identifier.
     pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
     }
