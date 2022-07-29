@@ -11,7 +11,7 @@ DSLAB_BINARY_PATH = "target/release/storage-disk-benchmark"
 DSLAB_ADDITIONAL_ARGS = None
 
 SIMGRID_BINARY_PATH = "examples-other/simgrid/build/relwithdebinfo/bin/storage"
-SIMGRID_ADDITIONAL_ARGS = "--log=root.thres:warning"
+SIMGRID_ADDITIONAL_ARGS = None
 
 
 SIMGRID_REGEX = re.compile("Done\. Elapsed ([\d]+) ms")
@@ -60,7 +60,7 @@ def main():
         dslab_time = get_dslab_data(
             run(DSLAB_BINARY_PATH, DSLAB_ADDITIONAL_ARGS, requests, disks))
         simgrid_time = get_simgrid_data(
-            run(SIMGRID_BINARY_PATH, SIMGRID_ADDITIONAL_ARGS, requests, disks, use_stderr=True))
+            run(SIMGRID_BINARY_PATH, SIMGRID_ADDITIONAL_ARGS, requests, disks))
         print(f"Dslab: {dslab_time}, SimGrid: {simgrid_time}")
 
     requests_list = args.requests_list.split(",")
