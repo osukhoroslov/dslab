@@ -1,3 +1,5 @@
+//! Implementation of slow model, which recalculates all events time at each `insert` and `pop`.
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -44,6 +46,7 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
+/// Implementation of slow model, which recalculates all events time at each `insert` and `pop`.
 pub struct SlowFairThroughputSharingModel<T> {
     throughput_function: ThroughputFunction,
     entries: BinaryHeap<Activity<T>>,
@@ -53,10 +56,12 @@ pub struct SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> SlowFairThroughputSharingModel<T> {
+    /// Creates slow model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
+    /// Creates slow model with dynamic throughput, represented by given closure.
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,

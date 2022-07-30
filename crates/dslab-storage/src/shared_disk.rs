@@ -1,3 +1,5 @@
+//! Shared disk model.
+
 use serde::Serialize;
 
 use dslab_core::cast;
@@ -19,11 +21,14 @@ struct DiskActivity {
 }
 
 #[derive(Serialize)]
+/// Event type for shared disk read request completed.
 pub struct DiskReadActivityCompleted {}
 
 #[derive(Serialize)]
+/// Event type for shared disk write request completed.
 pub struct DiskWriteActivityCompleted {}
 
+/// Representation of shared disk.
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
@@ -36,6 +41,7 @@ pub struct SharedDisk {
 }
 
 impl SharedDisk {
+    /// Creates new shared disk with fixed read and write throughput.
     pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
@@ -49,6 +55,7 @@ impl SharedDisk {
         }
     }
 
+    /// Creates new shared disk with given read and write throughput functions.
     pub fn new(
         capacity: u64,
         read_tf: ThroughputFunction,
@@ -67,6 +74,7 @@ impl SharedDisk {
         }
     }
 
+    /// Requests reading from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -98,6 +106,7 @@ impl SharedDisk {
         request_id
     }
 
+    /// Requests writing from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
@@ -128,6 +137,7 @@ impl SharedDisk {
         request_id
     }
 
+    /// Marks `size` as free. Given `size` should not be more than used space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
@@ -136,10 +146,12 @@ impl SharedDisk {
         Err(format!("invalid size: {}", size))
     }
 
+    /// Returns amount of used space on disk.
     pub fn get_used_space(&self) -> u64 {
         self.used
     }
 
+    /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }
