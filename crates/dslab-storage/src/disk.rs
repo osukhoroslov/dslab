@@ -1,3 +1,5 @@
+//! Disk model.
+
 use sugars::boxed;
 
 use dslab_core::component::Id;
@@ -6,6 +8,7 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
+/// Representation of disk.
 pub struct Disk {
     capacity: u64,
     used: u64,
@@ -17,6 +20,7 @@ pub struct Disk {
 }
 
 impl Disk {
+    /// Creates new disk.
     pub fn new(
         capacity: u64,
         read_bw_model: Box<dyn BWModel>,
@@ -34,6 +38,7 @@ impl Disk {
         }
     }
 
+    /// Creates new disk with constant bandwidth model.
     pub fn new_simple(capacity: u64, read_bandwidth: u64, write_bandwidth: u64, ctx: SimulationContext) -> Self {
         Self::new(
             capacity,
@@ -49,6 +54,7 @@ impl Disk {
         request_id
     }
 
+    /// Requests reading from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -78,6 +84,7 @@ impl Disk {
         request_id
     }
 
+    /// Requests writing from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
@@ -106,6 +113,7 @@ impl Disk {
         request_id
     }
 
+    /// Marks `size` as free. Given `size` should not be more than used space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
@@ -114,10 +122,12 @@ impl Disk {
         Err(format!("invalid size: {}", size))
     }
 
+    /// Returns amount of used space on disk.
     pub fn get_used_space(&self) -> u64 {
         self.used
     }
 
+    /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }

@@ -1,3 +1,6 @@
+#![warn(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 pub mod bandwidth;
 pub mod disk;
 pub mod events;

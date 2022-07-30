@@ -1,3 +1,5 @@
+//! Implementation of fast sharing model.
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -52,10 +54,12 @@ pub struct FairThroughputSharingModel<T> {
 }
 
 impl<T> FairThroughputSharingModel<T> {
+    /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
+    /// Creates model with dynamic throughput, represented by given closure.
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             activities: BinaryHeap::new(),

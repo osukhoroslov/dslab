@@ -1,3 +1,5 @@
+//! File system model.
+
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use dslab_core::component::Id;
@@ -7,24 +9,28 @@ use crate::{disk::Disk, events::*};
 
 struct File {
     size: u64,
-    cnt_actions: u64, // number of timed actions on this file. File can be removed only if there are no actions on it
+    /// Number of timed actions on this file. File can be removed only if there are no actions on it.
+    cnt_actions: u64,
 }
 
 impl File {
-    fn new(size: u64) -> File {
-        File { size, cnt_actions: 0 }
+    fn new(size: u64) -> Self {
+        Self { size, cnt_actions: 0 }
     }
 }
 
+/// Representation of file system.
 pub struct FileSystem {
     files: HashMap<String, File>,
     disks: HashMap<String, Rc<RefCell<Disk>>>,
-    requests: HashMap<(Id, u64), (u64, Id, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
+    /// Mapping (disk id, disk_request_id) -> (request_id, requester, file_name).
+    requests: HashMap<(Id, u64), (u64, Id, String)>,
     next_request_id: u64,
     ctx: SimulationContext,
 }
 
 impl FileSystem {
+    /// Creates new empty file system.
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
             files: HashMap::new(),
@@ -35,6 +41,7 @@ impl FileSystem {
         }
     }
 
+    /// Mounts `disk` to `mount_point` if it is not taken yet.
     pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
         if let Some(_) = self.disks.get(mount_point) {
@@ -44,6 +51,7 @@ impl FileSystem {
         Ok(())
     }
 
+    /// Unmounts disk which is mounted to `mount_point` if there is any.
     pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), String> {
         log_debug!(
             self.ctx,
@@ -71,6 +79,7 @@ impl FileSystem {
         request_id
     }
 
+    /// Requests reading from `file_name` of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
     pub fn read(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -82,6 +91,7 @@ impl FileSystem {
         self.read_impl(file_name, Some(size), requester)
     }
 
+    /// Requests reading from `file_name` of all size of this file. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
     pub fn read_all(&mut self, file_name: &str, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -151,6 +161,7 @@ impl FileSystem {
         request_id
     }
 
+    /// Requests writing to `file_name` of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
     pub fn write(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -197,6 +208,7 @@ impl FileSystem {
         request_id
     }
 
+    /// Creates file with name `file_name` if there is not any yet.
     pub fn create_file(&mut self, file_name: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received create file request, file_name: [{}]", file_name);
         if let Some(_) = self.files.get(file_name) {
@@ -207,6 +219,7 @@ impl FileSystem {
         Ok(())
     }
 
+    /// Returns size of the file with name `file_name` if there is any.
     pub fn get_file_size(&self, file_name: &str) -> Result<u64, String> {
         self.files
             .get(file_name)
@@ -214,10 +227,12 @@ impl FileSystem {
             .map(|f| f.size)
     }
 
+    /// Returns amount of used space on all disks on this file system.
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
+    /// Deletes file with name `file_name` if there is any yet.    
     pub fn delete_file(&mut self, file_name: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received delete file request, file_name: [{}]", file_name);
         let disk = self.resolve_disk(file_name)?;
