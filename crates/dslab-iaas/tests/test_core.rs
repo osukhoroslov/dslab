@@ -331,7 +331,8 @@ fn test_wrong_decision() {
 #[test]
 // Migrate a VM from host 1 to host 2
 // Network throughput is 10, then the migration of the VM with memory size 100 will take 10 seconds
-// The VM will finish at moment 22. 20 seconds of lifetime + 2 seconds of double initialization
+// The VM will finish at moment 21.4 (20 seconds + 1.4 for allocation)
+// Due to asynchrony the status will be updated at moment 21.7
 fn test_migration_simple() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -388,14 +389,20 @@ fn test_migration_simple() {
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.5);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.5);
 
-    cloud_sim.step_for_duration(5.);
+    cloud_sim.step_for_duration(4.69);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 22.);
+    assert_eq!(current_time, 21.5); // due to there are no events between 21.5 and 21.7
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    cloud_sim.step_for_duration(0.2);
+    current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 21.7);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
 
 #[test]
-// Despite two migrations the VM will end at moment 103
+// Despite two migrations the VM will end at moment 101.7
+// (100 seconds of lifetime + 1.7 for asynchrony reasons like in previous test)
 fn test_double_migration() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -429,8 +436,13 @@ fn test_double_migration() {
     assert_eq!(current_time, 100.);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
 
-    cloud_sim.step_for_duration(3.);
+    cloud_sim.step_for_duration(1.69);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 103.);
+    assert_eq!(current_time, 101.5);
+    assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
+
+    cloud_sim.step_for_duration(0.2);
+    current_time = cloud_sim.current_time();
+    assert_eq!(current_time, 101.7);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }

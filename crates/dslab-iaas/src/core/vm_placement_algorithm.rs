@@ -72,7 +72,7 @@ impl VMPlacementAlgorithm for WorstFit {
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                if result.is_none() || pool_state.get_available_cpu(host) > max_available_cpu {
+                if pool_state.get_available_cpu(host) > max_available_cpu {
                     max_available_cpu = pool_state.get_available_cpu(host);
                     result = Some(host);
                 }
@@ -106,7 +106,7 @@ impl VMPlacementAlgorithm for BestFitThreshold {
             let cpu_load_new = (cpu_used + alloc.cpu_usage as f64) / state.cpu_total as f64;
             let memory_load_new = (memory_used + alloc.memory_usage as f64) / state.memory_total as f64;
 
-            if result.is_none() || best_cpu_load < cpu_load_new {
+            if best_cpu_load < cpu_load_new {
                 if cpu_load_new < self.threshold && memory_load_new < self.threshold {
                     best_cpu_load = cpu_load_new;
                     result = Some(*host);
