@@ -1,40 +1,40 @@
-//! Events sent by disk and file system.
+//! Events produced by disk and file system.
 
 use serde::Serialize;
 
 // Disk events
 
 #[derive(Serialize)]
-/// Event type for disk read request complete. It is sent from disk to requester.
+/// Corresponds to completion of disk read request. Source: disk, destination: requester.
 pub struct DataReadCompleted {
-    /// Id which was returned from `read` disk method.
+    /// Request id returned by [`crate::disk::Disk::read()`] method.
     pub request_id: u64,
-    /// Size which was read from disk.
+    /// Size of data read from disk.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Event type of disk read request failure. It is sent from disk to requester.
+/// Corresponds to failure of disk read request. Source: disk, destination: requester.
 pub struct DataReadFailed {
-    /// Id which was returned from `read` disk method.
+    /// Request id returned by [`crate::disk::Disk::read()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
 }
 
 #[derive(Serialize)]
-/// Event type of disk write request complete. It is sent from disk to requester.
+/// Corresponds to completion of disk write request. Source: disk, destination: requester.
 pub struct DataWriteCompleted {
-    /// Id which was returned from `write` disk method.
+    /// Request id returned by [`crate::disk::Disk::write()`] method.
     pub request_id: u64,
-    /// Size which was written to disk.
+    /// Size of data written to disk.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Event type of disk write request failure. It is sent from disk to requester.
+/// Corresponds to failure of disk write request. Source: disk, destination: requester.
 pub struct DataWriteFailed {
-    /// Id which was returned from `write` disk method.
+    /// Request id returned by [`crate::disk::Disk::write()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
@@ -43,44 +43,44 @@ pub struct DataWriteFailed {
 // File events
 
 #[derive(Serialize)]
-/// Event type for file system read request complete. It is sent from file system to requester.
+/// Corresponds to completion of file system read request. Source: file system, destination: requester.
 pub struct FileReadCompleted {
-    /// Id which was returned from `read` file system method.
+    /// Request id returned by [`crate::fs::FileSystem::read()`] method.
     pub request_id: u64,
-    /// Name of the file to read from.
+    /// Name of read file.
     pub file_name: String,
-    /// Size which was read from disk.
+    /// Size of read data.
     pub read_size: u64,
 }
 
 #[derive(Serialize)]
-/// Event type for file system read request failure. It is sent from file system to requester.
+/// Corresponds to failure of file system read request. Source: file system, destination: requester.
 pub struct FileReadFailed {
     /// Id which was returned from `read` file system method.
     pub request_id: u64,
-    /// Name of the file to read from.
+    /// Name of read file.
     pub file_name: String,
     /// Reason of failure.
     pub error: String,
 }
 
 #[derive(Serialize)]
-/// Event type for file system write request complete. It is sent from file system to requester.
+/// Corresponds to completion of file system write request. Source: file system, destination: requester.
 pub struct FileWriteCompleted {
     /// Id which was returned from `write` file system method.
     pub request_id: u64,
-    /// Name of the file to write to.
+    /// Name of written file.
     pub file_name: String,
-    /// Size which was written to disk.
+    /// Size of written data.
     pub new_size: u64,
 }
 
 #[derive(Serialize)]
-/// Event type for file system write request failure. It is sent from file system to requester.
+/// Corresponds to failure of file system write request. Source: file system, destination: requester.
 pub struct FileWriteFailed {
     /// Id which was returned from `write` file system method.
     pub request_id: u64,
-    /// Name of the file to write to.
+    /// Name of written file.
     pub file_name: String,
     /// Reason of failure.
     pub error: String,

@@ -1,12 +1,12 @@
-# DSLab Models crate 
+# DSLab Common Models
 
-This crate contains implementation of some versatile models used by other DSLab libraries.
+This crate contains implementations of some versatile models used by other DSLab libraries.
 
 ## Throughput sharing model
 
-This model evaluates how some numerical resource is fairly shared by several concurrent activities. Fair sharing means that each activity gets equal part of resource throughput per time unit.
+This model evaluates how some resource with limited throughput (e.g. network, storage or compute) is shared by several concurrent activities (e.g. data transfers or computations). It implements fair sharing, i.e. each activity gets an equal share of resource throughput computed as `throughput / num of activities`.
 
-This model can be used to calculate completion times of network data transmissions, read-write requests to disk or compute tasks on CPU.
+This model can be used to calculate completion times of such activities as network data transfers, storage read/write operations or compute tasks.
 
 ### Slow algorithm
 
