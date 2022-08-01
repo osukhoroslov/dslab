@@ -12,7 +12,7 @@ The simulation represents a sequence of events. Each event has a unique identifi
 
 The library also provides convenient facilities for logging of events or arbitrary messages during the simulation with inclusion of component names, logging levels, etc.
 
-## Example
+## Examples
 
 ```rust
 use std::cell::RefCell;
@@ -20,19 +20,21 @@ use std::rc::Rc;
 use serde::Serialize;
 use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
 
-// Event types (should implement Serialize)
+// Event data types (should implement Serialize)
 #[derive(Serialize)]
 pub struct Ping {
-    payload: f64,
+    info: f64,
 }
 
 #[derive(Serialize)]
 pub struct Pong {
-    payload: f64,
+    info: f64,
 }
 
-// Simulation component types (here we have a single one) 
+// Simulation component types (here we have a single one - Process) 
 pub struct Process {
+    // generally components store the context,
+    // without it they cannot emit events
     ctx: SimulationContext,
 }
 
@@ -42,21 +44,30 @@ impl Process {
     }
 
     fn send_ping(&mut self, dst: Id) {
-        let payload = self.ctx.time() + 0.5;
-        self.ctx.emit(Ping { payload }, dst, 0.5);
+        let info = self.ctx.time() + 0.5;
+        // emit Ping event to another process with delay 0.5
+        // info contains the expected event delivery time
+        self.ctx.emit(Ping { info }, dst, 0.5);
     }
 }
 
+// To be able to consume events, the component should implement EventHandler trait
 impl EventHandler for Process {
+    // this method is invoked to deliver an event to the component 
     fn on(&mut self, event: Event) {
+        // use cast! macro for convenient matching of event data types
         cast!(match event.data {
-            Ping { payload } => {
-                assert_eq!(self.ctx.time(), payload);
-                let payload = self.ctx.time() + 1.2;
-                self.ctx.emit(Pong { payload }, event.src, 1.2);
+            Ping { info } => {
+                // check that the current time equals the time in info
+                assert_eq!(self.ctx.time(), info);
+                let info = self.ctx.time() + 1.2;
+                // emit Pong event back to another process with delay 1.2
+                // info contains the expected event delivery time
+                self.ctx.emit(Pong { info }, event.src, 1.2);
             }
-            Pong { payload } => {
-                assert_eq!(self.ctx.time(), payload);
+            Pong { info } => {
+                // check that the current time equals the time in info
+                assert_eq!(self.ctx.time(), info);
             }
         })
     }
@@ -64,13 +75,22 @@ impl EventHandler for Process {
 
 // Simulation setup and execution
 fn main() {
+    // create simulation with random seed
     let mut sim = Simulation::new(123);
+    // create pinger, a Process component instance
     let pinger = Rc::new(RefCell::new(Process::new(sim.create_context("pinger"))));
+    // register event handler for pinger
     let _pinger_id = sim.add_handler("pinger", pinger.clone());
+    // create ponger, another Process component instance
     let ponger = Rc::new(RefCell::new(Process::new(sim.create_context("ponger"))));
+    // register event handler for ponger
     let ponger_id = sim.add_handler("ponger", ponger.clone());
+    // it is fine to call component methods directly instead of sending them events
+    // here we ask pinger to send a Ping event to ponger
     pinger.borrow_mut().send_ping(ponger_id);
+    // run simulation until there are no pending events
     sim.step_until_no_events();
+    // check current simulation time, should be equal to the time of last event
     assert_eq!(sim.time(), 1.7)
 }
 ```

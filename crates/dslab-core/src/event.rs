@@ -22,6 +22,8 @@ impl<T: Serialize + 'static> EventData for T {}
 /// Representation of event.
 pub struct Event {
     /// Unique event identifier.
+    ///
+    /// Events are numbered sequentially starting from 0.
     pub id: EventId,
     /// Time of event occurrence.
     pub time: f64,
