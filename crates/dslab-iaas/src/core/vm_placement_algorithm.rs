@@ -41,12 +41,12 @@ impl BestFit {
 impl VMPlacementAlgorithm for BestFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
-        let mut best_cpu_load: f64 = 0.;
+        let mut min_available_cpu: u32 = u32::MAX;
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                if result.is_none() || best_cpu_load < pool_state.get_cpu_load(host) {
-                    best_cpu_load = pool_state.get_cpu_load(host);
+                if pool_state.get_available_cpu(host) < min_available_cpu {
+                    min_available_cpu = pool_state.get_available_cpu(host);
                     result = Some(host);
                 }
             }
@@ -68,12 +68,12 @@ impl WorstFit {
 impl VMPlacementAlgorithm for WorstFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
-        let mut best_cpu_load: f64 = 0.;
+        let mut max_available_cpu: u32 = 0;
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                if result.is_none() || best_cpu_load > pool_state.get_cpu_load(host) {
-                    best_cpu_load = pool_state.get_cpu_load(host);
+                if pool_state.get_available_cpu(host) > max_available_cpu {
+                    max_available_cpu = pool_state.get_available_cpu(host);
                     result = Some(host);
                 }
             }
@@ -106,7 +106,7 @@ impl VMPlacementAlgorithm for BestFitThreshold {
             let cpu_load_new = (cpu_used + alloc.cpu_usage as f64) / state.cpu_total as f64;
             let memory_load_new = (memory_used + alloc.memory_usage as f64) / state.memory_total as f64;
 
-            if result.is_none() || best_cpu_load < cpu_load_new {
+            if best_cpu_load < cpu_load_new {
                 if cpu_load_new < self.threshold && memory_load_new < self.threshold {
                     best_cpu_load = cpu_load_new;
                     result = Some(*host);

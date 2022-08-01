@@ -7,12 +7,13 @@ use serde::Serialize;
 use crate::core::config::SimulationConfig;
 use crate::core::load_model::LoadModel;
 
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum VmStatus {
     Initializing,
     Running,
-    Deactivated,
+    Finished,
     Migrating,
+    FailedToAllocate,
 }
 
 impl Display for VmStatus {
@@ -20,17 +21,21 @@ impl Display for VmStatus {
         match self {
             VmStatus::Initializing => write!(f, "initializing"),
             VmStatus::Running => write!(f, "running"),
-            VmStatus::Deactivated => write!(f, "deactivated"),
+            VmStatus::Finished => write!(f, "finished"),
             VmStatus::Migrating => write!(f, "migrating"),
+            VmStatus::FailedToAllocate => write!(f, "failed_to_allocate"),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct VirtualMachine {
+    pub id: u32,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+    pub allocation_start_time: f64,
     lifetime: f64,
     start_time: f64,
-    status: VmStatus,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
     sim_config: Rc<SimulationConfig>,
@@ -49,18 +54,25 @@ impl Serialize for VirtualMachine {
 
 impl VirtualMachine {
     pub fn new(
+        id: u32,
+        cpu_usage: u32,
+        memory_usage: u64,
+        allocation_start_time: f64,
         lifetime: f64,
         cpu_load_model: Box<dyn LoadModel>,
         memory_load_model: Box<dyn LoadModel>,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
+            id,
+            cpu_usage,
+            memory_usage,
+            allocation_start_time,
             lifetime,
             start_time: -1.,
             cpu_load_model,
             memory_load_model,
             sim_config,
-            status: VmStatus::Initializing,
         }
     }
 
@@ -72,10 +84,6 @@ impl VirtualMachine {
         self.start_time
     }
 
-    pub fn status(&self) -> &VmStatus {
-        &self.status
-    }
-
     pub fn start_duration(&self) -> f64 {
         self.sim_config.vm_start_duration
     }
@@ -85,29 +93,18 @@ impl VirtualMachine {
     }
 
     pub fn set_start_time(&mut self, time: f64) {
-        // VM start time is set only once!
-        if self.start_time == -1. {
-            self.start_time = time;
-        }
+        self.start_time = time;
     }
 
-    pub fn set_status(&mut self, status: VmStatus) {
-        self.status = status;
+    pub fn set_lifetime(&mut self, lifetime: f64) {
+        self.lifetime = lifetime;
     }
 
     pub fn get_cpu_load(&self, time: f64) -> f64 {
-        if self.status == VmStatus::Running {
-            self.cpu_load_model.get_resource_load(time, time - self.start_time)
-        } else {
-            0.
-        }
+        self.cpu_load_model.get_resource_load(time, time - self.start_time)
     }
 
     pub fn get_memory_load(&self, time: f64) -> f64 {
-        if self.status == VmStatus::Running {
-            self.memory_load_model.get_resource_load(time, time - self.start_time)
-        } else {
-            0.
-        }
+        self.memory_load_model.get_resource_load(time, time - self.start_time)
     }
 }

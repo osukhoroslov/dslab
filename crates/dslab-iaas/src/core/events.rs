@@ -3,56 +3,51 @@
 pub mod allocation {
     use serde::Serialize;
 
-    use crate::core::common::Allocation;
-    use crate::core::vm::VirtualMachine;
-
     #[derive(Serialize)]
     pub struct AllocationRequest {
-        pub alloc: Allocation,
-        pub vm: VirtualMachine,
+        pub vm_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitRequest {
-        pub alloc: Allocation,
-        pub vm: VirtualMachine,
+        pub vm_id: u32,
         pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitSucceeded {
-        pub alloc: Allocation,
+        pub vm_id: u32,
         pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitFailed {
-        pub alloc: Allocation,
+        pub vm_id: u32,
         pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationFailed {
-        pub alloc: Allocation,
+        pub vm_id: u32,
         pub host_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct AllocationReleased {
-        pub alloc: Allocation,
+        pub vm_id: u32,
         pub host_id: u32,
     }
 
     #[derive(Serialize, Clone)]
     pub struct AllocationReleaseRequest {
-        pub alloc_id: u32,
+        pub vm_id: u32,
+        pub is_migrating: bool,
     }
 
     #[derive(Serialize)]
     pub struct MigrationRequest {
         pub source_host: u32,
-        pub alloc: Allocation,
-        pub vm: VirtualMachine,
+        pub vm_id: u32,
     }
 }
 
@@ -63,33 +58,37 @@ pub mod vm {
 
     #[derive(Serialize)]
     pub struct VMStarted {
-        pub id: u32,
+        pub vm_id: u32,
     }
 
     #[derive(Serialize)]
     pub struct VMDeleted {
-        pub id: u32,
+        pub vm_id: u32,
     }
 }
 
 // MONITORING EVENTS ///////////////////////////////////////////////////////////////////////////////
 
 pub mod monitoring {
-    use std::collections::HashMap;
-
     use serde::Serialize;
-
-    use crate::core::common::Allocation;
-    use crate::core::vm::VirtualMachine;
-    use crate::core::vm::VmStatus;
 
     #[derive(Serialize)]
     pub struct HostStateUpdate {
         pub host_id: u32,
         pub cpu_load: f64,
         pub memory_load: f64,
-        pub recently_added_vms: Vec<(Allocation, VirtualMachine)>,
+        pub recently_added_vms: Vec<u32>,
         pub recently_removed_vms: Vec<u32>,
-        pub recent_vm_status_changes: HashMap<u32, (VmStatus, f64)>,
+    }
+}
+
+pub mod vm_api {
+    use serde::Serialize;
+
+    use crate::core::vm::VmStatus;
+    #[derive(Serialize)]
+    pub struct VmStatusChanged {
+        pub vm_id: u32,
+        pub status: VmStatus,
     }
 }

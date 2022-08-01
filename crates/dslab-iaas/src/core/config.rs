@@ -14,6 +14,7 @@ pub struct SimulationConfigRaw {
     pub host_cpu_capacity: Option<f64>, // CPU capacity for default host
     pub host_memory_capacity: Option<f64>, // RAM capacity for default host
     pub step_duration: Option<f64>,     // duration beetween user access the simulation info
+    pub vm_allocation_timeout: Option<f64>, // VM becomes failed after this timeout is reached
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -30,6 +31,7 @@ pub struct SimulationConfig {
     pub host_cpu_capacity: f64,       // CPU capacity for default host
     pub host_memory_capacity: f64,    // RAM capacity for default host
     pub step_duration: f64,           // duration beetween user access the simulation info
+    pub vm_allocation_timeout: f64,   // VM becomes failed after this timeout is reached
 }
 
 impl SimulationConfig {
@@ -47,6 +49,7 @@ impl SimulationConfig {
             host_cpu_capacity: 1.,
             host_memory_capacity: 1.,
             step_duration: 500.,
+            vm_allocation_timeout: 50.,
         }
     }
 
@@ -68,6 +71,7 @@ impl SimulationConfig {
             host_cpu_capacity: data.host_cpu_capacity.unwrap_or(default.host_cpu_capacity),
             host_memory_capacity: data.host_memory_capacity.unwrap_or(default.host_memory_capacity),
             step_duration: data.step_duration.unwrap_or(default.step_duration),
+            vm_allocation_timeout: data.vm_allocation_timeout.unwrap_or(default.vm_allocation_timeout),
         }
     }
 }

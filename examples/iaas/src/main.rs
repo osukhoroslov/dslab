@@ -28,51 +28,51 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
     let s2 = cloud_sim.add_scheduler("s2", Box::new(BestFit::new()));
 
     // spawn vm_0 - vm_4 on scheduler #1
-    for i in 0..5 {
+    for _ in 0..5 {
         cloud_sim.spawn_vm_now(
-            i,
             10,
             10,
             2.0,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
+            None,
             s1,
         );
     }
     // spawn vm_5 - vm_9 on scheduler #2
-    for i in 5..10 {
+    for _ in 5..10 {
         cloud_sim.spawn_vm_now(
-            i,
             10,
             10,
             2.0,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
+            None,
             s2,
         );
     }
 
     // spawn vm_10 - vm_14 on scheduler #1
-    for i in 10..15 {
+    for _ in 10..15 {
         cloud_sim.spawn_vm_now(
-            i,
             10,
             10,
             2.0,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
+            None,
             s1,
         );
     }
     // spawn vm_15 - vm_19 on scheduler #2
-    for i in 15..20 {
+    for _ in 15..20 {
         cloud_sim.spawn_vm_now(
-            i,
             10,
             10,
             2.0,
             Box::new(ConstLoadModel::new(1.0)),
             Box::new(ConstLoadModel::new(1.0)),
+            None,
             s2,
         );
     }
@@ -102,12 +102,12 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
 
     for i in 0..10 {
         cloud_sim.spawn_vm_with_delay(
-            i,
             10,
             10,
             2.0,
             Box::new(ConstLoadModel::new(0.5)),
             Box::new(ConstLoadModel::new(0.5)),
+            None,
             scheduler_id,
             i as f64,
         );
@@ -136,18 +136,18 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
     let h2 = cloud_sim.add_host("h2", 30, 30);
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        0,
+    let vm = cloud_sim.spawn_vm_now(
         10,
         10,
         20.0,
         Box::new(ConstLoadModel::new(0.5)),
         Box::new(ConstLoadModel::new(0.5)),
+        None,
         scheduler_id,
     );
 
     cloud_sim.step_for_duration(10.);
-    cloud_sim.migrate_vm_to_host(0, h2);
+    cloud_sim.migrate_vm_to_host(vm, h2);
 
     cloud_sim.steps(300);
 
@@ -197,14 +197,14 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
         cloud_sim.add_host(&format!("h{}", i), 50, 50);
     }
 
-    for i in 0..10 {
+    for _ in 0..10 {
         cloud_sim.spawn_vm_now(
-            i,
             30,
             30,
             1000.0,
             Box::new(DecreaseLoadModel::new()),
             Box::new(DecreaseLoadModel::new()),
+            None,
             scheduler_id,
         );
     }
@@ -212,7 +212,7 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");
     migrator
         .borrow_mut()
-        .patch_custom_args(5., cloud_sim.monitoring(), cloud_sim.sim_config());
+        .patch_custom_args(5., cloud_sim.monitoring(), cloud_sim.vm_api(), cloud_sim.sim_config());
     migrator.borrow_mut().init();
 
     cloud_sim.step_for_duration(1005.);

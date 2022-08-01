@@ -9,4 +9,5 @@ pub mod placement_store;
 pub mod resource_pool;
 pub mod scheduler;
 pub mod vm;
+pub mod vm_api;
 pub mod vm_placement_algorithm;
