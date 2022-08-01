@@ -99,7 +99,11 @@ impl Scheduler for SimpleDataScheduler {
         config: Config,
         ctx: &SimulationContext,
     ) -> Vec<Action> {
-        assert!(config.data_transfer_mode == DataTransferMode::Manual);
+        assert_eq!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "SimpleDataScheduler supports only DataTransferMode::Manual"
+        );
         self.schedule(dag, resources, ctx)
     }
 

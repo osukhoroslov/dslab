@@ -24,7 +24,7 @@ use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum DataTransferMode {
     ViaMasterNode,
     Direct,

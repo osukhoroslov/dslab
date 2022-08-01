@@ -112,7 +112,11 @@ impl Scheduler for HeftScheduler {
         config: Config,
         ctx: &SimulationContext,
     ) -> Vec<Action> {
-        assert!(config.data_transfer_mode != DataTransferMode::Manual);
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "HeftScheduler doesn't support DataTransferMode::Manual"
+        );
 
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(

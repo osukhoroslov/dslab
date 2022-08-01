@@ -201,7 +201,11 @@ impl Scheduler for PortfolioScheduler {
         config: Config,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
-        assert!(config.data_transfer_mode != DataTransferMode::Manual);
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "PortfolioScheduler doesn't support DataTransferMode::Manual"
+        );
         self.schedule(dag, resources)
     }
 
