@@ -51,7 +51,7 @@ impl FileSystem {
         Ok(())
     }
 
-    /// Unmounts disk which is mounted to `mount_point` if there is any.
+    /// Unmounts a disk which is mounted to `mount_point` if there is any.
     pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), String> {
         log_debug!(
             self.ctx,
@@ -208,7 +208,7 @@ impl FileSystem {
         request_id
     }
 
-    /// Creates file with name `file_name` if there is not any yet.
+    /// Creates file with name `file_name` if it doesn’t already exist.
     pub fn create_file(&mut self, file_name: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received create file request, file_name: [{}]", file_name);
         if let Some(_) = self.files.get(file_name) {
@@ -227,12 +227,12 @@ impl FileSystem {
             .map(|f| f.size)
     }
 
-    /// Returns amount of used space on all disks on this file system.
+    /// Returns amount of used space on all disks currently used by this file system.
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
-    /// Deletes file with name `file_name` if there is any yet.    
+    /// Deletes file with name `file_name` if there is any.    
     pub fn delete_file(&mut self, file_name: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received delete file request, file_name: [{}]", file_name);
         let disk = self.resolve_disk(file_name)?;

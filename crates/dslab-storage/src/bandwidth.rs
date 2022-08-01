@@ -12,7 +12,7 @@ pub trait BWModel {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Trivial model with constant.
+/// Simplest model with constant bandwidth.
 pub struct ConstantBWModel {
     bandwidth: u64,
 }
@@ -32,7 +32,7 @@ impl BWModel for ConstantBWModel {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Model which generates random bandwidth from specified distribution.
+/// Model which generates random bandwidth values from the specified distribution.
 pub struct RandomizedBWModel<Dist: Distribution<u64>> {
     dist: Dist,
 }
@@ -50,7 +50,7 @@ impl<Dist: Distribution<u64>> BWModel for RandomizedBWModel<Dist> {
     }
 }
 
-/// Creates randomized bandwidth model with uniform distribution with given low and high bounds.
+/// Creates randomized bandwidth model with uniform distribution in `[low, high]` range.
 pub fn make_uniform_bw_model(low: u64, high: u64) -> RandomizedBWModel<Uniform<u64>> {
     RandomizedBWModel::new(Uniform::<u64>::new(low, high))
 }
@@ -59,9 +59,9 @@ pub fn make_uniform_bw_model(low: u64, high: u64) -> RandomizedBWModel<Uniform<u
 
 /// Model which generates random bandwidth from specified weighted points distribution.
 pub struct EmpiricalBWModel {
-    /// Pairs of (value, proportion).
+    /// Pairs of (value, weight).
     points: Vec<(u64, u64)>,
-    /// Distribution to generate index of `points` from.
+    /// Distribution used to pick a random index from `points`.
     dist: WeightedIndex<u64>,
 }
 

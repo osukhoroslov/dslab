@@ -9,6 +9,9 @@ use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
 /// Representation of disk.
+///
+/// Disk is characterized by its capacity and read/write bandwidths (represented by bandwidth models).
+/// Disk state includes the amount of used disk space and the completion time of last pending activity (`ready_time`). 
 pub struct Disk {
     capacity: u64,
     used: u64,
@@ -54,7 +57,11 @@ impl Disk {
         request_id
     }
 
-    /// Requests reading from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
+    /// Submits data read request and returns unique request id.
+    ///
+    /// The amount of data read from disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -84,7 +91,11 @@ impl Disk {
         request_id
     }
 
-    /// Requests writing from disk of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this disk.
+    /// Submits data write request and returns unique request id.
+    ///
+    /// The amount of data written to disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
@@ -113,7 +124,9 @@ impl Disk {
         request_id
     }
 
-    /// Marks `size` as free. Given `size` should not be more than used space.
+    /// Marks previously used disk space of given `size` as free.
+    /// 
+    /// The `size` should not exceed the currently used disk space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
@@ -122,7 +135,7 @@ impl Disk {
         Err(format!("invalid size: {}", size))
     }
 
-    /// Returns amount of used space on disk.
+    /// Returns the amount of used disk space.
     pub fn get_used_space(&self) -> u64 {
         self.used
     }

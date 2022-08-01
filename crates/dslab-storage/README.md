@@ -1,6 +1,6 @@
-# DSLab storage crate
+# DSLab Storage Models
 
-This crate models such storage components as disk and file system.
+This crate includes the models of storage resources, such as disk and file system.
 
 ## Disk
 

@@ -1,4 +1,4 @@
-//! Implementation of fast sharing model.
+//! Fast implementation of fair throughput sharing model.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
