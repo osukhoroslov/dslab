@@ -67,7 +67,7 @@ macro_rules! log_info {
 ///
 /// # Examples
 ///
-/// See [`crate::log_info!`].
+/// See [log_info!](`crate::log_info!`).
 #[macro_export]
 macro_rules! log_debug {
     ($ctx:expr, $msg:expr) => (
@@ -90,7 +90,7 @@ macro_rules! log_debug {
 ///
 /// # Examples
 ///
-/// See [`crate::log_info!`].
+/// See [log_info!](`crate::log_info!`).
 #[macro_export]
 macro_rules! log_trace {
     ($ctx:expr, $msg:expr) => (
@@ -113,7 +113,7 @@ macro_rules! log_trace {
 ///
 /// # Examples
 ///
-/// See [`crate::log_info!`].
+/// See [log_info!](`crate::log_info!`).
 #[macro_export]
 macro_rules! log_error {
     ($ctx:expr, $msg:expr) => (
@@ -136,7 +136,7 @@ macro_rules! log_error {
 ///
 /// # Examples
 ///
-/// See [`crate::log_info!`].
+/// See [log_info!](`crate::log_info!`).
 #[macro_export]
 macro_rules! log_warn {
     ($ctx:expr, $msg:expr) => (
@@ -157,7 +157,7 @@ macro_rules! log_warn {
 
 /// Logs an unhandled event.
 ///
-/// This method is used internally in [`crate::cast!`] macro.
+/// This method is used internally in [`cast!`](`crate::cast!`) macro.
 pub fn log_unhandled_event(event: Event) {
     error!(
         target: "simulation",
