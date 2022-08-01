@@ -21,6 +21,7 @@ use dslab_dag::runner::{Config, DataTransferMode};
 use dslab_dag::scheduler::Scheduler;
 use dslab_dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_dag::schedulers::simple_with_data::SimpleDataScheduler;
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
@@ -33,11 +34,11 @@ struct Args {
     #[clap(long = "trace-log")]
     trace_log: bool,
 
-    /// Scheduler [heft, simple]
+    /// Scheduler [heft, simple, simple-with-data]
     #[clap(long, default_value = "heft")]
     scheduler: String,
 
-    /// Data transfer mode (via-master-node or direct)
+    /// Data transfer mode (via-master-node, direct or manual)
     #[clap(long = "data-transfer-mode", default_value = "via-master-node")]
     data_transfer_mode: String,
 }
@@ -48,6 +49,7 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
     let enable_trace_log = args.trace_log;
     let scheduler: Rc<RefCell<dyn Scheduler>> = match args.scheduler.as_str() {
         "simple" => rc!(refcell!(SimpleScheduler::new())),
+        "simple-with-data" => rc!(refcell!(SimpleDataScheduler::new())),
         "heft" => {
             rc!(refcell!(
                 HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
@@ -62,6 +64,7 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
     let data_transfer_mode = match args.data_transfer_mode.as_str() {
         "via-master-node" => DataTransferMode::ViaMasterNode,
         "direct" => DataTransferMode::Direct,
+        "manual" => DataTransferMode::Manual,
         _ => {
             eprintln!("Wrong data-transfer-mode");
             std::process::exit(1);

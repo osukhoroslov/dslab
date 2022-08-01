@@ -114,6 +114,12 @@ impl Scheduler for HeftScheduler {
         config: Config,
         ctx: &SimulationContext,
     ) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "HeftScheduler doesn't support DataTransferMode::Manual"
+        );
+
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,
@@ -199,6 +205,7 @@ impl Scheduler for HeftScheduler {
                         let data_upload_time = match data_transfer_mode {
                             DataTransferMode::ViaMasterNode => weight * avg_upload_net_time,
                             DataTransferMode::Direct => 0.,
+                            DataTransferMode::Manual => 0.,
                         };
                         eft[task] + data_upload_time
                     })
@@ -245,6 +252,7 @@ impl Scheduler for HeftScheduler {
                                     dag.get_data_item(f).size as f64 * cur_net_time
                                 }
                             }
+                            DataTransferMode::Manual => 0.,
                         })
                         .max_by(|a, b| a.total_cmp(&b))
                         .unwrap_or(0.),
@@ -331,7 +339,7 @@ impl Scheduler for HeftScheduler {
             eft[task] = best_finish;
             result.push((
                 best_finish - best_time,
-                Action::ScheduleOnCores {
+                Action::ScheduleTaskOnCores {
                     task,
                     resource: best_resource,
                     cores: best_cores,

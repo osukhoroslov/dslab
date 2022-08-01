@@ -4,7 +4,7 @@ use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::runner::Config;
+use crate::runner::{Config, DataTransferMode};
 use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
@@ -179,7 +179,7 @@ impl PortfolioScheduler {
             };
 
             resources[best_resource].cores_available -= cores;
-            result.push(Action::Schedule {
+            result.push(Action::ScheduleTask {
                 task,
                 resource: best_resource,
                 cores,
@@ -198,9 +198,14 @@ impl Scheduler for PortfolioScheduler {
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
         _network: &Network,
-        _config: Config,
+        config: Config,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "PortfolioScheduler doesn't support DataTransferMode::Manual"
+        );
         self.schedule(dag, resources)
     }
 

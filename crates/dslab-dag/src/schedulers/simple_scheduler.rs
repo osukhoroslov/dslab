@@ -2,7 +2,7 @@ use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::runner::Config;
+use crate::runner::{Config, DataTransferMode};
 use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 
@@ -37,7 +37,7 @@ impl SimpleScheduler {
                 let cores = resource.cores_available.min(task.max_cores);
                 resource.cores_available -= cores;
                 resource.memory_available -= task.memory;
-                result.push(Action::Schedule {
+                result.push(Action::ScheduleTask {
                     task: task_id,
                     resource: i,
                     cores,
@@ -55,9 +55,14 @@ impl Scheduler for SimpleScheduler {
         dag: &DAG,
         resources: &Vec<crate::resource::Resource>,
         _network: &Network,
-        _config: Config,
+        config: Config,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "SimpleScheduler doesn't support DataTransferMode::Manual"
+        );
         self.schedule(dag, resources)
     }
 

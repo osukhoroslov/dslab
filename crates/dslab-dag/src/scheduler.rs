@@ -1,3 +1,4 @@
+use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;
 
@@ -8,15 +9,20 @@ use crate::task::TaskState;
 
 #[derive(Debug)]
 pub enum Action {
-    Schedule {
+    ScheduleTask {
         task: usize,
         resource: usize,
         cores: u32,
     },
-    ScheduleOnCores {
+    ScheduleTaskOnCores {
         task: usize,
         resource: usize,
         cores: Vec<u32>,
+    },
+    TransferData {
+        data_item: usize,
+        from: Id,
+        to: Id,
     },
 }
 
