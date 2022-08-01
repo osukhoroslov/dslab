@@ -18,6 +18,33 @@ pub fn get_colored(s: &str, color: Color) -> ColoredString {
 }
 
 /// Logs a message at the info level.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::io::Write;
+/// use env_logger::Builder;
+/// use dslab_core::{log_info, Simulation, SimulationContext};
+///
+/// pub struct Component {
+///     ctx: SimulationContext,
+/// }
+///
+/// impl Component {
+///     fn start(&self) {
+///         log_info!(self.ctx, "started");
+///     }
+/// }
+///
+/// // configure env_logger
+/// Builder::from_default_env()
+///     .format(|buf, record| writeln!(buf, "{}", record.args()))
+///     .init();
+///
+/// let mut sim = Simulation::new(123);
+/// let comp = Component { ctx: sim.create_context("comp") };
+/// comp.start();
+/// ```
 #[macro_export]
 macro_rules! log_info {
     ($ctx:expr, $msg:expr) => (
@@ -37,6 +64,10 @@ macro_rules! log_info {
 }
 
 /// Logs a message at the debug level.
+///
+/// # Examples
+///
+/// See [`crate::log_info!`].
 #[macro_export]
 macro_rules! log_debug {
     ($ctx:expr, $msg:expr) => (
@@ -56,6 +87,10 @@ macro_rules! log_debug {
 }
 
 /// Logs a message at the trace level.
+///
+/// # Examples
+///
+/// See [`crate::log_info!`].
 #[macro_export]
 macro_rules! log_trace {
     ($ctx:expr, $msg:expr) => (
@@ -75,6 +110,10 @@ macro_rules! log_trace {
 }
 
 /// Logs a message at the error level.
+///
+/// # Examples
+///
+/// See [`crate::log_info!`].
 #[macro_export]
 macro_rules! log_error {
     ($ctx:expr, $msg:expr) => (
@@ -94,6 +133,10 @@ macro_rules! log_error {
 }
 
 /// Logs a message at the warn level.
+///
+/// # Examples
+///
+/// See [`crate::log_info!`].
 #[macro_export]
 macro_rules! log_warn {
     ($ctx:expr, $msg:expr) => (
@@ -113,6 +156,8 @@ macro_rules! log_warn {
 }
 
 /// Logs an unhandled event.
+///
+/// This method is used internally in [`crate::cast!`] macro.
 pub fn log_unhandled_event(event: Event) {
     error!(
         target: "simulation",
