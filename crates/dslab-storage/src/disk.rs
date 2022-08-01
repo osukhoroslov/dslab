@@ -11,7 +11,7 @@ use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataW
 /// Representation of disk.
 ///
 /// Disk is characterized by its capacity and read/write bandwidths (represented by bandwidth models).
-/// Disk state includes the amount of used disk space and the completion time of last pending activity (`ready_time`). 
+/// Disk state includes the amount of used disk space and the completion time of last pending activity (`ready_time`).
 pub struct Disk {
     capacity: u64,
     used: u64,
@@ -125,7 +125,7 @@ impl Disk {
     }
 
     /// Marks previously used disk space of given `size` as free.
-    /// 
+    ///
     /// The `size` should not exceed the currently used disk space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
