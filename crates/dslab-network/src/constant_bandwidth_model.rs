@@ -31,6 +31,7 @@ impl DataOperation for ConstantBandwidthNetwork {
     }
 
     fn receive_data(&mut self, _data: Data, _ctx: &mut SimulationContext) {}
+    fn recalculate_operations(&mut self, _ctx: &mut SimulationContext) {}
 }
 
 impl NetworkModel for ConstantBandwidthNetwork {}
