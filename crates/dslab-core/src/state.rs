@@ -50,6 +50,10 @@ impl SimulationState {
     where
         T: EventData,
     {
+        assert!(
+            delay >= 0.0,
+            "Event delay is negative! It is not allowed to add events from the past."
+        );
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
