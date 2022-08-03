@@ -1,4 +1,11 @@
-//! Disk model.
+//! Simple disk model.
+//!
+//! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
+//! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
+//! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
+//! There is also a support for __bandwidth models__ - methods that provide bandwidth for given size.
+//! Constant, randomized and empirical models are preset on this crate and arbitrary used-defined models can be defined by user.
+//! This model of disk **does not** support throughput sharing, so disk can process only one request on each time.
 
 use sugars::boxed;
 

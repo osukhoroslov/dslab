@@ -1,5 +1,6 @@
+//! This crate includes the models of storage resources, such as disk and file system.
+
 #![warn(missing_docs)]
-#![doc = include_str!("../README.md")]
 
 pub mod bandwidth;
 pub mod disk;

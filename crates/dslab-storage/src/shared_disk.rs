@@ -1,4 +1,8 @@
 //! Shared disk model.
+//!
+//! This is an alternative disk model, focusing on throughput sharing.
+//! It depends on [dslab-models](../dslab-models/) crate and transfers all computations to abstract fair sharing model.
+//! Methods set is the same as for simple disk model.
 
 use serde::Serialize;
 

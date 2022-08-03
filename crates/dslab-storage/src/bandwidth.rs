@@ -1,4 +1,15 @@
 //! Bandwidth models.
+//!
+//! These models represent different policies on how bandwidth changes over the size and the simulation time.
+//! All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value from `size` and simulation context `ctx`.
+//! Using `ctx`, simulation time and random engine can be accessed.
+//!
+//! There are 3 predefined models:
+//! * [`ConstantBWModel`]
+//! * [`RandomizedBWModel`]
+//! * [`EmpiricalBWModel`]
+//!
+//! Bandwidth models are supported by simple disk model.
 
 use rand::distributions::{Distribution, Uniform, WeightedError, WeightedIndex};
 
