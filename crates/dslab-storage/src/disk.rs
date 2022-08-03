@@ -6,7 +6,7 @@
 //! There is also a support for __bandwidth models__ - methods that provide bandwidth for given size.
 //! Constant, randomized and empirical models are preset on this crate and arbitrary used-defined models can be defined by user.
 //! This model of disk **does not** support throughput sharing, so disk can process only one request on each time.
-//! 
+//!
 //! Corresponding example: `storage-disk`
 
 use sugars::boxed;
