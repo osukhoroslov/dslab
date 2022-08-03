@@ -1,8 +1,7 @@
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
-use dslab_models::fair_sharing::FairThroughputSharingModel;
-use dslab_models::model::ThroughputSharingModel;
+use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
 
 use crate::model::*;
 

@@ -1,7 +1,7 @@
 //! Definition of the throughput model trait.
 
 /// Trait for throughput sharing model.
-pub trait ThroughputSharingModel<T> {
+pub trait Model<T> {
     /// Adds new activity into the model.
     ///
     /// Activity starts at `current_time`, has amount of work `value` and is represented by `item`.

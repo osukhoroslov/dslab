@@ -6,8 +6,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 
-use dslab_models::fair_sharing::FairThroughputSharingModel;
-use dslab_models::model::ThroughputSharingModel;
+use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
 
 // STRUCTS //////////////////////////////////////////////////////////////////////////////////////////
 

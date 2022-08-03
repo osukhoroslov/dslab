@@ -5,7 +5,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::{ThroughputFunction, ThroughputSharingModel};
+use super::model::{Model, ThroughputFunction};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -47,7 +47,7 @@ impl<T> PartialEq for Activity<T> {
 impl<T> Eq for Activity<T> {}
 
 /// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation and completion.
-pub struct SlowFairThroughputSharingModel<T> {
+pub struct SlowFairModel<T> {
     throughput_function: ThroughputFunction,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
@@ -55,7 +55,7 @@ pub struct SlowFairThroughputSharingModel<T> {
     last_recalculation_time: f64,
 }
 
-impl<T> SlowFairThroughputSharingModel<T> {
+impl<T> SlowFairModel<T> {
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
@@ -85,7 +85,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
     }
 }
 
-impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
+impl<T> Model<T> for SlowFairModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         let new_count = self.entries.len() + 1;
         self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);
