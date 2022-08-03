@@ -1,3 +1,5 @@
+//! Shared disk model.
+
 use serde::Serialize;
 
 use dslab_core::cast;
@@ -19,11 +21,15 @@ struct DiskActivity {
 }
 
 #[derive(Serialize)]
-pub struct DiskReadActivityCompleted {}
+struct DiskReadActivityCompleted {}
 
 #[derive(Serialize)]
-pub struct DiskWriteActivityCompleted {}
+struct DiskWriteActivityCompleted {}
 
+/// Representation of shared disk.
+/// 
+/// Shared disk is characterized by its capacity and read/write throughput models.
+/// Shared disk state includes the amount of used disk space and state of throughput models.
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
@@ -36,6 +42,7 @@ pub struct SharedDisk {
 }
 
 impl SharedDisk {
+    /// Creates new shared disk with fixed read and write throughput.
     pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
@@ -49,6 +56,7 @@ impl SharedDisk {
         }
     }
 
+    /// Creates new shared disk with given read and write throughput functions.
     pub fn new(
         capacity: u64,
         read_tf: ThroughputFunction,
@@ -67,6 +75,11 @@ impl SharedDisk {
         }
     }
 
+    /// Submits data read request and returns unique request id.
+    ///
+    /// The amount of data read from disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -98,6 +111,11 @@ impl SharedDisk {
         request_id
     }
 
+    /// Submits data write request and returns unique request id.
+    ///
+    /// The amount of data written to disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
@@ -128,6 +146,9 @@ impl SharedDisk {
         request_id
     }
 
+    /// Marks previously used disk space of given `size` as free.
+    ///
+    /// The `size` should not exceed the currently used disk space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
@@ -136,10 +157,12 @@ impl SharedDisk {
         Err(format!("invalid size: {}", size))
     }
 
+    /// Returns the amount of used disk space.
     pub fn get_used_space(&self) -> u64 {
         self.used
     }
 
+    /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }
