@@ -113,6 +113,7 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
+    // Creating empirical bandwidth model with weighted points distribution
     let points = [
         (DISK_READ_BW - 20, 3),
         (DISK_READ_BW - 10, 10),
@@ -126,7 +127,9 @@ fn main() {
 
     let disk = rc!(refcell!(Disk::new(
         DISK_CAPACITY,
+        // Using created model as read bandwidth model for disk
         boxed!(model.unwrap()),
+        // Creating uniformly randomized bandwidth model with bounds [DISK_WRITE_BW - 10; DISK_WRITE_BW + 10)
         boxed!(make_uniform_bw_model(DISK_WRITE_BW - 10, DISK_WRITE_BW + 10)),
         sim.create_context(DISK_NAME),
     )));

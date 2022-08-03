@@ -161,13 +161,13 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
+    // Creating two disks for file system
     let disk1 = rc!(refcell!(Disk::new_simple(
         DISK_1_CAPACITY,
         DISK_1_READ_BW,
         DISK_1_WRITE_BW,
         sim.create_context(DISK_1_NAME),
     )));
-
     let disk2 = rc!(refcell!(Disk::new_simple(
         DISK_2_CAPACITY,
         DISK_2_READ_BW,
@@ -178,6 +178,7 @@ fn main() {
     let fs = rc!(refcell!(FileSystem::new(sim.create_context(FILESYSTEM_NAME))));
     sim.add_handler(FILESYSTEM_NAME, fs.clone());
 
+    // Mounting disks to created FS at disjoint mount points
     fs.borrow_mut().mount_disk(DISK_1_MOUNT_POINT, disk1).unwrap();
     fs.borrow_mut().mount_disk(DISK_2_MOUNT_POINT, disk2).unwrap();
 
