@@ -3,6 +3,7 @@
 //! These models represent different policies on how bandwidth changes over the size and the simulation time.
 //! All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value from `size` and simulation context `ctx`.
 //! Using `ctx`, simulation time and random engine can be accessed.
+//! This method will be called each time when new disk read/write request is made.
 //!
 //! There are 3 predefined models:
 //! * [`ConstantBWModel`]
