@@ -79,7 +79,11 @@ impl FileSystem {
         request_id
     }
 
-    /// Requests reading from `file_name` of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
+    /// Submits file read request and returns unique request id.
+    ///
+    /// The amount of data read from file with name `file_name` is specified in `size`.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current file system.
     pub fn read(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -91,7 +95,11 @@ impl FileSystem {
         self.read_impl(file_name, Some(size), requester)
     }
 
-    /// Requests reading from `file_name` of all size of this file. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
+    /// Submits file read request and returns unique request id.
+    ///
+    /// The amount of data read from file with name `file_name` is equal to the file size.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion.
+    /// Note that the returned request id is unique only within the current file system.
     pub fn read_all(&mut self, file_name: &str, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -161,7 +169,11 @@ impl FileSystem {
         request_id
     }
 
-    /// Requests writing to `file_name` of `size`. Emits response event to `requester`. Returns `request_id` which is unique to this file system.
+    /// Submits file write request and returns unique request id.
+    ///
+    /// The amount of data written to file with name `file_name` is specified in `size`.
+    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current file system.
     pub fn write(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
