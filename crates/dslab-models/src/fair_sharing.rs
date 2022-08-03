@@ -67,7 +67,7 @@ impl TimeFunction {
     }
 }
 
-/// Implementation of fast sharing model.
+/// Fast implementation of fair throughput sharing model..
 pub struct FairThroughputSharingModel<T> {
     throughput_function: ThroughputFunction,
     time_fn: TimeFunction,
