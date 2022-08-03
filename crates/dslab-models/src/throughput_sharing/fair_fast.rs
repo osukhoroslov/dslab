@@ -5,7 +5,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-pub use super::model::{Model, ThroughputFunction};
+use super::model::{Model, ThroughputFunction};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
