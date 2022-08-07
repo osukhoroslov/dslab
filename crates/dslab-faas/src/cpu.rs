@@ -38,10 +38,7 @@ impl PartialOrd for WorkItem {
 
 impl Ord for WorkItem {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.finish
-            .partial_cmp(&other.finish)
-            .unwrap()
-            .then(self.id.cmp(&other.id))
+        self.finish.total_cmp(&other.finish).then(self.id.cmp(&other.id))
     }
 }
 
@@ -52,10 +49,10 @@ pub struct ProgressComputer {
     work_map: HashMap<u64, WorkItem>,
     work_total: KahanSum,
     cores: f64,
-    ctx: Rc<RefCell<SimulationContext>>,
     load: KahanSum,
     last_update: f64,
     end_event: Option<EventId>,
+    ctx: Rc<RefCell<SimulationContext>>,
 }
 
 impl ProgressComputer {
@@ -91,14 +88,6 @@ impl ProgressComputer {
         self.work_tree.insert(it);
     }
 
-    fn transform_time(&self, time: f64, share: f64, forward: bool) -> f64 {
-        if forward {
-            share * time / self.cores
-        } else {
-            time * self.cores / share
-        }
-    }
-
     fn shift_time(&mut self, time: f64) {
         self.work_total += (time - self.last_update) / f64::max(self.cores, *self.load);
     }
@@ -122,14 +111,7 @@ impl ProgressComputer {
         } else {
             self.load += container.cpu_share;
         }
-        self.insert_invocation(
-            invocation.id,
-            self.transform_time(
-                invocation.request.duration,
-                container.cpu_share / (container.invocations.len() as f64),
-                true,
-            ),
-        );
+        self.insert_invocation(invocation.id, invocation.request.duration / self.cores);
         self.last_update = time;
         self.reschedule_end();
     }
@@ -168,14 +150,22 @@ impl CPU {
             work_map: Default::default(),
             work_total: Default::default(),
             cores: cores as f64,
-            ctx,
             load: Default::default(),
             last_update: 0.,
             end_event: None,
+            ctx,
         };
         Self {
             cores,
             progress_computer,
         }
+    }
+
+    pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+        self.progress_computer.on_new_invocation(invocation, container, time)
+    }
+
+    pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+        self.progress_computer.on_invocation_end(invocation, container, time)
     }
 }

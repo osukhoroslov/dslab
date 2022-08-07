@@ -60,13 +60,7 @@ impl Stats {
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
-            if let Some(old) = self.wasted_resource_time.get_mut(&req.id) {
-                old.add(delta);
-            } else {
-                let mut metric: SampleMetric<f64> = Default::default();
-                metric.add(delta);
-                self.wasted_resource_time.insert(req.id, metric);
-            }
+            self.wasted_resource_time.entry(req.id).or_default().add(delta);
         }
     }
 }

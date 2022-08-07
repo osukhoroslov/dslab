@@ -124,11 +124,7 @@ impl ContainerManager {
     }
 
     pub fn reserve_container(&mut self, id: u64, request: InvocationRequest) {
-        if let Some(reserve) = self.reservations.get_mut(&id) {
-            reserve.push(request);
-        } else {
-            self.reservations.insert(id, vec![request]);
-        }
+        self.reservations.entry(id).or_default().push(request);
     }
 
     pub fn take_reservations(&mut self, id: u64) -> Option<Vec<InvocationRequest>> {

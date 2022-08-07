@@ -83,6 +83,7 @@ impl Host {
     }
 
     pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+        self.container_manager.inc_active_invocations();
         let status = self.invoker.invoke(
             request,
             self.function_registry.clone(),
@@ -138,9 +139,7 @@ impl Host {
         container.start_invocation(inv_id);
         let mut ir = self.invocation_registry.borrow_mut();
         let invocation = ir.get_invocation_mut(inv_id).unwrap();
-        self.cpu
-            .progress_computer
-            .on_new_invocation(invocation, container, time);
+        self.cpu.on_new_invocation(invocation, container, time);
     }
 
     fn on_container_start(&mut self, id: u64, time: f64) {
@@ -184,9 +183,7 @@ impl Host {
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         self.stats.borrow_mut().update_invocation_stats(invocation);
-        self.cpu
-            .progress_computer
-            .on_invocation_end(invocation, container, time);
+        self.cpu.on_invocation_end(invocation, container, time);
         let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
