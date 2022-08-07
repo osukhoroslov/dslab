@@ -33,7 +33,11 @@ impl PartialEq for Event {
 
 impl Ord for Event {
     fn cmp(&self, other: &Self) -> Ordering {
-      other.time.to_bits().cmp(&self.time.to_bits()).then_with(|| other.id.cmp(&self.id))
+        other
+            .time
+            .to_bits()
+            .cmp(&self.time.to_bits())
+            .then_with(|| other.id.cmp(&self.id))
     }
 }
 
