@@ -1,3 +1,5 @@
+//! Physical machines actual load.
+
 use std::collections::btree_map::Keys;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -10,6 +12,7 @@ use dslab_core::log_trace;
 
 use crate::core::events::monitoring::HostStateUpdate;
 
+/// Host state contains resource capacity and current actual load. In addition a set of active VMs is stored.
 #[derive(Clone)]
 pub struct HostState {
     pub cpu_load: f64,
@@ -37,6 +40,7 @@ impl HostState {
 }
 
 impl Monitoring {
+    /// Create component.
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
             host_states: BTreeMap::new(),
@@ -44,31 +48,39 @@ impl Monitoring {
         }
     }
 
+    /// Get component ID.
     pub fn get_id(&self) -> u32 {
         self.ctx.id()
     }
 
+    /// Get host state reference.
     pub fn get_host_state(&self, host: u32) -> &HostState {
         &self.host_states[&host]
     }
 
+    /// Get all cluster hosts iterator.
     pub fn get_hosts_list(&self) -> Keys<u32, HostState> {
         self.host_states.keys()
     }
 
+    /// Get all active VMS on specified host.
     pub fn get_host_vms(&self, host: u32) -> BTreeSet<u32> {
         self.host_states[&host].vms.clone()
     }
 
+    /// Get all host states.
     pub fn get_host_states(&self) -> &BTreeMap<u32, HostState> {
         &self.host_states
     }
 
+    /// Add new host to central database.
     pub fn add_host(&mut self, host_id: u32, cpu_total: u32, memory_total: u64) {
         self.host_states
             .insert(host_id, HostState::new(cpu_total, memory_total));
     }
 
+    /// Hosts periodically send their states to main storage.
+    /// This function processes these reports.
     fn update_host_state(
         &mut self,
         host_id: u32,
