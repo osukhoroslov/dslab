@@ -1,3 +1,5 @@
+//! Central copy of cluster state database.
+
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -17,6 +19,7 @@ use crate::core::events::allocation::{
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
 
+/// Central cluster state database, schedulers conflicts resolver.
 pub struct PlacementStore {
     allow_vm_overcommit: bool,
     pool_state: ResourcePoolState,
@@ -27,6 +30,7 @@ pub struct PlacementStore {
 }
 
 impl PlacementStore {
+    /// Create component.
     pub fn new(
         allow_vm_overcommit: bool,
         vm_api: Rc<RefCell<VmAPI>>,
@@ -43,23 +47,28 @@ impl PlacementStore {
         }
     }
 
+    /// Get component ID.
     pub fn get_id(&self) -> u32 {
         self.ctx.id()
     }
 
+    /// Add new host to database.
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
         self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
+    /// Subscribe new scheduler on system allocation events.
     pub fn add_scheduler(&mut self, id: u32) {
         self.schedulers.insert(id);
     }
 
+    /// Get current cluster state in order to copy it to new scheduler.
     pub fn get_pool_state(&self) -> ResourcePoolState {
         self.pool_state.clone()
     }
 
+    /// Try to apply scheduler decision. In case of conflict there are no enough space available.
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
@@ -103,6 +112,8 @@ impl PlacementStore {
         }
     }
 
+    /// If host allocation fails, usually that means host is overloaded.
+    /// Allocate resources locally and inform all known schedulers.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
@@ -115,6 +126,7 @@ impl PlacementStore {
         }
     }
 
+    /// When VM lifecycle finishes - release resources locally and inform all known schedulers.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);

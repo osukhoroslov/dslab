@@ -1,3 +1,5 @@
+//! Simulation configuration and execution. Library API.
+
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -22,6 +24,7 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
 
+/// Represents a simulation, provides methods for its configuration and execution.
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
     vm_api: Rc<RefCell<VmAPI>>,
@@ -35,6 +38,7 @@ pub struct CloudSimulation {
 }
 
 impl CloudSimulation {
+    /// Creates a simulation with specific config.
     pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         sim.add_handler("monitoring", monitoring.clone());
@@ -64,6 +68,7 @@ impl CloudSimulation {
         }
     }
 
+    /// Creates new host with specified CPU and RAM capacity. Returns a component ID.
     pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
         // create host
         let host = rc!(refcell!(HostManager::new(
@@ -91,6 +96,7 @@ impl CloudSimulation {
         id
     }
 
+    /// Creates new scheduler with specified host selection algorithm. Returns a component ID.
     pub fn add_scheduler(&mut self, name: &str, vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>) -> u32 {
         // create scheduler using current state from placement store
         let pool_state = self.placement_store.borrow_mut().get_pool_state();
@@ -110,6 +116,7 @@ impl CloudSimulation {
         id
     }
 
+    /// Created a VM allocation request on specified scheduler. Request will be processed immediately.
     pub fn spawn_vm_now(
         &mut self,
         cpu_usage: u32,
@@ -136,6 +143,7 @@ impl CloudSimulation {
         id
     }
 
+    /// Created a VM allocation request on specified scheduler with some delay.
     pub fn spawn_vm_with_delay(
         &mut self,
         cpu_usage: u32,
@@ -163,6 +171,7 @@ impl CloudSimulation {
         id
     }
 
+    /// Migrate VM to specified host is there are enough space available on target host.
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let vm_api = self.vm_api.borrow();
         let source_host = vm_api.find_host_by_vm(vm_id);
@@ -173,6 +182,7 @@ impl CloudSimulation {
         );
     }
 
+    /// Add custom component to simulation.
     pub fn build_custom_component<Component: 'static + CustomComponent>(
         &mut self,
         name: &str,
@@ -183,6 +193,7 @@ impl CloudSimulation {
         component
     }
 
+    /// Spawn all VMs from given dataset on specified scheduler.
     pub fn spawn_vms_from_dataset(&mut self, scheduler_id: u32, dataset: &mut dyn DatasetReader) {
         loop {
             let request_opt = dataset.get_next_vm();
@@ -204,50 +215,62 @@ impl CloudSimulation {
         }
     }
 
+    /// Get reference to monitoring component (actual host load).
     pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {
         self.monitoring.clone()
     }
 
+    /// Get reference to VMAPI component (VM status, location, etc.).
     pub fn vm_api(&self) -> Rc<RefCell<VmAPI>> {
         self.vm_api.clone()
     }
 
+    /// Get simulation context (to get current time).
     pub fn context(&self) -> &SimulationContext {
         return &self.ctx;
     }
 
+    /// Process N simulation steps.
     pub fn steps(&mut self, step_count: u64) -> bool {
         return self.sim.steps(step_count);
     }
 
+    /// Process simulation for "time" duration.
     pub fn step_for_duration(&mut self, time: f64) {
         self.sim.step_for_duration(time);
     }
 
+    /// Number of events processed yet.
     pub fn event_count(&self) -> u64 {
         return self.sim.event_count();
     }
 
+    /// Get current simulation time.
     pub fn current_time(&mut self) -> f64 {
         return self.sim.time();
     }
 
+    /// Get reference to host (host energy consumption, allocated resources etc.).
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
     }
 
+    /// Get reference to VM.
     pub fn vm(&self, vm_id: u32) -> Rc<RefCell<VirtualMachine>> {
         self.vm_api.borrow().get_vm(vm_id)
     }
 
+    /// Get VM status (running, initializing, finished, etc.).
     pub fn vm_status(&self, vm_id: u32) -> VmStatus {
         self.vm_api.borrow().get_vm_status(vm_id)
     }
 
+    /// Get VM location host ID.
     pub fn vm_location(&self, vm_id: u32) -> u32 {
         self.vm_api.borrow().find_host_by_vm(vm_id)
     }
 
+    /// Get simulation config.
     pub fn sim_config(&self) -> Rc<SimulationConfig> {
         self.sim_config.clone()
     }

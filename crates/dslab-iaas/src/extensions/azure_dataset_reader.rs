@@ -1,3 +1,5 @@
+//! Microsoft Azure 2020 dataset reader.
+
 use std::collections::HashMap;
 use std::fs::File;
 
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
+/// A SQL table contains VM types and their CPU and RAM capacity.
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 struct VMType {
@@ -17,6 +20,7 @@ struct VMType {
     memory: f64,
 }
 
+/// A SQL table contains VM instances information.
 #[derive(Serialize, Deserialize, Debug)]
 struct VMInstance {
     #[serde(rename = "vmId")]
@@ -29,6 +33,7 @@ struct VMInstance {
     end_time: Option<f64>,
 }
 
+/// /// Parse Azure .csv converted dataset files.
 pub struct AzureDatasetReader {
     simulation_length: f64,
     host_cpu_capacity: f64,
@@ -40,6 +45,7 @@ pub struct AzureDatasetReader {
 }
 
 impl AzureDatasetReader {
+    /// Create dataset reader. CPU and RAM capacity are specified in order to properly scale dataset VM sizes.
     pub fn new(simulation_length: f64, host_cpu_capacity: f64, host_memory_capacity: f64) -> Self {
         Self {
             simulation_length,
@@ -51,11 +57,13 @@ impl AzureDatasetReader {
         }
     }
 
+    /// Parse files.
     pub fn parse(&mut self, vm_types_file_name: String, vm_instances_file_name: String) {
         self.parse_vm_types(vm_types_file_name);
         self.parse_vm_instances(vm_instances_file_name);
     }
 
+    /// Parse VM types file.
     fn parse_vm_types(&mut self, file_name: String) {
         let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
         for record in reader.deserialize() {
@@ -64,6 +72,7 @@ impl AzureDatasetReader {
         }
     }
 
+    /// Parse VM instances file.
     fn parse_vm_instances(&mut self, file_name: String) {
         let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
         for record in reader.deserialize() {
@@ -82,6 +91,7 @@ impl AzureDatasetReader {
 }
 
 impl DatasetReader for AzureDatasetReader {
+    /// Standard dataset reader interface to get next VM to schedule it.
     fn get_next_vm(&mut self) -> Option<VMRequest> {
         if self.current_vm >= self.vm_instances.len() {
             return None;

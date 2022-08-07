@@ -1,3 +1,5 @@
+//! Simulation config.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -17,6 +19,7 @@ pub struct SimulationConfigRaw {
     pub vm_allocation_timeout: Option<f64>, // VM becomes failed after this timeout is reached
 }
 
+/// Configutable parameters, got from .yaml config or default value.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfig {
     pub send_stats_period: f64,       // periodically send statistics from host to monitoring
@@ -35,6 +38,7 @@ pub struct SimulationConfig {
 }
 
 impl SimulationConfig {
+    /// Build config from .yaml file or use default value is some properties are absent.
     pub fn new() -> Self {
         Self {
             send_stats_period: 0.5,
@@ -53,6 +57,7 @@ impl SimulationConfig {
         }
     }
 
+    /// Parse .yaml file
     pub fn from_file(file_name: &str) -> Self {
         let data: SimulationConfigRaw =
             serde_yaml::from_str(&std::fs::read_to_string(file_name).expect(&format!("Can't read file {}", file_name)))

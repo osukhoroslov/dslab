@@ -1,14 +1,22 @@
+//! Host selection algorithms.
+
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 
+/// Interface of host selection algorithm.
+/// alloc - allocated VM capacity
+/// pool_state - allocated resources on cluster hosts
+/// monitoring - host actual loads
+/// The algorithm returns ID of selected host where resources will be allocated.
 pub trait VMPlacementAlgorithm {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// First fit algorithm.
 pub struct FirstFit;
 
 impl FirstFit {
@@ -30,6 +38,7 @@ impl VMPlacementAlgorithm for FirstFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Best fit algorithm. Select the most CPU loaded machine.
 pub struct BestFit;
 
 impl BestFit {
@@ -57,6 +66,7 @@ impl VMPlacementAlgorithm for BestFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Best fit algorithm. Select the least CPU loaded machine.
 pub struct WorstFit;
 
 impl WorstFit {
@@ -84,6 +94,7 @@ impl VMPlacementAlgorithm for WorstFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Best fit algorithm. Select the most CPU loaded machine by actual load.
 pub struct BestFitThreshold {
     threshold: f64,
 }
@@ -116,3 +127,5 @@ impl VMPlacementAlgorithm for BestFitThreshold {
         return result;
     }
 }
+
+// implement your host selection algorithm here

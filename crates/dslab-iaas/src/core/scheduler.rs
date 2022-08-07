@@ -1,3 +1,5 @@
+//! Apply host selection algorithm to find a physical machine, where to allocate resources.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -19,6 +21,7 @@ use crate::core::vm::VmStatus;
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
+/// Aggregate cluster state information in order to find host for incoming VMs.
 pub struct Scheduler {
     pub id: u32,
     pool_state: ResourcePoolState,
@@ -31,6 +34,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
+    /// Create component with specified host selection algorithm.
     pub fn new(
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
@@ -52,11 +56,15 @@ impl Scheduler {
         }
     }
 
+    /// Add created host to local storage.
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
         self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
+    /// Process allocation request, find host and start allocation process.
+    /// Local scheduler storage contains it`s own decisions merged with central cluster state.
+    /// After decision is made, it is submitted to central PlacementStore in order to resolve conflicts.
     fn on_allocation_request(&mut self, vm_id: u32) {
         let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
@@ -98,21 +106,25 @@ impl Scheduler {
         }
     }
 
+    /// Apply confirmed allocation from central storage.
     fn on_allocation_commit_succeeded(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.allocate(&alloc, host_id);
     }
 
+    /// Apply failed allocation from central storage.
     fn on_allocation_commit_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
     }
 
+    /// Apply VM ending from central storage.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
     }
 
+    /// Apply VM allocation failed.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);

@@ -1,3 +1,5 @@
+//! Huawei 2021 dataset reader.
+
 use std::collections::HashMap;
 use std::fs::File;
 
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
+/// Represents allocation or deallocation request from dataset.
 #[derive(Serialize, Deserialize, Debug)]
 struct VMEvent {
     #[serde(rename = "vmid")]
@@ -21,6 +24,7 @@ struct VMEvent {
     is_finish: u32,
 }
 
+/// Parse Huawei .csv dataset files.
 pub struct HuaweiDatasetReader {
     simulation_length: f64,
 
@@ -30,6 +34,7 @@ pub struct HuaweiDatasetReader {
 }
 
 impl HuaweiDatasetReader {
+    /// Create reader to get some first VM from dataset.
     pub fn new(simulation_length: f64) -> Self {
         Self {
             simulation_length,
@@ -39,6 +44,7 @@ impl HuaweiDatasetReader {
         }
     }
 
+    /// Parse dataset files.
     pub fn parse(&mut self, vm_events_file_name: String) {
         let mut reader = csv::Reader::from_reader(File::open(vm_events_file_name).unwrap());
         let mut active_vms_count = 0;
@@ -74,6 +80,7 @@ impl HuaweiDatasetReader {
 }
 
 impl DatasetReader for HuaweiDatasetReader {
+    /// Standard dataset reader interface to get next VM to schedule it.
     fn get_next_vm(&mut self) -> Option<VMRequest> {
         if self.current_vm >= self.vm_requests.len() {
             return None;
