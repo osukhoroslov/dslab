@@ -139,7 +139,7 @@ impl ProgressComputer {
 
 pub struct CPU {
     pub cores: u32,
-    pub progress_computer: ProgressComputer,
+    progress_computer: ProgressComputer,
 }
 
 impl CPU {
