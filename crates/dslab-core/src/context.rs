@@ -132,8 +132,8 @@ impl SimulationContext {
     /// The event time will be `current_time + delay`.
     /// It is not allowed to create events before the current simulation time, so `delay` should be non-negative.
     ///
-    /// The event source will be equal to [id()](`Self::id()`). See [emit_as()](`Self::emit_as()`) if you want to emit event on behalf
-    /// of some other component.
+    /// The event source will be equal to [`id`](Self::id()).
+    /// See [`emit_as()`](Self::emit_as()) if you want to emit event on behalf of some other component.
     ///
     /// # Examples
     ///
@@ -198,7 +198,7 @@ impl SimulationContext {
 
     /// Creates new immediate (zero-delay) event with specified payload and destination, returns event id.
     ///
-    /// This is a shorthand for [emit()](`Self::emit()`) with zero delay.
+    /// This is a shorthand for [`emit()`](Self::emit()) with zero delay.
     ///
     /// # Examples
     ///
@@ -249,7 +249,7 @@ impl SimulationContext {
 
     /// Creates new event for itself with specified payload and delay, returns event id.
     ///
-    /// This is a shorthand for [emit()](`Self::emit()`) with event destination equals [id()](`Self::id()`).
+    /// This is a shorthand for [`emit()`](Self::emit()) with event destination equals [`id`](Self::id()).
     ///
     /// # Examples
     ///
@@ -305,7 +305,7 @@ impl SimulationContext {
 
     /// Creates new immediate event for itself with specified payload, returns event id.
     ///
-    /// This is a shorthand for [emit()](`Self::emit()`) with event destination equals [id()](`Self::id()`)
+    /// This is a shorthand for [`emit()`](Self::emit()) with event destination equals [`id`](Self::id())
     /// and zero delay.
     ///
     /// # Examples
@@ -362,7 +362,7 @@ impl SimulationContext {
 
     /// Creates new event with specified payload, source, destination and delay, returns event id.
     ///
-    /// This is an extended version of [emit()](`Self::emit()`) for special cases when the event should be emitted
+    /// This is an extended version of [`emit()`](Self::emit()) for special cases when the event should be emitted
     /// on behalf of another component.
     ///
     /// ```rust
@@ -415,7 +415,7 @@ impl SimulationContext {
 
     /// Cancels the specified event.
     ///
-    /// Use [EventId](`crate::event::EventId`) obtained when creating the event to cancel it.
+    /// Use [`EventId`](crate::event::EventId) obtained when creating the event to cancel it.
     /// Note that already processed events cannot be cancelled.
     ///
     /// # Examples

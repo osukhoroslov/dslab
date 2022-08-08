@@ -52,7 +52,7 @@ pub trait EventHandler {
 }
 
 /// Enables the use of pattern matching syntax for processing different types of events
-/// by downcasting the event payload from [EventData](`crate::event::EventData`) to user-defined types.
+/// by downcasting the event payload from [`EventData`](crate::event::EventData) to user-defined types.
 ///
 /// Note that match arms need not be exhaustive. However, if the event payload does not match any of specified arms,
 /// the macro will log the event as unhandled under `ERROR` level.  

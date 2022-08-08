@@ -257,7 +257,7 @@ impl Simulation {
     /// Performs a single step through the simulation.
     ///
     /// Takes the next event from the queue, advances the simulation time to event time and tries to process it
-    /// by invoking the [EventHandler::on()](`crate::EventHandler::on()`) method of the corresponding event handler.
+    /// by invoking the [`EventHandler::on()`](crate::EventHandler::on()) method of the corresponding event handler.
     /// If there is no handler registered for component with Id `event.dest`, logs the undelivered event and discards it.
     ///
     /// Returns `true` if some pending event was found (no matter was it properly processed or not) and `false`
@@ -315,7 +315,7 @@ impl Simulation {
 
     /// Performs the specified number of steps through the simulation.
     ///
-    /// This is a convenient wrapper around [step()](`Self::step()`), which invokes this method until the specified number of
+    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the specified number of
     /// steps is made, or `false` is returned (no more pending events).
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
@@ -354,7 +354,7 @@ impl Simulation {
 
     /// Steps through the simulation until there are no pending events left.
     ///
-    /// This is a convenient wrapper around [step()](`Self::step()`), which invokes this method until `false` is returned.
+    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until `false` is returned.
     ///
     /// # Examples
     ///
@@ -381,7 +381,7 @@ impl Simulation {
 
     /// Steps through the simulation with duration limit.
     ///
-    /// This is a convenient wrapper around [step()](`Self::step()`), which invokes this method until the next event
+    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
     /// time is above the specified threshold (`current_time + duration`) or there are no pending events left.
     ///
     /// # Examples
