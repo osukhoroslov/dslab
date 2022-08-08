@@ -92,7 +92,7 @@ impl ProgressComputer {
         self.work_total += (time - self.last_update) / f64::max(self.cores, *self.load);
     }
 
-    pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+    fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
         if self.disable_contention {
             self.ctx
                 .borrow_mut()
@@ -116,7 +116,7 @@ impl ProgressComputer {
         self.reschedule_end();
     }
 
-    pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
+    fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
         if self.disable_contention {
             return;
         }
