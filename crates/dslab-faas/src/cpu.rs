@@ -105,13 +105,16 @@ impl ProgressComputer {
             for i in container.invocations.iter().copied() {
                 if i != invocation.id {
                     let remain = self.remove_invocation(i);
-                    self.insert_invocation(i, remain * cnt / (cnt - 1.0))
+                    self.insert_invocation(i, remain * cnt / (cnt - 1.0));
                 }
             }
         } else {
             self.load += container.cpu_share;
         }
-        self.insert_invocation(invocation.id, invocation.request.duration / self.cores);
+        self.insert_invocation(
+            invocation.id,
+            invocation.request.duration / self.cores * (container.invocations.len() as f64),
+        );
         self.last_update = time;
         self.reschedule_end();
     }
@@ -127,7 +130,7 @@ impl ProgressComputer {
             let cnt = container.invocations.len() as f64;
             for i in container.invocations.iter().copied() {
                 let remain = self.remove_invocation(i);
-                self.insert_invocation(i, remain * cnt / (cnt + 1.0))
+                self.insert_invocation(i, remain * cnt / (cnt + 1.0));
             }
         } else {
             self.load -= container.cpu_share;

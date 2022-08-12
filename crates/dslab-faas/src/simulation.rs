@@ -10,7 +10,7 @@ use crate::controller::Controller;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
-use crate::invocation::{InvocationRegistry, InvocationRequest};
+use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::Stats;
@@ -71,6 +71,10 @@ impl ServerlessSimulation {
         ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
+    pub fn get_invocation(&self, id: u64) -> Option<Invocation> {
+        self.invocation_registry.borrow().get_invocation(id).cloned()
+    }
+
     pub fn get_stats(&self) -> Stats {
         self.stats.borrow().clone()
     }
@@ -108,14 +112,21 @@ impl ServerlessSimulation {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) {
+    pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) -> u64 {
+        let invocation_id = self.invocation_registry.borrow_mut().register_invocation();
         self.ctx.emit(
             InvocationStartEvent {
-                request: InvocationRequest { id, duration, time },
+                request: InvocationRequest {
+                    id,
+                    duration,
+                    time,
+                    invocation_id,
+                },
             },
             self.controller_id,
             time - self.sim.time(),
         );
+        invocation_id
     }
 
     /// Simulation end event is useful in case you have a no-unloading policy and you

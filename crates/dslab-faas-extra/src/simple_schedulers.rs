@@ -8,8 +8,8 @@ use dslab_faas::function::Application;
 use dslab_faas::host::Host;
 use dslab_faas::scheduler::Scheduler;
 
-/// LocalityBasedScheduler picks a host based on appication hash.
-/// In case host number i can't invoke, the scheduler considers host number (i + step)%hosts.len().
+/// LocalityBasedScheduler picks a host based on application hash.
+/// In case host number `i` can't invoke, the scheduler considers host number `(i + step) % hosts.len()`.
 pub struct LocalityBasedScheduler {
     hasher: fn(u64) -> u64,
     step: usize,
@@ -30,9 +30,9 @@ impl LocalityBasedScheduler {
 
 impl Scheduler for LocalityBasedScheduler {
     fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
-        let init = ((self.hasher)(app.id) % (hosts.len() as u64)) as usize;
+        let start_idx = ((self.hasher)(app.id) % (hosts.len() as u64)) as usize;
         let mut cycle = false;
-        let mut idx = init;
+        let mut idx = start_idx;
         while !cycle {
             if hosts[idx].borrow().can_invoke(app, false) {
                 break;
@@ -41,12 +41,12 @@ impl Scheduler for LocalityBasedScheduler {
                 break;
             }
             idx = (idx + self.step) % hosts.len();
-            if idx == init {
+            if idx == start_idx {
                 cycle = true;
             }
         }
         if cycle {
-            init
+            start_idx
         } else {
             idx
         }

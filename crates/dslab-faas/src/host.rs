@@ -124,8 +124,7 @@ impl Host {
     }
 
     fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
-        let inv_id = self
-            .invocation_registry
+        self.invocation_registry
             .borrow_mut()
             .new_invocation(request, self.id, cont_id, time);
         let stats = self.stats.clone();
@@ -136,9 +135,9 @@ impl Host {
         }
         container.last_change = time;
         container.status = ContainerStatus::Running;
-        container.start_invocation(inv_id);
+        container.start_invocation(request.invocation_id);
         let mut ir = self.invocation_registry.borrow_mut();
-        let invocation = ir.get_invocation_mut(inv_id).unwrap();
+        let invocation = ir.get_invocation_mut(request.invocation_id).unwrap();
         self.cpu.on_new_invocation(invocation, container, time);
     }
 
