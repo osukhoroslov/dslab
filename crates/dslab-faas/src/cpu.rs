@@ -56,6 +56,10 @@ pub struct ProgressComputer {
 }
 
 impl ProgressComputer {
+    pub fn get_load(&self) -> f64 {
+        *self.load
+    }
+
     fn reschedule_end(&mut self) {
         if let Some(evt) = self.end_event {
             self.ctx.borrow_mut().cancel_event(evt);
@@ -162,6 +166,10 @@ impl CPU {
             cores,
             progress_computer,
         }
+    }
+
+    pub fn get_load(&self) -> f64 {
+        self.progress_computer.get_load()
     }
 
     pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {

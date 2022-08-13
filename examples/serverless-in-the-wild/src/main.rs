@@ -17,17 +17,16 @@ fn test_policy(policy: Rc<RefCell<dyn ColdStartPolicy>>, trace: &Trace) -> Stats
     for req in trace.trace_records.iter() {
         time_range = f64::max(time_range, req.time + req.dur);
     }
-    let sim = Simulation::new(1);
     let mut config: Config = Default::default();
     config.coldstart_policy = policy;
-    let mut serverless = ServerlessSimulation::new(sim, config);
+    let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
     for _ in 0..1000 {
-        let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 8);
+        let mem = sim.create_resource("mem", 4096 * 4);
+        sim.add_host(None, ResourceProvider::new(vec![mem]), 8);
     }
     for app in trace.app_records.iter() {
-        let mem = serverless.create_resource_requirement("mem", app.mem);
-        serverless.add_app(Application::new(
+        let mem = sim.create_resource_requirement("mem", app.mem);
+        sim.add_app(Application::new(
             16,
             app.cold_start,
             1.0,
@@ -35,14 +34,14 @@ fn test_policy(policy: Rc<RefCell<dyn ColdStartPolicy>>, trace: &Trace) -> Stats
         ));
     }
     for func in trace.function_records.iter() {
-        serverless.add_function(Function::new(func.app_id));
+        sim.add_function(Function::new(func.app_id));
     }
     for req in trace.trace_records.iter() {
-        serverless.send_invocation_request(req.id as u64, req.dur, req.time);
+        sim.send_invocation_request(req.id as u64, req.dur, req.time);
     }
-    serverless.set_simulation_end(time_range);
-    serverless.step_until_no_events();
-    serverless.get_stats()
+    sim.set_simulation_end(time_range);
+    sim.step_until_no_events();
+    sim.get_stats()
 }
 
 fn print_results(stats: Stats, name: &str) {

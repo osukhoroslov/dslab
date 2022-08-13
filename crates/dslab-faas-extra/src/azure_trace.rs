@@ -1,10 +1,11 @@
 /// This file contains functions responsible for parsing Azure functions trace.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use csv::ReaderBuilder;
+use indexmap::IndexMap;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
@@ -68,7 +69,7 @@ fn app_id(id: &str) -> String {
 pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     let mut gen = Pcg64::seed_from_u64(1);
     let mut trace = Vec::new();
-    let mut parts = HashSet::<String>::new();
+    let mut parts = BTreeSet::<String>::new();
     let mut mem = HashMap::<String, PathBuf>::new();
     let mut inv = HashMap::<String, PathBuf>::new();
     let mut dur = HashMap::<String, PathBuf>::new();
@@ -100,7 +101,7 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     }
     // values: (id, coldstart_latency, memory)
     let mut app_data = HashMap::<String, (usize, f64, u64)>::new();
-    let mut fn_id = HashMap::<String, usize>::new();
+    let mut fn_id = IndexMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mem_percent = vec![0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99, 1.];
     let limit = invocations_limit / parts.len();
@@ -184,7 +185,9 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             }
             let mem_vec = mem_dist.get(&app).unwrap();
             let mem = gen_sample(&mut gen, &mem_percent, mem_vec);
-            app_data.insert(app.clone(), (app_data.len(), 0.1, mem as u64));
+            if !app_data.contains_key(&app) {
+                app_data.insert(app.clone(), (app_data.len(), 0.1, mem as u64));
+            }
             let mut funcs = Vec::new();
             for f in app_funcs.get_mut(&app).unwrap().drain() {
                 funcs.push(f);

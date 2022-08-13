@@ -15,23 +15,18 @@ use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
 use dslab_faas_extra::hermes::HermesScheduler;
 use dslab_faas_extra::simple_schedulers::*;
 
-fn test_scheduler(scheduler: Box<dyn Scheduler>, trace: &Trace) -> Stats {
-    let mut time_range = 0.0;
-    for req in trace.trace_records.iter() {
-        time_range = f64::max(time_range, req.time + req.dur);
-    }
-    let sim = Simulation::new(1);
+fn test_scheduler(scheduler: Box<dyn Scheduler>, trace: &Trace, time_range: f64) -> Stats {
     let mut config: Config = Default::default();
     config.scheduler = scheduler;
     config.coldstart_policy = Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)));
-    let mut serverless = ServerlessSimulation::new(sim, config);
+    let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
     for _ in 0..10 {
-        let mem = serverless.create_resource("mem", 4096 * 4);
-        serverless.add_host(None, ResourceProvider::new(vec![mem]), 4);
+        let mem = sim.create_resource("mem", 4096 * 4);
+        sim.add_host(None, ResourceProvider::new(vec![mem]), 4);
     }
     for app in trace.app_records.iter() {
-        let mem = serverless.create_resource_requirement("mem", app.mem);
-        serverless.add_app(Application::new(
+        let mem = sim.create_resource_requirement("mem", app.mem);
+        sim.add_app(Application::new(
             1,
             app.cold_start,
             1.,
@@ -39,14 +34,14 @@ fn test_scheduler(scheduler: Box<dyn Scheduler>, trace: &Trace) -> Stats {
         ));
     }
     for func in trace.function_records.iter() {
-        serverless.add_function(Function::new(func.app_id));
+        sim.add_function(Function::new(func.app_id));
     }
     for req in trace.trace_records.iter() {
-        serverless.send_invocation_request(req.id as u64, req.dur, req.time);
+        sim.send_invocation_request(req.id as u64, req.dur, req.time);
     }
-    serverless.set_simulation_end(time_range);
-    serverless.step_until_no_events();
-    serverless.get_stats()
+    sim.set_simulation_end(time_range);
+    sim.step_until_no_events();
+    sim.get_stats()
 }
 
 fn print_results(stats: Stats, name: &str) {
@@ -71,22 +66,40 @@ fn main() {
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
+    let mut time_range = 0.0;
+    for req in trace.trace_records.iter() {
+        time_range = f64::max(time_range, req.time + req.dur);
+    }
     print_results(
-        test_scheduler(Box::new(LocalityBasedScheduler::new(None, None, true)), &trace),
+        test_scheduler(
+            Box::new(LocalityBasedScheduler::new(None, None, true)),
+            &trace,
+            time_range,
+        ),
         "Locality-based, warm only",
     );
     print_results(
-        test_scheduler(Box::new(LocalityBasedScheduler::new(None, None, false)), &trace),
+        test_scheduler(
+            Box::new(LocalityBasedScheduler::new(None, None, false)),
+            &trace,
+            time_range,
+        ),
         "Locality-based, allow cold",
     );
-    print_results(test_scheduler(Box::new(RandomScheduler::new(1)), &trace), "Random");
     print_results(
-        test_scheduler(Box::new(LeastLoadedScheduler::new(true)), &trace),
+        test_scheduler(Box::new(RandomScheduler::new(1)), &trace, time_range),
+        "Random",
+    );
+    print_results(
+        test_scheduler(Box::new(LeastLoadedScheduler::new(true)), &trace, time_range),
         "Least-loaded",
     );
     print_results(
-        test_scheduler(Box::new(RoundRobinScheduler::new()), &trace),
+        test_scheduler(Box::new(RoundRobinScheduler::new()), &trace, time_range),
         "Round Robin",
     );
-    print_results(test_scheduler(Box::new(HermesScheduler::new()), &trace), "Hermes");
+    print_results(
+        test_scheduler(Box::new(HermesScheduler::new()), &trace, time_range),
+        "Hermes",
+    );
 }

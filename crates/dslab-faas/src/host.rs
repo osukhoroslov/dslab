@@ -82,6 +82,10 @@ impl Host {
         self.cpu.cores
     }
 
+    pub fn get_cpu_load(&self) -> f64 {
+        self.cpu.get_load()
+    }
+
     pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
         self.container_manager.inc_active_invocations();
         let status = self.invoker.invoke(

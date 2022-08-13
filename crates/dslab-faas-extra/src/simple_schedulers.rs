@@ -87,10 +87,10 @@ impl LeastLoadedScheduler {
 impl Scheduler for LeastLoadedScheduler {
     fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
         let mut best = 0;
-        let mut best_load = u64::MAX;
+        let mut best_load = f64::MAX;
         let mut warm = false;
         for (i, host) in hosts.iter().enumerate() {
-            let load = host.borrow().get_active_invocations();
+            let load = host.borrow().get_cpu_load();
             if load < best_load {
                 best_load = load;
                 best = i;

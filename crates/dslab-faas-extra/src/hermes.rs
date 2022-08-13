@@ -9,13 +9,13 @@ use crate::simple_schedulers::LeastLoadedScheduler;
 
 /// Refer to https://arxiv.org/abs/2111.07226
 pub struct HermesScheduler {
-    high_load: LeastLoadedScheduler,
+    high_load_fallback: LeastLoadedScheduler,
 }
 
 impl HermesScheduler {
     pub fn new() -> Self {
         Self {
-            high_load: LeastLoadedScheduler::new(true),
+            high_load_fallback: LeastLoadedScheduler::new(true),
         }
     }
 }
@@ -30,7 +30,7 @@ impl Scheduler for HermesScheduler {
         let mut priority = -1;
         for (i, host) in hosts.iter().enumerate() {
             let h = host.borrow();
-            if h.get_active_invocations() < (h.get_cpu_cores() as u64) {
+            if h.get_cpu_load() < (h.get_cpu_cores() as f64) {
                 let curr_priority;
                 if h.get_active_invocations() > 0 {
                     if h.can_invoke(app, false) {
@@ -54,6 +54,6 @@ impl Scheduler for HermesScheduler {
         if priority != -1 {
             return ans;
         }
-        self.high_load.select_host(app, hosts)
+        self.high_load_fallback.select_host(app, hosts)
     }
 }
