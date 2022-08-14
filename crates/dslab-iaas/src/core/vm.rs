@@ -1,4 +1,4 @@
-//! Virtual machine information.
+//! Representations of virtual machine and its status.
 
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
@@ -9,7 +9,7 @@ use serde::Serialize;
 use crate::core::config::SimulationConfig;
 use crate::core::load_model::LoadModel;
 
-/// Status.
+/// Status of virtual machine.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum VmStatus {
     Initializing,
@@ -31,7 +31,11 @@ impl Display for VmStatus {
     }
 }
 
-/// VM information.
+/// Represents virtual machine (VM).
+///
+// VM is characterized by its ID, resource requirements (vCPUs and memory), start time, lifetime and load models.
+// The latter model the actual resource utilization of VM in time, which may significantly differ from the VM's
+// resource requirements.
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub id: u32,
@@ -58,7 +62,7 @@ impl Serialize for VirtualMachine {
 }
 
 impl VirtualMachine {
-    /// Create virual machine with specified capacity and lifetime.
+    /// Creates virtual machine with specified parameters.
     pub fn new(
         id: u32,
         cpu_usage: u32,
@@ -82,42 +86,42 @@ impl VirtualMachine {
         }
     }
 
-    /// Get lifetime. It is updated when migrating.
+    /// Returns VM lifetime (it is updated when VM is migrated).
     pub fn lifetime(&self) -> f64 {
         self.lifetime
     }
 
-    /// Get start time. It is updated when migrating.
+    /// Returns VM start time (it is updated when VM is migrated).
     pub fn start_time(&self) -> f64 {
         self.start_time
     }
 
-    /// Get start duration. Passed from config.
+    /// Returns VM start duration (the value is taken from the simulation config).
     pub fn start_duration(&self) -> f64 {
         self.sim_config.vm_start_duration
     }
 
-    /// Get stop duration. Passed from config.
+    /// Returns VM stop duration (the value is taken from the simulation config).
     pub fn stop_duration(&self) -> f64 {
         self.sim_config.vm_stop_duration
     }
 
-    /// Update start time due to migration.
+    /// Sets VM start time. Can be called multiple times due to VM migration.
     pub fn set_start_time(&mut self, time: f64) {
         self.start_time = time;
     }
 
-    /// Update lifetime due to migration.
+    /// Changes VM lifetime. It is called only due to VM migration.
     pub fn set_lifetime(&mut self, lifetime: f64) {
         self.lifetime = lifetime;
     }
 
-    /// Get current CPU load, apply specified load model.
+    /// Returns the current CPU load of VM by invoking the CPU load model.
     pub fn get_cpu_load(&self, time: f64) -> f64 {
         self.cpu_load_model.get_resource_load(time, time - self.start_time)
     }
 
-    /// Get current RAM load, apply specified load model.
+    /// Returns the current memory load of VM by invoking the memory load model.
     pub fn get_memory_load(&self, time: f64) -> f64 {
         self.memory_load_model.get_resource_load(time, time - self.start_time)
     }

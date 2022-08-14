@@ -1,8 +1,8 @@
-//! Common structures.
+//! Common data structures.
 
 use serde::Serialize;
 
-/// VM capacity, is passed into processing events to briefly describe VM
+/// Describes a specific resource allocation, is used to pass and store VM resource requirements.
 #[derive(Serialize, Clone)]
 pub struct Allocation {
     pub id: u32,
@@ -10,7 +10,7 @@ pub struct Allocation {
     pub memory_usage: u64,
 }
 
-/// Allocation verdict.
+/// Describes a result of checking the allocation feasibility.
 #[derive(PartialEq)]
 pub enum AllocationVerdict {
     NotEnoughCPU,

@@ -1,10 +1,10 @@
-//! Local copy of cluster state database.
+//! Resource pool state.
 
 use std::collections::BTreeMap;
 
 use crate::core::common::{Allocation, AllocationVerdict};
 
-/// Host state, allocated resources and set of VM on that host.
+/// Stores host properties (resource capacity) and state (available resources, current allocations).
 #[derive(Clone)]
 pub struct HostInfo {
     pub cpu_total: u32,
@@ -20,7 +20,7 @@ pub struct HostInfo {
 }
 
 impl HostInfo {
-    /// Initialize structure.
+    /// Creates host info with specified total and available host capacity.
     pub fn new(cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) -> Self {
         Self {
             cpu_total,
@@ -40,12 +40,12 @@ pub struct ResourcePoolState {
 }
 
 impl ResourcePoolState {
-    /// Create storage.
+    /// Creates empty resource pool state.
     pub fn new() -> Self {
         Self { hosts: BTreeMap::new() }
     }
 
-    /// Add host to cluster.
+    /// Adds host to resource pool.
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
         self.hosts.insert(
             id,
@@ -53,12 +53,12 @@ impl ResourcePoolState {
         );
     }
 
-    /// Get all cluster hosts.
+    /// Returns IDs of all hosts.
     pub fn get_hosts_list(&self) -> Vec<u32> {
         self.hosts.keys().cloned().collect()
     }
 
-    /// Check if allocation of such VM is possible on specified host.
+    /// Checks if the specified allocation is currently possible on the specified host.
     pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
         if !self.hosts.contains_key(&host_id) {
             return AllocationVerdict::HostNotFound;
@@ -72,7 +72,7 @@ impl ResourcePoolState {
         return AllocationVerdict::Success;
     }
 
-    /// Allocate VM on specified host.
+    /// Applies the specified application on the specified host.
     pub fn allocate(&mut self, alloc: &Allocation, host_id: u32) {
         self.hosts.get_mut(&host_id).map(|host| {
             if host.allocations.contains_key(&alloc.id) {
@@ -118,22 +118,22 @@ impl ResourcePoolState {
         });
     }
 
-    /// Get remaining host CPU.
+    /// Returns the amount of available vCPUs on the specified host.
     pub fn get_available_cpu(&self, host_id: u32) -> u32 {
         return self.hosts[&host_id].cpu_available;
     }
 
-    /// Get remaining host RAM.
+    /// Returns the amount of available memory on the specified host.
     pub fn get_available_memory(&self, host_id: u32) -> u64 {
         return self.hosts[&host_id].memory_available;
     }
 
-    /// Get host CPU load (ratio pf allocated resources, not actual load).
+    /// Returns the CPU allocation rate (ratio of allocated to total resources) of the specified host
     pub fn get_cpu_load(&self, host_id: u32) -> f64 {
         return 1. - self.hosts[&host_id].cpu_available as f64 / self.hosts[&host_id].cpu_total as f64;
     }
 
-    /// Get host RAM load (ratio pf allocated resources, not actual load).
+    /// Returns the memory allocation rate (ratio of allocated to total resources) of the specified host
     pub fn get_memory_load(&self, host_id: u32) -> f64 {
         return 1. - self.hosts[&host_id].memory_available as f64 / self.hosts[&host_id].memory_total as f64;
     }

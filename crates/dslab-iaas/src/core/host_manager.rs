@@ -1,4 +1,4 @@
-//! Physical machine API.
+//! Host manager representing a physical machine.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -26,7 +26,12 @@ use crate::core::events::vm_api::VmStatusChanged;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 
-/// Physical machine model.
+/// Represents a single physical machine or host for short, which possesses a certain amount of resources and performs
+/// execution of VMs assigned to it by a scheduler. It models the main VM lifecycle stages such as creation, deletion
+/// and migration, and reports the VM status changes to VM API component. Host manager periodically computes its
+/// current load, as the sum of loads produced by currently running VMs, and reports it to the monitoring component.
+/// Host manager also records the total power consumption of the host computed using the energy consumption model
+/// defined as a function of CPU load.
 pub struct HostManager {
     pub id: u32,
 
@@ -57,7 +62,7 @@ pub struct HostManager {
 }
 
 impl HostManager {
-    // Create new host with specified capacity.
+    // Creates new host with specified capacity.
     pub fn new(
         cpu_total: u32,
         memory_total: u64,
@@ -92,7 +97,7 @@ impl HostManager {
         }
     }
 
-    /// Check if incoming VM can be allocated on this host.
+    /// Checks if incoming VM can be allocated on this host.
     fn can_allocate(&self, vm_id: u32) -> AllocationVerdict {
         let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
         if self.allow_vm_overcommit {
@@ -107,7 +112,7 @@ impl HostManager {
         return AllocationVerdict::Success;
     }
 
-    /// Allocate new virtual machine. Resource and energy consumption is recalculated.
+    /// Allocates new virtual machine, updates resource and energy consumption.
     fn allocate(&mut self, time: f64, vm_ref: Rc<RefCell<VirtualMachine>>) {
         let vm = vm_ref.borrow();
         if self.cpu_available < vm.cpu_usage {
@@ -131,7 +136,7 @@ impl HostManager {
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
-    /// Release resources when VM finishes. Resource and energy consumption is recalculated.
+    /// Releases resources when VM is deleted, updates resource and energy consumption.
     fn release(&mut self, time: f64, vm_id: u32) {
         let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
         if self.cpu_overcommit >= vm.cpu_usage {
@@ -154,17 +159,17 @@ impl HostManager {
         self.energy_manager.update_energy(time, self.get_energy_load(time));
     }
 
-    /// Get allocated vCPUs.
+    /// Returns the total amount of allocated vCPUs.
     pub fn get_cpu_allocated(&self) -> f64 {
         self.cpu_allocated as f64
     }
 
-    /// Get allocated RAM.
+    /// Returns the total amount of allocated memory.
     pub fn get_memory_allocated(&self) -> f64 {
         self.memory_allocated as f64
     }
 
-    /// Get CPU actual load using VM load model. Summarize loads from all active VMs on this host.
+    /// Returns the current CPU load (used/total) by summing the resource consumption of all active VMs on this host.
     pub fn get_cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for vm_id in &self.vms {
@@ -174,7 +179,7 @@ impl HostManager {
         return cpu_used / self.cpu_total as f64;
     }
 
-    /// Get RAM actual load using VM load model. Summarize loads from all active VMs on this host.
+    /// Returns the current memory load (used/total) by summing the resource consumption of all active VMs on this host.
     pub fn get_memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for vm_id in &self.vms {
@@ -184,7 +189,7 @@ impl HostManager {
         return memory_used / self.memory_total as f64;
     }
 
-    /// Get current energy consumption compared to fully loaded host.
+    /// Returns the current energy consumption (relative to fully loaded host).
     pub fn get_energy_load(&self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
         if cpu_load == 0. {
@@ -193,13 +198,13 @@ impl HostManager {
         return 0.4 + 0.6 * cpu_load;
     }
 
-    /// Get accumulated energy consumption.
+    /// Returns the total energy consumption.
     pub fn get_total_consumed(&mut self, time: f64) -> f64 {
         self.energy_manager.update_energy(time, self.get_energy_load(time));
         return self.energy_manager.get_total_consumed();
     }
 
-    /// Process allocation request. Allocate resources to start new VM.
+    /// Processes allocation request, allocates resources to start new VM.
     fn on_allocation_request(&mut self, vm_id: u32) -> bool {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
@@ -223,7 +228,7 @@ impl HostManager {
         }
     }
 
-    /// Process migration request. Allocate resources to start new VM. Update VM status.
+    /// Processes migration request (as migration target), allocates resources to start new VM, updates VM status.
     fn on_migration_request(&mut self, source_host: u32, vm_id: u32) {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
@@ -259,7 +264,7 @@ impl HostManager {
         }
     }
 
-    /// Release physical resources after VM lifecycle ends.
+    /// Processes resource release request by scheduling deletion of corresponding VM.
     fn on_allocation_release_request(&mut self, vm_id: u32, is_migrating: bool) {
         if self.vms.contains(&vm_id) {
             log_debug!(self.ctx, "release resources from vm #{} on host #{}", vm_id, self.id);
@@ -273,7 +278,7 @@ impl HostManager {
         }
     }
 
-    /// Update VM status due to VM starts after initialization is completed.
+    /// Invoked upon VM startup, updates VM status and schedules VM release event according to its lifetime.
     fn on_vm_started(&mut self, vm_id: u32) {
         log_debug!(self.ctx, "vm #{} started and running", vm_id);
         let vm = self.vm_api.borrow().get_vm(vm_id);
@@ -296,7 +301,7 @@ impl HostManager {
         );
     }
 
-    /// Start VM deallocation.
+    /// Invoked upon VM deletion to release the allocated resources and notify placement store.
     fn on_vm_deleted(&mut self, vm_id: u32) {
         if self.vms.contains(&vm_id) {
             log_debug!(self.ctx, "vm #{} deleted", vm_id);
@@ -312,8 +317,7 @@ impl HostManager {
         }
     }
 
-    /// Periodic process, which reports current host state into Monitoring and
-    /// virtual machine events into VmAPI.
+    /// Invoked periodically to report the current host state to Monitoring and VM status updates to VM API.
     fn send_host_state(&mut self) {
         log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         self.energy_manager

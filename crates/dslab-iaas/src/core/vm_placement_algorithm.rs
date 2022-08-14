@@ -1,22 +1,26 @@
-//! Host selection algorithms.
+//! Virtual machine placement algorithms.
 
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 
-/// Interface of host selection algorithm.
-/// alloc - allocated VM capacity
-/// pool_state - allocated resources on cluster hosts
-/// monitoring - host actual loads
-/// The algorithm returns ID of selected host where resources will be allocated.
+/// Trait for implementation of VM placement algorithms.
+///
+/// The algorithm is defined as a function of VM allocation request and current resource pool state, which returns an
+/// ID of host selected for VM placement or `None` if there is not suitable host.
+///
+/// The reference to monitoring service is also passed to the algorithm so that it can use the information about
+/// current host load.
+///
+/// It is possible to implement arbitrary placement algorithm and use it in scheduler.
 pub trait VMPlacementAlgorithm {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// First fit algorithm.
+/// FirstFit algorithm, which returns the first suitable host.
 pub struct FirstFit;
 
 impl FirstFit {
@@ -38,7 +42,7 @@ impl VMPlacementAlgorithm for FirstFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Best fit algorithm. Select the most CPU loaded machine.
+/// BestFit algorithm, which returns the most loaded (by CPU) suitable host.
 pub struct BestFit;
 
 impl BestFit {
@@ -66,7 +70,7 @@ impl VMPlacementAlgorithm for BestFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Best fit algorithm. Select the least CPU loaded machine.
+/// WorstFit algorithm, which returns the least loaded (by CPU) suitable host.
 pub struct WorstFit;
 
 impl WorstFit {
@@ -94,7 +98,7 @@ impl VMPlacementAlgorithm for WorstFit {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Best fit algorithm. Select the most CPU loaded machine by actual load.
+/// BestFit algorithm, which returns the most loaded (by actual CPU load) suitable host.
 pub struct BestFitThreshold {
     threshold: f64,
 }
@@ -127,5 +131,3 @@ impl VMPlacementAlgorithm for BestFitThreshold {
         return result;
     }
 }
-
-// implement your host selection algorithm here

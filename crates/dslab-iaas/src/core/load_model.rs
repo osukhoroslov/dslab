@@ -29,5 +29,3 @@ impl LoadModel for ConstLoadModel {
         self.load
     }
 }
-
-// implement your custom load model here

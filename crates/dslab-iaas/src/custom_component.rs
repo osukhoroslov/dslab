@@ -1,14 +1,14 @@
-//! Custom component standard interface.
+//! Trait for implementation of custom components.
 
 use dslab_core::context::SimulationContext;
 use dslab_core::handler::EventHandler;
 
 pub trait CustomComponent: EventHandler {
-    /// Create new components
+    /// Creates new component with provided simulation context.
     fn new(ctx: SimulationContext) -> Self
     where
         Self: Sized;
 
-    /// Initialize component, spawn required events.
+    /// Initializes component, emits required events.
     fn init(&mut self);
 }
