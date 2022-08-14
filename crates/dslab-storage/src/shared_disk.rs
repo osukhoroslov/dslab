@@ -1,7 +1,7 @@
 //! Shared disk model.
 //!
-//! This is an alternative disk model, focusing on throughput sharing.
-//! It depends on [dslab-models](../dslab-models/) crate and transfers all computations to abstract fair sharing model.
+//! This is an alternative disk model that supports concurrent execution of requests with bandwidth sharing.
+//! It uses the generic fair throughput sharing model from `dslab-models` to compute the request completion times.
 //! Methods set is the same as for simple disk model.
 //!
 //! Corresponding example: `storage-shared-disk`
