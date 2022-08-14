@@ -1,7 +1,7 @@
 use sugars::boxed;
 
-use super::fair_fast::FastFairModel;
-use super::fair_slow::SlowFairModel;
+use super::fair_fast::FairThroughputSharingModel;
+use super::fair_slow::SlowFairThroughputSharingModel;
 use super::model::Model;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
@@ -9,22 +9,22 @@ fn assert_float_eq(x: f64, y: f64, eps: f64) {
 }
 
 struct ModelsTester {
-    fast_model: FastFairModel<u32>,
-    slow_model: SlowFairModel<u32>,
+    fast_model: FairThroughputSharingModel<u32>,
+    slow_model: SlowFairThroughputSharingModel<u32>,
 }
 
 impl ModelsTester {
     fn with_fixed_throughput(bandwidth: f64) -> Self {
         Self {
-            fast_model: FastFairModel::with_fixed_throughput(bandwidth),
-            slow_model: SlowFairModel::with_fixed_throughput(bandwidth),
+            fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
+            slow_model: SlowFairThroughputSharingModel::with_fixed_throughput(bandwidth),
         }
     }
 
     pub fn with_dynamic_throughput(throughput_function: fn(usize) -> f64) -> Self {
         Self {
-            fast_model: FastFairModel::with_dynamic_throughput(boxed!(throughput_function)),
-            slow_model: SlowFairModel::with_dynamic_throughput(boxed!(throughput_function)),
+            fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
+            slow_model: SlowFairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
         }
     }
 

@@ -53,7 +53,7 @@ pub struct FairThroughputSharingModel<T> {
     last_update: f64,
 }
 
-impl<T> FastFairModel<T> {
+impl<T> FairThroughputSharingModel<T> {
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
@@ -86,7 +86,7 @@ impl<T> FastFairModel<T> {
     }
 }
 
-impl<T> Model<T> for FastFairModel<T> {
+impl<T> Model<T> for FairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         if self.activities.len() > 0 {
             self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);

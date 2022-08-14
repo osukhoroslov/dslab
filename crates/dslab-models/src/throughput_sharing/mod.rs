@@ -7,5 +7,5 @@ mod model;
 #[cfg(test)]
 mod tests;
 
-pub use fair_fast::FastFairModel as FairThroughputSharingModel;
+pub use fair_fast::FairThroughputSharingModel as FairThroughputSharingModel;
 pub use model::{Model as ThroughputSharingModel, ThroughputFunction};
