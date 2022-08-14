@@ -1,6 +1,6 @@
 //! Bandwidth models.
 //!
-//! These models represent different policies on how bandwidth changes over the size and the simulation time.
+//! These models allow to dynamically compute per-request bandwidth based on the request size, current simulation time, etc.
 //! All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value from `size` and simulation context `ctx`.
 //! Using `ctx`, simulation time and random engine can be accessed.
 //! This method will be called each time when new disk read/write request is made.
@@ -18,7 +18,11 @@ use dslab_core::context::SimulationContext;
 
 /// Trait for bandwidth model.
 pub trait BWModel {
-    /// Function which will be called each time when bandwidth is needed.
+    /// Returns the bandwidth per request.
+    ///
+    /// It is called each time new read/write request is made.
+    /// The model is provided with request size and simulation context.
+    /// The latter can be used to obtain the current simulation time and the random engine.
     fn get_bandwidth(&mut self, size: u64, ctx: &mut SimulationContext) -> u64;
 }
 

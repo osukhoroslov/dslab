@@ -1,10 +1,10 @@
 //! File system model.
 //!
-//! It is built on the top of disk model.
-//! It provides common methods for manipulating with it such as creation and deletion of files, mounting and unmounting disks, reading and writing files.
-//! This model supports using several disks, mounted on distinct mount points, just as there is in real file system.
+//! It is built on top of the disk model and supports modeling a storage system on the level of file system operations.
+//! The model provides common methods for manipulating the file system such as creation and deletion of files, mounting and unmounting disks, reading and writing files.
+//! It also supports modeling a system consisting of multiple disks mounted on distinct mount points.
 //!
-//! Corresponding example: `storage-fs`
+//! Usage example can be found in `/examples/storage-fs`
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 

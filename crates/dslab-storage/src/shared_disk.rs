@@ -4,7 +4,7 @@
 //! It uses the generic fair throughput sharing model from `dslab-models` to compute the request completion times.
 //! Methods set is the same as for simple disk model.
 //!
-//! Corresponding example: `storage-shared-disk`
+//! Usage example can be found in `/examples/storage-shared-disk`
 //! Corresponding benchmark: `storage-shared-disk-benchmark`
 
 use serde::Serialize;
