@@ -178,3 +178,15 @@ pub(crate) fn log_undelivered_event(event: Event) {
         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
     );
 }
+
+/// Logs incorrect event.
+pub(crate) fn log_incorrect_event(event: Event, msg: &str) {
+    error!(
+        target: "simulation",
+        "[{:.3} {} simulation] Incorrect event ({}): {}",
+        event.time,
+        crate::log::get_colored("ERROR", colored::Color::Red),
+        msg,
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+    );
+}

@@ -6,6 +6,7 @@ use rand_pcg::Pcg64;
 
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
+use crate::log::log_incorrect_event;
 
 pub struct SimulationState {
     clock: f64,
@@ -50,10 +51,6 @@ impl SimulationState {
     where
         T: EventData,
     {
-        assert!(
-            delay >= 0.0,
-            "Event delay is negative! It is not allowed to add events from the past."
-        );
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
@@ -62,9 +59,14 @@ impl SimulationState {
             dest,
             data: Box::new(data),
         };
-        self.events.push(event);
-        self.event_count += 1;
-        event_id
+        if delay >= 0. {
+            self.events.push(event);
+            self.event_count += 1;
+            event_id
+        } else {
+            log_incorrect_event(event, &format!("negative delay {}", delay));
+            panic!("Event delay is negative! It is not allowed to add events from the past.");
+        }
     }
 
     pub fn next_event(&mut self) -> Option<Event> {
