@@ -3,7 +3,7 @@
 //! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
 //! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
 //! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
-//! There is also support for [bandwidth models](crate:bandwidth) that dynamically compute per-request bandwidth based
+//! There is also support for [bandwidth models](crate::bandwidth) that dynamically compute per-request bandwidth based
 //! on the request size, current simulation time, etc. Several implementations of these models are included in this
 //! crate, and other user-defined models can also be used. This model of disk **does not** support bandwidth sharing, so
 //! disk can process only one request at a time. The requests are processed sequentially in FIFO order.
