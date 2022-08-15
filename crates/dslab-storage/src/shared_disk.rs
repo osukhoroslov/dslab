@@ -5,7 +5,7 @@
 //! Methods set is the same as for simple disk model.
 //!
 //! Usage example can be found in `/examples/storage-shared-disk`
-//! Corresponding benchmark: `storage-shared-disk-benchmark`
+//! Benchmark can be found in `/examples/storage-shared-disk-benchmark` and `/examples-other/simgrid/storage`
 
 use serde::Serialize;
 
