@@ -47,7 +47,7 @@ pub struct DataWriteFailed {
 pub struct FileReadCompleted {
     /// Request id returned by [`crate::fs::FileSystem::read()`] method.
     pub request_id: u64,
-    /// Name of read file.
+    /// Path to read file.
     pub file_path: String,
     /// Size of read data.
     pub read_size: u64,
@@ -58,7 +58,7 @@ pub struct FileReadCompleted {
 pub struct FileReadFailed {
     /// Id which was returned from `read` file system method.
     pub request_id: u64,
-    /// Name of read file.
+    /// Path to read file.
     pub file_path: String,
     /// Reason of failure.
     pub error: String,
@@ -69,7 +69,7 @@ pub struct FileReadFailed {
 pub struct FileWriteCompleted {
     /// Id which was returned from `write` file system method.
     pub request_id: u64,
-    /// Name of written file.
+    /// Path to written file.
     pub file_path: String,
     /// Size of written data.
     pub new_size: u64,
@@ -80,7 +80,7 @@ pub struct FileWriteCompleted {
 pub struct FileWriteFailed {
     /// Id which was returned from `write` file system method.
     pub request_id: u64,
-    /// Name of written file.
+    /// Path to written file.
     pub file_path: String,
     /// Reason of failure.
     pub error: String,

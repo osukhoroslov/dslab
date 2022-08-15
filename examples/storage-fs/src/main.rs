@@ -26,8 +26,8 @@ const DISK_2_NAME: &str = "Disk-2";
 
 const USER_NAME: &str = "User";
 
-const FILE_1_NAME: &str = "/disk1/file1";
-const FILE_2_NAME: &str = "/disk2/file2";
+const FILE_1_PATH: &str = "/disk1/file1";
+const FILE_2_PATH: &str = "/disk2/file2";
 
 const DISK_1_CAPACITY: u64 = 1000000000;
 const DISK_2_CAPACITY: u64 = 10000000;
@@ -67,42 +67,42 @@ impl EventHandler for User {
             Run { case } => {
                 match case {
                     0 => {
-                        self.fs.borrow_mut().create_file(FILE_1_NAME).unwrap();
-                        self.fs.borrow_mut().get_file_size(FILE_1_NAME).unwrap();
+                        self.fs.borrow_mut().create_file(FILE_1_PATH).unwrap();
+                        self.fs.borrow_mut().get_file_size(FILE_1_PATH).unwrap();
                         log_debug!(self.ctx, "Trying to read 3 bytes from empty file... should fail");
-                        self.fs.borrow_mut().read(FILE_1_NAME, 3, self.ctx.id());
+                        self.fs.borrow_mut().read(FILE_1_PATH, 3, self.ctx.id());
                     }
                     1 => {
-                        log_debug!(self.ctx, "Writing 5 bytes to file [{}]", FILE_1_NAME);
-                        self.fs.borrow_mut().write(FILE_1_NAME, 5, self.ctx.id());
+                        log_debug!(self.ctx, "Writing 5 bytes to file [{}]", FILE_1_PATH);
+                        self.fs.borrow_mut().write(FILE_1_PATH, 5, self.ctx.id());
                     }
                     2 => {
-                        log_debug!(self.ctx, "Reading all from file [{}]", FILE_1_NAME);
-                        self.fs.borrow_mut().read_all(FILE_1_NAME, self.ctx.id());
+                        log_debug!(self.ctx, "Reading all from file [{}]", FILE_1_PATH);
+                        self.fs.borrow_mut().read_all(FILE_1_PATH, self.ctx.id());
                     }
                     3 => {
-                        log_debug!(self.ctx, "Testing another disk for file [{}]", FILE_2_NAME);
-                        self.fs.borrow_mut().create_file(FILE_2_NAME).unwrap();
-                        self.fs.borrow_mut().write(FILE_2_NAME, 5, self.ctx.id());
+                        log_debug!(self.ctx, "Testing another disk for file [{}]", FILE_2_PATH);
+                        self.fs.borrow_mut().create_file(FILE_2_PATH).unwrap();
+                        self.fs.borrow_mut().write(FILE_2_PATH, 5, self.ctx.id());
                     }
                     4 => {
-                        log_debug!(self.ctx, "Deleting file [{}] and then trying to access", FILE_1_NAME);
-                        self.fs.borrow_mut().delete_file(FILE_1_NAME).unwrap();
-                        self.fs.borrow_mut().write(FILE_1_NAME, 1, self.ctx.id());
-                        self.fs.borrow_mut().read_all(FILE_1_NAME, self.ctx.id());
+                        log_debug!(self.ctx, "Deleting file [{}] and then trying to access", FILE_1_PATH);
+                        self.fs.borrow_mut().delete_file(FILE_1_PATH).unwrap();
+                        self.fs.borrow_mut().write(FILE_1_PATH, 1, self.ctx.id());
+                        self.fs.borrow_mut().read_all(FILE_1_PATH, self.ctx.id());
                     }
                     5 => {
                         log_debug!(
                             self.ctx,
                             "Requesting some actions and trying to delete file [{}]",
-                            FILE_2_NAME
+                            FILE_2_PATH
                         );
-                        self.fs.borrow_mut().write(FILE_2_NAME, 1, self.ctx.id());
-                        self.fs.borrow_mut().read_all(FILE_2_NAME, self.ctx.id());
+                        self.fs.borrow_mut().write(FILE_2_PATH, 1, self.ctx.id());
+                        self.fs.borrow_mut().read_all(FILE_2_PATH, self.ctx.id());
                         log_debug!(
                             self.ctx,
                             "Received error: {}",
-                            self.fs.borrow_mut().delete_file(FILE_2_NAME).err().unwrap()
+                            self.fs.borrow_mut().delete_file(FILE_2_PATH).err().unwrap()
                         )
                     }
                     _ => {

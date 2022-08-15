@@ -88,7 +88,7 @@ impl FileSystem {
 
     /// Submits file read request and returns unique request id.
     ///
-    /// The amount of data read from file with name `file_path` is specified in `size`.
+    /// The amount of data read from file located at `file_path` is specified in `size`.
     /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the
     /// read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
@@ -105,7 +105,7 @@ impl FileSystem {
 
     /// Submits file read request and returns unique request id.
     ///
-    /// The amount of data read from file with name `file_path` is equal to the file size.
+    /// The amount of data read from file located at `file_path` is equal to the file size.
     /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion.
     /// Note that the returned request id is unique only within the current file system.
     pub fn read_all(&mut self, file_path: &str, requester: Id) -> u64 {
@@ -179,7 +179,7 @@ impl FileSystem {
 
     /// Submits file write request and returns unique request id.
     ///
-    /// The amount of data written to file with name `file_path` is specified in `size`.
+    /// The amount of data written to file located at `file_path` is specified in `size`.
     /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If
     /// there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
@@ -229,7 +229,7 @@ impl FileSystem {
         request_id
     }
 
-    /// Creates file with name `file_path` if it doesn’t already exist.
+    /// Creates file at `file_path` if it doesn’t already exist.
     pub fn create_file(&mut self, file_path: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received create file request, file_path: [{}]", file_path);
         if let Some(_) = self.files.get(file_path) {
@@ -240,7 +240,7 @@ impl FileSystem {
         Ok(())
     }
 
-    /// Returns size of the file with name `file_path` if there is any.
+    /// Returns size of the file located at `file_path` if there is any.
     pub fn get_file_size(&self, file_path: &str) -> Result<u64, String> {
         self.files
             .get(file_path)
@@ -253,7 +253,7 @@ impl FileSystem {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
-    /// Deletes file with name `file_path` if there is any.    
+    /// Deletes file located at `file_path` if there is any.    
     pub fn delete_file(&mut self, file_path: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received delete file request, file_path: [{}]", file_path);
         let disk = self.resolve_disk(file_path)?;
