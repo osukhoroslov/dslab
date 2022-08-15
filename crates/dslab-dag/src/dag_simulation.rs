@@ -1,3 +1,5 @@
+//! Wrapper for DAG simulation.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -35,6 +37,7 @@ impl DagSimulation {
         }
     }
 
+    /// Adds a resource with provided parameters.
     pub fn add_resource(&mut self, name: &str, speed: u64, cores: u32, memory: u64) {
         let compute = Rc::new(RefCell::new(Compute::new(
             speed,
@@ -53,10 +56,12 @@ impl DagSimulation {
         });
     }
 
+    /// Loads a set of resources from a file. More info in [resource::load_resources()](crate::resource::load_resources).
     pub fn load_resources(&mut self, filename: &str) {
         self.resources = load_resources(filename, &mut self.sim);
     }
 
+    /// Starts DAG simulation.
     pub fn init(&mut self, dag: DAG) -> Rc<RefCell<DAGRunner>> {
         let network = Rc::new(RefCell::new(Network::new(
             self.network_model.clone(),
@@ -77,22 +82,27 @@ impl DagSimulation {
         runner
     }
 
+    /// See [Simulation::steps()](dslab_core::simulation::Simulation::steps).
     pub fn steps(&mut self, step_count: u64) -> bool {
         return self.sim.steps(step_count);
     }
 
+    /// See [Simulation::step_for_duration()](dslab_core::simulation::Simulation::step_for_duration).
     pub fn step_for_duration(&mut self, time: f64) {
         self.sim.step_for_duration(time);
     }
 
+    /// See [Simulation::step_until_no_events()](dslab_core::simulation::Simulation::step_until_no_events).
     pub fn step_until_no_events(&mut self) {
         self.sim.step_until_no_events();
     }
 
+    /// See [Simulation::event_count()](dslab_core::simulation::Simulation::event_count).
     pub fn event_count(&self) -> u64 {
         return self.sim.event_count();
     }
 
+    /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
     pub fn time(&mut self) -> f64 {
         return self.sim.time();
     }

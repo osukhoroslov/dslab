@@ -26,12 +26,16 @@ use crate::trace_log::TraceLog;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum DataTransferMode {
+    /// Every file gets transfered from producer to scheduler, and to consumer from there.
     ViaMasterNode,
+    /// Every file gets transfered directly from producer to consumer.
     Direct,
+    /// All file transfers must be done by a scheduler.
     Manual,
 }
 
 impl DataTransferMode {
+    /// Calculates tranfers time between actors for one unit of data.
     pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
             DataTransferMode::ViaMasterNode => {
@@ -144,10 +148,12 @@ impl DAGRunner {
         }
     }
 
+    /// Enables or disables [trace log](crate::trace_log::TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
     }
 
+    /// Starts DAG execution.
     pub fn start(&mut self) {
         for (id, data_item) in self.dag.get_data_items().iter().enumerate() {
             if data_item.state == DataItemState::Ready {
@@ -192,6 +198,7 @@ impl DAGRunner {
         self.trace_log.log_dag(&self.dag);
     }
 
+    /// Returns trace log.
     pub fn trace_log(&self) -> &TraceLog {
         &self.trace_log
     }
@@ -584,6 +591,7 @@ impl DAGRunner {
         }
     }
 
+    /// Checks that all tasks in a DAG are completed.
     pub fn validate_completed(&self) {
         if !self.is_completed() {
             let mut states: Vec<String> = Vec::new();

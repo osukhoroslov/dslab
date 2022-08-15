@@ -19,6 +19,8 @@ struct Yaml {
     network: Network,
 }
 
+/// Reads network configuration from
+/// [YAML file](https://github.com/osukhoroslov/dslab/blob/main/examples/dag/networks/network1.yaml).
 pub fn load_network(file: &str) -> Rc<RefCell<dyn NetworkModel>> {
     let network: Yaml =
         serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
