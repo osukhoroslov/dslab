@@ -84,8 +84,9 @@ impl SharedDisk {
     /// Submits data read request and returns unique request id.
     ///
     /// The amount of data read from disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead.
-    /// Note that the returned request id is unique only within the current disk.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the
+    /// read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead. Note
+    /// that the returned request id is unique only within the current disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -120,7 +121,8 @@ impl SharedDisk {
     /// Submits data write request and returns unique request id.
     ///
     /// The amount of data written to disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If
+    /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();

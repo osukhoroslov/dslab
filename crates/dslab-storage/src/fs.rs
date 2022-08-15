@@ -1,8 +1,9 @@
 //! File system model.
 //!
 //! It is built on top of the disk model and supports modeling a storage system on the level of file system operations.
-//! The model provides common methods for manipulating the file system such as creation and deletion of files, mounting and unmounting disks, reading and writing files.
-//! It also supports modeling a system consisting of multiple disks mounted on distinct mount points.
+//! The model provides common methods for manipulating the file system such as creation and deletion of files, mounting
+//! and unmounting disks, reading and writing files. It also supports modeling a system consisting of multiple disks
+//! mounted on distinct mount points.
 //!
 //! Usage example can be found in `/examples/storage-fs`
 
@@ -88,7 +89,8 @@ impl FileSystem {
     /// Submits file read request and returns unique request id.
     ///
     /// The amount of data read from file with name `file_name` is specified in `size`.
-    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the
+    /// read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn read(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
@@ -178,7 +180,8 @@ impl FileSystem {
     /// Submits file write request and returns unique request id.
     ///
     /// The amount of data written to file with name `file_name` is specified in `size`.
-    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If
+    /// there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn write(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
         log_debug!(

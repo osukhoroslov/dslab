@@ -16,5 +16,6 @@ pub trait Model<T> {
     fn peek(&self) -> Option<(f64, &T)>;
 }
 
-/// Type alias for function used to describe the dependence of resource throughput on the number of concurrent activities.
+/// Type alias for function used to describe the dependence of resource throughput on the number of concurrent
+/// activities.
 pub type ThroughputFunction = Box<dyn Fn(usize) -> f64>;

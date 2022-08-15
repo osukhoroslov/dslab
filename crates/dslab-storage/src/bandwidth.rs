@@ -1,9 +1,10 @@
 //! Bandwidth models.
 //!
-//! These models allow to dynamically compute per-request bandwidth based on the request size, current simulation time, etc.
-//! All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value from `size` and simulation context `ctx`.
-//! Using `ctx`, simulation time and random engine can be accessed.
-//! This method will be called each time when new disk read/write request is made, and the returned value will be used as the bandwidth for this request.
+//! These models allow to dynamically compute per-request bandwidth based on the request size, current simulation time,
+//! etc. All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value
+//! from `size` and simulation context `ctx`. Using `ctx`, simulation time and random engine can be accessed.
+//! This method will be called each time when new disk read/write request is made, and the returned value will be used
+//! as the bandwidth for this request.
 //!
 //! There are 3 predefined models:
 //! * [`ConstantBWModel`]

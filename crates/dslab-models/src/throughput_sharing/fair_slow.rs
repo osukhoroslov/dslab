@@ -1,4 +1,5 @@
-//! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation and completion.
+//! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
+//! and completion.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -46,7 +47,8 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
-/// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation and completion.
+/// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
+/// and completion.
 pub struct SlowFairThroughputSharingModel<T> {
     throughput_function: ThroughputFunction,
     entries: BinaryHeap<Activity<T>>,

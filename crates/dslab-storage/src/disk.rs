@@ -3,10 +3,10 @@
 //! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
 //! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
 //! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
-//! There is also support for [bandwidth models](crate:bandwidth) that dynamically compute per-request bandwidth based on the request size, current simulation time, etc.
-//! Several implementations of these models are included in this crate, and other user-defined models can also be used.
-//! This model of disk **does not** support bandwidth sharing, so disk can process only one request at a time.
-//! The requests are processed sequentially in FIFO order.
+//! There is also support for [bandwidth models](crate:bandwidth) that dynamically compute per-request bandwidth based
+//! on the request size, current simulation time, etc. Several implementations of these models are included in this
+//! crate, and other user-defined models can also be used. This model of disk **does not** support bandwidth sharing, so
+//! disk can process only one request at a time. The requests are processed sequentially in FIFO order.
 //!
 //! Usage example can be found in `/examples/storage-disk`.
 
@@ -70,8 +70,9 @@ impl Disk {
     /// Submits data read request and returns unique request id.
     ///
     /// The amount of data read from disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead.
-    /// Note that the returned request id is unique only within the current disk.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the
+    /// read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead. Note
+    /// that the returned request id is unique only within the current disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -104,7 +105,8 @@ impl Disk {
     /// Submits data write request and returns unique request id.
     ///
     /// The amount of data written to disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If
+    /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
