@@ -1,4 +1,4 @@
-//! Microsoft Azure 2020 dataset reader.
+//! Dataset reader for Azure Trace for Packing 2020.
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
-/// A SQL table contains VM types and their CPU and RAM capacity.
+/// Represents information about VM type from the dataset.
+///
+/// Note that CPU and memory sizes of VMs are stored as fractions of host capacities.
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 struct VMType {
@@ -20,7 +22,7 @@ struct VMType {
     memory: f64,
 }
 
-/// A SQL table contains VM instances information.
+/// Represents information about VM instance from the dataset.
 #[derive(Serialize, Deserialize, Debug)]
 struct VMInstance {
     #[serde(rename = "vmId")]
@@ -33,7 +35,28 @@ struct VMInstance {
     end_time: Option<f64>,
 }
 
-/// /// Parse Azure .csv converted dataset files.
+/// Dataset reader for
+/// [Azure Trace for Packing 2020](https://github.com/Azure/AzurePublicDataset/blob/master/AzureTracesForPacking2020.md).
+///
+/// Requires the conversion of original sqlite files to CVS format as follows:
+///
+/// ```shell
+/// $ sqlite3 packing_trace_zone_a_v1.sqlite
+/// sqlite> .headers on
+/// sqlite> .mode csv
+/// sqlite> .output vm_instances.csv
+/// sqlite> SELECT vmId, vmTypeId, starttime, endtime FROM vm ORDER BY starttime;
+/// sqlite> .quit
+///
+/// $ sqlite3 packing_trace_zone_a_v1.sqlite
+/// sqlite> .headers on
+/// sqlite> .mode csv
+/// sqlite> .output vm_types.csv
+/// sqlite> SELECT id, vmTypeId, core, memory FROM vmType;
+/// sqlite> .quit
+/// ```
+///
+/// Pass the produced CSV files to [`parse()`](AzureDatasetReader::parse) method.
 pub struct AzureDatasetReader {
     simulation_length: f64,
     host_cpu_capacity: f64,
@@ -45,7 +68,10 @@ pub struct AzureDatasetReader {
 }
 
 impl AzureDatasetReader {
-    /// Create dataset reader. CPU and RAM capacity are specified in order to properly scale dataset VM sizes.
+    /// Creates dataset reader.
+    ///
+    /// The sizes of VMs are computed based on the provided host CPU and memory capacities.
+    /// Parses only the VMs which started within first `simulation_length` seconds.
     pub fn new(simulation_length: f64, host_cpu_capacity: f64, host_memory_capacity: f64) -> Self {
         Self {
             simulation_length,
@@ -57,13 +83,13 @@ impl AzureDatasetReader {
         }
     }
 
-    /// Parse files.
+    /// Loads the dataset from CSV files with VM types and instances.
     pub fn parse(&mut self, vm_types_file_name: String, vm_instances_file_name: String) {
         self.parse_vm_types(vm_types_file_name);
         self.parse_vm_instances(vm_instances_file_name);
     }
 
-    /// Parse VM types file.
+    /// Parses CSV file with VM types.
     fn parse_vm_types(&mut self, file_name: String) {
         let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
         for record in reader.deserialize() {
@@ -72,7 +98,7 @@ impl AzureDatasetReader {
         }
     }
 
-    /// Parse VM instances file.
+    /// Parses CSV file with VM instances.
     fn parse_vm_instances(&mut self, file_name: String) {
         let mut reader = csv::Reader::from_reader(File::open(file_name).unwrap());
         for record in reader.deserialize() {
@@ -91,7 +117,6 @@ impl AzureDatasetReader {
 }
 
 impl DatasetReader for AzureDatasetReader {
-    /// Standard dataset reader interface to get next VM to schedule it.
     fn get_next_vm(&mut self) -> Option<VMRequest> {
         if self.current_vm >= self.vm_instances.len() {
             return None;

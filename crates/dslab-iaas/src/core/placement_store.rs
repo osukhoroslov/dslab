@@ -128,7 +128,7 @@ impl PlacementStore {
     /// Processes AllocationFailed events from host managers.
     ///
     /// If host allocation fails, usually that means that the host is overloaded.
-    /// Updates the local state by releasing the corresponding resources and forwards this
+    /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);

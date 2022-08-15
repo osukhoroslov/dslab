@@ -1,6 +1,6 @@
-//! Dataset reader interface.
+//! Trait for dataset readers.
 
-// VM request to scheduler. Result will be converted into VirtualMachine structure.
+/// Represents information about a single virtual machine from dataset.
 #[derive(Clone)]
 pub struct VMRequest {
     pub id: u32,
@@ -11,6 +11,8 @@ pub struct VMRequest {
 }
 
 pub trait DatasetReader {
-    /// Standard dataset reader interface to get next VM to schedule it.
+    /// Returns the next VM from dataset (if any).
+    ///
+    /// VMs should be returned in non-decreasing order of their start times.
     fn get_next_vm(&mut self) -> Option<VMRequest>;
 }

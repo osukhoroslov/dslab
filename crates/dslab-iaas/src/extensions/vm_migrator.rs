@@ -1,4 +1,4 @@
-//! VM automatic migrator component.
+//! Component performing automatic migration of VMs.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -21,7 +21,11 @@ use dslab_core::{log_debug, log_info, log_trace, log_warn};
 #[derive(Serialize)]
 pub struct PerformMigrations {}
 
-/// Finds underloaded and overloaded hosts and migrates VM from them in order to avoid SLAV and utilize physical machines.
+/// This component performs automatic migration of VMs to improve host utilization while avoiding SLA violations.
+///
+/// It periodically checks the state of resource pool and tries to find the overloaded and underloaded hosts.
+/// If there are any, it selects some VMs from these hosts and migrates them to other hosts in order to turn off the
+/// underloaded hosts and return the overloaded hosts to the normal state.
 pub struct VmMigrator {
     interval: f64,
     overload_threshold: f64,
@@ -33,7 +37,9 @@ pub struct VmMigrator {
 }
 
 impl VmMigrator {
-    // Pass standard components from CloudSimulation.
+    /// Used to provide the references to standard components needed for migrator work.
+    ///
+    /// This method should be invoked before [`init()`](VmMigrator::init()).
     pub fn patch_custom_args(
         &mut self,
         interval: f64,

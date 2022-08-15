@@ -21,7 +21,7 @@ use crate::core::vm::VmStatus;
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
-// Scheduler processes VM allocation requests by selecting hosts for running new VMs.
+/// Scheduler processes VM allocation requests by selecting hosts for running new VMs.
 ///
 /// It stores a local copy of resource pool state, which includes current resource allocations on each host.
 /// Scheduler can also access information about current load of each host from the monitoring component.

@@ -97,7 +97,7 @@ impl ResourcePoolState {
         });
     }
 
-    /// Release resources due to VM lifecycle finish.
+    /// Removes the specified allocation on the specified host.
     pub fn release(&mut self, alloc: &Allocation, host_id: u32) {
         self.hosts.get_mut(&host_id).map(|host| {
             if host.cpu_overcommit >= alloc.cpu_usage {

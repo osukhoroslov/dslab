@@ -33,9 +33,9 @@ impl Display for VmStatus {
 
 /// Represents virtual machine (VM).
 ///
-// VM is characterized by its ID, resource requirements (vCPUs and memory), start time, lifetime and load models.
-// The latter model the actual resource utilization of VM in time, which may significantly differ from the VM's
-// resource requirements.
+/// VM is characterized by its ID, resource requirements (vCPUs and memory), start time, lifetime and load models.
+/// The latter model the actual resource utilization of VM in time, which may significantly differ from the VM's
+/// resource requirements.
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub id: u32,
@@ -49,7 +49,6 @@ pub struct VirtualMachine {
     sim_config: Rc<SimulationConfig>,
 }
 
-///
 impl Serialize for VirtualMachine {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
