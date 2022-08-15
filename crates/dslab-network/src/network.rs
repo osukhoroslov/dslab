@@ -15,7 +15,7 @@ use crate::topology::Topology;
 
 pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
-    topology: Topology,
+    topology: Rc<RefCell<Topology>>,
     id_counter: AtomicUsize,
     ctx: SimulationContext,
 }
@@ -24,30 +24,50 @@ impl Network {
     pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>, ctx: SimulationContext) -> Self {
         Self {
             network_model,
-            topology: Topology::new(),
+            topology: Rc::new(RefCell::new(Topology::new())),
+            id_counter: AtomicUsize::new(1),
+            ctx,
+        }
+    }
+
+    pub fn new_with_topology(
+        network_model: Rc<RefCell<dyn NetworkModel>>,
+        topology: Rc<RefCell<Topology>>,
+        ctx: SimulationContext,
+    ) -> Self {
+        Self {
+            network_model,
+            topology,
             id_counter: AtomicUsize::new(1),
             ctx,
         }
     }
 
     pub fn add_node(&mut self, node_id: &str, local_bandwidth: f64, local_latency: f64) {
-        self.topology.add_node(node_id, local_bandwidth, local_latency)
+        self.topology
+            .borrow_mut()
+            .add_node(node_id, local_bandwidth, local_latency)
     }
 
-    pub fn set_location(&mut self, id: Id, node_id: &str) {
-        self.topology.set_location(id, node_id)
+    pub fn add_link(&mut self, node1: &str, node2: &str, latency: f64, bandwidth: f64) {
+        self.topology.borrow_mut().add_link(node1, node2, latency, bandwidth);
+        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
     }
 
-    pub fn get_location(&self, id: Id) -> Option<&String> {
-        self.topology.get_location(id)
+    pub fn init_topology(&mut self) {
+        self.topology.borrow_mut().init();
+    }
+
+    pub fn set_location(&mut self, id: Id, node_name: &str) {
+        self.topology.borrow_mut().set_location(id, node_name)
     }
 
     pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
-        self.topology.check_same_node(id1, id2)
+        self.topology.borrow().check_same_node(id1, id2)
     }
 
     pub fn get_nodes(&self) -> Vec<String> {
-        self.topology.get_nodes()
+        self.topology.borrow().get_nodes()
     }
 
     pub fn send_msg(&mut self, message: String, src: Id, dest: Id) -> usize {
@@ -66,7 +86,7 @@ impl Network {
         log_debug!(self.ctx, "{} sent event to {}", src, dest);
 
         let latency = if self.check_same_node(src, dest) {
-            self.topology.get_local_latency(src, dest)
+            self.topology.borrow().get_local_latency(src, dest)
         } else {
             self.network_model.borrow().latency(src, dest)
         };
@@ -104,7 +124,7 @@ impl EventHandler for Network {
                 );
 
                 let latency = if self.check_same_node(message.src, message.dest) {
-                    self.topology.get_local_latency(message.src, message.dest)
+                    self.topology.borrow().get_local_latency(message.src, message.dest)
                 } else {
                     self.network_model.borrow().latency(message.src, message.dest)
                 };
@@ -136,7 +156,7 @@ impl EventHandler for Network {
                     data.size
                 );
                 let latency = if self.check_same_node(data.src, data.dest) {
-                    self.topology.get_local_latency(data.src, data.dest)
+                    self.topology.borrow().get_local_latency(data.src, data.dest)
                 } else {
                     self.network_model.borrow().latency(data.src, data.dest)
                 };
@@ -146,7 +166,7 @@ impl EventHandler for Network {
                 if !self.check_same_node(data.src, data.dest) {
                     self.network_model.borrow_mut().send_data(data, &mut self.ctx);
                 } else {
-                    self.topology.local_send_data(data, &mut self.ctx)
+                    self.topology.borrow_mut().local_send_data(data, &mut self.ctx)
                 }
             }
             DataReceive { data } => {
@@ -163,7 +183,9 @@ impl EventHandler for Network {
                         .borrow_mut()
                         .receive_data(data.clone(), &mut self.ctx);
                 } else {
-                    self.topology.local_receive_data(data.clone(), &mut self.ctx)
+                    self.topology
+                        .borrow_mut()
+                        .local_receive_data(data.clone(), &mut self.ctx)
                 }
                 self.ctx
                     .emit_now(DataTransferCompleted { data: data.clone() }, data.notification_dest);
