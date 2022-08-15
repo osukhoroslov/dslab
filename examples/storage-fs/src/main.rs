@@ -112,41 +112,41 @@ impl EventHandler for User {
             }
             FileReadCompleted {
                 request_id: _,
-                file_name,
+                file_path,
                 read_size,
             } => {
                 log_debug!(
                     self.ctx,
                     "Completed reading {} bytes from file [{}]",
                     read_size,
-                    file_name
+                    file_path
                 );
             }
             FileReadFailed {
                 request_id: _,
-                file_name,
+                file_path,
                 error,
             } => {
-                log_debug!(self.ctx, "Failed reading from file [{}], error: {}", file_name, error,);
+                log_debug!(self.ctx, "Failed reading from file [{}], error: {}", file_path, error,);
             }
             FileWriteCompleted {
                 request_id: _,
-                file_name,
+                file_path,
                 new_size,
             } => {
                 log_debug!(
                     self.ctx,
                     "Completed writing to file [{}], new_size = {}",
-                    file_name,
+                    file_path,
                     new_size
                 );
             }
             FileWriteFailed {
                 request_id: _,
-                file_name,
+                file_path,
                 error,
             } => {
-                log_debug!(self.ctx, "Failed writing to file [{}], error: {}", file_name, error,);
+                log_debug!(self.ctx, "Failed writing to file [{}], error: {}", file_path, error,);
             }
         })
     }
