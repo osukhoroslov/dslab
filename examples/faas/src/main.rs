@@ -35,5 +35,6 @@ fn main() {
         "wasted memory time = {}",
         stats.wasted_resource_time.get(&0).unwrap().sum()
     );
-    println!("mean abs slowdown = {}", stats.abs_slowdown.mean());
+    println!("mean abs exec slowdown = {}", stats.abs_exec_slowdown.mean());
+    println!("mean abs total slowdown = {}", stats.abs_total_slowdown.mean());
 }
