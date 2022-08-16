@@ -48,14 +48,15 @@ fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
     println!("{} successful invocations", stats.invocations);
     println!(
-        "cold start rate = {}",
+        "- cold start rate = {}",
         (stats.cold_starts as f64) / (stats.invocations as f64)
     );
     println!(
-        "wasted memory time = {}",
+        "- wasted memory time = {}",
         stats.wasted_resource_time.get(&0).unwrap().sum()
     );
-    println!("rel slowdown = {}", stats.rel_slowdown.mean());
+    println!("- mean absolute total slowdown = {}", stats.abs_total_slowdown.mean());
+    println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
 }
 
 fn main() {

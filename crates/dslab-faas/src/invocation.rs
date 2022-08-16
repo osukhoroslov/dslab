@@ -6,10 +6,10 @@ use crate::util::Counter;
 
 #[derive(Copy, Clone, Debug, Serialize)]
 pub struct InvocationRequest {
-    pub id: u64,
+    pub func_id: u64,
     pub duration: f64,
     pub time: f64,
-    pub invocation_id: u64,
+    pub id: u64,
 }
 
 #[derive(Copy, Clone)]
@@ -30,7 +30,7 @@ pub struct InvocationRegistry {
 
 impl InvocationRegistry {
     pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64, time: f64) {
-        let id = request.invocation_id;
+        let id = request.id;
         let invocation = Invocation {
             id,
             request,

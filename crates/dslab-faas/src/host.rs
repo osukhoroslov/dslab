@@ -139,9 +139,9 @@ impl Host {
         }
         container.last_change = time;
         container.status = ContainerStatus::Running;
-        container.start_invocation(request.invocation_id);
+        container.start_invocation(request.id);
         let mut ir = self.invocation_registry.borrow_mut();
-        let invocation = ir.get_invocation_mut(request.invocation_id).unwrap();
+        let invocation = ir.get_invocation_mut(request.id).unwrap();
         self.cpu.on_new_invocation(invocation, container, time);
     }
 
@@ -176,7 +176,7 @@ impl Host {
         let function_registry = fr.borrow();
         invocation_registry.get_invocation_mut(id).unwrap().finished = Some(time);
         let invocation = invocation_registry.get_invocation_mut(id).unwrap();
-        let func_id = invocation.request.id;
+        let func_id = invocation.request.func_id;
         let cont_id = invocation.container_id;
         let app_id = function_registry.get_function(func_id).unwrap().app_id;
         self.coldstart

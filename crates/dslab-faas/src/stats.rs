@@ -45,16 +45,22 @@ pub struct Stats {
     pub cold_starts: u64,
     pub cold_start_latency: SampleMetric<f64>,
     pub wasted_resource_time: HashMap<usize, SampleMetric<f64>>,
-    pub abs_slowdown: SampleMetric<f64>,
-    pub rel_slowdown: SampleMetric<f64>,
+    pub abs_exec_slowdown: SampleMetric<f64>,
+    pub rel_exec_slowdown: SampleMetric<f64>,
+    pub abs_total_slowdown: SampleMetric<f64>,
+    pub rel_total_slowdown: SampleMetric<f64>,
 }
 
 impl Stats {
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         let len = invocation.finished.unwrap() - invocation.started;
-        self.abs_slowdown.add(len - invocation.request.duration);
-        self.rel_slowdown
+        let total_len = invocation.finished.unwrap() - invocation.request.time;
+        self.abs_exec_slowdown.add(len - invocation.request.duration);
+        self.rel_exec_slowdown
             .add((len - invocation.request.duration) / invocation.request.duration);
+        self.abs_total_slowdown.add(total_len - invocation.request.duration);
+        self.rel_total_slowdown
+            .add((total_len - invocation.request.duration) / invocation.request.duration);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {

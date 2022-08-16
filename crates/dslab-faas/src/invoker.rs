@@ -46,7 +46,7 @@ impl BasicInvoker {
         time: f64,
     ) -> InvocationStatus {
         let fr = fr.borrow();
-        let app = fr.get_app_by_function(request.id).unwrap();
+        let app = fr.get_app_by_function(request.func_id).unwrap();
         let mut nearest: Option<u64> = None;
         let mut wait = 0.0;
         for c in cm.get_possible_containers(app, true) {

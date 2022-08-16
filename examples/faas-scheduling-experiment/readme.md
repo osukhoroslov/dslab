@@ -1,5 +1,5 @@
 # FaaS scheduling experiment
-This crate experiments with several simple scheduling strategies and [Hermes](https://arxiv.org/abs/2111.07226) scheduler.
+This example evaluates different approaches for scheduling of function invocations (several simple strategies and [Hermes](https://arxiv.org/abs/2111.07226) scheduler) on Azure functions dataset.
 ## Running experiment
 - download and unpack Azure functions [dataset](https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md)
 - build

@@ -14,7 +14,6 @@ use dslab_core::event::EventId;
 use crate::container::Container;
 use crate::event::InvocationEndEvent;
 use crate::invocation::Invocation;
-use crate::util::KahanSum;
 
 #[derive(Clone)]
 pub struct WorkItem {
@@ -47,9 +46,9 @@ pub struct ProgressComputer {
     disable_contention: bool,
     work_tree: BTreeSet<WorkItem>,
     work_map: HashMap<u64, WorkItem>,
-    work_total: KahanSum,
+    work_total: f64,
     cores: f64,
-    load: KahanSum,
+    load: f64,
     last_update: f64,
     end_event: Option<EventId>,
     ctx: Rc<RefCell<SimulationContext>>,
@@ -57,7 +56,23 @@ pub struct ProgressComputer {
 
 impl ProgressComputer {
     pub fn get_load(&self) -> f64 {
-        *self.load
+        self.load
+    }
+
+    fn try_rebuild(&mut self) {
+        if self.work_total > 1e12 {
+            let mut items: Vec<_> = self.work_tree.iter().cloned().collect();
+            for it in items.iter_mut() {
+                it.finish -= self.work_total;
+            }
+            self.work_total = 0.;
+            self.work_tree = Default::default();
+            self.work_map = Default::default();
+            for it in items.into_iter() {
+                self.work_map.insert(it.id, it.clone());
+                self.work_tree.insert(it);
+            }
+        }
     }
 
     fn reschedule_end(&mut self) {
@@ -66,10 +81,10 @@ impl ProgressComputer {
         }
         if !self.work_tree.is_empty() {
             let it = self.work_tree.iter().next().unwrap().clone();
-            let delta = it.finish - *self.work_total;
+            let delta = it.finish - self.work_total;
             self.end_event = Some(self.ctx.borrow_mut().emit_self(
                 InvocationEndEvent { id: it.id },
-                delta * f64::max(self.cores, *self.load),
+                delta * f64::max(self.cores, self.load),
             ));
         } else {
             self.end_event = None;
@@ -79,13 +94,13 @@ impl ProgressComputer {
     fn remove_invocation(&mut self, id: u64) -> f64 {
         let it = self.work_map.remove(&id).unwrap();
         self.work_tree.remove(&it);
-        let delta = it.finish - *self.work_total;
+        let delta = it.finish - self.work_total;
         delta
     }
 
     fn insert_invocation(&mut self, id: u64, remain: f64) {
         let it = WorkItem {
-            finish: *self.work_total + remain,
+            finish: self.work_total + remain,
             id,
         };
         self.work_map.insert(id, it.clone());
@@ -93,7 +108,8 @@ impl ProgressComputer {
     }
 
     fn shift_time(&mut self, time: f64) {
-        self.work_total += (time - self.last_update) / f64::max(self.cores, *self.load);
+        self.work_total += (time - self.last_update) / f64::max(self.cores, self.load);
+        self.try_rebuild();
     }
 
     fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {

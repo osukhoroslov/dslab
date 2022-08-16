@@ -117,10 +117,10 @@ impl ServerlessSimulation {
         self.ctx.emit(
             InvocationStartEvent {
                 request: InvocationRequest {
-                    id,
+                    func_id: id,
                     duration,
                     time,
-                    invocation_id,
+                    id: invocation_id,
                 },
             },
             self.controller_id,
