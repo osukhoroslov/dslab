@@ -35,10 +35,10 @@ fn test_concurrency() {
         assert_float_eq(invocation.finished.unwrap(), 4., 1e-9);
     }
     let stats = serverless.get_stats();
-    let abs_slowdown = stats.abs_slowdown.mean();
-    let rel_slowdown = stats.rel_slowdown.mean();
-    assert_float_eq(abs_slowdown, 2.6, 1e-9);
-    assert_float_eq(rel_slowdown, 2.6, 1e-9);
+    let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
+    let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
+    assert_float_eq(abs_exec_slowdown, 2.6, 1e-9);
+    assert_float_eq(rel_exec_slowdown, 2.6, 1e-9);
 }
 
 #[test]
@@ -67,10 +67,10 @@ fn test_different_shares() {
         assert_float_eq(invocation.finished.unwrap(), 5.714285714285714, 1e-9);
     }
     let stats = serverless.get_stats();
-    let abs_slowdown = stats.abs_slowdown.mean();
-    let rel_slowdown = stats.rel_slowdown.mean();
-    assert_float_eq(abs_slowdown, 3.1428571428571432, 1e-9);
-    assert_float_eq(rel_slowdown, 2.2142857142857144, 1e-9);
+    let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
+    let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
+    assert_float_eq(abs_exec_slowdown, 3.1428571428571432, 1e-9);
+    assert_float_eq(rel_exec_slowdown, 2.2142857142857144, 1e-9);
 }
 
 #[test]
@@ -99,10 +99,10 @@ fn test_different_start_times() {
         assert_float_eq(invocation.finished.unwrap(), 6.809523809523809, 1e-9);
     }
     let stats = serverless.get_stats();
-    let abs_slowdown = stats.abs_slowdown.mean();
-    let rel_slowdown = stats.rel_slowdown.mean();
-    assert_float_eq(abs_slowdown, 4.726190476190476, 1e-9);
-    assert_float_eq(rel_slowdown, 2.363095238095238, 1e-9);
+    let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
+    let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
+    assert_float_eq(abs_exec_slowdown, 4.726190476190476, 1e-9);
+    assert_float_eq(rel_exec_slowdown, 2.363095238095238, 1e-9);
 }
 
 #[test]
@@ -123,10 +123,10 @@ fn test_equal_shares() {
         assert_float_eq(invocation.finished.unwrap(), 2.5, 1e-9);
     }
     let stats = serverless.get_stats();
-    let abs_slowdown = stats.abs_slowdown.mean();
-    let rel_slowdown = stats.rel_slowdown.mean();
-    assert_float_eq(abs_slowdown, 1.5, 1e-9);
-    assert_float_eq(rel_slowdown, 1.5, 1e-9);
+    let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
+    let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
+    assert_float_eq(abs_exec_slowdown, 1.5, 1e-9);
+    assert_float_eq(rel_exec_slowdown, 1.5, 1e-9);
 }
 
 #[test]
@@ -147,8 +147,8 @@ fn test_no_contention() {
         assert_float_eq(invocation.finished.unwrap(), 1., 1e-9);
     }
     let stats = serverless.get_stats();
-    let abs_slowdown = stats.abs_slowdown.mean();
-    let rel_slowdown = stats.rel_slowdown.mean();
-    assert_float_eq(abs_slowdown, 0., 1e-9);
-    assert_float_eq(rel_slowdown, 0., 1e-9);
+    let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
+    let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
+    assert_float_eq(abs_exec_slowdown, 0., 1e-9);
+    assert_float_eq(rel_exec_slowdown, 0., 1e-9);
 }
