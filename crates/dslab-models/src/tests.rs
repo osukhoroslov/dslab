@@ -110,7 +110,7 @@ fn fractional_times() {
 
 #[test]
 fn fairness() {
-    let activities_count: usize = 6; // inserting more than 5 activities leads to problems with accuracy
+    let activities_count: usize = 100;
     let mut tester = ModelsTester::with_fixed_throughput(1.);
     for i in 0..activities_count {
         let start_time = i as f64;
@@ -125,7 +125,7 @@ fn fairness() {
 
 #[test]
 fn equal_activities_ordering() {
-    let activities_count: u32 = 8; // inserting more than 7 activities leads to problems with accuracy
+    let activities_count: u32 = 100;
     let mut tester = ModelsTester::with_fixed_throughput(activities_count as f64);
     let mut expected_result = vec![];
     for i in 0..activities_count {
