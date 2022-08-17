@@ -22,6 +22,9 @@ use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_storage::disk::Disk;
 
+use dslab_network::topology::Topology;
+use dslab_network::topology_model::TopologyNetwork;
+
 use crate::common::Start;
 use crate::master::Master;
 use crate::task::TaskRequest;
@@ -71,6 +74,7 @@ fn main() {
     // client context for submitting tasks
     let mut client = sim.create_context("client");
 
+    /*
     // create network and add hosts
     let network_model: Rc<RefCell<dyn NetworkModel>> = if use_shared_network {
         rc!(refcell!(SharedBandwidthNetwork::new(
@@ -91,7 +95,37 @@ fn main() {
             .add_node(&format!("host{}", i), local_bandwidth as f64, local_latency);
     }
     let hosts = network.borrow().get_nodes();
+    */
 
+    // /*
+    let mut topology = Topology::new();
+    // network nodes
+    for i in 0..host_count {
+        topology.add_node(&format!("host{}", i), local_bandwidth as f64, local_latency);
+    }
+    topology.add_node("switch", local_bandwidth as f64, local_latency);
+    // network links
+    for i in 0..host_count {
+        topology.add_link(
+            &format!("host{}", i),
+            "switch",
+            network_latency,
+            network_bandwidth as f64,
+        );
+    }
+    // init topology
+    topology.init();
+
+    let topology_rc = rc!(refcell!(topology));
+    let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
+    let network = rc!(refcell!(Network::new_with_topology(
+        network_model,
+        topology_rc.clone(),
+        sim.create_context("net")
+    )));
+    sim.add_handler("net", network.clone());
+    let hosts = network.borrow().get_nodes();
+    // */
     // create and start master on host0
     let host = &hosts[0];
     let master_name = &format!("{}::master", host);

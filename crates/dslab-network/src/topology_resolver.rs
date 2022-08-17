@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
 
@@ -91,12 +93,12 @@ impl TopologyResolver {
     }
 
     fn dijkstra_for_node(&mut self, node: &NodeId, links: &BTreeMap<LinkID, Link>, node_links_map: &NodeLinksMap) {
-        let mut latency: HashMap<NodeId, f64> = HashMap::new();
+        let mut latency: FxHashMap<NodeId, f64> = FxHashMap::default();
         for n in node_links_map.keys() {
             latency.insert(*n, f64::INFINITY);
         }
         latency.insert(*node, 0.0);
-        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut visited: FxHashSet<NodeId> = FxHashSet::default();
         for _ in 0..node_links_map.len() {
             let mut relax_node = usize::MAX;
             for next_node in node_links_map.keys() {

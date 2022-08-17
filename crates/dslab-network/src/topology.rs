@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
 
@@ -16,12 +17,12 @@ pub struct Topology {
     nodes_name_map: IndexMap<String, NodeId>,
     nodes: BTreeMap<NodeId, Node>,
     links: BTreeMap<LinkID, Link>,
-    component_nodes: HashMap<Id, NodeId>,
+    component_nodes: FxHashMap<Id, NodeId>,
     node_links_map: NodeLinksMap,
     resolver: Option<TopologyResolver>,
-    bandwidth_cache: HashMap<(NodeId, NodeId), f64>,
-    latency_cache: HashMap<(NodeId, NodeId), f64>,
-    path_cache: HashMap<(NodeId, NodeId), Vec<LinkID>>,
+    bandwidth_cache: FxHashMap<(NodeId, NodeId), f64>,
+    latency_cache: FxHashMap<(NodeId, NodeId), f64>,
+    path_cache: FxHashMap<(NodeId, NodeId), Vec<LinkID>>,
 }
 
 impl Topology {
@@ -32,12 +33,12 @@ impl Topology {
             nodes_name_map: IndexMap::new(),
             nodes: BTreeMap::new(),
             links: BTreeMap::new(),
-            component_nodes: HashMap::new(),
+            component_nodes: FxHashMap::default(),
             node_links_map: BTreeMap::new(),
             resolver: None,
-            bandwidth_cache: HashMap::new(),
-            latency_cache: HashMap::new(),
-            path_cache: HashMap::new(),
+            bandwidth_cache: FxHashMap::default(),
+            latency_cache: FxHashMap::default(),
+            path_cache: FxHashMap::default(),
         }
     }
 

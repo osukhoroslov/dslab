@@ -11,4 +11,4 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 priority-queue = "1.2.3"
 indexmap = "1.9.1"
-
+rustc-hash = "1.1.0"

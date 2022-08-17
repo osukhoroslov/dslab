@@ -1,7 +1,7 @@
 use priority_queue::DoublePriorityQueue;
+use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use dslab_core::component::Id;
@@ -122,8 +122,8 @@ impl TopologyNetwork {
             paths.push(path.unwrap());
         }
 
-        let mut link_data = HashMap::new();
-        let mut link_paths = HashMap::new();
+        let mut link_data = FxHashMap::default();
+        let mut link_paths = FxHashMap::default();
         // Init initial link data
         for (idx, path) in paths.iter().enumerate() {
             for link_id in path {
@@ -155,7 +155,7 @@ impl TopologyNetwork {
         while current_link_usage.len() != 0 {
             let (link_with_minimal_bandwidth_id, link_with_minimal_bandwidth_usage) =
                 current_link_usage.pop_min().unwrap();
-            let mut links_decrease_paths = HashMap::new();
+            let mut links_decrease_paths = FxHashMap::default();
             let bandwidth = link_with_minimal_bandwidth_usage.get_path_bandwidth();
             for path_idx in link_paths.get(&link_with_minimal_bandwidth_id).unwrap() {
                 if assigned_path[*path_idx] {

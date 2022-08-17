@@ -1,4 +1,5 @@
-use std::collections::{BinaryHeap, HashSet};
+use rustc_hash::FxHashSet;
+use std::collections::BinaryHeap;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
@@ -11,7 +12,7 @@ pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
     events: BinaryHeap<Event>,
-    canceled_events: HashSet<EventId>,
+    canceled_events: FxHashSet<EventId>,
     event_count: u64,
 }
 
@@ -21,7 +22,7 @@ impl SimulationState {
             clock: 0.0,
             rand: Pcg64::seed_from_u64(seed),
             events: BinaryHeap::new(),
-            canceled_events: HashSet::new(),
+            canceled_events: FxHashSet::default(),
             event_count: 0,
         }
     }
@@ -50,10 +51,10 @@ impl SimulationState {
     where
         T: EventData,
     {
-        assert!(
+        /*assert!(
             delay >= 0.0,
             "Event delay is negative! It is not allowed to add events from the past."
-        );
+        );*/
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
