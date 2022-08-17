@@ -1,7 +1,6 @@
 use sugars::boxed;
 
-// use crate::fair_sharing::FairThroughputSharingModel;
-use crate::fair_sharing_new::FairThroughputSharingModel;
+use crate::fair_sharing::FairThroughputSharingModel;
 use crate::fair_sharing_slow::SlowFairThroughputSharingModel;
 use crate::model::ThroughputSharingModel;
 
