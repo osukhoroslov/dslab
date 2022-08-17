@@ -1,11 +1,12 @@
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::time::Instant;
 
 use log::log_enabled;
 use log::Level::Info;
 use priority_queue::PriorityQueue;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 
 use dslab_core::component::Id;
@@ -60,8 +61,8 @@ pub struct Master {
     workers: BTreeMap<Id, WorkerInfo>,
     worker_queue: PriorityQueue<Id, WorkerScore>,
     unassigned_tasks: BTreeMap<u64, TaskInfo>,
-    assigned_tasks: HashMap<u64, TaskInfo>,
-    completed_tasks: HashMap<u64, TaskInfo>,
+    assigned_tasks: FxHashMap<u64, TaskInfo>,
+    completed_tasks: FxHashMap<u64, TaskInfo>,
     cpus_total: u32,
     cpus_available: u32,
     memory_total: u64,
@@ -78,8 +79,8 @@ impl Master {
             workers: BTreeMap::new(),
             worker_queue: PriorityQueue::new(),
             unassigned_tasks: BTreeMap::new(),
-            assigned_tasks: HashMap::new(),
-            completed_tasks: HashMap::new(),
+            assigned_tasks: FxHashMap::default(),
+            completed_tasks: FxHashMap::default(),
             cpus_total: 0,
             cpus_available: 0,
             memory_total: 0,
@@ -147,7 +148,7 @@ impl Master {
         }
         log_trace!(self.ctx, "scheduling tasks");
         let t = Instant::now();
-        let mut assigned_tasks = HashSet::new();
+        let mut assigned_tasks = FxHashSet::default();
         for (task_id, task) in self.unassigned_tasks.iter_mut() {
             if self.worker_queue.is_empty() {
                 break;

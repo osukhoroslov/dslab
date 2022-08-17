@@ -1,7 +1,7 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
@@ -36,12 +36,12 @@ pub struct Worker {
     disk: Disk,
     net: Rc<RefCell<Network>>,
     master_id: Id,
-    tasks: HashMap<u64, TaskInfo>,
-    computations: HashMap<u64, u64>,
-    reads: HashMap<u64, u64>,
-    writes: HashMap<u64, u64>,
-    downloads: HashMap<usize, u64>,
-    uploads: HashMap<usize, u64>,
+    tasks: FxHashMap<u64, TaskInfo>,
+    computations: FxHashMap<u64, u64>,
+    reads: FxHashMap<u64, u64>,
+    writes: FxHashMap<u64, u64>,
+    downloads: FxHashMap<usize, u64>,
+    uploads: FxHashMap<usize, u64>,
     ctx: SimulationContext,
 }
 
@@ -59,12 +59,12 @@ impl Worker {
             disk,
             net,
             master_id,
-            tasks: HashMap::new(),
-            computations: HashMap::new(),
-            reads: HashMap::new(),
-            writes: HashMap::new(),
-            downloads: HashMap::new(),
-            uploads: HashMap::new(),
+            tasks: FxHashMap::default(),
+            computations: FxHashMap::default(),
+            reads: FxHashMap::default(),
+            writes: FxHashMap::default(),
+            downloads: FxHashMap::default(),
+            uploads: FxHashMap::default(),
             ctx,
         }
     }
