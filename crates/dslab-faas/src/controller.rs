@@ -45,7 +45,7 @@ impl Controller {
 
     fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
         let reg = self.function_registry.borrow();
-        let app_id = reg.get_function(request.id).unwrap().app_id;
+        let app_id = reg.get_function(request.func_id).unwrap().app_id;
         let app = reg.get_app(app_id).unwrap();
         let host = self.scheduler.select_host(app, &self.hosts);
         self.hosts[host].borrow_mut().invoke(request, time)

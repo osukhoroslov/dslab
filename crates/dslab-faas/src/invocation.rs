@@ -6,16 +6,19 @@ use crate::util::Counter;
 
 #[derive(Copy, Clone, Debug, Serialize)]
 pub struct InvocationRequest {
-    pub id: u64,
+    pub func_id: u64,
     pub duration: f64,
     pub time: f64,
+    pub id: u64,
 }
 
 #[derive(Copy, Clone)]
 pub struct Invocation {
+    pub id: u64,
     pub request: InvocationRequest,
     pub host_id: u64,
     pub container_id: u64,
+    pub started: f64,
     pub finished: Option<f64>,
 }
 
@@ -26,16 +29,21 @@ pub struct InvocationRegistry {
 }
 
 impl InvocationRegistry {
-    pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64) -> u64 {
-        let id = self.invocation_ctr.next();
+    pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64, time: f64) {
+        let id = request.id;
         let invocation = Invocation {
+            id,
             request,
             host_id,
             container_id,
+            started: time,
             finished: None,
         };
         self.invocations.insert(id, invocation);
-        id
+    }
+
+    pub fn register_invocation(&mut self) -> u64 {
+        self.invocation_ctr.next()
     }
 
     pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {

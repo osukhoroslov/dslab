@@ -7,6 +7,8 @@ edition = "2021"
 [dependencies]
 arima = "0.2"
 csv = "1.1"
+dslab-faas = { path = "../dslab-faas" }
+indexmap = "1.8.2"
 num = "0.2.0"
 rand = "0.8"
-dslab-faas = { path = "../dslab-faas" }
+rand_pcg = "0.3.1"
