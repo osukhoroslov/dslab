@@ -44,6 +44,7 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
+/// Fast implementation of fair throughput sharing model.
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ThroughputFunction,
