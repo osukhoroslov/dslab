@@ -4,6 +4,10 @@ use crate::fair_sharing::FairThroughputSharingModel;
 use crate::fair_sharing_slow::SlowFairThroughputSharingModel;
 use crate::model::ThroughputSharingModel;
 
+fn assert_float_eq(x: f64, y: f64, eps: f64) {
+    assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);
+}
+
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
     slow_model: SlowFairThroughputSharingModel<u32>,
@@ -27,7 +31,10 @@ impl ModelsTester {
     fn insert_and_compare(&mut self, current_time: f64, volume: f64, item: u32) {
         self.fast_model.insert(current_time, volume, item);
         self.slow_model.insert(current_time, volume, item);
-        assert_eq!(self.fast_model.peek(), self.slow_model.peek());
+        let fast_item = self.fast_model.peek().unwrap();
+        let slow_item = self.slow_model.peek().unwrap();
+        assert_float_eq(fast_item.0, slow_item.0, 1e-9);
+        assert_eq!(fast_item.1, slow_item.1);
     }
 
     fn pop_all_and_compare(&mut self) -> Vec<(f64, u32)> {
@@ -39,7 +46,12 @@ impl ModelsTester {
         while let Some((time, item)) = self.slow_model.pop() {
             slow_model_result.push((time, item));
         }
-        assert_eq!(fast_model_result, slow_model_result);
+        println!();
+        for i in 0..fast_model_result.len() {
+            assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-9);
+            println!("{} {}", fast_model_result[i].0, slow_model_result[i].0);
+            assert_eq!(fast_model_result[i].1, slow_model_result[i].1);
+        }
         return fast_model_result;
     }
 }
@@ -97,7 +109,7 @@ fn fractional_times() {
 
 #[test]
 fn fairness() {
-    let activities_count: usize = 5; // inserting more than 5 activities leads to problems with accuracy
+    let activities_count: usize = 100;
     let mut tester = ModelsTester::with_fixed_throughput(1.);
     for i in 0..activities_count {
         let start_time = i as f64;
@@ -112,7 +124,7 @@ fn fairness() {
 
 #[test]
 fn equal_activities_ordering() {
-    let activities_count: u32 = 7; // inserting more than 7 activities leads to problems with accuracy
+    let activities_count: u32 = 100;
     let mut tester = ModelsTester::with_fixed_throughput(activities_count as f64);
     let mut expected_result = vec![];
     for i in 0..activities_count {

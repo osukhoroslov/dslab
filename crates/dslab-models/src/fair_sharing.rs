@@ -5,15 +5,17 @@ use sugars::boxed;
 
 use crate::model::{ThroughputFunction, ThroughputSharingModel};
 
+const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
+
 struct Activity<T> {
-    position: f64,
     id: u64,
     item: T,
+    finish_work: f64,
 }
 
 impl<T> Activity<T> {
-    fn new(position: f64, id: u64, item: T) -> Self {
-        Self { position, id, item }
+    fn new(id: u64, item: T, finish_work: f64) -> Self {
+        Self { id, item, finish_work }
     }
 }
 
@@ -25,52 +27,28 @@ impl<T> PartialOrd for Activity<T> {
 
 impl<T> Ord for Activity<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.position.total_cmp(&self.position).then(other.id.cmp(&self.id))
+        other
+            .finish_work
+            .total_cmp(&self.finish_work)
+            .then(other.id.cmp(&self.id))
     }
 }
 
 impl<T> PartialEq for Activity<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.position == other.position && self.id == other.id
+        self.finish_work == other.finish_work && self.id == other.id
     }
 }
 
 impl<T> Eq for Activity<T> {}
 
-// Linear time function y = a * x + b
-struct TimeFunction {
-    a: f64,
-    b: f64,
-}
-
-impl TimeFunction {
-    fn ident() -> Self {
-        Self { a: 1., b: 0. }
-    }
-
-    fn at(&self, time: f64) -> f64 {
-        self.a * time + self.b
-    }
-
-    fn inversed(&self) -> Self {
-        Self {
-            a: 1. / self.a,
-            b: -self.b / self.a,
-        }
-    }
-
-    fn update(&mut self, current_time: f64, throughput_ratio: f64) {
-        self.a *= throughput_ratio;
-        self.b = self.b * throughput_ratio + current_time * (1. - throughput_ratio);
-    }
-}
-
 pub struct FairThroughputSharingModel<T> {
+    activities: BinaryHeap<Activity<T>>,
     throughput_function: ThroughputFunction,
-    time_fn: TimeFunction,
-    entries: BinaryHeap<Activity<T>>,
+    throughput_per_activity: f64,
     next_id: u64,
-    last_throughput_per_item: f64,
+    total_work: f64,
+    last_update: f64,
 }
 
 impl<T> FairThroughputSharingModel<T> {
@@ -80,59 +58,67 @@ impl<T> FairThroughputSharingModel<T> {
 
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
+            activities: BinaryHeap::new(),
             throughput_function,
-            time_fn: TimeFunction::ident(),
-            entries: BinaryHeap::new(),
+            throughput_per_activity: 0.,
             next_id: 0,
-            last_throughput_per_item: 0.,
+            total_work: 0.,
+            last_update: 0.,
+        }
+    }
+
+    fn increment_total_work(&mut self, delta: f64) {
+        self.total_work += delta;
+        if self.total_work > TOTAL_WORK_MAX_VALUE {
+            let mut entries_vec = Vec::new();
+            while self.activities.len() > 0 {
+                let mut activity = self.activities.pop().unwrap();
+                activity.finish_work -= self.total_work;
+                entries_vec.push(activity);
+            }
+            self.activities = entries_vec.into();
+            self.total_work = 0.;
         }
     }
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
-        if self.entries.is_empty() {
-            self.last_throughput_per_item = (self.throughput_function)(1);
-            let finish_time = current_time + volume / self.last_throughput_per_item;
-            self.time_fn = TimeFunction::ident();
-            self.entries.push(Activity::<T>::new(finish_time, self.next_id, item));
-        } else {
-            let new_count = self.entries.len() + 1;
-            let new_throughput_per_item = (self.throughput_function)(new_count) / new_count as f64;
-            self.time_fn
-                .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
-            self.last_throughput_per_item = new_throughput_per_item;
-            let finish_time = current_time + volume / new_throughput_per_item;
-            self.entries.push(Activity::<T>::new(
-                self.time_fn.inversed().at(finish_time),
-                self.next_id,
-                item,
-            ));
+        if self.activities.len() > 0 {
+            self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);
         }
+        let finish_work = self.total_work + volume;
+        self.activities
+            .push(Activity::<T>::new(self.next_id, item, finish_work));
         self.next_id += 1;
+        let count = self.activities.len();
+        self.throughput_per_activity = (self.throughput_function)(count) / count as f64;
+        self.last_update = current_time;
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {
-        if let Some(entry) = self.entries.pop() {
-            let current_time = self.time_fn.at(entry.position);
-            let new_count = self.entries.len();
-            if new_count > 0 {
-                let new_throughput_per_item = (self.throughput_function)(new_count) / new_count as f64;
-                self.time_fn
-                    .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
-                self.last_throughput_per_item = new_throughput_per_item;
+        if let Some(entry) = self.activities.pop() {
+            let remaining_work = entry.finish_work - self.total_work;
+            let finish_time = self.last_update + remaining_work / self.throughput_per_activity;
+            self.increment_total_work(remaining_work);
+            let count = self.activities.len();
+            if count > 0 {
+                self.throughput_per_activity = (self.throughput_function)(count) / count as f64;
             } else {
-                self.time_fn = TimeFunction::ident();
-                self.last_throughput_per_item = 0.;
+                self.throughput_per_activity = 0.;
             }
-            return Some((current_time, entry.item));
+            self.last_update = finish_time;
+            return Some((finish_time, entry.item));
         }
         None
     }
 
     fn peek(&self) -> Option<(f64, &T)> {
-        self.entries
-            .peek()
-            .map(|entry| (self.time_fn.at(entry.position), &entry.item))
+        self.activities.peek().map(|entry| {
+            (
+                self.last_update + (entry.finish_work - self.total_work) / self.throughput_per_activity,
+                &entry.item,
+            )
+        })
     }
 }
