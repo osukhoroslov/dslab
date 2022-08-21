@@ -71,7 +71,7 @@ impl AzureDatasetReader {
     /// Creates dataset reader.
     ///
     /// The sizes of VMs are computed based on the provided host CPU and memory capacities.
-    /// Parses only the VMs which started within first `simulation_length` seconds.
+    /// Reads only the VMs started within first `simulation_length` seconds.
     pub fn new(simulation_length: f64, host_cpu_capacity: f64, host_memory_capacity: f64) -> Self {
         Self {
             simulation_length,
