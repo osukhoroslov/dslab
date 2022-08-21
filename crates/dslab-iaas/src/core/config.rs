@@ -1,40 +1,70 @@
+//! Simulation configuration.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfigRaw {
-    pub send_stats_period: Option<f64>, // periodically send statistics from host to monitoring
-    pub message_delay: Option<f64>,     // message trip time from any host to any direction
-    pub allocation_retry_period: Option<f64>, // when allocation request fails then wait for ...
-    pub vm_start_duration: Option<f64>, // vm initialization duration
-    pub vm_stop_duration: Option<f64>,  // vm deallocation duration
-    pub allow_vm_overcommit: Option<bool>, // pack VM by real resource consumption, not SLA
-    pub network_throughput: Option<u64>, // to define VM migration duration
-    pub simulation_length: Option<f64>, // length of simulation (for public datasets only)
-    pub number_of_hosts: Option<u32>,   // number of hosts in datacenter (for public datasets only)
-    pub host_cpu_capacity: Option<f64>, // CPU capacity for default host
-    pub host_memory_capacity: Option<f64>, // RAM capacity for default host
-    pub step_duration: Option<f64>,     // duration beetween user access the simulation info
-    pub vm_allocation_timeout: Option<f64>, // VM becomes failed after this timeout is reached
+    /// periodically send statistics from host to monitoring
+    pub send_stats_period: Option<f64>,
+    /// message trip time from any host to any direction
+    pub message_delay: Option<f64>,
+    /// when allocation request fails then wait for this duration
+    pub allocation_retry_period: Option<f64>,
+    /// vm initialization duration
+    pub vm_start_duration: Option<f64>,
+    /// vm deallocation duration
+    pub vm_stop_duration: Option<f64>,
+    /// pack VM by real resource consumption, not SLA
+    pub allow_vm_overcommit: Option<bool>,
+    /// currently used to define VM migration duration
+    pub network_throughput: Option<u64>,
+    /// length of simulation (for public datasets only)
+    pub simulation_length: Option<f64>,
+    /// number of hosts in datacenter (for public datasets only)
+    pub number_of_hosts: Option<u32>,
+    /// CPU capacity for default host
+    pub host_cpu_capacity: Option<f64>,
+    /// RAM capacity for default host
+    pub host_memory_capacity: Option<f64>,
+    /// duration beetween user access the simulation info
+    pub step_duration: Option<f64>,
+    /// VM becomes failed after this timeout is reached
+    pub vm_allocation_timeout: Option<f64>,
 }
 
+/// Represents simulation configuration.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfig {
-    pub send_stats_period: f64,       // periodically send statistics from host to monitoring
-    pub message_delay: f64,           // message trip time from any host to any direction
-    pub allocation_retry_period: f64, // when allocation request fails then wait for ...
-    pub vm_start_duration: f64,       // vm initialization duration
-    pub vm_stop_duration: f64,        // vm deallocation duration
-    pub allow_vm_overcommit: bool,    // pack VM by real resource consumption, not SLA
-    pub network_throughput: u64,      // to define VM migration duration
-    pub simulation_length: f64,       // length of simulation (for public datasets only)
-    pub number_of_hosts: u32,         // number of hosts in datacenter (for public datasets only)
-    pub host_cpu_capacity: f64,       // CPU capacity for default host
-    pub host_memory_capacity: f64,    // RAM capacity for default host
-    pub step_duration: f64,           // duration beetween user access the simulation info
-    pub vm_allocation_timeout: f64,   // VM becomes failed after this timeout is reached
+    /// periodically send statistics from host to monitoring
+    pub send_stats_period: f64,
+    /// message trip time from any host to any direction
+    pub message_delay: f64,
+    /// when allocation request fails then wait for this duration
+    pub allocation_retry_period: f64,
+    /// vm initialization duration
+    pub vm_start_duration: f64,
+    // vm deallocation duration
+    pub vm_stop_duration: f64,
+    /// pack VM by real resource consumption, not SLA
+    pub allow_vm_overcommit: bool,
+    /// currently used to define VM migration duration
+    pub network_throughput: u64,
+    /// length of simulation (for public datasets only)
+    pub simulation_length: f64,
+    /// number of hosts in datacenter (for public datasets only)
+    pub number_of_hosts: u32,
+    /// CPU capacity for default host
+    pub host_cpu_capacity: f64,
+    /// RAM capacity for default host
+    pub host_memory_capacity: f64,
+    /// duration beetween user access the simulation info
+    pub step_duration: f64,
+    /// VM becomes failed after this timeout is reached
+    pub vm_allocation_timeout: f64,
 }
 
 impl SimulationConfig {
+    /// Creates simulation config with default parameter values.
     pub fn new() -> Self {
         Self {
             send_stats_period: 0.5,
@@ -53,6 +83,7 @@ impl SimulationConfig {
         }
     }
 
+    /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
         let data: SimulationConfigRaw =
             serde_yaml::from_str(&std::fs::read_to_string(file_name).expect(&format!("Can't read file {}", file_name)))

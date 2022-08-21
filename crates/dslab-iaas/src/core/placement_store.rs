@@ -1,3 +1,5 @@
+//! Component managing the authoritative copy of resource pool state.
+
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -17,6 +19,20 @@ use crate::core::events::allocation::{
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
 
+/// This component maintains the authoritative copy of resource pool state and serializes updates to it.
+///
+/// Each scheduler sends its placement decisions to the placement store (PS), which checks each decision for possible
+/// conflicts using its current pool state.
+///
+/// If no conflicts are detected, PS applies the change to its pool state and notifies about this change all
+/// schedulers, which in turn update their local pool states. PS also passes the committed decision to the host which
+/// has been selected for VM execution.
+///
+/// If a conflict is detected, PS rejects the update, notifies about it the corresponding scheduler and resubmits the
+/// failed allocation request with configurable retry delay.
+///
+/// A user can configure the message delay for communication between schedulers and PS, which influences the staleness
+/// of scheduler states and conflict rate.
 pub struct PlacementStore {
     allow_vm_overcommit: bool,
     pool_state: ResourcePoolState,
@@ -27,6 +43,7 @@ pub struct PlacementStore {
 }
 
 impl PlacementStore {
+    /// Creates component.
     pub fn new(
         allow_vm_overcommit: bool,
         vm_api: Rc<RefCell<VmAPI>>,
@@ -43,23 +60,28 @@ impl PlacementStore {
         }
     }
 
+    /// Returns component ID.
     pub fn get_id(&self) -> u32 {
         self.ctx.id()
     }
 
+    /// Adds new host to resource pool state.
     pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
         self.pool_state
             .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
+    /// Registers scheduler so that PS can notify it about allocation events.
     pub fn add_scheduler(&mut self, id: u32) {
         self.schedulers.insert(id);
     }
 
+    /// Returns a copy of the current resource pool state (e.g. to initialize a state of new scheduler).
     pub fn get_pool_state(&self) -> ResourcePoolState {
         self.pool_state.clone()
     }
 
+    /// Processes allocation commit requests from schedulers.
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
@@ -103,6 +125,10 @@ impl PlacementStore {
         }
     }
 
+    /// Processes AllocationFailed events from host managers.
+    ///
+    /// If host allocation fails, usually that means that the host is overloaded.
+    /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);
@@ -115,6 +141,9 @@ impl PlacementStore {
         }
     }
 
+    /// Processes AllocationReleased events that correspond to deletion of VM from the host.
+    ///
+    /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         self.pool_state.release(&alloc, host_id);

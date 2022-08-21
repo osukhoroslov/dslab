@@ -1,3 +1,6 @@
+//! Trait for dataset readers.
+
+/// Represents information about a single virtual machine from dataset.
 #[derive(Clone)]
 pub struct VMRequest {
     pub id: u32,
@@ -8,5 +11,8 @@ pub struct VMRequest {
 }
 
 pub trait DatasetReader {
+    /// Returns the next VM from dataset (if any).
+    ///
+    /// VMs should be returned in non-decreasing order of their start times.
     fn get_next_vm(&mut self) -> Option<VMRequest>;
 }

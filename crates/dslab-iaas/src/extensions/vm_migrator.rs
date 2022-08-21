@@ -1,3 +1,5 @@
+//! Component performing automatic migration of VMs.
+
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -19,6 +21,11 @@ use dslab_core::{log_debug, log_info, log_trace, log_warn};
 #[derive(Serialize)]
 pub struct PerformMigrations {}
 
+/// This component performs automatic migration of VMs to improve host utilization while avoiding SLA violations.
+///
+/// It periodically checks the state of resource pool and tries to find the overloaded and underloaded hosts.
+/// If there are any, it selects some VMs from these hosts and migrates them to other hosts in order to turn off the
+/// underloaded hosts and return the overloaded hosts to the normal state.
 pub struct VmMigrator {
     interval: f64,
     overload_threshold: f64,
@@ -30,6 +37,9 @@ pub struct VmMigrator {
 }
 
 impl VmMigrator {
+    /// Used to provide the references to standard components needed for migrator work.
+    ///
+    /// This method should be invoked before [`init()`](VmMigrator::init()).
     pub fn patch_custom_args(
         &mut self,
         interval: f64,
@@ -43,6 +53,7 @@ impl VmMigrator {
         self.sim_config = Some(sim_config);
     }
 
+    /// Periodic process, which finds hosts and performs VM migrations.
     fn perform_migrations(&mut self) {
         if self.monitoring.is_none() {
             log_warn!(self.ctx, "cannot perform migrations as there is no monitoring");
