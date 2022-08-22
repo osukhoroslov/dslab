@@ -1,3 +1,5 @@
+//! Core of DAG execution simulation.
+
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::rc::Rc;

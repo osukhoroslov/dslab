@@ -1,3 +1,5 @@
+//! Trait for defining custom schedulers.
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;

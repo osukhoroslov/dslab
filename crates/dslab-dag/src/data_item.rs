@@ -1,3 +1,5 @@
+//! DAG data item.
+
 #[derive(Eq, PartialEq, Clone)]
 pub enum DataItemState {
     /// Not ready, waiting for corresponding task to complete.
