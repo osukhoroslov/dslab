@@ -9,3 +9,6 @@ pub mod scheduler;
 pub mod schedulers;
 pub mod task;
 pub mod trace_log;
+
+#[cfg(test)]
+mod tests;
