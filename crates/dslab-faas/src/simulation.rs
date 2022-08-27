@@ -12,8 +12,9 @@ use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, Invoker};
-use crate::resource::{Resource, ResourceNameResolver, ResourceProvider, ResourceRequirement};
+use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::Stats;
+use crate::trace::Trace;
 use crate::util::Counter;
 
 pub type HandlerId = dslab_core::component::Id;
@@ -44,8 +45,8 @@ impl ServerlessSimulation {
             config.scheduler,
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
-        Self {
-            coldstart: config.coldstart_policy,
+        let mut me = Self {
+            coldstart: config.coldstart_policy.box_to_rc(),
             controller,
             controller_id,
             disable_contention: config.disable_contention,
@@ -56,7 +57,12 @@ impl ServerlessSimulation {
             resource_name_resolver: Default::default(),
             sim,
             stats,
+        };
+        for host in config.hosts {
+            let resources: Vec<_> = host.resources.iter().map(|x| me.create_resource(&x.0, x.1)).collect();
+            me.add_host(Some(host.invoker), ResourceProvider::new(resources), host.cores);
         }
+        me
     }
 
     pub fn try_resolve_resource_name(&self, name: &str) -> Option<usize> {
@@ -110,6 +116,32 @@ impl ServerlessSimulation {
 
     pub fn add_app(&mut self, app: Application) -> u64 {
         self.function_registry.borrow_mut().add_app(app)
+    }
+
+    pub fn load_trace(&mut self, trace: &dyn Trace) {
+        for app in trace.app_iter() {
+            let res = ResourceConsumer::new(
+                app.container_resources
+                    .iter()
+                    .map(|x| self.create_resource_requirement(&x.0, x.1))
+                    .collect(),
+            );
+            self.add_app(Application::new(
+                app.concurrent_invocations,
+                app.container_deployment_time,
+                app.container_cpu_share,
+                res,
+            ));
+        }
+        for func in trace.function_iter() {
+            self.add_function(Function::new(func));
+        }
+        for request in trace.request_iter() {
+            self.send_invocation_request(request.id, request.duration, request.time);
+        }
+        if let Some(t) = trace.simulation_end() {
+            self.set_simulation_end(t);
+        }
     }
 
     pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) -> u64 {

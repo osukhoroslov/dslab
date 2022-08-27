@@ -4,6 +4,9 @@ use std::str::FromStr;
 
 use csv::ReaderBuilder;
 
+use dslab_faas::trace::{ApplicationData, RequestData, Trace};
+
+#[derive(Default, Copy, Clone)]
 pub struct FunctionSample {
     pub time: u64,
     pub invocations: usize,
@@ -15,9 +18,109 @@ pub struct FunctionSample {
 }
 
 pub type FunctionTrace = Vec<FunctionSample>;
-pub type OpenDCTrace = Vec<FunctionTrace>;
 
-pub fn process_opendc_trace(path: &Path) -> OpenDCTrace {
+pub struct OpenDCTrace {
+    pub funcs: Vec<FunctionTrace>,
+    pub concurrency_level: usize,
+    pub cold_start: f64,
+    pub memory_name: String,
+}
+
+impl Trace for OpenDCTrace {
+    fn app_iter(&self) -> Box<dyn Iterator<Item = ApplicationData> + '_> {
+        Box::new(self.funcs.iter().map(|x| {
+            let mut max_mem = 0;
+            for sample in x.iter() {
+                max_mem = usize::max(max_mem, sample.mem_provisioned);
+            }
+            ApplicationData::new(
+                self.concurrency_level,
+                self.cold_start,
+                1.0,
+                vec![(self.memory_name.clone(), max_mem as u64)],
+            )
+        }))
+    }
+
+    fn request_iter(&self) -> Box<dyn Iterator<Item = RequestData> + '_> {
+        Box::new(OpenDCRequestIter::new(self.funcs.iter()))
+    }
+
+    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+        Box::new(0..(self.funcs.len() as u64))
+    }
+
+    fn simulation_end(&self) -> Option<f64> {
+        None
+    }
+}
+
+pub struct OpenDCRequestIter<'a> {
+    trace_iter: std::slice::Iter<'a, FunctionTrace>,
+    trace: FunctionTrace,
+    sample_id: usize,
+    fn_id: usize,
+    curr: FunctionSample,
+    invocations: usize,
+}
+
+impl<'a> OpenDCRequestIter<'a> {
+    pub fn new(trace_iter: std::slice::Iter<'a, FunctionTrace>) -> Self {
+        Self {
+            trace_iter,
+            trace: Vec::new(),
+            sample_id: 0,
+            fn_id: 0,
+            curr: Default::default(),
+            invocations: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for OpenDCRequestIter<'a> {
+    type Item = RequestData;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.invocations == self.curr.invocations {
+            while self.sample_id == self.trace.len() {
+                if let Some(trace) = self.trace_iter.next() {
+                    self.trace = trace.clone();
+                    self.fn_id += 1;
+                    self.sample_id = 0;
+                } else {
+                    return None;
+                }
+            }
+            self.curr = self.trace[self.sample_id].clone();
+            self.sample_id += 1;
+            self.invocations = 0;
+        }
+        self.invocations += 1;
+        Some(RequestData {
+            id: (self.fn_id - 1) as u64,
+            duration: (self.curr.exec as f64) / 1000.0,
+            time: (self.curr.time as f64) / 1000.0,
+        })
+    }
+}
+
+pub struct OpenDCTraceConfig {
+    pub concurrency_level: usize,
+    pub cold_start: f64,
+    pub memory_name: String,
+}
+
+impl Default for OpenDCTraceConfig {
+    fn default() -> Self {
+        Self {
+            concurrency_level: 1,
+            cold_start: 0.0,
+            memory_name: "mem".to_string(),
+        }
+    }
+}
+
+pub fn process_opendc_trace(path: &Path, config: OpenDCTraceConfig) -> OpenDCTrace {
     let mut files = Vec::new();
     match read_dir(path) {
         Ok(paths) => {
@@ -53,5 +156,10 @@ pub fn process_opendc_trace(path: &Path) -> OpenDCTrace {
         }
         trace.push(fun_trace);
     }
-    trace
+    OpenDCTrace {
+        funcs: trace,
+        concurrency_level: config.concurrency_level,
+        cold_start: config.cold_start,
+        memory_name: config.memory_name,
+    }
 }

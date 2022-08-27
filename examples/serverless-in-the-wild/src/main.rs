@@ -1,48 +1,10 @@
-use std::cell::RefCell;
 use std::path::Path;
-use std::rc::Rc;
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use dslab_faas::config::Config;
-use dslab_faas::function::{Application, Function};
-use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
-use dslab_faas::simulation::ServerlessSimulation;
+use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostData};
 use dslab_faas::stats::Stats;
-use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
+use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
-
-fn test_policy(policy: Rc<RefCell<dyn ColdStartPolicy>>, trace: &Trace) -> Stats {
-    let mut time_range = 0.0;
-    for req in trace.trace_records.iter() {
-        time_range = f64::max(time_range, req.time + req.dur);
-    }
-    let mut config: Config = Default::default();
-    config.coldstart_policy = policy;
-    let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
-    for _ in 0..1000 {
-        let mem = sim.create_resource("mem", 4096 * 4);
-        sim.add_host(None, ResourceProvider::new(vec![mem]), 8);
-    }
-    for app in trace.app_records.iter() {
-        let mem = sim.create_resource_requirement("mem", app.mem);
-        sim.add_app(Application::new(
-            16,
-            app.cold_start,
-            1.0,
-            ResourceConsumer::new(vec![mem]),
-        ));
-    }
-    for func in trace.function_records.iter() {
-        sim.add_function(Function::new(func.app_id));
-    }
-    for req in trace.trace_records.iter() {
-        sim.send_invocation_request(req.id as u64, req.dur, req.time);
-    }
-    sim.set_simulation_end(time_range);
-    sim.step_until_no_events();
-    sim.get_stats()
-}
 
 fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
@@ -61,41 +23,49 @@ fn print_results(stats: Stats, name: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let trace = process_azure_trace(Path::new(&args[1]), 200000);
+    let mut trace_config: AzureTraceConfig = Default::default();
+    trace_config.invocations_limit = 200000;
+    trace_config.concurrency_level = 16;
+    let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
-    print_results(
-        test_policy(
-            Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0))),
-            &trace,
-        ),
-        "No unloading",
-    );
+    let mut policies: Vec<Box<dyn ColdStartPolicy + Send>> = Vec::new();
+    let mut descr = Vec::new();
+    policies.push(Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)));
+    descr.push("No unloading".to_string());
     for len in &[20.0, 45.0, 60.0, 90.0, 120.0] {
-        print_results(
-            test_policy(
-                Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))),
-                &trace,
-            ),
-            &format!("{}-minute keepalive", len),
-        );
+        policies.push(Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)));
+        descr.push(format!("{}-minute keepalive", len));
     }
     for len in &[2.0, 3.0, 4.0] {
-        print_results(
-            test_policy(
-                Rc::new(RefCell::new(HybridHistogramPolicy::new(
-                    3600.0 * len,
-                    60.0,
-                    2.0,
-                    0.5,
-                    0.15,
-                    0.1,
-                ))),
-                &trace,
-            ),
-            &format!("Hybrid Histogram policy, {} hours bound", len),
-        );
+        policies.push(Box::new(HybridHistogramPolicy::new(
+            3600.0 * len,
+            60.0,
+            2.0,
+            0.5,
+            0.15,
+            0.1,
+        )));
+        descr.push(format!("Hybrid Histogram policy, {} hours bound", len));
+    }
+    let configs: Vec<_> = policies
+        .drain(..)
+        .map(|x| {
+            let mut config: ParallelConfig = Default::default();
+            config.coldstart_policy = x;
+            for _ in 0..1000 {
+                let mut host: ParallelHostData = Default::default();
+                host.resources = vec![("mem".to_string(), 4096 * 4)];
+                host.cores = 8;
+                config.hosts.push(host);
+            }
+            config
+        })
+        .collect();
+    let mut stats = parallel_simulation(configs, vec![trace], vec![1]);
+    for (i, s) in stats.drain(..).enumerate() {
+        print_results(s, &descr[i]);
     }
 }

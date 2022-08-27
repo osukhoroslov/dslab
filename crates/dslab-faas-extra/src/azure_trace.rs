@@ -9,12 +9,7 @@ use indexmap::IndexMap;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-#[derive(Default, Clone, Copy)]
-pub struct TraceRecord {
-    pub id: usize,
-    pub time: f64,
-    pub dur: f64,
-}
+use dslab_faas::trace::{ApplicationData, RequestData, Trace};
 
 #[derive(Default, Clone, Copy)]
 pub struct FunctionRecord {
@@ -28,10 +23,41 @@ pub struct ApplicationRecord {
 }
 
 #[derive(Default, Clone)]
-pub struct Trace {
-    pub trace_records: Vec<TraceRecord>,
+pub struct AzureTrace {
+    pub concurrency_level: usize,
+    pub memory_name: String,
+    pub trace_records: Vec<RequestData>,
     pub function_records: Vec<FunctionRecord>,
     pub app_records: Vec<ApplicationRecord>,
+}
+
+impl Trace for AzureTrace {
+    fn app_iter(&self) -> Box<dyn Iterator<Item = ApplicationData> + '_> {
+        Box::new(self.app_records.iter().map(|x| {
+            ApplicationData::new(
+                self.concurrency_level,
+                x.cold_start,
+                1.0,
+                vec![(self.memory_name.clone(), x.mem)],
+            )
+        }))
+    }
+
+    fn request_iter(&self) -> Box<dyn Iterator<Item = RequestData> + '_> {
+        Box::new(self.trace_records.iter().cloned())
+    }
+
+    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+        Box::new(self.function_records.iter().map(|x| x.app_id))
+    }
+
+    fn simulation_end(&self) -> Option<f64> {
+        let mut time_range = 0.0;
+        for req in self.trace_records.iter() {
+            time_range = f64::max(time_range, req.time + req.duration);
+        }
+        Some(time_range)
+    }
 }
 
 fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
@@ -65,8 +91,24 @@ fn app_id(id: &str) -> String {
     id0
 }
 
+pub struct AzureTraceConfig {
+    pub invocations_limit: usize,
+    pub concurrency_level: usize,
+    pub memory_name: String,
+}
+
+impl Default for AzureTraceConfig {
+    fn default() -> Self {
+        Self {
+            invocations_limit: 0,
+            concurrency_level: 1,
+            memory_name: "mem".to_string(),
+        }
+    }
+}
+
 /// This function parses Azure trace and generates experiment.
-pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
+pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace {
     let mut gen = Pcg64::seed_from_u64(1);
     let mut trace = Vec::new();
     let mut parts = BTreeSet::<String>::new();
@@ -104,7 +146,7 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
     let mut fn_id = IndexMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mem_percent = vec![0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99, 1.];
-    let limit = invocations_limit / parts.len();
+    let limit = config.invocations_limit / parts.len();
     for part in parts.iter() {
         if !mem.contains_key(part) {
             continue;
@@ -207,13 +249,13 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
                 for i in 0..1440 {
                     for _ in 0..inv_vec[i] {
                         let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
-                        let mut record = TraceRecord {
-                            id: curr_id,
+                        let mut record = RequestData {
+                            id: curr_id as u64,
+                            duration: f64::max(0.001, gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001),
                             time: second,
-                            dur: f64::max(0.001, gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001),
                         };
                         invocations_count += 1;
-                        record.dur = (record.dur * 1000000.).round() / 1000000.;
+                        record.duration = (record.duration * 1000000.).round() / 1000000.;
                         record.time = (record.time * 1000000.).round() / 1000000.;
                         trace.push(record);
                         if invocations_count == limit {
@@ -241,8 +283,10 @@ pub fn process_azure_trace(path: &Path, invocations_limit: usize) -> Trace {
             app_id: app_data.get(&app).unwrap().0 as u64,
         };
     }
-    trace.sort_by(|x: &TraceRecord, y: &TraceRecord| x.time.partial_cmp(&y.time).unwrap());
-    Trace {
+    trace.sort_by(|x: &RequestData, y: &RequestData| x.time.partial_cmp(&y.time).unwrap());
+    AzureTrace {
+        concurrency_level: config.concurrency_level,
+        memory_name: config.memory_name,
         trace_records: trace,
         function_records: funcs,
         app_records: apps,

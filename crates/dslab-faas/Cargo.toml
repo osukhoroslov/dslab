@@ -7,5 +7,7 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../dslab-core" }
 indexmap = "1.8.2"
+itertools = "0.10.3"
 num = "0.2.0"
 serde = { version = "1.0", features = ["derive"] }
+threadpool = "1.8.1"
