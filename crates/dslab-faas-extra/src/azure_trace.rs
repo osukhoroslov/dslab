@@ -26,6 +26,7 @@ pub struct ApplicationRecord {
 pub struct AzureTrace {
     pub concurrency_level: usize,
     pub memory_name: String,
+    pub sim_end: Option<f64>,
     pub trace_records: Vec<RequestData>,
     pub function_records: Vec<FunctionRecord>,
     pub app_records: Vec<ApplicationRecord>,
@@ -52,11 +53,15 @@ impl Trace for AzureTrace {
     }
 
     fn simulation_end(&self) -> Option<f64> {
-        let mut time_range = 0.0;
-        for req in self.trace_records.iter() {
-            time_range = f64::max(time_range, req.time + req.duration);
+        if self.sim_end.is_some() {
+            self.sim_end
+        } else {
+            let mut time_range = 0.0;
+            for req in self.trace_records.iter() {
+                time_range = f64::max(time_range, req.time + req.duration);
+            }
+            Some(time_range)
         }
-        Some(time_range)
     }
 }
 
@@ -284,9 +289,14 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         };
     }
     trace.sort_by(|x: &RequestData, y: &RequestData| x.time.partial_cmp(&y.time).unwrap());
+    let mut time_range = 0.0;
+    for req in trace.iter() {
+        time_range = f64::max(time_range, req.time + req.duration);
+    }
     AzureTrace {
         concurrency_level: config.concurrency_level,
         memory_name: config.memory_name,
+        sim_end: Some(time_range),
         trace_records: trace,
         function_records: funcs,
         app_records: apps,

@@ -24,6 +24,7 @@ pub struct OpenDCTrace {
     pub concurrency_level: usize,
     pub cold_start: f64,
     pub memory_name: String,
+    pub sim_end: Option<f64>,
 }
 
 impl Trace for OpenDCTrace {
@@ -51,7 +52,20 @@ impl Trace for OpenDCTrace {
     }
 
     fn simulation_end(&self) -> Option<f64> {
-        None
+        if self.sim_end.is_some() {
+            self.sim_end
+        } else {
+            let mut end = 0.0;
+            for fun in self.funcs.iter() {
+                for sample in fun.iter() {
+                    let t = ((sample.time + (sample.exec as u64)) as f64) / 1000.;
+                    if sample.invocations > 0 && end < t {
+                        end = t;
+                    }
+                }
+            }
+            Some(end)
+        }
     }
 }
 
@@ -156,10 +170,20 @@ pub fn process_opendc_trace(path: &Path, config: OpenDCTraceConfig) -> OpenDCTra
         }
         trace.push(fun_trace);
     }
+    let mut end = 0.0;
+    for fun in trace.iter() {
+        for sample in fun.iter() {
+            let t = ((sample.time + (sample.exec as u64)) as f64) / 1000.;
+            if sample.invocations > 0 && end < t {
+                end = t;
+            }
+        }
+    }
     OpenDCTrace {
         funcs: trace,
         concurrency_level: config.concurrency_level,
         cold_start: config.cold_start,
         memory_name: config.memory_name,
+        sim_end: Some(end),
     }
 }
