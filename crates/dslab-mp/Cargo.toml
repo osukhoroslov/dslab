@@ -1,0 +1,11 @@
+[package]
+name = "dslab-mp"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../dslab-core" }
+colored = "2.0.0"
+log = "0.4.17"
+serde = { version = "1.0", features = ["derive"] }
