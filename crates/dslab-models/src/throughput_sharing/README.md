@@ -14,7 +14,7 @@ Recalculation consists of 3 steps:
 
 1) Evaluate `throughput_per_item` using degradation function
 2) Evaluate `processed_volume` - amount, processed by single activity since last recalculation time
-3) For each activity evaluate `remaining_volume` as previous `remaining_volume` of this activity subtracted by `processed_volume` and push updated entry to the binary head instead of previous.
+3) For each activity evaluate `remaining_volume` as previous `remaining_volume` of this activity subtracted by `processed_volume` and push updated entry to the binary heap instead of previous.
 4) Update last recalculation time
 
 ## Fast algorithm
