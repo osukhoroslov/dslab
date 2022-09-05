@@ -8,8 +8,13 @@ The dependence of resource total throughput on the number of concurrent activiti
 
 ## Slow algorithm
 
-TODO
+This is a simple algorithm which explicitly recalculates all activities' complete times on every `insert` and `pop` call. `BinaryHeap` is used as a storage for activities, and they are sorted by their remaining volume.
+
+Recalculation consists of 3 steps:
+
+1) Evaluate `throughput_per_item` using degradation function
+2) Evaluate `processed_volume` - amount, processed by single activity since last recalculation time
+3) For each activity evaluate `remaining_volume` as previous `remaining_volume` of this activity subtracted by `processed_volume` and push updated entry to the binary head instead of previous.
+4) Update last recalculation time
 
 ## Fast algorithm
-
-TODO
