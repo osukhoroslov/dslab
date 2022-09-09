@@ -1,4 +1,4 @@
-//! Loading DAG from multiple file formats.
+//! Tools for loading DAG from different file formats.
 
 mod dax_parser;
 mod dot_parser;

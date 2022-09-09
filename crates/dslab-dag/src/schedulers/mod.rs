@@ -1,4 +1,4 @@
-//! Implementation of some schedulers.
+//! Scheduler implementations.
 
 pub mod heft;
 pub mod portfolio_scheduler;

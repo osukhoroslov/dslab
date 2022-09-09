@@ -1,4 +1,4 @@
-//! Directed acyclic graph.
+//! DAG model of computation.
 
 use std::collections::BTreeSet;
 
@@ -7,6 +7,13 @@ use dslab_compute::multicore::CoresDependency;
 use crate::data_item::*;
 use crate::task::*;
 
+/// Represents a computation consisting of multiple tasks with data dependencies
+/// modeled as a directed acyclic graph (DAG).
+///
+/// Each task can produce one or more data items (task outputs) and consume (as task inputs) data items produced by
+/// other tasks. Entry tasks consume separate data items corresponding to the DAG inputs. The data dependencies between
+/// the tasks define constraints on task execution - a task cannot start its execution on some resource until all its
+/// inputs are produced (parent tasks are completed) and transferred to this resource.
 #[derive(Clone)]
 pub struct DAG {
     tasks: Vec<Task>,
@@ -48,12 +55,12 @@ impl DAG {
         self.tasks.get(task_id).unwrap()
     }
 
-    /// Returns task by id.
+    /// Returns mutable task reference by id.
     pub fn get_task_mut(&mut self, task_id: usize) -> &mut Task {
         &mut self.tasks[task_id]
     }
 
-    /// Returns array of all tasks.
+    /// Returns all tasks.
     pub fn get_tasks(&self) -> &Vec<Task> {
         &self.tasks
     }
@@ -63,12 +70,12 @@ impl DAG {
         self.data_items.get(data_id).unwrap()
     }
 
-    /// Return array of all data items.
+    /// Returns all data items.
     pub fn get_data_items(&self) -> &Vec<DataItem> {
         &self.data_items
     }
 
-    /// Returns set of ids of [ready](crate::task::TaskState::Ready) tasks.
+    /// Returns ids of [ready](crate::task::TaskState::Ready) tasks.
     pub fn get_ready_tasks(&self) -> &BTreeSet<usize> {
         &self.ready_tasks
     }

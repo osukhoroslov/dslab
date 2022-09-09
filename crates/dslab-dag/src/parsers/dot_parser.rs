@@ -39,7 +39,7 @@ fn parse_params(s: &[char]) -> HashMap<String, String> {
 }
 
 impl DAG {
-    /// Reads DAG from a file with [DOT format](https://graphviz.org/doc/info/lang.html).
+    /// Reads DAG from a file in [DOT format](https://graphviz.org/doc/info/lang.html).
     pub fn from_dot(file: &str) -> Self {
         let lines = std::fs::read_to_string(file)
             .expect(&format!("Can't read file {}", file))

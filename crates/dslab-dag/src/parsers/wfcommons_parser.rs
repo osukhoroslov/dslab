@@ -57,7 +57,7 @@ struct Json {
 }
 
 impl DAG {
-    /// Reads DAG from a file with [WfCommons json format](https://wfcommons.org/format).
+    /// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
     pub fn from_wfcommons(file: &str, reference_flops: f64) -> Self {
         let json: Json = from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
             .expect(&format!("Can't parse WfCommons json from file {}", file));

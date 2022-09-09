@@ -1,4 +1,4 @@
-//! Core of DAG execution simulation.
+//! DAG execution runtime.
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
@@ -26,18 +26,22 @@ use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 
+/// Defines how data items are transferred during the DAG execution.
 #[derive(Clone, PartialEq, Debug)]
 pub enum DataTransferMode {
-    /// Every file gets transfered from producer to scheduler, and to consumer from there.
+    /// Every data item is automatically transferred between producer and consumer
+    /// via the master node (producer -> master -> consumer).
     ViaMasterNode,
-    /// Every file gets transfered directly from producer to consumer.
+    /// Every data item is automatically transferred between producer and consumer
+    /// directly (producer -> consumer)
     Direct,
-    /// All file transfers must be done by a scheduler.
+    /// Data items are not transferred automatically,
+    /// all data transfers must be explicitly ordered by the scheduler.
     Manual,
 }
 
 impl DataTransferMode {
-    /// Calculates tranfers time between actors for one unit of data.
+    /// Calculates the data transfer time per data unit between the specified resources (src, dest).
     pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
             DataTransferMode::ViaMasterNode => {
@@ -49,11 +53,13 @@ impl DataTransferMode {
     }
 }
 
+/// Represents a DAG execution configuration.
 #[derive(Clone)]
 pub struct Config {
     pub data_transfer_mode: DataTransferMode,
 }
 
+/// Represents a transfer of data item between resources.
 struct DataTransfer {
     data_id: usize,
     from: Id,
@@ -68,6 +74,11 @@ struct QueuedTask {
     action_id: usize,
 }
 
+/// Manages the execution of a DAG on a specified set of computing resources.
+///
+/// Invokes the supplied scheduler and executes the actions returned by the scheduler.
+/// Tracks and updates the states of DAG tasks, data items and data transfers.
+/// Supports collection of DAG execution log.
 pub struct DAGRunner {
     id: Id,
     dag: DAG,
@@ -593,7 +604,7 @@ impl DAGRunner {
         }
     }
 
-    /// Checks that all tasks in a DAG are completed.
+    /// Checks that all DAG tasks are completed.
     pub fn validate_completed(&self) {
         if !self.is_completed() {
             let mut states: Vec<String> = Vec::new();
