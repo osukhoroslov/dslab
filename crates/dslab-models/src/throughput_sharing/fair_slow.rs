@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use super::model::{ThroughputSharingModel, ThroughputFunction};
+use super::model::{ThroughputFunction, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
