@@ -2,7 +2,7 @@ use sugars::boxed;
 
 use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;
-use super::model::Model;
+use super::model::ThroughputSharingModel;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);

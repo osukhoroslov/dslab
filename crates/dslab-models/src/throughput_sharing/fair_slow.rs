@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use super::model::{Model, ThroughputFunction};
+use super::model::{ThroughputSharingModel, ThroughputFunction};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -87,7 +87,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
     }
 }
 
-impl<T> Model<T> for SlowFairThroughputSharingModel<T> {
+impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         let new_count = self.entries.len() + 1;
         self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);

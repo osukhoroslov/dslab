@@ -5,7 +5,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use super::model::{Model, ThroughputFunction};
+use super::model::{ThroughputSharingModel, ThroughputFunction};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
@@ -87,7 +87,7 @@ impl<T> FairThroughputSharingModel<T> {
     }
 }
 
-impl<T> Model<T> for FairThroughputSharingModel<T> {
+impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
         if self.activities.len() > 0 {
             self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);
