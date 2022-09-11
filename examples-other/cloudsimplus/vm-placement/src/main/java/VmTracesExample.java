@@ -1,3 +1,4 @@
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyBestFit;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
 import org.cloudbus.cloudsim.brokers.DatacenterBrokerBestFit;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -11,13 +12,14 @@ import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
 import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerTimeShared;
-import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerSpaceShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
 import org.cloudbus.cloudsim.vms.HostResourceStats;
 import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.util.Log;
+
+import ch.qos.logback.classic.Level;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -37,12 +39,16 @@ import java.util.Random;
 public class VmTracesExample {
     // Defines traces file path
     private static final String TRACES_PATH = "../../Huawei-East-1.csv";
+    // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
+    private static final double MIN_TIME_BETWEEN_EVENTS = 1E-6;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
+    // MIPS performance of PE
+    private static final int PE_MIPS = 1000;
     // CPUs per host
     private static final int HOST_PES = 192;
     // Indicates the time (in seconds) the Host takes to start up
-    private static final double HOST_START_UP_DELAY = 5;
+    private static final double HOST_START_UP_DELAY = 0;
     // Indicates the time (in seconds) the Host takes to shut down
     private static final double HOST_SHUT_DOWN_DELAY = 3;
     // Indicates Host power consumption (in Watts) during startup
@@ -66,16 +72,16 @@ public class VmTracesExample {
     private VmTracesExample(int host_count) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
-        Log.setLevel(ch.qos.logback.classic.Level.INFO);
+        Log.setLevel(Level.INFO);
+        Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
-        long timeStart = System.currentTimeMillis();
-
-        final CloudSim simulation = new CloudSim();
+        final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
         final var hosts = createHosts(host_count);
-        final Datacenter dc = new DatacenterSimple(simulation, hosts);
+        final Datacenter dc = new DatacenterSimple(simulation, hosts, new VmAllocationPolicyBestFit());
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
-        //Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
+        // Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
+        broker.setVmDestructionDelay(2 * MIN_TIME_BETWEEN_EVENTS);
 
         var vmEvents = readVmEvents();
         var vmFinishTimes = new HashMap<String, String>();
@@ -108,12 +114,13 @@ public class VmTracesExample {
                 continue;
             }
 
-            final var vm = new VmSimple(event.vmId, 800, vmPes);
+            final var vm = new VmSimple(event.vmId, PE_MIPS, vmPes);
             final var duration =finishTime - event.time;
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
             vm.setSubmissionDelay(event.time);
             vm.setStopTime(finishTime);
             vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+            vm.enableUtilizationStats();
             vmList.add(vm);
 
             final var cloudlet = createCloudlet(vmId, vm, vmPes, duration);
@@ -122,6 +129,8 @@ public class VmTracesExample {
         }
 
         System.out.println("Number of VMs is " + vmList.size());
+
+        long timeStart = System.currentTimeMillis();
 
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);
@@ -150,7 +159,7 @@ public class VmTracesExample {
         final var peList = new ArrayList<Pe>(HOST_PES);
         //List of Host's CPUs (Processing Elements, PEs)
         for (int i = 0; i < HOST_PES; i++) {
-            peList.add(new PeSimple(1000));
+            peList.add(new PeSimple(PE_MIPS));
         }
 
         final long ram = 320; //in Megabytes
@@ -200,7 +209,7 @@ public class VmTracesExample {
     private Cloudlet createCloudlet(final int id, final Vm vm, final int vmPes, final double duration) {
         final long fileSize = 1;
         final long outputSize = 1;
-        final long length = (long)duration; //in number of Million Instructions (MI)
+        final long length = (long) (duration * PE_MIPS); // in number of Million Instructions (MI)
         final int pesNumber = vmPes;
         final var utilizationModel = new UtilizationModelFull();
 
