@@ -10,8 +10,10 @@ import org.cloudbus.cloudsim.hosts.HostSimple;
 import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
+import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerSpaceShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
+import org.cloudbus.cloudsim.vms.HostResourceStats;
 import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.util.Log;
@@ -68,7 +70,8 @@ public class VmTracesExample {
         long timeStart = System.currentTimeMillis();
 
         final CloudSim simulation = new CloudSim();
-        final Datacenter dc = new DatacenterSimple(simulation, createHosts(host_count));
+        final var hosts = createHosts(host_count);
+        final Datacenter dc = new DatacenterSimple(simulation, hosts);
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
         //Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
@@ -94,22 +97,21 @@ public class VmTracesExample {
             final var vmBw = 1000;
             final var vmSize = 1000;
 
-            final var finishTimeOpt = Optional.ofNullable(vmFinishTimes.get(Integer.toString(event.vmId)));
-            if (!finishTimeOpt.isPresent()) {
-                continue;
-            }
+            final var finishTime = Optional
+                .ofNullable(vmFinishTimes.get(Integer.toString(event.vmId)))
+                .orElse(Double.toString(SIMULATION_LENGTH));
             if (event.time > SIMULATION_LENGTH || event.isFinish) {
                 continue;
             }
 
-            final var vm = new VmSimple(event.vmId, 1000, vmPes);
-            final var duration = Double.parseDouble(finishTimeOpt.get()) - event.time;
+            final var vm = new VmSimple(event.vmId, 800, vmPes);
+            final var duration = Double.parseDouble(finishTime) - event.time;
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
             vm.setSubmissionDelay(event.time);
-            vm.setStopTime(Double.parseDouble(finishTimeOpt.get()));
+            vm.setStopTime(Double.parseDouble(finishTime));
             vmList.add(vm);
 
-            final var cloudlet = createCloudlet(vmId, vm, duration);
+            final var cloudlet = createCloudlet(vmId, vm, vmPes, duration);
             cloudletList.add(cloudlet);
         }
 
@@ -123,6 +125,7 @@ public class VmTracesExample {
         var timeFinish = System.currentTimeMillis();
         var timeElapsed = timeFinish - timeStart;
         System.out.println("Elapsed time is " + timeElapsed / 1000.0 + " seconds");
+        printHostCpuUtilizationAndPowerConsumption(hosts);
     }
 
 
@@ -186,11 +189,11 @@ public class VmTracesExample {
      * @param vm vm to run the cloudlet
      * @return the created cloudlet
      */
-    private Cloudlet createCloudlet(final int id, final Vm vm, final double duration) {
+    private Cloudlet createCloudlet(final int id, final Vm vm, final int vmPes, final double duration) {
         final long fileSize = 1;
         final long outputSize = 1;
         final long length = (long)duration; //in number of Million Instructions (MI)
-        final int pesNumber = 1;
+        final int pesNumber = vmPes;
         final var utilizationModel = new UtilizationModelFull();
 
         return new CloudletSimple(id, length, pesNumber)
@@ -198,5 +201,20 @@ public class VmTracesExample {
             .setOutputSize(outputSize)
             .setUtilizationModel(utilizationModel)
             .setVm(vm);
+    }
+
+    private void printHostCpuUtilizationAndPowerConsumption(final List<Host> hosts) {
+        double accumulatedCPUUtilization = 0;
+        for (Host host: hosts) {
+            final HostResourceStats cpuStats = host.getCpuUtilizationStats();
+
+            //The total Host's CPU utilization for the time specified by the map key
+            final double utilizationPercentMean = cpuStats.getMean();
+            final double watts = host.getPowerModel().getPower(utilizationPercentMean);
+            accumulatedCPUUtilization += utilizationPercentMean * 100;
+        }
+        System.out.printf("Mean host CPU utilization is %.1f%%", 
+            accumulatedCPUUtilization / hosts.size());
+        System.out.println();
     }
 }

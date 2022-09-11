@@ -66,6 +66,8 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     let simulation_start = Instant::now();
     cloud_sim.spawn_vms_from_dataset(scheduler_id, dataset);
 
+    let mut accumulated_cpu_utilization = 0.;
+    let mut num_of_iterations = 0;
     loop {
         cloud_sim.step_for_duration(sim_config.step_duration);
 
@@ -97,6 +99,9 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
             sum_cpu_load / (hosts.len() as f64),
             sum_memory_load / (hosts.len() as f64)
         );
+        accumulated_cpu_utilization += sum_cpu_load / (hosts.len() as f64);
+        num_of_iterations += 1;
+
         if cloud_sim.current_time() > sim_config.simulation_length {
             break;
         }
@@ -116,6 +121,11 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
         cloud_sim.context(),
         "Events per second {:.0}",
         cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
+    );
+    log_info!(
+        cloud_sim.context(),
+        "Mean CPU utilization is {:.1}%",
+        100. * accumulated_cpu_utilization / (num_of_iterations as f64)
     );
 }
 

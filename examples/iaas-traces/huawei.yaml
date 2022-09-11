@@ -1,11 +1,11 @@
-send_stats_period: 30
-message_delay: 0.0
+send_stats_period: 2.0
+message_delay: 1.0
 allocation_retry_period: 60
 vm_start_duration: 120
 vm_stop_duration: 60
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 432000.0
-number_of_hosts: 60
+simulation_length: 10000.0
+number_of_hosts: 15
 host_cpu_capacity: 192.
 host_memory_capacity: 320.
