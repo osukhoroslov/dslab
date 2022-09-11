@@ -47,7 +47,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
     let mut hosts: Vec<u32> = Vec::new();
-    for i in 1..sim_config.number_of_hosts {
+    for i in 1..sim_config.number_of_hosts + 1 {
         let host_name = &format!("h{}", i);
         let host_id = cloud_sim.add_host(
             host_name,

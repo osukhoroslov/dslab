@@ -11,6 +11,7 @@ import org.cloudbus.cloudsim.hosts.HostSimple;
 import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
+import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerSpaceShared;
 import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
@@ -110,11 +111,11 @@ public class VmTracesExample {
             }
 
             final var vm = new VmSimple(event.vmId, PE_MIPS, vmPes);
-            final var duration =finishTime - event.time;
+            final var duration = finishTime - event.time;
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
             vm.setSubmissionDelay(event.time);
             vm.setStopTime(finishTime);
-            vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+            vm.setCloudletScheduler(new CloudletSchedulerSpaceShared());
             vm.enableUtilizationStats();
             vmList.add(vm);
 
@@ -136,8 +137,6 @@ public class VmTracesExample {
         var timeElapsed = timeFinish - timeStart;
         System.out.println("Elapsed time is " + timeElapsed / 1000.0 + " seconds");
         printHostCpuUtilizationAndPowerConsumption(hosts);
-
-        System.out.printf("%nVMs CPU utilization mean%n");
     }
 
 
@@ -220,9 +219,8 @@ public class VmTracesExample {
         for (Host host: hosts) {
             final HostResourceStats cpuStats = host.getCpuUtilizationStats();
 
-            //The total Host's CPU utilization for the time specified by the map key
+            // The total Host's CPU utilization for the time specified by the map key
             final double utilizationPercentMean = cpuStats.getMean();
-            final double watts = host.getPowerModel().getPower(utilizationPercentMean);
             accumulatedCPUUtilization += utilizationPercentMean * 100;
         }
         System.out.printf("Mean host CPU utilization is %.1f%%", 
