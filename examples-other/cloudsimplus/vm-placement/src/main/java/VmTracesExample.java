@@ -10,6 +10,7 @@ import org.cloudbus.cloudsim.hosts.HostSimple;
 import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
+import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerSpaceShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
@@ -97,21 +98,26 @@ public class VmTracesExample {
             final var vmBw = 1000;
             final var vmSize = 1000;
 
-            final var finishTime = Optional
-                .ofNullable(vmFinishTimes.get(Integer.toString(event.vmId)))
-                .orElse(Double.toString(SIMULATION_LENGTH));
+            final var finishTime = Math.min(
+                Double.parseDouble(Optional
+                    .ofNullable(vmFinishTimes.get(Integer.toString(event.vmId)))
+                    .orElse(Double.toString(SIMULATION_LENGTH))),
+                SIMULATION_LENGTH
+            );
             if (event.time > SIMULATION_LENGTH || event.isFinish) {
                 continue;
             }
 
             final var vm = new VmSimple(event.vmId, 800, vmPes);
-            final var duration = Double.parseDouble(finishTime) - event.time;
+            final var duration =finishTime - event.time;
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
             vm.setSubmissionDelay(event.time);
-            vm.setStopTime(Double.parseDouble(finishTime));
+            vm.setStopTime(finishTime);
+            vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
             vmList.add(vm);
 
             final var cloudlet = createCloudlet(vmId, vm, vmPes, duration);
+            cloudlet.setExecStartTime(event.time);
             cloudletList.add(cloudlet);
         }
 
@@ -126,6 +132,8 @@ public class VmTracesExample {
         var timeElapsed = timeFinish - timeStart;
         System.out.println("Elapsed time is " + timeElapsed / 1000.0 + " seconds");
         printHostCpuUtilizationAndPowerConsumption(hosts);
+
+        System.out.printf("%nVMs CPU utilization mean%n");
     }
 
 
