@@ -37,8 +37,6 @@ import java.util.Random;
  *
 **/
 public class VmTracesExample {
-    // Defines traces file path
-    private static final String TRACES_PATH = "../../Huawei-East-1.csv";
     // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
     private static final double MIN_TIME_BETWEEN_EVENTS = 1E-6;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
@@ -61,19 +59,16 @@ public class VmTracesExample {
     private static final int MAX_POWER = 50;
     // Just comma (,) symbol
     private static final String COMMA_DELIMITER = ",";
-    // Simulation duration means only VMs with start time less than value are borrowed
-    private static final double SIMULATION_LENGTH = 10000.0;
 
     public static void main(String[] args) throws Exception {
-        int host_count = Integer.parseInt(args[0]);
-        new VmTracesExample(host_count);
+        new VmTracesExample(Integer.parseInt(args[0]), args[1], Double.parseDouble(args[2]));
     }
 
-    private VmTracesExample(int host_count) throws Exception {
+    private VmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
         Log.setLevel(Level.INFO);
-        Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
+        //Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
         final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
         final var hosts = createHosts(host_count);
@@ -83,7 +78,7 @@ public class VmTracesExample {
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
         broker.setVmDestructionDelay(2 * MIN_TIME_BETWEEN_EVENTS);
 
-        var vmEvents = readVmEvents();
+        var vmEvents = readVmEvents(tracesPath);
         var vmFinishTimes = new HashMap<String, String>();
         for (HuaweiDatasetVmEvent event: vmEvents) {
             final var vmId = event.vmId;
@@ -107,10 +102,10 @@ public class VmTracesExample {
             final var finishTime = Math.min(
                 Double.parseDouble(Optional
                     .ofNullable(vmFinishTimes.get(Integer.toString(event.vmId)))
-                    .orElse(Double.toString(SIMULATION_LENGTH))),
-                SIMULATION_LENGTH
+                    .orElse(Double.toString(simulationTime))),
+                simulationTime
             );
-            if (event.time > SIMULATION_LENGTH || event.isFinish) {
+            if (event.time > simulationTime || event.isFinish) {
                 continue;
             }
 
@@ -182,9 +177,9 @@ public class VmTracesExample {
         return host;
     }
 
-    private ArrayList<HuaweiDatasetVmEvent> readVmEvents() throws Exception {
+    private ArrayList<HuaweiDatasetVmEvent> readVmEvents(String tracesPath) throws Exception {
         ArrayList<HuaweiDatasetVmEvent> records = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(TRACES_PATH))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(tracesPath))) {
             String line;
             var line_num = 0;
             while ((line = br.readLine()) != null) {
