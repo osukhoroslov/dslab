@@ -39,7 +39,7 @@ import java.util.Random;
 **/
 public class VmTracesExample {
     // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
-    private static final double MIN_TIME_BETWEEN_EVENTS = 1E-6;
+    private static final double MIN_TIME_BETWEEN_EVENTS = 1.;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
     // MIPS performance of PE
@@ -68,7 +68,7 @@ public class VmTracesExample {
     private VmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
-        Log.setLevel(Level.INFO);
+        Log.setLevel(Level.ERROR);
         //Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
         final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
