@@ -1,17 +1,32 @@
+//! DAG task.
+
 use enum_iterator::IntoEnumIterator;
 
 use dslab_compute::multicore::CoresDependency;
 
+/// Represents a DAG task state.
 #[derive(Eq, PartialEq, Copy, Clone, Debug, IntoEnumIterator)]
 pub enum TaskState {
+    /// Waiting for its dependencies.
     Pending,
+    /// All dependencies are satisfied, ready to be scheduled.
     Ready,
+    /// Task is scheduled, waiting for its dependencies.
     Scheduled,
+    /// All dependencies are satisfied and task is scheduled.
     Runnable,
+    /// Task is running.
     Running,
+    /// Task is completed.
     Done,
 }
 
+/// Represents a DAG task.
+///
+/// Described by the amount of computations in flops, the minimum and maximum number of used cores, and the amount of
+/// used memory. Also has a function which defines the dependence of parallel speedup on the number of used cores.
+///
+/// Each task can consume (as task inputs) and produce (as task inputs) one or more data items.
 #[derive(Clone, Debug)]
 pub struct Task {
     pub name: String,
@@ -27,6 +42,7 @@ pub struct Task {
 }
 
 impl Task {
+    /// Creates new task.
     pub fn new(
         name: &str,
         flops: u64,
@@ -49,10 +65,12 @@ impl Task {
         }
     }
 
+    /// Adds task input.
     pub fn add_input(&mut self, data_item_id: usize) {
         self.inputs.push(data_item_id);
     }
 
+    /// Adds task output.
     pub fn add_output(&mut self, data_item_id: usize) {
         self.outputs.push(data_item_id);
     }

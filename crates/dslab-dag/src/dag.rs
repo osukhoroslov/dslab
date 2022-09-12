@@ -1,3 +1,5 @@
+//! DAG model of computation.
+
 use std::collections::BTreeSet;
 
 use dslab_compute::multicore::CoresDependency;
@@ -5,6 +7,13 @@ use dslab_compute::multicore::CoresDependency;
 use crate::data_item::*;
 use crate::task::*;
 
+/// Represents a computation consisting of multiple tasks with data dependencies
+/// modeled as a directed acyclic graph (DAG).
+///
+/// Each task can produce one or more data items (task outputs) and consume (as task inputs) data items produced by
+/// other tasks. Entry tasks consume separate data items corresponding to the DAG inputs. The data dependencies between
+/// the tasks define constraints on task execution - a task cannot start its execution on some resource until all its
+/// inputs are produced (parent tasks are completed) and transferred to this resource.
 #[derive(Clone)]
 pub struct DAG {
     tasks: Vec<Task>,
@@ -14,6 +23,7 @@ pub struct DAG {
 }
 
 impl DAG {
+    /// Creates empty DAG.
     pub fn new() -> Self {
         Self {
             tasks: Vec::new(),
@@ -23,6 +33,7 @@ impl DAG {
         }
     }
 
+    /// Adds new [task](crate::task::Task) with provided parameters and returns its id.
     pub fn add_task(
         &mut self,
         name: &str,
@@ -39,30 +50,37 @@ impl DAG {
         task_id
     }
 
+    /// Returns task by id.
     pub fn get_task(&self, task_id: usize) -> &Task {
         self.tasks.get(task_id).unwrap()
     }
 
+    /// Returns mutable task reference by id.
     pub fn get_task_mut(&mut self, task_id: usize) -> &mut Task {
         &mut self.tasks[task_id]
     }
 
+    /// Returns all tasks.
     pub fn get_tasks(&self) -> &Vec<Task> {
         &self.tasks
     }
 
+    /// Returns data item by id.
     pub fn get_data_item(&self, data_id: usize) -> &DataItem {
         self.data_items.get(data_id).unwrap()
     }
 
+    /// Returns all data items.
     pub fn get_data_items(&self) -> &Vec<DataItem> {
         &self.data_items
     }
 
+    /// Returns ids of [ready](crate::task::TaskState::Ready) tasks.
     pub fn get_ready_tasks(&self) -> &BTreeSet<usize> {
         &self.ready_tasks
     }
 
+    /// Adds [data item](crate::data_item::DataItem) with provided parameters and returns its id.
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
         let data_item = DataItem::new(name, size, DataItemState::Ready, true);
         let data_item_id = self.data_items.len();
@@ -70,6 +88,7 @@ impl DAG {
         data_item_id
     }
 
+    /// Adds [data item](crate::data_item::DataItem) as a [task](crate::task::Task) output and returns its id.
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
         let data_item = DataItem::new(name, size, DataItemState::Pending, false);
         let data_item_id = self.data_items.len();
@@ -78,6 +97,7 @@ impl DAG {
         data_item_id
     }
 
+    /// Adds a dependency between [data item](crate::data_item::DataItem) and [task](crate::task::Task).
     pub fn add_data_dependency(&mut self, data_item_id: usize, consumer_id: usize) {
         let data_item = self.data_items.get_mut(data_item_id).unwrap();
         data_item.add_consumer(consumer_id);
@@ -91,6 +111,7 @@ impl DAG {
         }
     }
 
+    /// Updates task state to a provided value, updating dependent data item states if needed.
     pub fn update_task_state(&mut self, task_id: usize, state: TaskState) {
         let mut task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
@@ -108,6 +129,7 @@ impl DAG {
         }
     }
 
+    /// Updates data item state to a provided value, updating dependent task states if needed.
     pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
@@ -135,6 +157,7 @@ impl DAG {
         };
     }
 
+    /// Checks whether all tasks are completed.
     pub fn is_completed(&self) -> bool {
         self.tasks.len() == self.completed_task_count
     }

@@ -32,6 +32,7 @@ struct DAX {
 }
 
 impl DAG {
+    /// Reads DAG from a file in [DAX format](https://pegasus.isi.edu/documentation/development/schemas.html).
     pub fn from_dax(file: &str, flops_coefficient: f64) -> Self {
         let dax: DAX = from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
             .expect(&format!("Can't parse DAX from file {}", file));

@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub mod dag;
 pub mod dag_simulation;
 pub mod data_item;

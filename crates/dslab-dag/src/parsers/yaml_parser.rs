@@ -44,6 +44,8 @@ struct Yaml {
 }
 
 impl DAG {
+    /// Reads DAG from a file in
+    /// [YAML format](https://github.com/osukhoroslov/dslab/blob/main/examples/dag/dags/diamond.yaml).
     pub fn from_yaml(file: &str) -> Self {
         let yaml: Yaml =
             serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
