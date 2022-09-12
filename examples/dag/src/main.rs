@@ -19,7 +19,8 @@ use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::network::load_network;
 use dslab_dag::runner::{Config, DataTransferMode};
 use dslab_dag::scheduler::Scheduler;
-use dslab_dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
+use dslab_dag::schedulers::heft::HeftScheduler;
+use dslab_dag::schedulers::lookahead::LookaheadScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 use dslab_dag::schedulers::simple_with_data::SimpleDataScheduler;
 
@@ -51,9 +52,14 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "simple" => rc!(refcell!(SimpleScheduler::new())),
         "simple-with-data" => rc!(refcell!(SimpleDataScheduler::new())),
         "heft" => {
-            rc!(refcell!(
-                HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
-            ))
+            rc!(refcell!(HeftScheduler::new().with_data_transfer_strategy(
+                dslab_dag::schedulers::heft::DataTransferStrategy::Eager
+            )))
+        }
+        "lookahead" => {
+            rc!(refcell!(LookaheadScheduler::new().with_data_transfer_strategy(
+                dslab_dag::schedulers::lookahead::DataTransferStrategy::Eager
+            )))
         }
         _ => {
             eprintln!("Wrong scheduler");
