@@ -32,12 +32,12 @@ import java.util.Optional;
 import java.util.Random;
 
 /**
- * Simulation of Huawei VN traces using CloudSim Plus.
+ * Simulation of Huawei VM traces using CloudSim Plus.
  * The code in based on the official example:
  * https://github.com/cloudsimplus/cloudsimplus-examples/blob/master/src/main/java/org/cloudsimplus/examples/power/PowerExample.java
  *
 **/
-public class VmTracesExample {
+public class HuaweiVmTracesExample {
     // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
     private static final double MIN_TIME_BETWEEN_EVENTS = 1.;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
@@ -62,10 +62,10 @@ public class VmTracesExample {
     private static final String COMMA_DELIMITER = ",";
 
     public static void main(String[] args) throws Exception {
-        new VmTracesExample(Integer.parseInt(args[0]), args[1], Double.parseDouble(args[2]));
+        new HuaweiVmTracesExample(Integer.parseInt(args[0]), args[1], Double.parseDouble(args[2]));
     }
 
-    private VmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
+    private HuaweiVmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
         Log.setLevel(Level.ERROR);
