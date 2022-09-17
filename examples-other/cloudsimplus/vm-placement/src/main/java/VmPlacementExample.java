@@ -1,3 +1,4 @@
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyFirstFit;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
 import org.cloudbus.cloudsim.brokers.DatacenterBrokerBestFit;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -55,7 +56,7 @@ public class VmPlacementExample {
         long timeStart = System.currentTimeMillis();
 
         final CloudSim simulation = new CloudSim();
-        final Datacenter dc = new DatacenterSimple(simulation, createHosts(host_count));
+        final Datacenter dc = new DatacenterSimple(simulation, createHosts(host_count), new VmAllocationPolicyFirstFit());
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
         //Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);

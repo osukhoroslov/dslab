@@ -9,7 +9,7 @@ use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstLoadModel;
-use dslab_iaas::core::vm_placement_algorithm::BestFit;
+use dslab_iaas::core::vm_placement_algorithm::FirstFit;
 use dslab_iaas::simulation::CloudSimulation;
 
 const CPU_CAPACITY: u32 = 144;
@@ -41,7 +41,7 @@ fn simulation(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
     for i in 1..=args.num_hosts {
         cloud_sim.add_host(&format!("host{}", i), CPU_CAPACITY, RAM_CAPACITY);
