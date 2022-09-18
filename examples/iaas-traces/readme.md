@@ -27,4 +27,4 @@ sqlite> .quit
 
 1) Download dataset from https://github.com/huaweicloud/VM-placement-dataset/blob/main/Huawei-East-1/data/Huawei-East-1.csv
 2) Put the file to this directory and run `RUST_LOG=info cargo run -- --dataset-type=huawei`
-3) Or specify the path via `RUST_LOG=info cargo run -- --dataset-type=huawei -- dataset-path=<path>`
+3) Or specify the path via `RUST_LOG=info cargo run -- --dataset-type=huawei --dataset-path=<path>`
