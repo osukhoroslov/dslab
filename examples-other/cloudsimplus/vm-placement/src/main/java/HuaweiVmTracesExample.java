@@ -25,11 +25,9 @@ import ch.qos.logback.classic.Level;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 /**
  * Simulation of Huawei VM traces using CloudSim Plus.
@@ -38,14 +36,12 @@ import java.util.Random;
  *
 **/
 public class HuaweiVmTracesExample {
-    // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
-    private static final double MIN_TIME_BETWEEN_EVENTS = 1.;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
     // MIPS performance of PE
     private static final int PE_MIPS = 1000;
     // CPUs per host
-    private static final int HOST_PES = 192;
+    private static final int HOST_PES = 64;
     // Indicates the time (in seconds) the Host takes to start up
     private static final double HOST_START_UP_DELAY = 0;
     // Indicates the time (in seconds) the Host takes to shut down
@@ -68,16 +64,16 @@ public class HuaweiVmTracesExample {
     private HuaweiVmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
-        Log.setLevel(Level.ERROR);
-        //Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
+        Log.setLevel(Level.INFO);
+        Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
-        final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
+        final CloudSim simulation = new CloudSim();
         final var hosts = createHosts(host_count);
         final Datacenter dc = new DatacenterSimple(simulation, hosts, new VmAllocationPolicyBestFit());
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
         // Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
-        broker.setVmDestructionDelay(2 * MIN_TIME_BETWEEN_EVENTS);
+        broker.setVmDestructionDelay(1);
 
         var vmEvents = readVmEvents(tracesPath);
         var vmFinishTimes = new HashMap<String, String>();
@@ -111,7 +107,10 @@ public class HuaweiVmTracesExample {
             }
 
             final var vm = new VmSimple(event.vmId, PE_MIPS, vmPes);
-            final var duration = finishTime - event.time;
+            var duration = finishTime - event.time;
+            if (duration == 0) {
+                duration = 1;
+            }
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
             vm.setSubmissionDelay(event.time);
             vm.setStopTime(finishTime);
@@ -156,7 +155,7 @@ public class HuaweiVmTracesExample {
             peList.add(new PeSimple(PE_MIPS));
         }
 
-        final long ram = 320; //in Megabytes
+        final long ram = 128; //in Megabytes
         final long bw = 100000; //in Megabits/s
         final long storage = 1000000; //in Megabytes
         final var vmScheduler = new VmSchedulerTimeShared();
@@ -184,10 +183,10 @@ public class HuaweiVmTracesExample {
             while ((line = br.readLine()) != null) {
                 if (line_num++ == 0) {
                     continue;
-                } 
+                }
                 String[] values = line.split(COMMA_DELIMITER);
                 HuaweiDatasetVmEvent event = new HuaweiDatasetVmEvent(values);
-                records.add(event);    
+                records.add(event);
             }
         }
         return records;
@@ -223,8 +222,24 @@ public class HuaweiVmTracesExample {
             final double utilizationPercentMean = cpuStats.getMean();
             accumulatedCPUUtilization += utilizationPercentMean * 100;
         }
-        System.out.printf("Mean host CPU utilization is %.1f%%", 
+        System.out.printf("Mean host CPU utilization is %.1f%%",
             accumulatedCPUUtilization / hosts.size());
         System.out.println();
+    }
+
+    private static class HuaweiDatasetVmEvent {
+        public int vmId;
+        public int cpu;
+        public long memory;
+        public double time;
+        public boolean isFinish;
+
+        public HuaweiDatasetVmEvent(String[] values) {
+            this.vmId = Integer.parseInt(values[0]);
+            this.cpu = Integer.parseInt(values[1]);
+            this.memory = Long.parseLong(values[2]);
+            this.time = Double.parseDouble(values[3]);
+            this.isFinish = (Integer.parseInt(values[4]) == 1);
+        }
     }
 }
