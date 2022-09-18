@@ -7,7 +7,7 @@ use log::warn;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::vm_placement_algorithm::FirstFit;
+use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::extensions::azure_dataset_reader::AzureDatasetReader;
 use dslab_iaas::extensions::dataset_reader::DatasetReader;
 use dslab_iaas::extensions::huawei_dataset_reader::HuaweiDatasetReader;
@@ -56,7 +56,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
         );
         hosts.push(host_id);
     }
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     log_info!(
         cloud_sim.context(),
@@ -107,23 +107,13 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
         }
     }
 
-    log_info!(
-        cloud_sim.context(),
-        "Simulation process time {:.2?}",
-        simulation_start.elapsed()
-    );
-    log_info!(
-        cloud_sim.context(),
-        "Total events processed {}",
-        cloud_sim.event_count()
-    );
-    log_info!(
-        cloud_sim.context(),
+    println!("Simulation process time {:.2?}", simulation_start.elapsed());
+    println!("Total events processed {}", cloud_sim.event_count());
+    println!(
         "Events per second {:.0}",
         cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
     );
-    log_info!(
-        cloud_sim.context(),
+    println!(
         "Mean CPU utilization is {:.1}%",
         100. * accumulated_cpu_utilization / (num_of_iterations as f64)
     );
