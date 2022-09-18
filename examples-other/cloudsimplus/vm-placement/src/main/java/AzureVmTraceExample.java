@@ -23,7 +23,10 @@ import ch.qos.logback.classic.Level;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.OptionalDouble;
 
 /**
  * Simulation of Azure VM traces using CloudSim Plus.
@@ -31,7 +34,7 @@ import java.util.*;
  * https://github.com/cloudsimplus/cloudsimplus-examples/blob/master/src/main/java/org/cloudsimplus/examples/power/PowerExample.java
  *
 **/
-public class AzureVmTracesExample {
+public class AzureVmTraceExample {
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 60;
     // MIPS performance of PE
@@ -56,13 +59,11 @@ public class AzureVmTracesExample {
     private static final String COMMA_DELIMITER = ",";
 
     public static void main(String[] args) throws Exception {
-        new AzureVmTracesExample(Integer.parseInt(args[0]), args[1], args[2], Double.parseDouble(args[3]));
+        new AzureVmTraceExample(args[0], args[1], Double.parseDouble(args[2]), Integer.parseInt(args[3]));
     }
 
-    private AzureVmTracesExample(int host_count,
-                                  String tracesVmTypesPath,
-                                  String tracesVmInstancesPath,
-                                  double simulationTime) throws Exception {
+    private AzureVmTraceExample(String vmTypesPath, String vmInstancesPath,
+                                double simulationTime, int host_count) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
         Log.setLevel(Level.ERROR);
@@ -76,8 +77,8 @@ public class AzureVmTracesExample {
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
         broker.setVmDestructionDelay(1);
 
-        var vmTypes = readVmTypes(tracesVmTypesPath);
-        var vmInstances = readVmInstances(tracesVmInstancesPath);
+        var vmTypes = readVmTypes(vmTypesPath);
+        var vmInstances = readVmInstances(vmInstancesPath);
 
         List<Vm> vmList = new ArrayList<>();
         List<Cloudlet> cloudletList = new ArrayList<>();
@@ -226,9 +227,9 @@ public class AzureVmTracesExample {
         }
     }
 
-    private HashMap<String, AzureVmType> readVmTypes(String tracesVmTypesPath) throws Exception {
+    private HashMap<String, AzureVmType> readVmTypes(String vmTypesPath) throws Exception {
         HashMap<String, AzureVmType> records = new HashMap<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmTypesPath))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(vmTypesPath))) {
             String line;
             var line_num = 0;
             while ((line = br.readLine()) != null) {
@@ -243,9 +244,9 @@ public class AzureVmTracesExample {
         return records;
     }
 
-    private ArrayList<AzureVmInstance> readVmInstances(String tracesVmInstancesPath) throws Exception {
+    private ArrayList<AzureVmInstance> readVmInstances(String vmInstancesPath) throws Exception {
         ArrayList<AzureVmInstance> records = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmInstancesPath))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(vmInstancesPath))) {
             String line;
             var line_num = 0;
             while ((line = br.readLine()) != null) {

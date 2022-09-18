@@ -34,7 +34,7 @@ import java.util.Optional;
  * https://github.com/cloudsimplus/cloudsimplus-examples/blob/master/src/main/java/org/cloudsimplus/examples/power/PowerExample.java
  *
 **/
-public class HuaweiVmTracesExample {
+public class HuaweiVmTraceExample {
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
     // MIPS performance of PE
@@ -59,10 +59,10 @@ public class HuaweiVmTracesExample {
     private static final String COMMA_DELIMITER = ",";
 
     public static void main(String[] args) throws Exception {
-        new HuaweiVmTracesExample(Integer.parseInt(args[0]), args[1], Double.parseDouble(args[2]));
+        new HuaweiVmTraceExample(args[0], Double.parseDouble(args[1]), Integer.parseInt(args[2]));
     }
 
-    private HuaweiVmTracesExample(int host_count, String tracesPath, double simulationTime) throws Exception {
+    private HuaweiVmTraceExample(String tracePath, double simulationTime, int host_count) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
         Log.setLevel(Level.ERROR);
@@ -76,7 +76,7 @@ public class HuaweiVmTracesExample {
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
         broker.setVmDestructionDelay(1);
 
-        var vmEvents = readVmEvents(tracesPath);
+        var vmEvents = readVmEvents(tracePath);
         var vmFinishTimes = new HashMap<String, String>();
         for (HuaweiDatasetVmEvent event: vmEvents) {
             final var vmId = event.vmId;
@@ -221,9 +221,9 @@ public class HuaweiVmTracesExample {
         }
     }
 
-    private ArrayList<HuaweiDatasetVmEvent> readVmEvents(String tracesPath) throws Exception {
+    private ArrayList<HuaweiDatasetVmEvent> readVmEvents(String tracePath) throws Exception {
         ArrayList<HuaweiDatasetVmEvent> records = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(tracesPath))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(tracePath))) {
             String line;
             var line_num = 0;
             while ((line = br.readLine()) != null) {
