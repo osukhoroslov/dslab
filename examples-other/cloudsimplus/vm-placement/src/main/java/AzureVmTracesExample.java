@@ -12,8 +12,7 @@ import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
 import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerSpaceShared;
-import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerTimeShared;
-import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
+import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerSpaceShared;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
 import org.cloudbus.cloudsim.vms.HostResourceStats;
 import org.cloudbus.cloudsim.vms.Vm;
@@ -24,12 +23,7 @@ import ch.qos.logback.classic.Level;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Simulation of Azure VM traces using CloudSim Plus.
@@ -38,14 +32,14 @@ import java.util.Random;
  *
 **/
 public class AzureVmTracesExample {
-    // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
-    private static final double MIN_TIME_BETWEEN_EVENTS = 10.;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
-    private static final int SCHEDULING_INTERVAL = 10;
+    private static final int SCHEDULING_INTERVAL = 60;
     // MIPS performance of PE
     private static final int PE_MIPS = 1000;
     // CPUs per host
-    private static final int HOST_PES = 192;
+    private static final int HOST_PES = 64;
+    // Host memory capacity in GB
+    private static final int HOST_MEMORY = 128;
     // Indicates the time (in seconds) the Host takes to start up
     private static final double HOST_START_UP_DELAY = 0;
     // Indicates the time (in seconds) the Host takes to shut down
@@ -60,10 +54,6 @@ public class AzureVmTracesExample {
     private static final int MAX_POWER = 50;
     // Just comma (,) symbol
     private static final String COMMA_DELIMITER = ",";
-    // Host vCPU capacity
-    private static final int HOST_CPU = 192;
-    // Host memory capacity in GB
-    private static final int HOST_MEMORY = 320;
 
     public static void main(String[] args) throws Exception {
         new AzureVmTracesExample(Integer.parseInt(args[0]), args[1], args[2], Double.parseDouble(args[3]));
@@ -78,45 +68,37 @@ public class AzureVmTracesExample {
         Log.setLevel(Level.ERROR);
         //Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
-        final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
+        final CloudSim simulation = new CloudSim();
         final var hosts = createHosts(host_count);
         final Datacenter dc = new DatacenterSimple(simulation, hosts, new VmAllocationPolicyBestFit());
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
         // Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
-        broker.setVmDestructionDelay(2 * MIN_TIME_BETWEEN_EVENTS);
+        broker.setVmDestructionDelay(1);
 
-        var vmTypes = readVmType(tracesVmTypesPath);
+        var vmTypes = readVmTypes(tracesVmTypesPath);
         var vmInstances = readVmInstances(tracesVmInstancesPath);
 
-        ArrayList<Vm> vmList = new ArrayList();
-        ArrayList<Cloudlet> cloudletList = new ArrayList();
+        List<Vm> vmList = new ArrayList<>();
+        List<Cloudlet> cloudletList = new ArrayList<>();
         for (AzureVmInstance instance: vmInstances) {
-            var vmType = vmTypes.get(instance.vmTypeId);
-            if (vmType == null) {
-                continue;
-            }
-
-            final var vmId = instance.vmId;
-            final var vmPes = Math.max((int)(vmType.cpu * HOST_CPU), 1);
-            final var vmRam = Math.max((int)(vmType.memory * HOST_MEMORY), 1);
-            final var vmBw = 1000;
-            final var vmSize = 1000;
-            var finishTime = simulationTime;
             if (instance.startTime < 0) {
                 continue;
             }
-            if (instance.endTime != null && instance.endTime.getAsDouble() > simulationTime) {
-                finishTime = instance.endTime.getAsDouble();
-            } else {
-                finishTime = simulationTime;
-            }
             if (instance.startTime > simulationTime) {
-                continue;
+                break;
             }
-            instance.startTime *= 86400;
-            finishTime *= 86400;
+            var finishTime = simulationTime;
+            if (instance.endTime.isPresent() && instance.endTime.getAsDouble() < simulationTime) {
+                finishTime = instance.endTime.getAsDouble();
+            }
 
+            final var vmId = instance.vmId;
+            var vmType = vmTypes.get(instance.vmTypeId);
+            final var vmPes = Math.max((int)(vmType.cpu * HOST_PES), 1);
+            final var vmRam = Math.max((int)(vmType.memory * HOST_MEMORY), 1);
+            final var vmBw = 1000;
+            final var vmSize = 1000;
             final var vm = new VmSimple(instance.vmId, PE_MIPS, vmPes);
             final var duration = finishTime - instance.startTime;
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
@@ -130,7 +112,6 @@ public class AzureVmTracesExample {
             cloudlet.setExecStartTime(instance.startTime);
             cloudletList.add(cloudlet);
         }
-
         System.out.println("Number of VMs is " + vmList.size());
 
         long timeStart = System.currentTimeMillis();
@@ -146,6 +127,7 @@ public class AzureVmTracesExample {
         printHostCpuUtilizationAndPowerConsumption(hosts);
     }
 
+    // CloudSim --------------------------------------------------------------------------------------------------------
 
     private List<Host> createHosts(int host_count) {
         final List<Host> hostList = new ArrayList<>(host_count);
@@ -163,10 +145,10 @@ public class AzureVmTracesExample {
             peList.add(new PeSimple(PE_MIPS));
         }
 
-        final long ram = 320; //in Megabytes
+        final long ram = HOST_MEMORY * 1024; //in Megabytes
         final long bw = 100000; //in Megabits/s
         final long storage = 1000000; //in Megabytes
-        final var vmScheduler = new VmSchedulerTimeShared();
+        final var vmScheduler = new VmSchedulerSpaceShared();
 
         final var host = new HostSimple(ram, bw, storage, peList);
 
@@ -183,56 +165,13 @@ public class AzureVmTracesExample {
         return host;
     }
 
-    private HashMap<String, AzureVmType> readVmType(String tracesVmTypesPath) throws Exception {
-        HashMap<String, AzureVmType> records = new HashMap<String, AzureVmType>();
-        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmTypesPath))) {
-            String line;
-            var line_num = 0;
-            while ((line = br.readLine()) != null) {
-                if (line_num++ == 0) {
-                    continue;
-                } 
-                String[] values = line.split(COMMA_DELIMITER);
-                AzureVmType type = new AzureVmType(values);
-                records.put(type.id, type);    
-            }
-        }
-        return records;
-    }
-
-    private ArrayList<AzureVmInstance> readVmInstances(String tracesVmInstancesPath) throws Exception {
-        ArrayList<AzureVmInstance> records = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmInstancesPath))) {
-            String line;
-            var line_num = 0;
-            while ((line = br.readLine()) != null) {
-                if (line_num++ == 0) {
-                    continue;
-                }
-                line += ", none";
-                String[] values = line.split(COMMA_DELIMITER);
-                AzureVmInstance instance = new AzureVmInstance(values);
-                records.add(instance);    
-            }
-        }
-        return records;
-    }
-
-    /**
-     * Creates a cloudlet with pre-defined configuration.
-     *
-     * @param id Cloudlet id
-     * @param vm vm to run the cloudlet
-     * @return the created cloudlet
-     */
     private Cloudlet createCloudlet(final int id, final Vm vm, final int vmPes, final double duration) {
         final long fileSize = 1;
         final long outputSize = 1;
         final long length = (long) (duration * PE_MIPS); // in number of Million Instructions (MI)
-        final int pesNumber = vmPes;
         final var utilizationModel = new UtilizationModelFull();
 
-        return new CloudletSimple(id, length, pesNumber)
+        return new CloudletSimple(id, length, vmPes)
             .setFileSize(fileSize)
             .setOutputSize(outputSize)
             .setUtilizationModel(utilizationModel)
@@ -251,5 +190,74 @@ public class AzureVmTracesExample {
         System.out.printf("Mean host CPU utilization is %.1f%%", 
             accumulatedCPUUtilization / hosts.size());
         System.out.println();
+    }
+
+    // Dataset ---------------------------------------------------------------------------------------------------------
+
+    private static class AzureVmType {
+        String id;
+        String vmTypeId;
+        double cpu;
+        double memory;
+
+        public AzureVmType(String[] values) {
+            this.id = values[0];
+            this.vmTypeId = values[1];
+            this.cpu = Double.parseDouble(values[2]);
+            this.memory = Double.parseDouble(values[3]);
+        }
+    }
+
+    private static class AzureVmInstance {
+        int vmId;
+        String vmTypeId;
+        double startTime;
+        OptionalDouble endTime;
+
+        public AzureVmInstance(String[] values) {
+            this.vmId = Integer.parseInt(values[0]);
+            this.vmTypeId = values[1];
+            this.startTime = Double.parseDouble(values[2]) * 86400;
+            if (!values[3].equals("none") && !values[3].equals("")) {
+                this.endTime = OptionalDouble.of(Double.parseDouble(values[3]) * 86400) ;
+            } else {
+                this.endTime = OptionalDouble.empty();
+            }
+        }
+    }
+
+    private HashMap<String, AzureVmType> readVmTypes(String tracesVmTypesPath) throws Exception {
+        HashMap<String, AzureVmType> records = new HashMap<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmTypesPath))) {
+            String line;
+            var line_num = 0;
+            while ((line = br.readLine()) != null) {
+                if (line_num++ == 0) {
+                    continue;
+                }
+                String[] values = line.split(COMMA_DELIMITER);
+                AzureVmType type = new AzureVmType(values);
+                records.put(type.vmTypeId, type);
+            }
+        }
+        return records;
+    }
+
+    private ArrayList<AzureVmInstance> readVmInstances(String tracesVmInstancesPath) throws Exception {
+        ArrayList<AzureVmInstance> records = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(tracesVmInstancesPath))) {
+            String line;
+            var line_num = 0;
+            while ((line = br.readLine()) != null) {
+                if (line_num++ == 0) {
+                    continue;
+                }
+                line += ", none";
+                String[] values = line.split(COMMA_DELIMITER);
+                AzureVmInstance instance = new AzureVmInstance(values);
+                records.add(instance);
+            }
+        }
+        return records;
     }
 }
