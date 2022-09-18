@@ -39,7 +39,7 @@ import java.util.Random;
 **/
 public class AzureVmTracesExample {
     // Minimum time between events (used as delay between VM creation and cloudlet scheduling!)
-    private static final double MIN_TIME_BETWEEN_EVENTS = 1.;
+    private static final double MIN_TIME_BETWEEN_EVENTS = 10.;
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
     // MIPS performance of PE
@@ -75,7 +75,7 @@ public class AzureVmTracesExample {
                                   double simulationTime) throws Exception {
         /*Enables just some level of log messages.
           Make sure to import org.cloudsimplus.util.Log;*/
-        Log.setLevel(Level.INFO);
+        Log.setLevel(Level.ERROR);
         //Log.setLevel(DatacenterBroker.LOGGER, Level.ERROR);
 
         final CloudSim simulation = new CloudSim(MIN_TIME_BETWEEN_EVENTS);
@@ -103,15 +103,19 @@ public class AzureVmTracesExample {
             final var vmBw = 1000;
             final var vmSize = 1000;
             var finishTime = simulationTime;
-            if (instance.endTime != null && instance.endTime.getAsDouble() < simulationTime) {
+            if (instance.startTime < 0) {
+                continue;
+            }
+            if (instance.endTime != null && instance.endTime.getAsDouble() > simulationTime) {
                 finishTime = instance.endTime.getAsDouble();
+            } else {
+                finishTime = simulationTime;
             }
             if (instance.startTime > simulationTime) {
                 continue;
             }
-            if (instance.startTime >= finishTime - 0.1) {
-                continue;
-            }
+            instance.startTime *= 86400;
+            finishTime *= 86400;
 
             final var vm = new VmSimple(instance.vmId, PE_MIPS, vmPes);
             final var duration = finishTime - instance.startTime;
