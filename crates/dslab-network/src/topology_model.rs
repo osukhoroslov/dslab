@@ -197,6 +197,9 @@ impl TopologyNetwork {
     fn recalculate_receive_time(&mut self, ctx: &mut SimulationContext) {
         for transfer in &mut self.current_transfers {
             transfer.size_left -= transfer.throughput * (ctx.time() - transfer.last_update_time);
+            if transfer.size_left < 0.0 {
+                transfer.size_left = 0.0
+            }
             transfer.last_update_time = ctx.time();
         }
 
