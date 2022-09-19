@@ -109,8 +109,9 @@ fn simple_test() {
         },
     );
     gen_resources(&mut rng, &mut sim, 3, false);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
@@ -131,8 +132,9 @@ fn test_1() {
         },
     );
     gen_resources(&mut rng, &mut sim, 10, false);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
@@ -153,8 +155,9 @@ fn test_2() {
         },
     );
     gen_resources(&mut rng, &mut sim, 10, true);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
@@ -175,8 +178,9 @@ fn test_3() {
         },
     );
     gen_resources(&mut rng, &mut sim, 10, true);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
@@ -213,8 +217,9 @@ fn test_chain_1() {
         },
     );
     sim.add_resource("0", 5, 10, 1024);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = sim.time();
     println!("{:.100}", result);
@@ -257,8 +262,9 @@ fn test_chain_2() {
         },
     );
     sim.add_resource("0", 5, 10, 1024);
-    sim.init(dag);
+    let runner = sim.init(dag);
     sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
 
     let result = sim.time();
     println!("{:.100}", result);

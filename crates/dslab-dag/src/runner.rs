@@ -576,7 +576,7 @@ impl DAGRunner {
         self.check_and_log_completed();
     }
 
-    fn is_completed(&self) -> bool {
+    pub fn is_completed(&self) -> bool {
         self.dag.is_completed() && self.data_transfers.is_empty()
     }
 
