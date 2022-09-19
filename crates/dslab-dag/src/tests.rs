@@ -270,3 +270,40 @@ fn test_chain_2() {
     println!("{:.100}", result);
     assert_eq!(result, correct_result);
 }
+
+#[test]
+fn test_wide() {
+    let mut dag = DAG::new();
+    let root = dag.add_task("root", 10, 32, 1, 1, CoresDependency::Linear);
+    let end = dag.add_task("end", 10, 32, 1, 1, CoresDependency::Linear);
+    for i in 0..5 {
+        let data_id = dag.add_task_output(root, &i.to_string(), 100);
+        let task_id = dag.add_task(&i.to_string(), 50, 32, 1, 1, CoresDependency::Linear);
+        dag.add_data_dependency(data_id, task_id);
+        let data_id = dag.add_task_output(task_id, &(i.to_string() + "_"), 200);
+        dag.add_data_dependency(data_id, end);
+    }
+
+    let mut correct_result = (10. + 50. + 10.) / 5.;
+    correct_result += 100. / 10. + 0.1;
+    correct_result += 200. / 10. + 0.1;
+
+    let mut sim = DagSimulation::new(
+        123,
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+        },
+    );
+    for i in 0..5 {
+        sim.add_resource(&i.to_string(), 5, 1, 1024);
+    }
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    let result = sim.time();
+    println!("{:.100}", result);
+    assert_eq!(result, correct_result);
+}
