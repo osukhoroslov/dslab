@@ -241,7 +241,9 @@ impl DAGRunner {
         } else if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
                 if let Some(location) = self.data_location.get(&data_item_id).cloned() {
-                    self.add_data_transfer_task(data_item_id, location, self.resources[resource].id);
+                    if location != self.resources[resource].id {
+                        self.add_data_transfer_task(data_item_id, location, self.resources[resource].id);
+                    }
                 }
             }
         }

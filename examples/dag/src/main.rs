@@ -214,6 +214,40 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
+    let mut dag = DAG::new();
+    for i in 0..10 {
+        dag.add_task(&i.to_string(), i * 10 + 20, 32, 1, 2, CoresDependency::Linear);
+    }
+    for i in 0..9 {
+        let id = dag.add_task_output(i, &i.to_string(), i as u64 * 100 + 200);
+        dag.add_data_dependency(id, i + 1);
+    }
+
+    let mut correct_result = 0.;
+    for task in dag.get_tasks() {
+        correct_result += task.flops as f64 / 5. / 2.;
+    }
+
+    let mut sim = DagSimulation::new(
+        123,
+        Rc::new(RefCell::new(
+            dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork::new(10.0, 0.1),
+        )),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+        },
+    );
+    sim.add_resource("0", 5, 10, 1024);
+    sim.init(dag).borrow_mut().enable_trace_log(true);
+    sim.step_until_no_events();
+
+    let result = sim.time();
+    println!("{:.100}", result);
+    assert_eq!(result, correct_result);
+
+    return;
+
     let args = Args::parse();
 
     let mut experiments: BTreeMap<String, fn(&Args)> = BTreeMap::new();

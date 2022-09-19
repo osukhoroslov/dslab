@@ -114,7 +114,7 @@ fn simple_test() {
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
-    assert_eq!(result, 3742.044769287109375);
+    assert_eq!(result, 2559.57426166534423828125);
 }
 
 #[test]
@@ -181,4 +181,86 @@ fn test_3() {
     let result = (sim.time() / PRECISION).round() * PRECISION;
     println!("{:.100}", result);
     assert_eq!(result, 82.22796154022216796875);
+}
+
+#[test]
+fn test_chain_1() {
+    let mut dag = DAG::new();
+    for i in 0..10 {
+        dag.add_task(&i.to_string(), i * 10 + 20, 32, 1, 2, CoresDependency::Linear);
+    }
+    for i in 0..9 {
+        let id = dag.add_task_output(i, &i.to_string(), i as u64 * 100 + 200);
+        dag.add_data_dependency(id, i + 1);
+    }
+    let input = dag.add_data_item("input", 600);
+    dag.add_data_dependency(input, 0);
+    dag.add_task_output(9, "output", 700);
+
+    let mut correct_result = 0.;
+    for task in dag.get_tasks() {
+        correct_result += task.flops as f64 / 5. / 2.;
+    }
+    correct_result += 600. / 10. + 0.1;
+    correct_result += 700. / 10. + 0.1;
+
+    let mut sim = DagSimulation::new(
+        123,
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+        },
+    );
+    sim.add_resource("0", 5, 10, 1024);
+    sim.init(dag);
+    sim.step_until_no_events();
+
+    let result = sim.time();
+    println!("{:.100}", result);
+    assert_eq!(result, correct_result);
+}
+
+#[test]
+fn test_chain_2() {
+    let mut dag = DAG::new();
+    for i in 0..10 {
+        dag.add_task(&i.to_string(), i * 10 + 20, 32, 1, 2, CoresDependency::Linear);
+    }
+    for i in 0..9 {
+        let id = dag.add_task_output(i, &i.to_string(), i as u64 * 100 + 200);
+        dag.add_data_dependency(id, i + 1);
+    }
+    let input = dag.add_data_item("input", 600);
+    dag.add_data_dependency(input, 0);
+    dag.add_task_output(9, "output", 700);
+
+    let mut correct_result = 0.;
+    for task in dag.get_tasks() {
+        correct_result += task.flops as f64 / 5. / 2.;
+    }
+    for data_item in dag.get_data_items() {
+        if data_item.name == "input" || data_item.name == "output" {
+            continue;
+        }
+        correct_result += (data_item.size as f64 / 10. + 0.1) * 2.;
+    }
+    correct_result += 600. / 10. + 0.1;
+    correct_result += 700. / 10. + 0.1;
+
+    let mut sim = DagSimulation::new(
+        123,
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::ViaMasterNode,
+        },
+    );
+    sim.add_resource("0", 5, 10, 1024);
+    sim.init(dag);
+    sim.step_until_no_events();
+
+    let result = sim.time();
+    println!("{:.100}", result);
+    assert_eq!(result, correct_result);
 }
