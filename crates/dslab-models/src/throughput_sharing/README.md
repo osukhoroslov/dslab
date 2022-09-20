@@ -19,16 +19,12 @@ Recalculation consists of 3 steps:
 
 ## Fast algorithm
 
-Algorithm can be optimized based on the fairness guarantee. If activities stored in the heap are ordered by their remaining volume, then reorderings in the heap are not possible because each activity gets equal throughput ratio at each time interval.
+Algorithm can be optimized based on the fairness guarantee. If activities stored in the heap are ordered by their remaining volume, then reorderings in the heap are not possible because each activity gets equal throughput ratio at each time interval. That is why a full scan of the heap on each step is ineffective and can be avoided by using a simple metric described below.
 
-That is why full scan of the heap on each step is ineffective and can be replaced by storing some metadata next to the heap, equal for all activities.
+Total work per activity or simply _total work (TW)_ at time moment _t_ is calculated as a volume processed by the resource _per activity_ since the resource started till _t_. When there is a single activity using the resource, the total work is being increased by the full resource throughput for every time unit. When there are _N_ concurrent activities, the total work is being increased by the full throughput divided by _N_.
 
-*Total work* (`TW`) will be used for this metadata. *Total work* of time moment `t` is calculated as volume, processed by a single activity, since the system started till `t`. So, when there is single activity in the system, total work is increased by full bandwidth for every time unit, and when there are `N` activities, total work is being increased by full bandwidth divided by `N`.
+For every activity in the system the following equation is satisfied: _TW(start_time) + volume = TW(end_time)_. So, when a new activity is placed into the model, it calculates _TW(end_time)_ as current _TW_ + activity volume. The computed value, called activity _finish work_, is inserted in the heap. Activities are popped from the heap in the ascending order of their finish work.
 
-It is clear that for every activity in the system the equation `TW(start_time) + volume = TW(end_time)` is satisfied.
+The total work is updated efficiently too: instead of adding some volume every time unit, it is incremented only when some activity is inserted or popped from the model. The increment value is calculated as multiplication of time passed since the last update and throughput per activity during this period.
 
-So, when new activity is placed into model, it calculates `TW(end_time)` as current TW + activity volume. This, called `finish_work`, is inserted in the heap. Activities are popped from the heap in ascending order of `finish_work`.
-
-Total work is calculated effectively, too: instead of adding volume every time unit, total work is updated only when activity is inserted or popped from the model. Delta is calculated as multiplication of time delta since last update and throughput per activity on this period.
-
-It can be noticed that total work is always increasing. This can lead to overflow, so there is a periodic truncation procedure, which resets total work to 0 and subtracts all activities' finish works by old total work value. This is correct because activities order does not change and finish times are preserved too - they are calculated based on `finish_work` and `total_work` difference, which does not change.
+Note that the total work is always increasing. To avoid the overflow, each time the total work is above _1E+12_ it is reset to 0 and the finish work of each activity is reduced by the old value of total work. This is correct because the activities' order does not change, and the finish times are preserved too, since they are calculated based on the difference between finish work and total work, which also does not change.
