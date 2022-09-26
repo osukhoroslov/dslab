@@ -16,8 +16,9 @@ use env_logger::Builder;
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::data_item::{DataTransferMode, DataTransferStrategy};
 use dslab_dag::network::load_network;
-use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
 use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::lookahead::LookaheadScheduler;
@@ -52,14 +53,14 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "simple" => rc!(refcell!(SimpleScheduler::new())),
         "simple-with-data" => rc!(refcell!(SimpleDataScheduler::new())),
         "heft" => {
-            rc!(refcell!(HeftScheduler::new().with_data_transfer_strategy(
-                dslab_dag::schedulers::heft::DataTransferStrategy::Eager
-            )))
+            rc!(refcell!(
+                HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
         }
         "lookahead" => {
-            rc!(refcell!(LookaheadScheduler::new().with_data_transfer_strategy(
-                dslab_dag::schedulers::lookahead::DataTransferStrategy::Eager
-            )))
+            rc!(refcell!(
+                LookaheadScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
         }
         _ => {
             eprintln!("Wrong scheduler");
@@ -84,6 +85,7 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
 
     let t = Instant::now();
     sim.step_until_no_events();
+    println!("Makespan: {:.2}", sim.time());
     println!(
         "Processed {} events in {:.2?} ({:.0} events/sec)",
         sim.event_count(),

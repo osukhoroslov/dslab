@@ -5,7 +5,8 @@ use dslab_core::context::SimulationContext;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::runner::{Config, DataTransferMode};
+use crate::data_item::DataTransferMode;
+use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
 use crate::task::*;
 

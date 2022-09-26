@@ -20,38 +20,11 @@ use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::data_item::DataItemState;
+use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
 use crate::scheduler::{Action, Scheduler};
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
-
-/// Defines how data items are transferred during the DAG execution.
-#[derive(Clone, PartialEq, Debug)]
-pub enum DataTransferMode {
-    /// Every data item is automatically transferred between producer and consumer
-    /// via the master node (producer -> master -> consumer).
-    ViaMasterNode,
-    /// Every data item is automatically transferred between producer and consumer
-    /// directly (producer -> consumer)
-    Direct,
-    /// Data items are not transferred automatically,
-    /// all data transfers must be explicitly ordered by the scheduler.
-    Manual,
-}
-
-impl DataTransferMode {
-    /// Calculates the data transfer time per data unit between the specified resources (src, dest).
-    pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
-        match self {
-            DataTransferMode::ViaMasterNode => {
-                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
-            }
-            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
-            DataTransferMode::Manual => 0.,
-        }
-    }
-}
 
 /// Represents a DAG execution configuration.
 #[derive(Clone)]
@@ -168,6 +141,10 @@ impl DAGRunner {
 
     /// Starts DAG execution.
     pub fn start(&mut self) {
+        if !self.validate_input() {
+            return;
+        }
+
         for (id, data_item) in self.dag.get_data_items().iter().enumerate() {
             if data_item.state == DataItemState::Ready {
                 assert!(data_item.is_input, "Non-input data item has Ready state");
@@ -194,6 +171,16 @@ impl DAGRunner {
             &self.ctx,
         ));
         self.process_actions();
+    }
+
+    fn validate_input(&self) -> bool {
+        if self.dag.get_tasks().iter().map(|task| task.min_cores).max()
+            > self.resources.iter().map(|r| r.compute.borrow().cores_total()).max()
+        {
+            log_error!(self.ctx, "some tasks require more cores than any resource can provide");
+            return false;
+        }
+        true
     }
 
     fn trace_config(&mut self) {
