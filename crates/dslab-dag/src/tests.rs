@@ -114,7 +114,6 @@ fn simple_test() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    println!("{:.100}", result);
     assert_eq!(result, 2559.57426166534423828125);
 }
 
@@ -137,7 +136,6 @@ fn test_1() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    println!("{:.100}", result);
     assert_eq!(result, 87.13579273223876953125);
 }
 
@@ -160,7 +158,6 @@ fn test_2() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    println!("{:.100}", result);
     assert_eq!(result, 47.180736541748046875);
 }
 
@@ -183,7 +180,6 @@ fn test_3() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    println!("{:.100}", result);
     assert_eq!(result, 82.22796154022216796875);
 }
 
@@ -201,16 +197,19 @@ fn test_chain_1() {
     dag.add_data_dependency(input, 0);
     dag.add_task_output(9, "output", 700);
 
+    let bandwidth = 10.0;
+    let latency = 0.1;
+
     let mut correct_result = 0.;
     for task in dag.get_tasks() {
         correct_result += task.flops as f64 / 5. / 2.;
     }
-    correct_result += 600. / 10. + 0.1;
-    correct_result += 700. / 10. + 0.1;
+    correct_result += 600. / bandwidth + latency;
+    correct_result += 700. / bandwidth + latency;
 
     let mut sim = DagSimulation::new(
         123,
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
@@ -222,7 +221,6 @@ fn test_chain_1() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    println!("{:.100}", result);
     assert_eq!(result, correct_result);
 }
 
@@ -240,6 +238,9 @@ fn test_chain_2() {
     dag.add_data_dependency(input, 0);
     dag.add_task_output(9, "output", 700);
 
+    let bandwidth = 10.0;
+    let latency = 0.1;
+
     let mut correct_result = 0.;
     for task in dag.get_tasks() {
         correct_result += task.flops as f64 / 5. / 2.;
@@ -248,14 +249,14 @@ fn test_chain_2() {
         if data_item.name == "input" || data_item.name == "output" {
             continue;
         }
-        correct_result += (data_item.size as f64 / 10. + 0.1) * 2.;
+        correct_result += (data_item.size as f64 / bandwidth + latency) * 2.;
     }
-    correct_result += 600. / 10. + 0.1;
-    correct_result += 700. / 10. + 0.1;
+    correct_result += 600. / bandwidth + latency;
+    correct_result += 700. / bandwidth + latency;
 
     let mut sim = DagSimulation::new(
         123,
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
@@ -267,12 +268,11 @@ fn test_chain_2() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    println!("{:.100}", result);
     assert_eq!(result, correct_result);
 }
 
 #[test]
-fn test_wide() {
+fn test_fork_join() {
     let mut dag = DAG::new();
     let root = dag.add_task("root", 10, 32, 1, 1, CoresDependency::Linear);
     let end = dag.add_task("end", 10, 32, 1, 1, CoresDependency::Linear);
@@ -284,13 +284,16 @@ fn test_wide() {
         dag.add_data_dependency(data_id, end);
     }
 
+    let bandwidth = 10.0;
+    let latency = 0.1;
+
     let mut correct_result = (10. + 50. + 10.) / 5.;
-    correct_result += 100. / 10. + 0.1;
-    correct_result += 200. / 10. + 0.1;
+    correct_result += 100. / bandwidth + 0.1;
+    correct_result += 200. / bandwidth + 0.1;
 
     let mut sim = DagSimulation::new(
         123,
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(10.0, 0.1))),
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
@@ -304,6 +307,5 @@ fn test_wide() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    println!("{:.100}", result);
     assert_eq!(result, correct_result);
 }
