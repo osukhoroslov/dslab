@@ -27,12 +27,12 @@ pub struct Resource {
     pub memory_available: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct YamlResource {
-    name: String,
-    speed: u64,
-    cores: u32,
-    memory: u64,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct YamlResource {
+    pub name: String,
+    pub speed: u64,
+    pub cores: u32,
+    pub memory: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,11 +44,9 @@ struct Resources {
 ///
 /// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/resources/cluster1.yaml.
 pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
-    let resources: Resources =
-        serde_yaml::from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
-            .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file));
+    let resources = read_resources(file);
     let mut result: Vec<Resource> = Vec::new();
-    for resource in resources.resources.into_iter() {
+    for resource in resources.into_iter() {
         let compute = Rc::new(RefCell::new(Compute::new(
             resource.speed,
             resource.cores,
@@ -66,4 +64,11 @@ pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
         });
     }
     result
+}
+
+pub fn read_resources(file: &str) -> Vec<YamlResource> {
+    let resources: Resources =
+        serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
+            .expect(&format!("Can't parse YAML from file {}", file));
+    resources.resources
 }

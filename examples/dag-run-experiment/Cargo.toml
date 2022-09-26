@@ -1,0 +1,18 @@
+[package]
+name = "dag-run-experiment"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-compute = { path = "../../crates/dslab-compute" }
+dslab-network = { path = "../../crates/dslab-network" }
+dslab-dag = { path = "../../crates/dslab-dag" }
+env_logger = "0.9.0"
+clap = { version = "3.0.14", features = ["cargo", "derive"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+itertools = "0.10.5"
+threadpool = "1.8.1"
