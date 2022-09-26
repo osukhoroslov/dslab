@@ -261,7 +261,9 @@ impl DAGRunner {
         } else if self.config.data_transfer_mode == DataTransferMode::Direct {
             for &data_item_id in data_items.iter() {
                 if let Some(location) = self.data_location.get(&data_item_id).cloned() {
-                    self.add_data_transfer_task(data_item_id, location, self.resources[resource].id);
+                    if location != self.resources[resource].id {
+                        self.add_data_transfer_task(data_item_id, location, self.resources[resource].id);
+                    }
                 }
             }
         }
@@ -594,7 +596,7 @@ impl DAGRunner {
         self.check_and_log_completed();
     }
 
-    fn is_completed(&self) -> bool {
+    pub fn is_completed(&self) -> bool {
         self.dag.is_completed() && self.data_transfers.is_empty()
     }
 
