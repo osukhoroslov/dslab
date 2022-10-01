@@ -1,3 +1,12 @@
+//! File system model.
+//!
+//! It is built on top of the disk model and supports modeling a storage system on the level of file system operations.
+//! The model provides common methods for manipulating the file system such as creation and deletion of files, mounting
+//! and unmounting disks, reading and writing files. It also supports modeling a system consisting of multiple disks
+//! mounted on distinct mount points.
+//!
+//! Usage example can be found in `/examples/storage-fs`
+
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use dslab_core::component::Id;
@@ -7,24 +16,28 @@ use crate::{disk::Disk, events::*};
 
 struct File {
     size: u64,
-    cnt_actions: u64, // number of timed actions on this file. File can be removed only if there are no actions on it
+    /// Number of timed actions on this file. File can be removed only if there are no actions on it.
+    cnt_actions: u64,
 }
 
 impl File {
-    fn new(size: u64) -> File {
-        File { size, cnt_actions: 0 }
+    fn new(size: u64) -> Self {
+        Self { size, cnt_actions: 0 }
     }
 }
 
+/// Representation of file system.
 pub struct FileSystem {
     files: HashMap<String, File>,
     disks: HashMap<String, Rc<RefCell<Disk>>>,
-    requests: HashMap<(Id, u64), (u64, Id, String)>, // (disk id, disk_request_id) -> (request_id, requester, file_name)
+    /// Mapping (disk id, disk_request_id) -> (request_id, requester, file_path).
+    requests: HashMap<(Id, u64), (u64, Id, String)>,
     next_request_id: u64,
     ctx: SimulationContext,
 }
 
 impl FileSystem {
+    /// Creates new empty file system.
     pub fn new(ctx: SimulationContext) -> Self {
         Self {
             files: HashMap::new(),
@@ -35,6 +48,7 @@ impl FileSystem {
         }
     }
 
+    /// Mounts `disk` to `mount_point` if it is not taken yet.
     pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
         if let Some(_) = self.disks.get(mount_point) {
@@ -44,6 +58,7 @@ impl FileSystem {
         Ok(())
     }
 
+    /// Unmounts a disk which is mounted to `mount_point` if there is any.
     pub fn unmount_disk(&mut self, mount_point: &str) -> Result<(), String> {
         log_debug!(
             self.ctx,
@@ -56,13 +71,13 @@ impl FileSystem {
         Ok(())
     }
 
-    fn resolve_disk(&self, file_name: &str) -> Result<Rc<RefCell<Disk>>, String> {
+    fn resolve_disk(&self, file_path: &str) -> Result<Rc<RefCell<Disk>>, String> {
         for (mount_point, disk) in &self.disks {
-            if file_name.starts_with(mount_point) {
+            if file_path.starts_with(mount_point) {
                 return Ok(disk.clone());
             }
         }
-        Err(format!("cannot resolve on which disk file [{}] is located", file_name))
+        Err(format!("cannot resolve on which disk file [{}] is located", file_path))
     }
 
     fn get_unique_request_id(&mut self) -> u64 {
@@ -71,32 +86,43 @@ impl FileSystem {
         request_id
     }
 
-    pub fn read(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
+    /// Submits file read request and returns unique request id.
+    ///
+    /// The amount of data read from file located at `file_path` is specified in `size`.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the
+    /// read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current file system.
+    pub fn read(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: {}, file: [{}], requester: {}",
             size,
-            file_name,
+            file_path,
             requester
         );
-        self.read_impl(file_name, Some(size), requester)
+        self.read_impl(file_path, Some(size), requester)
     }
 
-    pub fn read_all(&mut self, file_name: &str, requester: Id) -> u64 {
+    /// Submits file read request and returns unique request id.
+    ///
+    /// The amount of data read from file located at `file_path` is equal to the file size.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion.
+    /// Note that the returned request id is unique only within the current file system.
+    pub fn read_all(&mut self, file_path: &str, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: all, file: [{}], requester: {}",
-            file_name,
+            file_path,
             requester
         );
-        self.read_impl(file_name, None, requester)
+        self.read_impl(file_path, None, requester)
     }
 
-    fn read_impl(&mut self, file_name: &str, size: Option<u64>, requester: Id) -> u64 {
+    fn read_impl(&mut self, file_path: &str, size: Option<u64>, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
-        match self.resolve_disk(&file_name) {
+        match self.resolve_disk(&file_path) {
             Ok(disk) => {
-                if let Some(file) = self.files.get_mut(file_name) {
+                if let Some(file) = self.files.get_mut(file_path) {
                     let size_to_read = if let Some(value) = size {
                         if file.size < value {
                             let error = format!("requested read size {} is more than file size {}", value, file.size);
@@ -104,7 +130,7 @@ impl FileSystem {
                             self.ctx.emit_now(
                                 FileReadFailed {
                                     request_id,
-                                    file_name: file_name.to_string(),
+                                    file_path: file_path.to_string(),
                                     error,
                                 },
                                 requester,
@@ -121,15 +147,15 @@ impl FileSystem {
                     let disk_request_id = disk.borrow_mut().read(size_to_read, self.ctx.id());
                     self.requests.insert(
                         (disk.borrow().id(), disk_request_id),
-                        (request_id, requester, file_name.into()),
+                        (request_id, requester, file_path.into()),
                     );
                 } else {
-                    let error = format!("file [{}] does not exist", file_name);
+                    let error = format!("file [{}] does not exist", file_path);
                     log_error!(self.ctx, "Failed reading: {}", error,);
                     self.ctx.emit_now(
                         FileReadFailed {
                             request_id,
-                            file_name: file_name.to_string(),
+                            file_path: file_path.to_string(),
                             error,
                         },
                         requester,
@@ -141,7 +167,7 @@ impl FileSystem {
                 self.ctx.emit_now(
                     FileReadFailed {
                         request_id,
-                        file_name: file_name.to_string(),
+                        file_path: file_path.to_string(),
                         error,
                     },
                     requester,
@@ -151,31 +177,37 @@ impl FileSystem {
         request_id
     }
 
-    pub fn write(&mut self, file_name: &str, size: u64, requester: Id) -> u64 {
+    /// Submits file write request and returns unique request id.
+    ///
+    /// The amount of data written to file located at `file_path` is specified in `size`.
+    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If
+    /// there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current file system.
+    pub fn write(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received write request, size: {}, file: [{}], requester: {}",
             size,
-            file_name,
+            file_path,
             requester,
         );
         let request_id = self.get_unique_request_id();
-        match self.resolve_disk(&file_name) {
+        match self.resolve_disk(&file_path) {
             Ok(disk) => {
-                if let Some(file) = self.files.get_mut(file_name) {
+                if let Some(file) = self.files.get_mut(file_path) {
                     file.cnt_actions += 1;
                     let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
                     self.requests.insert(
                         (disk.borrow().id(), disk_request_id),
-                        (request_id, requester.into(), file_name.into()),
+                        (request_id, requester.into(), file_path.into()),
                     );
                 } else {
-                    let error = format!("file [{}] does not exist", file_name);
+                    let error = format!("file [{}] does not exist", file_path);
                     log_error!(self.ctx, "Failed writing: {}", error,);
                     self.ctx.emit_now(
                         FileWriteFailed {
                             request_id,
-                            file_name: file_name.to_string(),
+                            file_path: file_path.to_string(),
                             error,
                         },
                         requester,
@@ -187,7 +219,7 @@ impl FileSystem {
                 self.ctx.emit_now(
                     FileWriteFailed {
                         request_id,
-                        file_name: file_name.to_string(),
+                        file_path: file_path.to_string(),
                         error,
                     },
                     requester,
@@ -197,39 +229,43 @@ impl FileSystem {
         request_id
     }
 
-    pub fn create_file(&mut self, file_name: &str) -> Result<(), String> {
-        log_debug!(self.ctx, "Received create file request, file_name: [{}]", file_name);
-        if let Some(_) = self.files.get(file_name) {
-            return Err(format!("file [{}] already exists", file_name));
+    /// Creates file at `file_path` if it doesn’t already exist.
+    pub fn create_file(&mut self, file_path: &str) -> Result<(), String> {
+        log_debug!(self.ctx, "Received create file request, file_path: [{}]", file_path);
+        if let Some(_) = self.files.get(file_path) {
+            return Err(format!("file [{}] already exists", file_path));
         }
-        self.resolve_disk(file_name)?;
-        self.files.insert(file_name.to_string(), File::new(0));
+        self.resolve_disk(file_path)?;
+        self.files.insert(file_path.to_string(), File::new(0));
         Ok(())
     }
 
-    pub fn get_file_size(&self, file_name: &str) -> Result<u64, String> {
+    /// Returns size of the file located at `file_path` if there is any.
+    pub fn get_file_size(&self, file_path: &str) -> Result<u64, String> {
         self.files
-            .get(file_name)
-            .ok_or(format!("file [{}] does not exist", file_name))
+            .get(file_path)
+            .ok_or(format!("file [{}] does not exist", file_path))
             .map(|f| f.size)
     }
 
+    /// Returns amount of used space on all disks currently used by this file system.
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
     }
 
-    pub fn delete_file(&mut self, file_name: &str) -> Result<(), String> {
-        log_debug!(self.ctx, "Received delete file request, file_name: [{}]", file_name);
-        let disk = self.resolve_disk(file_name)?;
+    /// Deletes file located at `file_path` if there is any.    
+    pub fn delete_file(&mut self, file_path: &str) -> Result<(), String> {
+        log_debug!(self.ctx, "Received delete file request, file_path: [{}]", file_path);
+        let disk = self.resolve_disk(file_path)?;
         let file = self
             .files
-            .get(file_name)
-            .ok_or(format!("file [{}] does not exist", file_name))?;
+            .get(file_path)
+            .ok_or(format!("file [{}] does not exist", file_path))?;
         if file.cnt_actions > 0 {
-            return Err(format!("file [{}] is busy and cannot be removed", file_name));
+            return Err(format!("file [{}] is busy and cannot be removed", file_path));
         }
         disk.borrow_mut().mark_free(file.size)?;
-        self.files.remove(file_name);
+        self.files.remove(file_path);
         Ok(())
     }
 }
@@ -242,26 +278,26 @@ impl EventHandler for FileSystem {
                 size,
             } => {
                 let key = (event.src, disk_request_id);
-                if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
-                    if let Some(file) = self.files.get_mut(file_name) {
+                if let Some((request_id, requester, file_path)) = self.requests.get(&key) {
+                    if let Some(file) = self.files.get_mut(file_path) {
                         log_debug!(
                             self.ctx,
                             "Completed reading from file [{}], read size: {}",
-                            file_name,
+                            file_path,
                             size,
                         );
                         file.cnt_actions -= 1;
                         self.ctx.emit_now(
                             FileReadCompleted {
                                 request_id: *request_id,
-                                file_name: file_name.clone(),
+                                file_path: file_path.clone(),
                                 read_size: size,
                             },
                             *requester,
                         );
                         self.requests.remove(&key);
                     } else {
-                        panic!("File [{}] was lost while reading", file_name);
+                        panic!("File [{}] was lost while reading", file_path);
                     }
                 } else {
                     panic!("Request ({},{}) not found", key.0, key.1);
@@ -272,26 +308,26 @@ impl EventHandler for FileSystem {
                 error,
             } => {
                 let key = (event.src, disk_request_id);
-                if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
-                    if let Some(file) = self.files.get_mut(file_name) {
+                if let Some((request_id, requester, file_path)) = self.requests.get(&key) {
+                    if let Some(file) = self.files.get_mut(file_path) {
                         log_error!(
                             self.ctx,
                             "Disk failed reading from file [{}], error: {}",
-                            file_name,
+                            file_path,
                             error
                         );
                         file.cnt_actions -= 1;
                         self.ctx.emit_now(
                             FileReadFailed {
                                 request_id: *request_id,
-                                file_name: file_name.clone(),
+                                file_path: file_path.clone(),
                                 error,
                             },
                             *requester,
                         );
                         self.requests.remove(&key);
                     } else {
-                        panic!("File [{}] was lost while reading", file_name);
+                        panic!("File [{}] was lost while reading", file_path);
                     }
                 } else {
                     panic!("Request ({},{}) not found", key.0, key.1);
@@ -302,28 +338,28 @@ impl EventHandler for FileSystem {
                 size,
             } => {
                 let key = (event.src, disk_request_id);
-                if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
-                    if let Some(file) = self.files.get_mut(file_name) {
+                if let Some((request_id, requester, file_path)) = self.requests.get(&key) {
+                    if let Some(file) = self.files.get_mut(file_path) {
                         file.size += size;
                         file.cnt_actions -= 1;
                         log_debug!(
                             self.ctx,
                             "Completed writing to file [{}], written size: {}, new size: {}",
-                            file_name,
+                            file_path,
                             size,
                             file.size,
                         );
                         self.ctx.emit_now(
                             FileWriteCompleted {
                                 request_id: *request_id,
-                                file_name: file_name.clone(),
+                                file_path: file_path.clone(),
                                 new_size: file.size,
                             },
                             *requester,
                         );
                         self.requests.remove(&key);
                     } else {
-                        panic!("File [{}] was lost while writing", file_name);
+                        panic!("File [{}] was lost while writing", file_path);
                     }
                 } else {
                     panic!("Request ({},{}) not found", key.0, key.1);
@@ -334,26 +370,26 @@ impl EventHandler for FileSystem {
                 error,
             } => {
                 let key = (event.src, disk_request_id);
-                if let Some((request_id, requester, file_name)) = self.requests.get(&key) {
-                    if let Some(file) = self.files.get_mut(file_name) {
+                if let Some((request_id, requester, file_path)) = self.requests.get(&key) {
+                    if let Some(file) = self.files.get_mut(file_path) {
                         file.cnt_actions -= 1;
                         log_error!(
                             self.ctx,
                             "Disk failed writing to file [{}], error: {}",
-                            file_name,
+                            file_path,
                             error,
                         );
                         self.ctx.emit_now(
                             FileWriteFailed {
                                 request_id: *request_id,
-                                file_name: file_name.clone(),
+                                file_path: file_path.clone(),
                                 error,
                             },
                             *requester,
                         );
                         self.requests.remove(&key);
                     } else {
-                        panic!("File [{}] was lost while writing", file_name);
+                        panic!("File [{}] was lost while writing", file_path);
                     }
                 } else {
                     panic!("Request ({},{}) not found", key.0, key.1);

@@ -1,9 +1,11 @@
+//! Fast implementation of fair throughput sharing model.
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::{ThroughputFunction, ThroughputSharingModel};
+use super::model::{ThroughputFunction, ThroughputSharingModel};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
@@ -42,6 +44,7 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
+/// Fast implementation of fair throughput sharing model.
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ThroughputFunction,
@@ -52,10 +55,12 @@ pub struct FairThroughputSharingModel<T> {
 }
 
 impl<T> FairThroughputSharingModel<T> {
+    /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
+    /// Creates model with dynamic throughput, represented by given closure.
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             activities: BinaryHeap::new(),

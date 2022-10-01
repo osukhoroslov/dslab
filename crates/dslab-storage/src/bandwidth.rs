@@ -1,19 +1,41 @@
+//! Bandwidth models.
+//!
+//! These models allow to dynamically compute per-request bandwidth based on the request size, current simulation time,
+//! etc. All implementations must have [`get_bandwidth`](BWModel::get_bandwidth) method, which returns bandwidth value
+//! from `size` and simulation context `ctx`. Using `ctx`, simulation time and random engine can be accessed.
+//! This method will be called each time when new disk read/write request is made, and the returned value will be used
+//! as the bandwidth for this request.
+//!
+//! There are 3 predefined models:
+//! * [`ConstantBWModel`]
+//! * [`RandomizedBWModel`]
+//! * [`EmpiricalBWModel`]
+//!
+//! Bandwidth models are supported by simple disk model.
+
 use rand::distributions::{Distribution, Uniform, WeightedError, WeightedIndex};
 
 use dslab_core::context::SimulationContext;
 
+/// Trait for bandwidth model.
 pub trait BWModel {
-    // will be called each time when bandwidth is needed
+    /// Returns the bandwidth per request.
+    ///
+    /// It is called each time new read/write request is made.
+    /// The model is provided with request size and simulation context.
+    /// The latter can be used to obtain the current simulation time and the random engine.
     fn get_bandwidth(&mut self, size: u64, ctx: &mut SimulationContext) -> u64;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// Simplest model with constant bandwidth.
 pub struct ConstantBWModel {
     bandwidth: u64,
 }
 
 impl ConstantBWModel {
+    /// Creates new constant bandwidth model with given value.
     pub fn new(bandwidth: u64) -> Self {
         Self { bandwidth }
     }
@@ -27,11 +49,13 @@ impl BWModel for ConstantBWModel {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// Model which generates random bandwidth values from the specified distribution.
 pub struct RandomizedBWModel<Dist: Distribution<u64>> {
     dist: Dist,
 }
 
 impl<Dist: Distribution<u64>> RandomizedBWModel<Dist> {
+    /// Creates new randomized bandwidth model with given distribution.
     pub fn new(dist: Dist) -> Self {
         Self { dist }
     }
@@ -43,18 +67,23 @@ impl<Dist: Distribution<u64>> BWModel for RandomizedBWModel<Dist> {
     }
 }
 
+/// Creates randomized bandwidth model with uniform distribution in `[low, high]` range.
 pub fn make_uniform_bw_model(low: u64, high: u64) -> RandomizedBWModel<Uniform<u64>> {
     RandomizedBWModel::new(Uniform::<u64>::new(low, high))
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// Model which generates random bandwidth from specified weighted points distribution.
 pub struct EmpiricalBWModel {
-    points: Vec<(u64, u64)>, // (value, proportion)
+    /// Pairs of (value, weight).
+    points: Vec<(u64, u64)>,
+    /// Distribution used to pick a random index from `points`.
     dist: WeightedIndex<u64>,
 }
 
 impl EmpiricalBWModel {
+    /// Creates new empirical bandwidth model with given weighted points.
     pub fn new(points: &[(u64, u64)]) -> Result<Self, WeightedError> {
         let dist = WeightedIndex::new(points.iter().map(|item| item.1))?;
         Ok(Self {

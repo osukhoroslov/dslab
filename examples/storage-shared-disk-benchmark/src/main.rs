@@ -54,7 +54,8 @@ struct Runner {
     requests_count: u64,
     max_size: u64,
     requests: Vec<DiskRequest>,
-    request_start_times: HashMap<(Id, u64), (f64, usize)>, // (disk_id, disk_request_id) -> (disk_request_start_time, runner_request_id)
+    request_start_times: HashMap<(Id, u64), (f64, usize)>, /* (disk_id, disk_request_id) ->
+                                                            * (disk_request_start_time, runner_request_id) */
 }
 
 #[derive(Serialize)]

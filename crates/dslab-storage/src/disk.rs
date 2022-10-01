@@ -1,3 +1,15 @@
+//! A simple disk model, which processes read/write requests sequentially.
+//!
+//! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
+//! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
+//! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
+//! There is also support for [bandwidth models](crate::bandwidth) that dynamically compute per-request bandwidth based
+//! on the request size, current simulation time, etc. Several implementations of these models are included in this
+//! crate, and other user-defined models can also be used. This model of disk **does not** support bandwidth sharing, so
+//! disk can process only one request at a time. The requests are processed sequentially in FIFO order.
+//!
+//! Usage example can be found in `/examples/storage-disk`.
+
 use sugars::boxed;
 
 use dslab_core::component::Id;
@@ -6,6 +18,10 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 
+/// Representation of disk.
+///
+/// Disk is characterized by its capacity and read/write bandwidths (represented by bandwidth models).
+/// Disk state includes the amount of used disk space and the completion time of last pending activity (`ready_time`).
 pub struct Disk {
     capacity: u64,
     used: u64,
@@ -17,6 +33,7 @@ pub struct Disk {
 }
 
 impl Disk {
+    /// Creates new disk.
     pub fn new(
         capacity: u64,
         read_bw_model: Box<dyn BWModel>,
@@ -34,6 +51,7 @@ impl Disk {
         }
     }
 
+    /// Creates new disk with constant bandwidth model.
     pub fn new_simple(capacity: u64, read_bandwidth: u64, write_bandwidth: u64, ctx: SimulationContext) -> Self {
         Self::new(
             capacity,
@@ -49,6 +67,12 @@ impl Disk {
         request_id
     }
 
+    /// Submits data read request and returns unique request id.
+    ///
+    /// The amount of data read from disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the
+    /// read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead. Note
+    /// that the returned request id is unique only within the current disk.
     pub fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -78,6 +102,12 @@ impl Disk {
         request_id
     }
 
+    /// Submits data write request and returns unique request id.
+    ///
+    /// The amount of data written to disk is specified in `size`.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If
+    /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
+    /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
         log_debug!(
@@ -106,6 +136,9 @@ impl Disk {
         request_id
     }
 
+    /// Marks previously used disk space of given `size` as free.
+    ///
+    /// The `size` should not exceed the currently used disk space.
     pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
@@ -114,10 +147,12 @@ impl Disk {
         Err(format!("invalid size: {}", size))
     }
 
+    /// Returns the amount of used disk space.
     pub fn get_used_space(&self) -> u64 {
         self.used
     }
 
+    /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }

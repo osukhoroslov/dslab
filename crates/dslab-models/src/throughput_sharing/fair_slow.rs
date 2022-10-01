@@ -1,9 +1,12 @@
+//! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
+//! and completion.
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use crate::model::{ThroughputFunction, ThroughputSharingModel};
+use super::model::{ThroughputFunction, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -44,6 +47,8 @@ impl<T> PartialEq for Activity<T> {
 
 impl<T> Eq for Activity<T> {}
 
+/// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
+/// and completion.
 pub struct SlowFairThroughputSharingModel<T> {
     throughput_function: ThroughputFunction,
     entries: BinaryHeap<Activity<T>>,
@@ -53,10 +58,12 @@ pub struct SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> SlowFairThroughputSharingModel<T> {
+    /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
+    /// Creates model with dynamic throughput, represented by given closure.
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,
