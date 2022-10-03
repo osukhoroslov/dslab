@@ -29,9 +29,9 @@ struct Args {
     #[clap(long)]
     dags: String,
 
-    /// Folder with platform configurations (resources + network)
+    /// Folder with system configurations (resources + network)
     #[clap(long)]
-    platforms: String,
+    systems: String,
 
     /// File with schedulers configuration
     #[clap(long)]
@@ -64,7 +64,7 @@ impl YamlScheduler {
 #[derive(Serialize)]
 struct ExperimentResult {
     dag: String,
-    platform: String,
+    system: String,
     scheduler: String,
     makespan: f64,
 }
@@ -92,8 +92,8 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    let platforms = std::fs::read_dir(args.platforms).expect("Can't open directory with platforms");
-    let platforms = platforms
+    let systems = std::fs::read_dir(args.systems).expect("Can't open directory with systems");
+    let systems = systems
         .filter_map(|x| x.ok())
         .filter(|path| path.path().is_file())
         .map(|path| {
@@ -112,15 +112,15 @@ fn main() {
     .expect(&format!("Can't parse YAML from file {}", &args.schedulers));
 
     eprintln!(
-        "Found {} dags, {} platforms, {} schedulers",
+        "Found {} dags, {} systems, {} schedulers",
         dags.len(),
-        platforms.len(),
+        systems.len(),
         schedulers.len()
     );
 
     let experiments = dags
         .into_iter()
-        .cartesian_product(platforms.into_iter())
+        .cartesian_product(systems.into_iter())
         .cartesian_product(schedulers.into_iter())
         .map(|((dag, (resources, network, file_name)), scheduler)| (dag, (file_name, resources), network, scheduler))
         .collect::<Vec<_>>();
@@ -131,7 +131,7 @@ fn main() {
     let result = Arc::new(Mutex::new(Vec::new()));
 
     let pool = ThreadPool::new(args.jobs);
-    for ((dag_name, dag), (platform_name, resources), network, scheduler_type) in experiments.into_iter() {
+    for ((dag_name, dag), (system_name, resources), network, scheduler_type) in experiments.into_iter() {
         let finished_runs = finished_runs.clone();
         let result = result.clone();
         pool.execute(move || {
@@ -157,7 +157,7 @@ fn main() {
 
             result.lock().unwrap().push(ExperimentResult {
                 dag: dag_name,
-                platform: platform_name,
+                system: system_name,
                 scheduler: format!("{:?}", scheduler_type),
                 makespan,
             });
