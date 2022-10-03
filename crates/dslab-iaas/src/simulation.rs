@@ -17,7 +17,11 @@ use crate::core::load_model::ConstLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
+use crate::core::power_model::LinearPowerModel;
+use crate::core::power_model::PowerModel;
 use crate::core::scheduler::Scheduler;
+use crate::core::slav_model::SLATAHModel;
+use crate::core::slav_model::SLAVModel;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -34,6 +38,8 @@ pub struct CloudSimulation {
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
+    energy_model: Box<dyn PowerModel>,
+    slav_model: Box<dyn SLAVModel>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -64,6 +70,8 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
+            energy_model: Box::new(LinearPowerModel::new(1.)),
+            slav_model: Box::new(SLATAHModel::new()),
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -80,6 +88,8 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
             self.sim_config.allow_vm_overcommit,
+            self.energy_model.clone(),
+            self.slav_model.clone(),
             self.sim.create_context(name),
             self.sim_config.clone(),
         )));
@@ -219,6 +229,23 @@ impl CloudSimulation {
         }
     }
 
+<<<<<<< HEAD
+=======
+    /// Overrides the used host energy load model.
+    ///
+    /// Should be called before adding hosts to simulation.
+    pub fn set_energy_load_model(&mut self, energy_model: Box<dyn PowerModel>) {
+        self.energy_model = energy_model;
+    }
+
+    /// Overrides the used SLAV model.
+    ///
+    /// Should be called before adding hosts to simulation.
+    pub fn set_slav_model(&mut self, slav_model: Box<dyn SLAVModel>) {
+        self.slav_model = slav_model;
+    }
+
+>>>>>>> Up to 2nd review
     /// Returns the reference to monitoring component (provides actual host load).
     pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {
         self.monitoring.clone()

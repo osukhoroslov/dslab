@@ -4,6 +4,10 @@ use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
+<<<<<<< HEAD
+=======
+use dslab_iaas::core::power_model::PowerModel;
+>>>>>>> Up to 2nd review
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
@@ -446,3 +450,92 @@ fn test_double_migration() {
     assert_eq!(current_time, 101.7);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
+<<<<<<< HEAD
+=======
+
+#[derive(Clone)]
+pub struct ConstPowerModel {}
+
+impl ConstPowerModel {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl PowerModel for ConstPowerModel {
+    fn get_power(&self, _time: f64, cpu_load: f64) -> f64 {
+        if cpu_load == 0. {
+            return 0.;
+        }
+        1.
+    }
+}
+
+#[test]
+// Default energy load model gets a result of 2.1 (test #1).
+// Override energy load model with constant of 1, then the total consumption is 3.5.
+fn test_energy_consumption_override() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    cloud_sim.set_energy_load_model(Box::new(ConstPowerModel::new()));
+
+    let h = cloud_sim.add_host("h", 30, 30);
+    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        2.0,
+        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstLoadModel::new(1.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(10.);
+    let end_time = cloud_sim.current_time();
+
+    assert_eq!(end_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_total_consumed(end_time), 3.5);
+}
+
+#[test]
+// SLATAH model is used to calculate SLAV value
+// Host is fully loaded then energy load is 1.0
+// Then during the period from 0 to 2 seconds host is fully loaded
+// and is half-loaded between 2 and 4 seconds, thus the SLATAH metrics is equal 50%.
+fn test_slatah() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h = cloud_sim.add_host("h", 40, 40);
+    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        4.0,
+        Box::new(ConstLoadModel::new(2.0)),
+        Box::new(ConstLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        2.0,
+        Box::new(ConstLoadModel::new(2.0)),
+        Box::new(ConstLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(10.);
+    let end_time = cloud_sim.current_time();
+
+    assert_eq!(end_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_accumulated_slav(end_time), 0.5);
+}
+>>>>>>> Up to 2nd review
