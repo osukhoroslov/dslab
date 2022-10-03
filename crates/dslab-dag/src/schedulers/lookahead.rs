@@ -2,13 +2,13 @@ use std::collections::{BTreeSet, HashSet};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::{log_debug, log_info, log_warn};
-use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
 use crate::schedulers::common::{calc_ranks, evaluate_assignment, predecessors, ScheduledTask};
+use crate::system::System;
 use crate::task::*;
 
 pub struct LookaheadScheduler {
@@ -29,14 +29,7 @@ impl LookaheadScheduler {
 }
 
 impl Scheduler for LookaheadScheduler {
-    fn start(
-        &mut self,
-        dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
-        network: &Network,
-        config: Config,
-        ctx: &SimulationContext,
-    ) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         assert_ne!(
             config.data_transfer_mode,
             DataTransferMode::Manual,
@@ -50,32 +43,19 @@ impl Scheduler for LookaheadScheduler {
             );
         }
 
+        let resources = system.resources;
+        let network = system.network;
+
         let data_transfer_mode = &config.data_transfer_mode;
 
-        // average time over all resources for executing one flop
-        let avg_flop_time = resources.iter().map(|r| 1. / r.speed as f64).sum::<f64>() / resources.len() as f64;
-
-        let avg_net_time = resources
-            .iter()
-            .map(|r1| {
-                resources
-                    .iter()
-                    .map(|r2| data_transfer_mode.net_time(network, r1.id, r2.id, ctx.id()))
-                    .sum::<f64>()
-            })
-            .sum::<f64>()
-            / (resources.len() as f64).powf(2.);
-        let avg_upload_net_time = resources
-            .iter()
-            .map(|r| 1. / network.bandwidth(r.id, ctx.id()))
-            .sum::<f64>()
-            / resources.len() as f64;
+        let avg_net_time = system.avg_net_time(ctx.id(), data_transfer_mode);
+        let avg_upload_net_time = system.avg_upload_net_time(ctx.id());
 
         let total_tasks = dag.get_tasks().len();
 
         let pred = predecessors(dag);
 
-        let task_ranks = calc_ranks(avg_flop_time, avg_net_time, dag);
+        let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
         let mut tasks = (0..total_tasks).collect::<Vec<_>>();
         tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
 
@@ -311,7 +291,7 @@ impl Scheduler for LookaheadScheduler {
         _task: usize,
         _task_state: TaskState,
         _dag: &DAG,
-        _resources: &Vec<crate::resource::Resource>,
+        _system: System,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
         Vec::new()

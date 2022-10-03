@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use dslab_core::context::SimulationContext;
-use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
+use crate::system::System;
 use crate::task::*;
 
 struct Resource {
@@ -194,20 +194,13 @@ impl PortfolioScheduler {
 }
 
 impl Scheduler for PortfolioScheduler {
-    fn start(
-        &mut self,
-        dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
-        _network: &Network,
-        config: Config,
-        _ctx: &SimulationContext,
-    ) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, _ctx: &SimulationContext) -> Vec<Action> {
         assert_ne!(
             config.data_transfer_mode,
             DataTransferMode::Manual,
             "PortfolioScheduler doesn't support DataTransferMode::Manual"
         );
-        self.schedule(dag, resources)
+        self.schedule(dag, system.resources)
     }
 
     fn on_task_state_changed(
@@ -215,9 +208,9 @@ impl Scheduler for PortfolioScheduler {
         _task: usize,
         _task_state: TaskState,
         dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
+        system: System,
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
-        self.schedule(dag, resources)
+        self.schedule(dag, system.resources)
     }
 }

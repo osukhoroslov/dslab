@@ -2,11 +2,10 @@
 
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
-use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::resource::Resource;
 use crate::runner::Config;
+use crate::system::System;
 use crate::task::TaskState;
 
 /// Represents an action ordered by the scheduler.
@@ -31,14 +30,7 @@ pub enum Action {
 /// made by the scheduler (assign task to resource, transfer data item between resources, etc).
 pub trait Scheduler {
     /// Called once in the beginning of DAG execution.
-    fn start(
-        &mut self,
-        dag: &DAG,
-        resources: &Vec<Resource>,
-        network: &Network,
-        config: Config,
-        ctx: &SimulationContext,
-    ) -> Vec<Action>;
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action>;
     /// Called on every task state change.
     ///
     /// Useful for implementing dynamic scheduling algorithms.
@@ -48,7 +40,7 @@ pub trait Scheduler {
         task: usize,
         task_state: TaskState,
         dag: &DAG,
-        resources: &Vec<Resource>,
+        system: System,
         ctx: &SimulationContext,
     ) -> Vec<Action>;
 }

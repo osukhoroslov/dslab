@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
-use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
+use crate::system::System;
 use crate::task::*;
 
 struct Resource {
@@ -92,20 +92,13 @@ impl SimpleDataScheduler {
 }
 
 impl Scheduler for SimpleDataScheduler {
-    fn start(
-        &mut self,
-        dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
-        _network: &Network,
-        config: Config,
-        ctx: &SimulationContext,
-    ) -> Vec<Action> {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         assert_eq!(
             config.data_transfer_mode,
             DataTransferMode::Manual,
             "SimpleDataScheduler supports only DataTransferMode::Manual"
         );
-        self.schedule(dag, resources, ctx)
+        self.schedule(dag, system.resources, ctx)
     }
 
     fn on_task_state_changed(
@@ -113,9 +106,9 @@ impl Scheduler for SimpleDataScheduler {
         _task: usize,
         _task_state: TaskState,
         dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
+        system: System,
         ctx: &SimulationContext,
     ) -> Vec<Action> {
-        self.schedule(dag, resources, ctx)
+        self.schedule(dag, system.resources, ctx)
     }
 }

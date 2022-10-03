@@ -11,7 +11,8 @@ use dslab_network::model::NetworkModel;
 
 use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
-use crate::runner::{Config, DataTransferMode};
+use crate::data_item::DataTransferMode;
+use crate::runner::Config;
 use crate::schedulers::heft::HeftScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 

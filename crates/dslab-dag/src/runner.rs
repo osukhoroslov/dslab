@@ -23,6 +23,7 @@ use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
 use crate::scheduler::{Action, Scheduler};
+use crate::system::System;
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
 
@@ -165,8 +166,10 @@ impl DAGRunner {
         self.trace_config();
         self.actions.extend(self.scheduler.borrow_mut().start(
             &self.dag,
-            &self.resources,
-            &self.network.borrow(),
+            System {
+                resources: &self.resources,
+                network: &self.network.borrow(),
+            },
             self.config.clone(),
             &self.ctx,
         ));
@@ -506,7 +509,10 @@ impl DAGRunner {
             task_id,
             TaskState::Done,
             &self.dag,
-            &self.resources,
+            System {
+                resources: &self.resources,
+                network: &self.network.borrow(),
+            },
             &self.ctx,
         ));
         self.process_actions();
