@@ -50,7 +50,7 @@ impl PartialEq for ScheduledTask {
 
 impl Eq for ScheduledTask {}
 
-pub fn assign_task_on_resource(
+pub fn evaluate_assignment(
     task: usize,
     resource: usize,
     est: f64,
@@ -156,7 +156,7 @@ pub fn assign_task_on_resource(
     Some((est, time, cores))
 }
 
-pub fn successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
+pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
     let mut result = Vec::new();
     for &data_item_id in dag.get_task(v).outputs.iter() {
         let data_item = dag.get_data_item(data_item_id);
@@ -165,29 +165,41 @@ pub fn successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
     result
 }
 
-fn calc_rank(v: usize, avg_flop_time: f64, avg_net_time: f64, dag: &DAG, rank: &mut Vec<f64>, used: &mut Vec<bool>) {
+pub fn predecessors(dag: &DAG) -> Vec<Vec<(usize, f64)>> {
+    let total_tasks = dag.get_tasks().len();
+
+    let mut predecessors = vec![vec![(0 as usize, 0.); 0]; total_tasks];
+    for task in 0..total_tasks {
+        for &(succ, weight) in task_successors(task, dag).iter() {
+            predecessors[succ].push((task, weight as f64));
+        }
+    }
+    predecessors
+}
+
+fn calc_rank(v: usize, avg_flop_time: f64, avg_net_time: f64, dag: &DAG, ranks: &mut Vec<f64>, used: &mut Vec<bool>) {
     if used[v] {
         return;
     }
     used[v] = true;
 
-    rank[v] = 0.;
-    for &(succ, edge_weight) in successors(v, dag).iter() {
-        calc_rank(succ, avg_flop_time, avg_net_time, dag, rank, used);
-        rank[v] = rank[v].max(rank[succ] + edge_weight as f64 * avg_net_time);
+    ranks[v] = 0.;
+    for &(succ, edge_weight) in task_successors(v, dag).iter() {
+        calc_rank(succ, avg_flop_time, avg_net_time, dag, ranks, used);
+        ranks[v] = ranks[v].max(ranks[succ] + edge_weight as f64 * avg_net_time);
     }
-    rank[v] += dag.get_task(v).flops as f64 * avg_flop_time;
+    ranks[v] += dag.get_task(v).flops as f64 * avg_flop_time;
 }
 
 pub fn calc_ranks(avg_flop_time: f64, avg_net_time: f64, dag: &DAG) -> Vec<f64> {
     let total_tasks = dag.get_tasks().len();
 
     let mut used = vec![false; total_tasks];
-    let mut rank = vec![0.; total_tasks];
+    let mut ranks = vec![0.; total_tasks];
 
     for i in 0..total_tasks {
-        calc_rank(i, avg_flop_time, avg_net_time, dag, &mut rank, &mut used);
+        calc_rank(i, avg_flop_time, avg_net_time, dag, &mut ranks, &mut used);
     }
 
-    rank
+    ranks
 }

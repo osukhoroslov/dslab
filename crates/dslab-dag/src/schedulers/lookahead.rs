@@ -8,7 +8,7 @@ use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
-use crate::schedulers::common::{assign_task_on_resource, calc_ranks, successors, ScheduledTask};
+use crate::schedulers::common::{calc_ranks, evaluate_assignment, predecessors, ScheduledTask};
 use crate::task::*;
 
 pub struct LookaheadScheduler {
@@ -73,17 +73,11 @@ impl Scheduler for LookaheadScheduler {
 
         let total_tasks = dag.get_tasks().len();
 
-        let rank = calc_ranks(avg_flop_time, avg_net_time, dag);
+        let pred = predecessors(dag);
 
-        let mut pred = vec![vec![(0 as usize, 0.); 0]; total_tasks];
-        for task in 0..total_tasks {
-            for &(succ, weight) in successors(task, dag).iter() {
-                pred[succ].push((task, weight as f64));
-            }
-        }
-
+        let task_ranks = calc_ranks(avg_flop_time, avg_net_time, dag);
         let mut tasks = (0..total_tasks).collect::<Vec<_>>();
-        tasks.sort_by(|&a, &b| rank[b].total_cmp(&rank[a]));
+        tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
 
         let mut scheduled_tasks = resources
             .iter()
@@ -142,7 +136,7 @@ impl Scheduler for LookaheadScheduler {
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
-                let res = assign_task_on_resource(
+                let res = evaluate_assignment(
                     task,
                     resource,
                     est,
@@ -173,7 +167,7 @@ impl Scheduler for LookaheadScheduler {
                 let mut children = (0..total_tasks)
                     .filter(|&task| !scheduled[task])
                     .collect::<Vec<usize>>();
-                children.sort_by(|&a, &b| rank[b].total_cmp(&rank[a]));
+                children.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
                 let mut max_eft = est + time;
                 for &child in children.iter() {
                     let (resource, cores, finish, time) = {
@@ -185,7 +179,7 @@ impl Scheduler for LookaheadScheduler {
                         let mut best_resource = 0 as usize;
                         let mut best_cores: Vec<u32> = Vec::new();
                         for resource in 0..resources.len() {
-                            let res = assign_task_on_resource(
+                            let res = evaluate_assignment(
                                 task,
                                 resource,
                                 est,
