@@ -1,3 +1,4 @@
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyFirstFit;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
 import org.cloudbus.cloudsim.brokers.DatacenterBrokerBestFit;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -8,7 +9,8 @@ import org.cloudbus.cloudsim.hosts.HostSimple;
 import org.cloudbus.cloudsim.power.models.PowerModelHostSimple;
 import org.cloudbus.cloudsim.resources.Pe;
 import org.cloudbus.cloudsim.resources.PeSimple;
-import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
+import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerSpaceShared;
+import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerSpaceShared;
 import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.util.Log;
@@ -26,10 +28,14 @@ import java.util.Random;
 public class VmPlacementExample {
     // Defines, between other things, the time intervals to keep Hosts CPU utilization history records
     private static final int SCHEDULING_INTERVAL = 10;
+    // MIPS performance of PE
+    private static final int PE_MIPS = 1000;
     // CPUs per host
     private static final int HOST_PES = 144;
+    // Host memory capacity in Megabytes
+    private static final int HOST_MEMORY = 204800;
     // Indicates the time (in seconds) the Host takes to start up
-    private static final double HOST_START_UP_DELAY = 5;
+    private static final double HOST_START_UP_DELAY = 0;
     // Indicates the time (in seconds) the Host takes to shut down
     private static final double HOST_SHUT_DOWN_DELAY = 3;
     // Indicates Host power consumption (in Watts) during startup
@@ -55,7 +61,7 @@ public class VmPlacementExample {
         long timeStart = System.currentTimeMillis();
 
         final CloudSim simulation = new CloudSim();
-        final Datacenter dc = new DatacenterSimple(simulation, createHosts(host_count));
+        final Datacenter dc = new DatacenterSimple(simulation, createHosts(host_count), new VmAllocationPolicyFirstFit());
         dc.setSchedulingInterval(SCHEDULING_INTERVAL);
         //Creates a broker that is a software acting on behalf of a cloud customer to manage his/her VMs
         DatacenterBroker broker = new DatacenterBrokerBestFit(simulation);
@@ -84,13 +90,13 @@ public class VmPlacementExample {
         final var peList = new ArrayList<Pe>(HOST_PES);
         //List of Host's CPUs (Processing Elements, PEs)
         for (int i = 0; i < HOST_PES; i++) {
-            peList.add(new PeSimple(1000));
+            peList.add(new PeSimple(PE_MIPS));
         }
 
-        final long ram = 204800; //in Megabytes
+        final long ram = HOST_MEMORY; //in Megabytes
         final long bw = 100000; //in Megabits/s
         final long storage = 1000000; //in Megabytes
-        final var vmScheduler = new VmSchedulerTimeShared();
+        final var vmScheduler = new VmSchedulerSpaceShared();
 
         final var host = new HostSimple(ram, bw, storage, peList);
 
@@ -122,8 +128,9 @@ public class VmPlacementExample {
             final var vmBw = vmBwDistribution[random.nextInt(4)];
             final var vmSize = vmSizeDistribution[random.nextInt(4)];
 
-            final var vm = new VmSimple(i, 1000, vmPes);
+            final var vm = new VmSimple(i, PE_MIPS, vmPes);
             vm.setRam(vmRam).setBw(vmBw).setSize(vmSize).enableUtilizationStats();
+            vm.setCloudletScheduler(new CloudletSchedulerSpaceShared());
             list.add(vm);
         }
 

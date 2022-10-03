@@ -7,7 +7,7 @@ use log::warn;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::vm_placement_algorithm::FirstFit;
+use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::extensions::azure_dataset_reader::AzureDatasetReader;
 use dslab_iaas::extensions::dataset_reader::DatasetReader;
 use dslab_iaas::extensions::huawei_dataset_reader::HuaweiDatasetReader;
@@ -47,7 +47,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
     let mut hosts: Vec<u32> = Vec::new();
-    for i in 1..sim_config.number_of_hosts {
+    for i in 1..sim_config.number_of_hosts + 1 {
         let host_name = &format!("h{}", i);
         let host_id = cloud_sim.add_host(
             host_name,
@@ -56,7 +56,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
         );
         hosts.push(host_id);
     }
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     log_info!(
         cloud_sim.context(),
@@ -66,6 +66,8 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     let simulation_start = Instant::now();
     cloud_sim.spawn_vms_from_dataset(scheduler_id, dataset);
 
+    let mut accumulated_cpu_utilization = 0.;
+    let mut num_of_iterations = 0;
     loop {
         cloud_sim.step_for_duration(sim_config.step_duration);
 
@@ -97,25 +99,23 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
             sum_cpu_load / (hosts.len() as f64),
             sum_memory_load / (hosts.len() as f64)
         );
+        accumulated_cpu_utilization += sum_cpu_load / (hosts.len() as f64);
+        num_of_iterations += 1;
+
         if cloud_sim.current_time() > sim_config.simulation_length {
             break;
         }
     }
 
-    log_info!(
-        cloud_sim.context(),
-        "Simulation process time {:.2?}",
-        simulation_start.elapsed()
-    );
-    log_info!(
-        cloud_sim.context(),
-        "Total events processed {}",
-        cloud_sim.event_count()
-    );
-    log_info!(
-        cloud_sim.context(),
+    println!("Simulation process time {:.2?}", simulation_start.elapsed());
+    println!("Total events processed {}", cloud_sim.event_count());
+    println!(
         "Events per second {:.0}",
         cloud_sim.event_count() as f64 / simulation_start.elapsed().as_secs_f64()
+    );
+    println!(
+        "Mean CPU utilization is {:.1}%",
+        100. * accumulated_cpu_utilization / (num_of_iterations as f64)
     );
 }
 

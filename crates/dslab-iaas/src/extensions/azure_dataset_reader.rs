@@ -129,7 +129,11 @@ impl DatasetReader for AzureDatasetReader {
         let memory_usage = (self.host_memory_capacity * vm_params.memory) as u64;
         self.current_vm += 1;
 
-        let end_time = raw_vm.end_time.map(|t| t * 86400.).unwrap_or(self.simulation_length);
+        let end_time = raw_vm
+            .end_time
+            .map(|t| t * 86400.)
+            .unwrap_or(self.simulation_length)
+            .min(self.simulation_length);
         let lifetime = end_time - start_time;
         return Some(VMRequest {
             id: raw_vm.vm_id.clone(),
