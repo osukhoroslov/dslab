@@ -39,8 +39,8 @@ struct DiskWriteActivityCompleted {}
 pub struct SharedDisk {
     capacity: u64,
     used: u64,
-    read_throughput_model: ThroughputSharingModelImpl<DiskActivity>,
-    write_throughput_model: ThroughputSharingModelImpl<DiskActivity>,
+    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -53,26 +53,8 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: ThroughputSharingModelImpl::with_fixed_throughput(read_bandwidth as f64),
-            write_throughput_model: ThroughputSharingModelImpl::with_fixed_throughput(write_bandwidth as f64),
-            next_request_id: 0,
-            next_read_event: 0,
-            next_write_event: 0,
-            ctx,
-        }
-    }
-
-    pub fn new(
-        capacity: u64,
-        read_tf: ThroughputFunction,
-        write_tf: ThroughputFunction,
-        ctx: SimulationContext,
-    ) -> Self {
-        Self {
-            capacity,
-            used: 0,
-            read_throughput_model: ThroughputSharingModelImpl::with_dynamic_throughput(read_tf),
-            write_throughput_model: ThroughputSharingModelImpl::with_dynamic_throughput(write_tf),
+            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth as f64),
+            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,

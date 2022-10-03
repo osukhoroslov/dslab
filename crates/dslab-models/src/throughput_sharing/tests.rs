@@ -8,10 +8,6 @@ fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);
 }
 
-fn assert_float_eq(x: f64, y: f64, eps: f64) {
-    assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);
-}
-
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
     slow_model: SlowFairThroughputSharingModel<u32>,

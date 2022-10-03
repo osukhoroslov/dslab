@@ -63,10 +63,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
         Self::with_dynamic_throughput(boxed!(move |_| throughput))
     }
 
-<<<<<<< HEAD:crates/dslab-models/src/throughput_sharing/fair_slow.rs
     /// Creates model with dynamic throughput, represented by given closure.
-=======
->>>>>>> Up to 2nd review:crates/dslab-models/src/fair_sharing_slow.rs
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,

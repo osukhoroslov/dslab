@@ -4,10 +4,7 @@ use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
-<<<<<<< HEAD
-=======
 use dslab_iaas::core::power_model::PowerModel;
->>>>>>> Up to 2nd review
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
@@ -450,8 +447,6 @@ fn test_double_migration() {
     assert_eq!(current_time, 101.7);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
-<<<<<<< HEAD
-=======
 
 #[derive(Clone)]
 pub struct ConstPowerModel {}
@@ -538,4 +533,3 @@ fn test_slatah() {
     assert_eq!(end_time, 10.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_accumulated_slav(end_time), 0.5);
 }
->>>>>>> Up to 2nd review
