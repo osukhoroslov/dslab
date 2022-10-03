@@ -229,8 +229,6 @@ impl CloudSimulation {
         }
     }
 
-<<<<<<< HEAD
-=======
     /// Overrides the used host energy load model.
     ///
     /// Should be called before adding hosts to simulation.
@@ -245,7 +243,6 @@ impl CloudSimulation {
         self.slav_model = slav_model;
     }
 
->>>>>>> Up to 2nd review
     /// Returns the reference to monitoring component (provides actual host load).
     pub fn monitoring(&self) -> Rc<RefCell<Monitoring>> {
         self.monitoring.clone()
