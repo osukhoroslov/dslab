@@ -5,7 +5,12 @@ use super::fair_slow::SlowFairThroughputSharingModel;
 use super::model::ThroughputSharingModel;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
-    assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);
+    assert!(
+        (x - y).abs() < eps || (x.max(y) - x.min(y)) / x.min(y) < eps,
+        "Values do not match: {:.15} vs {:.15}",
+        x,
+        y
+    );
 }
 
 struct ModelsTester {
