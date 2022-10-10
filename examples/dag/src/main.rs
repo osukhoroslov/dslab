@@ -20,6 +20,7 @@ use dslab_dag::data_item::{DataTransferMode, DataTransferStrategy};
 use dslab_dag::network::load_network;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
+use dslab_dag::schedulers::dls::DlsScheduler;
 use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::lookahead::LookaheadScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
@@ -36,7 +37,7 @@ struct Args {
     #[clap(long = "trace-log")]
     trace_log: bool,
 
-    /// Scheduler [heft, simple, simple-with-data]
+    /// Scheduler [heft, simple, simple-with-data, lookahead, dls]
     #[clap(long, default_value = "heft")]
     scheduler: String,
 
@@ -60,6 +61,11 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "lookahead" => {
             rc!(refcell!(
                 LookaheadScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
+        }
+        "dls" => {
+            rc!(refcell!(
+                DlsScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
             ))
         }
         _ => {

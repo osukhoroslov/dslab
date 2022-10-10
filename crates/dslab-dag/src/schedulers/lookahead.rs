@@ -39,7 +39,7 @@ impl Scheduler for LookaheadScheduler {
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,
-                "some tasks support different number of cores, but HEFT will always use min_cores"
+                "some tasks support different number of cores, but Lookahead will always use min_cores"
             );
         }
 

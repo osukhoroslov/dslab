@@ -1,6 +1,7 @@
 //! Scheduler implementations.
 
 mod common;
+pub mod dls;
 pub mod heft;
 pub mod lookahead;
 pub mod portfolio_scheduler;
