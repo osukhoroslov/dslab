@@ -45,7 +45,7 @@ impl ServerlessSimulation {
             config.scheduler,
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
-        let mut me = Self {
+        let mut this_sim = Self {
             coldstart: config.coldstart_policy.box_to_rc(),
             controller,
             controller_id,
@@ -59,10 +59,14 @@ impl ServerlessSimulation {
             stats,
         };
         for host in config.hosts {
-            let resources: Vec<_> = host.resources.iter().map(|x| me.create_resource(&x.0, x.1)).collect();
-            me.add_host(Some(host.invoker), ResourceProvider::new(resources), host.cores);
+            let resources: Vec<_> = host
+                .resources
+                .iter()
+                .map(|x| this_sim.create_resource(&x.0, x.1))
+                .collect();
+            this_sim.add_host(Some(host.invoker), ResourceProvider::new(resources), host.cores);
         }
-        me
+        this_sim
     }
 
     pub fn try_resolve_resource_name(&self, name: &str) -> Option<usize> {

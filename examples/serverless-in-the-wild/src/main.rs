@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostData};
+use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
@@ -56,7 +56,7 @@ fn main() {
             let mut config: ParallelConfig = Default::default();
             config.coldstart_policy = x;
             for _ in 0..1000 {
-                let mut host: ParallelHostData = Default::default();
+                let mut host: ParallelHostConfig = Default::default();
                 host.resources = vec![("mem".to_string(), 4096 * 4)];
                 host.cores = 8;
                 config.hosts.push(host);

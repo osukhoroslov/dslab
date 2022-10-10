@@ -8,7 +8,7 @@ use threadpool::ThreadPool;
 use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use crate::config::{Config, HostData};
+use crate::config::{Config, HostConfig};
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
@@ -16,13 +16,13 @@ use crate::simulation::ServerlessSimulation;
 use crate::stats::Stats;
 use crate::trace::Trace;
 
-pub struct ParallelHostData {
+pub struct ParallelHostConfig {
     pub invoker: Box<dyn Invoker + Send>,
     pub resources: Vec<(String, u64)>,
     pub cores: u32,
 }
 
-impl Default for ParallelHostData {
+impl Default for ParallelHostConfig {
     fn default() -> Self {
         Self {
             invoker: Box::new(BasicInvoker::new()),
@@ -32,9 +32,9 @@ impl Default for ParallelHostData {
     }
 }
 
-impl Into<HostData> for ParallelHostData {
-    fn into(self) -> HostData {
-        HostData {
+impl Into<HostConfig> for ParallelHostConfig {
+    fn into(self) -> HostConfig {
+        HostConfig {
             invoker: self.invoker,
             resources: self.resources,
             cores: self.cores,
@@ -47,7 +47,7 @@ pub struct ParallelConfig {
     pub disable_contention: bool,
     pub idle_deployer: Box<dyn IdleDeployer + Send>,
     pub scheduler: Box<dyn Scheduler + Send>,
-    pub hosts: Vec<ParallelHostData>,
+    pub hosts: Vec<ParallelHostConfig>,
 }
 
 impl Default for ParallelConfig {

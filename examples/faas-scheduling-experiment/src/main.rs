@@ -2,7 +2,7 @@ use std::boxed::Box;
 use std::path::Path;
 
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
-use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostData};
+use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
 use dslab_faas::scheduler::Scheduler;
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
@@ -64,7 +64,7 @@ fn main() {
             config.scheduler = x;
             config.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
             for _ in 0..10 {
-                let mut host: ParallelHostData = Default::default();
+                let mut host: ParallelHostConfig = Default::default();
                 host.resources = vec![("mem".to_string(), 4096 * 4)];
                 host.cores = 4;
                 config.hosts.push(host);

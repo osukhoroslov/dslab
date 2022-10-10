@@ -5,13 +5,13 @@ use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
 
-pub struct HostData {
+pub struct HostConfig {
     pub invoker: Box<dyn Invoker>,
     pub resources: Vec<(String, u64)>,
     pub cores: u32,
 }
 
-impl Default for HostData {
+impl Default for HostConfig {
     fn default() -> Self {
         Self {
             invoker: Box::new(BasicInvoker::new()),
@@ -30,7 +30,7 @@ pub struct Config {
     pub disable_contention: bool,
     pub idle_deployer: Box<dyn IdleDeployer>,
     pub scheduler: Box<dyn Scheduler>,
-    pub hosts: Vec<HostData>,
+    pub hosts: Vec<HostConfig>,
 }
 
 impl Default for Config {
