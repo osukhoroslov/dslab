@@ -1,6 +1,8 @@
 //! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 //! and completion.
 
+#![allow(dead_code)]
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
