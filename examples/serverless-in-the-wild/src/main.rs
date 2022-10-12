@@ -1,7 +1,9 @@
+use std::fs::File;
 use std::path::Path;
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
+use dslab_faas::config::{stub_idle_deployer_resolver, stub_invoker_resolver, stub_scheduler_resolver, RawConfig};
+use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
@@ -31,41 +33,50 @@ fn main() {
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
-    let mut policies: Vec<Box<dyn ColdStartPolicy + Send>> = Vec::new();
-    let mut descr = Vec::new();
-    policies.push(Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)));
-    descr.push("No unloading".to_string());
+    let mut policies = Vec::new();
+    policies.push("No unloading".to_string());
     for len in &[20.0, 45.0, 60.0, 90.0, 120.0] {
-        policies.push(Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)));
-        descr.push(format!("{}-minute keepalive", len));
+        policies.push(format!("{}-minute keepalive", len));
     }
     for len in &[2.0, 3.0, 4.0] {
-        policies.push(Box::new(HybridHistogramPolicy::new(
-            3600.0 * len,
-            60.0,
-            2.0,
-            0.5,
-            0.15,
-            0.1,
-        )));
-        descr.push(format!("Hybrid Histogram policy, {} hours bound", len));
+        policies.push(format!("Hybrid Histogram policy, {} hours bound", len));
     }
-    let configs: Vec<_> = policies
-        .drain(..)
-        .map(|x| {
-            let mut config: ParallelConfig = Default::default();
-            config.coldstart_policy = x;
-            for _ in 0..1000 {
-                let mut host: ParallelHostConfig = Default::default();
-                host.resources = vec![("mem".to_string(), 4096 * 4)];
-                host.cores = 8;
-                config.hosts.push(host);
+    let policy_resolver = |s: &str| -> Box<dyn ColdStartPolicy> {
+        match &s[s.len() - 9..] {
+            "keepalive" => {
+                let s1 = s.split("-").next().unwrap();
+                let len = s1.parse::<f64>().unwrap();
+                Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))
             }
+            "unloading" => Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)),
+            _ => {
+                let mut it = s.split(",");
+                it.next();
+                let s1 = it.next().unwrap();
+                let s2 = s1[1..].split(" ").next().unwrap();
+                let len = s2.parse::<f64>().unwrap();
+                Box::new(HybridHistogramPolicy::new(3600.0 * len, 60.0, 2.0, 0.5, 0.15, 0.1))
+            }
+        }
+    };
+    let configs: Vec<_> = policies
+        .iter()
+        .map(|x| {
+            let mut config: RawConfig = serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
+            config.coldstart_policy = x.to_string();
             config
         })
         .collect();
-    let mut stats = parallel_simulation(configs, vec![trace], vec![1]);
+    let mut stats = parallel_simulation_raw(
+        configs,
+        Box::new(policy_resolver),
+        Box::new(stub_idle_deployer_resolver),
+        Box::new(stub_scheduler_resolver),
+        Box::new(stub_invoker_resolver),
+        vec![trace],
+        vec![1],
+    );
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &descr[i]);
+        print_results(s, &policies[i]);
     }
 }

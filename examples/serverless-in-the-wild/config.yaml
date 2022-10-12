@@ -1,0 +1,6 @@
+hosts:
+  - cores: 8
+    resources:
+    - name: mem
+      quantity: 16384
+    count: 1000
