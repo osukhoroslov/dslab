@@ -14,17 +14,17 @@ clone_trait_object!(LoadModel);
 
 /// The simplest load model, the constant load.
 #[derive(Clone)]
-pub struct ConstLoadModel {
+pub struct ConstantLoadModel {
     load: f64,
 }
 
-impl ConstLoadModel {
+impl ConstantLoadModel {
     pub fn new(load: f64) -> Self {
         Self { load }
     }
 }
 
-impl LoadModel for ConstLoadModel {
+impl LoadModel for ConstantLoadModel {
     fn get_resource_load(&self, _time: f64, _time_from_start: f64) -> f64 {
         self.load
     }

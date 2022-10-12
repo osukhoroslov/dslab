@@ -13,7 +13,7 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
-use crate::core::load_model::ConstLoadModel;
+use crate::core::load_model::ConstantLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
@@ -220,8 +220,8 @@ impl CloudSimulation {
                 request.cpu_usage,
                 request.memory_usage,
                 request.lifetime,
-                Box::new(ConstLoadModel::new(1.0)),
-                Box::new(ConstLoadModel::new(1.0)),
+                Box::new(ConstantLoadModel::new(1.0)),
+                Box::new(ConstantLoadModel::new(1.0)),
                 Some(request.id),
                 scheduler_id,
                 request.start_time,

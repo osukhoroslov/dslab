@@ -2,9 +2,9 @@ use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstLoadModel;
+use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
-use dslab_iaas::core::power_model::HostPowerModel;
+use dslab_iaas::core::power_model::ConstantPowerModel;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
@@ -36,8 +36,8 @@ fn test_energy_consumption() {
         10,
         10,
         2.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -64,8 +64,8 @@ fn test_first_fit() {
         20,
         10,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -83,8 +83,8 @@ fn test_first_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -114,8 +114,8 @@ fn test_best_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -133,8 +133,8 @@ fn test_best_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -165,8 +165,8 @@ fn test_no_overcommit() {
             10,
             10,
             100.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s,
         );
@@ -196,8 +196,8 @@ fn test_overcommit() {
             100,
             100,
             1000.0,
-            Box::new(ConstLoadModel::new(0.01)),
-            Box::new(ConstLoadModel::new(0.01)),
+            Box::new(ConstantLoadModel::new(0.01)),
+            Box::new(ConstantLoadModel::new(0.01)),
             None,
             s,
         );
@@ -247,8 +247,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -266,8 +266,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         bad_s,
     );
@@ -288,8 +288,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         bad_s2,
     );
@@ -309,8 +309,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         fine_s,
     );
@@ -350,8 +350,8 @@ fn test_migration_simple() {
         100,
         100,
         20.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -420,8 +420,8 @@ fn test_double_migration() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -450,24 +450,6 @@ fn test_double_migration() {
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
 
-#[derive(Clone)]
-pub struct ConstPowerModel {}
-
-impl ConstPowerModel {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl HostPowerModel for ConstPowerModel {
-    fn get_power(&self, _time: f64, cpu_load: f64) -> f64 {
-        if cpu_load == 0. {
-            return 0.;
-        }
-        1.
-    }
-}
-
 #[test]
 // Default power model gets a result of 2.1 (test #1).
 // Override the power model with constant of 1, then the total consumption is 3.5.
@@ -475,7 +457,7 @@ fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
-    cloud_sim.set_host_power_model(Box::new(ConstPowerModel::new()));
+    cloud_sim.set_host_power_model(Box::new(ConstantPowerModel::new(1., true)));
 
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
@@ -484,8 +466,8 @@ fn test_energy_consumption_override() {
         10,
         10,
         2.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -515,8 +497,8 @@ fn test_slatah() {
         10,
         10,
         4.0,
-        Box::new(ConstLoadModel::new(2.0)),
-        Box::new(ConstLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
         None,
         s,
     );
@@ -524,8 +506,8 @@ fn test_slatah() {
         10,
         10,
         2.0,
-        Box::new(ConstLoadModel::new(2.0)),
-        Box::new(ConstLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
         None,
         s,
     );
