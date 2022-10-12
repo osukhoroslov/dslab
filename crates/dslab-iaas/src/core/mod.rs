@@ -9,7 +9,7 @@ pub mod placement_store;
 pub mod power_model;
 pub mod resource_pool;
 pub mod scheduler;
-pub mod slav_model;
+pub mod slav_metric;
 pub mod vm;
 pub mod vm_api;
 pub mod vm_placement_algorithm;

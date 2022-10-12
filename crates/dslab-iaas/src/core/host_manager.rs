@@ -24,7 +24,7 @@ use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
 use crate::core::power_model::PowerModel;
-use crate::core::slav_model::SLAVModel;
+use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 
@@ -59,7 +59,7 @@ pub struct HostManager {
 
     allow_vm_overcommit: bool,
     power_model: Box<dyn PowerModel>,
-    slav_model: Box<dyn SLAVModel>,
+    slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -75,7 +75,7 @@ impl HostManager {
         vm_api: Rc<RefCell<VmAPI>>,
         allow_vm_overcommit: bool,
         power_model: Box<dyn PowerModel>,
-        slav_model: Box<dyn SLAVModel>,
+        slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
@@ -99,7 +99,7 @@ impl HostManager {
             vm_api,
             allow_vm_overcommit,
             power_model,
-            slav_model,
+            slav_metric,
             ctx,
             sim_config,
         }
@@ -144,7 +144,7 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let energy_load = self.get_power(time, cpu_load);
         self.energy_manager.update_energy(time, energy_load);
-        self.slav_model.update_model(time, cpu_load, energy_load);
+        self.slav_metric.update(time, cpu_load);
     }
 
     /// Releases resources when VM is deleted, updates resource and energy consumption.
@@ -170,7 +170,7 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let energy_load = self.get_power(time, cpu_load);
         self.energy_manager.update_energy(time, energy_load);
-        self.slav_model.update_model(time, cpu_load, energy_load);
+        self.slav_metric.update(time, cpu_load);
     }
 
     /// Returns the total amount of allocated vCPUs.
@@ -213,17 +213,14 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let energy_load = self.get_power(time, cpu_load);
         self.energy_manager.update_energy(time, energy_load);
-        self.slav_model.update_model(time, cpu_load, energy_load);
         return self.energy_manager.get_total_consumed();
     }
 
     /// Returns the total SLAV value.
     pub fn get_accumulated_slav(&mut self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
-        let energy_load = self.get_power(time, cpu_load);
-        self.energy_manager.update_energy(time, energy_load);
-        self.slav_model.update_model(time, cpu_load, energy_load);
-        self.slav_model.get_accumulated_slav()
+        self.slav_metric.update(time, cpu_load);
+        self.slav_metric.value()
     }
 
     /// Processes allocation request, allocates resources to start new VM.
@@ -346,7 +343,7 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let energy_load = self.get_power(time, cpu_load);
         self.energy_manager.update_energy(time, energy_load);
-        self.slav_model.update_model(time, cpu_load, energy_load);
+        self.slav_metric.update(time, cpu_load);
 
         self.ctx.emit(
             HostStateUpdate {

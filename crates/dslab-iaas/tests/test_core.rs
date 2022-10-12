@@ -6,6 +6,7 @@ use dslab_iaas::core::load_model::ConstLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::power_model::PowerModel;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
+use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
@@ -496,7 +497,7 @@ fn test_energy_consumption_override() {
 }
 
 #[test]
-// SLATAH model is used to calculate SLAV value
+// OTF metric is used to calculate SLA violation
 // Host is fully loaded then energy load is 1.0
 // Then during the period from 0 to 2 seconds host is fully loaded
 // and is half-loaded between 2 and 4 seconds, thus the SLATAH metrics is equal 50%.
@@ -504,6 +505,7 @@ fn test_slatah() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    cloud_sim.set_slav_metric(Box::new(OverloadTimeFraction::new()));
 
     let h = cloud_sim.add_host("h", 40, 40);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));

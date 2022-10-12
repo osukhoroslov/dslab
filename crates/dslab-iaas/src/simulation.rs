@@ -20,8 +20,8 @@ use crate::core::placement_store::PlacementStore;
 use crate::core::power_model::LinearPowerModel;
 use crate::core::power_model::PowerModel;
 use crate::core::scheduler::Scheduler;
-use crate::core::slav_model::SLATAHModel;
-use crate::core::slav_model::SLAVModel;
+use crate::core::slav_metric::HostSLAVMetric;
+use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -39,7 +39,7 @@ pub struct CloudSimulation {
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     energy_model: Box<dyn PowerModel>,
-    slav_model: Box<dyn SLAVModel>,
+    slav_metric: Box<dyn HostSLAVMetric>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -71,7 +71,7 @@ impl CloudSimulation {
             schedulers: HashMap::new(),
             components: HashMap::new(),
             energy_model: Box::new(LinearPowerModel::new(1.)),
-            slav_model: Box::new(SLATAHModel::new()),
+            slav_metric: Box::new(OverloadTimeFraction::new()),
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -89,7 +89,7 @@ impl CloudSimulation {
             self.vm_api.clone(),
             self.sim_config.allow_vm_overcommit,
             self.energy_model.clone(),
-            self.slav_model.clone(),
+            self.slav_metric.clone(),
             self.sim.create_context(name),
             self.sim_config.clone(),
         )));
@@ -236,11 +236,11 @@ impl CloudSimulation {
         self.energy_model = energy_model;
     }
 
-    /// Overrides the used SLAV model.
+    /// Overrides the used host-level SLAV metric.
     ///
     /// Should be called before adding hosts to simulation.
-    pub fn set_slav_model(&mut self, slav_model: Box<dyn SLAVModel>) {
-        self.slav_model = slav_model;
+    pub fn set_slav_metric(&mut self, slav_metric: Box<dyn HostSLAVMetric>) {
+        self.slav_metric = slav_metric;
     }
 
     /// Returns the reference to monitoring component (provides actual host load).
