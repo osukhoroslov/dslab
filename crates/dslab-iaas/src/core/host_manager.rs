@@ -16,14 +16,14 @@ use dslab_core::{log_debug, log_trace};
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
-use crate::core::energy_manager::EnergyManager;
+use crate::core::energy_meter::EnergyMeter;
 use crate::core::events::allocation::{
     AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest, MigrationRequest,
 };
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
-use crate::core::power_model::PowerModel;
+use crate::core::power_model::HostPowerModel;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
@@ -32,7 +32,7 @@ use crate::core::vm_api::VmAPI;
 /// execution of VMs assigned to it by a scheduler. It models the main VM lifecycle stages such as creation, deletion
 /// and migration, and reports the VM status changes to VM API component. Host manager periodically computes its
 /// current load, as the sum of loads produced by currently running VMs, and reports it to the monitoring component.
-/// Host manager also records the total power consumption of the host computed using the energy consumption model
+/// Host manager also records the total energy consumption of the host computed using the power model
 /// defined as a function of CPU load.
 pub struct HostManager {
     pub id: u32,
@@ -52,13 +52,13 @@ pub struct HostManager {
     recently_added_vms: Vec<u32>,
     recently_removed_vms: Vec<u32>,
     recent_vm_status_changes: HashMap<u32, VmStatus>,
-    energy_manager: EnergyManager,
+    energy_meter: EnergyMeter,
     monitoring_id: u32,
     placement_store_id: u32,
     vm_api: Rc<RefCell<VmAPI>>,
 
     allow_vm_overcommit: bool,
-    power_model: Box<dyn PowerModel>,
+    power_model: Box<dyn HostPowerModel>,
     slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
@@ -74,7 +74,7 @@ impl HostManager {
         placement_store_id: u32,
         vm_api: Rc<RefCell<VmAPI>>,
         allow_vm_overcommit: bool,
-        power_model: Box<dyn PowerModel>,
+        power_model: Box<dyn HostPowerModel>,
         slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
         sim_config: Rc<SimulationConfig>,
@@ -93,7 +93,7 @@ impl HostManager {
             recently_added_vms: Vec::new(),
             recently_removed_vms: Vec::new(),
             recent_vm_status_changes: HashMap::new(),
-            energy_manager: EnergyManager::new(),
+            energy_meter: EnergyMeter::new(),
             monitoring_id,
             placement_store_id,
             vm_api,
@@ -142,8 +142,8 @@ impl HostManager {
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let energy_load = self.get_power(time, cpu_load);
-        self.energy_manager.update_energy(time, energy_load);
+        let power = self.get_power(time, cpu_load);
+        self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
 
@@ -168,8 +168,8 @@ impl HostManager {
         self.vms.remove(&vm.id);
         self.recently_removed_vms.push(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let energy_load = self.get_power(time, cpu_load);
-        self.energy_manager.update_energy(time, energy_load);
+        let power = self.get_power(time, cpu_load);
+        self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
 
@@ -203,17 +203,17 @@ impl HostManager {
         return memory_used / self.memory_total as f64;
     }
 
-    /// Returns the current energy consumption (relative to fully loaded host).
+    /// Returns the current power consumption.
     pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
         return self.power_model.get_power(time, cpu_load);
     }
 
     /// Returns the total energy consumption.
-    pub fn get_total_consumed(&mut self, time: f64) -> f64 {
+    pub fn get_energy_consumed(&mut self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
-        let energy_load = self.get_power(time, cpu_load);
-        self.energy_manager.update_energy(time, energy_load);
-        return self.energy_manager.get_total_consumed();
+        let power = self.get_power(time, cpu_load);
+        self.energy_meter.update(time, power);
+        return self.energy_meter.energy_consumed();
     }
 
     /// Returns the total SLAV value.
@@ -341,8 +341,8 @@ impl HostManager {
         log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         let time = self.ctx.time();
         let cpu_load = self.get_cpu_load(time);
-        let energy_load = self.get_power(time, cpu_load);
-        self.energy_manager.update_energy(time, energy_load);
+        let power = self.get_power(time, cpu_load);
+        self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
 
         self.ctx.emit(

@@ -17,8 +17,8 @@ use crate::core::load_model::ConstLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
+use crate::core::power_model::HostPowerModel;
 use crate::core::power_model::LinearPowerModel;
-use crate::core::power_model::PowerModel;
 use crate::core::scheduler::Scheduler;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
@@ -38,7 +38,7 @@ pub struct CloudSimulation {
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
-    energy_model: Box<dyn PowerModel>,
+    power_model: Box<dyn HostPowerModel>,
     slav_metric: Box<dyn HostSLAVMetric>,
     sim: Simulation,
     ctx: SimulationContext,
@@ -70,7 +70,7 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            energy_model: Box::new(LinearPowerModel::new(1.)),
+            power_model: Box::new(LinearPowerModel::new(1., 0.4, true)),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             sim,
             ctx,
@@ -88,7 +88,7 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
             self.sim_config.allow_vm_overcommit,
-            self.energy_model.clone(),
+            self.power_model.clone(),
             self.slav_metric.clone(),
             self.sim.create_context(name),
             self.sim_config.clone(),
@@ -229,11 +229,11 @@ impl CloudSimulation {
         }
     }
 
-    /// Overrides the used host energy load model.
+    /// Overrides the used host power model.
     ///
     /// Should be called before adding hosts to simulation.
-    pub fn set_energy_load_model(&mut self, energy_model: Box<dyn PowerModel>) {
-        self.energy_model = energy_model;
+    pub fn set_host_power_model(&mut self, power_model: Box<dyn HostPowerModel>) {
+        self.power_model = power_model;
     }
 
     /// Overrides the used host-level SLAV metric.

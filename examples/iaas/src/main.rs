@@ -81,12 +81,12 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
@@ -117,12 +117,12 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
@@ -153,12 +153,12 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 

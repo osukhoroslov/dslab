@@ -1,6 +1,6 @@
 pub mod common;
 pub mod config;
-pub mod energy_manager;
+pub mod energy_meter;
 pub mod events;
 pub mod host_manager;
 pub mod load_model;
