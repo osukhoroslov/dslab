@@ -8,7 +8,12 @@ pub trait HostPowerModel: DynClone {
     ///
     /// * `time` - current simulation time.
     /// * `cpu_load` - current host CPU load.
-    fn get_power(&self, time: f64, cpu_load: f64) -> f64;
+    fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
+        self.get_power_impl(time, cpu_load.min(1.))
+    }
+
+    /// Implementation of power consumption function that can be overrided.
+    fn get_power_impl(&self, time: f64, cpu_load: f64) -> f64;
 }
 
 clone_trait_object!(HostPowerModel);
@@ -40,7 +45,7 @@ impl LinearPowerModel {
 }
 
 impl HostPowerModel for LinearPowerModel {
-    fn get_power(&self, _time: f64, cpu_load: f64) -> f64 {
+    fn get_power_impl(&self, _time: f64, cpu_load: f64) -> f64 {
         if cpu_load == 0. && self.zero_idle_power {
             return 0.;
         }
@@ -66,7 +71,7 @@ impl ConstantPowerModel {
 }
 
 impl HostPowerModel for ConstantPowerModel {
-    fn get_power(&self, _time: f64, cpu_load: f64) -> f64 {
+    fn get_power_impl(&self, _time: f64, cpu_load: f64) -> f64 {
         if cpu_load == 0. && self.zero_idle_power {
             return 0.;
         }
