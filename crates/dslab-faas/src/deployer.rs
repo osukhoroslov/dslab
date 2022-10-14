@@ -7,6 +7,10 @@ use crate::host::Host;
 /// IdleDeployer chooses an invoker to deploy new idle container on. Used for prewarm.
 pub trait IdleDeployer {
     fn deploy(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> Option<usize>;
+
+    fn get_name(&self) -> String {
+        "STUB DEPLOYER NAME".to_string()
+    }
 }
 
 /// BasicDeployer deploys new container on the first host with enough resources.
@@ -20,5 +24,9 @@ impl IdleDeployer for BasicDeployer {
             }
         }
         None
+    }
+
+    fn get_name(&self) -> String {
+        "Basic Deployer".to_string()
     }
 }

@@ -27,6 +27,10 @@ pub trait Invoker {
         cm: &mut ContainerManager,
         time: f64,
     ) -> InvocationStatus;
+
+    fn get_name(&self) -> String {
+        "STUB INVOKER NAME".to_string()
+    }
 }
 
 pub struct BasicInvoker {
@@ -102,5 +106,9 @@ impl Invoker for BasicInvoker {
             return InvocationStatus::Queued;
         }
         status
+    }
+
+    fn get_name(&self) -> String {
+        "Basic Invoker".to_string()
     }
 }

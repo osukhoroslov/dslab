@@ -24,6 +24,10 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
     fn prewarm_window(&mut self, app: &Application) -> f64;
     /// this function allows tuning policy on finished invocations
     fn update(&mut self, invocation: &Invocation, app: &Application);
+
+    fn get_name(&self) -> String {
+        "STUB COLDSTART POLICY NAME".to_string()
+    }
 }
 
 pub struct FixedTimeColdStartPolicy {
@@ -50,4 +54,11 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
     }
 
     fn update(&mut self, _invocation: &Invocation, _app: &Application) {}
+
+    fn get_name(&self) -> String {
+        format!(
+            "Fixed-time policy with keepalive = {:.2} and prewarm = {:.2}",
+            self.keepalive_window, self.prewarm_window
+        )
+    }
 }

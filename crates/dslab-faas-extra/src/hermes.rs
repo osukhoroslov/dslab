@@ -56,4 +56,8 @@ impl Scheduler for HermesScheduler {
         }
         self.high_load_fallback.select_host(app, hosts)
     }
+
+    fn get_name(&self) -> String {
+        "Hermes Scheduler".to_string()
+    }
 }

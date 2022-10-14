@@ -11,6 +11,10 @@ use crate::host::Host;
  */
 pub trait Scheduler {
     fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize;
+
+    fn get_name(&self) -> String {
+        "STUB SCHEDULER NAME".to_string()
+    }
 }
 
 /* BasicScheduler chooses the first invoker
@@ -32,5 +36,9 @@ impl Scheduler for BasicScheduler {
             }
         }
         0
+    }
+
+    fn get_name(&self) -> String {
+        "Basic Scheduler".to_string()
     }
 }

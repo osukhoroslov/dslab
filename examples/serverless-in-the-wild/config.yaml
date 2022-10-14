@@ -1,6 +1,17 @@
-hosts:
-  - cores: 8
-    resources:
-    - name: mem
-      quantity: 16384
-    count: 1000
+config:
+  hosts:
+    - cores: 8
+      resources:
+        - name: mem
+          quantity: 16384
+      count: 1000
+policies:
+  - No unloading
+  - 20-minute keepalive
+  - 45-minute keepalive
+  - 60-minute keepalive
+  - 90-minute keepalive
+  - 120-minute keepalive
+  - Hybrid Histogram policy, 2 hours bound
+  - Hybrid Histogram policy, 3 hours bound
+  - Hybrid Histogram policy, 4 hours bound

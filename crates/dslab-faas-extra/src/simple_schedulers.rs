@@ -51,6 +51,14 @@ impl Scheduler for LocalityBasedScheduler {
             idx
         }
     }
+
+    fn get_name(&self) -> String {
+        if self.warm_only {
+            "Locality-based Scheduler (warm containers only)".to_string()
+        } else {
+            "Locality-based Scheduler".to_string()
+        }
+    }
 }
 
 /// RandomScheduler picks a host uniformly at random.
@@ -69,6 +77,10 @@ impl RandomScheduler {
 impl Scheduler for RandomScheduler {
     fn select_host(&mut self, _app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
         self.rng.gen::<usize>() % hosts.len()
+    }
+
+    fn get_name(&self) -> String {
+        "Random Scheduler".to_string()
     }
 }
 
@@ -104,6 +116,14 @@ impl Scheduler for LeastLoadedScheduler {
         }
         best
     }
+
+    fn get_name(&self) -> String {
+        if self.prefer_warm {
+            "Least-loaded Scheduler (prefer warm containers)".to_string()
+        } else {
+            "Least-loaded Scheduler".to_string()
+        }
+    }
 }
 
 /// RoundRobinScheduler chooses hosts in a circular fashion.
@@ -123,5 +143,9 @@ impl Scheduler for RoundRobinScheduler {
         let chosen = self.index;
         self.index += 1;
         chosen
+    }
+
+    fn get_name(&self) -> String {
+        "Round Robin Scheduler".to_string()
     }
 }

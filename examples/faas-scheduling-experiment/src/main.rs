@@ -49,14 +49,7 @@ fn main() {
         Box::new(RoundRobinScheduler::new()),
         Box::new(HermesScheduler::new()),
     ];
-    let descr = vec![
-        "Locality-based, warm only".to_string(),
-        "Locality-based, allow cold".to_string(),
-        "Random".to_string(),
-        "Least-loaded".to_string(),
-        "Round Robin".to_string(),
-        "Hermes".to_string(),
-    ];
+    let descr = schedulers.iter().map(|x| x.get_name()).collect::<Vec<_>>();
     let configs: Vec<_> = schedulers
         .drain(..)
         .map(|x| {

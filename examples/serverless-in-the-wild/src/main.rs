@@ -1,12 +1,20 @@
 use std::fs::File;
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
+
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::config::{stub_idle_deployer_resolver, stub_invoker_resolver, stub_scheduler_resolver, RawConfig};
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
+
+#[derive(Serialize, Deserialize)]
+struct ExperimentConfig {
+    pub config: RawConfig,
+    pub policies: Vec<String>,
+}
 
 fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
@@ -33,14 +41,10 @@ fn main() {
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
-    let mut policies = Vec::new();
-    policies.push("No unloading".to_string());
-    for len in &[20.0, 45.0, 60.0, 90.0, 120.0] {
-        policies.push(format!("{}-minute keepalive", len));
-    }
-    for len in &[2.0, 3.0, 4.0] {
-        policies.push(format!("Hybrid Histogram policy, {} hours bound", len));
-    }
+    let experiment_config: ExperimentConfig =
+        serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
+    let policies = experiment_config.policies;
+    let sim_config = experiment_config.config;
     let policy_resolver = |s: &str| -> Box<dyn ColdStartPolicy> {
         match &s[s.len() - 9..] {
             "keepalive" => {
@@ -62,7 +66,7 @@ fn main() {
     let configs: Vec<_> = policies
         .iter()
         .map(|x| {
-            let mut config: RawConfig = serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
+            let mut config = sim_config.clone();
             config.coldstart_policy = x.to_string();
             config
         })
