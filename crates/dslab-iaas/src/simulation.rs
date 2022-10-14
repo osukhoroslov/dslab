@@ -38,7 +38,7 @@ pub struct CloudSimulation {
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
-    power_model: Box<dyn HostPowerModel>,
+    host_power_model: HostPowerModel,
     slav_metric: Box<dyn HostSLAVMetric>,
     sim: Simulation,
     ctx: SimulationContext,
@@ -70,7 +70,7 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            power_model: Box::new(LinearPowerModel::new(1., 0.4, true)),
+            host_power_model: HostPowerModel::with_zero_idle_power(Box::new(LinearPowerModel::new(1., 0.4))),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             sim,
             ctx,
@@ -88,7 +88,7 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
             self.sim_config.allow_vm_overcommit,
-            self.power_model.clone(),
+            self.host_power_model.clone(),
             self.slav_metric.clone(),
             self.sim.create_context(name),
             self.sim_config.clone(),
@@ -232,8 +232,8 @@ impl CloudSimulation {
     /// Overrides the used host power model.
     ///
     /// Should be called before adding hosts to simulation.
-    pub fn set_host_power_model(&mut self, power_model: Box<dyn HostPowerModel>) {
-        self.power_model = power_model;
+    pub fn set_host_power_model(&mut self, host_power_model: HostPowerModel) {
+        self.host_power_model = host_power_model;
     }
 
     /// Overrides the used host-level SLAV metric.

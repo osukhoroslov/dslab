@@ -58,7 +58,7 @@ pub struct HostManager {
     vm_api: Rc<RefCell<VmAPI>>,
 
     allow_vm_overcommit: bool,
-    power_model: Box<dyn HostPowerModel>,
+    power_model: HostPowerModel,
     slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
@@ -74,7 +74,7 @@ impl HostManager {
         placement_store_id: u32,
         vm_api: Rc<RefCell<VmAPI>>,
         allow_vm_overcommit: bool,
-        power_model: Box<dyn HostPowerModel>,
+        power_model: HostPowerModel,
         slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
         sim_config: Rc<SimulationConfig>,
@@ -205,7 +205,9 @@ impl HostManager {
 
     /// Returns the current power consumption.
     pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
-        return self.power_model.get_power(time, cpu_load);
+        // CPU utilization is capped by 100%
+        let cpu_util = cpu_load.min(1.);
+        return self.power_model.get_power(time, cpu_util);
     }
 
     /// Returns the total energy consumption.

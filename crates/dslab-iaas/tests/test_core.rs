@@ -4,7 +4,7 @@ use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
-use dslab_iaas::core::power_model::ConstantPowerModel;
+use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
@@ -19,7 +19,7 @@ fn name_wrapper(file_name: &str) -> String {
 }
 
 #[test]
-// Default (linear) power model is 0.4 + 0.6 * CPU load.
+// Using default linear power model (0.4 + 0.6 * CPU load) with zero idle power.
 // Host is loaded by 1/3 then power consumption is 0.4 + 0.6 / 3 = 0.6.
 // VM lifetime is 2 seconds + 1 second of initializing + 0.5 seconds of shutdown.
 // Thus, the overall energy consumed is (2 + 1 + 0.5) * 0.6 = 2.1.
@@ -457,7 +457,9 @@ fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
-    cloud_sim.set_host_power_model(Box::new(ConstantPowerModel::new(1., true)));
+    cloud_sim.set_host_power_model(HostPowerModel::with_zero_idle_power(Box::new(ConstantPowerModel::new(
+        1.,
+    ))));
 
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
