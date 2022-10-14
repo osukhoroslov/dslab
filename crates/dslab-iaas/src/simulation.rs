@@ -70,7 +70,7 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            host_power_model: HostPowerModel::with_zero_idle_power(Box::new(LinearPowerModel::new(1., 0.4))),
+            host_power_model: HostPowerModel::new(Box::new(LinearPowerModel::new(1., 0.4))).with_zero_idle_power(),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             sim,
             ctx,

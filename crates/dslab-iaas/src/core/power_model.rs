@@ -22,14 +22,10 @@ impl HostPowerModel {
         }
     }
 
-    /// Creates host power model that assumes no power consumption when the host is idle.
-    ///
-    /// * `power_fn` - Function for computing the host power consumption.
-    pub fn with_zero_idle_power(power_fn: Box<dyn PowerModel>) -> Self {
-        Self {
-            power_model: power_fn,
-            zero_idle_power: true,
-        }
+    /// Modifies the model to assume no power consumption when the host is idle.
+    pub fn with_zero_idle_power(mut self) -> Self {
+        self.zero_idle_power = true;
+        self
     }
 
     /// Returns the current power consumption of a physical host.
