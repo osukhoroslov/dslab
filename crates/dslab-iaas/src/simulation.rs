@@ -13,11 +13,15 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
-use crate::core::load_model::ConstLoadModel;
+use crate::core::load_model::ConstantLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
+use crate::core::power_model::HostPowerModel;
+use crate::core::power_model::LinearPowerModel;
 use crate::core::scheduler::Scheduler;
+use crate::core::slav_metric::HostSLAVMetric;
+use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -34,6 +38,8 @@ pub struct CloudSimulation {
     hosts: BTreeMap<u32, Rc<RefCell<HostManager>>>,
     schedulers: HashMap<u32, Rc<RefCell<Scheduler>>>,
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
+    host_power_model: HostPowerModel,
+    slav_metric: Box<dyn HostSLAVMetric>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -64,6 +70,8 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
+            host_power_model: HostPowerModel::new(Box::new(LinearPowerModel::new(1., 0.4))).with_zero_idle_power(),
+            slav_metric: Box::new(OverloadTimeFraction::new()),
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -80,6 +88,8 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             self.vm_api.clone(),
             self.sim_config.allow_vm_overcommit,
+            self.host_power_model.clone(),
+            self.slav_metric.clone(),
             self.sim.create_context(name),
             self.sim_config.clone(),
         )));
@@ -210,13 +220,27 @@ impl CloudSimulation {
                 request.cpu_usage,
                 request.memory_usage,
                 request.lifetime,
-                Box::new(ConstLoadModel::new(1.0)),
-                Box::new(ConstLoadModel::new(1.0)),
+                Box::new(ConstantLoadModel::new(1.0)),
+                Box::new(ConstantLoadModel::new(1.0)),
                 Some(request.id),
                 scheduler_id,
                 request.start_time,
             );
         }
+    }
+
+    /// Overrides the used host power model.
+    ///
+    /// Should be called before adding hosts to simulation.
+    pub fn set_host_power_model(&mut self, host_power_model: HostPowerModel) {
+        self.host_power_model = host_power_model;
+    }
+
+    /// Overrides the used host-level SLAV metric.
+    ///
+    /// Should be called before adding hosts to simulation.
+    pub fn set_slav_metric(&mut self, slav_metric: Box<dyn HostSLAVMetric>) {
+        self.slav_metric = slav_metric;
     }
 
     /// Returns the reference to monitoring component (provides actual host load).

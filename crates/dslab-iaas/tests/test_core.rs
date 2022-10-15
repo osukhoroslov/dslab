@@ -2,9 +2,11 @@ use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstLoadModel;
+use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
+use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
+use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
@@ -17,10 +19,11 @@ fn name_wrapper(file_name: &str) -> String {
 }
 
 #[test]
-// Default enegrgy consumption function is 0.4 + 0.6 * CPU load
-// Host is loaded by 1/3 then energy load is 0.4 + 0.6 / 3 = 0.6
-// VM lifetime is 2 seconds + 1 second of initializing + 0.5 seconds of shutdown
-// Thus, overall energy consumption is (2 + 1 + 0.5) * 0.6 = 2.1
+// Using default linear power model (0.4 + 0.6 * CPU load) with zero idle power.
+// Host is loaded by 1/3 then power consumption is 0.4 + 0.6 / 3 = 0.6.
+// VM lifetime is 2 seconds + 1 second of initializing + 0.5 seconds of shutdown.
+// Thus, the overall energy consumed is (2 + 1 + 0.5) * 0.6 = 2.1.
+
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -33,8 +36,8 @@ fn test_energy_consumption() {
         10,
         10,
         2.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -43,11 +46,11 @@ fn test_energy_consumption() {
     let end_time = cloud_sim.current_time();
 
     assert_eq!(end_time, 10.);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_total_consumed(end_time), 2.1);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time), 2.1);
 }
 
 #[test]
-// First fit selects first appropriate host
+// First fit selects first appropriate host.
 fn test_first_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -61,8 +64,8 @@ fn test_first_fit() {
         20,
         10,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -80,8 +83,8 @@ fn test_first_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -97,7 +100,7 @@ fn test_first_fit() {
 }
 
 #[test]
-// Best fit selects the host with the least free space left
+// Best fit selects the host with the least free space left.
 fn test_best_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -111,8 +114,8 @@ fn test_best_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -130,8 +133,8 @@ fn test_best_fit() {
         20,
         20,
         100.0,
-        Box::new(ConstLoadModel::new(1.0)),
-        Box::new(ConstLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -147,7 +150,7 @@ fn test_best_fit() {
 }
 
 #[test]
-// Not enough space for 11th VM, resources will be allocated on host 2
+// Not enough space for 11th VM, resources will be allocated on host 2.
 fn test_no_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -162,8 +165,8 @@ fn test_no_overcommit() {
             10,
             10,
             100.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s,
         );
@@ -179,7 +182,7 @@ fn test_no_overcommit() {
 }
 
 #[test]
-// Can pack 94 VMS despite their total SLA is 94 times bigger than host capacity
+// Can pack 94 VMS despite their total SLA is 94 times bigger than host capacity.
 fn test_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -193,8 +196,8 @@ fn test_overcommit() {
             100,
             100,
             1000.0,
-            Box::new(ConstLoadModel::new(0.01)),
-            Box::new(ConstLoadModel::new(0.01)),
+            Box::new(ConstantLoadModel::new(0.01)),
+            Box::new(ConstantLoadModel::new(0.01)),
             None,
             s,
         );
@@ -230,7 +233,7 @@ impl VMPlacementAlgorithm for BadScheduler {
 }
 
 #[test]
-// User packs the VM on overloaded host, but the issue is resolved by placement store
+// User packs the VM on overloaded host, but the issue is resolved by placement store.
 fn test_wrong_decision() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
@@ -244,8 +247,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -263,8 +266,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         bad_s,
     );
@@ -285,8 +288,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         bad_s2,
     );
@@ -306,8 +309,8 @@ fn test_wrong_decision() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         fine_s,
     );
@@ -329,10 +332,10 @@ fn test_wrong_decision() {
 }
 
 #[test]
-// Migrate a VM from host 1 to host 2
-// Network throughput is 10, then the migration of the VM with memory size 100 will take 10 seconds
-// The VM will finish at moment 21.4 (20 seconds + 1.4 for allocation)
-// Due to asynchrony the status will be updated at moment 21.7
+// Migrate a VM from host 1 to host 2.
+// Network throughput is 10, then the migration of the VM with memory size 100 will take 10 seconds.
+// The VM will finish at moment 21.4 (20 seconds + 1.4 for allocation).
+// Due to asynchrony the status will be updated at moment 21.7.
 fn test_migration_simple() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -347,8 +350,8 @@ fn test_migration_simple() {
         100,
         100,
         20.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -401,8 +404,8 @@ fn test_migration_simple() {
 }
 
 #[test]
-// Despite two migrations the VM will end at moment 101.7
-// (100 seconds of lifetime + 1.7 for asynchrony reasons like in previous test)
+// Despite two migrations the VM will end at moment 101.7.
+// (100 seconds of lifetime + 1.7 for asynchrony reasons like in previous test).
 fn test_double_migration() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
@@ -417,8 +420,8 @@ fn test_double_migration() {
         100,
         100,
         100.0,
-        Box::new(ConstLoadModel::new(1.)),
-        Box::new(ConstLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
+        Box::new(ConstantLoadModel::new(1.)),
         None,
         s,
     );
@@ -445,4 +448,74 @@ fn test_double_migration() {
     current_time = cloud_sim.current_time();
     assert_eq!(current_time, 101.7);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
+}
+
+#[test]
+// Default power model gets a result of 2.1 (test #1).
+// Override the power model with constant of 1, then the total consumption is 3.5.
+fn test_energy_consumption_override() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let power_model = HostPowerModel::new(Box::new(ConstantPowerModel::new(1.))).with_zero_idle_power();
+    cloud_sim.set_host_power_model(power_model);
+
+    let h = cloud_sim.add_host("h", 30, 30);
+    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        2.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(10.);
+    let end_time = cloud_sim.current_time();
+
+    assert_eq!(end_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time), 3.5);
+}
+
+#[test]
+// OTF metric is used to calculate SLA violation.
+// Host is fully loaded then CPU load is 100%.
+// Then during the period from 0 to 2 seconds host is fully loaded
+// and is half-loaded between 2 and 4 seconds, thus the OTF metric is equal 50%.
+fn test_slatah() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    cloud_sim.set_slav_metric(Box::new(OverloadTimeFraction::new()));
+
+    let h = cloud_sim.add_host("h", 40, 40);
+    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    cloud_sim.spawn_vm_now(
+        10,
+        10,
+        2.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(10.);
+    let end_time = cloud_sim.current_time();
+
+    assert_eq!(end_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_accumulated_slav(end_time), 0.5);
 }

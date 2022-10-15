@@ -2,7 +2,7 @@ use log::info;
 
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstLoadModel;
+use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
@@ -33,8 +33,8 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
             10,
             10,
             2.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s1,
         );
@@ -45,8 +45,8 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
             10,
             10,
             2.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s2,
         );
@@ -58,8 +58,8 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
             10,
             10,
             2.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s1,
         );
@@ -70,8 +70,8 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
             10,
             10,
             2.0,
-            Box::new(ConstLoadModel::new(1.0)),
-            Box::new(ConstLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s2,
         );
@@ -81,12 +81,12 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
@@ -105,8 +105,8 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
             10,
             10,
             2.0,
-            Box::new(ConstLoadModel::new(0.5)),
-            Box::new(ConstLoadModel::new(0.5)),
+            Box::new(ConstantLoadModel::new(0.5)),
+            Box::new(ConstantLoadModel::new(0.5)),
             None,
             scheduler_id,
             i as f64,
@@ -117,12 +117,12 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
@@ -140,8 +140,8 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
         10,
         10,
         20.0,
-        Box::new(ConstLoadModel::new(0.5)),
-        Box::new(ConstLoadModel::new(0.5)),
+        Box::new(ConstantLoadModel::new(0.5)),
+        Box::new(ConstantLoadModel::new(0.5)),
         None,
         scheduler_id,
     );
@@ -153,12 +153,12 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed on host one: {} watt",
-        cloud_sim.host(h1).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host one: {}",
+        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed on host two: {} watt",
-        cloud_sim.host(h2).borrow_mut().get_total_consumed(end_time)
+        "Total energy consumed by host two: {}",
+        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
