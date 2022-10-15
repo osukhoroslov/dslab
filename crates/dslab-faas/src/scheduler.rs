@@ -10,7 +10,7 @@ use crate::host::Host;
  * from given application.
  */
 pub trait Scheduler {
-    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize;
+    fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize;
 
     fn get_name(&self) -> String {
         "STUB SCHEDULER NAME".to_string()
@@ -24,7 +24,7 @@ pub trait Scheduler {
 pub struct BasicScheduler {}
 
 impl Scheduler for BasicScheduler {
-    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         for (i, host) in hosts.iter().enumerate() {
             if host.borrow().can_invoke(app, true) {
                 return i;

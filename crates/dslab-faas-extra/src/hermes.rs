@@ -21,7 +21,7 @@ impl HermesScheduler {
 }
 
 impl Scheduler for HermesScheduler {
-    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let mut ans = 0;
         // 0 -> empty, no warm container
         // 1 -> empty, warm container

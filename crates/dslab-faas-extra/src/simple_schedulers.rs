@@ -29,7 +29,7 @@ impl LocalityBasedScheduler {
 }
 
 impl Scheduler for LocalityBasedScheduler {
-    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let start_idx = ((self.hasher)(app.id) % (hosts.len() as u64)) as usize;
         let mut cycle = false;
         let mut idx = start_idx;
@@ -75,7 +75,7 @@ impl RandomScheduler {
 }
 
 impl Scheduler for RandomScheduler {
-    fn select_host(&mut self, _app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, _app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         self.rng.gen::<usize>() % hosts.len()
     }
 
@@ -97,7 +97,7 @@ impl LeastLoadedScheduler {
 }
 
 impl Scheduler for LeastLoadedScheduler {
-    fn select_host(&mut self, app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let mut best = 0;
         let mut best_load = f64::MAX;
         let mut warm = false;
@@ -138,7 +138,7 @@ impl RoundRobinScheduler {
 }
 
 impl Scheduler for RoundRobinScheduler {
-    fn select_host(&mut self, _app: &Application, hosts: &Vec<Rc<RefCell<Host>>>) -> usize {
+    fn select_host(&mut self, _app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         self.index %= hosts.len();
         let chosen = self.index;
         self.index += 1;
