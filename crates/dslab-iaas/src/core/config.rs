@@ -2,6 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::load_model::LoadModelType;
+use crate::core::vm_placement_algorithm::VmPlacementAlgorithmType;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfigRaw {
     /// periodically send statistics from host to monitoring
@@ -30,6 +33,86 @@ pub struct SimulationConfigRaw {
     pub step_duration: Option<f64>,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<f64>,
+    /// Cloud infrastructure: hosts, schedulers, incoming VMs
+    pub infrastructure: Option<ConfigInfrastructure>,
+}
+
+/// Represents custom load model in .ymal config.
+///
+/// model_type: type of custom resourse load model
+/// args: arbitrary arguments for load model
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigLoadModel {
+    pub model_type: LoadModelType,
+    pub args: String
+}
+
+/// Represents incoming virtual machine request.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigVM {
+    /// requested CPU capacity for VM
+    pub cpu_usage: u32,
+    /// requested memory capacity for VM
+    pub memory_usage: u64,
+    /// VM lifetime
+    pub lifetime: f64,
+    /// CPU load model - it`s type and arguments
+    pub cpu_load_model: ConfigLoadModel,
+    /// memory load model - it`s type and arguments
+    pub memory_load_model: ConfigLoadModel,
+    /// explicitly defined VM id, if not selected - it will be generated automaticly
+    pub vm_id: Option<u32>,
+    /// scheduler name where VM should be scheduled
+    pub scheduler_name: String,
+    /// simulation time when current VM arrives to scheduler
+    pub delay: f64,
+    /// number of such VMs
+    pub amount: u32,
+}
+
+/// Represents custom virtual machine placement algorithm in .ymal config.
+///
+/// algorithm_type: type of algorithm
+/// args: arbitrary arguments for the algorithm
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigVmPlacementAlgorithm {
+    pub algorithm_type: VmPlacementAlgorithmType,
+    pub args: String
+}
+
+/// Represents physical host properties.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigScheduler {
+    /// scheduler name
+    pub name: String,
+    /// VM placement algorithm for this scheduler
+    pub placement_algorithm: ConfigVmPlacementAlgorithm,
+    /// number of such schedulers
+    pub amount: u32,
+}
+
+/// Represents physical host properties.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigHost {
+    /// host name
+    pub name: String,
+    /// host CPU capacity
+    pub cpu_capacity: u32,
+    /// host memory capacity
+    pub memory_capacity: u64,
+    /// number of such hosts
+    pub amount: u32,
+}
+
+/// Represents cloud infrustructure for simulation instance.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ConfigInfrastructure {
+    /// incoming VM requests
+    pub vms: Vec<ConfigVM>,
+    /// cloud physical hosts
+    pub hosts: Vec<ConfigHost>,
+    /// cloud schedulers
+    pub schedulers: Vec<ConfigScheduler>,
 }
 
 /// Represents simulation configuration.
@@ -43,7 +126,7 @@ pub struct SimulationConfig {
     pub allocation_retry_period: f64,
     /// vm initialization duration
     pub vm_start_duration: f64,
-    // vm deallocation duration
+    /// vm deallocation duration
     pub vm_stop_duration: f64,
     /// pack VM by real resource consumption, not SLA
     pub allow_vm_overcommit: bool,
@@ -61,6 +144,8 @@ pub struct SimulationConfig {
     pub step_duration: f64,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: f64,
+    /// Cloud infrastructure: hosts, schedulers, incoming VMs
+    pub infrastructure: ConfigInfrastructure,
 }
 
 impl SimulationConfig {
@@ -80,6 +165,7 @@ impl SimulationConfig {
             host_memory_capacity: 1.,
             step_duration: 500.,
             vm_allocation_timeout: 50.,
+            infrastructure: ConfigInfrastructure{ vms: Vec::new(), hosts: Vec::new(), schedulers: Vec::new() },
         }
     }
 
@@ -103,6 +189,7 @@ impl SimulationConfig {
             host_memory_capacity: data.host_memory_capacity.unwrap_or(default.host_memory_capacity),
             step_duration: data.step_duration.unwrap_or(default.step_duration),
             vm_allocation_timeout: data.vm_allocation_timeout.unwrap_or(default.vm_allocation_timeout),
+            infrastructure: data.infrastructure.unwrap_or(default.infrastructure),
         }
     }
 }

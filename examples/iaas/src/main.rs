@@ -96,33 +96,19 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    let h1 = cloud_sim.add_host("h1", 30, 30);
-    let h2 = cloud_sim.add_host("h2", 30, 30);
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
+    cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
 
-    for i in 0..10 {
-        cloud_sim.spawn_vm_with_delay(
-            10,
-            10,
-            2.0,
-            Box::new(ConstantLoadModel::new(0.5)),
-            Box::new(ConstantLoadModel::new(0.5)),
-            None,
-            scheduler_id,
-            i as f64,
-        );
-    }
-
+    cloud_sim.spawn_infrastructure_from_config();
     cloud_sim.steps(300);
 
     let end_time = cloud_sim.current_time();
     info!(
         "Total energy consumed by host one: {}",
-        cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
+        cloud_sim.host_by_name("h1").borrow_mut().get_energy_consumed(end_time)
     );
     info!(
         "Total energy consumed by host two: {}",
-        cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
+        cloud_sim.host_by_name("h2").borrow_mut().get_energy_consumed(end_time)
     );
 }
 
@@ -174,6 +160,8 @@ impl DecreaseLoadModel {
 }
 
 impl LoadModel for DecreaseLoadModel {
+    fn parse_config_args(&mut self, _config_str: String) {}
+
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
         // linear drop from 100% to zero within first 50 time points
         // then linear growth back from zero to 100% during next 50 time points
@@ -222,8 +210,9 @@ fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
     let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
+    let config_with_vms = SimulationConfig::from_file("config_with_vms.yaml");
     simulation_two_best_fit_schedulers(config.clone());
-    simulation_one_thresholded_scheduler(config_with_overcommit.clone());
+    simulation_one_thresholded_scheduler(config_with_vms);
     simulation_migration_simple(config);
     simulation_migration_component(config_with_overcommit);
 }

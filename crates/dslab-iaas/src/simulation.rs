@@ -15,6 +15,7 @@ use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
 use crate::core::load_model::ConstantLoadModel;
 use crate::core::load_model::LoadModel;
+use crate::core::load_model::parse_load_model;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::power_model::HostPowerModel;
@@ -24,6 +25,7 @@ use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
+use crate::core::vm_placement_algorithm::parse_placement_algorithm;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
@@ -185,6 +187,56 @@ impl CloudSimulation {
         id
     }
 
+    /// Creates new VMs with specified properties, given from .yaml simulation config
+    /// VMs properties are specified in infrastructure.vms field
+    pub fn spawn_infrastructure_from_config(&mut self) {
+        for host_properties in self.sim_config.infrastructure.hosts.clone() {
+            for _ in 0..host_properties.amount {
+                self.add_host(
+                    &host_properties.name,
+                    host_properties.cpu_capacity,
+                    host_properties.memory_capacity,
+                );
+            }
+        }
+
+        for scheduler_properties in self.sim_config.infrastructure.schedulers.clone() {
+            for _ in 0..scheduler_properties.amount {
+                self.add_scheduler(
+                    &scheduler_properties.name,
+                    parse_placement_algorithm(
+                        scheduler_properties.placement_algorithm.algorithm_type.clone(),
+                        scheduler_properties.placement_algorithm.args.clone(),
+                    ),
+                );
+            }
+        }
+
+        for vm_properties in self.sim_config.infrastructure.vms.clone() {
+            for _ in 0..vm_properties.amount {
+                let id = vm_properties.vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
+                let scheduler_id = self.sim.lookup_id(&vm_properties.scheduler_name);
+
+                self.spawn_vm_with_delay(
+                      vm_properties.cpu_usage,
+                      vm_properties.memory_usage,
+                      vm_properties.lifetime,
+                      parse_load_model(
+                          vm_properties.cpu_load_model.model_type.clone(),
+                          vm_properties.cpu_load_model.args.clone()
+                      ),
+                      parse_load_model(
+                          vm_properties.memory_load_model.model_type.clone(),
+                          vm_properties.memory_load_model.args.clone()
+                      ),
+                      Some(id),
+                      scheduler_id, 
+                      vm_properties.delay,
+                );
+            }
+        }
+    }
+
     /// Sends VM migration request to the specified target host.
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let vm_api = self.vm_api.borrow();
@@ -281,6 +333,23 @@ impl CloudSimulation {
     /// Returns the reference to host manager (host energy consumption, allocated resources etc.).
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
+    }
+
+    /// Returns the reference to host manager (host energy consumption, allocated resources etc.).
+    pub fn host_by_name(&self, name: &str) -> Rc<RefCell<HostManager>> {
+        let host_id = self.sim.lookup_id(name);
+        self.hosts.get(&host_id).unwrap().clone()
+    }
+
+    /// Returns the reference to scheduler.
+    pub fn scheduler(&self, scheduler_id: u32) -> Rc<RefCell<Scheduler>> {
+        self.schedulers.get(&scheduler_id).unwrap().clone()
+    }
+
+    /// Returns the reference to host scheduler.
+    pub fn scheduler_by_name(&self, name: &str) -> Rc<RefCell<Scheduler>> {
+        let scheduler_id = self.sim.lookup_id(name);
+        self.schedulers.get(&scheduler_id).unwrap().clone()
     }
 
     /// Returns the reference to VM information.

@@ -1,0 +1,194 @@
+send_stats_period: 0.5
+message_delay: 0.2
+allocation_retry_period: 1.0
+vm_start_duration: 1.0
+vm_stop_duration: 0.5
+allow_vm_overcommit: false
+network_throughput: 10
+infrastructure:
+    hosts: [
+        {
+            amount: 1,
+            cpu_capacity: 30,
+            memory_capacity: 30,
+            name: h1,
+        },
+        {
+            amount: 1,
+            cpu_capacity: 30,
+            memory_capacity: 30,
+            name: h2,
+        }
+    ]
+    schedulers: [
+        {
+            amount: 1,
+            name: s,
+            placement_algorithm: {
+                algorithm_type: BestFitThreshold,
+                args: 0.8
+            }
+        },
+    ]
+    vms: [
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 0,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 1,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 2,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 3,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 4,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 5,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 6,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 7,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 8,
+        },
+        {
+            amount: 1,
+            cpu_usage: 10,
+            memory_usage: 10,
+            lifetime: 2.0,
+            cpu_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            memory_load_model: {
+                model_type: Const,
+                args: 0.5
+            },
+            scheduler_name: s,
+            delay: 9,
+        }
+    ]
