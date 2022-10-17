@@ -38,7 +38,7 @@ impl ModelsTester {
         self.slow_model.insert(current_time, volume, item);
         let fast_item = self.fast_model.peek().unwrap();
         let slow_item = self.slow_model.peek().unwrap();
-        assert_float_eq(fast_item.0, slow_item.0, 1e-9);
+        assert_float_eq(fast_item.0, slow_item.0, 1e-12);
         assert_eq!(fast_item.1, slow_item.1);
     }
 
@@ -53,7 +53,7 @@ impl ModelsTester {
         }
         println!();
         for i in 0..fast_model_result.len() {
-            assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-9);
+            assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-12);
             println!("{} {}", fast_model_result[i].0, slow_model_result[i].0);
             assert_eq!(fast_model_result[i].1, slow_model_result[i].1);
         }
