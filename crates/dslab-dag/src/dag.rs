@@ -20,6 +20,8 @@ pub struct DAG {
     data_items: Vec<DataItem>,
     ready_tasks: BTreeSet<usize>,
     completed_task_count: usize,
+    inputs: BTreeSet<usize>,
+    outputs: BTreeSet<usize>,
 }
 
 impl DAG {
@@ -30,6 +32,8 @@ impl DAG {
             data_items: Vec::new(),
             ready_tasks: BTreeSet::new(),
             completed_task_count: 0,
+            inputs: BTreeSet::new(),
+            outputs: BTreeSet::new(),
         }
     }
 
@@ -80,11 +84,21 @@ impl DAG {
         &self.ready_tasks
     }
 
+    pub fn get_inputs(&self) -> &BTreeSet<usize> {
+        &self.inputs
+    }
+
+    pub fn get_outputs(&self) -> &BTreeSet<usize> {
+        &self.outputs
+    }
+
     /// Adds [data item](crate::data_item::DataItem) with provided parameters and returns its id.
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
         let data_item = DataItem::new(name, size, DataItemState::Ready, true);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
+        self.inputs.insert(data_item_id);
+        self.outputs.insert(data_item_id);
         data_item_id
     }
 
@@ -94,6 +108,7 @@ impl DAG {
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
+        self.outputs.insert(data_item_id);
         data_item_id
     }
 
@@ -103,6 +118,7 @@ impl DAG {
         data_item.add_consumer(consumer_id);
         let consumer = self.tasks.get_mut(consumer_id).unwrap();
         consumer.add_input(data_item_id);
+        self.outputs.remove(&data_item_id);
         if data_item.state == DataItemState::Pending && consumer.state == TaskState::Ready {
             consumer.state = TaskState::Pending;
             self.ready_tasks.remove(&consumer_id);

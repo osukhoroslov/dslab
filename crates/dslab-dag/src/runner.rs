@@ -271,9 +271,9 @@ impl DAGRunner {
         for i in 0..self.resources.len() {
             self.process_resource_queue(i);
         }
-        while !self.actions.is_empty() {
-            log_debug!(self.ctx, "Got action: {:?}", self.actions.front().unwrap());
-            match self.actions.pop_front().unwrap() {
+        while let Some(action) = self.actions.pop_front() {
+            log_debug!(self.ctx, "Got action: {:?}", action);
+            match action {
                 Action::ScheduleTask { task, resource, cores } => {
                     let allowed_cores =
                         (0..self.resources[resource].compute.borrow().cores_total()).collect::<Vec<_>>();
@@ -484,11 +484,13 @@ impl DAGRunner {
             for &data_item_id in data_items.iter() {
                 for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
                     if let Some(consumer_location) = self.task_location.get(&consumer).cloned() {
-                        self.add_data_transfer_task(
-                            data_item_id,
-                            self.resources[location].id,
-                            self.resources[consumer_location].id,
-                        );
+                        if location != consumer_location {
+                            self.add_data_transfer_task(
+                                data_item_id,
+                                self.resources[location].id,
+                                self.resources[consumer_location].id,
+                            );
+                        }
                     }
                 }
             }

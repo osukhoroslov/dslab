@@ -2964,7 +2964,7 @@
       "time": 3567.9410233333333,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 52,
       "data_item_id": 12,
       "data_name": "chr21.0.12.sfq"
@@ -3049,7 +3049,7 @@
       "time": 3601.787463333333,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute2",
+      "to": "compute3",
       "data_id": 57,
       "data_item_id": 13,
       "data_name": "chr21.0.13.sfq"
@@ -3114,25 +3114,10 @@
       "data_name": "chr21.0.18.sfq"
     },
     {
-      "time": 3617.6234233333334,
-      "type": "task_scheduled",
-      "task_id": 19,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3617.6234233333334,
-      "type": "task_started",
-      "task_id": 19,
-      "task_name": "filterContams_chr21"
-    },
-    {
       "time": 3617.8689633333333,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 52,
       "data_name": "chr21.0.12.sfq"
     },
@@ -3141,7 +3126,7 @@
       "type": "task_scheduled",
       "task_id": 13,
       "task_name": "filterContams_chr21",
-      "location": "compute3",
+      "location": "compute2",
       "cores": 1,
       "memory": 0
     },
@@ -3203,7 +3188,7 @@
       "time": 3623.8166333333334,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute1",
+      "to": "compute2",
       "data_id": 62,
       "data_item_id": 15,
       "data_name": "chr21.0.15.sfq"
@@ -3271,34 +3256,10 @@
       "time": 3628.0145933333333,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute1",
+      "to": "compute2",
       "data_id": 66,
       "data_item_id": 0,
       "data_name": "chr21.0.0.sfq"
-    },
-    {
-      "time": 3631.29009,
-      "type": "task_completed",
-      "task_id": 19,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3631.29009,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 67,
-      "data_item_id": 60,
-      "data_name": "chr21.0.18.nocontam.sfq"
-    },
-    {
-      "time": 3631.29009,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 68,
-      "data_item_id": 61,
-      "data_name": "chr21.0.18.contam.sfq"
     },
     {
       "time": 3633.8848033333334,
@@ -3311,7 +3272,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 69,
+      "data_id": 67,
       "data_item_id": 56,
       "data_name": "chr21.0.16.nocontam.sfq"
     },
@@ -3320,33 +3281,9 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 70,
+      "data_id": 68,
       "data_item_id": 57,
       "data_name": "chr21.0.16.contam.sfq"
-    },
-    {
-      "time": 3635.53563,
-      "type": "task_completed",
-      "task_id": 13,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3635.53563,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 71,
-      "data_item_id": 48,
-      "data_name": "chr21.0.12.nocontam.sfq"
-    },
-    {
-      "time": 3635.53563,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 72,
-      "data_item_id": 49,
-      "data_name": "chr21.0.12.contam.sfq"
     },
     {
       "time": 3637.7932533333333,
@@ -3361,7 +3298,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 73,
+      "data_id": 69,
       "data_item_id": 2,
       "data_name": "chr21.0.2.sfq"
     },
@@ -3400,10 +3337,34 @@
       "time": 3643.029453333333,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 74,
+      "to": "compute3",
+      "data_id": 70,
       "data_item_id": 5,
       "data_name": "chr21.0.5.sfq"
+    },
+    {
+      "time": 3644.3689633333333,
+      "type": "task_completed",
+      "task_id": 13,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 3644.3689633333333,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 71,
+      "data_item_id": 48,
+      "data_name": "chr21.0.12.nocontam.sfq"
+    },
+    {
+      "time": 3644.3689633333333,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 72,
+      "data_item_id": 49,
+      "data_name": "chr21.0.12.contam.sfq"
     },
     {
       "time": 3645.8090233333332,
@@ -3417,8 +3378,8 @@
       "time": 3645.8090233333332,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 75,
+      "to": "compute3",
+      "data_id": 73,
       "data_item_id": 10,
       "data_name": "chr21.0.10.sfq"
     },
@@ -3435,7 +3396,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 76,
+      "data_id": 74,
       "data_item_id": 19,
       "data_name": "chr21.0.19.sfq"
     },
@@ -3471,21 +3432,6 @@
       "data_name": "chr21.0.23.sfq"
     },
     {
-      "time": 3656.1176633333334,
-      "type": "task_scheduled",
-      "task_id": 24,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3656.1176633333334,
-      "type": "task_started",
-      "task_id": 24,
-      "task_name": "filterContams_chr21"
-    },
-    {
       "time": 3659.4897699999997,
       "type": "task_completed",
       "task_id": 22,
@@ -3496,7 +3442,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 77,
+      "data_id": 75,
       "data_item_id": 66,
       "data_name": "chr21.0.21.nocontam.sfq"
     },
@@ -3505,57 +3451,24 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 78,
+      "data_id": 76,
       "data_item_id": 67,
       "data_name": "chr21.0.21.contam.sfq"
-    },
-    {
-      "time": 3660.2295,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 68,
-      "data_name": "chr21.0.18.contam.sfq"
-    },
-    {
-      "time": 3662.15585,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 67,
-      "data_name": "chr21.0.18.nocontam.sfq"
-    },
-    {
-      "time": 3662.15585,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 79,
-      "data_item_id": 60,
-      "data_name": "chr21.0.18.nocontam.sfq"
     },
     {
       "time": 3663.379483333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 70,
+      "data_id": 68,
       "data_name": "chr21.0.16.contam.sfq"
-    },
-    {
-      "time": 3664.6825599999997,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 72,
-      "data_name": "chr21.0.12.contam.sfq"
     },
     {
       "time": 3664.825983333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 69,
+      "data_id": 67,
       "data_name": "chr21.0.16.nocontam.sfq"
     },
     {
@@ -3563,7 +3476,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 80,
+      "data_id": 77,
       "data_item_id": 56,
       "data_name": "chr21.0.16.nocontam.sfq"
     },
@@ -3580,26 +3493,9 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute2",
-      "data_id": 81,
+      "data_id": 78,
       "data_item_id": 8,
       "data_name": "chr21.0.8.sfq"
-    },
-    {
-      "time": 3666.31664,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 71,
-      "data_name": "chr21.0.12.nocontam.sfq"
-    },
-    {
-      "time": 3666.31664,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 82,
-      "data_item_id": 48,
-      "data_name": "chr21.0.12.nocontam.sfq"
     },
     {
       "time": 3670.5908833333333,
@@ -3612,7 +3508,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 83,
+      "data_id": 79,
       "data_item_id": 36,
       "data_name": "chr21.0.6.nocontam.sfq"
     },
@@ -3621,33 +3517,34 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 84,
+      "data_id": 80,
       "data_item_id": 37,
       "data_name": "chr21.0.6.contam.sfq"
     },
     {
-      "time": 3675.1176633333334,
-      "type": "task_completed",
-      "task_id": 24,
-      "task_name": "filterContams_chr21"
+      "time": 3673.515893333333,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 72,
+      "data_name": "chr21.0.12.contam.sfq"
     },
     {
-      "time": 3675.1176633333334,
-      "type": "start_uploading",
-      "from": "compute3",
+      "time": 3675.1499733333335,
+      "type": "finish_uploading",
+      "from": "compute2",
       "to": "runner",
-      "data_id": 85,
-      "data_item_id": 70,
-      "data_name": "chr21.0.23.nocontam.sfq"
+      "data_id": 71,
+      "data_name": "chr21.0.12.nocontam.sfq"
     },
     {
-      "time": 3675.1176633333334,
+      "time": 3675.1499733333335,
       "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 86,
-      "data_item_id": 71,
-      "data_name": "chr21.0.23.contam.sfq"
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 81,
+      "data_item_id": 48,
+      "data_name": "chr21.0.12.nocontam.sfq"
     },
     {
       "time": 3682.8765533333335,
@@ -3662,7 +3559,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 87,
+      "data_id": 82,
       "data_item_id": 17,
       "data_name": "chr21.0.17.sfq"
     },
@@ -3670,54 +3567,16 @@
       "time": 3685.561843333333,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute2",
+      "to": "compute3",
       "data_id": 57,
       "data_name": "chr21.0.13.sfq"
-    },
-    {
-      "time": 3685.561843333333,
-      "type": "task_scheduled",
-      "task_id": 14,
-      "task_name": "filterContams_chr21",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3685.561843333333,
-      "type": "task_started",
-      "task_id": 14,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3693.0216100000002,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 79,
-      "data_name": "chr21.0.18.nocontam.sfq"
-    },
-    {
-      "time": 3693.0216100000002,
-      "type": "task_scheduled",
-      "task_id": 43,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3693.0216100000002,
-      "type": "task_started",
-      "task_id": 43,
-      "task_name": "sol2sanger_chr21"
     },
     {
       "time": 3694.47149,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 78,
+      "data_id": 76,
       "data_name": "chr21.0.21.contam.sfq"
     },
     {
@@ -3725,7 +3584,7 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 80,
+      "data_id": 77,
       "data_name": "chr21.0.16.nocontam.sfq"
     },
     {
@@ -3748,7 +3607,7 @@
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 77,
+      "data_id": 75,
       "data_name": "chr21.0.21.nocontam.sfq"
     },
     {
@@ -3756,47 +3615,9 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 88,
+      "data_id": 83,
       "data_item_id": 66,
       "data_name": "chr21.0.21.nocontam.sfq"
-    },
-    {
-      "time": 3697.09765,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 82,
-      "data_name": "chr21.0.12.nocontam.sfq"
-    },
-    {
-      "time": 3697.09765,
-      "type": "task_scheduled",
-      "task_id": 37,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3697.09765,
-      "type": "task_started",
-      "task_id": 37,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3697.3549433333337,
-      "type": "task_completed",
-      "task_id": 43,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3697.3549433333337,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 89,
-      "data_item_id": 90,
-      "data_name": "chr21.0.18.nocontam.fq"
     },
     {
       "time": 3700.396043333333,
@@ -3805,36 +3626,6 @@
       "to": "compute3",
       "data_id": 58,
       "data_name": "chr21.0.9.sfq"
-    },
-    {
-      "time": 3700.396043333333,
-      "type": "task_scheduled",
-      "task_id": 10,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3700.396043333333,
-      "type": "task_started",
-      "task_id": 10,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3703.09765,
-      "type": "task_completed",
-      "task_id": 37,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3703.09765,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 90,
-      "data_item_id": 84,
-      "data_name": "chr21.0.12.nocontam.fq"
     },
     {
       "time": 3703.767163333333,
@@ -3847,7 +3638,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 91,
+      "data_id": 84,
       "data_item_id": 88,
       "data_name": "chr21.0.16.nocontam.fq"
     },
@@ -3875,6 +3666,29 @@
       "task_name": "filterContams_chr21"
     },
     {
+      "time": 3705.9309833333336,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 81,
+      "data_name": "chr21.0.12.nocontam.sfq"
+    },
+    {
+      "time": 3705.9309833333336,
+      "type": "task_scheduled",
+      "task_id": 37,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3705.9309833333336,
+      "type": "task_started",
+      "task_id": 37,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
       "time": 3706.943263333333,
       "type": "finish_uploading",
       "from": "compute3",
@@ -3886,8 +3700,8 @@
       "time": 3706.943263333333,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 92,
+      "to": "compute3",
+      "data_id": 85,
       "data_item_id": 20,
       "data_name": "chr21.0.20.sfq"
     },
@@ -3896,7 +3710,7 @@
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 83,
+      "data_id": 79,
       "data_name": "chr21.0.6.nocontam.sfq"
     },
     {
@@ -3904,7 +3718,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 93,
+      "data_id": 86,
       "data_item_id": 36,
       "data_name": "chr21.0.6.nocontam.sfq"
     },
@@ -3913,16 +3727,8 @@
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 84,
+      "data_id": 80,
       "data_name": "chr21.0.6.contam.sfq"
-    },
-    {
-      "time": 3714.0756233333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 86,
-      "data_name": "chr21.0.23.contam.sfq"
     },
     {
       "time": 3714.877443333333,
@@ -3933,21 +3739,19 @@
       "data_name": "chr21.0.22.sfq"
     },
     {
-      "time": 3715.2119933333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 85,
-      "data_name": "chr21.0.23.nocontam.sfq"
+      "time": 3714.9309833333336,
+      "type": "task_completed",
+      "task_id": 37,
+      "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3715.2119933333333,
+      "time": 3714.9309833333336,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 94,
-      "data_item_id": 70,
-      "data_name": "chr21.0.23.nocontam.sfq"
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 87,
+      "data_item_id": 84,
+      "data_name": "chr21.0.12.nocontam.fq"
     },
     {
       "time": 3721.162183333333,
@@ -3958,69 +3762,11 @@
       "data_name": "chr21.0.3.sfq"
     },
     {
-      "time": 3724.9854333333337,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 89,
-      "data_name": "chr21.0.18.nocontam.fq"
-    },
-    {
-      "time": 3724.9854333333337,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 95,
-      "data_item_id": 90,
-      "data_name": "chr21.0.18.nocontam.fq"
-    },
-    {
-      "time": 3726.88439,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 90,
-      "data_name": "chr21.0.12.nocontam.fq"
-    },
-    {
-      "time": 3726.88439,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 96,
-      "data_item_id": 84,
-      "data_name": "chr21.0.12.nocontam.fq"
-    },
-    {
-      "time": 3728.396043333333,
-      "type": "task_completed",
-      "task_id": 10,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3728.396043333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 97,
-      "data_item_id": 42,
-      "data_name": "chr21.0.9.nocontam.sfq"
-    },
-    {
-      "time": 3728.396043333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 98,
-      "data_item_id": 43,
-      "data_name": "chr21.0.9.contam.sfq"
-    },
-    {
       "time": 3728.433253333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 91,
+      "data_id": 84,
       "data_name": "chr21.0.16.nocontam.fq"
     },
     {
@@ -4028,7 +3774,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 99,
+      "data_id": 88,
       "data_item_id": 88,
       "data_name": "chr21.0.16.nocontam.fq"
     },
@@ -4036,7 +3782,7 @@
       "time": 3729.6201833333334,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute1",
+      "to": "compute2",
       "data_id": 62,
       "data_name": "chr21.0.15.sfq"
     },
@@ -4045,7 +3791,7 @@
       "type": "task_scheduled",
       "task_id": 16,
       "task_name": "filterContams_chr21",
-      "location": "compute1",
+      "location": "compute2",
       "cores": 1,
       "memory": 0
     },
@@ -4066,7 +3812,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 100,
+      "data_id": 89,
       "data_item_id": 32,
       "data_name": "chr21.0.4.nocontam.sfq"
     },
@@ -4075,7 +3821,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 101,
+      "data_id": 90,
       "data_item_id": 33,
       "data_name": "chr21.0.4.contam.sfq"
     },
@@ -4088,26 +3834,11 @@
       "data_name": "chr21.0.7.sfq"
     },
     {
-      "time": 3734.1874433333332,
-      "type": "task_scheduled",
-      "task_id": 8,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3734.1874433333332,
-      "type": "task_started",
-      "task_id": 8,
-      "task_name": "filterContams_chr21"
-    },
-    {
       "time": 3734.33635,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 88,
+      "data_id": 83,
       "data_name": "chr21.0.21.nocontam.sfq"
     },
     {
@@ -4132,45 +3863,6 @@
       "to": "compute3",
       "data_id": 64,
       "data_name": "chr21.0.1.sfq"
-    },
-    {
-      "time": 3734.7964433333336,
-      "type": "task_scheduled",
-      "task_id": 2,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3734.7964433333336,
-      "type": "task_started",
-      "task_id": 2,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3735.561843333333,
-      "type": "task_completed",
-      "task_id": 14,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3735.561843333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 102,
-      "data_item_id": 50,
-      "data_name": "chr21.0.13.nocontam.sfq"
-    },
-    {
-      "time": 3735.561843333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 103,
-      "data_item_id": 51,
-      "data_name": "chr21.0.13.contam.sfq"
     },
     {
       "time": 3736.3651433333334,
@@ -4199,24 +3891,26 @@
       "time": 3738.0161033333334,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute1",
+      "to": "compute2",
       "data_id": 66,
       "data_name": "chr21.0.0.sfq"
     },
     {
-      "time": 3738.0161033333334,
-      "type": "task_scheduled",
-      "task_id": 1,
-      "task_name": "filterContams_chr21",
-      "location": "compute1",
-      "cores": 1,
-      "memory": 0
+      "time": 3738.7177233333337,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 87,
+      "data_name": "chr21.0.12.nocontam.fq"
     },
     {
-      "time": 3738.0161033333334,
-      "type": "task_started",
-      "task_id": 1,
-      "task_name": "filterContams_chr21"
+      "time": 3738.7177233333337,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 91,
+      "data_item_id": 84,
+      "data_name": "chr21.0.12.nocontam.fq"
     },
     {
       "time": 3739.33635,
@@ -4229,7 +3923,7 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 104,
+      "data_id": 92,
       "data_item_id": 93,
       "data_name": "chr21.0.21.nocontam.fq"
     },
@@ -4246,7 +3940,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 105,
+      "data_id": 93,
       "data_item_id": 14,
       "data_name": "chr21.0.14.sfq"
     },
@@ -4255,61 +3949,45 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 93,
+      "data_id": 86,
       "data_name": "chr21.0.6.nocontam.sfq"
     },
     {
-      "time": 3750.67113,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 96,
-      "data_name": "chr21.0.12.nocontam.fq"
-    },
-    {
-      "time": 3750.67113,
+      "time": 3748.3162433333337,
       "type": "task_scheduled",
-      "task_id": 61,
-      "task_name": "fastq2bfq_chr21",
+      "task_id": 31,
+      "task_name": "sol2sanger_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3750.67113,
+      "time": 3748.3162433333337,
       "type": "task_started",
-      "task_id": 61,
-      "task_name": "fastq2bfq_chr21"
+      "task_id": 31,
+      "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3752.6159233333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 95,
-      "data_name": "chr21.0.18.nocontam.fq"
+      "time": 3752.649576666667,
+      "type": "task_completed",
+      "task_id": 31,
+      "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3752.6159233333337,
-      "type": "task_scheduled",
-      "task_id": 67,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3752.6159233333337,
-      "type": "task_started",
-      "task_id": 67,
-      "task_name": "fastq2bfq_chr21"
+      "time": 3752.649576666667,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 94,
+      "data_item_id": 78,
+      "data_name": "chr21.0.6.nocontam.fq"
     },
     {
       "time": 3753.0993433333333,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 99,
+      "data_id": 88,
       "data_name": "chr21.0.16.nocontam.fq"
     },
     {
@@ -4328,49 +4006,11 @@
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3755.3063233333332,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 94,
-      "data_name": "chr21.0.23.nocontam.sfq"
-    },
-    {
-      "time": 3757.3377966666667,
-      "type": "task_completed",
-      "task_id": 61,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3757.3377966666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 106,
-      "data_item_id": 108,
-      "data_name": "chr21.0.12.nocontam.bfq"
-    },
-    {
-      "time": 3757.3377966666667,
-      "type": "task_scheduled",
-      "task_id": 31,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3757.3377966666667,
-      "type": "task_started",
-      "task_id": 31,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
       "time": 3757.5734233333333,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 73,
+      "data_id": 69,
       "data_name": "chr21.0.2.sfq"
     },
     {
@@ -4384,14 +4024,14 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 107,
+      "data_id": 95,
       "data_item_id": 112,
       "data_name": "chr21.0.16.nocontam.bfq"
     },
     {
       "time": 3760.0993433333333,
       "type": "task_scheduled",
-      "task_id": 4,
+      "task_id": 3,
       "task_name": "filterContams_chr21",
       "location": "compute3",
       "cores": 1,
@@ -4400,115 +4040,76 @@
     {
       "time": 3760.0993433333333,
       "type": "task_started",
-      "task_id": 4,
+      "task_id": 3,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3761.67113,
-      "type": "task_completed",
-      "task_id": 31,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3761.67113,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 108,
-      "data_item_id": 78,
-      "data_name": "chr21.0.6.nocontam.fq"
-    },
-    {
-      "time": 3761.67113,
-      "type": "task_scheduled",
-      "task_id": 23,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3761.67113,
-      "type": "task_started",
-      "task_id": 23,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3766.6159233333337,
-      "type": "task_completed",
-      "task_id": 67,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3766.6159233333337,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 109,
-      "data_item_id": 114,
-      "data_name": "chr21.0.18.nocontam.bfq"
-    },
-    {
-      "time": 3766.6159233333337,
-      "type": "task_scheduled",
-      "task_id": 48,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3766.6159233333337,
-      "type": "task_started",
-      "task_id": 48,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3768.045823333333,
+      "time": 3762.5044633333337,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute2",
-      "data_id": 74,
-      "data_name": "chr21.0.5.sfq"
+      "data_id": 91,
+      "data_name": "chr21.0.12.nocontam.fq"
+    },
+    {
+      "time": 3762.5044633333337,
+      "type": "task_scheduled",
+      "task_id": 61,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3762.5044633333337,
+      "type": "task_started",
+      "task_id": 61,
+      "task_name": "fastq2bfq_chr21"
     },
     {
       "time": 3768.045823333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 70,
+      "data_name": "chr21.0.5.sfq"
+    },
+    {
+      "time": 3772.5044633333337,
+      "type": "task_completed",
+      "task_id": 61,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 3772.5044633333337,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 96,
+      "data_item_id": 108,
+      "data_name": "chr21.0.12.nocontam.bfq"
+    },
+    {
+      "time": 3772.5044633333337,
       "type": "task_scheduled",
-      "task_id": 6,
+      "task_id": 1,
       "task_name": "filterContams_chr21",
       "location": "compute2",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3768.045823333333,
+      "time": 3772.5044633333337,
       "type": "task_started",
-      "task_id": 6,
+      "task_id": 1,
       "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3770.2240866666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 106,
-      "data_name": "chr21.0.12.nocontam.bfq"
-    },
-    {
-      "time": 3770.2240866666666,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 110,
-      "data_item_id": 108,
-      "data_name": "chr21.0.12.nocontam.bfq"
     },
     {
       "time": 3772.89812,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 104,
+      "data_id": 92,
       "data_name": "chr21.0.21.nocontam.fq"
     },
     {
@@ -4516,7 +4117,7 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 111,
+      "data_id": 97,
       "data_item_id": 93,
       "data_name": "chr21.0.21.nocontam.fq"
     },
@@ -4524,8 +4125,8 @@
       "time": 3773.604963333333,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 75,
+      "to": "compute3",
+      "data_id": 73,
       "data_name": "chr21.0.10.sfq"
     },
     {
@@ -4533,7 +4134,7 @@
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 107,
+      "data_id": 95,
       "data_name": "chr21.0.16.nocontam.bfq"
     },
     {
@@ -4541,153 +4142,40 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 112,
+      "data_id": 98,
       "data_item_id": 112,
       "data_name": "chr21.0.16.nocontam.bfq"
     },
     {
-      "time": 3777.6159233333337,
+      "time": 3780.6201833333334,
       "type": "task_completed",
-      "task_id": 48,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3777.6159233333337,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 113,
-      "data_item_id": 95,
-      "data_name": "chr21.0.23.nocontam.fq"
-    },
-    {
-      "time": 3777.6159233333337,
-      "type": "task_scheduled",
-      "task_id": 11,
-      "task_name": "filterContams_chr21",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3777.6159233333337,
-      "type": "task_started",
-      "task_id": 11,
+      "task_id": 16,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3777.779793333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 97,
-      "data_name": "chr21.0.9.nocontam.sfq"
-    },
-    {
-      "time": 3777.779793333333,
+      "time": 3780.6201833333334,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 114,
-      "data_item_id": 42,
-      "data_name": "chr21.0.9.nocontam.sfq"
-    },
-    {
-      "time": 3779.8541099999998,
-      "type": "task_completed",
-      "task_id": 8,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3779.8541099999998,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 115,
-      "data_item_id": 38,
-      "data_name": "chr21.0.7.nocontam.sfq"
-    },
-    {
-      "time": 3779.8541099999998,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 116,
-      "data_item_id": 39,
-      "data_name": "chr21.0.7.contam.sfq"
-    },
-    {
-      "time": 3780.203773333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 98,
-      "data_name": "chr21.0.9.contam.sfq"
-    },
-    {
-      "time": 3780.7921433333336,
-      "type": "finish_uploading",
       "from": "compute2",
       "to": "runner",
-      "data_id": 109,
-      "data_name": "chr21.0.18.nocontam.bfq"
+      "data_id": 99,
+      "data_item_id": 54,
+      "data_name": "chr21.0.15.nocontam.sfq"
     },
     {
-      "time": 3780.7921433333336,
+      "time": 3780.6201833333334,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 117,
-      "data_item_id": 114,
-      "data_name": "chr21.0.18.nocontam.bfq"
-    },
-    {
-      "time": 3781.5665133333328,
-      "type": "finish_uploading",
       "from": "compute2",
-      "to": "runner",
-      "data_id": 102,
-      "data_name": "chr21.0.13.nocontam.sfq"
-    },
-    {
-      "time": 3781.5665133333328,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 118,
-      "data_item_id": 50,
-      "data_name": "chr21.0.13.nocontam.sfq"
-    },
-    {
-      "time": 3781.7964433333336,
-      "type": "task_completed",
-      "task_id": 2,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3781.7964433333336,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 119,
-      "data_item_id": 26,
-      "data_name": "chr21.0.1.nocontam.sfq"
-    },
-    {
-      "time": 3781.7964433333336,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 120,
-      "data_item_id": 27,
-      "data_name": "chr21.0.1.contam.sfq"
-    },
-    {
-      "time": 3782.7520899999995,
-      "type": "finish_uploading",
-      "from": "compute3",
       "to": "runner",
       "data_id": 100,
+      "data_item_id": 55,
+      "data_name": "chr21.0.15.contam.sfq"
+    },
+    {
+      "time": 3782.7520899999995,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 89,
       "data_name": "chr21.0.4.nocontam.sfq"
     },
     {
@@ -4695,32 +4183,16 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 121,
+      "data_id": 101,
       "data_item_id": 32,
       "data_name": "chr21.0.4.nocontam.sfq"
-    },
-    {
-      "time": 3783.1103766666665,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 110,
-      "data_name": "chr21.0.12.nocontam.bfq"
-    },
-    {
-      "time": 3783.331553333333,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 103,
-      "data_name": "chr21.0.13.contam.sfq"
     },
     {
       "time": 3783.6771099999996,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 101,
+      "data_id": 90,
       "data_name": "chr21.0.4.contam.sfq"
     },
     {
@@ -4728,126 +4200,65 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 76,
+      "data_id": 74,
       "data_name": "chr21.0.19.sfq"
     },
     {
-      "time": 3784.876243333333,
-      "type": "task_scheduled",
-      "task_id": 20,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
+      "time": 3785.2983666666673,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 94,
+      "data_name": "chr21.0.6.nocontam.fq"
     },
     {
-      "time": 3784.876243333333,
-      "type": "task_started",
-      "task_id": 20,
-      "task_name": "filterContams_chr21"
+      "time": 3785.2983666666673,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 102,
+      "data_item_id": 78,
+      "data_name": "chr21.0.6.nocontam.fq"
+    },
+    {
+      "time": 3785.3907533333336,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 96,
+      "data_name": "chr21.0.12.nocontam.bfq"
+    },
+    {
+      "time": 3785.3907533333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 103,
+      "data_item_id": 108,
+      "data_name": "chr21.0.12.nocontam.bfq"
     },
     {
       "time": 3787.399503333333,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 112,
+      "data_id": 98,
       "data_name": "chr21.0.16.nocontam.bfq"
     },
     {
-      "time": 3791.432676666667,
-      "type": "task_completed",
-      "task_id": 4,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3791.432676666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 122,
-      "data_item_id": 30,
-      "data_name": "chr21.0.3.nocontam.sfq"
-    },
-    {
-      "time": 3791.432676666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 123,
-      "data_item_id": 31,
-      "data_name": "chr21.0.3.contam.sfq"
-    },
-    {
-      "time": 3791.432676666667,
-      "type": "task_scheduled",
-      "task_id": 3,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3791.432676666667,
-      "type": "task_started",
-      "task_id": 3,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3793.3377966666667,
-      "type": "task_completed",
-      "task_id": 23,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3793.3377966666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 124,
-      "data_item_id": 68,
-      "data_name": "chr21.0.22.nocontam.sfq"
-    },
-    {
-      "time": 3793.3377966666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 125,
-      "data_item_id": 69,
-      "data_name": "chr21.0.22.contam.sfq"
-    },
-    {
-      "time": 3794.3199200000004,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 108,
-      "data_name": "chr21.0.6.nocontam.fq"
-    },
-    {
-      "time": 3794.3199200000004,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 126,
-      "data_item_id": 78,
-      "data_name": "chr21.0.6.nocontam.fq"
-    },
-    {
-      "time": 3794.9683633333334,
+      "time": 3798.2770433333335,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute3",
-      "data_id": 117,
-      "data_name": "chr21.0.18.nocontam.bfq"
+      "to": "compute1",
+      "data_id": 103,
+      "data_name": "chr21.0.12.nocontam.bfq"
     },
     {
       "time": 3806.4598899999996,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 111,
+      "data_id": 97,
       "data_name": "chr21.0.21.nocontam.fq"
     },
     {
@@ -4866,28 +4277,35 @@
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3810.0082233333337,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 113,
-      "data_name": "chr21.0.23.nocontam.fq"
+      "time": 3806.76601,
+      "type": "task_completed",
+      "task_id": 3,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3810.0082233333337,
+      "time": 3806.76601,
       "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 127,
-      "data_item_id": 95,
-      "data_name": "chr21.0.23.nocontam.fq"
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 104,
+      "data_item_id": 28,
+      "data_name": "chr21.0.2.nocontam.sfq"
+    },
+    {
+      "time": 3806.76601,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 105,
+      "data_item_id": 29,
+      "data_name": "chr21.0.2.contam.sfq"
     },
     {
       "time": 3813.2574633333334,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute2",
-      "data_id": 81,
+      "data_id": 78,
       "data_name": "chr21.0.8.sfq"
     },
     {
@@ -4901,83 +4319,35 @@
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 128,
+      "data_id": 106,
       "data_item_id": 117,
       "data_name": "chr21.0.21.nocontam.bfq"
     },
     {
-      "time": 3820.876243333333,
-      "type": "task_completed",
-      "task_id": 20,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3820.876243333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 129,
-      "data_item_id": 62,
-      "data_name": "chr21.0.19.nocontam.sfq"
-    },
-    {
-      "time": 3820.876243333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 130,
-      "data_item_id": 63,
-      "data_name": "chr21.0.19.contam.sfq"
-    },
-    {
-      "time": 3821.045823333333,
-      "type": "task_completed",
-      "task_id": 6,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3821.045823333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 131,
-      "data_item_id": 34,
-      "data_name": "chr21.0.5.nocontam.sfq"
-    },
-    {
-      "time": 3821.045823333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 132,
-      "data_item_id": 35,
-      "data_name": "chr21.0.5.contam.sfq"
-    },
-    {
-      "time": 3821.045823333333,
+      "time": 3816.4598899999996,
       "type": "task_scheduled",
-      "task_id": 9,
+      "task_id": 10,
       "task_name": "filterContams_chr21",
-      "location": "compute2",
+      "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3821.045823333333,
+      "time": 3816.4598899999996,
       "type": "task_started",
-      "task_id": 9,
+      "task_id": 10,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3826.9687100000006,
+      "time": 3817.9471566666675,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 126,
+      "data_id": 102,
       "data_name": "chr21.0.6.nocontam.fq"
     },
     {
-      "time": 3826.9687100000006,
+      "time": 3817.9471566666675,
       "type": "task_scheduled",
       "task_id": 55,
       "task_name": "fastq2bfq_chr21",
@@ -4986,57 +4356,41 @@
       "memory": 0
     },
     {
-      "time": 3826.9687100000006,
+      "time": 3817.9471566666675,
       "type": "task_started",
       "task_id": 55,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3827.163543333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 114,
-      "data_name": "chr21.0.9.nocontam.sfq"
-    },
-    {
-      "time": 3827.5711833333326,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 118,
-      "data_name": "chr21.0.13.nocontam.sfq"
-    },
-    {
-      "time": 3830.6159233333337,
+      "time": 3827.5044633333337,
       "type": "task_completed",
-      "task_id": 11,
+      "task_id": 1,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3830.6159233333337,
+      "time": 3827.5044633333337,
       "type": "start_uploading",
       "from": "compute2",
       "to": "runner",
-      "data_id": 133,
-      "data_item_id": 44,
-      "data_name": "chr21.0.10.nocontam.sfq"
+      "data_id": 107,
+      "data_item_id": 24,
+      "data_name": "chr21.0.0.nocontam.sfq"
     },
     {
-      "time": 3830.6159233333337,
+      "time": 3827.5044633333337,
       "type": "start_uploading",
       "from": "compute2",
       "to": "runner",
-      "data_id": 134,
-      "data_item_id": 45,
-      "data_name": "chr21.0.10.contam.sfq"
+      "data_id": 108,
+      "data_item_id": 25,
+      "data_name": "chr21.0.0.contam.sfq"
     },
     {
       "time": 3831.5565899999997,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 128,
+      "data_id": 106,
       "data_name": "chr21.0.21.nocontam.bfq"
     },
     {
@@ -5044,206 +4398,133 @@
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 135,
+      "data_id": 109,
       "data_item_id": 117,
       "data_name": "chr21.0.21.nocontam.bfq"
     },
     {
-      "time": 3831.6201833333334,
+      "time": 3831.9471566666675,
       "type": "task_completed",
-      "task_id": 16,
-      "task_name": "filterContams_chr21"
+      "task_id": 55,
+      "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3831.6201833333334,
+      "time": 3831.9471566666675,
       "type": "start_uploading",
-      "from": "compute1",
+      "from": "compute3",
       "to": "runner",
-      "data_id": 136,
-      "data_item_id": 54,
-      "data_name": "chr21.0.15.nocontam.sfq"
-    },
-    {
-      "time": 3831.6201833333334,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 137,
-      "data_item_id": 55,
-      "data_name": "chr21.0.15.contam.sfq"
+      "data_id": 110,
+      "data_item_id": 102,
+      "data_name": "chr21.0.6.nocontam.bfq"
     },
     {
       "time": 3833.7965499999996,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 121,
+      "data_id": 101,
       "data_name": "chr21.0.4.nocontam.sfq"
     },
     {
-      "time": 3838.0993433333333,
+      "time": 3833.7965499999996,
+      "type": "task_scheduled",
+      "task_id": 29,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3833.7965499999996,
+      "type": "task_started",
+      "task_id": 29,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3837.5550233333333,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 100,
+      "data_name": "chr21.0.15.contam.sfq"
+    },
+    {
+      "time": 3839.4888933333336,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 99,
+      "data_name": "chr21.0.15.nocontam.sfq"
+    },
+    {
+      "time": 3839.4888933333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 111,
+      "data_item_id": 54,
+      "data_name": "chr21.0.15.nocontam.sfq"
+    },
+    {
+      "time": 3842.7965499999996,
       "type": "task_completed",
-      "task_id": 3,
+      "task_id": 29,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3842.7965499999996,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 112,
+      "data_item_id": 76,
+      "data_name": "chr21.0.4.nocontam.fq"
+    },
+    {
+      "time": 3842.7965499999996,
+      "type": "task_scheduled",
+      "task_id": 14,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3842.7965499999996,
+      "type": "task_started",
+      "task_id": 14,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3838.0993433333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 138,
-      "data_item_id": 28,
-      "data_name": "chr21.0.2.nocontam.sfq"
-    },
-    {
-      "time": 3838.0993433333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 139,
-      "data_item_id": 29,
-      "data_name": "chr21.0.2.contam.sfq"
-    },
-    {
-      "time": 3838.0993433333333,
-      "type": "task_scheduled",
-      "task_id": 34,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3838.0993433333333,
-      "type": "task_started",
-      "task_id": 34,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3838.59498,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 116,
-      "data_name": "chr21.0.7.contam.sfq"
-    },
-    {
-      "time": 3838.7756333333336,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 119,
-      "data_name": "chr21.0.1.nocontam.sfq"
-    },
-    {
-      "time": 3838.7756333333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 140,
-      "data_item_id": 26,
-      "data_name": "chr21.0.1.nocontam.sfq"
-    },
-    {
-      "time": 3839.2004199999997,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 115,
-      "data_name": "chr21.0.7.nocontam.sfq"
-    },
-    {
-      "time": 3839.2004199999997,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 141,
-      "data_item_id": 38,
-      "data_name": "chr21.0.7.nocontam.sfq"
-    },
-    {
-      "time": 3840.9687100000006,
+      "time": 3844.4598899999996,
       "type": "task_completed",
-      "task_id": 55,
-      "task_name": "fastq2bfq_chr21"
+      "task_id": 10,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3840.9687100000006,
+      "time": 3844.4598899999996,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 142,
-      "data_item_id": 102,
-      "data_name": "chr21.0.6.nocontam.bfq"
+      "data_id": 113,
+      "data_item_id": 42,
+      "data_name": "chr21.0.9.nocontam.sfq"
     },
     {
-      "time": 3840.9687100000006,
-      "type": "task_scheduled",
-      "task_id": 29,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3840.9687100000006,
-      "type": "task_started",
-      "task_id": 29,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3842.4005233333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 127,
-      "data_name": "chr21.0.23.nocontam.fq"
-    },
-    {
-      "time": 3842.4005233333337,
-      "type": "task_scheduled",
-      "task_id": 72,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3842.4005233333337,
-      "type": "task_started",
-      "task_id": 72,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3843.208933333334,
-      "type": "finish_uploading",
+      "time": 3844.4598899999996,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 120,
-      "data_name": "chr21.0.1.contam.sfq"
-    },
-    {
-      "time": 3845.172516666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 123,
-      "data_name": "chr21.0.3.contam.sfq"
-    },
-    {
-      "time": 3846.152016666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 125,
-      "data_name": "chr21.0.22.contam.sfq"
+      "data_id": 114,
+      "data_item_id": 43,
+      "data_name": "chr21.0.9.contam.sfq"
     },
     {
       "time": 3846.6532899999997,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 135,
+      "data_id": 109,
       "data_name": "chr21.0.21.nocontam.bfq"
     },
     {
@@ -5251,198 +4532,99 @@
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 87,
+      "data_id": 82,
       "data_name": "chr21.0.17.sfq"
     },
     {
-      "time": 3847.7400233333337,
-      "type": "task_scheduled",
-      "task_id": 18,
-      "task_name": "filterContams_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3847.7400233333337,
-      "type": "task_started",
-      "task_id": 18,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3848.0161033333334,
-      "type": "task_completed",
-      "task_id": 1,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3848.0161033333334,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 143,
-      "data_item_id": 24,
-      "data_name": "chr21.0.0.nocontam.sfq"
-    },
-    {
-      "time": 3848.0161033333334,
-      "type": "start_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 144,
-      "data_item_id": 25,
-      "data_name": "chr21.0.0.contam.sfq"
-    },
-    {
-      "time": 3848.0993433333333,
-      "type": "task_completed",
-      "task_id": 34,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3848.0993433333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 145,
-      "data_item_id": 81,
-      "data_name": "chr21.0.9.nocontam.fq"
-    },
-    {
-      "time": 3848.9557566666667,
+      "time": 3848.8626166666677,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 124,
-      "data_name": "chr21.0.22.nocontam.sfq"
-    },
-    {
-      "time": 3848.9557566666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 146,
-      "data_item_id": 68,
-      "data_name": "chr21.0.22.nocontam.sfq"
-    },
-    {
-      "time": 3849.267386666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 122,
-      "data_name": "chr21.0.3.nocontam.sfq"
-    },
-    {
-      "time": 3849.267386666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 147,
-      "data_item_id": 30,
-      "data_name": "chr21.0.3.nocontam.sfq"
-    },
-    {
-      "time": 3849.9687100000006,
-      "type": "task_completed",
-      "task_id": 29,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3849.9687100000006,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 148,
-      "data_item_id": 76,
-      "data_name": "chr21.0.4.nocontam.fq"
-    },
-    {
-      "time": 3850.733856666667,
-      "type": "task_completed",
-      "task_id": 72,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3850.733856666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 149,
-      "data_item_id": 119,
-      "data_name": "chr21.0.23.nocontam.bfq"
-    },
-    {
-      "time": 3850.733856666667,
-      "type": "task_scheduled",
-      "task_id": 38,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3850.733856666667,
-      "type": "task_started",
-      "task_id": 38,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3857.8841700000007,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 142,
+      "data_id": 110,
       "data_name": "chr21.0.6.nocontam.bfq"
     },
     {
-      "time": 3857.8841700000007,
+      "time": 3848.8626166666677,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 150,
+      "data_id": 115,
       "data_item_id": 102,
       "data_name": "chr21.0.6.nocontam.bfq"
     },
     {
-      "time": 3858.733856666667,
-      "type": "task_completed",
-      "task_id": 38,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3858.733856666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 151,
-      "data_item_id": 85,
-      "data_name": "chr21.0.13.nocontam.fq"
-    },
-    {
-      "time": 3866.1920166666673,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 149,
-      "data_name": "chr21.0.23.nocontam.bfq"
-    },
-    {
-      "time": 3866.1920166666673,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 152,
-      "data_item_id": 119,
-      "data_name": "chr21.0.23.nocontam.bfq"
-    },
-    {
-      "time": 3874.799630000001,
+      "time": 3865.778076666668,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 150,
+      "data_id": 115,
       "data_name": "chr21.0.6.nocontam.bfq"
+    },
+    {
+      "time": 3868.9996199999996,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 105,
+      "data_name": "chr21.0.2.contam.sfq"
+    },
+    {
+      "time": 3874.31257,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 104,
+      "data_name": "chr21.0.2.nocontam.sfq"
+    },
+    {
+      "time": 3874.31257,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 116,
+      "data_item_id": 28,
+      "data_name": "chr21.0.2.nocontam.sfq"
+    },
+    {
+      "time": 3876.129883333333,
+      "type": "task_completed",
+      "task_id": 14,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 3876.129883333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 117,
+      "data_item_id": 50,
+      "data_name": "chr21.0.13.nocontam.sfq"
+    },
+    {
+      "time": 3876.129883333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 118,
+      "data_item_id": 51,
+      "data_name": "chr21.0.13.contam.sfq"
+    },
+    {
+      "time": 3878.6160199999995,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 112,
+      "data_name": "chr21.0.4.nocontam.fq"
+    },
+    {
+      "time": 3878.6160199999995,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 119,
+      "data_item_id": 76,
+      "data_name": "chr21.0.4.nocontam.fq"
     },
     {
       "time": 3881.3651433333334,
@@ -5455,7 +4637,7 @@
       "type": "start_uploading",
       "from": "compute1",
       "to": "runner",
-      "data_id": 153,
+      "data_id": 120,
       "data_item_id": 46,
       "data_name": "chr21.0.11.nocontam.sfq"
     },
@@ -5464,578 +4646,808 @@
       "type": "start_uploading",
       "from": "compute1",
       "to": "runner",
-      "data_id": 154,
+      "data_id": 121,
       "data_item_id": 47,
       "data_name": "chr21.0.11.contam.sfq"
     },
     {
-      "time": 3881.6501766666674,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 152,
-      "data_name": "chr21.0.23.nocontam.bfq"
-    },
-    {
-      "time": 3885.7881800000005,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 148,
-      "data_name": "chr21.0.4.nocontam.fq"
-    },
-    {
-      "time": 3885.7881800000005,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 155,
-      "data_item_id": 76,
-      "data_name": "chr21.0.4.nocontam.fq"
-    },
-    {
-      "time": 3886.608003333333,
+      "time": 3887.2154533333337,
       "type": "finish_uploading",
       "from": "compute2",
       "to": "runner",
-      "data_id": 132,
-      "data_name": "chr21.0.5.contam.sfq"
+      "data_id": 108,
+      "data_name": "chr21.0.0.contam.sfq"
     },
     {
-      "time": 3888.5550233333333,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 137,
-      "data_name": "chr21.0.15.contam.sfq"
-    },
-    {
-      "time": 3888.7400233333337,
-      "type": "task_completed",
-      "task_id": 18,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3888.7400233333337,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 156,
-      "data_item_id": 58,
-      "data_name": "chr21.0.17.nocontam.sfq"
-    },
-    {
-      "time": 3888.7400233333337,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 157,
-      "data_item_id": 59,
-      "data_name": "chr21.0.17.contam.sfq"
-    },
-    {
-      "time": 3890.4888933333336,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 136,
-      "data_name": "chr21.0.15.nocontam.sfq"
-    },
-    {
-      "time": 3890.4888933333336,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 158,
-      "data_item_id": 54,
-      "data_name": "chr21.0.15.nocontam.sfq"
-    },
-    {
-      "time": 3890.500013333333,
+      "time": 3887.7949833333337,
       "type": "finish_uploading",
       "from": "compute2",
       "to": "runner",
-      "data_id": 131,
-      "data_name": "chr21.0.5.nocontam.sfq"
+      "data_id": 107,
+      "data_name": "chr21.0.0.nocontam.sfq"
     },
     {
-      "time": 3890.500013333333,
+      "time": 3887.7949833333337,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute3",
-      "data_id": 159,
-      "data_item_id": 34,
-      "data_name": "chr21.0.5.nocontam.sfq"
+      "to": "compute2",
+      "data_id": 122,
+      "data_item_id": 24,
+      "data_name": "chr21.0.0.nocontam.sfq"
     },
     {
-      "time": 3890.559316666667,
+      "time": 3893.8436399999996,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 151,
-      "data_name": "chr21.0.13.nocontam.fq"
+      "data_id": 113,
+      "data_name": "chr21.0.9.nocontam.sfq"
     },
     {
-      "time": 3890.559316666667,
+      "time": 3893.8436399999996,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 160,
-      "data_item_id": 85,
-      "data_name": "chr21.0.13.nocontam.fq"
-    },
-    {
-      "time": 3890.947873333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 130,
-      "data_name": "chr21.0.19.contam.sfq"
-    },
-    {
-      "time": 3894.236193333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 129,
-      "data_name": "chr21.0.19.nocontam.sfq"
-    },
-    {
-      "time": 3894.236193333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 161,
-      "data_item_id": 62,
-      "data_name": "chr21.0.19.nocontam.sfq"
-    },
-    {
-      "time": 3895.7548233333337,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 140,
-      "data_name": "chr21.0.1.nocontam.sfq"
+      "data_id": 123,
+      "data_item_id": 42,
+      "data_name": "chr21.0.9.nocontam.sfq"
     },
     {
       "time": 3895.873443333333,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 92,
+      "to": "compute3",
+      "data_id": 85,
       "data_name": "chr21.0.20.sfq"
     },
     {
-      "time": 3895.873443333333,
+      "time": 3896.2676199999996,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 114,
+      "data_name": "chr21.0.9.contam.sfq"
+    },
+    {
+      "time": 3898.357603333334,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 111,
+      "data_name": "chr21.0.15.nocontam.sfq"
+    },
+    {
+      "time": 3898.357603333334,
       "type": "task_scheduled",
-      "task_id": 21,
+      "task_id": 40,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3898.357603333334,
+      "type": "task_started",
+      "task_id": 40,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3914.4354899999994,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 119,
+      "data_name": "chr21.0.4.nocontam.fq"
+    },
+    {
+      "time": 3914.4354899999994,
+      "type": "task_scheduled",
+      "task_id": 53,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3914.4354899999994,
+      "type": "task_started",
+      "task_id": 53,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 3915.857603333334,
+      "type": "task_completed",
+      "task_id": 40,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3915.857603333334,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 124,
+      "data_item_id": 87,
+      "data_name": "chr21.0.15.nocontam.fq"
+    },
+    {
+      "time": 3915.857603333334,
+      "type": "task_scheduled",
+      "task_id": 9,
       "task_name": "filterContams_chr21",
       "location": "compute2",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3895.873443333333,
+      "time": 3915.857603333334,
       "type": "task_started",
-      "task_id": 21,
-      "task_name": "filterContams_chr21"
-    },
-    {
-      "time": 3898.5467299999996,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 141,
-      "data_name": "chr21.0.7.nocontam.sfq"
-    },
-    {
-      "time": 3898.578383333334,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 134,
-      "data_name": "chr21.0.10.contam.sfq"
-    },
-    {
-      "time": 3900.2554133333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 145,
-      "data_name": "chr21.0.9.nocontam.fq"
-    },
-    {
-      "time": 3900.2554133333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 162,
-      "data_item_id": 81,
-      "data_name": "chr21.0.9.nocontam.fq"
-    },
-    {
-      "time": 3900.3329533333335,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 139,
-      "data_name": "chr21.0.2.contam.sfq"
-    },
-    {
-      "time": 3900.4494033333335,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 133,
-      "data_name": "chr21.0.10.nocontam.sfq"
-    },
-    {
-      "time": 3900.4494033333335,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 163,
-      "data_item_id": 44,
-      "data_name": "chr21.0.10.nocontam.sfq"
-    },
-    {
-      "time": 3904.5737166666668,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 146,
-      "data_name": "chr21.0.22.nocontam.sfq"
-    },
-    {
-      "time": 3904.5737166666668,
-      "type": "task_scheduled",
-      "task_id": 47,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3904.5737166666668,
-      "type": "task_started",
-      "task_id": 47,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3905.645903333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 138,
-      "data_name": "chr21.0.2.nocontam.sfq"
-    },
-    {
-      "time": 3905.645903333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 164,
-      "data_item_id": 28,
-      "data_name": "chr21.0.2.nocontam.sfq"
-    },
-    {
-      "time": 3907.102096666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 147,
-      "data_name": "chr21.0.3.nocontam.sfq"
-    },
-    {
-      "time": 3907.102096666667,
-      "type": "task_scheduled",
-      "task_id": 28,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3907.102096666667,
-      "type": "task_started",
-      "task_id": 28,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3907.7270933333334,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 144,
-      "data_name": "chr21.0.0.contam.sfq"
-    },
-    {
-      "time": 3908.3066233333334,
-      "type": "finish_uploading",
-      "from": "compute1",
-      "to": "runner",
-      "data_id": 143,
-      "data_name": "chr21.0.0.nocontam.sfq"
-    },
-    {
-      "time": 3908.3066233333334,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 165,
-      "data_item_id": 24,
-      "data_name": "chr21.0.0.nocontam.sfq"
-    },
-    {
-      "time": 3915.5737166666668,
-      "type": "task_completed",
-      "task_id": 47,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3915.5737166666668,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 166,
-      "data_item_id": 94,
-      "data_name": "chr21.0.22.nocontam.fq"
-    },
-    {
-      "time": 3915.5737166666668,
-      "type": "task_scheduled",
-      "task_id": 26,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3915.5737166666668,
-      "type": "task_started",
-      "task_id": 26,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3916.045823333333,
-      "type": "task_completed",
       "task_id": 9,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3916.045823333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 167,
-      "data_item_id": 40,
-      "data_name": "chr21.0.8.nocontam.sfq"
-    },
-    {
-      "time": 3916.045823333333,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 168,
-      "data_item_id": 41,
-      "data_name": "chr21.0.8.contam.sfq"
-    },
-    {
-      "time": 3921.102096666667,
-      "type": "task_completed",
-      "task_id": 28,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3921.102096666667,
-      "type": "start_uploading",
+      "time": 3922.134553333333,
+      "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 169,
-      "data_item_id": 75,
-      "data_name": "chr21.0.3.nocontam.fq"
+      "data_id": 117,
+      "data_name": "chr21.0.13.nocontam.sfq"
     },
     {
-      "time": 3921.102096666667,
-      "type": "task_scheduled",
-      "task_id": 32,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3921.102096666667,
-      "type": "task_started",
-      "task_id": 32,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3921.6076500000004,
-      "type": "finish_uploading",
+      "time": 3922.134553333333,
+      "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 155,
-      "data_name": "chr21.0.4.nocontam.fq"
+      "data_id": 125,
+      "data_item_id": 50,
+      "data_name": "chr21.0.13.nocontam.sfq"
     },
     {
-      "time": 3922.384776666667,
+      "time": 3923.102156666666,
+      "type": "task_completed",
+      "task_id": 53,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 3923.102156666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 126,
+      "data_item_id": 100,
+      "data_name": "chr21.0.4.nocontam.bfq"
+    },
+    {
+      "time": 3923.102156666666,
+      "type": "task_scheduled",
+      "task_id": 19,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3923.102156666666,
+      "type": "task_started",
+      "task_id": 19,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 3923.899593333333,
       "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 160,
-      "data_name": "chr21.0.13.nocontam.fq"
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 118,
+      "data_name": "chr21.0.13.contam.sfq"
     },
     {
-      "time": 3922.384776666667,
-      "type": "task_scheduled",
-      "task_id": 62,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3922.384776666667,
-      "type": "task_started",
-      "task_id": 62,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3924.2403833333333,
+      "time": 3936.7688233333324,
       "type": "task_completed",
-      "task_id": 26,
-      "task_name": "sol2sanger_chr21"
+      "task_id": 19,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3924.2403833333333,
+      "time": 3936.7688233333324,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 170,
-      "data_item_id": 73,
-      "data_name": "chr21.0.1.nocontam.fq"
+      "data_id": 127,
+      "data_item_id": 60,
+      "data_name": "chr21.0.18.nocontam.sfq"
     },
     {
-      "time": 3932.4354300000005,
-      "type": "task_completed",
-      "task_id": 32,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3932.4354300000005,
+      "time": 3936.7688233333324,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 171,
-      "data_item_id": 79,
-      "data_name": "chr21.0.7.nocontam.fq"
-    },
-    {
-      "time": 3936.0514433333337,
-      "type": "task_completed",
-      "task_id": 62,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 3936.0514433333337,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 172,
-      "data_item_id": 109,
-      "data_name": "chr21.0.13.nocontam.bfq"
-    },
-    {
-      "time": 3936.0514433333337,
-      "type": "task_scheduled",
-      "task_id": 53,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3936.0514433333337,
-      "type": "task_started",
-      "task_id": 53,
-      "task_name": "fastq2bfq_chr21"
+      "data_id": 128,
+      "data_item_id": 61,
+      "data_name": "chr21.0.18.contam.sfq"
     },
     {
       "time": 3939.2123433333336,
       "type": "finish_uploading",
       "from": "compute1",
       "to": "runner",
-      "data_id": 154,
+      "data_id": 121,
       "data_name": "chr21.0.11.contam.sfq"
+    },
+    {
+      "time": 3939.951306666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 126,
+      "data_name": "chr21.0.4.nocontam.bfq"
+    },
+    {
+      "time": 3939.951306666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 129,
+      "data_item_id": 100,
+      "data_name": "chr21.0.4.nocontam.bfq"
+    },
+    {
+      "time": 3941.85913,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 116,
+      "data_name": "chr21.0.2.nocontam.sfq"
     },
     {
       "time": 3942.6939733333334,
       "type": "finish_uploading",
       "from": "compute1",
       "to": "runner",
-      "data_id": 153,
+      "data_id": 120,
       "data_name": "chr21.0.11.nocontam.sfq"
     },
     {
       "time": 3942.6939733333334,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute3",
-      "data_id": 173,
+      "to": "compute1",
+      "data_id": 130,
       "data_item_id": 46,
       "data_name": "chr21.0.11.nocontam.sfq"
     },
     {
-      "time": 3944.7181100000003,
-      "type": "task_completed",
-      "task_id": 53,
-      "task_name": "fastq2bfq_chr21"
+      "time": 3943.2273899999996,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 123,
+      "data_name": "chr21.0.9.nocontam.sfq"
     },
     {
-      "time": 3944.7181100000003,
+      "time": 3943.2273899999996,
+      "type": "task_scheduled",
+      "task_id": 34,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3943.2273899999996,
+      "type": "task_started",
+      "task_id": 34,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3948.0855033333337,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 122,
+      "data_name": "chr21.0.0.nocontam.sfq"
+    },
+    {
+      "time": 3948.0855033333337,
+      "type": "task_scheduled",
+      "task_id": 25,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3948.0855033333337,
+      "type": "task_started",
+      "task_id": 25,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3953.2273899999996,
+      "type": "task_completed",
+      "task_id": 34,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3953.2273899999996,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 174,
-      "data_item_id": 100,
+      "data_id": 131,
+      "data_item_id": 81,
+      "data_name": "chr21.0.9.nocontam.fq"
+    },
+    {
+      "time": 3953.2273899999996,
+      "type": "task_scheduled",
+      "task_id": 27,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3953.2273899999996,
+      "type": "task_started",
+      "task_id": 27,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3956.800456666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 129,
       "data_name": "chr21.0.4.nocontam.bfq"
     },
     {
-      "time": 3949.357603333334,
+      "time": 3959.9216233333336,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 124,
+      "data_name": "chr21.0.15.nocontam.fq"
+    },
+    {
+      "time": 3959.9216233333336,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 132,
+      "data_item_id": 87,
+      "data_name": "chr21.0.15.nocontam.fq"
+    },
+    {
+      "time": 3964.7694833333335,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 158,
-      "data_name": "chr21.0.15.nocontam.sfq"
+      "data_id": 93,
+      "data_name": "chr21.0.14.sfq"
     },
     {
-      "time": 3950.1134633333336,
+      "time": 3965.7082333333324,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 172,
-      "data_name": "chr21.0.13.nocontam.bfq"
+      "data_id": 128,
+      "data_name": "chr21.0.18.contam.sfq"
     },
     {
-      "time": 3950.1134633333336,
+      "time": 3966.560723333333,
+      "type": "task_completed",
+      "task_id": 27,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3966.560723333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 133,
+      "data_item_id": 74,
+      "data_name": "chr21.0.2.nocontam.fq"
+    },
+    {
+      "time": 3967.6345833333326,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 127,
+      "data_name": "chr21.0.18.nocontam.sfq"
+    },
+    {
+      "time": 3967.6345833333326,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 175,
+      "data_id": 134,
+      "data_item_id": 60,
+      "data_name": "chr21.0.18.nocontam.sfq"
+    },
+    {
+      "time": 3968.1392233333327,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 125,
+      "data_name": "chr21.0.13.nocontam.sfq"
+    },
+    {
+      "time": 3968.1392233333327,
+      "type": "task_scheduled",
+      "task_id": 38,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3968.1392233333327,
+      "type": "task_started",
+      "task_id": 38,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3976.1392233333327,
+      "type": "task_completed",
+      "task_id": 38,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3976.1392233333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 135,
+      "data_item_id": 85,
+      "data_name": "chr21.0.13.nocontam.fq"
+    },
+    {
+      "time": 3976.1392233333327,
+      "type": "task_scheduled",
+      "task_id": 8,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3976.1392233333327,
+      "type": "task_started",
+      "task_id": 8,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 3976.5855033333337,
+      "type": "task_completed",
+      "task_id": 25,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 3976.5855033333337,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 136,
+      "data_item_id": 72,
+      "data_name": "chr21.0.0.nocontam.fq"
+    },
+    {
+      "time": 3998.5003433333327,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 134,
+      "data_name": "chr21.0.18.nocontam.sfq"
+    },
+    {
+      "time": 3998.5003433333327,
+      "type": "task_scheduled",
+      "task_id": 43,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 3998.5003433333327,
+      "type": "task_started",
+      "task_id": 43,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4002.833676666666,
+      "type": "task_completed",
+      "task_id": 43,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4002.833676666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 137,
+      "data_item_id": 90,
+      "data_name": "chr21.0.18.nocontam.fq"
+    },
+    {
+      "time": 4003.9856433333334,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 132,
+      "data_name": "chr21.0.15.nocontam.fq"
+    },
+    {
+      "time": 4004.0228033333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 130,
+      "data_name": "chr21.0.11.nocontam.sfq"
+    },
+    {
+      "time": 4004.0228033333333,
+      "type": "task_scheduled",
+      "task_id": 36,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute1",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4004.0228033333333,
+      "type": "task_started",
+      "task_id": 36,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4005.3834599999996,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 131,
+      "data_name": "chr21.0.9.nocontam.fq"
+    },
+    {
+      "time": 4005.3834599999996,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 138,
+      "data_item_id": 81,
+      "data_name": "chr21.0.9.nocontam.fq"
+    },
+    {
+      "time": 4007.9646833333327,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 135,
+      "data_name": "chr21.0.13.nocontam.fq"
+    },
+    {
+      "time": 4007.9646833333327,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 139,
+      "data_item_id": 85,
+      "data_name": "chr21.0.13.nocontam.fq"
+    },
+    {
+      "time": 4010.857603333334,
+      "type": "task_completed",
+      "task_id": 9,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4010.857603333334,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 140,
+      "data_item_id": 40,
+      "data_name": "chr21.0.8.nocontam.sfq"
+    },
+    {
+      "time": 4010.857603333334,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 141,
+      "data_item_id": 41,
+      "data_name": "chr21.0.8.contam.sfq"
+    },
+    {
+      "time": 4011.038013333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 133,
+      "data_name": "chr21.0.2.nocontam.fq"
+    },
+    {
+      "time": 4011.038013333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 142,
+      "data_item_id": 74,
+      "data_name": "chr21.0.2.nocontam.fq"
+    },
+    {
+      "time": 4021.805889999999,
+      "type": "task_completed",
+      "task_id": 8,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4021.805889999999,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 143,
+      "data_item_id": 38,
+      "data_name": "chr21.0.7.nocontam.sfq"
+    },
+    {
+      "time": 4021.805889999999,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 144,
+      "data_item_id": 39,
+      "data_name": "chr21.0.7.contam.sfq"
+    },
+    {
+      "time": 4021.805889999999,
+      "type": "task_scheduled",
+      "task_id": 20,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4021.805889999999,
+      "type": "task_started",
+      "task_id": 20,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4029.3255733333335,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 136,
+      "data_name": "chr21.0.0.nocontam.fq"
+    },
+    {
+      "time": 4029.3255733333335,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 145,
+      "data_item_id": 72,
+      "data_name": "chr21.0.0.nocontam.fq"
+    },
+    {
+      "time": 4030.464166666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 137,
+      "data_name": "chr21.0.18.nocontam.fq"
+    },
+    {
+      "time": 4030.464166666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 146,
+      "data_item_id": 90,
+      "data_name": "chr21.0.18.nocontam.fq"
+    },
+    {
+      "time": 4039.7901433333327,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 139,
+      "data_name": "chr21.0.13.nocontam.fq"
+    },
+    {
+      "time": 4039.7901433333327,
+      "type": "task_scheduled",
+      "task_id": 62,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4039.7901433333327,
+      "type": "task_started",
+      "task_id": 62,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4040.0228033333333,
+      "type": "task_completed",
+      "task_id": 36,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4040.0228033333333,
+      "type": "start_uploading",
+      "from": "compute1",
+      "to": "runner",
+      "data_id": 147,
+      "data_item_id": 83,
+      "data_name": "chr21.0.11.nocontam.fq"
+    },
+    {
+      "time": 4053.456809999999,
+      "type": "task_completed",
+      "task_id": 62,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4053.456809999999,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 148,
       "data_item_id": 109,
       "data_name": "chr21.0.13.nocontam.bfq"
     },
     {
-      "time": 3952.4114833333333,
+      "time": 4053.456809999999,
+      "type": "task_scheduled",
+      "task_id": 4,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4053.456809999999,
+      "type": "task_started",
+      "task_id": 4,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4055.5153033333327,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 162,
+      "data_id": 142,
+      "data_name": "chr21.0.2.nocontam.fq"
+    },
+    {
+      "time": 4055.5153033333327,
+      "type": "task_scheduled",
+      "task_id": 51,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4055.5153033333327,
+      "type": "task_started",
+      "task_id": 51,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4057.5395299999996,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 138,
       "data_name": "chr21.0.9.nocontam.fq"
     },
     {
-      "time": 3952.4114833333333,
+      "time": 4057.5395299999996,
       "type": "task_scheduled",
       "task_id": 58,
       "task_name": "fastq2bfq_chr21",
@@ -6044,221 +5456,793 @@
       "memory": 0
     },
     {
-      "time": 3952.4114833333333,
+      "time": 4057.5395299999996,
       "type": "task_started",
       "task_id": 58,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3959.9542033333328,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 159,
-      "data_name": "chr21.0.5.nocontam.sfq"
+      "time": 4057.805889999999,
+      "type": "task_completed",
+      "task_id": 20,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3961.5672600000003,
-      "type": "finish_uploading",
+      "time": 4057.805889999999,
+      "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 174,
-      "data_name": "chr21.0.4.nocontam.bfq"
-    },
-    {
-      "time": 3961.5672600000003,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 176,
-      "data_item_id": 100,
-      "data_name": "chr21.0.4.nocontam.bfq"
-    },
-    {
-      "time": 3964.1754833333334,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 175,
-      "data_name": "chr21.0.13.nocontam.bfq"
-    },
-    {
-      "time": 3964.7694833333335,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 105,
-      "data_name": "chr21.0.14.sfq"
-    },
-    {
-      "time": 3967.596143333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 161,
+      "data_id": 149,
+      "data_item_id": 62,
       "data_name": "chr21.0.19.nocontam.sfq"
     },
     {
-      "time": 3967.596143333333,
+      "time": 4057.805889999999,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 150,
+      "data_item_id": 63,
+      "data_name": "chr21.0.19.contam.sfq"
+    },
+    {
+      "time": 4058.094656666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 146,
+      "data_name": "chr21.0.18.nocontam.fq"
+    },
+    {
+      "time": 4067.518829999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 148,
+      "data_name": "chr21.0.13.nocontam.bfq"
+    },
+    {
+      "time": 4067.518829999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 151,
+      "data_item_id": 109,
+      "data_name": "chr21.0.13.nocontam.bfq"
+    },
+    {
+      "time": 4069.5153033333327,
+      "type": "task_completed",
+      "task_id": 51,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4069.5153033333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 152,
+      "data_item_id": 98,
+      "data_name": "chr21.0.2.nocontam.bfq"
+    },
+    {
+      "time": 4069.5153033333327,
       "type": "task_scheduled",
-      "task_id": 44,
-      "task_name": "sol2sanger_chr21",
+      "task_id": 24,
+      "task_name": "filterContams_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3967.596143333333,
+      "time": 4069.5153033333327,
       "type": "task_started",
-      "task_id": 44,
-      "task_name": "sol2sanger_chr21"
+      "task_id": 24,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3968.5971433333334,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 165,
-      "data_name": "chr21.0.0.nocontam.sfq"
-    },
-    {
-      "time": 3970.2828833333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 163,
-      "data_name": "chr21.0.10.nocontam.sfq"
-    },
-    {
-      "time": 3970.3882866666668,
+      "time": 4080.5467599999993,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 166,
-      "data_name": "chr21.0.22.nocontam.fq"
+      "data_id": 144,
+      "data_name": "chr21.0.7.contam.sfq"
     },
     {
-      "time": 3970.3882866666668,
+      "time": 4081.152199999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 143,
+      "data_name": "chr21.0.7.nocontam.sfq"
+    },
+    {
+      "time": 4081.152199999999,
       "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 153,
+      "data_item_id": 38,
+      "data_name": "chr21.0.7.nocontam.sfq"
+    },
+    {
+      "time": 4081.580849999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 151,
+      "data_name": "chr21.0.13.nocontam.bfq"
+    },
+    {
+      "time": 4081.604513333333,
+      "type": "finish_uploading",
+      "from": "compute1",
+      "to": "runner",
+      "data_id": 147,
+      "data_name": "chr21.0.11.nocontam.fq"
+    },
+    {
+      "time": 4081.604513333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 154,
+      "data_item_id": 83,
+      "data_name": "chr21.0.11.nocontam.fq"
+    },
+    {
+      "time": 4082.0656433333334,
+      "type": "finish_uploading",
       "from": "runner",
       "to": "compute2",
-      "data_id": 177,
-      "data_item_id": 94,
-      "data_name": "chr21.0.22.nocontam.fq"
+      "data_id": 145,
+      "data_name": "chr21.0.0.nocontam.fq"
     },
     {
-      "time": 3973.192463333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 164,
-      "data_name": "chr21.0.2.nocontam.sfq"
-    },
-    {
-      "time": 3973.192463333333,
+      "time": 4082.0656433333334,
       "type": "task_scheduled",
-      "task_id": 27,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
+      "task_id": 49,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute2",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3973.192463333333,
+      "time": 4082.0656433333334,
       "type": "task_started",
-      "task_id": 27,
-      "task_name": "sol2sanger_chr21"
+      "task_id": 49,
+      "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3974.806103333334,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 156,
-      "data_name": "chr21.0.17.nocontam.sfq"
-    },
-    {
-      "time": 3974.806103333334,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 178,
-      "data_item_id": 58,
-      "data_name": "chr21.0.17.nocontam.sfq"
-    },
-    {
-      "time": 3975.5941733333334,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 170,
-      "data_name": "chr21.0.1.nocontam.fq"
-    },
-    {
-      "time": 3975.5941733333334,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 179,
-      "data_item_id": 73,
-      "data_name": "chr21.0.1.nocontam.fq"
-    },
-    {
-      "time": 3977.537413333334,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 157,
-      "data_name": "chr21.0.17.contam.sfq"
-    },
-    {
-      "time": 3978.4164100000003,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 176,
-      "data_name": "chr21.0.4.nocontam.bfq"
-    },
-    {
-      "time": 3979.07815,
+      "time": 4084.206196666666,
       "type": "task_completed",
       "task_id": 58,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 3979.07815,
+      "time": 4084.206196666666,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 180,
+      "data_id": 155,
       "data_item_id": 105,
       "data_name": "chr21.0.9.nocontam.bfq"
     },
     {
-      "time": 3979.07815,
+      "time": 4084.206196666666,
       "type": "task_scheduled",
-      "task_id": 40,
+      "task_id": 67,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4084.206196666666,
+      "type": "task_started",
+      "task_id": 67,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4084.7901433333327,
+      "type": "task_completed",
+      "task_id": 4,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4084.7901433333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 156,
+      "data_item_id": 30,
+      "data_name": "chr21.0.3.nocontam.sfq"
+    },
+    {
+      "time": 4084.7901433333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 157,
+      "data_item_id": 31,
+      "data_name": "chr21.0.3.contam.sfq"
+    },
+    {
+      "time": 4084.7901433333327,
+      "type": "task_scheduled",
+      "task_id": 2,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4084.7901433333327,
+      "type": "task_started",
+      "task_id": 2,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4087.821513333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 152,
+      "data_name": "chr21.0.2.nocontam.bfq"
+    },
+    {
+      "time": 4087.821513333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 158,
+      "data_item_id": 98,
+      "data_name": "chr21.0.2.nocontam.bfq"
+    },
+    {
+      "time": 4088.5153033333327,
+      "type": "task_completed",
+      "task_id": 24,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4088.5153033333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 159,
+      "data_item_id": 70,
+      "data_name": "chr21.0.23.nocontam.sfq"
+    },
+    {
+      "time": 4088.5153033333327,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 160,
+      "data_item_id": 71,
+      "data_name": "chr21.0.23.contam.sfq"
+    },
+    {
+      "time": 4089.4846433333337,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 141,
+      "data_name": "chr21.0.8.contam.sfq"
+    },
+    {
+      "time": 4089.852753333334,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 140,
+      "data_name": "chr21.0.8.nocontam.sfq"
+    },
+    {
+      "time": 4089.852753333334,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 161,
+      "data_item_id": 40,
+      "data_name": "chr21.0.8.nocontam.sfq"
+    },
+    {
+      "time": 4093.5395299999996,
+      "type": "task_completed",
+      "task_id": 67,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4093.5395299999996,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 162,
+      "data_item_id": 114,
+      "data_name": "chr21.0.18.nocontam.bfq"
+    },
+    {
+      "time": 4104.095746666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 155,
+      "data_name": "chr21.0.9.nocontam.bfq"
+    },
+    {
+      "time": 4104.095746666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 163,
+      "data_item_id": 105,
+      "data_name": "chr21.0.9.nocontam.bfq"
+    },
+    {
+      "time": 4106.127723333332,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 158,
+      "data_name": "chr21.0.2.nocontam.bfq"
+    },
+    {
+      "time": 4107.71575,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 162,
+      "data_name": "chr21.0.18.nocontam.bfq"
+    },
+    {
+      "time": 4107.71575,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 164,
+      "data_item_id": 114,
+      "data_name": "chr21.0.18.nocontam.bfq"
+    },
+    {
+      "time": 4121.891970000001,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 164,
+      "data_name": "chr21.0.18.nocontam.bfq"
+    },
+    {
+      "time": 4123.186223333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 154,
+      "data_name": "chr21.0.11.nocontam.fq"
+    },
+    {
+      "time": 4123.186223333333,
+      "type": "task_scheduled",
+      "task_id": 60,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute1",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4123.186223333333,
+      "type": "task_started",
+      "task_id": 60,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4123.985296666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 163,
+      "data_name": "chr21.0.9.nocontam.bfq"
+    },
+    {
+      "time": 4126.065643333333,
+      "type": "task_completed",
+      "task_id": 49,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4126.065643333333,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 165,
+      "data_item_id": 96,
+      "data_name": "chr21.0.0.nocontam.bfq"
+    },
+    {
+      "time": 4126.065643333333,
+      "type": "task_scheduled",
+      "task_id": 64,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4126.065643333333,
+      "type": "task_started",
+      "task_id": 64,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4127.473263333332,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 160,
+      "data_name": "chr21.0.23.contam.sfq"
+    },
+    {
+      "time": 4127.877519999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 150,
+      "data_name": "chr21.0.19.contam.sfq"
+    },
+    {
+      "time": 4128.609633333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 159,
+      "data_name": "chr21.0.23.nocontam.sfq"
+    },
+    {
+      "time": 4128.609633333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 166,
+      "data_item_id": 70,
+      "data_name": "chr21.0.23.nocontam.sfq"
+    },
+    {
+      "time": 4131.165839999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 149,
+      "data_name": "chr21.0.19.nocontam.sfq"
+    },
+    {
+      "time": 4131.165839999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 167,
+      "data_item_id": 62,
+      "data_name": "chr21.0.19.nocontam.sfq"
+    },
+    {
+      "time": 4131.790143333333,
+      "type": "task_completed",
+      "task_id": 2,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4131.790143333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 168,
+      "data_item_id": 26,
+      "data_name": "chr21.0.1.nocontam.sfq"
+    },
+    {
+      "time": 4131.790143333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 169,
+      "data_item_id": 27,
+      "data_name": "chr21.0.1.contam.sfq"
+    },
+    {
+      "time": 4131.790143333333,
+      "type": "task_scheduled",
+      "task_id": 23,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4131.790143333333,
+      "type": "task_started",
+      "task_id": 23,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4138.529983333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 157,
+      "data_name": "chr21.0.3.contam.sfq"
+    },
+    {
+      "time": 4140.498509999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 153,
+      "data_name": "chr21.0.7.nocontam.sfq"
+    },
+    {
+      "time": 4140.498509999999,
+      "type": "task_scheduled",
+      "task_id": 32,
       "task_name": "sol2sanger_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3979.07815,
+      "time": 4140.498509999999,
       "type": "task_started",
-      "task_id": 40,
+      "task_id": 32,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3979.2640200000005,
+      "time": 4142.624853333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
+      "data_id": 156,
+      "data_name": "chr21.0.3.nocontam.sfq"
+    },
+    {
+      "time": 4142.624853333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 170,
+      "data_item_id": 30,
+      "data_name": "chr21.0.3.nocontam.sfq"
+    },
+    {
+      "time": 4146.331603333333,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 165,
+      "data_name": "chr21.0.0.nocontam.bfq"
+    },
+    {
+      "time": 4146.331603333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
       "data_id": 171,
+      "data_item_id": 96,
+      "data_name": "chr21.0.0.nocontam.bfq"
+    },
+    {
+      "time": 4147.565643333333,
+      "type": "task_completed",
+      "task_id": 64,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4147.565643333333,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 172,
+      "data_item_id": 111,
+      "data_name": "chr21.0.15.nocontam.bfq"
+    },
+    {
+      "time": 4151.8318433333325,
+      "type": "task_completed",
+      "task_id": 32,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4151.8318433333325,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 173,
+      "data_item_id": 79,
       "data_name": "chr21.0.7.nocontam.fq"
     },
     {
-      "time": 3979.2640200000005,
+      "time": 4163.45681,
+      "type": "task_completed",
+      "task_id": 23,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4163.45681,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 174,
+      "data_item_id": 68,
+      "data_name": "chr21.0.22.nocontam.sfq"
+    },
+    {
+      "time": 4163.45681,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 175,
+      "data_item_id": 69,
+      "data_name": "chr21.0.22.contam.sfq"
+    },
+    {
+      "time": 4163.45681,
+      "type": "task_scheduled",
+      "task_id": 6,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4163.45681,
+      "type": "task_started",
+      "task_id": 6,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4164.186223333333,
+      "type": "task_completed",
+      "task_id": 60,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4164.186223333333,
+      "type": "start_uploading",
+      "from": "compute1",
+      "to": "runner",
+      "data_id": 176,
+      "data_item_id": 107,
+      "data_name": "chr21.0.11.nocontam.bfq"
+    },
+    {
+      "time": 4165.871703333333,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 172,
+      "data_name": "chr21.0.15.nocontam.bfq"
+    },
+    {
+      "time": 4165.871703333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 177,
+      "data_item_id": 111,
+      "data_name": "chr21.0.15.nocontam.bfq"
+    },
+    {
+      "time": 4166.597563333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 171,
+      "data_name": "chr21.0.0.nocontam.bfq"
+    },
+    {
+      "time": 4168.7039633333325,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 166,
+      "data_name": "chr21.0.23.nocontam.sfq"
+    },
+    {
+      "time": 4168.847903333334,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 161,
+      "data_name": "chr21.0.8.nocontam.sfq"
+    },
+    {
+      "time": 4168.847903333334,
+      "type": "task_scheduled",
+      "task_id": 33,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4168.847903333334,
+      "type": "task_started",
+      "task_id": 33,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4181.440543333333,
+      "type": "finish_uploading",
+      "from": "compute1",
+      "to": "runner",
+      "data_id": 176,
+      "data_name": "chr21.0.11.nocontam.bfq"
+    },
+    {
+      "time": 4181.440543333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 178,
+      "data_item_id": 107,
+      "data_name": "chr21.0.11.nocontam.bfq"
+    },
+    {
+      "time": 4184.177763333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 177,
+      "data_name": "chr21.0.15.nocontam.bfq"
+    },
+    {
+      "time": 4188.769333333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 168,
+      "data_name": "chr21.0.1.nocontam.sfq"
+    },
+    {
+      "time": 4188.769333333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 179,
+      "data_item_id": 26,
+      "data_name": "chr21.0.1.nocontam.sfq"
+    },
+    {
+      "time": 4191.847903333334,
+      "type": "task_completed",
+      "task_id": 33,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4191.847903333334,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 180,
+      "data_item_id": 80,
+      "data_name": "chr21.0.8.nocontam.fq"
+    },
+    {
+      "time": 4193.202633333332,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 169,
+      "data_name": "chr21.0.1.contam.sfq"
+    },
+    {
+      "time": 4198.660433333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 173,
+      "data_name": "chr21.0.7.nocontam.fq"
+    },
+    {
+      "time": 4198.660433333333,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
@@ -6267,69 +6251,194 @@
       "data_name": "chr21.0.7.nocontam.fq"
     },
     {
-      "time": 3981.3566766666668,
+      "time": 4198.694863333333,
       "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 169,
-      "data_name": "chr21.0.3.nocontam.fq"
-    },
-    {
-      "time": 3981.3566766666668,
-      "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 182,
-      "data_item_id": 75,
-      "data_name": "chr21.0.3.nocontam.fq"
+      "data_id": 178,
+      "data_name": "chr21.0.11.nocontam.bfq"
     },
     {
-      "time": 3986.5257966666663,
+      "time": 4198.790143333333,
       "type": "task_completed",
-      "task_id": 27,
-      "task_name": "sol2sanger_chr21"
+      "task_id": 6,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 3986.5257966666663,
+      "time": 4198.790143333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 182,
+      "data_item_id": 34,
+      "data_name": "chr21.0.5.nocontam.sfq"
+    },
+    {
+      "time": 4198.790143333333,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 183,
-      "data_item_id": 74,
-      "data_name": "chr21.0.2.nocontam.fq"
+      "data_item_id": 35,
+      "data_name": "chr21.0.5.contam.sfq"
     },
     {
-      "time": 3986.5257966666663,
+      "time": 4198.790143333333,
       "type": "task_scheduled",
-      "task_id": 30,
+      "task_id": 18,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4198.790143333333,
+      "type": "task_started",
+      "task_id": 18,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4200.459563333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 170,
+      "data_name": "chr21.0.3.nocontam.sfq"
+    },
+    {
+      "time": 4200.459563333333,
+      "type": "task_scheduled",
+      "task_id": 28,
       "task_name": "sol2sanger_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 3986.5257966666663,
+      "time": 4200.459563333333,
       "type": "task_started",
-      "task_id": 30,
+      "task_id": 28,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3990.596143333333,
+      "time": 4204.525789999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 167,
+      "data_name": "chr21.0.19.nocontam.sfq"
+    },
+    {
+      "time": 4204.525789999999,
+      "type": "task_scheduled",
+      "task_id": 44,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4204.525789999999,
+      "type": "task_started",
+      "task_id": 44,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4214.459563333333,
+      "type": "task_completed",
+      "task_id": 28,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4214.459563333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 184,
+      "data_item_id": 75,
+      "data_name": "chr21.0.3.nocontam.fq"
+    },
+    {
+      "time": 4216.27103,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 175,
+      "data_name": "chr21.0.22.contam.sfq"
+    },
+    {
+      "time": 4219.074769999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 174,
+      "data_name": "chr21.0.22.nocontam.sfq"
+    },
+    {
+      "time": 4219.074769999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 185,
+      "data_item_id": 68,
+      "data_name": "chr21.0.22.nocontam.sfq"
+    },
+    {
+      "time": 4227.525789999999,
       "type": "task_completed",
       "task_id": 44,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 3990.596143333333,
+      "time": 4227.525789999999,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 184,
+      "data_id": 186,
       "data_item_id": 91,
       "data_name": "chr21.0.19.nocontam.fq"
     },
     {
-      "time": 3990.596143333333,
+      "time": 4227.525789999999,
+      "type": "task_scheduled",
+      "task_id": 21,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4227.525789999999,
+      "type": "task_started",
+      "task_id": 21,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4239.790143333333,
+      "type": "task_completed",
+      "task_id": 18,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4239.790143333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 187,
+      "data_item_id": 58,
+      "data_name": "chr21.0.17.nocontam.sfq"
+    },
+    {
+      "time": 4239.790143333333,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 188,
+      "data_item_id": 59,
+      "data_name": "chr21.0.17.contam.sfq"
+    },
+    {
+      "time": 4239.790143333333,
       "type": "task_scheduled",
       "task_id": 15,
       "task_name": "filterContams_chr21",
@@ -6338,154 +6447,13 @@
       "memory": 0
     },
     {
-      "time": 3990.596143333333,
+      "time": 4239.790143333333,
       "type": "task_started",
       "task_id": 15,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 3990.7448166666663,
-      "type": "task_completed",
-      "task_id": 40,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3990.7448166666663,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 185,
-      "data_item_id": 87,
-      "data_name": "chr21.0.15.nocontam.fq"
-    },
-    {
-      "time": 3990.7448166666663,
-      "type": "task_scheduled",
-      "task_id": 35,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 3990.7448166666663,
-      "type": "task_started",
-      "task_id": 35,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3994.6728633333328,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 168,
-      "data_name": "chr21.0.8.contam.sfq"
-    },
-    {
-      "time": 3995.040973333333,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 167,
-      "data_name": "chr21.0.8.nocontam.sfq"
-    },
-    {
-      "time": 3995.040973333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 186,
-      "data_item_id": 40,
-      "data_name": "chr21.0.8.nocontam.sfq"
-    },
-    {
-      "time": 3998.9676999999997,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 180,
-      "data_name": "chr21.0.9.nocontam.bfq"
-    },
-    {
-      "time": 3998.9676999999997,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 187,
-      "data_item_id": 105,
-      "data_name": "chr21.0.9.nocontam.bfq"
-    },
-    {
-      "time": 3999.192463333333,
-      "type": "task_completed",
-      "task_id": 30,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 3999.192463333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 188,
-      "data_item_id": 77,
-      "data_name": "chr21.0.5.nocontam.fq"
-    },
-    {
-      "time": 4004.0228033333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 173,
-      "data_name": "chr21.0.11.nocontam.sfq"
-    },
-    {
-      "time": 4005.07815,
-      "type": "task_completed",
-      "task_id": 35,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4005.07815,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 189,
-      "data_item_id": 82,
-      "data_name": "chr21.0.10.nocontam.fq"
-    },
-    {
-      "time": 4018.8572499999996,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 187,
-      "data_name": "chr21.0.9.nocontam.bfq"
-    },
-    {
-      "time": 4025.202856666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 177,
-      "data_name": "chr21.0.22.nocontam.fq"
-    },
-    {
-      "time": 4025.202856666667,
-      "type": "task_scheduled",
-      "task_id": 71,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute2",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4025.202856666667,
-      "type": "task_started",
-      "task_id": 71,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4026.0926100000006,
+      "time": 4245.489023333333,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
@@ -6493,7 +6461,7 @@
       "data_name": "chr21.0.7.nocontam.fq"
     },
     {
-      "time": 4026.0926100000006,
+      "time": 4245.489023333333,
       "type": "task_scheduled",
       "task_id": 56,
       "task_name": "fastq2bfq_chr21",
@@ -6502,1116 +6470,990 @@
       "memory": 0
     },
     {
-      "time": 4026.0926100000006,
+      "time": 4245.489023333333,
       "type": "task_started",
       "task_id": 56,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4026.9479633333335,
+      "time": 4245.748523333333,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
       "data_id": 179,
-      "data_name": "chr21.0.1.nocontam.fq"
+      "data_name": "chr21.0.1.nocontam.sfq"
     },
     {
-      "time": 4026.9479633333335,
-      "type": "task_scheduled",
-      "task_id": 50,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4026.9479633333335,
-      "type": "task_started",
-      "task_id": 50,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4031.003086666666,
+      "time": 4264.352323333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 183,
-      "data_name": "chr21.0.2.nocontam.fq"
+      "data_name": "chr21.0.5.contam.sfq"
     },
     {
-      "time": 4031.003086666666,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 190,
-      "data_item_id": 74,
-      "data_name": "chr21.0.2.nocontam.fq"
-    },
-    {
-      "time": 4034.808836666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 185,
-      "data_name": "chr21.0.15.nocontam.fq"
-    },
-    {
-      "time": 4034.808836666666,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 191,
-      "data_item_id": 87,
-      "data_name": "chr21.0.15.nocontam.fq"
-    },
-    {
-      "time": 4041.6112566666666,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 182,
-      "data_name": "chr21.0.3.nocontam.fq"
-    },
-    {
-      "time": 4041.6112566666666,
-      "type": "task_scheduled",
-      "task_id": 52,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4041.6112566666666,
-      "type": "task_started",
-      "task_id": 52,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4043.367613333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 188,
-      "data_name": "chr21.0.5.nocontam.fq"
-    },
-    {
-      "time": 4043.367613333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 192,
-      "data_item_id": 77,
-      "data_name": "chr21.0.5.nocontam.fq"
-    },
-    {
-      "time": 4045.2361533333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 184,
-      "data_name": "chr21.0.19.nocontam.fq"
-    },
-    {
-      "time": 4045.2361533333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 193,
-      "data_item_id": 91,
-      "data_name": "chr21.0.19.nocontam.fq"
-    },
-    {
-      "time": 4045.281296666667,
-      "type": "task_completed",
-      "task_id": 50,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4045.281296666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 194,
-      "data_item_id": 97,
-      "data_name": "chr21.0.1.nocontam.bfq"
-    },
-    {
-      "time": 4045.281296666667,
-      "type": "task_scheduled",
-      "task_id": 25,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4045.281296666667,
-      "type": "task_started",
-      "task_id": 25,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4046.0926100000006,
+      "time": 4265.489023333333,
       "type": "task_completed",
       "task_id": 56,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4046.0926100000006,
+      "time": 4265.489023333333,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 195,
+      "data_id": 189,
       "data_item_id": 103,
       "data_name": "chr21.0.7.nocontam.bfq"
     },
     {
-      "time": 4046.0926100000006,
+      "time": 4265.489023333333,
       "type": "task_scheduled",
-      "task_id": 36,
+      "task_id": 48,
       "task_name": "sol2sanger_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 4046.0926100000006,
+      "time": 4265.489023333333,
       "type": "task_started",
-      "task_id": 36,
+      "task_id": 48,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 4058.0926100000006,
+      "time": 4268.109493333334,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 180,
+      "data_name": "chr21.0.8.nocontam.fq"
+    },
+    {
+      "time": 4268.109493333334,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 190,
+      "data_item_id": 80,
+      "data_name": "chr21.0.8.nocontam.fq"
+    },
+    {
+      "time": 4268.244333333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 182,
+      "data_name": "chr21.0.5.nocontam.sfq"
+    },
+    {
+      "time": 4268.244333333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 191,
+      "data_item_id": 34,
+      "data_name": "chr21.0.5.nocontam.sfq"
+    },
+    {
+      "time": 4272.822356666666,
       "type": "task_completed",
-      "task_id": 36,
+      "task_id": 48,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 4058.0926100000006,
+      "time": 4272.822356666666,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 196,
-      "data_item_id": 83,
-      "data_name": "chr21.0.11.nocontam.fq"
+      "data_id": 192,
+      "data_item_id": 95,
+      "data_name": "chr21.0.23.nocontam.fq"
     },
     {
-      "time": 4058.873443333333,
+      "time": 4272.822356666666,
+      "type": "task_scheduled",
+      "task_id": 26,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4272.822356666666,
+      "type": "task_started",
+      "task_id": 26,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4274.692729999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 185,
+      "data_name": "chr21.0.22.nocontam.sfq"
+    },
+    {
+      "time": 4274.714143333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 184,
+      "data_name": "chr21.0.3.nocontam.fq"
+    },
+    {
+      "time": 4274.714143333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 193,
+      "data_item_id": 75,
+      "data_name": "chr21.0.3.nocontam.fq"
+    },
+    {
+      "time": 4281.489023333333,
       "type": "task_completed",
-      "task_id": 21,
-      "task_name": "filterContams_chr21"
+      "task_id": 26,
+      "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 4058.873443333333,
+      "time": 4281.489023333333,
       "type": "start_uploading",
-      "from": "compute2",
+      "from": "compute3",
       "to": "runner",
-      "data_id": 197,
-      "data_item_id": 64,
-      "data_name": "chr21.0.20.nocontam.sfq"
+      "data_id": 194,
+      "data_item_id": 73,
+      "data_name": "chr21.0.1.nocontam.fq"
     },
     {
-      "time": 4058.873443333333,
+      "time": 4282.165799999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 186,
+      "data_name": "chr21.0.19.nocontam.fq"
+    },
+    {
+      "time": 4282.165799999999,
       "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 198,
-      "data_item_id": 65,
-      "data_name": "chr21.0.20.contam.sfq"
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 195,
+      "data_item_id": 91,
+      "data_name": "chr21.0.19.nocontam.fq"
     },
     {
-      "time": 4059.53556,
+      "time": 4284.637643333333,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 189,
-      "data_name": "chr21.0.10.nocontam.fq"
-    },
-    {
-      "time": 4059.53556,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 199,
-      "data_item_id": 82,
-      "data_name": "chr21.0.10.nocontam.fq"
-    },
-    {
-      "time": 4060.872183333334,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 178,
-      "data_name": "chr21.0.17.nocontam.sfq"
-    },
-    {
-      "time": 4062.202856666667,
-      "type": "task_completed",
-      "task_id": 71,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4062.202856666667,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 200,
-      "data_item_id": 118,
-      "data_name": "chr21.0.22.nocontam.bfq"
-    },
-    {
-      "time": 4064.281296666667,
-      "type": "task_completed",
-      "task_id": 25,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4064.281296666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 201,
-      "data_item_id": 72,
-      "data_name": "chr21.0.0.nocontam.fq"
-    },
-    {
-      "time": 4065.2412300000005,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 195,
       "data_name": "chr21.0.7.nocontam.bfq"
     },
     {
-      "time": 4065.2412300000005,
+      "time": 4284.637643333333,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 202,
+      "data_id": 196,
       "data_item_id": 103,
       "data_name": "chr21.0.7.nocontam.bfq"
     },
     {
-      "time": 4065.587206666667,
+      "time": 4303.7862633333325,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 196,
+      "data_name": "chr21.0.7.nocontam.bfq"
+    },
+    {
+      "time": 4305.214656666666,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 194,
-      "data_name": "chr21.0.1.nocontam.bfq"
+      "data_id": 192,
+      "data_name": "chr21.0.23.nocontam.fq"
     },
     {
-      "time": 4065.587206666667,
+      "time": 4305.214656666666,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute1",
-      "data_id": 203,
-      "data_item_id": 97,
-      "data_name": "chr21.0.1.nocontam.bfq"
+      "to": "compute3",
+      "data_id": 197,
+      "data_item_id": 95,
+      "data_name": "chr21.0.23.nocontam.fq"
     },
     {
-      "time": 4069.2628099999997,
+      "time": 4318.45681,
       "type": "task_completed",
       "task_id": 15,
       "task_name": "filterContams_chr21"
     },
     {
-      "time": 4069.2628099999997,
+      "time": 4318.45681,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 204,
+      "data_id": 198,
       "data_item_id": 52,
       "data_name": "chr21.0.14.nocontam.sfq"
     },
     {
-      "time": 4069.2628099999997,
+      "time": 4318.45681,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 205,
+      "data_id": 199,
       "data_item_id": 53,
       "data_name": "chr21.0.14.contam.sfq"
     },
     {
-      "time": 4073.6112566666666,
+      "time": 4325.856223333332,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 187,
+      "data_name": "chr21.0.17.nocontam.sfq"
+    },
+    {
+      "time": 4325.856223333332,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 200,
+      "data_item_id": 58,
+      "data_name": "chr21.0.17.nocontam.sfq"
+    },
+    {
+      "time": 4328.587533333332,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 188,
+      "data_name": "chr21.0.17.contam.sfq"
+    },
+    {
+      "time": 4332.842813333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 194,
+      "data_name": "chr21.0.1.nocontam.fq"
+    },
+    {
+      "time": 4332.842813333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 201,
+      "data_item_id": 73,
+      "data_name": "chr21.0.1.nocontam.fq"
+    },
+    {
+      "time": 4334.9687233333325,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 193,
+      "data_name": "chr21.0.3.nocontam.fq"
+    },
+    {
+      "time": 4334.9687233333325,
+      "type": "task_scheduled",
+      "task_id": 52,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4334.9687233333325,
+      "type": "task_started",
+      "task_id": 52,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4336.192456666666,
+      "type": "task_completed",
+      "task_id": 21,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4336.192456666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 202,
+      "data_item_id": 64,
+      "data_name": "chr21.0.20.nocontam.sfq"
+    },
+    {
+      "time": 4336.192456666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 203,
+      "data_item_id": 65,
+      "data_name": "chr21.0.20.contam.sfq"
+    },
+    {
+      "time": 4336.805809999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 195,
+      "data_name": "chr21.0.19.nocontam.fq"
+    },
+    {
+      "time": 4337.6069566666665,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 197,
+      "data_name": "chr21.0.23.nocontam.fq"
+    },
+    {
+      "time": 4337.6985233333335,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 191,
+      "data_name": "chr21.0.5.nocontam.sfq"
+    },
+    {
+      "time": 4344.371083333334,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 190,
+      "data_name": "chr21.0.8.nocontam.fq"
+    },
+    {
+      "time": 4344.371083333334,
+      "type": "task_scheduled",
+      "task_id": 57,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4344.371083333334,
+      "type": "task_started",
+      "task_id": 57,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4366.9687233333325,
       "type": "task_completed",
       "task_id": 52,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4073.6112566666666,
+      "time": 4366.9687233333325,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 206,
+      "data_id": 204,
       "data_item_id": 99,
       "data_name": "chr21.0.3.nocontam.bfq"
     },
     {
-      "time": 4074.0361233333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 186,
-      "data_name": "chr21.0.8.nocontam.sfq"
-    },
-    {
-      "time": 4074.0361233333333,
+      "time": 4366.9687233333325,
       "type": "task_scheduled",
-      "task_id": 33,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4074.0361233333333,
-      "type": "task_started",
-      "task_id": 33,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4075.480376666666,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 190,
-      "data_name": "chr21.0.2.nocontam.fq"
-    },
-    {
-      "time": 4075.480376666666,
-      "type": "task_scheduled",
-      "task_id": 51,
+      "task_id": 72,
       "task_name": "fastq2bfq_chr21",
       "location": "compute3",
       "cores": 1,
       "memory": 0
     },
     {
-      "time": 4075.480376666666,
+      "time": 4366.9687233333325,
       "type": "task_started",
-      "task_id": 51,
+      "task_id": 72,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4078.872856666666,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 191,
-      "data_name": "chr21.0.15.nocontam.fq"
-    },
-    {
-      "time": 4078.872856666666,
-      "type": "task_scheduled",
-      "task_id": 64,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4078.872856666666,
-      "type": "task_started",
-      "task_id": 64,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4083.051876666667,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 200,
-      "data_name": "chr21.0.22.nocontam.bfq"
-    },
-    {
-      "time": 4083.051876666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 207,
-      "data_item_id": 118,
-      "data_name": "chr21.0.22.nocontam.bfq"
-    },
-    {
-      "time": 4084.3898500000005,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 202,
-      "data_name": "chr21.0.7.nocontam.bfq"
-    },
-    {
-      "time": 4085.893116666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 203,
-      "data_name": "chr21.0.1.nocontam.bfq"
-    },
-    {
-      "time": 4087.542763333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 192,
-      "data_name": "chr21.0.5.nocontam.fq"
-    },
-    {
-      "time": 4089.369456666667,
+      "time": 4375.3020566666655,
       "type": "task_completed",
-      "task_id": 33,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4089.369456666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 208,
-      "data_item_id": 80,
-      "data_name": "chr21.0.8.nocontam.fq"
-    },
-    {
-      "time": 4089.480376666666,
-      "type": "task_completed",
-      "task_id": 51,
+      "task_id": 72,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4089.480376666666,
+      "time": 4375.3020566666655,
       "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 209,
-      "data_item_id": 98,
-      "data_name": "chr21.0.2.nocontam.bfq"
-    },
-    {
-      "time": 4089.480376666666,
-      "type": "task_scheduled",
-      "task_id": 54,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4089.480376666666,
-      "type": "task_started",
-      "task_id": 54,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4093.2061899999994,
-      "type": "task_completed",
-      "task_id": 64,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4093.2061899999994,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 210,
-      "data_item_id": 111,
-      "data_name": "chr21.0.15.nocontam.bfq"
-    },
-    {
-      "time": 4093.5755166666668,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 206,
-      "data_name": "chr21.0.3.nocontam.bfq"
-    },
-    {
-      "time": 4093.5755166666668,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 211,
-      "data_item_id": 99,
-      "data_name": "chr21.0.3.nocontam.bfq"
-    },
-    {
-      "time": 4099.674320000001,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 196,
-      "data_name": "chr21.0.11.nocontam.fq"
-    },
-    {
-      "time": 4099.674320000001,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 212,
-      "data_item_id": 83,
-      "data_name": "chr21.0.11.nocontam.fq"
-    },
-    {
-      "time": 4099.876163333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 193,
-      "data_name": "chr21.0.19.nocontam.fq"
-    },
-    {
-      "time": 4103.900896666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 207,
-      "data_name": "chr21.0.22.nocontam.bfq"
-    },
-    {
-      "time": 4105.480376666666,
-      "type": "task_completed",
-      "task_id": 54,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4105.480376666666,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 213,
-      "data_item_id": 101,
-      "data_name": "chr21.0.5.nocontam.bfq"
-    },
-    {
-      "time": 4105.480376666666,
-      "type": "task_scheduled",
-      "task_id": 42,
-      "task_name": "sol2sanger_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4105.480376666666,
-      "type": "task_started",
-      "task_id": 42,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4107.786586666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 209,
-      "data_name": "chr21.0.2.nocontam.bfq"
-    },
-    {
-      "time": 4107.786586666666,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 214,
-      "data_item_id": 98,
-      "data_name": "chr21.0.2.nocontam.bfq"
-    },
-    {
-      "time": 4111.512249999999,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 210,
-      "data_name": "chr21.0.15.nocontam.bfq"
-    },
-    {
-      "time": 4111.512249999999,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 215,
-      "data_item_id": 111,
-      "data_name": "chr21.0.15.nocontam.bfq"
-    },
-    {
-      "time": 4113.5397766666665,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 211,
-      "data_name": "chr21.0.3.nocontam.bfq"
-    },
-    {
-      "time": 4113.99297,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 199,
-      "data_name": "chr21.0.10.nocontam.fq"
-    },
-    {
-      "time": 4113.99297,
-      "type": "task_scheduled",
-      "task_id": 59,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4113.99297,
-      "type": "task_started",
-      "task_id": 59,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4117.021366666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 201,
-      "data_name": "chr21.0.0.nocontam.fq"
-    },
-    {
-      "time": 4117.021366666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 216,
-      "data_item_id": 72,
-      "data_name": "chr21.0.0.nocontam.fq"
-    },
-    {
-      "time": 4118.147043333333,
-      "type": "task_completed",
-      "task_id": 42,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4118.147043333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 217,
-      "data_item_id": 89,
-      "data_name": "chr21.0.17.nocontam.fq"
-    },
-    {
-      "time": 4118.147043333333,
-      "type": "task_scheduled",
-      "task_id": 68,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4118.147043333333,
-      "type": "task_started",
-      "task_id": 68,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4123.647216666666,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 213,
-      "data_name": "chr21.0.5.nocontam.bfq"
-    },
-    {
-      "time": 4123.647216666666,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 218,
-      "data_item_id": 101,
-      "data_name": "chr21.0.5.nocontam.bfq"
-    },
-    {
-      "time": 4126.092796666666,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 214,
-      "data_name": "chr21.0.2.nocontam.bfq"
-    },
-    {
-      "time": 4129.818309999999,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 215,
-      "data_name": "chr21.0.15.nocontam.bfq"
-    },
-    {
-      "time": 4136.326303333333,
-      "type": "task_completed",
-      "task_id": 59,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4136.326303333333,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 219,
-      "data_item_id": 106,
-      "data_name": "chr21.0.10.nocontam.bfq"
-    },
-    {
-      "time": 4141.256030000001,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 212,
-      "data_name": "chr21.0.11.nocontam.fq"
-    },
-    {
-      "time": 4141.256030000001,
-      "type": "task_scheduled",
-      "task_id": 60,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4141.256030000001,
-      "type": "task_started",
-      "task_id": 60,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4141.814056666666,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 218,
-      "data_name": "chr21.0.5.nocontam.bfq"
-    },
-    {
-      "time": 4145.480376666666,
-      "type": "task_completed",
-      "task_id": 68,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4145.480376666666,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 220,
-      "data_item_id": 115,
-      "data_name": "chr21.0.19.nocontam.bfq"
-    },
-    {
-      "time": 4153.989873333333,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 197,
-      "data_name": "chr21.0.20.nocontam.sfq"
-    },
-    {
-      "time": 4153.989873333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 221,
-      "data_item_id": 64,
-      "data_name": "chr21.0.20.nocontam.sfq"
-    },
-    {
-      "time": 4154.922696666668,
-      "type": "task_completed",
-      "task_id": 60,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4154.922696666668,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 222,
-      "data_item_id": 107,
-      "data_name": "chr21.0.11.nocontam.bfq"
-    },
-    {
-      "time": 4156.6039433333335,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 219,
-      "data_name": "chr21.0.10.nocontam.bfq"
-    },
-    {
-      "time": 4156.6039433333335,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 223,
-      "data_item_id": 106,
-      "data_name": "chr21.0.10.nocontam.bfq"
-    },
-    {
-      "time": 4162.687193333333,
-      "type": "finish_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 198,
-      "data_name": "chr21.0.20.contam.sfq"
-    },
-    {
-      "time": 4165.631046666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 208,
-      "data_name": "chr21.0.8.nocontam.fq"
-    },
-    {
-      "time": 4165.631046666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 224,
-      "data_item_id": 80,
-      "data_name": "chr21.0.8.nocontam.fq"
-    },
-    {
-      "time": 4166.236916666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 220,
-      "data_name": "chr21.0.19.nocontam.bfq"
-    },
-    {
-      "time": 4166.236916666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 225,
-      "data_item_id": 115,
-      "data_name": "chr21.0.19.nocontam.bfq"
-    },
-    {
-      "time": 4169.761436666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 216,
-      "data_name": "chr21.0.0.nocontam.fq"
-    },
-    {
-      "time": 4169.761436666667,
-      "type": "task_scheduled",
-      "task_id": 49,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4169.761436666667,
-      "type": "task_started",
-      "task_id": 49,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4171.089433333334,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 217,
-      "data_name": "chr21.0.17.nocontam.fq"
-    },
-    {
-      "time": 4171.089433333334,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 226,
-      "data_item_id": 89,
-      "data_name": "chr21.0.17.nocontam.fq"
-    },
-    {
-      "time": 4172.177016666668,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 222,
-      "data_name": "chr21.0.11.nocontam.bfq"
-    },
-    {
-      "time": 4172.177016666668,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 227,
-      "data_item_id": 107,
-      "data_name": "chr21.0.11.nocontam.bfq"
-    },
-    {
-      "time": 4176.881583333334,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 223,
-      "data_name": "chr21.0.10.nocontam.bfq"
-    },
-    {
-      "time": 4184.54602,
-      "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 205,
-      "data_name": "chr21.0.14.contam.sfq"
+      "data_item_id": 119,
+      "data_name": "chr21.0.23.nocontam.bfq"
     },
     {
-      "time": 4186.993456666667,
+      "time": 4375.3020566666655,
+      "type": "task_scheduled",
+      "task_id": 68,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4375.3020566666655,
+      "type": "task_started",
+      "task_id": 68,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4384.196603333333,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute1",
-      "data_id": 225,
-      "data_name": "chr21.0.19.nocontam.bfq"
+      "to": "compute3",
+      "data_id": 201,
+      "data_name": "chr21.0.1.nocontam.fq"
     },
     {
-      "time": 4187.3578,
+      "time": 4384.196603333333,
+      "type": "task_scheduled",
+      "task_id": 50,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4384.196603333333,
+      "type": "task_started",
+      "task_id": 50,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4386.932983333332,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 204,
-      "data_name": "chr21.0.14.nocontam.sfq"
+      "data_name": "chr21.0.3.nocontam.bfq"
     },
     {
-      "time": 4187.3578,
+      "time": 4386.932983333332,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 228,
+      "data_id": 206,
+      "data_item_id": 99,
+      "data_name": "chr21.0.3.nocontam.bfq"
+    },
+    {
+      "time": 4390.760216666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 205,
+      "data_name": "chr21.0.23.nocontam.bfq"
+    },
+    {
+      "time": 4390.760216666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 207,
+      "data_item_id": 119,
+      "data_name": "chr21.0.23.nocontam.bfq"
+    },
+    {
+      "time": 4395.371083333334,
+      "type": "task_completed",
+      "task_id": 57,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4395.371083333334,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 208,
+      "data_item_id": 104,
+      "data_name": "chr21.0.8.nocontam.bfq"
+    },
+    {
+      "time": 4402.529936666666,
+      "type": "task_completed",
+      "task_id": 50,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4402.529936666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 209,
+      "data_item_id": 97,
+      "data_name": "chr21.0.1.nocontam.bfq"
+    },
+    {
+      "time": 4402.529936666666,
+      "type": "task_scheduled",
+      "task_id": 47,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4402.529936666666,
+      "type": "task_started",
+      "task_id": 47,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4402.635389999999,
+      "type": "task_completed",
+      "task_id": 68,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4402.635389999999,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 210,
+      "data_item_id": 115,
+      "data_name": "chr21.0.19.nocontam.bfq"
+    },
+    {
+      "time": 4402.635389999999,
+      "type": "task_scheduled",
+      "task_id": 30,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4402.635389999999,
+      "type": "task_started",
+      "task_id": 30,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4406.218376666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 207,
+      "data_name": "chr21.0.23.nocontam.bfq"
+    },
+    {
+      "time": 4406.897243333332,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 206,
+      "data_name": "chr21.0.3.nocontam.bfq"
+    },
+    {
+      "time": 4411.922303333332,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 200,
+      "data_name": "chr21.0.17.nocontam.sfq"
+    },
+    {
+      "time": 4413.529936666666,
+      "type": "task_completed",
+      "task_id": 47,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4413.529936666666,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 211,
+      "data_item_id": 94,
+      "data_name": "chr21.0.22.nocontam.fq"
+    },
+    {
+      "time": 4415.3020566666655,
+      "type": "task_completed",
+      "task_id": 30,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4415.3020566666655,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 212,
+      "data_item_id": 77,
+      "data_name": "chr21.0.5.nocontam.fq"
+    },
+    {
+      "time": 4415.3020566666655,
+      "type": "task_scheduled",
+      "task_id": 11,
+      "task_name": "filterContams_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4415.3020566666655,
+      "type": "task_started",
+      "task_id": 11,
+      "task_name": "filterContams_chr21"
+    },
+    {
+      "time": 4419.633143333334,
+      "type": "finish_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 208,
+      "data_name": "chr21.0.8.nocontam.bfq"
+    },
+    {
+      "time": 4419.633143333334,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 213,
+      "data_item_id": 104,
+      "data_name": "chr21.0.8.nocontam.bfq"
+    },
+    {
+      "time": 4422.835846666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 209,
+      "data_name": "chr21.0.1.nocontam.bfq"
+    },
+    {
+      "time": 4422.835846666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 214,
+      "data_item_id": 97,
+      "data_name": "chr21.0.1.nocontam.bfq"
+    },
+    {
+      "time": 4423.391929999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 210,
+      "data_name": "chr21.0.19.nocontam.bfq"
+    },
+    {
+      "time": 4423.391929999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 215,
+      "data_item_id": 115,
+      "data_name": "chr21.0.19.nocontam.bfq"
+    },
+    {
+      "time": 4431.308886666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 202,
+      "data_name": "chr21.0.20.nocontam.sfq"
+    },
+    {
+      "time": 4431.308886666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 216,
+      "data_item_id": 64,
+      "data_name": "chr21.0.20.nocontam.sfq"
+    },
+    {
+      "time": 4433.740019999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 199,
+      "data_name": "chr21.0.14.contam.sfq"
+    },
+    {
+      "time": 4436.551799999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 198,
+      "data_name": "chr21.0.14.nocontam.sfq"
+    },
+    {
+      "time": 4436.551799999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 217,
       "data_item_id": 52,
       "data_name": "chr21.0.14.nocontam.sfq"
     },
     {
-      "time": 4189.431336666668,
+      "time": 4440.006206666666,
       "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 227,
-      "data_name": "chr21.0.11.nocontam.bfq"
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 203,
+      "data_name": "chr21.0.20.contam.sfq"
     },
     {
-      "time": 4199.09477,
+      "time": 4443.141756666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 214,
+      "data_name": "chr21.0.1.nocontam.bfq"
+    },
+    {
+      "time": 4443.895203333334,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 213,
+      "data_name": "chr21.0.8.nocontam.bfq"
+    },
+    {
+      "time": 4444.148469999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 215,
+      "data_name": "chr21.0.19.nocontam.bfq"
+    },
+    {
+      "time": 4450.635389999999,
       "type": "task_completed",
-      "task_id": 49,
-      "task_name": "fastq2bfq_chr21"
+      "task_id": 11,
+      "task_name": "filterContams_chr21"
     },
     {
-      "time": 4199.09477,
+      "time": 4450.635389999999,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 229,
-      "data_item_id": 96,
-      "data_name": "chr21.0.0.nocontam.bfq"
+      "data_id": 218,
+      "data_item_id": 44,
+      "data_name": "chr21.0.10.nocontam.sfq"
     },
     {
-      "time": 4219.360729999999,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 229,
-      "data_name": "chr21.0.0.nocontam.bfq"
-    },
-    {
-      "time": 4219.360729999999,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 230,
-      "data_item_id": 96,
-      "data_name": "chr21.0.0.nocontam.bfq"
-    },
-    {
-      "time": 4224.031823333334,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 226,
-      "data_name": "chr21.0.17.nocontam.fq"
-    },
-    {
-      "time": 4224.031823333334,
-      "type": "task_scheduled",
-      "task_id": 66,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4224.031823333334,
-      "type": "task_started",
-      "task_id": 66,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4239.626689999999,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 230,
-      "data_name": "chr21.0.0.nocontam.bfq"
-    },
-    {
-      "time": 4241.892636666667,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 224,
-      "data_name": "chr21.0.8.nocontam.fq"
-    },
-    {
-      "time": 4241.892636666667,
-      "type": "task_scheduled",
-      "task_id": 57,
-      "task_name": "fastq2bfq_chr21",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 0
-    },
-    {
-      "time": 4241.892636666667,
-      "type": "task_started",
-      "task_id": 57,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4243.031823333334,
-      "type": "task_completed",
-      "task_id": 66,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4243.031823333334,
+      "time": 4450.635389999999,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 231,
-      "data_item_id": 113,
-      "data_name": "chr21.0.17.nocontam.bfq"
+      "data_id": 219,
+      "data_item_id": 45,
+      "data_name": "chr21.0.10.contam.sfq"
     },
     {
-      "time": 4249.106303333333,
+      "time": 4459.477206666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 212,
+      "data_name": "chr21.0.5.nocontam.fq"
+    },
+    {
+      "time": 4459.477206666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 220,
+      "data_item_id": 77,
+      "data_name": "chr21.0.5.nocontam.fq"
+    },
+    {
+      "time": 4468.344506666666,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 211,
+      "data_name": "chr21.0.22.nocontam.fq"
+    },
+    {
+      "time": 4468.344506666666,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 221,
+      "data_item_id": 94,
+      "data_name": "chr21.0.22.nocontam.fq"
+    },
+    {
+      "time": 4503.652356666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 220,
+      "data_name": "chr21.0.5.nocontam.fq"
+    },
+    {
+      "time": 4518.597849999998,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 219,
+      "data_name": "chr21.0.10.contam.sfq"
+    },
+    {
+      "time": 4520.468869999999,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 218,
+      "data_name": "chr21.0.10.nocontam.sfq"
+    },
+    {
+      "time": 4520.468869999999,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 222,
+      "data_item_id": 44,
+      "data_name": "chr21.0.10.nocontam.sfq"
+    },
+    {
+      "time": 4523.159076666667,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
       "data_id": 221,
+      "data_name": "chr21.0.22.nocontam.fq"
+    },
+    {
+      "time": 4523.159076666667,
+      "type": "task_scheduled",
+      "task_id": 71,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4523.159076666667,
+      "type": "task_started",
+      "task_id": 71,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4526.425316666666,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 216,
       "data_name": "chr21.0.20.nocontam.sfq"
     },
     {
-      "time": 4249.106303333333,
+      "time": 4547.825743333334,
+      "type": "task_completed",
+      "task_id": 71,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4547.825743333334,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 223,
+      "data_item_id": 118,
+      "data_name": "chr21.0.22.nocontam.bfq"
+    },
+    {
+      "time": 4547.825743333334,
+      "type": "task_scheduled",
+      "task_id": 54,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4547.825743333334,
+      "type": "task_started",
+      "task_id": 54,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4554.646789999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 217,
+      "data_name": "chr21.0.14.nocontam.sfq"
+    },
+    {
+      "time": 4563.825743333334,
+      "type": "task_completed",
+      "task_id": 54,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4563.825743333334,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 224,
+      "data_item_id": 101,
+      "data_name": "chr21.0.5.nocontam.bfq"
+    },
+    {
+      "time": 4563.825743333334,
+      "type": "task_scheduled",
+      "task_id": 42,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4563.825743333334,
+      "type": "task_started",
+      "task_id": 42,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4568.674763333333,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 223,
+      "data_name": "chr21.0.22.nocontam.bfq"
+    },
+    {
+      "time": 4568.674763333333,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 225,
+      "data_item_id": 118,
+      "data_name": "chr21.0.22.nocontam.bfq"
+    },
+    {
+      "time": 4576.492410000001,
+      "type": "task_completed",
+      "task_id": 42,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4576.492410000001,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 226,
+      "data_item_id": 89,
+      "data_name": "chr21.0.17.nocontam.fq"
+    },
+    {
+      "time": 4576.492410000001,
       "type": "task_scheduled",
       "task_id": 45,
       "task_name": "sol2sanger_chr21",
@@ -7620,93 +7462,171 @@
       "memory": 0
     },
     {
-      "time": 4249.106303333333,
+      "time": 4576.492410000001,
       "type": "task_started",
       "task_id": 45,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 4264.1455633333335,
+      "time": 4581.992583333334,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 231,
-      "data_name": "chr21.0.17.nocontam.bfq"
+      "data_id": 224,
+      "data_name": "chr21.0.5.nocontam.bfq"
     },
     {
-      "time": 4264.1455633333335,
+      "time": 4581.992583333334,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute1",
+      "data_id": 227,
+      "data_item_id": 101,
+      "data_name": "chr21.0.5.nocontam.bfq"
+    },
+    {
+      "time": 4589.523783333333,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 225,
+      "data_name": "chr21.0.22.nocontam.bfq"
+    },
+    {
+      "time": 4590.302349999999,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 222,
+      "data_name": "chr21.0.10.nocontam.sfq"
+    },
+    {
+      "time": 4590.302349999999,
+      "type": "task_scheduled",
+      "task_id": 35,
+      "task_name": "sol2sanger_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4590.302349999999,
+      "type": "task_started",
+      "task_id": 35,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4594.159076666668,
+      "type": "task_completed",
+      "task_id": 45,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4594.159076666668,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 228,
+      "data_item_id": 92,
+      "data_name": "chr21.0.20.nocontam.fq"
+    },
+    {
+      "time": 4600.1594233333335,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 227,
+      "data_name": "chr21.0.5.nocontam.bfq"
+    },
+    {
+      "time": 4604.635683333332,
+      "type": "task_completed",
+      "task_id": 35,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4604.635683333332,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 229,
+      "data_item_id": 82,
+      "data_name": "chr21.0.10.nocontam.fq"
+    },
+    {
+      "time": 4629.434800000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 226,
+      "data_name": "chr21.0.17.nocontam.fq"
+    },
+    {
+      "time": 4629.434800000001,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 230,
+      "data_item_id": 89,
+      "data_name": "chr21.0.17.nocontam.fq"
+    },
+    {
+      "time": 4659.093093333332,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 229,
+      "data_name": "chr21.0.10.nocontam.fq"
+    },
+    {
+      "time": 4659.093093333332,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 231,
+      "data_item_id": 82,
+      "data_name": "chr21.0.10.nocontam.fq"
+    },
+    {
+      "time": 4682.377190000001,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute3",
+      "data_id": 230,
+      "data_name": "chr21.0.17.nocontam.fq"
+    },
+    {
+      "time": 4682.377190000001,
+      "type": "task_scheduled",
+      "task_id": 66,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
+    },
+    {
+      "time": 4682.377190000001,
+      "type": "task_started",
+      "task_id": 66,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4701.377190000001,
+      "type": "task_completed",
+      "task_id": 66,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4701.377190000001,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
       "data_id": 232,
       "data_item_id": 113,
       "data_name": "chr21.0.17.nocontam.bfq"
     },
     {
-      "time": 4266.77297,
-      "type": "task_completed",
-      "task_id": 45,
-      "task_name": "sol2sanger_chr21"
-    },
-    {
-      "time": 4266.77297,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 233,
-      "data_item_id": 92,
-      "data_name": "chr21.0.20.nocontam.fq"
-    },
-    {
-      "time": 4275.892636666667,
-      "type": "task_completed",
-      "task_id": 57,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4275.892636666667,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 234,
-      "data_item_id": 104,
-      "data_name": "chr21.0.8.nocontam.bfq"
-    },
-    {
-      "time": 4285.259303333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 232,
-      "data_name": "chr21.0.17.nocontam.bfq"
-    },
-    {
-      "time": 4300.154696666667,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 234,
-      "data_name": "chr21.0.8.nocontam.bfq"
-    },
-    {
-      "time": 4300.154696666667,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute2",
-      "data_id": 235,
-      "data_item_id": 104,
-      "data_name": "chr21.0.8.nocontam.bfq"
-    },
-    {
-      "time": 4305.452789999999,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute3",
-      "data_id": 228,
-      "data_name": "chr21.0.14.nocontam.sfq"
-    },
-    {
-      "time": 4305.452789999999,
+      "time": 4701.377190000001,
       "type": "task_scheduled",
       "task_id": 39,
       "task_name": "sol2sanger_chr21",
@@ -7715,61 +7635,141 @@
       "memory": 0
     },
     {
-      "time": 4305.452789999999,
+      "time": 4701.377190000001,
       "type": "task_started",
       "task_id": 39,
       "task_name": "sol2sanger_chr21"
     },
     {
-      "time": 4324.416756666667,
+      "time": 4713.550503333332,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute2",
-      "data_id": 235,
-      "data_name": "chr21.0.8.nocontam.bfq"
+      "to": "compute3",
+      "data_id": 231,
+      "data_name": "chr21.0.10.nocontam.fq"
     },
     {
-      "time": 4329.786123333332,
-      "type": "task_completed",
-      "task_id": 39,
-      "task_name": "sol2sanger_chr21"
+      "time": 4713.550503333332,
+      "type": "task_scheduled",
+      "task_id": 59,
+      "task_name": "fastq2bfq_chr21",
+      "location": "compute3",
+      "cores": 1,
+      "memory": 0
     },
     {
-      "time": 4329.786123333332,
-      "type": "start_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 236,
-      "data_item_id": 86,
-      "data_name": "chr21.0.14.nocontam.fq"
+      "time": 4713.550503333332,
+      "type": "task_started",
+      "task_id": 59,
+      "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4392.36256,
+      "time": 4719.748666666667,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 233,
+      "data_id": 228,
       "data_name": "chr21.0.20.nocontam.fq"
     },
     {
-      "time": 4392.36256,
+      "time": 4719.748666666667,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 237,
+      "data_id": 233,
       "data_item_id": 92,
       "data_name": "chr21.0.20.nocontam.fq"
     },
     {
-      "time": 4440.299623333332,
+      "time": 4722.490930000001,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 232,
+      "data_name": "chr21.0.17.nocontam.bfq"
+    },
+    {
+      "time": 4722.490930000001,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 234,
+      "data_item_id": 113,
+      "data_name": "chr21.0.17.nocontam.bfq"
+    },
+    {
+      "time": 4725.710523333334,
+      "type": "task_completed",
+      "task_id": 39,
+      "task_name": "sol2sanger_chr21"
+    },
+    {
+      "time": 4725.710523333334,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 235,
+      "data_item_id": 86,
+      "data_name": "chr21.0.14.nocontam.fq"
+    },
+    {
+      "time": 4735.883836666665,
+      "type": "task_completed",
+      "task_id": 59,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4735.883836666665,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 236,
+      "data_item_id": 106,
+      "data_name": "chr21.0.10.nocontam.bfq"
+    },
+    {
+      "time": 4743.604670000001,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 234,
+      "data_name": "chr21.0.17.nocontam.bfq"
+    },
+    {
+      "time": 4756.161476666665,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 236,
+      "data_name": "chr21.0.10.nocontam.bfq"
+    },
+    {
+      "time": 4756.161476666665,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 237,
+      "data_item_id": 106,
+      "data_name": "chr21.0.10.nocontam.bfq"
+    },
+    {
+      "time": 4776.4391166666655,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute2",
+      "data_id": 237,
+      "data_name": "chr21.0.10.nocontam.bfq"
+    },
+    {
+      "time": 4836.224023333334,
+      "type": "finish_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 235,
       "data_name": "chr21.0.14.nocontam.fq"
     },
     {
-      "time": 4440.299623333332,
+      "time": 4836.224023333334,
       "type": "start_uploading",
       "from": "runner",
       "to": "compute3",
@@ -7778,15 +7778,15 @@
       "data_name": "chr21.0.14.nocontam.fq"
     },
     {
-      "time": 4517.952149999999,
+      "time": 4845.338256666667,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
-      "data_id": 237,
+      "data_id": 233,
       "data_name": "chr21.0.20.nocontam.fq"
     },
     {
-      "time": 4517.952149999999,
+      "time": 4845.338256666667,
       "type": "task_scheduled",
       "task_id": 69,
       "task_name": "fastq2bfq_chr21",
@@ -7795,13 +7795,28 @@
       "memory": 0
     },
     {
-      "time": 4517.952149999999,
+      "time": 4845.338256666667,
       "type": "task_started",
       "task_id": 69,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4550.813123333332,
+      "time": 4911.67159,
+      "type": "task_completed",
+      "task_id": 69,
+      "task_name": "fastq2bfq_chr21"
+    },
+    {
+      "time": 4911.67159,
+      "type": "start_uploading",
+      "from": "compute3",
+      "to": "runner",
+      "data_id": 239,
+      "data_item_id": 116,
+      "data_name": "chr21.0.20.nocontam.bfq"
+    },
+    {
+      "time": 4946.737523333334,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute3",
@@ -7809,7 +7824,7 @@
       "data_name": "chr21.0.14.nocontam.fq"
     },
     {
-      "time": 4550.813123333332,
+      "time": 4946.737523333334,
       "type": "task_scheduled",
       "task_id": 63,
       "task_name": "fastq2bfq_chr21",
@@ -7818,90 +7833,75 @@
       "memory": 0
     },
     {
-      "time": 4550.813123333332,
+      "time": 4946.737523333334,
       "type": "task_started",
       "task_id": 63,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4584.285483333332,
-      "type": "task_completed",
-      "task_id": 69,
-      "task_name": "fastq2bfq_chr21"
-    },
-    {
-      "time": 4584.285483333332,
-      "type": "start_uploading",
+      "time": 4953.90295,
+      "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
       "data_id": 239,
+      "data_name": "chr21.0.20.nocontam.bfq"
+    },
+    {
+      "time": 4953.90295,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 240,
       "data_item_id": 116,
       "data_name": "chr21.0.20.nocontam.bfq"
     },
     {
-      "time": 4593.813123333332,
+      "time": 4989.737523333334,
       "type": "task_completed",
       "task_id": 63,
       "task_name": "fastq2bfq_chr21"
     },
     {
-      "time": 4593.813123333332,
+      "time": 4989.737523333334,
       "type": "start_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 240,
-      "data_item_id": 110,
-      "data_name": "chr21.0.14.nocontam.bfq"
-    },
-    {
-      "time": 4626.254363333333,
-      "type": "finish_uploading",
-      "from": "compute3",
-      "to": "runner",
-      "data_id": 240,
-      "data_name": "chr21.0.14.nocontam.bfq"
-    },
-    {
-      "time": 4626.254363333333,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
       "data_id": 241,
       "data_item_id": 110,
       "data_name": "chr21.0.14.nocontam.bfq"
     },
     {
-      "time": 4626.516843333332,
+      "time": 4996.1343099999995,
+      "type": "finish_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 240,
+      "data_name": "chr21.0.20.nocontam.bfq"
+    },
+    {
+      "time": 5022.178763333334,
       "type": "finish_uploading",
       "from": "compute3",
       "to": "runner",
-      "data_id": 239,
-      "data_name": "chr21.0.20.nocontam.bfq"
-    },
-    {
-      "time": 4626.516843333332,
-      "type": "start_uploading",
-      "from": "runner",
-      "to": "compute1",
-      "data_id": 242,
-      "data_item_id": 116,
-      "data_name": "chr21.0.20.nocontam.bfq"
-    },
-    {
-      "time": 4658.695603333333,
-      "type": "finish_uploading",
-      "from": "runner",
-      "to": "compute1",
       "data_id": 241,
       "data_name": "chr21.0.14.nocontam.bfq"
     },
     {
-      "time": 4668.748203333332,
+      "time": 5022.178763333334,
+      "type": "start_uploading",
+      "from": "runner",
+      "to": "compute1",
+      "data_id": 242,
+      "data_item_id": 110,
+      "data_name": "chr21.0.14.nocontam.bfq"
+    },
+    {
+      "time": 5054.620003333334,
       "type": "finish_uploading",
       "from": "runner",
       "to": "compute1",
       "data_id": 242,
-      "data_name": "chr21.0.20.nocontam.bfq"
+      "data_name": "chr21.0.14.nocontam.bfq"
     },
     {
       "time": 53019.47649,

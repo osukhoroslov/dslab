@@ -237,21 +237,6 @@
     },
     {
       "time": 9.799999999999999,
-      "type": "task_completed",
-      "task_id": 1,
-      "task_name": "B"
-    },
-    {
-      "time": 9.799999999999999,
-      "type": "start_uploading",
-      "from": "compute2",
-      "to": "runner",
-      "data_id": 6,
-      "data_item_id": 3,
-      "data_name": "B-output-0"
-    },
-    {
-      "time": 9.799999999999999,
       "type": "task_scheduled",
       "task_id": 2,
       "task_name": "C",
@@ -264,6 +249,21 @@
       "type": "task_started",
       "task_id": 2,
       "task_name": "C"
+    },
+    {
+      "time": 9.799999999999999,
+      "type": "task_completed",
+      "task_id": 1,
+      "task_name": "B"
+    },
+    {
+      "time": 9.799999999999999,
+      "type": "start_uploading",
+      "from": "compute2",
+      "to": "runner",
+      "data_id": 6,
+      "data_item_id": 3,
+      "data_name": "B-output-0"
     },
     {
       "time": 11.049999999999999,

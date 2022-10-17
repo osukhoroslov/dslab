@@ -1,13 +1,14 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use dslab_core::context::SimulationContext;
+use dslab_core::Id;
 use dslab_core::{log_debug, log_error, log_info, log_warn};
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
-use crate::schedulers::common::{calc_ranks, evaluate_assignment, predecessors, ScheduledTask};
+use crate::schedulers::common::*;
 use crate::system::System;
 use crate::task::*;
 
@@ -49,15 +50,14 @@ impl Scheduler for HeftScheduler {
         let data_transfer_mode = &config.data_transfer_mode;
 
         let avg_net_time = system.avg_net_time(ctx.id(), data_transfer_mode);
-        let avg_upload_net_time = system.avg_upload_net_time(ctx.id());
 
-        let total_tasks = dag.get_tasks().len();
+        let task_count = dag.get_tasks().len();
 
         let pred = predecessors(dag);
 
         let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
-        let mut tasks = (0..total_tasks).collect::<Vec<_>>();
-        tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
+        let mut task_ids = (0..task_count).collect::<Vec<_>>();
+        task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
 
         let mut scheduled_tasks = resources
             .iter()
@@ -67,56 +67,27 @@ impl Scheduler for HeftScheduler {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let mut eft = vec![0.; total_tasks];
+        let mut eft = vec![0.; task_count];
+
+        let mut data_location: HashMap<usize, Id> = HashMap::new();
+        let mut task_location: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
-        let inputs: HashSet<usize> = dag
-            .get_tasks()
-            .iter()
-            .flat_map(|task| task.inputs.iter())
-            .cloned()
-            .collect();
-        let outputs: HashSet<usize> = dag
-            .get_tasks()
-            .iter()
-            .flat_map(|task| task.outputs.iter())
-            .cloned()
-            .collect();
-
-        for task in tasks.into_iter() {
-            let est = match self.data_transfer_strategy {
-                DataTransferStrategy::Eager => pred[task]
-                    .iter()
-                    .map(|&(task, weight)| eft[task] + weight * avg_net_time)
-                    .max_by(|a, b| a.total_cmp(&b))
-                    .unwrap_or(0.),
-                DataTransferStrategy::Lazy => pred[task]
-                    .iter()
-                    .map(|&(task, weight)| {
-                        let data_upload_time = match data_transfer_mode {
-                            DataTransferMode::ViaMasterNode => weight * avg_upload_net_time,
-                            DataTransferMode::Direct => 0.,
-                            DataTransferMode::Manual => 0.,
-                        };
-                        eft[task] + data_upload_time
-                    })
-                    .max_by(|a, b| a.total_cmp(&b))
-                    .unwrap_or(0.),
-            };
-
+        for task_id in task_ids.into_iter() {
             let mut best_finish = -1.;
-            let mut best_time = -1.;
+            let mut best_start = -1.;
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
                 let res = evaluate_assignment(
-                    task,
+                    task_id,
                     resource,
-                    est,
+                    &eft,
+                    &pred,
                     &scheduled_tasks,
-                    &outputs,
-                    avg_net_time,
+                    &data_location,
+                    &task_location,
                     &self.data_transfer_strategy,
                     dag,
                     resources,
@@ -130,7 +101,7 @@ impl Scheduler for HeftScheduler {
                 let (est, time, cores) = res.unwrap();
 
                 if best_finish == -1. || best_finish > est + time {
-                    best_time = time;
+                    best_start = est;
                     best_finish = est + time;
                     best_resource = resource;
                     best_cores = cores;
@@ -141,7 +112,7 @@ impl Scheduler for HeftScheduler {
                 log_error!(
                     ctx,
                     "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task",
-                    dag.get_task(task).name
+                    dag.get_task(task_id ).name
                 );
                 return Vec::new();
             }
@@ -149,59 +120,38 @@ impl Scheduler for HeftScheduler {
             log_debug!(
                 ctx,
                 "scheduling [heft] task {} on resource {} on cores {:?} on time {:.3}-{:.3}",
-                dag.get_task(task).name,
+                dag.get_task(task_id).name,
                 resources[best_resource].name,
                 best_cores,
-                best_finish - best_time,
+                best_start,
                 best_finish
             );
-
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
-                    best_finish - best_time,
+                    best_start,
                     best_finish,
-                    task,
+                    task_id,
                 ));
             }
-            eft[task] = best_finish;
+            eft[task_id] = best_finish;
             result.push((
-                best_finish - best_time,
+                best_start,
                 Action::ScheduleTaskOnCores {
-                    task,
+                    task: task_id,
                     resource: best_resource,
                     cores: best_cores,
                 },
             ));
+            for &output in dag.get_task(task_id).outputs.iter() {
+                data_location.insert(output, resources[best_resource].id);
+            }
+            task_location.insert(task_id, resources[best_resource].id);
         }
 
         log_info!(
             ctx,
             "expected makespan: {:.3}",
-            scheduled_tasks
-                .iter()
-                .enumerate()
-                .map(|(resource, cores)| {
-                    let cur_net_time = 1. / network.bandwidth(resources[resource].id, ctx.id());
-                    cores
-                        .iter()
-                        .map(|schedule| {
-                            schedule.iter().next_back().map_or(0., |task| {
-                                task.end_time
-                                    + dag
-                                        .get_task(task.task)
-                                        .outputs
-                                        .iter()
-                                        .filter(|f| !inputs.contains(f))
-                                        .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-                                        .max_by(|a, b| a.total_cmp(&b))
-                                        .unwrap_or(0.)
-                            })
-                        })
-                        .max_by(|a, b| a.total_cmp(&b))
-                        .unwrap_or(0.)
-                })
-                .max_by(|a, b| a.total_cmp(&b))
-                .unwrap_or(0.)
+            calc_makespan(&scheduled_tasks, dag, resources, network, ctx)
         );
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));

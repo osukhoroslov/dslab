@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 
 use dslab_core::context::SimulationContext;
+use dslab_core::Id;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
@@ -53,10 +54,11 @@ impl Eq for ScheduledTask {}
 pub fn evaluate_assignment(
     task: usize,
     resource: usize,
-    est: f64,
+    eft: &Vec<f64>,
+    pred: &Vec<Vec<(usize, f64)>>,
     scheduled_tasks: &Vec<Vec<BTreeSet<ScheduledTask>>>,
-    outputs: &HashSet<usize>,
-    avg_net_time: f64,
+    data_location: &HashMap<usize, Id>,
+    task_location: &HashMap<usize, Id>,
     data_transfer_strategy: &DataTransferStrategy,
     dag: &DAG,
     resources: &Vec<crate::resource::Resource>,
@@ -66,13 +68,46 @@ pub fn evaluate_assignment(
 ) -> Option<(f64, f64, Vec<u32>)> {
     let data_transfer_mode = &config.data_transfer_mode;
 
+    let est = match data_transfer_strategy {
+        DataTransferStrategy::Eager => pred[task]
+            .iter()
+            .map(|&(task, weight)| {
+                if task_location[&task] == resources[resource].id {
+                    eft[task]
+                } else {
+                    eft[task]
+                        + weight
+                            * data_transfer_mode.net_time(
+                                network,
+                                task_location[&task],
+                                resources[resource].id,
+                                ctx.id(),
+                            )
+                }
+            })
+            .max_by(|a, b| a.total_cmp(&b))
+            .unwrap_or(0.),
+        DataTransferStrategy::Lazy => pred[task]
+            .iter()
+            .map(|&(task, weight)| {
+                let data_upload_time = match data_transfer_mode {
+                    DataTransferMode::ViaMasterNode => weight / network.bandwidth(task_location[&task], ctx.id()),
+                    DataTransferMode::Direct => 0.,
+                    DataTransferMode::Manual => 0.,
+                };
+                eft[task] + data_upload_time
+            })
+            .max_by(|a, b| a.total_cmp(&b))
+            .unwrap_or(0.),
+    };
+
     let cur_net_time = 1. / network.bandwidth(ctx.id(), resources[resource].id);
     let input_load_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => dag
             .get_task(task)
             .inputs
             .iter()
-            .filter(|f| !outputs.contains(f))
+            .filter(|f| dag.get_inputs().contains(f))
             .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
             .max_by(|a, b| a.total_cmp(&b))
             .unwrap_or(0.),
@@ -94,8 +129,13 @@ pub fn evaluate_assignment(
             .map(|&f| match data_transfer_mode {
                 DataTransferMode::ViaMasterNode => dag.get_data_item(f).size as f64 * cur_net_time,
                 DataTransferMode::Direct => {
-                    if outputs.contains(&f) {
-                        dag.get_data_item(f).size as f64 * avg_net_time
+                    if !dag.get_inputs().contains(&f) {
+                        if data_location[&f] == resources[resource].id {
+                            0.
+                        } else {
+                            dag.get_data_item(f).size as f64
+                                / network.bandwidth(data_location[&f], resources[resource].id)
+                        }
                     } else {
                         dag.get_data_item(f).size as f64 * cur_net_time
                     }
@@ -202,4 +242,38 @@ pub fn calc_ranks(avg_flop_time: f64, avg_net_time: f64, dag: &DAG) -> Vec<f64> 
     }
 
     ranks
+}
+
+pub fn calc_makespan(
+    scheduled_tasks: &Vec<Vec<BTreeSet<ScheduledTask>>>,
+    dag: &DAG,
+    resources: &Vec<crate::resource::Resource>,
+    network: &Network,
+    ctx: &SimulationContext,
+) -> f64 {
+    scheduled_tasks
+        .iter()
+        .enumerate()
+        .map(|(resource, cores)| {
+            let cur_net_time = 1. / network.bandwidth(resources[resource].id, ctx.id());
+            cores
+                .iter()
+                .map(|schedule| {
+                    schedule.iter().next_back().map_or(0., |task| {
+                        task.end_time
+                            + dag
+                                .get_task(task.task)
+                                .outputs
+                                .iter()
+                                .filter(|f| dag.get_outputs().contains(f))
+                                .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
+                                .max_by(|a, b| a.total_cmp(&b))
+                                .unwrap_or(0.)
+                    })
+                })
+                .max_by(|a, b| a.total_cmp(&b))
+                .unwrap_or(0.)
+        })
+        .max_by(|a, b| a.total_cmp(&b))
+        .unwrap_or(0.)
 }
