@@ -8,4 +8,5 @@ mod model;
 mod tests;
 
 pub use fair_fast::FairThroughputSharingModel;
+pub use fair_slow::SlowFairThroughputSharingModel;
 pub use model::{ThroughputFunction, ThroughputSharingModel};

@@ -1,0 +1,14 @@
+[package]
+name = "throughput-model-comparison"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-models = { path = "../../crates/dslab-models" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-faas = { path = "../../crates/dslab-faas" }
+sugars = "3.0.0"
+num = "0.4.0"
+rand = "0.8.5"
+rand_pcg = "0.3.1"

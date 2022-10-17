@@ -5,7 +5,12 @@ use super::fair_slow::SlowFairThroughputSharingModel;
 use super::model::ThroughputSharingModel;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
-    assert!(x > y - eps && x < y + eps, "Values do not match: {} vs {}", x, y);
+    assert!(
+        (x - y).abs() < eps || (x.max(y) - x.min(y)) / x.min(y) < eps,
+        "Values do not match: {:.15} vs {:.15}",
+        x,
+        y
+    );
 }
 
 struct ModelsTester {
@@ -33,7 +38,7 @@ impl ModelsTester {
         self.slow_model.insert(current_time, volume, item);
         let fast_item = self.fast_model.peek().unwrap();
         let slow_item = self.slow_model.peek().unwrap();
-        assert_float_eq(fast_item.0, slow_item.0, 1e-9);
+        assert_float_eq(fast_item.0, slow_item.0, 1e-12);
         assert_eq!(fast_item.1, slow_item.1);
     }
 
@@ -48,7 +53,7 @@ impl ModelsTester {
         }
         println!();
         for i in 0..fast_model_result.len() {
-            assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-9);
+            assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-12);
             println!("{} {}", fast_model_result[i].0, slow_model_result[i].0);
             assert_eq!(fast_model_result[i].1, slow_model_result[i].1);
         }
