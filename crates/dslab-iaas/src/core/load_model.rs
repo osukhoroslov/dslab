@@ -28,7 +28,7 @@ pub fn parse_load_model(model_type: LoadModelType, args: String) -> Box<dyn Load
             let mut result = ConstantLoadModel::new_fwd();
             result.parse_config_args(args);
             Box::new(result)
-        },
+        }
     }
 }
 

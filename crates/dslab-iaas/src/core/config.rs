@@ -44,7 +44,7 @@ pub struct SimulationConfigRaw {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ConfigLoadModel {
     pub model_type: LoadModelType,
-    pub args: String
+    pub args: String,
 }
 
 /// Represents incoming virtual machine request.
@@ -77,7 +77,7 @@ pub struct ConfigVM {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ConfigVmPlacementAlgorithm {
     pub algorithm_type: VmPlacementAlgorithmType,
-    pub args: String
+    pub args: String,
 }
 
 /// Represents physical host properties.
@@ -165,7 +165,11 @@ impl SimulationConfig {
             host_memory_capacity: 1.,
             step_duration: 500.,
             vm_allocation_timeout: 50.,
-            infrastructure: ConfigInfrastructure{ vms: Vec::new(), hosts: Vec::new(), schedulers: Vec::new() },
+            infrastructure: ConfigInfrastructure {
+                vms: Vec::new(),
+                hosts: Vec::new(),
+                schedulers: Vec::new(),
+            },
         }
     }
 

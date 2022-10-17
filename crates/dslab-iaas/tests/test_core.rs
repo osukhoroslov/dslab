@@ -222,6 +222,8 @@ impl BadScheduler {
 }
 
 impl VMPlacementAlgorithm for BadScheduler {
+    fn parse_config_args(&mut self, _config_str: String) {}
+
     fn select_host(
         &self,
         _alloc: &Allocation,

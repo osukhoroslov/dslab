@@ -13,9 +13,9 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
+use crate::core::load_model::parse_load_model;
 use crate::core::load_model::ConstantLoadModel;
 use crate::core::load_model::LoadModel;
-use crate::core::load_model::parse_load_model;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::power_model::HostPowerModel;
@@ -218,20 +218,20 @@ impl CloudSimulation {
                 let scheduler_id = self.sim.lookup_id(&vm_properties.scheduler_name);
 
                 self.spawn_vm_with_delay(
-                      vm_properties.cpu_usage,
-                      vm_properties.memory_usage,
-                      vm_properties.lifetime,
-                      parse_load_model(
-                          vm_properties.cpu_load_model.model_type.clone(),
-                          vm_properties.cpu_load_model.args.clone()
-                      ),
-                      parse_load_model(
-                          vm_properties.memory_load_model.model_type.clone(),
-                          vm_properties.memory_load_model.args.clone()
-                      ),
-                      Some(id),
-                      scheduler_id, 
-                      vm_properties.delay,
+                    vm_properties.cpu_usage,
+                    vm_properties.memory_usage,
+                    vm_properties.lifetime,
+                    parse_load_model(
+                        vm_properties.cpu_load_model.model_type.clone(),
+                        vm_properties.cpu_load_model.args.clone(),
+                    ),
+                    parse_load_model(
+                        vm_properties.memory_load_model.model_type.clone(),
+                        vm_properties.memory_load_model.args.clone(),
+                    ),
+                    Some(id),
+                    scheduler_id,
+                    vm_properties.delay,
                 );
             }
         }

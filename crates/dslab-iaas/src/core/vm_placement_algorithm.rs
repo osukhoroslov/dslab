@@ -38,22 +38,22 @@ pub fn parse_placement_algorithm(model_type: VmPlacementAlgorithmType, args: Str
             let mut result = FirstFit::new();
             result.parse_config_args(args);
             Box::new(result)
-        },
+        }
         VmPlacementAlgorithmType::BestFit => {
             let mut result = BestFit::new();
             result.parse_config_args(args);
             Box::new(result)
-        },
+        }
         VmPlacementAlgorithmType::WorstFit => {
             let mut result = WorstFit::new();
             result.parse_config_args(args);
             Box::new(result)
-        },
+        }
         VmPlacementAlgorithmType::BestFitThreshold => {
             let mut result = BestFitThreshold::new_fwd();
             result.parse_config_args(args);
             Box::new(result)
-        },
+        }
     }
 }
 
@@ -69,8 +69,7 @@ impl FirstFit {
 }
 
 impl VMPlacementAlgorithm for FirstFit {
-    fn parse_config_args(&mut self, _config_str: String) {
-    }
+    fn parse_config_args(&mut self, _config_str: String) {}
 
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         for host in pool_state.get_hosts_list() {
@@ -94,8 +93,7 @@ impl BestFit {
 }
 
 impl VMPlacementAlgorithm for BestFit {
-    fn parse_config_args(&mut self, _config_str: String) {
-    }
+    fn parse_config_args(&mut self, _config_str: String) {}
 
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
@@ -125,8 +123,7 @@ impl WorstFit {
 }
 
 impl VMPlacementAlgorithm for WorstFit {
-    fn parse_config_args(&mut self, _config_str: String) {
-    }
+    fn parse_config_args(&mut self, _config_str: String) {}
 
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
