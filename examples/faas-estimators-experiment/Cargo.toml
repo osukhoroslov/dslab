@@ -1,0 +1,11 @@
+[package]
+name = "faas-estimators-experiment"
+version = "0.0.1"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-faas = { path = "../../crates/dslab-faas" }
+dslab-faas-estimators = { path = "../../crates/dslab-faas-estimators" }
+dslab-faas-extra = { path = "../../crates/dslab-faas-extra" }

@@ -1,0 +1,12 @@
+[package]
+name = "dslab-faas-estimators"
+version = "0.0.1"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-faas = { path = "../dslab-faas" }
+indexmap = "1.8.2"
+num = "0.2.0"
+rand = "0.8"
+rand_pcg = "0.3.1"
