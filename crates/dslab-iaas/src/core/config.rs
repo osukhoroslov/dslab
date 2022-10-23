@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::load_model::LoadModelType;
 use crate::core::vm_placement_algorithm::VmPlacementAlgorithmType;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -35,39 +34,6 @@ pub struct SimulationConfigRaw {
     pub vm_allocation_timeout: Option<f64>,
     /// Cloud infrastructure: hosts, schedulers, incoming VMs
     pub infrastructure: Option<ConfigInfrastructure>,
-}
-
-/// Represents custom load model in .ymal config.
-///
-/// model_type: type of custom resourse load model
-/// args: arbitrary arguments for load model
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigLoadModel {
-    pub model_type: LoadModelType,
-    pub args: String,
-}
-
-/// Represents incoming virtual machine request.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigVM {
-    /// requested CPU capacity for VM
-    pub cpu_usage: u32,
-    /// requested memory capacity for VM
-    pub memory_usage: u64,
-    /// VM lifetime
-    pub lifetime: f64,
-    /// CPU load model - it`s type and arguments
-    pub cpu_load_model: ConfigLoadModel,
-    /// memory load model - it`s type and arguments
-    pub memory_load_model: ConfigLoadModel,
-    /// explicitly defined VM id, if not selected - it will be generated automaticly
-    pub vm_id: Option<u32>,
-    /// scheduler name where VM should be scheduled
-    pub scheduler_name: String,
-    /// simulation time when current VM arrives to scheduler
-    pub delay: f64,
-    /// number of such VMs
-    pub amount: u32,
 }
 
 /// Represents custom virtual machine placement algorithm in .ymal config.
@@ -107,8 +73,6 @@ pub struct ConfigHost {
 /// Represents cloud infrustructure for simulation instance.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ConfigInfrastructure {
-    /// incoming VM requests
-    pub vms: Vec<ConfigVM>,
     /// cloud physical hosts
     pub hosts: Vec<ConfigHost>,
     /// cloud schedulers
@@ -166,7 +130,6 @@ impl SimulationConfig {
             step_duration: 500.,
             vm_allocation_timeout: 50.,
             infrastructure: ConfigInfrastructure {
-                vms: Vec::new(),
                 hosts: Vec::new(),
                 schedulers: Vec::new(),
             },

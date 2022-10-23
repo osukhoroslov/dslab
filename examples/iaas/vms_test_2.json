@@ -1,0 +1,162 @@
+[
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 0
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 1
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 2
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 3
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 4
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 5
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 6
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 7
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 8
+    },
+    {
+        "amount": 1,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "memory_load_model": {
+            "model_type": "Const",
+            "args": 0.5
+        },
+        "scheduler_name": "s",
+        "arrival_time": 9
+    }
+]

@@ -7,6 +7,7 @@ use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
 use dslab_iaas::custom_component::CustomComponent;
+use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
 use dslab_iaas::simulation::CloudSimulation;
 
@@ -96,7 +97,10 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
+    let mut dataset = StandardDatasetReader::new();
+    dataset.parse("vms_test_2.json");
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
+    cloud_sim.spawn_vms_from_dataset(scheduler_id, &mut dataset);
 
     cloud_sim.spawn_infrastructure_from_config();
     cloud_sim.steps(300);

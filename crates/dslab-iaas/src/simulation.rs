@@ -13,8 +13,6 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
-use crate::core::load_model::parse_load_model;
-use crate::core::load_model::ConstantLoadModel;
 use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
@@ -188,7 +186,6 @@ impl CloudSimulation {
     }
 
     /// Creates new VMs with specified properties, given from .yaml simulation config
-    /// VMs properties are specified in infrastructure.vms field
     pub fn spawn_infrastructure_from_config(&mut self) {
         for host_properties in self.sim_config.infrastructure.hosts.clone() {
             for _ in 0..host_properties.amount {
@@ -208,30 +205,6 @@ impl CloudSimulation {
                         scheduler_properties.placement_algorithm.algorithm_type.clone(),
                         scheduler_properties.placement_algorithm.args.clone(),
                     ),
-                );
-            }
-        }
-
-        for vm_properties in self.sim_config.infrastructure.vms.clone() {
-            for _ in 0..vm_properties.amount {
-                let id = vm_properties.vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
-                let scheduler_id = self.sim.lookup_id(&vm_properties.scheduler_name);
-
-                self.spawn_vm_with_delay(
-                    vm_properties.cpu_usage,
-                    vm_properties.memory_usage,
-                    vm_properties.lifetime,
-                    parse_load_model(
-                        vm_properties.cpu_load_model.model_type.clone(),
-                        vm_properties.cpu_load_model.args.clone(),
-                    ),
-                    parse_load_model(
-                        vm_properties.memory_load_model.model_type.clone(),
-                        vm_properties.memory_load_model.args.clone(),
-                    ),
-                    Some(id),
-                    scheduler_id,
-                    vm_properties.delay,
                 );
             }
         }
@@ -272,9 +245,9 @@ impl CloudSimulation {
                 request.cpu_usage,
                 request.memory_usage,
                 request.lifetime,
-                Box::new(ConstantLoadModel::new(1.0)),
-                Box::new(ConstantLoadModel::new(1.0)),
-                Some(request.id),
+                request.cpu_load_model.clone(),
+                request.memory_load_model.clone(),
+                request.id,
                 scheduler_id,
                 request.start_time,
             );

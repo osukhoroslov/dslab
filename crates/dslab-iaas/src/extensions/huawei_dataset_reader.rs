@@ -6,8 +6,9 @@ use std::fs::File;
 use log::info;
 use serde::{Deserialize, Serialize};
 
+use crate::core::load_model::ConstantLoadModel;
 use crate::extensions::dataset_reader::DatasetReader;
-use crate::extensions::dataset_reader::VMRequest;
+use crate::extensions::dataset_reader::VMRequestInternal;
 
 /// Represents allocation or deallocation request from dataset.
 #[derive(Serialize, Deserialize, Debug)]
@@ -32,7 +33,7 @@ pub struct HuaweiDatasetReader {
     simulation_length: f64,
 
     vm_events: Vec<VMEvent>,
-    vm_requests: Vec<VMRequest>,
+    vm_requests: Vec<VMRequestInternal>,
     current_vm: usize,
 }
 
@@ -72,12 +73,15 @@ impl HuaweiDatasetReader {
 
         for event in &self.vm_events {
             if event.is_finish == 0 {
-                self.vm_requests.push(VMRequest {
-                    id: event.vm_id,
+                self.vm_requests.push(VMRequestInternal {
+                    id: Some(event.vm_id),
                     cpu_usage: event.cpu,
                     memory_usage: event.memory,
                     lifetime: end_times.get(&event.vm_id).unwrap_or(&self.simulation_length) - event.time,
                     start_time: event.time,
+                    cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
+                    memory_load_model: Box::new(ConstantLoadModel::new(1.)),
+                    scheduler_name: None,
                 });
             }
         }
@@ -85,7 +89,7 @@ impl HuaweiDatasetReader {
 }
 
 impl DatasetReader for HuaweiDatasetReader {
-    fn get_next_vm(&mut self) -> Option<VMRequest> {
+    fn get_next_vm(&mut self) -> Option<VMRequestInternal> {
         if self.current_vm >= self.vm_requests.len() {
             return None;
         }

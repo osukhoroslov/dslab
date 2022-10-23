@@ -6,8 +6,9 @@ use std::fs::File;
 use log::info;
 use serde::{Deserialize, Serialize};
 
+use crate::core::load_model::ConstantLoadModel;
 use crate::extensions::dataset_reader::DatasetReader;
-use crate::extensions::dataset_reader::VMRequest;
+use crate::extensions::dataset_reader::VMRequestInternal;
 
 /// Represents information about VM type from the dataset.
 ///
@@ -117,7 +118,7 @@ impl AzureDatasetReader {
 }
 
 impl DatasetReader for AzureDatasetReader {
-    fn get_next_vm(&mut self) -> Option<VMRequest> {
+    fn get_next_vm(&mut self) -> Option<VMRequestInternal> {
         if self.current_vm >= self.vm_instances.len() {
             return None;
         }
@@ -135,12 +136,15 @@ impl DatasetReader for AzureDatasetReader {
             .unwrap_or(self.simulation_length)
             .min(self.simulation_length);
         let lifetime = end_time - start_time;
-        return Some(VMRequest {
-            id: raw_vm.vm_id.clone(),
+        return Some(VMRequestInternal {
+            id: Some(raw_vm.vm_id.clone()),
             cpu_usage,
             memory_usage,
             lifetime,
             start_time,
+            cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
+            memory_load_model: Box::new(ConstantLoadModel::new(1.)),
+            scheduler_name: None,
         });
     }
 }
