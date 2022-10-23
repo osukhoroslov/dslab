@@ -1,6 +1,7 @@
 //! Virtual machine placement algorithms.
 
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
@@ -18,13 +19,12 @@ use crate::core::resource_pool::ResourcePoolState;
 /// It is possible to implement arbitrary placement algorithm and use it in scheduler.
 pub trait VMPlacementAlgorithm {
     /// parse load model arguments from .yaml config string
-    fn parse_config_args(&mut self, config_string: String);
+    fn parse_config_args(&mut self, _config_string: String) {}
 
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
 }
 
-/// Load model names enum.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, EnumString, Serialize, Deserialize)]
 pub enum VmPlacementAlgorithmType {
     FirstFit,
     BestFit,
@@ -32,26 +32,31 @@ pub enum VmPlacementAlgorithmType {
     BestFitThreshold,
 }
 
-pub fn parse_placement_algorithm(model_type: VmPlacementAlgorithmType, args: String) -> Box<dyn VMPlacementAlgorithm> {
+pub fn parse_placement_algorithm(raw_data: String) -> Box<dyn VMPlacementAlgorithm> {
+    let cleanup = raw_data.replace("]", "").replace("\"", "");
+    let split = cleanup.split("[").collect::<Vec<&str>>();
+    let model_type: VmPlacementAlgorithmType = split.get(0).unwrap().parse().unwrap();
+    let model_args = split.get(1).unwrap().to_string();
+
     match model_type {
         VmPlacementAlgorithmType::FirstFit => {
             let mut result = FirstFit::new();
-            result.parse_config_args(args);
+            result.parse_config_args(model_args);
             Box::new(result)
         }
         VmPlacementAlgorithmType::BestFit => {
             let mut result = BestFit::new();
-            result.parse_config_args(args);
+            result.parse_config_args(model_args);
             Box::new(result)
         }
         VmPlacementAlgorithmType::WorstFit => {
             let mut result = WorstFit::new();
-            result.parse_config_args(args);
+            result.parse_config_args(model_args);
             Box::new(result)
         }
         VmPlacementAlgorithmType::BestFitThreshold => {
             let mut result = BestFitThreshold::new_fwd();
-            result.parse_config_args(args);
+            result.parse_config_args(model_args);
             Box::new(result)
         }
     }
@@ -69,8 +74,6 @@ impl FirstFit {
 }
 
 impl VMPlacementAlgorithm for FirstFit {
-    fn parse_config_args(&mut self, _config_str: String) {}
-
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
@@ -93,8 +96,6 @@ impl BestFit {
 }
 
 impl VMPlacementAlgorithm for BestFit {
-    fn parse_config_args(&mut self, _config_str: String) {}
-
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut min_available_cpu: u32 = u32::MAX;
@@ -123,8 +124,6 @@ impl WorstFit {
 }
 
 impl VMPlacementAlgorithm for WorstFit {
-    fn parse_config_args(&mut self, _config_str: String) {}
-
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_available_cpu: u32 = 0;
@@ -160,7 +159,13 @@ impl BestFitThreshold {
 
 impl VMPlacementAlgorithm for BestFitThreshold {
     fn parse_config_args(&mut self, config_str: String) {
-        self.threshold = config_str.parse::<f64>().unwrap();
+        let variables = config_str.split(",");
+        for variable in variables {
+            let split = variable.split("=").collect::<Vec<&str>>();
+            if split.get(0).unwrap().to_string() == "threshold" {
+                self.threshold = split.get(1).unwrap().to_string().parse::<f64>().unwrap();
+            }
+        }
     }
 
     fn select_host(&self, alloc: &Allocation, _pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32> {

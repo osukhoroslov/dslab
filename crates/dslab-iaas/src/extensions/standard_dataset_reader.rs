@@ -2,7 +2,9 @@
 
 use std::fs::File;
 
-use crate::core::load_model::ConstantLoadModel;
+use serde::{Deserialize, Serialize};
+
+use crate::core::load_model::parse_load_model;
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequestInternal;
 
@@ -12,6 +14,20 @@ use crate::extensions::dataset_reader::VMRequestInternal;
 pub struct StandardDatasetReader {
     vm_requests: Vec<VMRequestInternal>,
     current_vm: usize,
+}
+
+/// Represents allocation request from dataset.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct VmRequest {
+    pub id: Option<u32>,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+    pub lifetime: f64,
+    pub arrival_time: f64,
+    pub cpu_load_model: String,
+    pub memory_load_model: String,
+    pub scheduler: Option<String>,
+    pub count: Option<u32>,
 }
 
 impl StandardDatasetReader {
@@ -29,16 +45,19 @@ impl StandardDatasetReader {
         let raw_json: Vec<serde_json::Value> = serde_json::from_reader(file).unwrap();
 
         for raw_vm in raw_json.iter() {
-            self.vm_requests.push(VMRequestInternal {
-                id: None,
-                cpu_usage: raw_vm["cpu_usage"].as_u64().unwrap() as u32,
-                memory_usage: raw_vm["memory_usage"].as_u64().unwrap(),
-                lifetime: raw_vm["lifetime"].as_f64().unwrap(),
-                start_time: raw_vm["arrival_time"].as_f64().unwrap(),
-                cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
-                memory_load_model: Box::new(ConstantLoadModel::new(1.)),
-                scheduler_name: Some(raw_vm["scheduler"].to_string()),
-            });
+            let dataset_request: VmRequest = serde_json::from_str(&raw_vm.to_string()).unwrap();
+            for _i in 0..dataset_request.count.unwrap_or(1) {
+                self.vm_requests.push(VMRequestInternal {
+                    id: None,
+                    cpu_usage: dataset_request.clone().cpu_usage,
+                    memory_usage: dataset_request.clone().memory_usage,
+                    lifetime: dataset_request.clone().lifetime,
+                    start_time: dataset_request.clone().arrival_time,
+                    cpu_load_model: parse_load_model(dataset_request.clone().cpu_load_model),
+                    memory_load_model: parse_load_model(dataset_request.clone().memory_load_model),
+                    scheduler_name: dataset_request.clone().scheduler,
+                });
+            }
         }
     }
 }

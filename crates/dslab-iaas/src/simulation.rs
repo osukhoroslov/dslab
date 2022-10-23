@@ -187,25 +187,23 @@ impl CloudSimulation {
 
     /// Creates new VMs with specified properties, given from .yaml simulation config
     pub fn spawn_infrastructure_from_config(&mut self) {
-        for host_properties in self.sim_config.infrastructure.hosts.clone() {
-            for _ in 0..host_properties.amount {
-                self.add_host(
-                    &host_properties.name,
-                    host_properties.cpu_capacity,
-                    host_properties.memory_capacity,
-                );
+        for host_properties in self.sim_config.hosts.clone() {
+            for i in 0..host_properties.count.unwrap_or(1) {
+                let mut name = host_properties.name_prefix.clone();
+                if host_properties.count.unwrap_or(1) > 1 {
+                    name = format!("{}{}", name, i + 1);
+                }
+                self.add_host(&name, host_properties.cpus, host_properties.memory);
             }
         }
 
-        for scheduler_properties in self.sim_config.infrastructure.schedulers.clone() {
-            for _ in 0..scheduler_properties.amount {
-                self.add_scheduler(
-                    &scheduler_properties.name,
-                    parse_placement_algorithm(
-                        scheduler_properties.placement_algorithm.algorithm_type.clone(),
-                        scheduler_properties.placement_algorithm.args.clone(),
-                    ),
-                );
+        for scheduler_properties in self.sim_config.schedulers.clone() {
+            for i in 0..scheduler_properties.count.unwrap_or(1) {
+                let mut name = scheduler_properties.name_prefix.clone();
+                if scheduler_properties.count.unwrap_or(1) > 1 {
+                    name = format!("{}{}", name, i + 1);
+                }
+                self.add_scheduler(&name, parse_placement_algorithm(scheduler_properties.clone().algorithm));
             }
         }
     }
@@ -241,6 +239,11 @@ impl CloudSimulation {
             }
             let request = request_opt.unwrap();
 
+            let mut scheduler = scheduler_id;
+            if !request.scheduler_name.is_none() {
+                scheduler = self.sim.lookup_id(&request.scheduler_name.unwrap());
+            }
+
             self.spawn_vm_with_delay(
                 request.cpu_usage,
                 request.memory_usage,
@@ -248,7 +251,7 @@ impl CloudSimulation {
                 request.cpu_load_model.clone(),
                 request.memory_load_model.clone(),
                 request.id,
-                scheduler_id,
+                scheduler,
                 request.start_time,
             );
         }

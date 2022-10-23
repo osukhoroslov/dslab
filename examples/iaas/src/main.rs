@@ -5,7 +5,6 @@ use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
-use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
 use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
@@ -99,10 +98,10 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
 
     let mut dataset = StandardDatasetReader::new();
     dataset.parse("vms_test_2.json");
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(0.8)));
-    cloud_sim.spawn_vms_from_dataset(scheduler_id, &mut dataset);
 
     cloud_sim.spawn_infrastructure_from_config();
+    cloud_sim.spawn_vms_from_dataset(0, &mut dataset);
+
     cloud_sim.steps(300);
 
     let end_time = cloud_sim.current_time();
@@ -214,7 +213,7 @@ fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
     let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
-    let config_with_vms = SimulationConfig::from_file("config_with_vms.yaml");
+    let config_with_vms = SimulationConfig::from_file("infrastructure.yaml");
     simulation_two_best_fit_schedulers(config.clone());
     simulation_one_thresholded_scheduler(config_with_vms);
     simulation_migration_simple(config);

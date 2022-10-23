@@ -2,8 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::vm_placement_algorithm::VmPlacementAlgorithmType;
-
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfigRaw {
     /// periodically send statistics from host to monitoring
@@ -32,51 +30,34 @@ pub struct SimulationConfigRaw {
     pub step_duration: Option<f64>,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<f64>,
-    /// Cloud infrastructure: hosts, schedulers, incoming VMs
-    pub infrastructure: Option<ConfigInfrastructure>,
-}
-
-/// Represents custom virtual machine placement algorithm in .ymal config.
-///
-/// algorithm_type: type of algorithm
-/// args: arbitrary arguments for the algorithm
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigVmPlacementAlgorithm {
-    pub algorithm_type: VmPlacementAlgorithmType,
-    pub args: String,
-}
-
-/// Represents physical host properties.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigScheduler {
-    /// scheduler name
-    pub name: String,
-    /// VM placement algorithm for this scheduler
-    pub placement_algorithm: ConfigVmPlacementAlgorithm,
-    /// number of such schedulers
-    pub amount: u32,
-}
-
-/// Represents physical host properties.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigHost {
-    /// host name
-    pub name: String,
-    /// host CPU capacity
-    pub cpu_capacity: u32,
-    /// host memory capacity
-    pub memory_capacity: u64,
-    /// number of such hosts
-    pub amount: u32,
-}
-
-/// Represents cloud infrustructure for simulation instance.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct ConfigInfrastructure {
     /// cloud physical hosts
-    pub hosts: Vec<ConfigHost>,
+    pub hosts: Option<Vec<HostConfig>>,
     /// cloud schedulers
-    pub schedulers: Vec<ConfigScheduler>,
+    pub schedulers: Option<Vec<SchedulerConfig>>,
+}
+
+/// Represents physical host properties.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct SchedulerConfig {
+    /// Host name prefix. Number of instance comes next.
+    pub name_prefix: String,
+    /// VM placement algorithm for this scheduler
+    pub algorithm: String,
+    /// number of such schedulers
+    pub count: Option<u32>,
+}
+
+/// Represents physical host properties.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct HostConfig {
+    /// Host name prefix. Number of instance comes next.
+    pub name_prefix: String,
+    /// host CPU capacity
+    pub cpus: u32,
+    /// host memory capacity
+    pub memory: u64,
+    /// number of such hosts
+    pub count: Option<u32>,
 }
 
 /// Represents simulation configuration.
@@ -108,8 +89,10 @@ pub struct SimulationConfig {
     pub step_duration: f64,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: f64,
-    /// Cloud infrastructure: hosts, schedulers, incoming VMs
-    pub infrastructure: ConfigInfrastructure,
+    /// cloud physical hosts
+    pub hosts: Vec<HostConfig>,
+    /// cloud schedulers
+    pub schedulers: Vec<SchedulerConfig>,
 }
 
 impl SimulationConfig {
@@ -129,10 +112,8 @@ impl SimulationConfig {
             host_memory_capacity: 1.,
             step_duration: 500.,
             vm_allocation_timeout: 50.,
-            infrastructure: ConfigInfrastructure {
-                hosts: Vec::new(),
-                schedulers: Vec::new(),
-            },
+            hosts: Vec::new(),
+            schedulers: Vec::new(),
         }
     }
 
@@ -156,7 +137,8 @@ impl SimulationConfig {
             host_memory_capacity: data.host_memory_capacity.unwrap_or(default.host_memory_capacity),
             step_duration: data.step_duration.unwrap_or(default.step_duration),
             vm_allocation_timeout: data.vm_allocation_timeout.unwrap_or(default.vm_allocation_timeout),
-            infrastructure: data.infrastructure.unwrap_or(default.infrastructure),
+            hosts: data.hosts.unwrap_or(Vec::new()),
+            schedulers: data.schedulers.unwrap_or(Vec::new()),
         }
     }
 }
