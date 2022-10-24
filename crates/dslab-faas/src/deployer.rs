@@ -27,6 +27,6 @@ impl IdleDeployer for BasicDeployer {
     }
 
     fn get_name(&self) -> String {
-        "Basic Deployer".to_string()
+        "BasicDeployer".to_string()
     }
 }

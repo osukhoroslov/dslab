@@ -206,6 +206,6 @@ impl ColdStartPolicy for HybridHistogramPolicy {
     }
 
     fn get_name(&self) -> String {
-        format!("Hybrid Histogram Policy (range: {:.2}, bin_len: {:.2}, cv_thr: {:.2}, oob_thr: {:.2}, arima_margin: {:.2}, hist_margin: {:.2})", self.range, self.bin_len, self.cv_thr, self.oob_thr, self.arima_margin, self.hist_margin)
+        format!("HybridHistogramPolicy[range={:.2},bin_len={:.2},cv_thr={:.2},oob_thr={:.2},arima_margin={:.2},hist_margin={:.2}]", self.range, self.bin_len, self.cv_thr, self.oob_thr, self.arima_margin, self.hist_margin)
     }
 }

@@ -53,11 +53,10 @@ impl Scheduler for LocalityBasedScheduler {
     }
 
     fn get_name(&self) -> String {
-        if self.warm_only {
-            "Locality-based Scheduler (warm containers only)".to_string()
-        } else {
-            "Locality-based Scheduler".to_string()
-        }
+        format!(
+            "LocalityBasedScheduler[hasher=[some_fn],step={},warm_only={}]",
+            self.step, self.warm_only
+        )
     }
 }
 
@@ -80,7 +79,7 @@ impl Scheduler for RandomScheduler {
     }
 
     fn get_name(&self) -> String {
-        "Random Scheduler".to_string()
+        "RandomScheduler".to_string()
     }
 }
 
@@ -118,11 +117,7 @@ impl Scheduler for LeastLoadedScheduler {
     }
 
     fn get_name(&self) -> String {
-        if self.prefer_warm {
-            "Least-loaded Scheduler (prefer warm containers)".to_string()
-        } else {
-            "Least-loaded Scheduler".to_string()
-        }
+        format!("LeastLoadedScheduler[prefer_warm={}]", self.prefer_warm)
     }
 }
 
@@ -146,6 +141,6 @@ impl Scheduler for RoundRobinScheduler {
     }
 
     fn get_name(&self) -> String {
-        "Round Robin Scheduler".to_string()
+        "RoundRobinScheduler".to_string()
     }
 }

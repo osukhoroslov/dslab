@@ -1,13 +1,20 @@
 use std::boxed::Box;
+use std::fs::File;
 use std::path::Path;
 
-use dslab_faas::coldstart::FixedTimeColdStartPolicy;
-use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
-use dslab_faas::scheduler::Scheduler;
+use serde::{Deserialize, Serialize};
+
+use dslab_faas::config::{ConfigParamResolvers, RawConfig};
+use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
-use dslab_faas_extra::hermes::HermesScheduler;
-use dslab_faas_extra::simple_schedulers::*;
+use dslab_faas_extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
+
+#[derive(Serialize, Deserialize)]
+struct ExperimentConfig {
+    pub base_config: RawConfig,
+    pub schedulers: Vec<String>,
+}
 
 fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
@@ -41,32 +48,23 @@ fn main() {
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
-    let mut schedulers: Vec<Box<dyn Scheduler + Send>> = vec![
-        Box::new(LocalityBasedScheduler::new(None, None, true)),
-        Box::new(LocalityBasedScheduler::new(None, None, false)),
-        Box::new(RandomScheduler::new(1)),
-        Box::new(LeastLoadedScheduler::new(true)),
-        Box::new(RoundRobinScheduler::new()),
-        Box::new(HermesScheduler::new()),
-    ];
-    let descr = schedulers.iter().map(|x| x.get_name()).collect::<Vec<_>>();
+    let experiment_config: ExperimentConfig =
+        serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
+    let schedulers = experiment_config.schedulers;
+    let sim_config = experiment_config.base_config;
     let configs: Vec<_> = schedulers
-        .drain(..)
+        .iter()
         .map(|x| {
-            let mut config: ParallelConfig = Default::default();
-            config.scheduler = x;
-            config.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
-            for _ in 0..10 {
-                let mut host: ParallelHostConfig = Default::default();
-                host.resources = vec![("mem".to_string(), 4096 * 4)];
-                host.cores = 4;
-                config.hosts.push(host);
-            }
+            let mut config = sim_config.clone();
+            config.scheduler = x.to_string();
             config
         })
         .collect();
-    let mut stats = parallel_simulation(configs, vec![trace], vec![1]);
+    let mut resolvers: ConfigParamResolvers = Default::default();
+    resolvers.coldstart_policy_resolver = Box::new(extra_coldstart_policy_resolver);
+    resolvers.scheduler_resolver = Box::new(extra_scheduler_resolver);
+    let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &descr[i]);
+        print_results(s, &schedulers[i]);
     }
 }

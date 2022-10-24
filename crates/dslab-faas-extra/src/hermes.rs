@@ -58,6 +58,6 @@ impl Scheduler for HermesScheduler {
     }
 
     fn get_name(&self) -> String {
-        "Hermes Scheduler".to_string()
+        "HermesScheduler".to_string()
     }
 }

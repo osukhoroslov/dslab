@@ -1,10 +1,11 @@
+use std::boxed::Box;
 use std::fs::File;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use dslab_faas::config::{stub_idle_deployer_resolver, stub_invoker_resolver, stub_scheduler_resolver, RawConfig};
+use dslab_faas::config::{ConfigParamResolvers, RawConfig};
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
 use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
@@ -12,8 +13,8 @@ use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
-    pub config: RawConfig,
-    pub policies: Vec<String>,
+    pub base_config: RawConfig,
+    pub coldstart_policies: Vec<String>,
 }
 
 fn print_results(stats: Stats, name: &str) {
@@ -43,8 +44,8 @@ fn main() {
     );
     let experiment_config: ExperimentConfig =
         serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
-    let policies = experiment_config.policies;
-    let sim_config = experiment_config.config;
+    let policies = experiment_config.coldstart_policies;
+    let sim_config = experiment_config.base_config;
     let policy_resolver = |s: &str| -> Box<dyn ColdStartPolicy> {
         match &s[s.len() - 9..] {
             "keepalive" => {
@@ -71,15 +72,9 @@ fn main() {
             config
         })
         .collect();
-    let mut stats = parallel_simulation_raw(
-        configs,
-        Box::new(policy_resolver),
-        Box::new(stub_idle_deployer_resolver),
-        Box::new(stub_scheduler_resolver),
-        Box::new(stub_invoker_resolver),
-        vec![trace],
-        vec![1],
-    );
+    let mut resolvers: ConfigParamResolvers = Default::default();
+    resolvers.coldstart_policy_resolver = Box::new(policy_resolver);
+    let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
         print_results(s, &policies[i]);
     }

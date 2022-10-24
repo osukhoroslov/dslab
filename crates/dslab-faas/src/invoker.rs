@@ -109,6 +109,6 @@ impl Invoker for BasicInvoker {
     }
 
     fn get_name(&self) -> String {
-        "Basic Invoker".to_string()
+        "BasicInvoker".to_string()
     }
 }

@@ -1,4 +1,5 @@
 use std::boxed::Box;
+use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
@@ -45,7 +46,7 @@ pub struct RawHostConfig {
     pub count: u32,
 }
 
-/// YAML-serializeable config
+/// YAML-serializable config
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawConfig {
     #[serde(default)]
@@ -60,20 +61,70 @@ pub struct RawConfig {
     pub hosts: Vec<RawHostConfig>,
 }
 
-pub fn stub_coldstart_policy_resolver(_s: &str) -> Box<dyn ColdStartPolicy> {
-    Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0))
+pub fn parse_options(s: &str) -> HashMap<String, String> {
+    let mut ans = HashMap::new();
+    for t in s.split(",") {
+        let val = t.split_once("=");
+        if let Some((l, r)) = val {
+            ans.insert(l.to_string(), r.to_string());
+        }
+    }
+    ans
 }
 
-pub fn stub_idle_deployer_resolver(_s: &str) -> Box<dyn IdleDeployer> {
-    Box::new(BasicDeployer {})
+pub fn stub_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
+    if s == "No unloading" {
+        return Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0));
+    }
+    if s.len() >= 26 && &s[0..25] == "FixedTimeColdStartPolicy[" && s.chars().next_back().unwrap() == ']' {
+        let opts = parse_options(&s[25..s.len() - 1]);
+        let keepalive = opts.get("keepalive").unwrap().parse::<f64>().unwrap();
+        let prewarm = opts.get("prewarm").unwrap().parse::<f64>().unwrap();
+        return Box::new(FixedTimeColdStartPolicy::new(keepalive, prewarm));
+    }
+    panic!("Can't resolve: {}", s);
 }
 
-pub fn stub_scheduler_resolver(_s: &str) -> Box<dyn Scheduler> {
-    Box::new(BasicScheduler {})
+pub fn stub_idle_deployer_resolver(s: &str) -> Box<dyn IdleDeployer> {
+    if s == "BasicDeployer" {
+        Box::new(BasicDeployer {})
+    } else {
+        panic!("Can't resolve: {}", s);
+    }
 }
 
-pub fn stub_invoker_resolver(_s: &str) -> Box<dyn Invoker> {
-    Box::new(BasicInvoker::new())
+pub fn stub_scheduler_resolver(s: &str) -> Box<dyn Scheduler> {
+    if s == "BasicScheduler" {
+        Box::new(BasicScheduler {})
+    } else {
+        panic!("Can't resolve: {}", s);
+    }
+}
+
+pub fn stub_invoker_resolver(s: &str) -> Box<dyn Invoker> {
+    if s == "BasicInvoker" {
+        Box::new(BasicInvoker::new())
+    } else {
+        panic!("Can't resolve: {}", s);
+    }
+}
+
+pub struct ConfigParamResolvers {
+    pub coldstart_policy_resolver: Box<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync>,
+    pub idle_deployer_resolver: Box<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync>,
+    pub scheduler_resolver: Box<dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync>,
+    pub invoker_resolver: Box<dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync>,
+}
+
+impl Default for ConfigParamResolvers {
+    fn default() -> Self {
+        Self {
+            coldstart_policy_resolver: Box::new(stub_coldstart_policy_resolver),
+            idle_deployer_resolver: Box::new(stub_idle_deployer_resolver),
+            scheduler_resolver: Box::new(stub_scheduler_resolver),
+            invoker_resolver: Box::new(stub_invoker_resolver),
+        }
+    }
 }
 
 /// This is simulation config. It implements Default trait (see below) so that you can create
@@ -101,12 +152,22 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn from_raw(
+    pub fn from_raw(raw: RawConfig, resolvers: ConfigParamResolvers) -> Self {
+        Self::from_raw_split_resolvers(
+            raw,
+            resolvers.coldstart_policy_resolver.as_ref(),
+            resolvers.idle_deployer_resolver.as_ref(),
+            resolvers.scheduler_resolver.as_ref(),
+            resolvers.invoker_resolver.as_ref(),
+        )
+    }
+
+    pub fn from_raw_split_resolvers(
         raw: RawConfig,
-        coldstart_policy_resolver: &dyn Fn(&str) -> Box<dyn ColdStartPolicy>,
-        idle_deployer_resolver: &dyn Fn(&str) -> Box<dyn IdleDeployer>,
-        scheduler_resolver: &dyn Fn(&str) -> Box<dyn Scheduler>,
-        invoker_resolver: &dyn Fn(&str) -> Box<dyn Invoker>,
+        coldstart_policy_resolver: &(dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync),
+        idle_deployer_resolver: &(dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync),
+        scheduler_resolver: &(dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync),
+        invoker_resolver: &(dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync),
     ) -> Self {
         let mut me: Self = Default::default();
         if !raw.coldstart_policy.is_empty() {
@@ -136,20 +197,8 @@ impl Config {
         me
     }
 
-    pub fn from_yaml(
-        path: &Path,
-        coldstart_policy_resolver: &dyn Fn(&str) -> Box<dyn ColdStartPolicy>,
-        idle_deployer_resolver: &dyn Fn(&str) -> Box<dyn IdleDeployer>,
-        scheduler_resolver: &dyn Fn(&str) -> Box<dyn Scheduler>,
-        invoker_resolver: &dyn Fn(&str) -> Box<dyn Invoker>,
-    ) -> Self {
+    pub fn from_yaml(path: &Path, resolvers: ConfigParamResolvers) -> Self {
         let f = File::open(path).unwrap();
-        Self::from_raw(
-            serde_yaml::from_reader(f).unwrap(),
-            coldstart_policy_resolver,
-            idle_deployer_resolver,
-            scheduler_resolver,
-            invoker_resolver,
-        )
+        Self::from_raw(serde_yaml::from_reader(f).unwrap(), resolvers)
     }
 }

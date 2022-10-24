@@ -57,7 +57,7 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
 
     fn get_name(&self) -> String {
         format!(
-            "Fixed-time policy with keepalive = {:.2} and prewarm = {:.2}",
+            "FixedTimeColdStartPolicy[keepalive={:.2},prewarm{:.2}]",
             self.keepalive_window, self.prewarm_window
         )
     }

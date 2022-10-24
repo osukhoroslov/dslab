@@ -39,6 +39,6 @@ impl Scheduler for BasicScheduler {
     }
 
     fn get_name(&self) -> String {
-        "Basic Scheduler".to_string()
+        "BasicScheduler".to_string()
     }
 }

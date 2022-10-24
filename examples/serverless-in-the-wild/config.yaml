@@ -1,11 +1,15 @@
-config:
+base_config:
   hosts:
     - cores: 8
       resources:
         - name: mem
           quantity: 16384
+      invoker: BasicInvoker
       count: 1000
-policies:
+  scheduler: BasicScheduler
+  idle_deployer: BasicDeployer
+  disable_contention: false
+coldstart_policies:
   - No unloading
   - 20-minute keepalive
   - 45-minute keepalive
