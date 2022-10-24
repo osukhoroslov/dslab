@@ -1,4 +1,4 @@
-//! System.
+//! Distributed computing system.
 
 use dslab_core::component::Id;
 use dslab_network::network::Network;
@@ -31,14 +31,5 @@ impl System<'_> {
             })
             .sum::<f64>()
             / (self.resources.len() as f64).powf(2.)
-    }
-
-    /// Returns average time over all resources for sending one unit of data to runner.
-    pub fn avg_upload_net_time(&self, id: Id) -> f64 {
-        self.resources
-            .iter()
-            .map(|r| 1. / self.network.bandwidth(r.id, id))
-            .sum::<f64>()
-            / self.resources.len() as f64
     }
 }

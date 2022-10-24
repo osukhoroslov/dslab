@@ -13,15 +13,15 @@ use crate::runner::Config;
 #[derive(Clone, Debug)]
 pub struct ScheduledTask {
     pub start_time: f64,
-    pub end_time: f64,
+    pub finish_time: f64,
     pub task: usize,
 }
 
 impl ScheduledTask {
-    pub fn new(start_time: f64, end_time: f64, task: usize) -> ScheduledTask {
+    pub fn new(start_time: f64, finish_time: f64, task: usize) -> ScheduledTask {
         ScheduledTask {
             start_time,
-            end_time,
+            finish_time,
             task,
         }
     }
@@ -32,7 +32,7 @@ impl PartialOrd for ScheduledTask {
         Some(
             self.start_time
                 .total_cmp(&other.start_time)
-                .then(self.end_time.total_cmp(&other.end_time)),
+                .then(self.finish_time.total_cmp(&other.finish_time)),
         )
     }
 }
@@ -52,10 +52,9 @@ impl PartialEq for ScheduledTask {
 impl Eq for ScheduledTask {}
 
 pub fn evaluate_assignment(
-    task: usize,
+    task_id: usize,
     resource: usize,
-    eft: &Vec<f64>,
-    pred: &Vec<Vec<(usize, f64)>>,
+    task_finish_times: &Vec<f64>,
     scheduled_tasks: &Vec<Vec<BTreeSet<ScheduledTask>>>,
     data_location: &HashMap<usize, Id>,
     task_location: &HashMap<usize, Id>,
@@ -69,13 +68,18 @@ pub fn evaluate_assignment(
     let data_transfer_mode = &config.data_transfer_mode;
 
     let est = match data_transfer_strategy {
-        DataTransferStrategy::Eager => pred[task]
+        DataTransferStrategy::Eager => dag
+            .get_task(task_id)
+            .inputs
             .iter()
-            .map(|&(task, weight)| {
+            .map(|&id| dag.get_data_item(id))
+            .filter(|&data_item| data_item.producer.is_some())
+            .map(|data_item| (data_item.producer.unwrap(), data_item.size as f64))
+            .map(|(task, weight)| {
                 if task_location[&task] == resources[resource].id {
-                    eft[task]
+                    task_finish_times[task]
                 } else {
-                    eft[task]
+                    task_finish_times[task]
                         + weight
                             * data_transfer_mode.net_time(
                                 network,
@@ -87,15 +91,20 @@ pub fn evaluate_assignment(
             })
             .max_by(|a, b| a.total_cmp(&b))
             .unwrap_or(0.),
-        DataTransferStrategy::Lazy => pred[task]
+        DataTransferStrategy::Lazy => dag
+            .get_task(task_id)
+            .inputs
             .iter()
-            .map(|&(task, weight)| {
+            .map(|&id| dag.get_data_item(id))
+            .filter(|&data_item| data_item.producer.is_some())
+            .map(|data_item| (data_item.producer.unwrap(), data_item.size as f64))
+            .map(|(task, weight)| {
                 let data_upload_time = match data_transfer_mode {
                     DataTransferMode::ViaMasterNode => weight / network.bandwidth(task_location[&task], ctx.id()),
                     DataTransferMode::Direct => 0.,
                     DataTransferMode::Manual => 0.,
                 };
-                eft[task] + data_upload_time
+                task_finish_times[task] + data_upload_time
             })
             .max_by(|a, b| a.total_cmp(&b))
             .unwrap_or(0.),
@@ -104,7 +113,7 @@ pub fn evaluate_assignment(
     let cur_net_time = 1. / network.bandwidth(ctx.id(), resources[resource].id);
     let input_load_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => dag
-            .get_task(task)
+            .get_task(task_id)
             .inputs
             .iter()
             .filter(|f| dag.get_inputs().contains(f))
@@ -115,7 +124,7 @@ pub fn evaluate_assignment(
     };
     let est = est.max(input_load_time);
 
-    let need_cores = dag.get_task(task).min_cores;
+    let need_cores = dag.get_task(task_id).min_cores;
     if resources[resource].compute.borrow().cores_total() < need_cores {
         return None;
     }
@@ -123,7 +132,7 @@ pub fn evaluate_assignment(
     let download_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => 0.,
         DataTransferStrategy::Lazy => dag
-            .get_task(task)
+            .get_task(task_id)
             .inputs
             .iter()
             .map(|&f| match data_transfer_mode {
@@ -145,14 +154,14 @@ pub fn evaluate_assignment(
             .max_by(|a, b| a.total_cmp(&b))
             .unwrap_or(0.),
     };
-    let time = dag.get_task(task).flops as f64
+    let time = dag.get_task(task_id).flops as f64
         / resources[resource].speed as f64
-        / dag.get_task(task).cores_dependency.speedup(need_cores)
+        / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
     let mut possible_starts = scheduled_tasks[resource]
         .iter()
-        .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.end_time))
+        .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.finish_time))
         .filter(|&a| a >= est)
         .collect::<Vec<_>>();
     possible_starts.push(est);
@@ -170,7 +179,7 @@ pub fn evaluate_assignment(
                 .range((Unbounded, Included(ScheduledTask::new(possible_start, 0., 0))))
                 .next_back();
             if let Some(scheduled_task) = prev {
-                if scheduled_task.end_time > possible_start {
+                if scheduled_task.finish_time > possible_start {
                     continue;
                 }
             }
@@ -203,18 +212,6 @@ pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
         result.extend(data_item.consumers.iter().map(|&v| (v, data_item.size)));
     }
     result
-}
-
-pub fn predecessors(dag: &DAG) -> Vec<Vec<(usize, f64)>> {
-    let total_tasks = dag.get_tasks().len();
-
-    let mut predecessors = vec![vec![(0 as usize, 0.); 0]; total_tasks];
-    for task in 0..total_tasks {
-        for &(succ, weight) in task_successors(task, dag).iter() {
-            predecessors[succ].push((task, weight as f64));
-        }
-    }
-    predecessors
 }
 
 fn calc_rank(v: usize, avg_flop_time: f64, avg_net_time: f64, dag: &DAG, ranks: &mut Vec<f64>, used: &mut Vec<bool>) {
@@ -260,7 +257,7 @@ pub fn calc_makespan(
                 .iter()
                 .map(|schedule| {
                     schedule.iter().next_back().map_or(0., |task| {
-                        task.end_time
+                        task.finish_time
                             + dag
                                 .get_task(task.task)
                                 .outputs

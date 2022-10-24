@@ -53,8 +53,6 @@ impl Scheduler for HeftScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let pred = predecessors(dag);
-
         let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
@@ -67,10 +65,10 @@ impl Scheduler for HeftScheduler {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let mut eft = vec![0.; task_count];
+        let mut task_finish_times = vec![0.; task_count];
 
-        let mut data_location: HashMap<usize, Id> = HashMap::new();
-        let mut task_location: HashMap<usize, Id> = HashMap::new();
+        let mut data_locations: HashMap<usize, Id> = HashMap::new();
+        let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
@@ -83,11 +81,10 @@ impl Scheduler for HeftScheduler {
                 let res = evaluate_assignment(
                     task_id,
                     resource,
-                    &eft,
-                    &pred,
+                    &task_finish_times,
                     &scheduled_tasks,
-                    &data_location,
-                    &task_location,
+                    &data_locations,
+                    &task_locations,
                     &self.data_transfer_strategy,
                     dag,
                     resources,
@@ -133,7 +130,7 @@ impl Scheduler for HeftScheduler {
                     task_id,
                 ));
             }
-            eft[task_id] = best_finish;
+            task_finish_times[task_id] = best_finish;
             result.push((
                 best_start,
                 Action::ScheduleTaskOnCores {
@@ -143,9 +140,9 @@ impl Scheduler for HeftScheduler {
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {
-                data_location.insert(output, resources[best_resource].id);
+                data_locations.insert(output, resources[best_resource].id);
             }
-            task_location.insert(task_id, resources[best_resource].id);
+            task_locations.insert(task_id, resources[best_resource].id);
         }
 
         log_info!(

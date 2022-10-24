@@ -53,8 +53,6 @@ impl Scheduler for LookaheadScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let pred = predecessors(dag);
-
         let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
@@ -67,16 +65,16 @@ impl Scheduler for LookaheadScheduler {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let mut eft = vec![0.; task_count];
+        let mut task_finish_times = vec![0.; task_count];
         let mut scheduled = vec![false; task_count];
 
-        let mut data_location: HashMap<usize, Id> = HashMap::new();
-        let mut task_location: HashMap<usize, Id> = HashMap::new();
+        let mut data_locations: HashMap<usize, Id> = HashMap::new();
+        let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
         for task_id in task_ids.into_iter() {
-            let mut best_eft = -1.;
+            let mut best_task_finish_time = -1.;
             let mut best_time = -1.;
             let mut best_finish = -1.;
             let mut best_resource = 0 as usize;
@@ -85,11 +83,10 @@ impl Scheduler for LookaheadScheduler {
                 let res = evaluate_assignment(
                     task_id,
                     resource,
-                    &eft,
-                    &pred,
+                    &task_finish_times,
                     &scheduled_tasks,
-                    &data_location,
-                    &task_location,
+                    &data_locations,
+                    &task_locations,
                     &self.data_transfer_strategy,
                     dag,
                     resources,
@@ -103,23 +100,23 @@ impl Scheduler for LookaheadScheduler {
                 let (est, time, cores) = res.unwrap();
 
                 let mut to_undo: Vec<(usize, Vec<u32>, ScheduledTask)> = Vec::new();
-                let old_task_location = task_location.clone();
-                let old_data_location = data_location.clone();
+                let old_task_location = task_locations.clone();
+                let old_data_location = data_locations.clone();
 
                 for &core in cores.iter() {
                     scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(est, est + time, task_id));
                 }
-                eft[task_id] = est + time;
+                task_finish_times[task_id] = est + time;
                 scheduled[task_id] = true;
                 for &output in dag.get_task(task_id).outputs.iter() {
-                    data_location.insert(output, resources[resource].id);
+                    data_locations.insert(output, resources[resource].id);
                 }
-                task_location.insert(task_id, resources[resource].id);
+                task_locations.insert(task_id, resources[resource].id);
                 to_undo.push((resource, cores.clone(), ScheduledTask::new(est, est + time, task_id)));
 
                 let mut children = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
                 children.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
-                let mut max_eft = est + time;
+                let mut max_task_finish_time = est + time;
                 for &child in children.iter() {
                     let (resource, cores, finish, time) = {
                         let task = child;
@@ -132,11 +129,10 @@ impl Scheduler for LookaheadScheduler {
                             let res = evaluate_assignment(
                                 task,
                                 resource,
-                                &eft,
-                                &pred,
+                                &task_finish_times,
                                 &scheduled_tasks,
-                                &data_location,
-                                &task_location,
+                                &data_locations,
+                                &task_locations,
                                 &self.data_transfer_strategy,
                                 dag,
                                 resources,
@@ -168,15 +164,15 @@ impl Scheduler for LookaheadScheduler {
                             child,
                         ));
                     }
-                    eft[child] = finish;
+                    task_finish_times[child] = finish;
                     scheduled[child] = true;
                     for &output in dag.get_task(child).outputs.iter() {
-                        data_location.insert(output, resources[resource].id);
+                        data_locations.insert(output, resources[resource].id);
                     }
-                    task_location.insert(child, resources[resource].id);
+                    task_locations.insert(child, resources[resource].id);
                     to_undo.push((resource, cores, ScheduledTask::new(finish - time, finish, child)));
-                    if finish > max_eft {
-                        max_eft = finish;
+                    if finish > max_task_finish_time {
+                        max_task_finish_time = finish;
                     }
                 }
 
@@ -186,13 +182,13 @@ impl Scheduler for LookaheadScheduler {
                     }
                     scheduled[scheduled_task.task] = false;
                 }
-                data_location = old_data_location;
-                task_location = old_task_location;
+                data_locations = old_data_location;
+                task_locations = old_task_location;
 
-                if best_eft == -1. || best_eft > max_eft {
+                if best_task_finish_time == -1. || best_task_finish_time > max_task_finish_time {
                     best_time = time;
                     best_finish = est + time;
-                    best_eft = max_eft;
+                    best_task_finish_time = max_task_finish_time;
                     best_resource = resource;
                     best_cores = cores.clone();
                 }
@@ -207,7 +203,7 @@ impl Scheduler for LookaheadScheduler {
                     task_id,
                 ));
             }
-            eft[task_id] = best_finish;
+            task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((
                 best_finish - best_time,
@@ -218,9 +214,9 @@ impl Scheduler for LookaheadScheduler {
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {
-                data_location.insert(output, resources[best_resource].id);
+                data_locations.insert(output, resources[best_resource].id);
             }
-            task_location.insert(task_id, resources[best_resource].id);
+            task_locations.insert(task_id, resources[best_resource].id);
         }
 
         log_info!(

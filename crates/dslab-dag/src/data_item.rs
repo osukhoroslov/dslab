@@ -19,19 +19,19 @@ pub enum DataItemState {
 pub struct DataItem {
     pub name: String,
     pub size: u64,
+    pub producer: Option<usize>,
     pub(crate) consumers: Vec<usize>,
-    pub(crate) is_input: bool,
     pub(crate) state: DataItemState,
 }
 
 impl DataItem {
     /// Creates new data item.
-    pub fn new(name: &str, size: u64, state: DataItemState, is_input: bool) -> Self {
+    pub fn new(name: &str, size: u64, state: DataItemState, producer: Option<usize>) -> Self {
         Self {
             name: name.to_string(),
             size,
+            producer,
             consumers: Vec::new(),
-            is_input,
             state,
         }
     }

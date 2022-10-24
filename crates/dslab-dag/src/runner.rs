@@ -148,7 +148,7 @@ impl DAGRunner {
 
         for (id, data_item) in self.dag.get_data_items().iter().enumerate() {
             if data_item.state == DataItemState::Ready {
-                assert!(data_item.is_input, "Non-input data item has Ready state");
+                assert!(data_item.producer.is_none(), "Non-input data item has Ready state");
                 self.data_location.insert(id, self.id);
                 self.resource_data_items.entry(self.id).or_default().insert(id);
             } else if data_item.consumers.is_empty() {

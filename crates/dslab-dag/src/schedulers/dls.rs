@@ -53,8 +53,6 @@ impl Scheduler for DlsScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let pred = predecessors(dag);
-
         let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
@@ -67,11 +65,11 @@ impl Scheduler for DlsScheduler {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let mut eft = vec![1e100; task_count];
+        let mut task_finish_times = vec![1e100; task_count];
         let mut scheduled = vec![false; task_count];
 
-        let mut data_location: HashMap<usize, Id> = HashMap::new();
-        let mut task_location: HashMap<usize, Id> = HashMap::new();
+        let mut data_locations: HashMap<usize, Id> = HashMap::new();
+        let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
@@ -81,20 +79,21 @@ impl Scheduler for DlsScheduler {
             let mut best_finish = -1.;
             let mut best_time = -1.;
             let mut best_cores: Vec<u32> = Vec::new();
-            for &task_id in task_ids
-                .iter()
-                .filter(|&i| !scheduled[*i])
-                .filter(|&i| pred[*i].iter().all(|&(task, _weight)| scheduled[task]))
-            {
+            for &task_id in task_ids.iter().filter(|&i| !scheduled[*i]).filter(|&i| {
+                dag.get_task(*i)
+                    .inputs
+                    .iter()
+                    .filter_map(|&id| dag.get_data_item(id).producer)
+                    .all(|task| scheduled[task])
+            }) {
                 for resource in 0..resources.len() {
                     let res = evaluate_assignment(
                         task_id,
                         resource,
-                        &eft,
-                        &pred,
+                        &task_finish_times,
                         &scheduled_tasks,
-                        &data_location,
-                        &task_location,
+                        &data_locations,
+                        &task_locations,
                         &self.data_transfer_strategy,
                         dag,
                         resources,
@@ -127,7 +126,7 @@ impl Scheduler for DlsScheduler {
                     task_id,
                 ));
             }
-            eft[task_id] = best_finish;
+            task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((
                 best_finish - best_time,
@@ -138,9 +137,9 @@ impl Scheduler for DlsScheduler {
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {
-                data_location.insert(output, resources[resource].id);
+                data_locations.insert(output, resources[resource].id);
             }
-            task_location.insert(task_id, resources[resource].id);
+            task_locations.insert(task_id, resources[resource].id);
         }
 
         log_info!(

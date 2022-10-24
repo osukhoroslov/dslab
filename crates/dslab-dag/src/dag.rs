@@ -94,7 +94,7 @@ impl DAG {
 
     /// Adds [data item](crate::data_item::DataItem) with provided parameters and returns its id.
     pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Ready, true);
+        let data_item = DataItem::new(name, size, DataItemState::Ready, None);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.inputs.insert(data_item_id);
@@ -104,7 +104,7 @@ impl DAG {
 
     /// Adds [data item](crate::data_item::DataItem) as a [task](crate::task::Task) output and returns its id.
     pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
-        let data_item = DataItem::new(name, size, DataItemState::Pending, false);
+        let data_item = DataItem::new(name, size, DataItemState::Pending, Some(producer));
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
         self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
