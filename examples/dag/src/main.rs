@@ -23,6 +23,7 @@ use dslab_dag::scheduler::Scheduler;
 use dslab_dag::schedulers::dls::DlsScheduler;
 use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::lookahead::LookaheadScheduler;
+use dslab_dag::schedulers::peft::PeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 use dslab_dag::schedulers::simple_with_data::SimpleDataScheduler;
 
@@ -56,6 +57,11 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "heft" => {
             rc!(refcell!(
                 HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
+        }
+        "peft" => {
+            rc!(refcell!(
+                PeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
             ))
         }
         "lookahead" => {

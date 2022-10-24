@@ -316,7 +316,7 @@
       "time": 9.6,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 8,
       "data_item_id": 7,
       "data_name": "map2_out2"
@@ -367,7 +367,7 @@
       "time": 10.7,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 8,
       "data_name": "map2_out2"
     },
@@ -481,7 +481,7 @@
       "time": 17.333333333333336,
       "type": "start_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 16,
       "data_item_id": 3,
       "data_name": "map1_out2"
@@ -547,9 +547,24 @@
       "time": 18.433333333333337,
       "type": "finish_uploading",
       "from": "runner",
-      "to": "compute3",
+      "to": "compute2",
       "data_id": 16,
       "data_name": "map1_out2"
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "task_scheduled",
+      "task_id": 3,
+      "task_name": "reduce2",
+      "location": "compute2",
+      "cores": 1,
+      "memory": 128
+    },
+    {
+      "time": 18.433333333333337,
+      "type": "task_started",
+      "task_id": 3,
+      "task_name": "reduce2"
     },
     {
       "time": 18.433333333333337,
@@ -613,30 +628,15 @@
       "data_name": "result1"
     },
     {
-      "time": 19.433333333333337,
-      "type": "task_scheduled",
-      "task_id": 3,
-      "task_name": "reduce2",
-      "location": "compute3",
-      "cores": 1,
-      "memory": 128
-    },
-    {
-      "time": 19.433333333333337,
-      "type": "task_started",
-      "task_id": 3,
-      "task_name": "reduce2"
-    },
-    {
-      "time": 21.100000000000005,
+      "time": 20.933333333333337,
       "type": "task_completed",
       "task_id": 3,
       "task_name": "reduce2"
     },
     {
-      "time": 21.100000000000005,
+      "time": 20.933333333333337,
       "type": "start_uploading",
-      "from": "compute3",
+      "from": "compute2",
       "to": "runner",
       "data_id": 20,
       "data_item_id": 11,
@@ -681,9 +681,9 @@
       "data_name": "result1"
     },
     {
-      "time": 24.400000000000006,
+      "time": 24.233333333333338,
       "type": "finish_uploading",
-      "from": "compute3",
+      "from": "compute2",
       "to": "runner",
       "data_id": 20,
       "data_name": "result2"

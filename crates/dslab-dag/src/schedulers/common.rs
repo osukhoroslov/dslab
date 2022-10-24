@@ -76,7 +76,7 @@ pub fn evaluate_assignment(
             .filter(|&data_item| data_item.producer.is_some())
             .map(|data_item| (data_item.producer.unwrap(), data_item.size as f64))
             .map(|(task, weight)| {
-                if task_location[&task] == resources[resource].id {
+                if task_location[&task] == resources[resource].id && data_transfer_mode == &DataTransferMode::Direct {
                     task_finish_times[task]
                 } else {
                     task_finish_times[task]
@@ -239,6 +239,29 @@ pub fn calc_ranks(avg_flop_time: f64, avg_net_time: f64, dag: &DAG) -> Vec<f64> 
     }
 
     ranks
+}
+
+fn topsort_dfs(v: usize, dag: &DAG, used: &mut Vec<bool>, order: &mut Vec<usize>) {
+    used[v] = true;
+    for &(succ, _) in task_successors(v, dag).iter() {
+        if !used[succ] {
+            topsort_dfs(succ, dag, used, order);
+        }
+    }
+    order.push(v);
+}
+
+pub fn topsort(dag: &DAG) -> Vec<usize> {
+    let mut order = Vec::with_capacity(dag.get_tasks().len());
+    let mut used = vec![false; dag.get_tasks().len()];
+    for i in 0..dag.get_tasks().len() {
+        if !used[i] {
+            topsort_dfs(i, dag, &mut used, &mut order);
+        }
+    }
+    assert_eq!(order.len(), dag.get_tasks().len());
+    order.reverse();
+    order
 }
 
 pub fn calc_makespan(
