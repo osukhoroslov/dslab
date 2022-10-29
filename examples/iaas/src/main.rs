@@ -5,6 +5,10 @@ use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
+use dslab_iaas::core::vm_placement_algorithm::CosineSimilarity;
+use dslab_iaas::core::vm_placement_algorithm::DotProduct;
+use dslab_iaas::core::vm_placement_algorithm::NormBasedGreedy;
+use dslab_iaas::core::vm_placement_algorithm::PerpDistance;
 use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
@@ -211,11 +215,52 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
 
 fn main() {
     init_logger();
-    let config = SimulationConfig::from_file("config.yaml");
-    let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
-    let config_with_vms = SimulationConfig::from_file("infrastructure.yaml");
-    simulation_two_best_fit_schedulers(config.clone());
-    simulation_one_thresholded_scheduler(config_with_vms);
-    simulation_migration_simple(config);
-    simulation_migration_component(config_with_overcommit);
+    //let config = SimulationConfig::from_file("config.yaml");
+    //let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
+    //let config_with_vms = SimulationConfig::from_file("infrastructure.yaml");
+    //simulation_two_best_fit_schedulers(config.clone());
+    //simulation_one_thresholded_scheduler(config_with_vms);
+    //simulation_migration_simple(config);
+    //simulation_migration_component(config_with_overcommit);
+
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file("config.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 20, 40);
+    let h2 = cloud_sim.add_host("h2", 20, 80);
+    let s = cloud_sim.add_scheduler("s", Box::new(NormBasedGreedy::new()));
+
+    let vm1 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        40.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm2 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        40.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm3 = cloud_sim.spawn_vm_now(
+        1,
+        4,
+        40.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(20.);
+    let cur_time = cloud_sim.current_time();
+
+    assert_eq!(cur_time, 20.);
 }

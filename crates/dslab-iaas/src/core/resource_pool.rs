@@ -128,6 +128,16 @@ impl ResourcePoolState {
         return self.hosts[&host_id].memory_available;
     }
 
+    /// Returns the total amount of vCPUs on the specified host.
+    pub fn get_total_cpu(&self, host_id: u32) -> u32 {
+        return self.hosts[&host_id].cpu_total;
+    }
+
+    /// Returns the total amount of memory on the specified host.
+    pub fn get_total_memory(&self, host_id: u32) -> u64 {
+        return self.hosts[&host_id].memory_total;
+    }
+
     /// Returns the CPU allocation rate (ratio of allocated to total resources) of the specified host
     pub fn get_cpu_load(&self, host_id: u32) -> f64 {
         return 1. - self.hosts[&host_id].cpu_available as f64 / self.hosts[&host_id].cpu_total as f64;
