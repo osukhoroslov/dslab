@@ -1,10 +1,15 @@
 //! Virtual machine placement algorithms.
 
+use std::num::ParseIntError;
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
+use crate::core::config::parse_model_name_and_args;
+use crate::core::config::parse_options;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 
@@ -33,32 +38,14 @@ pub enum VmPlacementAlgorithmType {
 }
 
 pub fn parse_placement_algorithm(raw_data: String) -> Box<dyn VMPlacementAlgorithm> {
-    let cleanup = raw_data.replace("]", "").replace("\"", "");
-    let split = cleanup.split("[").collect::<Vec<&str>>();
-    let model_type: VmPlacementAlgorithmType = split.get(0).unwrap().parse().unwrap();
-    let model_args = split.get(1).unwrap().to_string();
+    let (model_type_str, model_args) = parse_model_name_and_args(&raw_data);
+    let model_type: VmPlacementAlgorithmType = model_type_str.parse().unwrap();
 
     match model_type {
-        VmPlacementAlgorithmType::FirstFit => {
-            let mut result = FirstFit::new();
-            result.parse_config_args(model_args);
-            Box::new(result)
-        }
-        VmPlacementAlgorithmType::BestFit => {
-            let mut result = BestFit::new();
-            result.parse_config_args(model_args);
-            Box::new(result)
-        }
-        VmPlacementAlgorithmType::WorstFit => {
-            let mut result = WorstFit::new();
-            result.parse_config_args(model_args);
-            Box::new(result)
-        }
-        VmPlacementAlgorithmType::BestFitThreshold => {
-            let mut result = BestFitThreshold::new_fwd();
-            result.parse_config_args(model_args);
-            Box::new(result)
-        }
+        VmPlacementAlgorithmType::FirstFit => Box::new(FirstFit::from_str(&model_args).unwrap()),
+        VmPlacementAlgorithmType::BestFit => Box::new(BestFit::from_str(&model_args).unwrap()),
+        VmPlacementAlgorithmType::WorstFit => Box::new(WorstFit::from_str(&model_args).unwrap()),
+        VmPlacementAlgorithmType::BestFitThreshold => Box::new(BestFitThreshold::from_str(&model_args).unwrap()),
     }
 }
 
@@ -81,6 +68,14 @@ impl VMPlacementAlgorithm for FirstFit {
             }
         }
         return None;
+    }
+}
+
+impl FromStr for FirstFit {
+    type Err = ParseIntError;
+
+    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
+        Ok(FirstFit {})
     }
 }
 
@@ -112,6 +107,14 @@ impl VMPlacementAlgorithm for BestFit {
     }
 }
 
+impl FromStr for BestFit {
+    type Err = ParseIntError;
+
+    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
+        Ok(BestFit {})
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// WorstFit algorithm, which returns the least loaded (by CPU) suitable host.
@@ -140,6 +143,14 @@ impl VMPlacementAlgorithm for WorstFit {
     }
 }
 
+impl FromStr for WorstFit {
+    type Err = ParseIntError;
+
+    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
+        Ok(WorstFit {})
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// BestFit algorithm, which returns the most loaded (by actual CPU load) suitable host.
@@ -151,23 +162,9 @@ impl BestFitThreshold {
     pub fn new(threshold: f64) -> Self {
         Self { threshold }
     }
-
-    pub fn new_fwd() -> Self {
-        Self { threshold: 0. }
-    }
 }
 
 impl VMPlacementAlgorithm for BestFitThreshold {
-    fn parse_config_args(&mut self, config_str: String) {
-        let variables = config_str.split(",");
-        for variable in variables {
-            let split = variable.split("=").collect::<Vec<&str>>();
-            if split.get(0).unwrap().to_string() == "threshold" {
-                self.threshold = split.get(1).unwrap().to_string().parse::<f64>().unwrap();
-            }
-        }
-    }
-
     fn select_host(&self, alloc: &Allocation, _pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut best_cpu_load: f64 = 0.;
@@ -187,5 +184,15 @@ impl VMPlacementAlgorithm for BestFitThreshold {
             }
         }
         return result;
+    }
+}
+
+impl FromStr for BestFitThreshold {
+    type Err = ParseIntError;
+
+    fn from_str(config_str: &str) -> Result<Self, Self::Err> {
+        let options = parse_options(config_str);
+        let threshold = options.get("threshold").unwrap().parse::<f64>().unwrap();
+        Ok(BestFitThreshold { threshold })
     }
 }

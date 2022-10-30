@@ -6,19 +6,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::load_model::parse_load_model;
 use crate::extensions::dataset_reader::DatasetReader;
-use crate::extensions::dataset_reader::VMRequestInternal;
+use crate::extensions::dataset_reader::VMRequest;
 
 /// Dataset reader for manually created datasets.
 ///
 /// Pass the produced JSON file to [`parse()`](StandardDatasetReader::parse) method.
 pub struct StandardDatasetReader {
-    vm_requests: Vec<VMRequestInternal>,
+    vm_requests: Vec<VMRequest>,
     current_vm: usize,
 }
 
 /// Represents allocation request from dataset.
 #[derive(Clone, Serialize, Deserialize, Debug)]
-struct VmRequest {
+struct StandardVmRequest {
     pub id: Option<u32>,
     pub cpu_usage: u32,
     pub memory_usage: u64,
@@ -45,9 +45,9 @@ impl StandardDatasetReader {
         let raw_json: Vec<serde_json::Value> = serde_json::from_reader(file).unwrap();
 
         for raw_vm in raw_json.iter() {
-            let dataset_request: VmRequest = serde_json::from_str(&raw_vm.to_string()).unwrap();
+            let dataset_request: StandardVmRequest = serde_json::from_str(&raw_vm.to_string()).unwrap();
             for _i in 0..dataset_request.count.unwrap_or(1) {
-                self.vm_requests.push(VMRequestInternal {
+                self.vm_requests.push(VMRequest {
                     id: None,
                     cpu_usage: dataset_request.clone().cpu_usage,
                     memory_usage: dataset_request.clone().memory_usage,
@@ -63,7 +63,7 @@ impl StandardDatasetReader {
 }
 
 impl DatasetReader for StandardDatasetReader {
-    fn get_next_vm(&mut self) -> Option<VMRequestInternal> {
+    fn get_next_vm(&mut self) -> Option<VMRequest> {
         if self.current_vm >= self.vm_requests.len() {
             return None;
         }

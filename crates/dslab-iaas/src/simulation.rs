@@ -188,10 +188,12 @@ impl CloudSimulation {
     /// Creates new VMs with specified properties, given from .yaml simulation config
     pub fn spawn_infrastructure_from_config(&mut self) {
         for host_properties in self.sim_config.hosts.clone() {
-            for i in 0..host_properties.count.unwrap_or(1) {
-                let mut name = host_properties.name_prefix.clone();
+            for i in 0..host_properties.clone().count.unwrap_or(1) {
+                let name: String;
                 if host_properties.count.unwrap_or(1) > 1 {
-                    name = format!("{}{}", name, i + 1);
+                    name = format!("{}{}", host_properties.name_prefix.clone().unwrap(), i + 1);
+                } else {
+                    name = host_properties.clone().name.unwrap();
                 }
                 self.add_host(&name, host_properties.cpus, host_properties.memory);
             }
@@ -199,9 +201,11 @@ impl CloudSimulation {
 
         for scheduler_properties in self.sim_config.schedulers.clone() {
             for i in 0..scheduler_properties.count.unwrap_or(1) {
-                let mut name = scheduler_properties.name_prefix.clone();
+                let name: String;
                 if scheduler_properties.count.unwrap_or(1) > 1 {
-                    name = format!("{}{}", name, i + 1);
+                    name = format!("{}{}", scheduler_properties.name_prefix.clone().unwrap(), i + 1);
+                } else {
+                    name = scheduler_properties.clone().name.unwrap();
                 }
                 self.add_scheduler(&name, parse_placement_algorithm(scheduler_properties.clone().algorithm));
             }

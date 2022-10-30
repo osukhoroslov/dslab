@@ -1,5 +1,7 @@
 //! Simulation configuration.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -36,22 +38,28 @@ pub struct SimulationConfigRaw {
     pub schedulers: Option<Vec<SchedulerConfig>>,
 }
 
-/// Represents physical host properties.
+/// Represents scheduler(s) configuration.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SchedulerConfig {
-    /// Host name prefix. Number of instance comes next.
-    pub name_prefix: String,
+    /// Scheduler name. Should be set if count = 1
+    pub name: Option<String>,
+    /// Scheduler name prefix. Full name is produced by appending instance number to the prefix.
+    /// Should be set if count > 1
+    pub name_prefix: Option<String>,
     /// VM placement algorithm for this scheduler
     pub algorithm: String,
     /// number of such schedulers
     pub count: Option<u32>,
 }
 
-/// Represents physical host properties.
+/// Represents physical host(s) configuration.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct HostConfig {
-    /// Host name prefix. Number of instance comes next.
-    pub name_prefix: String,
+    /// Host name. Should be set if count = 1
+    pub name: Option<String>,
+    /// Host name prefix. Full name is produced by appending instance number to the prefix.
+    /// Should be set if count > 1
+    pub name_prefix: Option<String>,
     /// host CPU capacity
     pub cpus: u32,
     /// host memory capacity
@@ -141,4 +149,27 @@ impl SimulationConfig {
             schedulers: data.schedulers.unwrap_or(Vec::new()),
         }
     }
+}
+
+/// Parses options string from config value. Example: parsing string "threshold=0.8,cpu=8" returns
+/// map with two varaibles for threshold and CPU.
+pub fn parse_options(config_str: &str) -> HashMap<String, String> {
+    let mut result: HashMap<String, String> = HashMap::new();
+
+    let variables = config_str.split(",");
+    for variable in variables {
+        let split = variable.split("=").collect::<Vec<&str>>();
+        result.insert(split.get(0).unwrap().to_string(), split.get(1).unwrap().to_string());
+    }
+    result
+}
+
+/// Parses raw model config string, which consists of two parts - name and arguments.
+/// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and arguments string "load=0.8".
+pub fn parse_model_name_and_args(config_str: &str) -> (String, String) {
+    let cleanup = config_str.replace("]", "").replace("\"", "");
+    let split = cleanup.split("[").collect::<Vec<&str>>();
+    let model_type = split.get(0).unwrap();
+    let model_args = split.get(1).unwrap().to_string();
+    (model_type.to_string(), model_args)
 }

@@ -163,8 +163,6 @@ impl DecreaseLoadModel {
 }
 
 impl LoadModel for DecreaseLoadModel {
-    fn parse_config_args(&mut self, _config_str: String) {}
-
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
         // linear drop from 100% to zero within first 50 time points
         // then linear growth back from zero to 100% during next 50 time points

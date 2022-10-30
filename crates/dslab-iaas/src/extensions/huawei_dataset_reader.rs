@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::load_model::ConstantLoadModel;
 use crate::extensions::dataset_reader::DatasetReader;
-use crate::extensions::dataset_reader::VMRequestInternal;
+use crate::extensions::dataset_reader::VMRequest;
 
 /// Represents allocation or deallocation request from dataset.
 #[derive(Serialize, Deserialize, Debug)]
@@ -33,7 +33,7 @@ pub struct HuaweiDatasetReader {
     simulation_length: f64,
 
     vm_events: Vec<VMEvent>,
-    vm_requests: Vec<VMRequestInternal>,
+    vm_requests: Vec<VMRequest>,
     current_vm: usize,
 }
 
@@ -73,7 +73,7 @@ impl HuaweiDatasetReader {
 
         for event in &self.vm_events {
             if event.is_finish == 0 {
-                self.vm_requests.push(VMRequestInternal {
+                self.vm_requests.push(VMRequest {
                     id: Some(event.vm_id),
                     cpu_usage: event.cpu,
                     memory_usage: event.memory,
@@ -89,7 +89,7 @@ impl HuaweiDatasetReader {
 }
 
 impl DatasetReader for HuaweiDatasetReader {
-    fn get_next_vm(&mut self) -> Option<VMRequestInternal> {
+    fn get_next_vm(&mut self) -> Option<VMRequest> {
         if self.current_vm >= self.vm_requests.len() {
             return None;
         }

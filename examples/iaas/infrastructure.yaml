@@ -11,6 +11,5 @@ hosts:
     memory: 30
     name_prefix: h
 schedulers:
-  - count: 1
-    name_prefix: s
+  - name: s
     algorithm: BestFitThreshold[threshold=0.8]
