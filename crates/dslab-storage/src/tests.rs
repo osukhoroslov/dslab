@@ -201,114 +201,113 @@ fn single_disk_on_multiple_filesystems() {
 }
 
 #[test]
-fn read_write() {
-    // Good read and write
-    {
-        let mut sim = Simulation::new(SEED);
+fn good_read_write() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_simple_disk(&mut sim, "Disk-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
-        assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
-        assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
 
-        fs.borrow_mut().write("/mnt/file", 99, checker_id);
-        sim.step_until_no_events();
+    fs.borrow_mut().write("/mnt/file", 99, checker_id);
+    sim.step_until_no_events();
 
-        let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadCompleted)));
-        let read_checker_id = sim.add_handler("User", read_checker);
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadCompleted)));
+    let read_checker_id = sim.add_handler("User", read_checker);
 
-        fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
-        fs.borrow_mut().read_all("/mnt/file", read_checker_id);
+    fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
+    fs.borrow_mut().read_all("/mnt/file", read_checker_id);
 
-        sim.step_until_no_events();
-    }
+    sim.step_until_no_events();
+}
 
-    // Read fails because file does not exist
-    {
-        let mut sim = Simulation::new(SEED);
+#[test]
+fn failed_read_non_existent_file() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_simple_disk(&mut sim, "Disk-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
-        assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
-        fs.borrow_mut().read_all("/mnt/file", checker_id);
-        sim.step_until_no_events();
-    }
+    fs.borrow_mut().read_all("/mnt/file", checker_id);
+    sim.step_until_no_events();
+}
 
-    // Read fails because of bad size
-    {
-        let mut sim = Simulation::new(SEED);
+#[test]
+fn failed_read_file_bad_size() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_simple_disk(&mut sim, "Disk-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
-        assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
-        assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
 
-        fs.borrow_mut().write("/mnt/file", 98, checker_id);
-        sim.step_until_no_events();
+    fs.borrow_mut().write("/mnt/file", 98, checker_id);
+    sim.step_until_no_events();
 
-        let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
-        let read_checker_id = sim.add_handler("User", read_checker);
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
+    let read_checker_id = sim.add_handler("User", read_checker);
 
-        fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
-        sim.step_until_no_events();
-    }
+    fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
+    sim.step_until_no_events();
+}
 
-    // Write fails because of unresolved disk
-    {
-        let mut sim = Simulation::new(SEED);
+#[test]
+fn failed_write_unresolved_disk() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
 
-        fs.borrow_mut().write("/mnt/file", 99, checker_id);
-        sim.step_until_no_events();
-    }
+    fs.borrow_mut().write("/mnt/file", 99, checker_id);
+    sim.step_until_no_events();
+}
 
-    // Write fails because of non-existent file
-    {
-        let mut sim = Simulation::new(SEED);
+// Write fails because of non-existent file
+#[test]
+fn failed_write_non_existent_file() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_simple_disk(&mut sim, "Disk-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
-        assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
-        fs.borrow_mut().write("/mnt/file", 99, checker_id);
-        sim.step_until_no_events();
-    }
+    fs.borrow_mut().write("/mnt/file", 99, checker_id);
+    sim.step_until_no_events();
+}
 
-    // Write fails because of low disk capacity
-    {
-        let mut sim = Simulation::new(SEED);
+// Write fails because of low disk capacity
+#[test]
+fn failed_write_low_disk_capacity() {
+    let mut sim = Simulation::new(SEED);
 
-        let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
-        let checker_id = sim.add_handler("User", checker);
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker_id = sim.add_handler("User", checker);
 
-        let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_simple_disk(&mut sim, "Disk-1");
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
-        assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
-        assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
 
-        fs.borrow_mut().write("/mnt/file", 101, checker_id);
-        sim.step_until_no_events();
-    }
+    fs.borrow_mut().write("/mnt/file", 101, checker_id);
+    sim.step_until_no_events();
 }
