@@ -1,12 +1,11 @@
-use std::fs;
-use std::rc::Rc;
 use pyo3::prelude::*;
 use pyo3::types::{PyModule, PyTuple};
+use std::fs;
+use std::rc::Rc;
 
-use dslab_mp::process::Process;
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
-
+use dslab_mp::process::Process;
 
 // #[derive(Clone)]
 // pub struct JsonMessage {
@@ -67,8 +66,7 @@ impl PyProcessFactory {
         let impl_filename = impl_realpath.to_str().unwrap();
         let impl_module = impl_filename.replace(".py", "");
         let classes = Python::with_gil(|py| -> (PyObject, PyObject, PyObject, Py<PyAny>) {
-            let impl_module = PyModule::from_code(
-                py, impl_code.as_str(), impl_filename, &impl_module).unwrap();
+            let impl_module = PyModule::from_code(py, impl_code.as_str(), impl_filename, &impl_module).unwrap();
             let proc_class = impl_module.getattr(impl_class).unwrap().to_object(py);
             let msg_class = impl_module.getattr("Message").unwrap().to_object(py);
             let ctx_class = impl_module.getattr("Context").unwrap().to_object(py);
@@ -85,10 +83,13 @@ impl PyProcessFactory {
 
     pub fn build(&self, args: impl IntoPy<Py<PyTuple>>, seed: u64) -> PyProcess {
         let proc = Python::with_gil(|py| -> PyObject {
-            py.run(format!("import random\nrandom.seed({})", seed).as_str(), None, None).unwrap();
-            self.proc_class.call1(py, args)
+            py.run(format!("import random\nrandom.seed({})", seed).as_str(), None, None)
+                .unwrap();
+            self.proc_class
+                .call1(py, args)
                 .map_err(|e| log_python_error(e, py))
-                .unwrap().to_object(py)
+                .unwrap()
+                .to_object(py)
         });
         PyProcess {
             proc,
@@ -123,7 +124,8 @@ impl PyProcess {
         for m in sent {
             ctx.send(Message::new(&m.0, &m.1), m.2);
         }
-        let sent_local: Vec<(String, String)> = py_ctx.getattr(py, "_sent_local_messages").unwrap().extract(py).unwrap();
+        let sent_local: Vec<(String, String)> =
+            py_ctx.getattr(py, "_sent_local_messages").unwrap().extract(py).unwrap();
         for m in sent_local {
             ctx.send_local(Message::new(&m.0, &m.1));
         }
@@ -152,7 +154,10 @@ impl PyProcess {
 impl Process for PyProcess {
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
         Python::with_gil(|py| {
-            let py_msg = self.msg_class.call_method1(py, "from_json", (msg.tip, msg.data)).unwrap();
+            let py_msg = self
+                .msg_class
+                .call_method1(py, "from_json", (msg.tip, msg.data))
+                .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_message", (py_msg, from, &py_ctx))
@@ -165,7 +170,10 @@ impl Process for PyProcess {
 
     fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
         Python::with_gil(|py| {
-            let py_msg = self.msg_class.call_method1(py, "from_json", (msg.tip, msg.data)).unwrap();
+            let py_msg = self
+                .msg_class
+                .call_method1(py, "from_json", (msg.tip, msg.data))
+                .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_local_message", (py_msg, &py_ctx))
@@ -189,9 +197,7 @@ impl Process for PyProcess {
     }
 
     fn max_size(&mut self) -> u64 {
-        Python::with_gil(|py| {
-            self.update_max_size(py, true)
-        });
+        Python::with_gil(|py| self.update_max_size(py, true));
         self.max_size
     }
 }
@@ -229,5 +235,9 @@ def get_size(obj, seen=None):
     return size",
         "",
         "",
-    ).unwrap().getattr("get_size").unwrap().into()
+    )
+    .unwrap()
+    .getattr("get_size")
+    .unwrap()
+    .into()
 }
