@@ -25,7 +25,7 @@ fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> 
     fs
 }
 
-fn make_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
+fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
     rc!(refcell!(Disk::new_simple(
         DISK_CAPACITY,
         DISK_READ_BW,
@@ -91,7 +91,7 @@ fn files_metadata_consistence() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_disk(&mut sim, "Disk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_err());
     assert!(fs.borrow().get_file_size("/mnt/file1").is_err());
@@ -130,8 +130,8 @@ fn multiple_disks_on_single_filesystem() {
     let mut sim = Simulation::new(SEED);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk1 = make_disk(&mut sim, "Disk-1");
-    let disk2 = make_disk(&mut sim, "Disk-2");
+    let disk1 = make_simple_disk(&mut sim, "Disk-1");
+    let disk2 = make_simple_disk(&mut sim, "Disk-2");
 
     // Disk is not mounted yet
     assert!(fs.borrow_mut().unmount_disk("/mnt/vda").is_err());
@@ -168,7 +168,7 @@ fn single_disk_on_multiple_filesystems() {
 
     let fs1 = make_filesystem(&mut sim, "FS-1");
     let fs2 = make_filesystem(&mut sim, "FS-2");
-    let disk = make_disk(&mut sim, "Disk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs1.borrow_mut().unmount_disk("/mnt").is_err());
     assert!(fs2.borrow_mut().unmount_disk("/mnt").is_err());
@@ -210,7 +210,7 @@ fn read_write() {
         let checker_id = sim.add_handler("User", checker);
 
         let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_disk(&mut sim, "Disk-1");
+        let disk = make_simple_disk(&mut sim, "Disk-1");
 
         assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
         assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -235,7 +235,7 @@ fn read_write() {
         let checker_id = sim.add_handler("User", checker);
 
         let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_disk(&mut sim, "Disk-1");
+        let disk = make_simple_disk(&mut sim, "Disk-1");
 
         assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
@@ -251,7 +251,7 @@ fn read_write() {
         let checker_id = sim.add_handler("User", checker);
 
         let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_disk(&mut sim, "Disk-1");
+        let disk = make_simple_disk(&mut sim, "Disk-1");
 
         assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
         assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -287,7 +287,7 @@ fn read_write() {
         let checker_id = sim.add_handler("User", checker);
 
         let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_disk(&mut sim, "Disk-1");
+        let disk = make_simple_disk(&mut sim, "Disk-1");
 
         assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
@@ -303,7 +303,7 @@ fn read_write() {
         let checker_id = sim.add_handler("User", checker);
 
         let fs = make_filesystem(&mut sim, "FS-1");
-        let disk = make_disk(&mut sim, "Disk-1");
+        let disk = make_simple_disk(&mut sim, "Disk-1");
 
         assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
         assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
