@@ -2,18 +2,18 @@ use dslab_mp::context::Context;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 
-pub struct PingClient {
+pub struct BasicPingClient {
     server: String,
 }
 
-impl PingClient {
+impl BasicPingClient {
     #[allow(dead_code)]
     pub fn new(server: String) -> Self {
         Self { server }
     }
 }
 
-impl Process for PingClient {
+impl Process for BasicPingClient {
     fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
         if msg.tip == "PONG" {
             ctx.send_local(msg);

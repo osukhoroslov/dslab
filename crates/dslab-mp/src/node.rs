@@ -129,7 +129,7 @@ impl Node {
 
     fn on_timer_fired(&mut self, timer_name: String, proc_name: String) {
         let time = self.ctx.borrow().time();
-        t!(format!("{:>9.3} {:>10} !-- {:<10}", time, proc_name, timer_name).magenta());
+        t!(format!("{:>9.3} {:>10} !-- {:<10}", time, proc_name, timer_name).yellow());
         let proc_entry = self.processes.get_mut(&proc_name).unwrap();
         proc_entry.pending_timers.remove(&timer_name);
         let mut proc_ctx = Context::new(proc_name.clone(), self.ctx.clone());
@@ -160,7 +160,7 @@ impl Node {
                 ProcessEvent::TimerSet { name, delay } => {
                     assert!(
                         !proc_entry.pending_timers.contains_key(&name),
-                        "Timer \"{}\" is already set by process \"{}\" (active timer ids should be unique!)",
+                        "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
                         name,
                         proc_name
                     );

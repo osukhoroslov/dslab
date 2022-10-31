@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use colored::*;
+use lazy_static::lazy_static;
+use regex::Regex;
 
 use dslab_core::Id;
 use dslab_core::SimulationContext;
@@ -156,20 +158,28 @@ impl Network {
                 && !self.drop_incoming.contains(dest_node)
                 && !self.disabled_links.contains(&(src_node.clone(), dest_node.clone()))
             {
-                let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                if self.ctx.rand() < self.corrupt_rate {
-                    // TODO: support message corruption
-                }
+                let msg = if self.ctx.rand() < self.corrupt_rate {
+                    lazy_static! {
+                        static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                    }
+                    let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+                    let corrupted_msg = Message::new(msg.tip, corrupted_data);
+                    corrupted_msg
+                } else {
+                    msg
+                };
                 let e = MessageReceived {
                     msg,
                     src,
                     dest: dest.clone(),
                 };
                 if self.ctx.rand() >= self.dupl_rate {
+                    let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                     self.ctx.emit(e, dest_node_id, delay);
                 } else {
                     let dups = (self.ctx.rand() * 2.).ceil() as u32 + 1;
                     for _i in 0..dups {
+                        let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                         self.ctx.emit(e.clone(), dest_node_id, delay);
                     }
                 }
@@ -178,10 +188,10 @@ impl Network {
                     "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
                     "!!!", src, dest, msg
                 )
-                .yellow());
+                .red());
             }
         } else {
-            t!(format!("Discarded message from crashed node {:?}", msg).yellow());
+            t!(format!("Discarded message from crashed node {:?}", msg).red());
         }
         self.message_count += 1;
         //self.traffic += msg_size;

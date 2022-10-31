@@ -49,7 +49,7 @@ impl Context {
             "{:>9.3} {:>10} >>> {:<10} {:?}",
             self.time, self.proc_name, "local", msg
         )
-        .cyan());
+        .green());
         self.actions.push(ProcessEvent::LocalMessageSent { msg: msg.clone() });
     }
 

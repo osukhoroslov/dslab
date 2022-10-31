@@ -127,6 +127,12 @@ impl SimulationContext {
         self.sim_state.borrow_mut().sample_from_distribution(dist)
     }
 
+    /// Returns a random alphanumeric string of specified length
+    /// using the simulation-wide random number generator.
+    pub fn random_string(&mut self, len: usize) -> String {
+        self.sim_state.borrow_mut().random_string(len)
+    }
+
     /// Creates new event with specified payload, destination and delay, returns event id.
     ///
     /// The event time will be `current_time + delay`.

@@ -1,6 +1,7 @@
+use std::fmt::{Error, Formatter};
 use serde::Serialize;
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone)]
 pub struct Message {
     pub tip: String,
     pub data: String,
@@ -15,5 +16,11 @@ impl Message {
             tip: tip.into(),
             data: data.into(),
         }
+    }
+}
+
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "{} {}", self.tip, self.data)
     }
 }

@@ -1,0 +1,12 @@
+[package]
+name = "dslab-mp-python"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-mp = { path = "../dslab-mp" }
+
+[dependencies.pyo3]
+version = "0.16.5"
+features = ["auto-initialize"]

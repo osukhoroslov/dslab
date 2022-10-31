@@ -1,5 +1,6 @@
 use std::collections::{BinaryHeap, HashSet};
 
+use rand::distributions::{Alphanumeric, DistString};
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -45,6 +46,10 @@ impl SimulationState {
 
     pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
         dist.sample(&mut self.rand)
+    }
+
+    pub fn random_string(&mut self, len: usize) -> String {
+        Alphanumeric.sample_string(&mut self.rand, len)
     }
 
     pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId

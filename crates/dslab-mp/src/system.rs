@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use rand::distributions::uniform::{SampleRange, SampleUniform};
+
 use dslab_core::Simulation;
 
 use crate::message::Message;
@@ -70,6 +72,22 @@ impl System {
         self.net.clone()
     }
 
+    pub fn time(&self) -> f64 {
+        self.sim.time()
+    }
+
+    pub fn gen_range<T, R>(&mut self, range: R) -> T
+    where
+        T: SampleUniform,
+        R: SampleRange<T>,
+    {
+        self.sim.gen_range(range)
+    }
+
+    pub fn random_string(&mut self, len: usize) -> String {
+        self.sim.random_string(len)
+    }
+
     pub fn step(&mut self) -> bool {
         self.sim.step()
     }
@@ -82,7 +100,7 @@ impl System {
         self.sim.step_until_no_events()
     }
 
-    pub fn step_for_duration(&mut self, duration: f64) {
+    pub fn step_for_duration(&mut self, duration: f64) -> bool {
         self.sim.step_for_duration(duration)
     }
 
@@ -104,6 +122,17 @@ impl System {
     //             None => (),
     //         }
     //         steps += 1;
+    //     }
+    //     Err("No messages")
+    // }
+
+    // pub fn step_until_local_message_with_timeout(&mut self, node_id: &str, timeout: f64) -> Result<Vec<M>,&str> {
+    //     let end_time = self.time() + timeout;
+    //     while self.step() && self.time() < end_time {
+    //         match self.check_mailbox(node_id) {
+    //             Some(messages) => return Ok(messages),
+    //             None => ()
+    //         }
     //     }
     //     Err("No messages")
     // }
