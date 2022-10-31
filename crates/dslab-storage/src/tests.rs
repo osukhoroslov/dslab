@@ -141,9 +141,6 @@ fn multiple_disks_on_single_filesystem() {
     assert!(fs.borrow_mut().unmount_disk("/mnt/vda").is_ok());
     assert!(fs.borrow_mut().mount_disk("/mnt/vda", disk1.clone()).is_ok());
 
-    // `/mnt` is prefix of `/mnt/vda`, so it can't be used as a mount point
-    assert!(fs.borrow_mut().mount_disk("/mnt", disk2.clone()).is_err());
-
     assert!(fs.borrow_mut().mount_disk("/mnt/vdb", disk2.clone()).is_ok());
 
     assert_eq!(disk1.borrow().get_used_space(), 0);
