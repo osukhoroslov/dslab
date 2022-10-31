@@ -22,7 +22,6 @@ const DISK_WRITE_BW: u64 = 100;
 fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> {
     let fs = rc!(refcell!(FileSystem::new(sim.create_context(name))));
     sim.add_handler(name, fs.clone());
-
     fs
 }
 
