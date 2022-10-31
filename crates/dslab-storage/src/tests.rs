@@ -227,7 +227,7 @@ fn read_write() {
         sim.step_until_no_events();
     }
 
-    // Read failes because file does not exist
+    // Read fails because file does not exist
     {
         let mut sim = Simulation::new(SEED);
 
@@ -243,7 +243,7 @@ fn read_write() {
         sim.step_until_no_events();
     }
 
-    // Read failes because of bad size
+    // Read fails because of bad size
     {
         let mut sim = Simulation::new(SEED);
 
