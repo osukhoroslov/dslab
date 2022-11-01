@@ -148,7 +148,7 @@ impl Network {
     }
 
     pub fn send_message(&mut self, msg: Message, src: String, dest: String) {
-        //let msg_size = msg.size();
+        let msg_size = msg.size();
         let src_node = self.proc_nodes.get(&src).unwrap();
         let dest_node = self.proc_nodes.get(&dest).unwrap();
         let dest_node_id = *self.node_ids.get(dest_node).unwrap();
@@ -194,16 +194,6 @@ impl Network {
             t!(format!("Discarded message from crashed node {:?}", msg).red());
         }
         self.message_count += 1;
-        //self.traffic += msg_size;
+        self.traffic += msg_size as u64;
     }
 }
-
-// impl EventHandler for Network {
-//     fn on(&mut self, event: Event) {
-//         cast!(match event.data {
-//             MessageSent { msg, src, dest } => {
-//                 self.on_message_sent(msg, src, dest);
-//             }
-//         })
-//     }
-// }

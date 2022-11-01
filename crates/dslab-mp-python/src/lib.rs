@@ -8,51 +8,6 @@ use dslab_mp::context::Context;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 
-// #[derive(Clone)]
-// pub struct JsonMessage {
-//     pub tip: String,
-//     pub data: String,
-// }
-//
-// impl JsonMessage {
-//     pub fn new(tip: &str, data: &str) -> Self {
-//         JsonMessage {
-//             tip: tip.to_string(),
-//             data: data.to_string(),
-//         }
-//     }
-//
-//     pub fn from<T>(tip: &str, data: &T) -> Self
-//     where
-//         T: ?Sized + Serialize,
-//     {
-//         JsonMessage {
-//             tip: tip.to_string(),
-//             // TODO: use regex
-//             data: serde_json::to_string_pretty(data).unwrap().replace("\n", "").replace("  ", ""),
-//         }
-//     }
-// }
-//
-// impl std::fmt::Debug for JsonMessage {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-//         write!(f, "{} {}", self.tip, self.data)
-//     }
-// }
-//
-// impl Message for JsonMessage {
-//     fn size(&self) -> u64 {
-//         self.data.len() as u64
-//     }
-//
-//     fn corrupt(&mut self) {
-//         lazy_static! {
-//             static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
-//         }
-//         self.data = RE.replace_all(&*self.data, "\"\"").to_string();
-//     }
-// }
-
 pub struct PyProcessFactory {
     proc_class: PyObject,
     msg_class: Rc<PyObject>,

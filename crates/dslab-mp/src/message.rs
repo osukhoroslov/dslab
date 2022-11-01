@@ -17,6 +17,10 @@ impl Message {
             data: data.into(),
         }
     }
+
+    pub fn size(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl std::fmt::Debug for Message {
