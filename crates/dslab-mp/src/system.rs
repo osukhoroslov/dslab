@@ -21,7 +21,6 @@ impl System {
     pub fn new(seed: u64) -> Self {
         let mut sim = Simulation::new(seed);
         let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"))));
-        //sim.add_handler("net", net.clone());
         Self {
             sim,
             net,
@@ -113,29 +112,29 @@ impl System {
         }
         Err("No messages")
     }
-    //
-    // pub fn step_until_local_message_max_steps(&mut self, node_id: &str, max_steps: u32) -> Result<Vec<M>, &str> {
-    //     let mut steps = 0;
-    //     while self.step() && steps <= max_steps {
-    //         match self.check_mailbox(node_id) {
-    //             Some(messages) => return Ok(messages),
-    //             None => (),
-    //         }
-    //         steps += 1;
-    //     }
-    //     Err("No messages")
-    // }
 
-    // pub fn step_until_local_message_with_timeout(&mut self, node_id: &str, timeout: f64) -> Result<Vec<M>,&str> {
-    //     let end_time = self.time() + timeout;
-    //     while self.step() && self.time() < end_time {
-    //         match self.check_mailbox(node_id) {
-    //             Some(messages) => return Ok(messages),
-    //             None => ()
-    //         }
-    //     }
-    //     Err("No messages")
-    // }
+    pub fn step_until_local_message_max_steps(&mut self, proc: &str, max_steps: u32) -> Result<Vec<Message>, &str> {
+        let mut steps = 0;
+        while self.step() && steps <= max_steps {
+            match self.read_local_messages(proc) {
+                Some(messages) => return Ok(messages),
+                None => (),
+            }
+            steps += 1;
+        }
+        Err("No messages")
+    }
+
+    pub fn step_until_local_message_with_timeout(&mut self, proc: &str, timeout: f64) -> Result<Vec<Message>, &str> {
+        let end_time = self.time() + timeout;
+        while self.step() && self.time() < end_time {
+            match self.read_local_messages(proc) {
+                Some(messages) => return Ok(messages),
+                None => (),
+            }
+        }
+        Err("No messages")
+    }
 
     pub fn read_local_messages(&mut self, proc: &str) -> Option<Vec<Message>> {
         let proc = proc.to_string();
