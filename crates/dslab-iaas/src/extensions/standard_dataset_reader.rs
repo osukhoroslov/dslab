@@ -4,7 +4,7 @@ use std::fs::File;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::load_model::parse_load_model;
+use crate::core::load_model::load_model_resolver;
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
@@ -49,13 +49,13 @@ impl StandardDatasetReader {
             for _i in 0..dataset_request.count.unwrap_or(1) {
                 self.vm_requests.push(VMRequest {
                     id: None,
-                    cpu_usage: dataset_request.clone().cpu_usage,
-                    memory_usage: dataset_request.clone().memory_usage,
-                    lifetime: dataset_request.clone().lifetime,
-                    start_time: dataset_request.clone().arrival_time,
-                    cpu_load_model: parse_load_model(dataset_request.clone().cpu_load_model),
-                    memory_load_model: parse_load_model(dataset_request.clone().memory_load_model),
-                    scheduler_name: dataset_request.clone().scheduler,
+                    cpu_usage: dataset_request.cpu_usage,
+                    memory_usage: dataset_request.memory_usage,
+                    lifetime: dataset_request.lifetime,
+                    start_time: dataset_request.arrival_time,
+                    cpu_load_model: load_model_resolver(dataset_request.cpu_load_model.clone()),
+                    memory_load_model: load_model_resolver(dataset_request.memory_load_model.clone()),
+                    scheduler_name: dataset_request.scheduler.clone(),
                 });
             }
         }

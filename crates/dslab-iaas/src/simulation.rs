@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::rc::Rc;
+
 use sugars::{rc, refcell};
 
 use dslab_core::context::SimulationContext;
@@ -23,7 +24,7 @@ use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
-use crate::core::vm_placement_algorithm::parse_placement_algorithm;
+use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
@@ -63,7 +64,7 @@ impl CloudSimulation {
         sim.add_handler("placement_store", placement_store.clone());
 
         let ctx = sim.create_context("simulation");
-        Self {
+        let mut sim = Self {
             monitoring,
             vm_api,
             placement_store,
@@ -75,7 +76,41 @@ impl CloudSimulation {
             sim,
             ctx,
             sim_config: rc!(sim_config),
+        };
+
+        // Add hosts from config
+        for host_config in sim.sim_config.hosts.clone() {
+            let count = host_config.count.unwrap_or(1);
+            if count == 1 {
+                let name = host_config.name.unwrap();
+                sim.add_host(&name, host_config.cpus, host_config.memory);
+            } else {
+                let prefix = host_config.name_prefix.unwrap();
+                for i in 0..count {
+                    let name = format!("{}{}", prefix, i + 1);
+                    sim.add_host(&name, host_config.cpus, host_config.memory);
+                }
+            }
         }
+
+        // Add schedulers from config
+        for scheduler_config in sim.sim_config.schedulers.clone() {
+            let count = scheduler_config.count.unwrap_or(1);
+            if count == 1 {
+                let name = scheduler_config.name.unwrap();
+                let alg = placement_algorithm_resolver(scheduler_config.algorithm);
+                sim.add_scheduler(&name, alg);
+            } else {
+                let prefix = scheduler_config.name_prefix.unwrap();
+                for i in 0..scheduler_config.count.unwrap_or(1) {
+                    let name = format!("{}{}", prefix, i + 1);
+                    let alg = placement_algorithm_resolver(scheduler_config.algorithm.clone());
+                    sim.add_scheduler(&name, alg);
+                }
+            }
+        }
+
+        sim
     }
 
     /// Creates new host with specified name and resource capacity, and returns the host ID.
@@ -183,33 +218,6 @@ impl CloudSimulation {
         self.vm_api.borrow_mut().register_new_vm(vm);
         self.ctx.emit(AllocationRequest { vm_id: id }, scheduler_id, delay);
         id
-    }
-
-    /// Creates new VMs with specified properties, given from .yaml simulation config
-    pub fn spawn_infrastructure_from_config(&mut self) {
-        for host_properties in self.sim_config.hosts.clone() {
-            for i in 0..host_properties.clone().count.unwrap_or(1) {
-                let name: String;
-                if host_properties.count.unwrap_or(1) > 1 {
-                    name = format!("{}{}", host_properties.name_prefix.clone().unwrap(), i + 1);
-                } else {
-                    name = host_properties.clone().name.unwrap();
-                }
-                self.add_host(&name, host_properties.cpus, host_properties.memory);
-            }
-        }
-
-        for scheduler_properties in self.sim_config.schedulers.clone() {
-            for i in 0..scheduler_properties.count.unwrap_or(1) {
-                let name: String;
-                if scheduler_properties.count.unwrap_or(1) > 1 {
-                    name = format!("{}{}", scheduler_properties.name_prefix.clone().unwrap(), i + 1);
-                } else {
-                    name = scheduler_properties.clone().name.unwrap();
-                }
-                self.add_scheduler(&name, parse_placement_algorithm(scheduler_properties.clone().algorithm));
-            }
-        }
     }
 
     /// Sends VM migration request to the specified target host.

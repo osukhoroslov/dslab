@@ -99,7 +99,6 @@ fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     let mut dataset = StandardDatasetReader::new();
     dataset.parse("vms_test_2.json");
 
-    cloud_sim.spawn_infrastructure_from_config();
     cloud_sim.spawn_vms_from_dataset(0, &mut dataset);
 
     cloud_sim.steps(300);

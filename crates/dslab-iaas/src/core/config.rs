@@ -151,25 +151,31 @@ impl SimulationConfig {
     }
 }
 
-/// Parses options string from config value. Example: parsing string "threshold=0.8,cpu=8" returns
-/// map with two varaibles for threshold and CPU.
-pub fn parse_options(config_str: &str) -> HashMap<String, String> {
-    let mut result: HashMap<String, String> = HashMap::new();
-
-    let variables = config_str.split(",");
-    for variable in variables {
-        let split = variable.split("=").collect::<Vec<&str>>();
-        result.insert(split.get(0).unwrap().to_string(), split.get(1).unwrap().to_string());
-    }
-    result
+/// Parses config value string, which consists of two parts - name and options.
+/// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and options string "load=0.8".
+pub fn parse_config_value(config_str: &str) -> (String, String) {
+    let (l, r) = config_str.split_once("[").unwrap();
+    (l.to_string(), r.to_string().replace("]", "").replace("\"", ""))
 }
 
-/// Parses raw model config string, which consists of two parts - name and arguments.
-/// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and arguments string "load=0.8".
-pub fn parse_model_name_and_args(config_str: &str) -> (String, String) {
-    let cleanup = config_str.replace("]", "").replace("\"", "");
-    let split = cleanup.split("[").collect::<Vec<&str>>();
-    let model_type = split.get(0).unwrap();
-    let model_args = split.get(1).unwrap().to_string();
-    (model_type.to_string(), model_args)
+/// Parses options string from config value, returns map with option names and values.
+///
+/// # Examples
+///
+/// ```rust
+/// use dslab_iaas::core::config::parse_options;
+///
+/// let options = parse_options("option1=0.8,option2=something");
+/// assert_eq!(options.get("option1").unwrap(), "0.8");
+/// assert_eq!(options.get("option2").unwrap(), "something");
+/// assert_eq!(options.get("option3"), None);
+/// ```
+pub fn parse_options(options_str: &str) -> HashMap<String, String> {
+    let mut options = HashMap::new();
+    for option_str in options_str.split(",") {
+        if let Some((name, value)) = option_str.split_once("=") {
+            options.insert(name.to_string(), value.to_string());
+        }
+    }
+    options
 }

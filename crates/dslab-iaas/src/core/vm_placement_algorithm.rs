@@ -1,14 +1,8 @@
 //! Virtual machine placement algorithms.
 
-use std::num::ParseIntError;
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
-
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
-use crate::core::config::parse_model_name_and_args;
+use crate::core::config::parse_config_value;
 use crate::core::config::parse_options;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
@@ -23,29 +17,17 @@ use crate::core::resource_pool::ResourcePoolState;
 ///
 /// It is possible to implement arbitrary placement algorithm and use it in scheduler.
 pub trait VMPlacementAlgorithm {
-    /// parse load model arguments from .yaml config string
-    fn parse_config_args(&mut self, _config_string: String) {}
-
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
 }
 
-#[derive(Clone, Debug, PartialEq, EnumString, Serialize, Deserialize)]
-pub enum VmPlacementAlgorithmType {
-    FirstFit,
-    BestFit,
-    WorstFit,
-    BestFitThreshold,
-}
-
-pub fn parse_placement_algorithm(raw_data: String) -> Box<dyn VMPlacementAlgorithm> {
-    let (model_type_str, model_args) = parse_model_name_and_args(&raw_data);
-    let model_type: VmPlacementAlgorithmType = model_type_str.parse().unwrap();
-
-    match model_type {
-        VmPlacementAlgorithmType::FirstFit => Box::new(FirstFit::from_str(&model_args).unwrap()),
-        VmPlacementAlgorithmType::BestFit => Box::new(BestFit::from_str(&model_args).unwrap()),
-        VmPlacementAlgorithmType::WorstFit => Box::new(WorstFit::from_str(&model_args).unwrap()),
-        VmPlacementAlgorithmType::BestFitThreshold => Box::new(BestFitThreshold::from_str(&model_args).unwrap()),
+pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAlgorithm> {
+    let (algorithm_name, options) = parse_config_value(&config_str);
+    match algorithm_name.as_str() {
+        "FirstFit" => return Box::new(FirstFit::new()),
+        "BestFit" => return Box::new(BestFit::new()),
+        "WorstFit" => return Box::new(WorstFit::new()),
+        "BestFitThreshold" => return Box::new(BestFitThreshold::from_str(&options)),
+        _ => panic!("Can't resolve: {}", config_str),
     }
 }
 
@@ -68,14 +50,6 @@ impl VMPlacementAlgorithm for FirstFit {
             }
         }
         return None;
-    }
-}
-
-impl FromStr for FirstFit {
-    type Err = ParseIntError;
-
-    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
-        Ok(FirstFit {})
     }
 }
 
@@ -107,14 +81,6 @@ impl VMPlacementAlgorithm for BestFit {
     }
 }
 
-impl FromStr for BestFit {
-    type Err = ParseIntError;
-
-    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
-        Ok(BestFit {})
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 /// WorstFit algorithm, which returns the least loaded (by CPU) suitable host.
@@ -143,14 +109,6 @@ impl VMPlacementAlgorithm for WorstFit {
     }
 }
 
-impl FromStr for WorstFit {
-    type Err = ParseIntError;
-
-    fn from_str(_config_str: &str) -> Result<Self, Self::Err> {
-        Ok(WorstFit {})
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 /// BestFit algorithm, which returns the most loaded (by actual CPU load) suitable host.
@@ -160,6 +118,12 @@ pub struct BestFitThreshold {
 
 impl BestFitThreshold {
     pub fn new(threshold: f64) -> Self {
+        Self { threshold }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        let options = parse_options(s);
+        let threshold = options.get("threshold").unwrap().parse::<f64>().unwrap();
         Self { threshold }
     }
 }
@@ -184,15 +148,5 @@ impl VMPlacementAlgorithm for BestFitThreshold {
             }
         }
         return result;
-    }
-}
-
-impl FromStr for BestFitThreshold {
-    type Err = ParseIntError;
-
-    fn from_str(config_str: &str) -> Result<Self, Self::Err> {
-        let options = parse_options(config_str);
-        let threshold = options.get("threshold").unwrap().parse::<f64>().unwrap();
-        Ok(BestFitThreshold { threshold })
     }
 }
