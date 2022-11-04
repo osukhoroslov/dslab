@@ -9,6 +9,7 @@ use rand::prelude::Distribution;
 use crate::component::Id;
 use crate::event::{EventData, EventId};
 use crate::state::SimulationState;
+use crate::Event;
 
 /// A facade for accessing the simulation state and producing events from simulation components.
 pub struct SimulationContext {
@@ -446,6 +447,37 @@ impl SimulationContext {
     /// ```
     pub fn cancel_event(&mut self, id: EventId) {
         self.sim_state.borrow_mut().cancel_event(id);
+    }
+
+    /// Cancels events that satisfy the given predicate function.
+    ///
+    /// Note that already processed events cannot be cancelled.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Event, Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// let event1 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.cancel_events(|e| e.id < 2);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 3.0);
+    /// ```
+    pub fn cancel_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_events(pred);
     }
 
     /// Returns component name by its identifier.

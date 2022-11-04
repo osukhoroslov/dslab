@@ -10,12 +10,6 @@ pub struct MessageReceived {
 }
 
 #[derive(Serialize)]
-pub struct LocalMessageReceived {
-    pub msg: Message,
-    pub dest: String,
-}
-
-#[derive(Serialize)]
 pub struct TimerFired {
     pub timer_name: String,
     pub proc_name: String,

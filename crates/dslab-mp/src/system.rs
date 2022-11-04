@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use colored::*;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
 use dslab_core::Simulation;
@@ -9,7 +10,7 @@ use dslab_core::Simulation;
 use crate::message::Message;
 use crate::network::Network;
 use crate::node::{EventLogEntry, Node};
-use crate::process::Process;
+use crate::util::t;
 
 pub struct System {
     sim: Simulation,
@@ -28,33 +29,52 @@ impl System {
         }
     }
 
-    pub fn add_node<T>(&mut self, name: T)
+    pub fn add_node<S>(&mut self, node_name: S) -> Rc<RefCell<Node>>
     where
-        T: Into<String>,
+        S: AsRef<str>,
     {
-        let node_name = name.into();
         let node = Rc::new(RefCell::new(Node::new(
+            node_name.as_ref().to_string(),
             self.net.clone(),
-            self.sim.create_context(node_name.clone()),
+            self.sim.create_context(node_name.as_ref()),
         )));
-        let node_id = self.sim.add_handler(node_name.clone(), node.clone());
-        self.nodes.insert(node_name.clone(), node);
-        self.net.borrow_mut().add_node(node_name.clone(), node_id);
+        let node_id = self.sim.add_handler(node_name.as_ref(), node.clone());
+        self.nodes.insert(node_name.as_ref().to_string(), node.clone());
+        self.net.borrow_mut().add_node(node_name.as_ref().to_string(), node_id);
+        t!(format!("{:>9.3} {:>10} STARTED", self.sim.time(), node_name.as_ref())
+            .green()
+            .bold());
+        node
     }
 
-    pub fn add_process<T>(&mut self, proc: Rc<RefCell<dyn Process>>, proc_name: T, node_name: T)
+    pub fn node<S>(&self, node_name: S) -> Rc<RefCell<Node>>
     where
-        T: Into<String>,
+        S: AsRef<str>,
     {
-        let proc_name = proc_name.into();
-        let node_name = node_name.into();
-        let node = self.nodes.get(&node_name).unwrap();
-        node.borrow_mut().add_proc(proc, proc_name.clone());
-        self.net.borrow_mut().set_proc_location(proc_name.clone(), node_name);
+        self.nodes.get(node_name.as_ref()).unwrap().clone()
+    }
+
+    pub fn crash_node<S>(&mut self, node_name: S)
+    where
+        S: AsRef<str>,
+    {
+        self.sim.remove_handler(node_name.as_ref());
+
+        // cancel pending events from the crashed node
+        let node_id = self.sim.lookup_id(node_name.as_ref());
+        self.sim.cancel_events(|e| e.src == node_id);
+
+        t!(format!("{:>9.3} {:>10} CRASHED", self.sim.time(), node_name.as_ref())
+            .red()
+            .bold());
+    }
+
+    pub fn process_names(&self) -> Vec<String> {
+        self.net.borrow().process_names()
     }
 
     pub fn send_local(&mut self, msg: Message, proc: &str) {
-        let proc_node = self.net.borrow().get_proc_location(proc.to_string());
+        let proc_node = self.net.borrow().proc_location(proc.to_string());
         self.nodes
             .get(&proc_node)
             .unwrap()
@@ -63,7 +83,7 @@ impl System {
     }
 
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {
-        let proc_node = self.net.borrow().get_proc_location(proc.to_string());
+        let proc_node = self.net.borrow().proc_location(proc.to_string());
         self.nodes.get(&proc_node).unwrap().borrow().event_log(proc.to_string())
     }
 
@@ -138,7 +158,7 @@ impl System {
 
     pub fn read_local_messages(&mut self, proc: &str) -> Option<Vec<Message>> {
         let proc = proc.to_string();
-        let proc_node = self.net.borrow().get_proc_location(proc.clone());
+        let proc_node = self.net.borrow().proc_location(proc.clone());
         self.nodes
             .get(&proc_node)
             .unwrap()

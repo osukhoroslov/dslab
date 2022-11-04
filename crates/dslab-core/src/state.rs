@@ -95,6 +95,17 @@ impl SimulationState {
         self.canceled_events.insert(id);
     }
 
+    pub fn cancel_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        for event in self.events.iter() {
+            if pred(event) {
+                self.canceled_events.insert(event.id);
+            }
+        }
+    }
+
     pub fn event_count(&self) -> u64 {
         self.event_count
     }

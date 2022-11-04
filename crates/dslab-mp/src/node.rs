@@ -7,7 +7,7 @@ use colored::*;
 use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 use crate::context::Context;
-use crate::events::{LocalMessageReceived, MessageReceived, TimerFired};
+use crate::events::{MessageReceived, TimerFired};
 use crate::message::Message;
 use crate::network::Network;
 use crate::process::Process;
@@ -41,6 +41,8 @@ struct ProcessEntry {
     event_log: Vec<EventLogEntry>,
     local_outbox: Vec<Message>,
     pending_timers: HashMap<String, u64>,
+    sent_message_count: u64,
+    received_message_count: u64,
 }
 
 impl ProcessEntry {
@@ -50,6 +52,8 @@ impl ProcessEntry {
             event_log: Vec::new(),
             local_outbox: Vec::new(),
             pending_timers: HashMap::new(),
+            sent_message_count: 0,
+            received_message_count: 0,
         }
     }
 }
@@ -57,35 +61,61 @@ impl ProcessEntry {
 pub struct Node {
     #[allow(dead_code)]
     id: Id,
+    name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
+    clock_skew: f64,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
 impl Node {
-    pub fn new(net: Rc<RefCell<Network>>, ctx: SimulationContext) -> Self {
+    pub fn new(name: String, net: Rc<RefCell<Network>>, ctx: SimulationContext) -> Self {
         Self {
             id: ctx.id(),
+            name,
             processes: HashMap::new(),
             net,
+            clock_skew: 0.,
             ctx: Rc::new(RefCell::new(ctx)),
         }
     }
 
-    pub fn add_proc(&mut self, proc: Rc<RefCell<dyn Process>>, proc_id: String) {
-        self.processes.insert(proc_id, ProcessEntry::new(proc));
+    pub fn set_clock_skew(&mut self, clock_skew: f64) {
+        self.clock_skew = clock_skew;
+    }
+
+    pub fn add_process<S>(&mut self, proc_name: S, proc: Box<dyn Process>)
+    where
+        S: AsRef<str>,
+    {
+        self.add_process_rc(proc_name, proc.box_to_rc());
+    }
+
+    pub fn add_process_rc<S>(&mut self, proc_name: S, proc: Rc<RefCell<dyn Process>>)
+    where
+        S: AsRef<str>,
+    {
+        self.processes
+            .insert(proc_name.as_ref().to_string(), ProcessEntry::new(proc));
+        self.net
+            .borrow_mut()
+            .set_proc_location(proc_name.as_ref().to_string(), self.name.clone());
     }
 
     pub fn send_local(&mut self, msg: Message, proc: String) {
-        let event = LocalMessageReceived {
-            msg,
-            dest: proc.clone(),
-        };
-        self.ctx.borrow_mut().emit_self(event, 0.);
+        self.on_local_message_received(msg, proc);
     }
 
     pub fn event_log(&self, proc: String) -> Vec<EventLogEntry> {
         self.processes.get(&proc).unwrap().event_log.clone()
+    }
+
+    pub fn sent_message_count(&self, proc: String) -> u64 {
+        self.processes.get(&proc).unwrap().sent_message_count
+    }
+
+    pub fn received_message_count(&self, proc: String) -> u64 {
+        self.processes.get(&proc).unwrap().received_message_count
     }
 
     pub fn read_local_messages(&mut self, proc: String) -> Option<Vec<Message>> {
@@ -109,7 +139,8 @@ impl Node {
                 dest: dest.clone(),
             },
         ));
-        let mut proc_ctx = Context::new(dest.clone(), self.ctx.clone());
+        proc_entry.received_message_count += 1;
+        let mut proc_ctx = Context::new(dest.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc.borrow_mut().on_message(msg, src, &mut proc_ctx);
         self.handle_process_actions(dest, time, proc_ctx.actions());
     }
@@ -122,7 +153,7 @@ impl Node {
             time,
             ProcessEvent::LocalMessageReceived { msg: msg.clone() },
         ));
-        let mut proc_ctx = Context::new(dest.clone(), self.ctx.clone());
+        let mut proc_ctx = Context::new(dest.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc.borrow_mut().on_local_message(msg, &mut proc_ctx);
         self.handle_process_actions(dest, time, proc_ctx.actions());
     }
@@ -132,7 +163,7 @@ impl Node {
         t!(format!("{:>9.3} {:>10} !-- {:<10}", time, proc_name, timer_name).yellow());
         let proc_entry = self.processes.get_mut(&proc_name).unwrap();
         proc_entry.pending_timers.remove(&timer_name);
-        let mut proc_ctx = Context::new(proc_name.clone(), self.ctx.clone());
+        let mut proc_ctx = Context::new(proc_name.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc.borrow_mut().on_timer(timer_name, &mut proc_ctx);
         self.handle_process_actions(proc_name, time, proc_ctx.actions());
     }
@@ -153,6 +184,7 @@ impl Node {
                     } else {
                         self.net.borrow_mut().send_message(msg, proc_name.clone(), dest.clone());
                     }
+                    proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
@@ -187,9 +219,6 @@ impl EventHandler for Node {
         cast!(match event.data {
             MessageReceived { msg, src, dest } => {
                 self.on_message_received(msg, src, dest);
-            }
-            LocalMessageReceived { msg, dest } => {
-                self.on_local_message_received(msg, dest);
             }
             TimerFired { timer_name, proc_name } => {
                 self.on_timer_fired(timer_name, proc_name);

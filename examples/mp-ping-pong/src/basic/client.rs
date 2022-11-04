@@ -7,9 +7,10 @@ pub struct BasicPingClient {
 }
 
 impl BasicPingClient {
-    #[allow(dead_code)]
-    pub fn new(server: String) -> Self {
-        Self { server }
+    pub fn new(server: &str) -> Self {
+        Self {
+            server: server.to_string(),
+        }
     }
 }
 

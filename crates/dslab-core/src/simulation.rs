@@ -16,6 +16,7 @@ use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
+use crate::Event;
 
 /// Represents a simulation, provides methods for its configuration and execution.
 pub struct Simulation {
@@ -231,6 +232,59 @@ impl Simulation {
             json!({"name": name.as_ref(), "id": id})
         );
         id
+    }
+
+    /// Removes the event handler for component with specified name.
+    ///
+    /// All subsequent events destined for this component will not be delivered until the handler is added again.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::cell::RefCell;
+    /// use std::rc::Rc;
+    /// use serde::Serialize;
+    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// pub struct Component {
+    /// }
+    ///
+    /// impl EventHandler for Component {
+    ///     fn on(&mut self, event: Event) {
+    ///         cast!(match event.data {
+    ///             SomeEvent { } => {
+    ///                 // some event processing logic...
+    ///             }
+    ///         })
+    ///
+    ///    }
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp_id1 = sim.add_handler("comp", comp.clone());
+    /// sim.remove_handler("comp");
+    /// // Assigned component Id is not changed if we call `add_handler` again.
+    /// let comp_id2 = sim.add_handler("comp", comp);
+    /// assert_eq!(comp_id1, comp_id2);
+    /// ```
+    pub fn remove_handler<S>(&mut self, name: S)
+    where
+        S: AsRef<str>,
+    {
+        let id = self.lookup_id(name.as_ref());
+        self.handlers[id as usize] = None;
+        debug!(
+            target: "simulation",
+            "[{:.3} {} simulation] Removed handler: {}",
+            self.time(),
+            crate::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": name.as_ref(), "id": id})
+        );
     }
 
     /// Returns the current simulation time.
@@ -502,5 +556,36 @@ impl Simulation {
     /// ```
     pub fn event_count(&self) -> u64 {
         self.sim_state.borrow().event_count()
+    }
+
+    /// Cancels events that satisfy the given predicate function.
+    ///
+    /// Note that already processed events cannot be cancelled.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Event, Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// let event1 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// sim.cancel_events(|e| e.id < 2);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 3.0);
+    /// ```
+    pub fn cancel_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_events(pred);
     }
 }

@@ -8,9 +8,11 @@ pub struct RetryPingClient {
 }
 
 impl RetryPingClient {
-    #[allow(dead_code)]
-    pub fn new(server: String) -> Self {
-        Self { server, ping: None }
+    pub fn new(server: &str) -> Self {
+        Self {
+            server: server.to_string(),
+            ping: None,
+        }
     }
 }
 
