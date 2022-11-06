@@ -1,4 +1,4 @@
-//! Dataset reader for manually created datasets.
+//! Dataset reader for standard JSON format.
 
 use std::fs::File;
 
@@ -8,9 +8,14 @@ use crate::core::load_model::load_model_resolver;
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
-/// Dataset reader for manually created datasets.
+/// Dataset reader for standard JSON format.
 ///
-/// Pass the produced JSON file to [`parse()`](StandardDatasetReader::parse) method.
+/// This format can be used for storing arbitrary VM request traces,
+/// i.e. manually created, generated or exported from existing cloud traces.
+///
+/// Example: see `examples/iaas/workload.json`.
+///
+/// Pass the needed JSON file to [`parse()`](StandardDatasetReader::parse) method.
 pub struct StandardDatasetReader {
     vm_requests: Vec<VMRequest>,
     current_vm: usize,
@@ -48,7 +53,7 @@ impl StandardDatasetReader {
             let dataset_request: StandardVmRequest = serde_json::from_str(&raw_vm.to_string()).unwrap();
             for _i in 0..dataset_request.count.unwrap_or(1) {
                 self.vm_requests.push(VMRequest {
-                    id: None,
+                    id: dataset_request.id,
                     cpu_usage: dataset_request.cpu_usage,
                     memory_usage: dataset_request.memory_usage,
                     lifetime: dataset_request.lifetime,

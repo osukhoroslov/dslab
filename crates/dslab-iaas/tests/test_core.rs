@@ -185,7 +185,7 @@ fn test_no_overcommit() {
 // Can pack 94 VMS despite their total SLA is 94 times bigger than host capacity.
 fn test_overcommit() {
     let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
     let h = cloud_sim.add_host("h", 200, 200);
@@ -222,8 +222,6 @@ impl BadScheduler {
 }
 
 impl VMPlacementAlgorithm for BadScheduler {
-    fn parse_config_args(&mut self, _config_str: String) {}
-
     fn select_host(
         &self,
         _alloc: &Allocation,
@@ -340,7 +338,7 @@ fn test_wrong_decision() {
 // Due to asynchrony the status will be updated at moment 21.7.
 fn test_migration_simple() {
     let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
@@ -410,7 +408,7 @@ fn test_migration_simple() {
 // (100 seconds of lifetime + 1.7 for asynchrony reasons like in previous test).
 fn test_double_migration() {
     let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_with_overcommit.yaml"));
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
 
     let h1 = cloud_sim.add_host("h1", 200, 200);

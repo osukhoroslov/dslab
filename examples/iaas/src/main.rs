@@ -95,11 +95,12 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
 fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
     let sim = Simulation::new(123);
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+    let scheduler_id = cloud_sim.lookup_id("s");
 
     let mut dataset = StandardDatasetReader::new();
-    dataset.parse("vms_test_2.json");
+    dataset.parse("workload.json");
 
-    cloud_sim.spawn_vms_from_dataset(0, &mut dataset);
+    cloud_sim.spawn_vms_from_dataset(scheduler_id, &mut dataset);
 
     cloud_sim.steps(300);
 
@@ -209,10 +210,10 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
 fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
-    let config_with_overcommit = SimulationConfig::from_file("config_with_overcommit.yaml");
-    let config_with_vms = SimulationConfig::from_file("infrastructure.yaml");
+    let config_overcommit = SimulationConfig::from_file("config_overcommit.yaml");
+    let config_with_infra = SimulationConfig::from_file("config_with_infrastructure.yaml");
     simulation_two_best_fit_schedulers(config.clone());
-    simulation_one_thresholded_scheduler(config_with_vms);
+    simulation_one_thresholded_scheduler(config_with_infra);
     simulation_migration_simple(config);
-    simulation_migration_component(config_with_overcommit);
+    simulation_migration_component(config_overcommit);
 }

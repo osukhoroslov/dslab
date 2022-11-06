@@ -9,6 +9,7 @@ use sugars::{rc, refcell};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::simulation::Simulation;
+use dslab_core::Id;
 
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
@@ -242,8 +243,10 @@ impl CloudSimulation {
         component
     }
 
-    /// Spawns all VMs from the given dataset on the specified scheduler.
-    pub fn spawn_vms_from_dataset(&mut self, scheduler_id: u32, dataset: &mut dyn DatasetReader) {
+    /// Spawns all VMs from the given dataset.
+    ///
+    /// The specified default scheduler is used for VM requests without scheduler information.
+    pub fn spawn_vms_from_dataset(&mut self, default_scheduler_id: u32, dataset: &mut dyn DatasetReader) {
         loop {
             let request_opt = dataset.get_next_vm();
             if request_opt.is_none() {
@@ -251,9 +254,9 @@ impl CloudSimulation {
             }
             let request = request_opt.unwrap();
 
-            let mut scheduler = scheduler_id;
+            let mut scheduler_id = default_scheduler_id;
             if !request.scheduler_name.is_none() {
-                scheduler = self.sim.lookup_id(&request.scheduler_name.unwrap());
+                scheduler_id = self.sim.lookup_id(&request.scheduler_name.unwrap());
             }
 
             self.spawn_vm_with_delay(
@@ -263,7 +266,7 @@ impl CloudSimulation {
                 request.cpu_load_model.clone(),
                 request.memory_load_model.clone(),
                 request.id,
-                scheduler,
+                scheduler_id,
                 request.start_time,
             );
         }
@@ -358,5 +361,10 @@ impl CloudSimulation {
     /// Returns the simulation config.
     pub fn sim_config(&self) -> Rc<SimulationConfig> {
         self.sim_config.clone()
+    }
+
+    /// Returns the identifier of component by its name.
+    pub fn lookup_id(&self, name: &str) -> Id {
+        self.sim.lookup_id(name)
     }
 }
