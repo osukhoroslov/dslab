@@ -153,9 +153,11 @@ impl SimulationConfig {
 
 /// Parses config value string, which consists of two parts - name and options.
 /// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and options string "load=0.8".
-pub fn parse_config_value(config_str: &str) -> (String, String) {
-    let (l, r) = config_str.split_once("[").unwrap();
-    (l.to_string(), r.to_string().replace("]", "").replace("\"", ""))
+pub fn parse_config_value(config_str: &str) -> (String, Option<String>) {
+    match config_str.split_once("[") {
+        Some((l, r)) => (l.to_string(), Some(r.to_string().replace("]", ""))),
+        None => (config_str.to_string(), None),
+    }
 }
 
 /// Parses options string from config value, returns map with option names and values.

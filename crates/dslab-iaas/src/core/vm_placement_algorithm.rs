@@ -26,7 +26,7 @@ pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAl
         "FirstFit" => return Box::new(FirstFit::new()),
         "BestFit" => return Box::new(BestFit::new()),
         "WorstFit" => return Box::new(WorstFit::new()),
-        "BestFitThreshold" => return Box::new(BestFitThreshold::from_str(&options)),
+        "BestFitThreshold" => return Box::new(BestFitThreshold::from_str(&options.unwrap())),
         _ => panic!("Can't resolve: {}", config_str),
     }
 }

@@ -18,7 +18,7 @@ clone_trait_object!(LoadModel);
 pub fn load_model_resolver(config_str: String) -> Box<dyn LoadModel> {
     let (model_name, options) = parse_config_value(&config_str);
     match model_name.as_str() {
-        "Const" => Box::new(ConstantLoadModel::from_str(&options)),
+        "Const" => Box::new(ConstantLoadModel::from_str(&options.unwrap())),
         _ => panic!("Can't resolve: {}", config_str),
     }
 }

@@ -1,8 +1,9 @@
 [
     {
+        "count": 5,
         "cpu_usage": 10,
         "memory_usage": 10,
-        "lifetime": 2.0,
+        "lifetime": 6.0,
         "cpu_load_model": "Const[load=0.5]",
         "memory_load_model": "Const[load=0.5]",
         "arrival_time": 0
@@ -10,23 +11,7 @@
     {
         "cpu_usage": 10,
         "memory_usage": 10,
-        "lifetime": 2.0,
-        "cpu_load_model": "Const[load=0.5]",
-        "memory_load_model": "Const[load=0.5]",
-        "arrival_time": 1
-    },
-    {
-        "cpu_usage": 10,
-        "memory_usage": 10,
-        "lifetime": 2.0,
-        "cpu_load_model": "Const[load=0.5]",
-        "memory_load_model": "Const[load=0.5]",
-        "arrival_time": 2
-    },
-    {
-        "cpu_usage": 10,
-        "memory_usage": 10,
-        "lifetime": 2.0,
+        "lifetime": 5.0,
         "cpu_load_model": "Const[load=0.5]",
         "memory_load_model": "Const[load=0.5]",
         "arrival_time": 3
@@ -34,23 +19,7 @@
     {
         "cpu_usage": 10,
         "memory_usage": 10,
-        "lifetime": 2.0,
-        "cpu_load_model": "Const[load=0.5]",
-        "memory_load_model": "Const[load=0.5]",
-        "arrival_time": 4
-    },
-    {
-        "cpu_usage": 10,
-        "memory_usage": 10,
-        "lifetime": 2.0,
-        "cpu_load_model": "Const[load=0.5]",
-        "memory_load_model": "Const[load=0.5]",
-        "arrival_time": 5
-    },
-    {
-        "cpu_usage": 10,
-        "memory_usage": 10,
-        "lifetime": 2.0,
+        "lifetime": 4.0,
         "cpu_load_model": "Const[load=0.5]",
         "memory_load_model": "Const[load=0.5]",
         "arrival_time": 6
@@ -58,7 +27,7 @@
     {
         "cpu_usage": 10,
         "memory_usage": 10,
-        "lifetime": 2.0,
+        "lifetime": 3.0,
         "cpu_load_model": "Const[load=0.5]",
         "memory_load_model": "Const[load=0.5]",
         "arrival_time": 7
@@ -74,7 +43,7 @@
     {
         "cpu_usage": 10,
         "memory_usage": 10,
-        "lifetime": 2.0,
+        "lifetime": 1.0,
         "cpu_load_model": "Const[load=0.5]",
         "memory_load_model": "Const[load=0.5]",
         "arrival_time": 9

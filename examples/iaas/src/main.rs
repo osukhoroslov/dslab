@@ -1,5 +1,7 @@
 use log::info;
 
+use clap::Parser;
+
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
@@ -18,9 +20,11 @@ fn init_logger() {
         .init();
 }
 
-fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
+/// Execution of 20 VMs with constant 100% load on two hosts using two BestFit schedulers.
+fn example_two_schedulers() {
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+    let config = SimulationConfig::from_file("config.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
@@ -77,49 +81,50 @@ fn simulation_two_best_fit_schedulers(sim_config: SimulationConfig) {
         );
     }
 
-    cloud_sim.steps(500);
+    cloud_sim.step_for_duration(20.);
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed by host one: {}",
+        "Total energy consumed by host one: {:.2}",
         cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed by host two: {}",
+        "Total energy consumed by host two: {:.2}",
         cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-fn simulation_one_thresholded_scheduler(sim_config: SimulationConfig) {
+/// Execution of 10 VMs with constant 50% load (taken from workload.json) on two hosts
+/// using a single BestFitThreshold scheduler with resource overcommitment.
+/// The hosts and scheduler are initialized directly from the config file.
+fn example_single_scheduler_overcommit() {
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+    let config = SimulationConfig::from_file("config_with_infrastructure.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, config);
     let scheduler_id = cloud_sim.lookup_id("s");
 
     let mut dataset = StandardDatasetReader::new();
     dataset.parse("workload.json");
-
     cloud_sim.spawn_vms_from_dataset(scheduler_id, &mut dataset);
 
-    cloud_sim.steps(300);
+    cloud_sim.step_for_duration(20.);
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed by host one: {}",
+        "Total energy consumed by host one: {:.2}",
         cloud_sim.host_by_name("h1").borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed by host two: {}",
+        "Total energy consumed by host two: {:.2}",
         cloud_sim.host_by_name("h2").borrow_mut().get_energy_consumed(end_time)
     );
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-fn simulation_migration_simple(sim_config: SimulationConfig) {
+/// Manual migration of a single VM between two hosts.
+fn example_manual_migration() {
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+    let config = SimulationConfig::from_file("config.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
@@ -137,21 +142,18 @@ fn simulation_migration_simple(sim_config: SimulationConfig) {
 
     cloud_sim.step_for_duration(10.);
     cloud_sim.migrate_vm_to_host(vm, h2);
-
-    cloud_sim.steps(300);
+    cloud_sim.step_for_duration(12.);
 
     let end_time = cloud_sim.current_time();
     info!(
-        "Total energy consumed by host one: {}",
+        "Total energy consumed by host one: {:.2}",
         cloud_sim.host(h1).borrow_mut().get_energy_consumed(end_time)
     );
     info!(
-        "Total energy consumed by host two: {}",
+        "Total energy consumed by host two: {:.2}",
         cloud_sim.host(h2).borrow_mut().get_energy_consumed(end_time)
     );
 }
-
-////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone)]
 pub struct DecreaseLoadModel {}
@@ -164,27 +166,29 @@ impl DecreaseLoadModel {
 
 impl LoadModel for DecreaseLoadModel {
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
-        // linear drop from 100% to zero within first 50 time points
-        // then linear growth back from zero to 100% during next 50 time points
-        if time <= 500. {
+        // linear drop from 100% to zero within the first 500 time points
+        // then linear growth back from zero to 100% during the next 500 time points
+        return if time <= 500. {
             let linear = (500. - time) / 500.;
-            return linear.max(0.);
+            linear.max(0.)
         } else {
             let linear = (time - 500.) / 500.;
-            return linear.min(1.);
-        }
+            linear.min(1.)
+        };
     }
 }
 
-fn simulation_migration_component(sim_config: SimulationConfig) {
+/// Execution of 10 VMs with custom load function (see above) on 10 hosts with overcommitment
+/// using a single BestFit scheduler and VM migrator performing periodical VM consolidation.
+fn example_vm_migrator() {
     let sim = Simulation::new(123);
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let config = SimulationConfig::from_file("config_overcommit.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     for i in 0..10 {
         cloud_sim.add_host(&format!("h{}", i), 50, 50);
     }
+    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     for _ in 0..10 {
         cloud_sim.spawn_vm_now(
@@ -207,13 +211,32 @@ fn simulation_migration_component(sim_config: SimulationConfig) {
     cloud_sim.step_for_duration(1005.);
 }
 
+/// DSLab IaaS Examples
+#[derive(Parser, Debug)]
+#[clap(about, long_about = None)]
+struct Args {
+    #[clap(long, short)]
+    example: Option<String>,
+}
+
 fn main() {
     init_logger();
-    let config = SimulationConfig::from_file("config.yaml");
-    let config_overcommit = SimulationConfig::from_file("config_overcommit.yaml");
-    let config_with_infra = SimulationConfig::from_file("config_with_infrastructure.yaml");
-    simulation_two_best_fit_schedulers(config.clone());
-    simulation_one_thresholded_scheduler(config_with_infra);
-    simulation_migration_simple(config);
-    simulation_migration_component(config_overcommit);
+    let args = Args::parse();
+    let example = args.example.as_ref();
+    if example.is_none() || example.unwrap() == "two-schedulers" {
+        println!("\n--- TWO SCHEDULERS ---\n");
+        example_two_schedulers();
+    }
+    if example.is_none() || example.unwrap() == "single-scheduler-overcommit" {
+        println!("\n--- SINGLE SCHEDULER WITH OVERCOMMIT ---\n");
+        example_single_scheduler_overcommit();
+    }
+    if example.is_none() || example.unwrap() == "manual-migration" {
+        println!("\n--- MANUAL MIGRATION ---\n");
+        example_manual_migration();
+    }
+    if example.is_none() || example.unwrap() == "vm-migrator" {
+        println!("\n--- VM MIGRATOR ---\n");
+        example_vm_migrator();
+    }
 }

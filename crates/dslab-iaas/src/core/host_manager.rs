@@ -36,6 +36,7 @@ use crate::core::vm_api::VmAPI;
 /// defined as a function of CPU load.
 pub struct HostManager {
     pub id: u32,
+    name: String,
 
     cpu_total: u32,
     cpu_allocated: u32,
@@ -81,6 +82,7 @@ impl HostManager {
     ) -> Self {
         Self {
             id: ctx.id(),
+            name: ctx.name().to_string(),
             cpu_total,
             memory_total,
             cpu_allocated: 0,
@@ -232,11 +234,11 @@ impl HostManager {
             let start_duration = vm.borrow().start_duration();
             self.allocate(self.ctx.time(), vm.clone());
             self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
-            log_debug!(self.ctx, "vm #{} allocated on host #{}", vm_id, self.id);
+            log_debug!(self.ctx, "vm {} allocated on host {}", vm_id, self.name);
             self.ctx.emit_self(VMStarted { vm_id }, start_duration);
             true
         } else {
-            log_debug!(self.ctx, "not enough space for vm #{} on host #{}", vm_id, self.id);
+            log_debug!(self.ctx, "not enough space for vm {} on host {}", vm_id, self.name);
             self.ctx.emit(
                 AllocationFailed {
                     vm_id,
@@ -259,9 +261,9 @@ impl HostManager {
             self.allocate(self.ctx.time(), vm);
             log_debug!(
                 self.ctx,
-                "vm #{} allocated on host #{}, start migration",
+                "vm {} allocated on host {}, start migration",
                 vm_id,
-                self.id
+                self.name
             );
             self.recent_vm_status_changes.insert(vm_id, VmStatus::Migrating);
 
@@ -278,9 +280,9 @@ impl HostManager {
         } else {
             log_debug!(
                 self.ctx,
-                "not enough space for vm #{} on host #{}, migration failed",
+                "not enough space for vm {} on host {}, migration failed",
                 vm_id,
-                self.id
+                self.name
             );
         }
     }
@@ -288,7 +290,7 @@ impl HostManager {
     /// Processes resource release request by scheduling deletion of corresponding VM.
     fn on_allocation_release_request(&mut self, vm_id: u32, is_migrating: bool) {
         if self.vms.contains(&vm_id) {
-            log_debug!(self.ctx, "release resources from vm #{} on host #{}", vm_id, self.id);
+            log_debug!(self.ctx, "release resources from vm {} on host {}", vm_id, self.name);
             if !is_migrating {
                 self.recent_vm_status_changes.insert(vm_id, VmStatus::Finished);
             }
@@ -301,7 +303,7 @@ impl HostManager {
 
     /// Invoked upon VM startup, updates VM status and schedules VM release event according to its lifetime.
     fn on_vm_started(&mut self, vm_id: u32) {
-        log_debug!(self.ctx, "vm #{} started and running", vm_id);
+        log_debug!(self.ctx, "vm {} started and running", vm_id);
         let vm = self.vm_api.borrow().get_vm(vm_id);
         let start_time = vm.borrow().start_time();
 
@@ -325,7 +327,7 @@ impl HostManager {
     /// Invoked upon VM deletion to release the allocated resources and notify placement store.
     fn on_vm_deleted(&mut self, vm_id: u32) {
         if self.vms.contains(&vm_id) {
-            log_debug!(self.ctx, "vm #{} deleted", vm_id);
+            log_debug!(self.ctx, "vm {} deleted", vm_id);
             self.release(self.ctx.time(), vm_id);
             self.ctx.emit(
                 AllocationReleased {

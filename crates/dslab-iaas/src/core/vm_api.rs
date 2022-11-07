@@ -35,7 +35,7 @@ impl VmAPI {
             vms: HashMap::new(),
             vm_status: HashMap::new(),
             vm_location: HashMap::new(),
-            vm_counter: 1,
+            vm_counter: 0,
             ctx,
         }
     }
