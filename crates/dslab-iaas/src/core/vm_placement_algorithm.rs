@@ -2,6 +2,8 @@
 
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
+use crate::core::config::parse_config_value;
+use crate::core::config::parse_options;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 
@@ -16,6 +18,17 @@ use crate::core::resource_pool::ResourcePoolState;
 /// It is possible to implement arbitrary placement algorithm and use it in scheduler.
 pub trait VMPlacementAlgorithm {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
+}
+
+pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAlgorithm> {
+    let (algorithm_name, options) = parse_config_value(&config_str);
+    match algorithm_name.as_str() {
+        "FirstFit" => return Box::new(FirstFit::new()),
+        "BestFit" => return Box::new(BestFit::new()),
+        "WorstFit" => return Box::new(WorstFit::new()),
+        "BestFitThreshold" => return Box::new(BestFitThreshold::from_str(&options.unwrap())),
+        _ => panic!("Can't resolve: {}", config_str),
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,6 +118,12 @@ pub struct BestFitThreshold {
 
 impl BestFitThreshold {
     pub fn new(threshold: f64) -> Self {
+        Self { threshold }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        let options = parse_options(s);
+        let threshold = options.get("threshold").unwrap().parse::<f64>().unwrap();
         Self { threshold }
     }
 }

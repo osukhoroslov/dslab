@@ -88,9 +88,9 @@ impl PlacementStore {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
                 self.ctx,
-                "vm #{} commited to host #{} in placement store",
+                "commited placement of vm {} to host {}",
                 vm_id,
-                host_id
+                self.ctx.lookup_name(host_id)
             );
             self.ctx
                 .emit(AllocationRequest { vm_id }, host_id, self.sim_config.message_delay);
@@ -105,15 +105,12 @@ impl PlacementStore {
         } else {
             log_debug!(
                 self.ctx,
-                "not enough space for vm #{} on host #{} in placement store",
+                "rejected placement of vm {} on host {} due to insufficient resources",
                 vm_id,
-                host_id
+                self.ctx.lookup_name(host_id)
             );
             self.ctx.emit(
-                AllocationCommitFailed {
-                    vm_id,
-                    host_id: host_id,
-                },
+                AllocationCommitFailed { vm_id, host_id },
                 from_scheduler,
                 self.sim_config.message_delay,
             );

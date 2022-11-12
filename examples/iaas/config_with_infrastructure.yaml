@@ -1,0 +1,20 @@
+# Settings
+send_stats_period: 5
+message_delay: 0.1
+allocation_retry_period: 1.0
+vm_start_duration: 1.0
+vm_stop_duration: 0.5
+allow_vm_overcommit: true
+network_throughput: 10
+
+# Hosts
+hosts:
+  - count: 2
+    cpus: 30
+    memory: 30
+    name_prefix: h
+
+# Schedulers
+schedulers:
+  - name: s
+    algorithm: BestFitThreshold[threshold=0.9]

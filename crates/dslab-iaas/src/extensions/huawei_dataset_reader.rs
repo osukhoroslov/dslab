@@ -6,6 +6,7 @@ use std::fs::File;
 use log::info;
 use serde::{Deserialize, Serialize};
 
+use crate::core::load_model::ConstantLoadModel;
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
@@ -73,11 +74,14 @@ impl HuaweiDatasetReader {
         for event in &self.vm_events {
             if event.is_finish == 0 {
                 self.vm_requests.push(VMRequest {
-                    id: event.vm_id,
+                    id: Some(event.vm_id),
                     cpu_usage: event.cpu,
                     memory_usage: event.memory,
                     lifetime: end_times.get(&event.vm_id).unwrap_or(&self.simulation_length) - event.time,
                     start_time: event.time,
+                    cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
+                    memory_load_model: Box::new(ConstantLoadModel::new(1.)),
+                    scheduler_name: None,
                 });
             }
         }

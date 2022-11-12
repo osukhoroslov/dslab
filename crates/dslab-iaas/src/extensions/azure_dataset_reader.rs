@@ -6,6 +6,7 @@ use std::fs::File;
 use log::info;
 use serde::{Deserialize, Serialize};
 
+use crate::core::load_model::ConstantLoadModel;
 use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_reader::VMRequest;
 
@@ -136,11 +137,14 @@ impl DatasetReader for AzureDatasetReader {
             .min(self.simulation_length);
         let lifetime = end_time - start_time;
         return Some(VMRequest {
-            id: raw_vm.vm_id.clone(),
+            id: Some(raw_vm.vm_id.clone()),
             cpu_usage,
             memory_usage,
             lifetime,
             start_time,
+            cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
+            memory_load_model: Box::new(ConstantLoadModel::new(1.)),
+            scheduler_name: None,
         });
     }
 }

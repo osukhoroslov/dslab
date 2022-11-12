@@ -14,3 +14,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 dyn-clone = "1.0"
 csv = "1.1"
+serde_json = "1.0.48"

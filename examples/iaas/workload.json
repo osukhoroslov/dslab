@@ -1,0 +1,51 @@
+[
+    {
+        "count": 5,
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 6.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 0
+    },
+    {
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 5.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 3
+    },
+    {
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 4.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 6
+    },
+    {
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 3.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 7
+    },
+    {
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 2.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 8
+    },
+    {
+        "cpu_usage": 10,
+        "memory_usage": 10,
+        "lifetime": 1.0,
+        "cpu_load_model": "Const[load=0.5]",
+        "memory_load_model": "Const[load=0.5]",
+        "arrival_time": 9
+    }
+]
