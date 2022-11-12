@@ -1,11 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_faas::function::Application;
-use dslab_faas::host::Host;
-use dslab_faas::scheduler::Scheduler;
-
-use crate::simple_schedulers::LeastLoadedScheduler;
+use crate::extra::simple_schedulers::LeastLoadedScheduler;
+use crate::function::Application;
+use crate::host::Host;
+use crate::scheduler::Scheduler;
 
 /// Refer to https://arxiv.org/abs/2111.07226
 pub struct HermesScheduler {

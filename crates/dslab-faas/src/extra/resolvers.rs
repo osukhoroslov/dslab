@@ -1,11 +1,10 @@
-use dslab_faas::coldstart::ColdStartPolicy;
 /// This file contains additional resolvers for YAML configs
-use dslab_faas::config::{parse_options, stub_coldstart_policy_resolver};
-use dslab_faas::scheduler::{BasicScheduler, Scheduler};
-
-use crate::hermes::HermesScheduler;
-use crate::hybrid_histogram::HybridHistogramPolicy;
-use crate::simple_schedulers::*;
+use crate::coldstart::ColdStartPolicy;
+use crate::config::{parse_options, stub_coldstart_policy_resolver};
+use crate::extra::hermes::HermesScheduler;
+use crate::extra::hybrid_histogram::HybridHistogramPolicy;
+use crate::extra::simple_schedulers::*;
+use crate::scheduler::{BasicScheduler, Scheduler};
 
 pub fn extra_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     if s.len() >= 23 && &s[0..22] == "HybridHistogramPolicy[" && s.chars().next_back().unwrap() == ']' {

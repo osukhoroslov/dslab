@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use dslab_faas::trace::{ApplicationData, RequestData, Trace};
+use crate::trace::{ApplicationData, RequestData, Trace};
 
 #[derive(Default, Clone, Copy)]
 pub struct FunctionRecord {

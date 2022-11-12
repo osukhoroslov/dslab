@@ -5,6 +5,7 @@ pub mod controller;
 pub mod cpu;
 pub mod deployer;
 pub mod event;
+pub mod extra;
 pub mod function;
 pub mod host;
 pub mod invocation;

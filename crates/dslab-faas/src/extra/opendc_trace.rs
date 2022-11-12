@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use csv::ReaderBuilder;
 
-use dslab_faas::trace::{ApplicationData, RequestData, Trace};
+use crate::trace::{ApplicationData, RequestData, Trace};
 
 #[derive(Default, Copy, Clone)]
 pub struct FunctionSample {

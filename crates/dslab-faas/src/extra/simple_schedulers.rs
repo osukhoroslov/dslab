@@ -4,21 +4,36 @@ use std::rc::Rc;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use dslab_faas::function::Application;
-use dslab_faas::host::Host;
-use dslab_faas::scheduler::Scheduler;
+use crate::function::Application;
+use crate::host::Host;
+use crate::scheduler::Scheduler;
+
+pub struct ApplicationHasher {
+    pub hash_fn: fn(u64) -> u64,
+    pub name: String,
+}
+
+impl ApplicationHasher {
+    pub fn new(hash_fn: fn(u64) -> u64, name: String) -> Self {
+        Self { hash_fn, name }
+    }
+
+    pub fn hash(&self, app: u64) -> u64 {
+        (self.hash_fn)(app)
+    }
+}
 
 /// LocalityBasedScheduler picks a host based on application hash.
 /// In case host number `i` can't invoke, the scheduler considers host number `(i + step) % hosts.len()`.
 pub struct LocalityBasedScheduler {
-    hasher: fn(u64) -> u64,
+    hasher: ApplicationHasher,
     step: usize,
     warm_only: bool,
 }
 
 impl LocalityBasedScheduler {
-    pub fn new(hasher: Option<fn(u64) -> u64>, step: Option<usize>, warm_only: bool) -> Self {
-        let f = hasher.unwrap_or(|a| a);
+    pub fn new(hasher: Option<ApplicationHasher>, step: Option<usize>, warm_only: bool) -> Self {
+        let f = hasher.unwrap_or(ApplicationHasher::new(|a| a, "Identity hasher".to_string()));
         let s = step.unwrap_or(1);
         Self {
             hasher: f,
@@ -30,7 +45,7 @@ impl LocalityBasedScheduler {
 
 impl Scheduler for LocalityBasedScheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
-        let start_idx = ((self.hasher)(app.id) % (hosts.len() as u64)) as usize;
+        let start_idx = (self.hasher.hash(app.id) % (hosts.len() as u64)) as usize;
         let mut cycle = false;
         let mut idx = start_idx;
         while !cycle {
@@ -54,8 +69,8 @@ impl Scheduler for LocalityBasedScheduler {
 
     fn get_name(&self) -> String {
         format!(
-            "LocalityBasedScheduler[hasher=[some_fn],step={},warm_only={}]",
-            self.step, self.warm_only
+            "LocalityBasedScheduler[hasher=[{}],step={},warm_only={}]",
+            &self.hasher.name, self.step, self.warm_only
         )
     }
 }

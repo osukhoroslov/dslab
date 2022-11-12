@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
+use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
-use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
-use dslab_faas_extra::hybrid_histogram::HybridHistogramPolicy;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
@@ -32,6 +32,25 @@ fn print_results(stats: Stats, name: &str) {
     println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
 }
 
+fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
+    match &s[s.len() - 9..] {
+        "keepalive" => {
+            let s1 = s.split("-").next().unwrap();
+            let len = s1.parse::<f64>().unwrap();
+            Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))
+        }
+        "unloading" => Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)),
+        _ => {
+            let mut it = s.split(",");
+            it.next();
+            let s1 = it.next().unwrap();
+            let s2 = s1[1..].split(" ").next().unwrap();
+            let len = s2.parse::<f64>().unwrap();
+            Box::new(HybridHistogramPolicy::new(3600.0 * len, 60.0, 2.0, 0.5, 0.15, 0.1))
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let mut trace_config: AzureTraceConfig = Default::default();
@@ -45,29 +64,11 @@ fn main() {
     let experiment_config: ExperimentConfig =
         serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
     let policies = experiment_config.coldstart_policies;
-    let sim_config = experiment_config.base_config;
-    let policy_resolver = |s: &str| -> Box<dyn ColdStartPolicy> {
-        match &s[s.len() - 9..] {
-            "keepalive" => {
-                let s1 = s.split("-").next().unwrap();
-                let len = s1.parse::<f64>().unwrap();
-                Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))
-            }
-            "unloading" => Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)),
-            _ => {
-                let mut it = s.split(",");
-                it.next();
-                let s1 = it.next().unwrap();
-                let s2 = s1[1..].split(" ").next().unwrap();
-                let len = s2.parse::<f64>().unwrap();
-                Box::new(HybridHistogramPolicy::new(3600.0 * len, 60.0, 2.0, 0.5, 0.15, 0.1))
-            }
-        }
-    };
+    let base_config = experiment_config.base_config;
     let configs: Vec<_> = policies
         .iter()
         .map(|x| {
-            let mut config = sim_config.clone();
+            let mut config = base_config.clone();
             config.coldstart_policy = x.to_string();
             config
         })

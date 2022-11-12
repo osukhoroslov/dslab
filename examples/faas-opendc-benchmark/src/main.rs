@@ -4,9 +4,9 @@ use std::time::Instant;
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::Config;
+use dslab_faas::extra::opendc_trace::{process_opendc_trace, OpenDCTraceConfig};
 use dslab_faas::resource::ResourceProvider;
 use dslab_faas::simulation::ServerlessSimulation;
-use dslab_faas_extra::opendc_trace::{process_opendc_trace, OpenDCTraceConfig};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

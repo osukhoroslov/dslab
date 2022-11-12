@@ -5,10 +5,10 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
+use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
-use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
-use dslab_faas_extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {

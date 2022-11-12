@@ -5,12 +5,11 @@ use std::collections::HashMap;
 
 use rand::prelude::*;
 
-use dslab_faas::coldstart::ColdStartPolicy;
-use dslab_faas::container::Container;
-use dslab_faas::function::Application;
-use dslab_faas::invocation::Invocation;
-
-use crate::arima_extra::{arima_forecast, autofit};
+use crate::coldstart::ColdStartPolicy;
+use crate::container::Container;
+use crate::extra::arima_extra::{arima_forecast, autofit};
+use crate::function::Application;
+use crate::invocation::Invocation;
 
 const HEAD: f64 = 0.05;
 const TAIL: f64 = 0.99;
