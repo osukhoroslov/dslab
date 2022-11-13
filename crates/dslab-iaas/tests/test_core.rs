@@ -10,7 +10,11 @@ use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
 use dslab_iaas::core::vm_placement_algorithm::BestFit;
 use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
+use dslab_iaas::core::vm_placement_algorithm::CosineSimilarity;
+use dslab_iaas::core::vm_placement_algorithm::DotProduct;
 use dslab_iaas::core::vm_placement_algorithm::FirstFit;
+use dslab_iaas::core::vm_placement_algorithm::NormBasedGreedy;
+use dslab_iaas::core::vm_placement_algorithm::PerpDistance;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::simulation::CloudSimulation;
 
@@ -518,4 +522,182 @@ fn test_slatah() {
 
     assert_eq!(end_time, 10.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_accumulated_slav(end_time), 0.5);
+}
+
+#[test]
+// Test perp dist algorithm which minimizes the distance to host resource usage vector.
+// First VM is perfectly suited for first host, second VM is perfect for second host.
+fn test_perp_dist() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 20, 40);
+    let h2 = cloud_sim.add_host("h2", 40, 20);
+    let s = cloud_sim.add_scheduler("s", Box::new(PerpDistance::new()));
+
+    let vm1 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm2 = cloud_sim.spawn_vm_now(
+        2,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(2.);
+    let cur_time = cloud_sim.current_time();
+
+    assert_eq!(cur_time, 2.);
+    assert_eq!(cloud_sim.vm_location(vm1), h1);
+    assert_eq!(cloud_sim.vm_location(vm2), h2);
+}
+
+#[test]
+// Test cosine similarity algorithm.
+// First VM is perfectly suited for first host, second VM is perfect for second host.
+fn test_cosine_similarity() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 20, 40);
+    let h2 = cloud_sim.add_host("h2", 40, 20);
+    let s = cloud_sim.add_scheduler("s", Box::new(CosineSimilarity::new()));
+
+    let vm1 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm2 = cloud_sim.spawn_vm_now(
+        2,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(2.);
+    let cur_time = cloud_sim.current_time();
+
+    assert_eq!(cur_time, 2.);
+    assert_eq!(cloud_sim.vm_location(vm1), h1);
+    assert_eq!(cloud_sim.vm_location(vm2), h2);
+}
+
+#[test]
+// Test dot product algorithm.
+// Despite all the VMs are more suited for first host, they are scheduled to second one
+// as long as there is large amount of memory available in.
+fn test_dot_product() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 20, 40);
+    let h2 = cloud_sim.add_host("h2", 20, 80);
+    let s = cloud_sim.add_scheduler("s", Box::new(DotProduct::new()));
+
+    let vm1 = cloud_sim.spawn_vm_now(
+        1,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm2 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm3 = cloud_sim.spawn_vm_now(
+        1,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(2.);
+    let cur_time = cloud_sim.current_time();
+
+    assert_eq!(cur_time, 2.);
+    assert_eq!(cloud_sim.vm_location(vm1), h1);
+    assert_eq!(cloud_sim.vm_location(vm2), h2);
+    assert_eq!(cloud_sim.vm_location(vm3), h2);
+}
+
+#[test]
+// Test norm based greedy algorithm.
+// Greedy algorithm schedules all the VMs to first available host as it is more suited in
+// terms of resource normilized capacities.
+fn test_norm_based_greedy() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+
+    let h1 = cloud_sim.add_host("h1", 20, 40);
+    cloud_sim.add_host("h2", 20, 80);
+    let s = cloud_sim.add_scheduler("s", Box::new(NormBasedGreedy::new()));
+
+    let vm1 = cloud_sim.spawn_vm_now(
+        1,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm2 = cloud_sim.spawn_vm_now(
+        1,
+        2,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+    let vm3 = cloud_sim.spawn_vm_now(
+        1,
+        1,
+        4.0,
+        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(2.0)),
+        None,
+        s,
+    );
+
+    cloud_sim.step_for_duration(2.);
+    let cur_time = cloud_sim.current_time();
+
+    assert_eq!(cur_time, 2.);
+    assert_eq!(cloud_sim.vm_location(vm1), h1);
+    assert_eq!(cloud_sim.vm_location(vm2), h1);
+    assert_eq!(cloud_sim.vm_location(vm3), h1);
 }

@@ -150,3 +150,180 @@ impl VMPlacementAlgorithm for BestFitThreshold {
         return result;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Delta perp distance algorithm that minimizes the distance beetwen new allocated resources
+/// vector point to host resource provider vector. As the result, VM with imbalanced resource
+/// consupmtions are packed as tightly as possible and different resources fragmentation is
+/// reduced significantly.
+pub struct PerpDistance;
+
+impl PerpDistance {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl VMPlacementAlgorithm for PerpDistance {
+    fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
+        let mut result: Option<u32> = None;
+        let mut min_perp_dist: f64 = f64::MAX;
+
+        for host in pool_state.get_hosts_list() {
+            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+                let total_cpu: f64 = pool_state.get_total_cpu(host) as f64;
+                let total_memory: f64 = pool_state.get_total_memory(host) as f64;
+                let new_cpu: f64 = alloc.cpu_usage as f64;
+                let new_memory: f64 = alloc.memory_usage as f64;
+
+                let scalar: f64 = total_cpu * new_cpu + total_memory * new_memory;
+                let dist_one = (total_cpu * total_cpu + total_memory * total_memory).sqrt();
+                let dist_two = (new_cpu * new_cpu + new_memory * new_memory).sqrt();
+                let cos = (scalar / dist_one) / dist_two;
+                let sin = (1. - cos * cos).sqrt();
+
+                let perp_dist = sin * dist_two;
+
+                if perp_dist < min_perp_dist {
+                    min_perp_dist = perp_dist;
+                    result = Some(host);
+                }
+            }
+        }
+        result
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Cosine similarity algorithm maximizes the a * d value, where a is a vector of currently
+/// available host resources while d is new VM resource denamds. Both vectors are normialized
+/// to host resource sizes.
+pub struct CosineSimilarity;
+
+impl CosineSimilarity {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl VMPlacementAlgorithm for CosineSimilarity {
+    fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
+        let mut result: Option<u32> = None;
+        let mut min_similarity: f64 = f64::MAX;
+
+        for host in pool_state.get_hosts_list() {
+            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+                let total_cpu: f64 = pool_state.get_total_cpu(host) as f64;
+                let total_memory: f64 = pool_state.get_total_memory(host) as f64;
+
+                // already normalized values
+                let new_cpu: f64 = alloc.cpu_usage as f64 / total_cpu;
+                let new_memory: f64 = alloc.memory_usage as f64 / total_memory;
+                let load_cpu = pool_state.get_cpu_load(host);
+                let load_memory = pool_state.get_memory_load(host);
+
+                let similarity = new_cpu * load_cpu + new_memory * load_memory;
+                if similarity < min_similarity {
+                    min_similarity = similarity;
+                    result = Some(host);
+                }
+            }
+        }
+        result
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Dot product algorithm maximizes dot product between the vector of remaining capacities and the
+/// vector of demands for the incoming VM capacities.
+pub struct DotProduct;
+
+impl DotProduct {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl VMPlacementAlgorithm for DotProduct {
+    fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
+        let mut result: Option<u32> = None;
+        let mut max_product: f64 = f64::MIN;
+
+        let mut cpu_weight = 0.;
+        let mut memory_weight = 0.;
+        for host in pool_state.get_hosts_list() {
+            cpu_weight += pool_state.get_cpu_load(host);
+            memory_weight += pool_state.get_memory_load(host);
+        }
+        cpu_weight /= pool_state.get_hosts_list().len() as f64;
+        memory_weight /= pool_state.get_hosts_list().len() as f64;
+
+        for host in pool_state.get_hosts_list() {
+            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+                let cpu_product = pool_state.get_available_cpu(host) as f64 * alloc.cpu_usage as f64 * cpu_weight;
+                let memory_product =
+                    pool_state.get_available_memory(host) as f64 * alloc.memory_usage as f64 * memory_weight;
+                let product = cpu_product + memory_product;
+                if product > max_product {
+                    max_product = product;
+                    result = Some(host);
+                }
+            }
+        }
+        result
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Norm-based Greedy algorithm minimizes the difference between the new VM resource usage
+/// vector and the residual capacity under a certain norm, instead of the
+/// dot product.
+pub struct NormBasedGreedy;
+
+impl NormBasedGreedy {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl VMPlacementAlgorithm for NormBasedGreedy {
+    fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
+        let mut result: Option<u32> = None;
+        let mut min_diff: f64 = f64::MAX;
+
+        let mut cpu_weight = 0.;
+        let mut memory_weight = 0.;
+        for host in pool_state.get_hosts_list() {
+            cpu_weight += pool_state.get_cpu_load(host);
+            memory_weight += pool_state.get_memory_load(host);
+        }
+        cpu_weight /= pool_state.get_hosts_list().len() as f64;
+        memory_weight /= pool_state.get_hosts_list().len() as f64;
+
+        for host in pool_state.get_hosts_list() {
+            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+                let total_cpu: f64 = pool_state.get_total_cpu(host) as f64;
+                let total_memory: f64 = pool_state.get_total_memory(host) as f64;
+
+                // already normalized values
+                let new_cpu: f64 = alloc.cpu_usage as f64 / total_cpu;
+                let new_memory: f64 = alloc.memory_usage as f64 / total_memory;
+                let load_cpu = 1. - pool_state.get_cpu_load(host);
+                let load_memory = 1. - pool_state.get_memory_load(host);
+
+                let cpu_diff = (new_cpu - load_cpu) * (new_cpu - load_cpu) * cpu_weight;
+                let memory_diff = (new_memory - load_memory) * (new_memory - load_memory) * memory_weight;
+                let diff = cpu_diff + memory_diff;
+                if diff < min_diff {
+                    min_diff = diff;
+                    result = Some(host);
+                }
+            }
+        }
+        result
+    }
+}

@@ -137,4 +137,14 @@ impl ResourcePoolState {
     pub fn get_memory_load(&self, host_id: u32) -> f64 {
         return 1. - self.hosts[&host_id].memory_available as f64 / self.hosts[&host_id].memory_total as f64;
     }
+
+    /// Returns the total CPU capacity of the specified host
+    pub fn get_total_cpu(&self, host_id: u32) -> u32 {
+        self.hosts[&host_id].cpu_total
+    }
+
+    /// Returns the total memory capacity of the specified host
+    pub fn get_total_memory(&self, host_id: u32) -> u64 {
+        self.hosts[&host_id].memory_total
+    }
 }
