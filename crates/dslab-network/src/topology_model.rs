@@ -179,7 +179,7 @@ impl TopologyNetwork {
                     current_link_usage.change_priority_by(&link_id, |link_usage: &mut LinkUsage| {
                         link_usage.transfers_count -= uses_amount;
                         link_usage.left_bandwidth -= bandwidth * uses_amount as f64;
-                    })
+                    });
                 }
             }
         }
