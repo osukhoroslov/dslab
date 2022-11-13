@@ -11,6 +11,6 @@ pub struct MessageReceived {
 
 #[derive(Serialize)]
 pub struct TimerFired {
-    pub timer_name: String,
-    pub proc_name: String,
+    pub proc: String,
+    pub timer: String,
 }
