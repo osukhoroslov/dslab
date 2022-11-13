@@ -85,7 +85,7 @@ impl Node {
         self.clock_skew = clock_skew;
     }
 
-    pub fn add_process<S>(&mut self, name: &str, proc: Box<dyn Process>) {
+    pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>) {
         self.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }
 

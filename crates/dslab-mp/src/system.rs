@@ -40,7 +40,7 @@ impl System {
 
     // Nodes -----------------------------------------------------------------------------------------------------------
 
-    pub fn add_node<S>(&mut self, name: &str) {
+    pub fn add_node(&mut self, name: &str) {
         let node = Rc::new(RefCell::new(Node::new(
             name.to_string(),
             self.net.clone(),
@@ -56,7 +56,7 @@ impl System {
         self.nodes[node].borrow_mut().set_clock_skew(clock_skew);
     }
 
-    pub fn crash_node<S>(&mut self, node: &str) {
+    pub fn crash_node(&mut self, node: &str) {
         self.sim.remove_handler(node);
 
         // cancel pending events from the crashed node
