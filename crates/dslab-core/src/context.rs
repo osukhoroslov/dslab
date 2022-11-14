@@ -7,9 +7,8 @@ use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
 use crate::component::Id;
-use crate::event::{EventData, EventId};
+use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
-use crate::Event;
 
 /// A facade for accessing the simulation state and producing events from simulation components.
 pub struct SimulationContext {
