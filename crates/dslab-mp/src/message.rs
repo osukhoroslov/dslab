@@ -1,5 +1,6 @@
-use serde::Serialize;
 use std::fmt::{Error, Formatter};
+
+use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct Message {
