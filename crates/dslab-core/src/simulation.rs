@@ -6,6 +6,8 @@ use std::rc::Rc;
 
 use log::Level::Trace;
 use log::{debug, log_enabled, trace};
+use rand::distributions::uniform::{SampleRange, SampleUniform};
+use rand::prelude::Distribution;
 use serde_json::json;
 use serde_type_name::type_name;
 
@@ -14,6 +16,7 @@ use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
+use crate::Event;
 
 /// Represents a simulation, provides methods for its configuration and execution.
 pub struct Simulation {
@@ -231,6 +234,59 @@ impl Simulation {
         id
     }
 
+    /// Removes the event handler for component with specified name.
+    ///
+    /// All subsequent events destined for this component will not be delivered until the handler is added again.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::cell::RefCell;
+    /// use std::rc::Rc;
+    /// use serde::Serialize;
+    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// pub struct Component {
+    /// }
+    ///
+    /// impl EventHandler for Component {
+    ///     fn on(&mut self, event: Event) {
+    ///         cast!(match event.data {
+    ///             SomeEvent { } => {
+    ///                 // some event processing logic...
+    ///             }
+    ///         })
+    ///
+    ///    }
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp_id1 = sim.add_handler("comp", comp.clone());
+    /// sim.remove_handler("comp");
+    /// // Assigned component Id is not changed if we call `add_handler` again.
+    /// let comp_id2 = sim.add_handler("comp", comp);
+    /// assert_eq!(comp_id1, comp_id2);
+    /// ```
+    pub fn remove_handler<S>(&mut self, name: S)
+    where
+        S: AsRef<str>,
+    {
+        let id = self.lookup_id(name.as_ref());
+        self.handlers[id as usize] = None;
+        debug!(
+            target: "simulation",
+            "[{:.3} {} simulation] Removed handler: {}",
+            self.time(),
+            crate::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": name.as_ref(), "id": id})
+        );
+    }
+
     /// Returns the current simulation time.
     ///
     /// # Examples
@@ -278,10 +334,10 @@ impl Simulation {
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
     /// let mut status = sim.step();
-    /// assert_eq!(status, true);
+    /// assert!(status);
     /// assert_eq!(sim.time(), 1.2);
     /// status = sim.step();
-    /// assert_eq!(status, false);
+    /// assert!(!status);
     /// ```
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
@@ -337,10 +393,10 @@ impl Simulation {
     /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.4);
     /// let mut status = sim.steps(2);
-    /// assert_eq!(status, true);
+    /// assert!(status);
     /// assert_eq!(sim.time(), 1.3);
     /// status = sim.steps(2);
-    /// assert_eq!(status, false);
+    /// assert!(!status);
     /// assert_eq!(sim.time(), 1.4);
     /// ```
     pub fn steps(&mut self, step_count: u64) -> bool {
@@ -384,6 +440,8 @@ impl Simulation {
     /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
     /// time is above the specified threshold (`current_time + duration`) or there are no pending events left.
     ///
+    /// Returns `true` if there could be more pending events and `false` otherwise.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -400,25 +458,78 @@ impl Simulation {
     /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
-    /// sim.step_for_duration(1.5);
+    /// let mut status = sim.step_for_duration(1.5);
     /// assert_eq!(sim.time(), 1.0); // time equals to the first event
-    /// sim.step_for_duration(0.1);
+    /// assert!(status); // there are more events
+    /// status = sim.step_for_duration(0.1);
     /// assert_eq!(sim.time(), 1.0); // no progress is made
-    /// sim.step_for_duration(3.0);
+    /// assert!(status); // there are more events
+    /// status = sim.step_for_duration(3.0);
     /// assert_eq!(sim.time(), 3.5); // time equals to the last event
+    /// assert!(!status); // there are no more events
     /// ```
-    pub fn step_for_duration(&mut self, duration: f64) {
+    pub fn step_for_duration(&mut self, duration: f64) -> bool {
         let end_time = self.sim_state.borrow().time() + duration;
         loop {
             if let Some(event) = self.sim_state.borrow().peek_event() {
                 if event.time > end_time {
-                    break;
+                    return true;
                 }
             } else {
-                break;
+                return false;
             }
             self.step();
         }
+    }
+
+    /// Returns a random float in the range _[0, 1)_
+    /// using the simulation-wide random number generator.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dslab_core::Simulation;
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let f: f64 = sim.rand();
+    /// assert!(f >= 0.0 && f < 1.0);
+    /// ```
+    pub fn rand(&mut self) -> f64 {
+        self.sim_state.borrow_mut().rand()
+    }
+
+    /// Returns a random number in the specified range
+    /// using the simulation-wide random number generator.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dslab_core::Simulation;
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let n: u32 = sim.gen_range(1..=10);
+    /// assert!(n >= 1 && n <= 10);
+    /// let f: f64 = sim.gen_range(0.1..0.5);
+    /// assert!(f >= 0.1 && f < 0.5);
+    /// ```
+    pub fn gen_range<T, R>(&mut self, range: R) -> T
+    where
+        T: SampleUniform,
+        R: SampleRange<T>,
+    {
+        self.sim_state.borrow_mut().gen_range(range)
+    }
+
+    /// Returns a random value from the specified distribution
+    /// using the simulation-wide random number generator.
+    pub fn sample_from_distribution<T, Dist: Distribution<T>>(&mut self, dist: &Dist) -> T {
+        self.sim_state.borrow_mut().sample_from_distribution(dist)
+    }
+
+    /// Returns a random alphanumeric string of specified length
+    /// using the simulation-wide random number generator.
+    pub fn random_string(&mut self, len: usize) -> String {
+        self.sim_state.borrow_mut().random_string(len)
     }
 
     /// Returns the total number of created events.
@@ -445,5 +556,36 @@ impl Simulation {
     /// ```
     pub fn event_count(&self) -> u64 {
         self.sim_state.borrow().event_count()
+    }
+
+    /// Cancels events that satisfy the given predicate function.
+    ///
+    /// Note that already processed events cannot be cancelled.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Event, Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// let event1 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// sim.cancel_events(|e| e.id < 2);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 3.0);
+    /// ```
+    pub fn cancel_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_events(pred);
     }
 }

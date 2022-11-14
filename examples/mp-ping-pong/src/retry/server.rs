@@ -2,9 +2,9 @@ use dslab_mp::context::Context;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 
-pub struct PingServer {}
+pub struct RetryPingServer {}
 
-impl Process for PingServer {
+impl Process for RetryPingServer {
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
         if msg.tip == "PING" {
             let resp = Message::new("PONG".to_string(), msg.data);

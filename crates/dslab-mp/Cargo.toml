@@ -7,5 +7,8 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../dslab-core" }
 colored = "2.0.0"
+lazy_static = "1.4.0"
 log = "0.4.17"
+rand = "0.8.4"
+regex = "1.6.0"
 serde = { version = "1.0", features = ["derive"] }

@@ -17,8 +17,8 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(proc_name: String, sim_ctx: Rc<RefCell<SimulationContext>>) -> Self {
-        let time = sim_ctx.borrow().time();
+    pub fn new(proc_name: String, sim_ctx: Rc<RefCell<SimulationContext>>, clock_skew: f64) -> Self {
+        let time = sim_ctx.borrow().time() + clock_skew;
         Self {
             proc_name,
             time,
@@ -49,7 +49,7 @@ impl Context {
             "{:>9.3} {:>10} >>> {:<10} {:?}",
             self.time, self.proc_name, "local", msg
         )
-        .cyan());
+        .green());
         self.actions.push(ProcessEvent::LocalMessageSent { msg: msg.clone() });
     }
 

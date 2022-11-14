@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use colored::*;
+use lazy_static::lazy_static;
+use regex::Regex;
 
 use dslab_core::Id;
 use dslab_core::SimulationContext;
@@ -16,8 +18,7 @@ pub struct Network {
     dupl_rate: f64,
     corrupt_rate: f64,
     node_ids: HashMap<String, Id>,
-    proc_nodes: HashMap<String, String>,
-    crashed_nodes: HashSet<String>,
+    proc_locations: HashMap<String, String>,
     drop_incoming: HashSet<String>,
     drop_outgoing: HashSet<String>,
     disabled_links: HashSet<(String, String)>,
@@ -35,8 +36,7 @@ impl Network {
             dupl_rate: 0.,
             corrupt_rate: 0.,
             node_ids: HashMap::new(),
-            proc_nodes: HashMap::new(),
-            crashed_nodes: HashSet::new(),
+            proc_locations: HashMap::new(),
             drop_incoming: HashSet::new(),
             drop_outgoing: HashSet::new(),
             disabled_links: HashSet::new(),
@@ -51,11 +51,7 @@ impl Network {
     }
 
     pub fn set_proc_location(&mut self, proc: String, node: String) {
-        self.proc_nodes.insert(proc, node);
-    }
-
-    pub fn get_proc_location(&self, proc: String) -> String {
-        self.proc_nodes.get(&proc).unwrap().clone()
+        self.proc_locations.insert(proc, node);
     }
 
     pub fn set_delay(&mut self, delay: f64) {
@@ -80,46 +76,46 @@ impl Network {
         self.corrupt_rate = corrupt_rate;
     }
 
-    pub fn node_crashed(&mut self, node_id: &str) {
-        self.crashed_nodes.insert(node_id.to_string());
+    pub fn drop_incoming(&mut self, node: &str) {
+        self.drop_incoming.insert(node.to_string());
+        t!(format!("{:>9.3} - drop messages to {}", self.ctx.time(), node).red());
     }
 
-    pub fn node_recovered(&mut self, node_id: &str) {
-        self.crashed_nodes.remove(node_id);
+    pub fn pass_incoming(&mut self, node: &str) {
+        self.drop_incoming.remove(node);
+        t!(format!("{:>9.3} - pass messages to {}", self.ctx.time(), node).green());
     }
 
-    pub fn drop_incoming(&mut self, node_id: &str) {
-        self.drop_incoming.insert(node_id.to_string());
+    pub fn drop_outgoing(&mut self, node: &str) {
+        self.drop_outgoing.insert(node.to_string());
+        t!(format!("{:>9.3} - drop messages from {}", self.ctx.time(), node).red());
     }
 
-    pub fn pass_incoming(&mut self, node_id: &str) {
-        self.drop_incoming.remove(node_id);
+    pub fn pass_outgoing(&mut self, node: &str) {
+        self.drop_outgoing.remove(node);
+        t!(format!("{:>9.3} - pass messages from {}", self.ctx.time(), node).green());
     }
 
-    pub fn drop_outgoing(&mut self, node_id: &str) {
-        self.drop_outgoing.insert(node_id.to_string());
+    pub fn disconnect_node(&mut self, node: &str) {
+        self.drop_incoming.insert(node.to_string());
+        self.drop_outgoing.insert(node.to_string());
+        t!(format!("{:>9.3} - disconnected node: {}", self.ctx.time(), node).red());
     }
 
-    pub fn pass_outgoing(&mut self, node_id: &str) {
-        self.drop_outgoing.remove(node_id);
-    }
-
-    pub fn disconnect_node(&mut self, node_id: &str) {
-        self.drop_incoming.insert(node_id.to_string());
-        self.drop_outgoing.insert(node_id.to_string());
-    }
-
-    pub fn connect_node(&mut self, node_id: &str) {
-        self.drop_incoming.remove(node_id);
-        self.drop_outgoing.remove(node_id);
+    pub fn connect_node(&mut self, node: &str) {
+        self.drop_incoming.remove(node);
+        self.drop_outgoing.remove(node);
+        t!(format!("{:>9.3} - connected node: {}", self.ctx.time(), node).green());
     }
 
     pub fn disable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.insert((from.to_string(), to.to_string()));
+        t!(format!("{:>9.3} - disabled link: {:>10} --> {:<10}", self.ctx.time(), from, to).red());
     }
 
     pub fn enable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.remove(&(from.to_string(), to.to_string()));
+        t!(format!("{:>9.3} - enabled link: {:>10} --> {:<10}", self.ctx.time(), from, to).green());
     }
 
     pub fn make_partition(&mut self, group1: &[&str], group2: &[&str]) {
@@ -129,47 +125,72 @@ impl Network {
                 self.disabled_links.insert((n2.to_string(), n1.to_string()));
             }
         }
+        t!(format!(
+            "{:>9.3} - network partition: {:?} -x- {:?}",
+            self.ctx.time(),
+            group1,
+            group2
+        )
+        .red());
     }
 
     pub fn reset_network(&mut self) {
         self.disabled_links.clear();
         self.drop_incoming.clear();
         self.drop_outgoing.clear();
+        t!(format!("{:>9.3} - network reset, all problems healed", self.ctx.time()).green());
     }
 
-    pub fn get_message_count(&self) -> u64 {
+    pub fn message_count(&self) -> u64 {
         self.message_count
     }
 
-    pub fn get_traffic(&self) -> u64 {
+    pub fn traffic(&self) -> u64 {
         self.traffic
     }
 
-    pub fn send_message(&mut self, msg: Message, src: String, dest: String) {
-        //let msg_size = msg.size();
-        let src_node = self.proc_nodes.get(&src).unwrap();
-        let dest_node = self.proc_nodes.get(&dest).unwrap();
+    pub fn send_message(&mut self, msg: Message, src: &str, dest: &str) {
+        let msg_size = msg.size();
+        let src_node = self.proc_locations.get(src).unwrap();
+        let dest_node = self.proc_locations.get(dest).unwrap();
         let dest_node_id = *self.node_ids.get(dest_node).unwrap();
-        if !self.crashed_nodes.contains(src_node) {
+        // local communication inside a node is reliable and fast
+        if src_node == dest_node {
+            let e = MessageReceived {
+                msg,
+                src: src.to_string(),
+                dest: dest.to_string(),
+            };
+            self.ctx.emit(e, dest_node_id, 0.);
+        // communication between different nodes can be faulty
+        } else {
             if self.ctx.rand() >= self.drop_rate
                 && !self.drop_outgoing.contains(src_node)
                 && !self.drop_incoming.contains(dest_node)
                 && !self.disabled_links.contains(&(src_node.clone(), dest_node.clone()))
             {
-                let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                if self.ctx.rand() < self.corrupt_rate {
-                    // TODO: support message corruption
-                }
+                let msg = if self.ctx.rand() < self.corrupt_rate {
+                    lazy_static! {
+                        static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                    }
+                    let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+                    let corrupted_msg = Message::new(msg.tip, corrupted_data);
+                    corrupted_msg
+                } else {
+                    msg
+                };
                 let e = MessageReceived {
                     msg,
-                    src,
-                    dest: dest.clone(),
+                    src: src.to_string(),
+                    dest: dest.to_string(),
                 };
                 if self.ctx.rand() >= self.dupl_rate {
+                    let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                     self.ctx.emit(e, dest_node_id, delay);
                 } else {
                     let dups = (self.ctx.rand() * 2.).ceil() as u32 + 1;
                     for _i in 0..dups {
+                        let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                         self.ctx.emit(e.clone(), dest_node_id, delay);
                     }
                 }
@@ -178,22 +199,10 @@ impl Network {
                     "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
                     "!!!", src, dest, msg
                 )
-                .yellow());
+                .red());
             }
-        } else {
-            t!(format!("Discarded message from crashed node {:?}", msg).yellow());
+            self.message_count += 1;
+            self.traffic += msg_size as u64;
         }
-        self.message_count += 1;
-        //self.traffic += msg_size;
     }
 }
-
-// impl EventHandler for Network {
-//     fn on(&mut self, event: Event) {
-//         cast!(match event.data {
-//             MessageSent { msg, src, dest } => {
-//                 self.on_message_sent(msg, src, dest);
-//             }
-//         })
-//     }
-// }

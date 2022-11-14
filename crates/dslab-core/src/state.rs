@@ -1,6 +1,7 @@
 use std::collections::{BinaryHeap, HashSet};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
+use rand::distributions::{Alphanumeric, DistString};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
@@ -47,6 +48,10 @@ impl SimulationState {
         dist.sample(&mut self.rand)
     }
 
+    pub fn random_string(&mut self, len: usize) -> String {
+        Alphanumeric.sample_string(&mut self.rand, len)
+    }
+
     pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
@@ -88,6 +93,17 @@ impl SimulationState {
 
     pub fn cancel_event(&mut self, id: EventId) {
         self.canceled_events.insert(id);
+    }
+
+    pub fn cancel_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        for event in self.events.iter() {
+            if pred(event) {
+                self.canceled_events.insert(event.id);
+            }
+        }
     }
 
     pub fn event_count(&self) -> u64 {
