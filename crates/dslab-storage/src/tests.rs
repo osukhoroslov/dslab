@@ -8,7 +8,7 @@ use dslab_core::{cast, Event, EventHandler};
 
 use crate::disk::Disk;
 use crate::events::*;
-use crate::fs::FileSystem;
+use crate::fs::{DiskStatistics, FileSystem};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -119,20 +119,52 @@ fn fs_files_metadata_consistence() {
 
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_err());
     assert!(fs.borrow().get_file_size("/mnt/file1").is_err());
+
+    assert_eq!(fs.borrow().get_capacity(), 0);
     assert_eq!(fs.borrow().get_used_space(), 0);
+    assert_eq!(fs.borrow().get_free_space(), 0);
+    assert_eq!(fs.borrow().get_disks_statistics(), vec![]);
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk.clone()).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_ok());
 
     assert_eq!(fs.borrow().get_file_size("/mnt/file1"), Ok(0));
+
+    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
     assert_eq!(fs.borrow().get_used_space(), 0);
+    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY);
+    assert_eq!(
+        fs.borrow().get_disks_statistics(),
+        vec![(
+            "/mnt".to_owned(),
+            DiskStatistics {
+                capacity: DISK_CAPACITY,
+                used_space: 0,
+                free_space: DISK_CAPACITY
+            }
+        )]
+    );
 
     fs.borrow_mut().write("/mnt/file1", 1, checker_id);
 
     sim.step_until_no_events();
 
     assert_eq!(fs.borrow().get_file_size("/mnt/file1"), Ok(1));
+
+    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
     assert_eq!(fs.borrow().get_used_space(), 1);
+    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 1);
+    assert_eq!(
+        fs.borrow().get_disks_statistics(),
+        vec![(
+            "/mnt".to_owned(),
+            DiskStatistics {
+                capacity: DISK_CAPACITY,
+                used_space: 1,
+                free_space: DISK_CAPACITY - 1
+            }
+        )]
+    );
 
     assert!(fs.borrow_mut().create_file("/mnt/file2").is_ok());
     fs.borrow_mut().write("/mnt/file2", 2, checker_id);
@@ -141,12 +173,39 @@ fn fs_files_metadata_consistence() {
     sim.step_until_no_events();
 
     assert_eq!(fs.borrow().get_file_size("/mnt/file2"), Ok(2));
+    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
     assert_eq!(fs.borrow().get_used_space(), 3);
+    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 3);
+    assert_eq!(
+        fs.borrow().get_disks_statistics(),
+        vec![(
+            "/mnt".to_owned(),
+            DiskStatistics {
+                capacity: DISK_CAPACITY,
+                used_space: 3,
+                free_space: DISK_CAPACITY - 3,
+            }
+        )]
+    );
 
     assert!(fs.borrow_mut().delete_file("/mnt/file2").is_ok());
     assert!(fs.borrow_mut().delete_file("/mnt/file2").is_err());
     assert!(fs.borrow().get_file_size("/mnt/file2").is_err());
+
+    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
     assert_eq!(fs.borrow().get_used_space(), 1);
+    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 1);
+    assert_eq!(
+        fs.borrow().get_disks_statistics(),
+        vec![(
+            "/mnt".to_owned(),
+            DiskStatistics {
+                capacity: DISK_CAPACITY,
+                used_space: 1,
+                free_space: DISK_CAPACITY - 1,
+            }
+        )]
+    );
 }
 
 #[test]

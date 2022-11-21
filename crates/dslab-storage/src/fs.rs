@@ -36,6 +36,17 @@ pub struct FileSystem {
     ctx: SimulationContext,
 }
 
+/// Struct for disk usage statistics
+#[derive(Debug, PartialEq)]
+pub struct DiskStatistics {
+    /// Disk capacity. Is equal to used_space + free_space
+    pub capacity: u64,
+    /// Amount of used space. Cannot be greater than capacity
+    pub used_space: u64,
+    /// Amount of free space. Cannot be greater than capacity
+    pub free_space: u64,
+}
+
 impl FileSystem {
     /// Creates new empty file system.
     pub fn new(ctx: SimulationContext) -> Self {
@@ -261,6 +272,23 @@ impl FileSystem {
     /// Returns cumulative capacity of all disks currently mounted to this file system.
     pub fn get_capacity(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_capacity()).sum()
+    }
+
+    /// Returns vec of disk statistics associated to mount points
+    pub fn get_disks_statistics(&self) -> Vec<(String, DiskStatistics)> {
+        self.disks
+            .iter()
+            .map(|(mount_point, v)| {
+                (
+                    mount_point.to_owned(),
+                    DiskStatistics {
+                        capacity: v.borrow().get_capacity(),
+                        used_space: v.borrow().get_used_space(),
+                        free_space: v.borrow().get_free_space(),
+                    },
+                )
+            })
+            .collect()
     }
 
     /// Deletes file located at `file_path` if there is any.    
