@@ -7,7 +7,7 @@ use dslab_core::simulation::Simulation;
 use dslab_core::{cast, Event, EventHandler};
 
 use crate::disk::Disk;
-use crate::events::{FileReadCompleted, FileReadFailed, FileWriteCompleted, FileWriteFailed};
+use crate::events::*;
 use crate::fs::FileSystem;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38,10 +38,14 @@ fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
 
 #[derive(PartialEq)]
 enum ExpectedEventType {
-    ReadCompleted,
-    ReadFailed,
-    WriteCompleted,
-    WriteFailed,
+    DataReadCompleted,
+    DataReadFailed,
+    DataWriteCompleted,
+    DataWriteFailed,
+    FileReadCompleted,
+    FileReadFailed,
+    FileWriteCompleted,
+    FileWriteFailed,
 }
 
 struct Checker {
@@ -58,22 +62,42 @@ impl EventHandler for Checker {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             FileReadCompleted { .. } => {
-                if self.expected_event_type != ExpectedEventType::ReadCompleted {
+                if self.expected_event_type != ExpectedEventType::FileReadCompleted {
                     panic!();
                 }
             }
             FileReadFailed { .. } => {
-                if self.expected_event_type != ExpectedEventType::ReadFailed {
+                if self.expected_event_type != ExpectedEventType::FileReadFailed {
                     panic!();
                 }
             }
             FileWriteCompleted { .. } => {
-                if self.expected_event_type != ExpectedEventType::WriteCompleted {
+                if self.expected_event_type != ExpectedEventType::FileWriteCompleted {
                     panic!();
                 }
             }
             FileWriteFailed { .. } => {
-                if self.expected_event_type != ExpectedEventType::WriteFailed {
+                if self.expected_event_type != ExpectedEventType::FileWriteFailed {
+                    panic!();
+                }
+            }
+            DataReadCompleted { .. } => {
+                if self.expected_event_type != ExpectedEventType::DataReadCompleted {
+                    panic!();
+                }
+            }
+            DataReadFailed { .. } => {
+                if self.expected_event_type != ExpectedEventType::DataReadFailed {
+                    panic!();
+                }
+            }
+            DataWriteCompleted { .. } => {
+                if self.expected_event_type != ExpectedEventType::DataWriteCompleted {
+                    panic!();
+                }
+            }
+            DataWriteFailed { .. } => {
+                if self.expected_event_type != ExpectedEventType::DataWriteFailed {
                     panic!();
                 }
             }
@@ -87,7 +111,7 @@ impl EventHandler for Checker {
 fn files_metadata_consistence() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteCompleted)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -204,7 +228,7 @@ fn single_disk_on_multiple_filesystems() {
 fn good_read_write() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteCompleted)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -216,7 +240,7 @@ fn good_read_write() {
     fs.borrow_mut().write("/mnt/file", 99, checker_id);
     sim.step_until_no_events();
 
-    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadCompleted)));
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::FileReadCompleted)));
     let read_checker_id = sim.add_handler("User", read_checker);
 
     fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
@@ -229,7 +253,7 @@ fn good_read_write() {
 fn failed_read_non_existent_file() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileReadFailed)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -242,10 +266,35 @@ fn failed_read_non_existent_file() {
 }
 
 #[test]
+fn failed_read_unmounted_disk() {
+    let mut sim = Simulation::new(SEED);
+
+    let checker_ok = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteCompleted)));
+    let checker_ok_id = sim.add_handler("User1", checker_ok);
+
+    let checker_fail = rc!(refcell!(Checker::new(ExpectedEventType::FileReadFailed)));
+    let checker_fail_id = sim.add_handler("User2", checker_fail);
+
+    let fs = make_filesystem(&mut sim, "FS-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
+
+    assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
+    assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
+
+    fs.borrow_mut().write("/mnt/file", 10, checker_ok_id);
+    sim.step_until_no_events();
+
+    assert!(fs.borrow_mut().unmount_disk("/mnt").is_ok());
+
+    fs.borrow_mut().read_all("/mnt/file", checker_fail_id);
+    sim.step_until_no_events();
+}
+
+#[test]
 fn failed_read_file_bad_size() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteCompleted)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteCompleted)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -257,7 +306,7 @@ fn failed_read_file_bad_size() {
     fs.borrow_mut().write("/mnt/file", 98, checker_id);
     sim.step_until_no_events();
 
-    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::ReadFailed)));
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::FileReadFailed)));
     let read_checker_id = sim.add_handler("User", read_checker);
 
     fs.borrow_mut().read("/mnt/file", 99, read_checker_id);
@@ -268,7 +317,7 @@ fn failed_read_file_bad_size() {
 fn failed_write_unresolved_disk() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteFailed)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -282,7 +331,7 @@ fn failed_write_unresolved_disk() {
 fn failed_write_non_existent_file() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteFailed)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
@@ -299,7 +348,7 @@ fn failed_write_non_existent_file() {
 fn failed_write_low_disk_capacity() {
     let mut sim = Simulation::new(SEED);
 
-    let checker = rc!(refcell!(Checker::new(ExpectedEventType::WriteFailed)));
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteFailed)));
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");

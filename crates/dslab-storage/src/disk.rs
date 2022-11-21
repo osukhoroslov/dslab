@@ -152,6 +152,16 @@ impl Disk {
         self.used
     }
 
+    /// Returns the amount of free disk space.
+    pub fn get_free_space(&self) -> u64 {
+        self.capacity - self.used
+    }
+
+    /// Returns the capacity of disk
+    pub fn get_capacity(&self) -> u64 {
+        self.capacity
+    }
+
     /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()

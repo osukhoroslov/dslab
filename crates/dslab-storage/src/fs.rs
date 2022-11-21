@@ -248,9 +248,19 @@ impl FileSystem {
             .map(|f| f.size)
     }
 
-    /// Returns amount of used space on all disks currently used by this file system.
+    /// Returns amount of used space on all disks currently mounted to this file system.
     pub fn get_used_space(&self) -> u64 {
         self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
+    }
+
+    /// Returns amount of free space on all disks currently mounted to this file system.
+    pub fn get_free_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().get_free_space()).sum()
+    }
+
+    /// Returns cumulative capacity of all disks currently mounted to this file system.
+    pub fn get_capacity(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().get_capacity()).sum()
     }
 
     /// Deletes file located at `file_path` if there is any.    
