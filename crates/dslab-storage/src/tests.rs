@@ -153,6 +153,9 @@ fn fs_files_metadata_consistence() {
 fn fs_multiple_disks_on_single_filesystem() {
     let mut sim = Simulation::new(SEED);
 
+    let checker_ok = rc!(refcell!(Checker::new(ExpectedEventType::FileWriteCompleted)));
+    let checker_ok_id = sim.add_handler("User1", checker_ok);
+
     let fs = make_filesystem(&mut sim, "FS-1");
     let disk1 = make_simple_disk(&mut sim, "Disk-1");
     let disk2 = make_simple_disk(&mut sim, "Disk-2");
@@ -170,8 +173,11 @@ fn fs_multiple_disks_on_single_filesystem() {
     assert_eq!(disk2.borrow().get_used_space(), 0);
     assert_eq!(fs.borrow().get_used_space(), 0);
 
-    fs.borrow_mut().write("/mnt/vda/file1", 2, 0);
-    fs.borrow_mut().write("/mnt/vdb/file2", 3, 0);
+    assert!(fs.borrow_mut().create_file("/mnt/vda/file1").is_ok());
+    assert!(fs.borrow_mut().create_file("/mnt/vdb/file2").is_ok());
+
+    fs.borrow_mut().write("/mnt/vda/file1", 2, checker_ok_id);
+    fs.borrow_mut().write("/mnt/vdb/file2", 3, checker_ok_id);
 
     sim.step_until_no_events();
 
