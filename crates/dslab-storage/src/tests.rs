@@ -394,6 +394,7 @@ fn disk_good_read_write_with_time_check() {
     );
 }
 
+// Read fails because of too big requested size
 #[test]
 fn disk_failed_read_bad_size() {
     let mut sim = Simulation::new(SEED);
@@ -421,7 +422,7 @@ fn disk_failed_write_low_disk_capacity() {
     sim.step_until_no_events();
 }
 
-// Write fails because of low disk capacity
+// Disk space is marked free correctly
 #[test]
 fn disk_write_after_spaced_marked_free() {
     let mut sim = Simulation::new(SEED);
