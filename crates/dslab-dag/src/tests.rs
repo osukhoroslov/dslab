@@ -185,6 +185,68 @@ fn test_3() {
 }
 
 #[test]
+fn test_4() {
+    let mut dag = DAG::new();
+
+    dag.add_task("A", 64, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("B", 76, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("C", 52, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("D", 32, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("E", 56, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("F", 64, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("G", 60, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("H", 44, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("I", 48, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("J", 28, 0, 1, 1, CoresDependency::Linear);
+
+    let mut add_edge = |from: usize, to: usize, size: u64, name: &str| {
+        let id = dag.add_task_output(from, name, size);
+        dag.add_data_dependency(id, to);
+    };
+
+    add_edge(0, 1, 18, "a");
+    add_edge(0, 2, 12, "b");
+    add_edge(0, 3, 9, "c");
+    add_edge(0, 4, 11, "d");
+    add_edge(0, 5, 14, "e");
+    add_edge(1, 7, 19, "f");
+    add_edge(1, 8, 16, "g");
+    add_edge(2, 6, 23, "h");
+    add_edge(3, 7, 27, "i");
+    add_edge(3, 8, 23, "j");
+    add_edge(4, 8, 13, "k");
+    add_edge(5, 7, 15, "l");
+    add_edge(6, 9, 17, "m");
+    add_edge(7, 9, 11, "n");
+    add_edge(8, 9, 13, "o");
+
+    let mut sim = DagSimulation::new(
+        123,
+        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
+        Rc::new(RefCell::new(HeftScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+        },
+    );
+    sim.add_resource("0", 1, 1, 0);
+    sim.add_resource("1", 2, 1, 0);
+    sim.add_resource("2", 4, 1, 0);
+    sim.add_resource("3", 4, 1, 0);
+
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    let result = sim.time();
+    assert_eq!(result, 98.0);
+
+    // 0:
+    // 1:                           [-------------E------------]
+    // 2:[-------A------][-----C-----][--------B--------][------G------]
+    // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
+}
+
+#[test]
 fn test_chain_1() {
     let mut dag = DAG::new();
     for i in 0..10 {
