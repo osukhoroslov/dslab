@@ -158,15 +158,15 @@ impl HybridHistogramPolicy {
     }
 
     fn get_app(&mut self, id: u64) -> &ApplicationData {
-        if !self.data.contains_key(&id) {
-            self.data.insert(id, ApplicationData::new(self.n_bins, self.bin_len));
+        if let std::collections::hash_map::Entry::Vacant(e) = self.data.entry(id) {
+            e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get(&id).unwrap()
     }
 
     fn get_app_mut(&mut self, id: u64) -> &mut ApplicationData {
-        if !self.data.contains_key(&id) {
-            self.data.insert(id, ApplicationData::new(self.n_bins, self.bin_len));
+        if let std::collections::hash_map::Entry::Vacant(e) = self.data.entry(id) {
+            e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get_mut(&id).unwrap()
     }

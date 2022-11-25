@@ -72,7 +72,7 @@ impl TimeFunction {
     fn update(&mut self, current_time: BigRational, throughput_ratio: BigRational) {
         self.a *= throughput_ratio.clone();
         self.b = self.b.clone() * throughput_ratio.clone()
-            + current_time * (BigRational::new(one(), one()) - throughput_ratio.clone());
+            + current_time * (BigRational::new(one(), one()) - throughput_ratio);
     }
 }
 

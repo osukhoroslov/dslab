@@ -34,8 +34,8 @@ struct DAX {
 impl DAG {
     /// Reads DAG from a file in [DAX format](https://pegasus.isi.edu/documentation/development/schemas.html).
     pub fn from_dax(file: &str, flops_coefficient: f64) -> Self {
-        let dax: DAX = from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
-            .expect(&format!("Can't parse DAX from file {}", file));
+        let dax: DAX = from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
+            .unwrap_or_else(|_| panic!("Can't parse DAX from file {}", file));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for job in dax.jobs.iter() {

@@ -280,8 +280,8 @@ impl EventHandler for Compute {
                 } else {
                     let current_allocation = self
                         .allocations
-                        .entry(requester.clone())
-                        .or_insert(Allocation::new(0, 0));
+                        .entry(requester)
+                        .or_insert_with(|| Allocation::new(0, 0));
                     current_allocation.cores += allocation.cores;
                     current_allocation.memory += allocation.memory;
                     self.cores_available -= allocation.cores;
@@ -292,8 +292,8 @@ impl EventHandler for Compute {
             DeallocationRequest { allocation, requester } => {
                 let current_allocation = self
                     .allocations
-                    .entry(requester.clone())
-                    .or_insert(Allocation::new(0, 0));
+                    .entry(requester)
+                    .or_insert_with(|| Allocation::new(0, 0));
                 if current_allocation.cores >= allocation.cores && current_allocation.memory >= allocation.memory {
                     current_allocation.cores -= allocation.cores;
                     current_allocation.memory -= allocation.memory;

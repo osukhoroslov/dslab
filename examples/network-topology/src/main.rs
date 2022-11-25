@@ -115,7 +115,7 @@ fn main() {
 
     let receiver_1 = DataReceiver::new(network_rc.clone(), sim.create_context("receiver_1"));
     let receiver_1_id = sim.add_handler("receiver_1", rc!(refcell!(receiver_1)));
-    let receiver_2 = DataReceiver::new(network_rc.clone(), sim.create_context("receiver_2"));
+    let receiver_2 = DataReceiver::new(network_rc, sim.create_context("receiver_2"));
     let receiver_2_id = sim.add_handler("receiver_2", rc!(refcell!(receiver_2)));
 
     topology_rc.borrow_mut().set_location(sender_1_id, "sender_1");

@@ -133,7 +133,7 @@ fn main() {
     init_logger();
     let args = Args::parse();
     let dataset_type = DatasetType::from_str(&args.dataset_type).unwrap();
-    let dataset_path = args.dataset_path.unwrap_or(".".to_string());
+    let dataset_path = args.dataset_path.unwrap_or_else(|| ".".to_string());
 
     if dataset_type == DatasetType::Azure {
         let config = SimulationConfig::from_file("azure.yaml");
@@ -146,11 +146,11 @@ fn main() {
             format!("{}/vm_types.csv", dataset_path),
             format!("{}/vm_instances.csv", dataset_path),
         );
-        simulation_with_traces(config.clone(), &mut dataset);
+        simulation_with_traces(config, &mut dataset);
     } else if dataset_type == DatasetType::Huawei {
         let config = SimulationConfig::from_file("huawei.yaml");
         let mut dataset = HuaweiDatasetReader::new(config.simulation_length);
         dataset.parse(format!("{}/Huawei-East-1.csv", dataset_path));
-        simulation_with_traces(config.clone(), &mut dataset);
+        simulation_with_traces(config, &mut dataset);
     }
 }

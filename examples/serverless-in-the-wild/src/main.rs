@@ -73,7 +73,7 @@ fn main() {
         ),
         "No unloading",
     );
-    for len in vec![20.0, 45.0, 60.0, 90.0, 120.0] {
+    for len in &[20.0, 45.0, 60.0, 90.0, 120.0] {
         print_results(
             test_policy(
                 Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))),
@@ -82,7 +82,7 @@ fn main() {
             &format!("{}-minute keepalive", len),
         );
     }
-    for len in vec![2.0, 3.0, 4.0] {
+    for len in &[2.0, 3.0, 4.0] {
         print_results(
             test_policy(
                 Rc::new(RefCell::new(HybridHistogramPolicy::new(

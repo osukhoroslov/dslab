@@ -246,7 +246,7 @@ fn main() {
         sim.create_context("allocator2"),
     );
     let allocator3 = Allocator::new(
-        compute.clone(),
+        compute,
         Allocation::new(6, 100),
         30.,
         sim.create_context("allocator3"),

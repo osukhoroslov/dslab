@@ -38,9 +38,9 @@ impl Context {
     pub fn send(&mut self, msg: Message, dest: String) {
         t!("{:>9.3} {:>10} --> {:<10} {:?}", self.time, self.proc_name, dest, msg);
         self.actions.push(ProcessEvent::MessageSent {
-            msg: msg.clone(),
+            msg,
             src: self.proc_name.clone(),
-            dest: dest.clone(),
+            dest,
         });
     }
 
@@ -50,7 +50,7 @@ impl Context {
             self.time, self.proc_name, "local", msg
         )
         .green());
-        self.actions.push(ProcessEvent::LocalMessageSent { msg: msg.clone() });
+        self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
     pub fn set_timer(&mut self, name: &str, delay: f64) {

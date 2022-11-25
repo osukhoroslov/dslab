@@ -45,8 +45,8 @@ struct Resources {
 /// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/resources/cluster1.yaml.
 pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
     let resources: Resources =
-        serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
-            .expect(&format!("Can't parse YAML from file {}", file));
+        serde_yaml::from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
+            .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file));
     let mut result: Vec<Resource> = Vec::new();
     for resource in resources.resources.into_iter() {
         let compute = Rc::new(RefCell::new(Compute::new(

@@ -74,8 +74,8 @@ impl Network {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
-            src: src.into(),
-            dest: dest.into(),
+            src,
+            dest,
             data: message,
         };
         self.ctx.emit_self_now(MessageSend { message: msg });
