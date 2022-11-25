@@ -222,11 +222,7 @@ fn main() {
     tests.add("DROP PING 2", test_drop_ping2, config.clone());
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
-    tests.add(
-        "10 UNIQUE RESULTS UNRELIABLE",
-        test_10results_unique_unreliable,
-        config,
-    );
+    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config);
 
     if args.test.is_none() {
         tests.run();

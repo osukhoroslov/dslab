@@ -193,7 +193,7 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
     type Item = &'a Container;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(inner) = self.inner.as_mut() {
-                for id in inner.by_ref() {
+            for id in inner.by_ref() {
                 let c = self.containers.get(id).unwrap();
                 if c.status != ContainerStatus::Deploying && c.invocations.len() < self.limit {
                     return Some(c);

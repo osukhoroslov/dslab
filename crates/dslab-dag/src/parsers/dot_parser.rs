@@ -41,12 +41,8 @@ fn parse_params(s: &[char]) -> HashMap<String, String> {
 impl DAG {
     /// Reads DAG from a file in [DOT format](https://graphviz.org/doc/info/lang.html).
     pub fn from_dot(file: &str) -> Self {
-        let data = std::fs::read_to_string(&file)
-        .unwrap_or_else(|_| panic!("Can't read file {}", file));
-        let lines = data
-            .trim()
-            .split('\n')
-            .map(|x| x.to_string());
+        let data = std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file));
+        let lines = data.trim().split('\n').map(|x| x.to_string());
 
         let is_word_char = |c: char| -> bool { c.is_ascii_alphanumeric() || c == '_' };
 

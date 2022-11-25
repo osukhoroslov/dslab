@@ -130,10 +130,12 @@ pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
     let mut result = String::new();
     write!(result, "Task: {}\n\n", task.name).unwrap();
     if task_info.is_some() {
-        write!(result,
+        write!(
+            result,
             "Total time: {:.3}\n\n",
             task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
-        ).unwrap();
+        )
+        .unwrap();
     }
     let inputs: Vec<String> = task
         .inputs

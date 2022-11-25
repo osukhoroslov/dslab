@@ -127,9 +127,10 @@ impl SimulationConfig {
 
     /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
-        let data: SimulationConfigRaw =
-            serde_yaml::from_str(&std::fs::read_to_string(file_name).unwrap_or_else(|_|panic!("Can't read file {}", file_name)))
-                .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));
+        let data: SimulationConfigRaw = serde_yaml::from_str(
+            &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));
         let default = SimulationConfig::new();
         Self {
             send_stats_period: data.send_stats_period.unwrap_or(default.send_stats_period),
