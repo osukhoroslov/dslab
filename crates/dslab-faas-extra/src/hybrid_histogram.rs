@@ -1,5 +1,6 @@
 /// This file contains the implementation of hybrid histogram policy from
 /// https://www.usenix.org/conference/atc20/presentation/shahrad
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use rand::prelude::*;
@@ -158,14 +159,14 @@ impl HybridHistogramPolicy {
     }
 
     fn get_app(&mut self, id: u64) -> &ApplicationData {
-        if let std::collections::hash_map::Entry::Vacant(e) = self.data.entry(id) {
+        if let Entry::Vacant(e) = self.data.entry(id) {
             e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get(&id).unwrap()
     }
 
     fn get_app_mut(&mut self, id: u64) -> &mut ApplicationData {
-        if let std::collections::hash_map::Entry::Vacant(e) = self.data.entry(id) {
+        if let Entry::Vacant(e) = self.data.entry(id) {
             e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get_mut(&id).unwrap()

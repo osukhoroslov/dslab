@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
+use std::fmt::Write;
 
 use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
 use druid::widget::prelude::*;
 use druid::Color;
 use druid::Point;
-use std::fmt::Write;
 
 use crate::app_data::AppData;
 
