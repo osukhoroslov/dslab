@@ -81,7 +81,7 @@ impl ServerlessSimulation {
 
     pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {
         let id = self.host_ctr.next();
-        let real_invoker = invoker.unwrap_or(Box::new(BasicInvoker::new()));
+        let real_invoker = invoker.unwrap_or_else(|| Box::new(BasicInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,

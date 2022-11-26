@@ -10,7 +10,7 @@ pub struct ConstantBandwidthNetwork {
 
 impl ConstantBandwidthNetwork {
     pub fn new(bandwidth: f64, latency: f64) -> ConstantBandwidthNetwork {
-        return ConstantBandwidthNetwork { bandwidth, latency };
+        ConstantBandwidthNetwork { bandwidth, latency }
     }
 }
 

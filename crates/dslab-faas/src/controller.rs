@@ -38,7 +38,7 @@ impl Controller {
     fn idle_deploy(&mut self, app_id: u64, time: f64) {
         let reg = self.function_registry.borrow();
         let app = reg.get_app(app_id).unwrap();
-        if let Some(host) = self.idle_deployer.deploy(app, &mut self.hosts) {
+        if let Some(host) = self.idle_deployer.deploy(app, &self.hosts) {
             self.hosts[host].borrow_mut().try_deploy(app, time);
         }
     }

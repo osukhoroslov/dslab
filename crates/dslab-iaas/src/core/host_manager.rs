@@ -232,7 +232,7 @@ impl HostManager {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
             let start_duration = vm.borrow().start_duration();
-            self.allocate(self.ctx.time(), vm.clone());
+            self.allocate(self.ctx.time(), vm);
             self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
             log_debug!(self.ctx, "vm {} allocated on host {}", vm_id, self.name);
             self.ctx.emit_self(VMStarted { vm_id }, start_duration);

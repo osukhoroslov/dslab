@@ -41,19 +41,15 @@ fn parse_params(s: &[char]) -> HashMap<String, String> {
 impl DAG {
     /// Reads DAG from a file in [DOT format](https://graphviz.org/doc/info/lang.html).
     pub fn from_dot(file: &str) -> Self {
-        let lines = std::fs::read_to_string(file)
-            .expect(&format!("Can't read file {}", file))
-            .trim()
-            .split('\n')
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>();
+        let data = std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file));
+        let lines = data.trim().split('\n').map(|x| x.to_string());
 
         let is_word_char = |c: char| -> bool { c.is_ascii_alphanumeric() || c == '_' };
 
         let mut nodes: Vec<Node> = Vec::new();
         let mut edges: Vec<Edge> = Vec::new();
 
-        for line in lines.into_iter() {
+        for line in lines {
             let line = line.trim();
             if line.is_empty() {
                 continue;
@@ -149,7 +145,7 @@ impl DAG {
             task_ids.insert(
                 node.name.clone(),
                 dag.add_task(
-                    &node.label.unwrap_or(node.name.clone()),
+                    &node.label.unwrap_or_else(|| node.name.clone()),
                     node.size.round() as u64,
                     0,
                     1,

@@ -146,7 +146,7 @@ impl ProgressComputer {
         self.end_event = None;
         self.shift_time(time);
         self.remove_invocation(invocation.id);
-        if container.invocations.len() > 0 {
+        if !container.invocations.is_empty() {
             let cnt = container.invocations.len() as f64;
             for i in container.invocations.iter().copied() {
                 let remain = self.remove_invocation(i);

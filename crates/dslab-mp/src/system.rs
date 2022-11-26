@@ -96,7 +96,7 @@ impl System {
         self.proc_nodes[proc]
             .borrow_mut()
             .read_local_messages(proc)
-            .unwrap_or(Vec::new())
+            .unwrap_or_default()
     }
 
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {

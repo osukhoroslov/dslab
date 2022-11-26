@@ -86,7 +86,7 @@ impl AppData {
                 "start_uploading" => {
                     uploads
                         .entry(event["data_id"].as_u64().unwrap())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(event.clone());
                     if event["from"].as_str().unwrap() == "runner" {
                         present_scheduler_files.insert(event["data_name"].as_str().unwrap().to_string());
@@ -95,25 +95,25 @@ impl AppData {
                 "finish_uploading" => {
                     uploads
                         .entry(event["data_id"].as_u64().unwrap())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(event.clone());
                 }
                 "task_scheduled" => {
                     tasks
                         .entry(event["task_id"].as_u64().unwrap())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(event.clone());
                 }
                 "task_started" => {
                     tasks
                         .entry(event["task_id"].as_u64().unwrap())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(event.clone());
                 }
                 "task_completed" => {
                     tasks
                         .entry(event["task_id"].as_u64().unwrap())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(event.clone());
                 }
                 _ => {}

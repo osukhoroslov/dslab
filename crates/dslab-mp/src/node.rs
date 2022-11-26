@@ -95,7 +95,7 @@ impl Node {
 
     pub fn read_local_messages(&mut self, proc: &str) -> Option<Vec<Message>> {
         let proc_entry = self.processes.get_mut(proc).unwrap();
-        if proc_entry.local_outbox.len() > 0 {
+        if !proc_entry.local_outbox.is_empty() {
             Some(proc_entry.local_outbox.drain(..).collect())
         } else {
             None

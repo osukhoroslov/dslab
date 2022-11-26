@@ -176,7 +176,7 @@ impl CloudSimulation {
         vm_id: Option<u32>,
         scheduler_id: u32,
     ) -> u32 {
-        let id = vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
+        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
             cpu_usage,
@@ -205,7 +205,7 @@ impl CloudSimulation {
         scheduler_id: u32,
         delay: f64,
     ) -> u32 {
-        let id = vm_id.unwrap_or(self.vm_api.borrow_mut().generate_vm_id());
+        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
             cpu_usage,

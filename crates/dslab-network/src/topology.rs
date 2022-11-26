@@ -122,15 +122,15 @@ impl Topology {
     }
 
     pub fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
-        return self.nodes.get(id);
+        self.nodes.get(id)
     }
 
     pub fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        return self.nodes.get_mut(id);
+        self.nodes.get_mut(id)
     }
 
     pub fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = self.get_location(data.dest).unwrap().clone();
+        let node = *self.get_location(data.dest).unwrap();
         self.get_node_info_mut(&node)
             .unwrap()
             .local_network
@@ -138,7 +138,7 @@ impl Topology {
     }
 
     pub fn local_send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = self.get_location(data.dest).unwrap().clone();
+        let node = *self.get_location(data.dest).unwrap();
         self.get_node_info_mut(&node)
             .unwrap()
             .local_network

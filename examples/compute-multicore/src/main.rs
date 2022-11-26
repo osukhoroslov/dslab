@@ -245,12 +245,7 @@ fn main() {
         20.,
         sim.create_context("allocator2"),
     );
-    let allocator3 = Allocator::new(
-        compute.clone(),
-        Allocation::new(6, 100),
-        30.,
-        sim.create_context("allocator3"),
-    );
+    let allocator3 = Allocator::new(compute, Allocation::new(6, 100), 30., sim.create_context("allocator3"));
     let allocator1_id = sim.add_handler("allocator1", rc!(refcell!(allocator1)));
     let allocator2_id = sim.add_handler("allocator2", rc!(refcell!(allocator2)));
     let allocator3_id = sim.add_handler("allocator3", rc!(refcell!(allocator3)));

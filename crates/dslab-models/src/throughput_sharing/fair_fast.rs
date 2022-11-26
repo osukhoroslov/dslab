@@ -76,7 +76,7 @@ impl<T> FairThroughputSharingModel<T> {
         self.total_work += delta;
         if self.total_work > TOTAL_WORK_MAX_VALUE {
             let mut entries_vec = Vec::new();
-            while self.activities.len() > 0 {
+            while !self.activities.is_empty() {
                 let mut activity = self.activities.pop().unwrap();
                 activity.finish_work -= self.total_work;
                 entries_vec.push(activity);
@@ -89,7 +89,7 @@ impl<T> FairThroughputSharingModel<T> {
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
     fn insert(&mut self, current_time: f64, volume: f64, item: T) {
-        if self.activities.len() > 0 {
+        if !self.activities.is_empty() {
             self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);
         }
         let finish_work = self.total_work + volume;

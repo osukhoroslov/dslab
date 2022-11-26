@@ -42,5 +42,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Build
       run: cargo build --verbose
+    - name: Run linter
+      run: cargo clippy -- -A clippy::all -D clippy::perf -D clippy::correctness
     - name: Run tests
       run: cargo test --verbose

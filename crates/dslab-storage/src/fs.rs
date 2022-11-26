@@ -51,7 +51,7 @@ impl FileSystem {
     /// Mounts `disk` to `mount_point` if it is not taken yet.
     pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
-        if let Some(_) = self.disks.get(mount_point) {
+        if self.disks.get(mount_point).is_some() {
             return Err(format!("mount point [{}] is already is use", mount_point));
         }
         self.disks.insert(mount_point.to_string(), disk);
@@ -65,7 +65,7 @@ impl FileSystem {
             "Received unmount disk request, mount_point: [{}]",
             mount_point
         );
-        if let None = self.disks.remove(mount_point) {
+        if self.disks.remove(mount_point).is_none() {
             return Err(format!("unknown mount point [{}]", mount_point));
         }
         Ok(())
@@ -120,7 +120,7 @@ impl FileSystem {
 
     fn read_impl(&mut self, file_path: &str, size: Option<u64>, requester: Id) -> u64 {
         let request_id = self.get_unique_request_id();
-        match self.resolve_disk(&file_path) {
+        match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
                     let size_to_read = if let Some(value) = size {
@@ -192,14 +192,14 @@ impl FileSystem {
             requester,
         );
         let request_id = self.get_unique_request_id();
-        match self.resolve_disk(&file_path) {
+        match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
                     file.cnt_actions += 1;
                     let disk_request_id = disk.borrow_mut().write(size, self.ctx.id());
                     self.requests.insert(
                         (disk.borrow().id(), disk_request_id),
-                        (request_id, requester.into(), file_path.into()),
+                        (request_id, requester, file_path.into()),
                     );
                 } else {
                     let error = format!("file [{}] does not exist", file_path);
@@ -232,7 +232,7 @@ impl FileSystem {
     /// Creates file at `file_path` if it doesn’t already exist.
     pub fn create_file(&mut self, file_path: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received create file request, file_path: [{}]", file_path);
-        if let Some(_) = self.files.get(file_path) {
+        if self.files.get(file_path).is_some() {
             return Err(format!("file [{}] already exists", file_path));
         }
         self.resolve_disk(file_path)?;

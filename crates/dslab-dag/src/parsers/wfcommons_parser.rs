@@ -59,8 +59,9 @@ struct Json {
 impl DAG {
     /// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
     pub fn from_wfcommons(file: &str, reference_flops: f64) -> Self {
-        let json: Json = from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
-            .expect(&format!("Can't parse WfCommons json from file {}", file));
+        let json: Json =
+            from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
+                .unwrap_or_else(|_| panic!("Can't parse WfCommons json from file {}", file));
         let workflow = json.workflow;
         let machine_speed: HashMap<String, u64> = workflow
             .machines

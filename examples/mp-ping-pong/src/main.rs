@@ -76,7 +76,7 @@ fn check(messages: Vec<Message>, expected: &str) -> TestResult {
 fn test_run(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::new("PING", r#"{"value": "Hello!"}"#);
-    sys.send_local_message("client", msg.clone());
+    sys.send_local_message("client", msg);
     sys.step_until_no_events();
     Ok(true)
 }
@@ -222,11 +222,7 @@ fn main() {
     tests.add("DROP PING 2", test_drop_ping2, config.clone());
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
-    tests.add(
-        "10 UNIQUE RESULTS UNRELIABLE",
-        test_10results_unique_unreliable,
-        config.clone(),
-    );
+    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config);
 
     if args.test.is_none() {
         tests.run();

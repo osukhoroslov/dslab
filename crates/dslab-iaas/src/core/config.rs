@@ -127,9 +127,10 @@ impl SimulationConfig {
 
     /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
-        let data: SimulationConfigRaw =
-            serde_yaml::from_str(&std::fs::read_to_string(file_name).expect(&format!("Can't read file {}", file_name)))
-                .expect(&format!("Can't parse YAML from file {}", file_name));
+        let data: SimulationConfigRaw = serde_yaml::from_str(
+            &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));
         let default = SimulationConfig::new();
         Self {
             send_stats_period: data.send_stats_period.unwrap_or(default.send_stats_period),
@@ -145,8 +146,8 @@ impl SimulationConfig {
             host_memory_capacity: data.host_memory_capacity.unwrap_or(default.host_memory_capacity),
             step_duration: data.step_duration.unwrap_or(default.step_duration),
             vm_allocation_timeout: data.vm_allocation_timeout.unwrap_or(default.vm_allocation_timeout),
-            hosts: data.hosts.unwrap_or(Vec::new()),
-            schedulers: data.schedulers.unwrap_or(Vec::new()),
+            hosts: data.hosts.unwrap_or_default(),
+            schedulers: data.schedulers.unwrap_or_default(),
         }
     }
 }
@@ -154,8 +155,8 @@ impl SimulationConfig {
 /// Parses config value string, which consists of two parts - name and options.
 /// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and options string "load=0.8".
 pub fn parse_config_value(config_str: &str) -> (String, Option<String>) {
-    match config_str.split_once("[") {
-        Some((l, r)) => (l.to_string(), Some(r.to_string().replace("]", ""))),
+    match config_str.split_once('[') {
+        Some((l, r)) => (l.to_string(), Some(r.to_string().replace(']', ""))),
         None => (config_str.to_string(), None),
     }
 }
@@ -174,8 +175,8 @@ pub fn parse_config_value(config_str: &str) -> (String, Option<String>) {
 /// ```
 pub fn parse_options(options_str: &str) -> HashMap<String, String> {
     let mut options = HashMap::new();
-    for option_str in options_str.split(",") {
-        if let Some((name, value)) = option_str.split_once("=") {
+    for option_str in options_str.split(',') {
+        if let Some((name, value)) = option_str.split_once('=') {
             options.insert(name.to_string(), value.to_string());
         }
     }

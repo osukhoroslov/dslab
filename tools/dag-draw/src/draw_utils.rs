@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::fmt::Write;
 
 use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
 use druid::widget::prelude::*;
@@ -127,12 +128,14 @@ pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
     let task = &data.graph.borrow().tasks[task_id];
 
     let mut result = String::new();
-    result += &format!("Task: {}\n\n", task.name);
+    write!(result, "Task: {}\n\n", task.name).unwrap();
     if task_info.is_some() {
-        result += &format!(
+        write!(
+            result,
             "Total time: {:.3}\n\n",
             task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
-        );
+        )
+        .unwrap();
     }
     let inputs: Vec<String> = task
         .inputs
@@ -144,7 +147,7 @@ pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
         .iter()
         .map(|&i| data.graph.borrow().data_items[i].name.clone())
         .collect();
-    result += &format!("Inputs: {}\n\n", inputs.join(", "));
-    result += &format!("Outputs: {}\n\n", outputs.join(", "));
+    write!(result, "Inputs: {}\n\n", inputs.join(", ")).unwrap();
+    write!(result, "Outputs: {}\n\n", outputs.join(", ")).unwrap();
     result
 }

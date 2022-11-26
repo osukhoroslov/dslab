@@ -85,7 +85,7 @@ fn main() {
 
     let task1 = Task::new(compute.clone(), 100, 512, sim.create_context("task1"));
     let task1_id = sim.add_handler("task1", rc!(refcell!(task1)));
-    let task2 = Task::new(compute.clone(), 200, 512, sim.create_context("task2"));
+    let task2 = Task::new(compute, 200, 512, sim.create_context("task2"));
     let task2_id = sim.add_handler("task2", rc!(refcell!(task2)));
 
     let mut ctx = sim.create_context("root");

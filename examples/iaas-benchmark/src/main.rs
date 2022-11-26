@@ -85,5 +85,5 @@ fn simulation(sim_config: SimulationConfig) {
 fn main() {
     init_logger();
     let config = SimulationConfig::from_file("config.yaml");
-    simulation(config.clone());
+    simulation(config);
 }

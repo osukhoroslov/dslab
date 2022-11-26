@@ -70,7 +70,7 @@ impl BasicInvoker {
         if let Some((id, delay)) = cm.try_deploy(app, time) {
             return InvocationStatus::Cold((id, delay));
         }
-        return InvocationStatus::Rejected;
+        InvocationStatus::Rejected
     }
 }
 
