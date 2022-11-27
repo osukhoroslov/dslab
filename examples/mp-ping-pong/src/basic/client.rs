@@ -29,6 +29,7 @@ impl Process for BasicPingClient {
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 
+    // not used in tests
     fn serialize(&self) -> String {
         "".to_string()
     }

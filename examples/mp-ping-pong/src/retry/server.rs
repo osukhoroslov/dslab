@@ -15,6 +15,8 @@ impl Process for RetryPingServer {
     fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+
+    // not used in tests
     fn serialize(&self) -> String {
         "".to_string()
     }
