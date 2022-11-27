@@ -12,6 +12,6 @@ pub trait Process {
         0
     }
 
-    fn serialize(&self) -> String;
-    fn deserialize(&self, data: &String);
+    fn get_state(&self) -> String;
+    fn set_state(&self, data: &String);
 }

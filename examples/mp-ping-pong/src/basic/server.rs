@@ -17,8 +17,8 @@ impl Process for BasicPingServer {
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 
     // not used in tests
-    fn serialize(&self) -> String {
+    fn get_state(&self) -> String {
         "".to_string()
     }
-    fn deserialize(&self, _: &String) {}
+    fn set_state(&self, _: &String) {}
 }

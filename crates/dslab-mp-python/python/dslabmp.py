@@ -1,7 +1,7 @@
 from __future__ import annotations
 import abc
 import json
-from typing import Any, List, Dict, Tuple, Generic, Union, Annotated, get_type_hints
+from typing import Any, List, Dict, Tuple, Generic, Union
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
@@ -89,14 +89,14 @@ class Process:
         This method is called when a timer fires.
         """
 
-    def serialize(self):
+    def get_state(self):
         data = {}
         for name, member in self.__dict__.items():
             if type(member) is StateMember:
                 data[name] = member.serialize()
         return json.dumps(data)
     
-    def deserialize(self, state_encoded):
+    def set_state(self, state_encoded):
         data = json.loads(state_encoded)
         for name in self.__dict__:
             self.__dict__[name] = None

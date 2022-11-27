@@ -160,21 +160,21 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn serialize(&self) -> String {
+    fn get_state(&self) -> String {
         Python::with_gil(|py| {
             let res = self
                 .proc
-                .call_method0(py, "serialize")
+                .call_method0(py, "get_state")
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
             res.as_ref(py).downcast::<PyString>().unwrap().to_string()
         })
     }
 
-    fn deserialize(&self, data: &String) {
+    fn set_state(&self, data: &String) {
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "deserialize", (data,))
+                .call_method1(py, "set_state", (data,))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });
