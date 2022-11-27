@@ -28,4 +28,9 @@ impl Process for BasicPingClient {
     }
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+
+    fn serialize(&self) -> String {
+        "".to_string()
+    }
+    fn deserialize(&self, _: &String) {}
 }

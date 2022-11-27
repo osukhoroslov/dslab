@@ -66,6 +66,10 @@ impl System {
         t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
     }
 
+    pub fn get_node(&self, name: &str) -> Rc<RefCell<Node>> {
+        self.nodes[name].clone()
+    }
+
     // Processes -------------------------------------------------------------------------------------------------------
 
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>, node: &str) {

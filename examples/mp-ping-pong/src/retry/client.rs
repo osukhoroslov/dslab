@@ -39,4 +39,8 @@ impl Process for RetryPingClient {
             ctx.set_timer("check-pong", 3.);
         }
     }
+    fn serialize(&self) -> String {
+        "".to_string()
+    }
+    fn deserialize(&self, _: &String) {}
 }

@@ -11,4 +11,7 @@ pub trait Process {
     fn max_size(&mut self) -> u64 {
         0
     }
+
+    fn serialize(&self) -> String;
+    fn deserialize(&self, data: &String);
 }
