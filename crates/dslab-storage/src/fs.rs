@@ -271,7 +271,7 @@ impl FileSystem {
             .collect()
     }
 
-    /// Returns disk info associated to given mount point.
+    /// Returns disk info for a mount point.
     pub fn disk_info(&self, mount_point: &str) -> Result<DiskInfo, String> {
         self.resolve_disk(mount_point).and_then(|disk| Ok(disk.borrow().info()))
     }
