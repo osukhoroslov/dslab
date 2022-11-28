@@ -14,6 +14,7 @@ use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
 use crate::schedulers::heft::HeftScheduler;
+use crate::schedulers::lookahead::LookaheadScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
@@ -220,30 +221,45 @@ fn test_4() {
     add_edge(7, 9, 11, "n");
     add_edge(8, 9, 13, "o");
 
-    let mut sim = DagSimulation::new(
-        123,
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
-        Rc::new(RefCell::new(HeftScheduler::new())),
-        Config {
-            data_transfer_mode: DataTransferMode::Direct,
-        },
-    );
-    sim.add_resource("0", 1, 1, 0);
-    sim.add_resource("1", 2, 1, 0);
-    sim.add_resource("2", 4, 1, 0);
-    sim.add_resource("3", 4, 1, 0);
-
-    let runner = sim.init(dag);
-    sim.step_until_no_events();
-    assert!(runner.borrow().is_completed());
-
-    let result = sim.time();
-    assert_eq!(result, 98.0);
+    fn run_sim (scheduler: impl crate::scheduler::Scheduler, dag: &mut DAG) -> f64 {
+        let mut sim = DagSimulation::new(
+            123,
+            Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
+            Rc::new(RefCell::new(scheduler)),
+            Config {
+                data_transfer_mode: DataTransferMode::Direct,
+            },
+        );
+        sim.add_resource("0", 1, 1, 0);
+        sim.add_resource("1", 2, 1, 0);
+        sim.add_resource("2", 4, 1, 0);
+        sim.add_resource("3", 4, 1, 0);
+    
+        let dag_copy = dag.clone();
+        let runner = sim.init(dag);
+        sim.step_until_no_events();
+        assert!(runner.borrow().is_completed());
+    
+        return sim.time();
+    }
+    let heft_makespan = run_sim(HeftScheduler::new(), &mut dag.clone());
+    assert_eq!(heft_makespan, 98.0);
 
     // 0:
     // 1:                           [-------------E------------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]
     // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
+
+
+    // current best solution found by me
+    let reverse_lookahead_makespan = run_sim(LookaheadScheduler::new(), &mut dag.clone());
+    assert_eq!(reverse_lookahead_makespan, 93.0);
+    
+    // 0:
+    // 1:                           [-------------E------------]
+    // 2:[-------A------][-----C-----][--------B--------][-------F-------][----H----]
+    // 3:                         [---D--]                   [------G------] [-----I----]      [--J--]
+
 }
 
 #[test]
