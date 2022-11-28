@@ -91,7 +91,7 @@ impl FileSystem {
         Err(format!("cannot resolve on which disk file [{}] is located", file_path))
     }
 
-    fn get_unique_request_id(&mut self) -> u64 {
+    fn unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
@@ -130,7 +130,7 @@ impl FileSystem {
     }
 
     fn read_impl(&mut self, file_path: &str, size: Option<u64>, requester: Id) -> u64 {
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
@@ -202,7 +202,7 @@ impl FileSystem {
             file_path,
             requester,
         );
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
@@ -252,7 +252,7 @@ impl FileSystem {
     }
 
     /// Returns size of the file located at `file_path` if there is any.
-    pub fn get_file_size(&self, file_path: &str) -> Result<u64, String> {
+    pub fn file_size(&self, file_path: &str) -> Result<u64, String> {
         self.files
             .get(file_path)
             .ok_or(format!("file [{}] does not exist", file_path))
@@ -260,31 +260,31 @@ impl FileSystem {
     }
 
     /// Returns amount of used space on all disks currently mounted to this file system.
-    pub fn get_used_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
+    pub fn used_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().used_space()).sum()
     }
 
     /// Returns amount of free space on all disks currently mounted to this file system.
-    pub fn get_free_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().get_free_space()).sum()
+    pub fn free_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().free_space()).sum()
     }
 
     /// Returns cumulative capacity of all disks currently mounted to this file system.
-    pub fn get_capacity(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().get_capacity()).sum()
+    pub fn capacity(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().capacity()).sum()
     }
 
     /// Returns vec of disk statistics associated to mount points
-    pub fn get_disks_statistics(&self) -> Vec<(String, DiskStatistics)> {
+    pub fn disks_info(&self) -> Vec<(String, DiskStatistics)> {
         self.disks
             .iter()
             .map(|(mount_point, v)| {
                 (
                     mount_point.to_owned(),
                     DiskStatistics {
-                        capacity: v.borrow().get_capacity(),
-                        used_space: v.borrow().get_used_space(),
-                        free_space: v.borrow().get_free_space(),
+                        capacity: v.borrow().capacity(),
+                        used_space: v.borrow().used_space(),
+                        free_space: v.borrow().free_space(),
                     },
                 )
             })

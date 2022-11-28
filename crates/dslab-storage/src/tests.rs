@@ -118,23 +118,23 @@ fn fs_files_metadata_consistence() {
     let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_err());
-    assert!(fs.borrow().get_file_size("/mnt/file1").is_err());
+    assert!(fs.borrow().file_size("/mnt/file1").is_err());
 
-    assert_eq!(fs.borrow().get_capacity(), 0);
-    assert_eq!(fs.borrow().get_used_space(), 0);
-    assert_eq!(fs.borrow().get_free_space(), 0);
-    assert_eq!(fs.borrow().get_disks_statistics(), vec![]);
+    assert_eq!(fs.borrow().capacity(), 0);
+    assert_eq!(fs.borrow().used_space(), 0);
+    assert_eq!(fs.borrow().free_space(), 0);
+    assert_eq!(fs.borrow().disks_info(), vec![]);
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk.clone()).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_ok());
 
-    assert_eq!(fs.borrow().get_file_size("/mnt/file1"), Ok(0));
+    assert_eq!(fs.borrow().file_size("/mnt/file1"), Ok(0));
 
-    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
-    assert_eq!(fs.borrow().get_used_space(), 0);
-    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY);
+    assert_eq!(fs.borrow().capacity(), DISK_CAPACITY);
+    assert_eq!(fs.borrow().used_space(), 0);
+    assert_eq!(fs.borrow().free_space(), DISK_CAPACITY);
     assert_eq!(
-        fs.borrow().get_disks_statistics(),
+        fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
             DiskStatistics {
@@ -149,13 +149,13 @@ fn fs_files_metadata_consistence() {
 
     sim.step_until_no_events();
 
-    assert_eq!(fs.borrow().get_file_size("/mnt/file1"), Ok(1));
+    assert_eq!(fs.borrow().file_size("/mnt/file1"), Ok(1));
 
-    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
-    assert_eq!(fs.borrow().get_used_space(), 1);
-    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 1);
+    assert_eq!(fs.borrow().capacity(), DISK_CAPACITY);
+    assert_eq!(fs.borrow().used_space(), 1);
+    assert_eq!(fs.borrow().free_space(), DISK_CAPACITY - 1);
     assert_eq!(
-        fs.borrow().get_disks_statistics(),
+        fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
             DiskStatistics {
@@ -172,12 +172,12 @@ fn fs_files_metadata_consistence() {
 
     sim.step_until_no_events();
 
-    assert_eq!(fs.borrow().get_file_size("/mnt/file2"), Ok(2));
-    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
-    assert_eq!(fs.borrow().get_used_space(), 3);
-    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 3);
+    assert_eq!(fs.borrow().file_size("/mnt/file2"), Ok(2));
+    assert_eq!(fs.borrow().capacity(), DISK_CAPACITY);
+    assert_eq!(fs.borrow().used_space(), 3);
+    assert_eq!(fs.borrow().free_space(), DISK_CAPACITY - 3);
     assert_eq!(
-        fs.borrow().get_disks_statistics(),
+        fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
             DiskStatistics {
@@ -190,13 +190,13 @@ fn fs_files_metadata_consistence() {
 
     assert!(fs.borrow_mut().delete_file("/mnt/file2").is_ok());
     assert!(fs.borrow_mut().delete_file("/mnt/file2").is_err());
-    assert!(fs.borrow().get_file_size("/mnt/file2").is_err());
+    assert!(fs.borrow().file_size("/mnt/file2").is_err());
 
-    assert_eq!(fs.borrow().get_capacity(), DISK_CAPACITY);
-    assert_eq!(fs.borrow().get_used_space(), 1);
-    assert_eq!(fs.borrow().get_free_space(), DISK_CAPACITY - 1);
+    assert_eq!(fs.borrow().capacity(), DISK_CAPACITY);
+    assert_eq!(fs.borrow().used_space(), 1);
+    assert_eq!(fs.borrow().free_space(), DISK_CAPACITY - 1);
     assert_eq!(
-        fs.borrow().get_disks_statistics(),
+        fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
             DiskStatistics {
@@ -228,9 +228,9 @@ fn fs_multiple_disks_on_single_filesystem() {
 
     assert!(fs.borrow_mut().mount_disk("/mnt/vdb", disk2.clone()).is_ok());
 
-    assert_eq!(disk1.borrow().get_used_space(), 0);
-    assert_eq!(disk2.borrow().get_used_space(), 0);
-    assert_eq!(fs.borrow().get_used_space(), 0);
+    assert_eq!(disk1.borrow().used_space(), 0);
+    assert_eq!(disk2.borrow().used_space(), 0);
+    assert_eq!(fs.borrow().used_space(), 0);
 
     assert!(fs.borrow_mut().create_file("/mnt/vda/file1").is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/vdb/file2").is_ok());
@@ -240,15 +240,15 @@ fn fs_multiple_disks_on_single_filesystem() {
 
     sim.step_until_no_events();
 
-    assert_eq!(disk1.borrow().get_used_space(), 2);
-    assert_eq!(disk2.borrow().get_used_space(), 3);
-    assert_eq!(fs.borrow().get_used_space(), 5);
+    assert_eq!(disk1.borrow().used_space(), 2);
+    assert_eq!(disk2.borrow().used_space(), 3);
+    assert_eq!(fs.borrow().used_space(), 5);
 
     assert!(fs.borrow_mut().delete_file("/mnt/vdb/file2").is_ok());
 
-    assert_eq!(disk1.borrow().get_used_space(), 2);
-    assert_eq!(disk2.borrow().get_used_space(), 0);
-    assert_eq!(fs.borrow().get_used_space(), 2);
+    assert_eq!(disk1.borrow().used_space(), 2);
+    assert_eq!(disk2.borrow().used_space(), 0);
+    assert_eq!(fs.borrow().used_space(), 2);
 }
 
 #[test]
@@ -268,9 +268,9 @@ fn fs_single_disk_on_multiple_filesystems() {
     assert!(fs1.borrow_mut().unmount_disk("/mnt/vdc").is_ok());
     assert!(fs1.borrow_mut().mount_disk("/mnt/vda", disk.clone()).is_ok());
 
-    assert_eq!(disk.borrow().get_used_space(), 0);
-    assert_eq!(fs1.borrow().get_used_space(), 0);
-    assert_eq!(fs2.borrow().get_used_space(), 0);
+    assert_eq!(disk.borrow().used_space(), 0);
+    assert_eq!(fs1.borrow().used_space(), 0);
+    assert_eq!(fs2.borrow().used_space(), 0);
 
     assert!(fs1.borrow_mut().create_file("/mnt/vda/file").is_ok());
     fs1.borrow_mut().write("/mnt/vda/file", 4, 0);
@@ -278,15 +278,15 @@ fn fs_single_disk_on_multiple_filesystems() {
     sim.step_until_no_events();
 
     // Used space on shared disk is visible for both file systems
-    assert_eq!(disk.borrow().get_used_space(), 4);
-    assert_eq!(fs1.borrow().get_used_space(), 4);
-    assert_eq!(fs2.borrow().get_used_space(), 4);
+    assert_eq!(disk.borrow().used_space(), 4);
+    assert_eq!(fs1.borrow().used_space(), 4);
+    assert_eq!(fs2.borrow().used_space(), 4);
 
     assert!(fs1.borrow_mut().unmount_disk("/mnt/vda").is_ok());
     assert!(fs2.borrow_mut().unmount_disk("/mnt/vda").is_ok());
 
     // Used space on disk does not change after unmount
-    assert_eq!(disk.borrow().get_used_space(), 4);
+    assert_eq!(disk.borrow().used_space(), 4);
 }
 
 #[test]
@@ -500,21 +500,21 @@ fn disk_write_after_spaced_marked_free() {
     disk.borrow_mut().write(99, checker_id);
     sim.step_until_no_events();
 
-    assert!(disk.borrow().get_capacity() == DISK_CAPACITY);
-    assert!(disk.borrow().get_used_space() == 99);
-    assert!(disk.borrow().get_free_space() == DISK_CAPACITY - 99);
+    assert!(disk.borrow().capacity() == DISK_CAPACITY);
+    assert!(disk.borrow().used_space() == 99);
+    assert!(disk.borrow().free_space() == DISK_CAPACITY - 99);
 
     assert!(disk.borrow_mut().mark_free(100).is_err());
     assert!(disk.borrow_mut().mark_free(99).is_ok());
 
-    assert!(disk.borrow().get_capacity() == DISK_CAPACITY);
-    assert!(disk.borrow().get_used_space() == 0);
-    assert!(disk.borrow().get_free_space() == DISK_CAPACITY);
+    assert!(disk.borrow().capacity() == DISK_CAPACITY);
+    assert!(disk.borrow().used_space() == 0);
+    assert!(disk.borrow().free_space() == DISK_CAPACITY);
 
     disk.borrow_mut().write(99, checker_id);
     sim.step_until_no_events();
 
-    assert!(disk.borrow().get_capacity() == DISK_CAPACITY);
-    assert!(disk.borrow().get_used_space() == 99);
-    assert!(disk.borrow().get_free_space() == DISK_CAPACITY - 99);
+    assert!(disk.borrow().capacity() == DISK_CAPACITY);
+    assert!(disk.borrow().used_space() == 99);
+    assert!(disk.borrow().free_space() == DISK_CAPACITY - 99);
 }

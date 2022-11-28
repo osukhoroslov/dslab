@@ -61,7 +61,7 @@ impl Disk {
         )
     }
 
-    fn get_unique_request_id(&mut self) -> u64 {
+    fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
@@ -80,7 +80,7 @@ impl Disk {
             size,
             requester
         );
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         if size > self.capacity {
             let error = format!(
                 "requested read size is {} but only {} is available",
@@ -109,7 +109,7 @@ impl Disk {
     /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         log_debug!(
             self.ctx,
             "Received write request, size: {}, requester: {}",
@@ -148,17 +148,17 @@ impl Disk {
     }
 
     /// Returns the amount of used disk space.
-    pub fn get_used_space(&self) -> u64 {
+    pub fn used_space(&self) -> u64 {
         self.used
     }
 
     /// Returns the amount of free disk space.
-    pub fn get_free_space(&self) -> u64 {
+    pub fn free_space(&self) -> u64 {
         self.capacity - self.used
     }
 
     /// Returns the capacity of disk.
-    pub fn get_capacity(&self) -> u64 {
+    pub fn capacity(&self) -> u64 {
         self.capacity
     }
 
