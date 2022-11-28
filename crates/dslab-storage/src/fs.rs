@@ -80,7 +80,7 @@ impl FileSystem {
         Err(format!("cannot resolve on which disk file [{}] is located", file_path))
     }
 
-    fn unique_request_id(&mut self) -> u64 {
+    fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
