@@ -157,7 +157,7 @@ impl Disk {
         self.capacity - self.used
     }
 
-    /// Returns the capacity of disk
+    /// Returns the capacity of disk.
     pub fn get_capacity(&self) -> u64 {
         self.capacity
     }
