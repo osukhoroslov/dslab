@@ -47,9 +47,7 @@ impl Scheduler for DlsScheduler {
         let resources = system.resources;
         let network = system.network;
 
-        let data_transfer_mode = &config.data_transfer_mode;
-
-        let avg_net_time = system.avg_net_time(ctx.id(), data_transfer_mode);
+        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
 
         let task_count = dag.get_tasks().len();
 
@@ -104,14 +102,14 @@ impl Scheduler for DlsScheduler {
                     if res.is_none() {
                         continue;
                     }
-                    let (est, time, cores) = res.unwrap();
+                    let (est, finish_time, cores) = res.unwrap();
 
                     let current_score = task_ranks[task_id] - est;
                     if current_score > best_dl {
                         best_dl = current_score;
                         best_pair = Some((task_id, resource));
-                        best_time = time;
-                        best_finish = est + time;
+                        best_time = finish_time - est;
+                        best_finish = finish_time;
                         best_cores = cores;
                     }
                 }

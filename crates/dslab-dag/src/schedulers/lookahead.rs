@@ -47,9 +47,7 @@ impl Scheduler for LookaheadScheduler {
         let resources = system.resources;
         let network = system.network;
 
-        let data_transfer_mode = &config.data_transfer_mode;
-
-        let avg_net_time = system.avg_net_time(ctx.id(), data_transfer_mode);
+        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
 
         let task_count = dag.get_tasks().len();
 
@@ -75,8 +73,8 @@ impl Scheduler for LookaheadScheduler {
 
         for task_id in task_ids.into_iter() {
             let mut best_task_finish_time = -1.;
-            let mut best_time = -1.;
-            let mut best_finish = -1.;
+            let mut best_start = -1.;
+            let mut best_makespan = -1.;
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
@@ -97,32 +95,32 @@ impl Scheduler for LookaheadScheduler {
                 if res.is_none() {
                     continue;
                 }
-                let (est, time, cores) = res.unwrap();
+                let (est, finish_time, cores) = res.unwrap();
 
                 let mut to_undo: Vec<(usize, Vec<u32>, ScheduledTask)> = Vec::new();
                 let old_task_location = task_locations.clone();
                 let old_data_location = data_locations.clone();
 
                 for &core in cores.iter() {
-                    scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(est, est + time, task_id));
+                    scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(est, finish_time, task_id));
                 }
-                task_finish_times[task_id] = est + time;
+                task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
                 for &output in dag.get_task(task_id).outputs.iter() {
                     data_locations.insert(output, resources[resource].id);
                 }
                 task_locations.insert(task_id, resources[resource].id);
-                to_undo.push((resource, cores.clone(), ScheduledTask::new(est, est + time, task_id)));
+                to_undo.push((resource, cores.clone(), ScheduledTask::new(est, finish_time, task_id)));
 
-                let mut children = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
-                children.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
-                let mut max_task_finish_time = est + time;
-                for &child in children.iter() {
-                    let (resource, cores, finish, time) = {
+                let mut unscheduled_tasks = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
+                unscheduled_tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
+                let mut max_task_finish_time = finish_time;
+                for &child in unscheduled_tasks.iter() {
+                    let (resource, cores, start, finish) = {
                         let task = child;
 
+                        let mut best_start = -1.;
                         let mut best_finish = -1.;
-                        let mut best_time = -1.;
                         let mut best_resource = 0 as usize;
                         let mut best_cores: Vec<u32> = Vec::new();
                         for resource in 0..resources.len() {
@@ -143,11 +141,11 @@ impl Scheduler for LookaheadScheduler {
                             if res.is_none() {
                                 continue;
                             }
-                            let (est, time, cores) = res.unwrap();
+                            let (est, finish_time, cores) = res.unwrap();
 
-                            if best_finish == -1. || best_finish > est + time {
-                                best_time = time;
-                                best_finish = est + time;
+                            if best_finish == -1. || best_finish > finish_time {
+                                best_start = est;
+                                best_finish = finish_time;
                                 best_resource = resource;
                                 best_cores = cores;
                             }
@@ -155,14 +153,10 @@ impl Scheduler for LookaheadScheduler {
 
                         assert!(best_finish != -1.);
 
-                        (best_resource, best_cores, best_finish, best_time)
+                        (best_resource, best_cores, best_start, best_finish)
                     };
                     for &core in cores.iter() {
-                        scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(
-                            finish - time,
-                            finish,
-                            child,
-                        ));
+                        scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(start, finish, child));
                     }
                     task_finish_times[child] = finish;
                     scheduled[child] = true;
@@ -170,7 +164,7 @@ impl Scheduler for LookaheadScheduler {
                         data_locations.insert(output, resources[resource].id);
                     }
                     task_locations.insert(child, resources[resource].id);
-                    to_undo.push((resource, cores, ScheduledTask::new(finish - time, finish, child)));
+                    to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
                     if finish > max_task_finish_time {
                         max_task_finish_time = finish;
                     }
@@ -186,27 +180,27 @@ impl Scheduler for LookaheadScheduler {
                 task_locations = old_task_location;
 
                 if best_task_finish_time == -1. || best_task_finish_time > max_task_finish_time {
-                    best_time = time;
-                    best_finish = est + time;
+                    best_start = est;
+                    best_makespan = finish_time;
                     best_task_finish_time = max_task_finish_time;
                     best_resource = resource;
                     best_cores = cores.clone();
                 }
             }
 
-            assert!(best_finish != -1.);
+            assert!(best_makespan != -1.);
 
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
-                    best_finish - best_time,
-                    best_finish,
+                    best_start,
+                    best_makespan,
                     task_id,
                 ));
             }
-            task_finish_times[task_id] = best_finish;
+            task_finish_times[task_id] = best_makespan;
             scheduled[task_id] = true;
             result.push((
-                best_finish - best_time,
+                best_start,
                 Action::ScheduleTaskOnCores {
                     task: task_id,
                     resource: best_resource,

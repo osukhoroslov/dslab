@@ -65,6 +65,11 @@ pub fn evaluate_assignment(
     config: &Config,
     ctx: &SimulationContext,
 ) -> Option<(f64, f64, Vec<u32>)> {
+    let need_cores = dag.get_task(task_id).min_cores;
+    if resources[resource].compute.borrow().cores_total() < need_cores {
+        return None;
+    }
+
     let data_transfer_mode = &config.data_transfer_mode;
 
     let est = match data_transfer_strategy {
@@ -124,11 +129,6 @@ pub fn evaluate_assignment(
     };
     let est = est.max(input_load_time);
 
-    let need_cores = dag.get_task(task_id).min_cores;
-    if resources[resource].compute.borrow().cores_total() < need_cores {
-        return None;
-    }
-
     let download_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => 0.,
         DataTransferStrategy::Lazy => dag
@@ -154,12 +154,27 @@ pub fn evaluate_assignment(
             .max_by(|a, b| a.total_cmp(&b))
             .unwrap_or(0.),
     };
-    let time = dag.get_task(task_id).flops as f64
+    let task_exec_time = dag.get_task(task_id).flops as f64
         / resources[resource].speed as f64
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
-    let mut possible_starts = scheduled_tasks[resource]
+    let (est, cores) = find_earliest_slot(&scheduled_tasks[resource], est, task_exec_time, need_cores);
+
+    assert!(cores.len() >= need_cores as usize);
+
+    let cores = cores.iter().take(need_cores as usize).cloned().collect::<Vec<_>>();
+
+    Some((est, est + task_exec_time, cores))
+}
+
+fn find_earliest_slot(
+    scheduled_tasks: &Vec<BTreeSet<ScheduledTask>>,
+    mut est: f64,
+    task_exec_time: f64,
+    need_cores: u32,
+) -> (f64, Vec<u32>) {
+    let mut possible_starts = scheduled_tasks
         .iter()
         .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.finish_time))
         .filter(|&a| a >= est)
@@ -169,13 +184,12 @@ pub fn evaluate_assignment(
     possible_starts.dedup();
 
     let mut cores: Vec<u32> = Vec::new();
-    let mut est = est;
     for &possible_start in possible_starts.iter() {
-        for core in 0..resources[resource].cores_available as usize {
-            let next = scheduled_tasks[resource][core]
+        for core in 0..scheduled_tasks.len() {
+            let next = scheduled_tasks[core]
                 .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))
                 .next();
-            let prev = scheduled_tasks[resource][core]
+            let prev = scheduled_tasks[core]
                 .range((Unbounded, Included(ScheduledTask::new(possible_start, 0., 0))))
                 .next_back();
             if let Some(scheduled_task) = prev {
@@ -184,7 +198,7 @@ pub fn evaluate_assignment(
                 }
             }
             if let Some(scheduled_task) = next {
-                if scheduled_task.start_time < possible_start + time {
+                if scheduled_task.start_time < possible_start + task_exec_time {
                     continue;
                 }
             }
@@ -197,12 +211,7 @@ pub fn evaluate_assignment(
             cores.clear();
         }
     }
-
-    assert!(cores.len() >= need_cores as usize);
-
-    let cores = cores.iter().take(need_cores as usize).cloned().collect::<Vec<_>>();
-
-    Some((est, time, cores))
+    (est, cores)
 }
 
 pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {

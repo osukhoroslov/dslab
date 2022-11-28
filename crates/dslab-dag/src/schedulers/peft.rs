@@ -47,8 +47,6 @@ impl Scheduler for PeftScheduler {
         let resources = system.resources;
         let network = system.network;
 
-        let data_transfer_mode = &config.data_transfer_mode;
-
         let task_count = dag.get_tasks().len();
 
         // optimistic cost table
@@ -63,7 +61,7 @@ impl Scheduler for PeftScheduler {
                                 oct[succ][succ_resource]
                                     + dag.get_task(succ).flops as f64 / resources[succ_resource].speed as f64
                                     + weight as f64
-                                        * data_transfer_mode.net_time(
+                                        * config.data_transfer_mode.net_time(
                                             network,
                                             resources[resource_id].id,
                                             resources[succ_resource].id,
@@ -137,11 +135,11 @@ impl Scheduler for PeftScheduler {
                 if res.is_none() {
                     continue;
                 }
-                let (est, time, cores) = res.unwrap();
+                let (est, finish_time, cores) = res.unwrap();
 
-                if best_finish == -1. || best_finish > est + time {
+                if best_finish == -1. || best_finish > finish_time {
                     best_start = est;
-                    best_finish = est + time;
+                    best_finish = finish_time;
                     best_resource = resource;
                     best_cores = cores;
                 }

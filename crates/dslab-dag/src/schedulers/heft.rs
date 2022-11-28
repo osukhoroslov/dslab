@@ -47,9 +47,7 @@ impl Scheduler for HeftScheduler {
         let resources = system.resources;
         let network = system.network;
 
-        let data_transfer_mode = &config.data_transfer_mode;
-
-        let avg_net_time = system.avg_net_time(ctx.id(), data_transfer_mode);
+        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
 
         let task_count = dag.get_tasks().len();
 
@@ -95,11 +93,11 @@ impl Scheduler for HeftScheduler {
                 if res.is_none() {
                     continue;
                 }
-                let (est, time, cores) = res.unwrap();
+                let (est, finish_time, cores) = res.unwrap();
 
-                if best_finish == -1. || best_finish > est + time {
+                if best_finish == -1. || best_finish > finish_time {
                     best_start = est;
-                    best_finish = est + time;
+                    best_finish = finish_time;
                     best_resource = resource;
                     best_cores = cores;
                 }
