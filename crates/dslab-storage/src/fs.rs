@@ -276,7 +276,7 @@ impl FileSystem {
         self.resolve_disk(mount_point).and_then(|disk| Ok(disk.borrow().info()))
     }
 
-    /// Returns vec of mount_points created in this file system.
+    /// Returns mount points present in this file system.
     pub fn mount_points(&self) -> Vec<String> {
         self.disks
             .iter()
