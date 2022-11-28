@@ -221,7 +221,7 @@ fn test_4() {
     add_edge(7, 9, 11, "n");
     add_edge(8, 9, 13, "o");
 
-    fn run_sim (scheduler: impl crate::scheduler::Scheduler, dag: &mut DAG) -> f64 {
+    fn run_sim (scheduler: impl crate::scheduler::Scheduler + 'static, dag: DAG) -> f64 {
         let mut sim = DagSimulation::new(
             123,
             Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
@@ -235,14 +235,13 @@ fn test_4() {
         sim.add_resource("2", 4, 1, 0);
         sim.add_resource("3", 4, 1, 0);
     
-        let dag_copy = dag.clone();
         let runner = sim.init(dag);
         sim.step_until_no_events();
         assert!(runner.borrow().is_completed());
     
         return sim.time();
     }
-    let heft_makespan = run_sim(HeftScheduler::new(), &mut dag.clone());
+    let heft_makespan = run_sim(HeftScheduler::new(), dag.clone());
     assert_eq!(heft_makespan, 98.0);
 
     // 0:
@@ -251,14 +250,13 @@ fn test_4() {
     // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
 
 
-    // current best solution found by me
-    let reverse_lookahead_makespan = run_sim(LookaheadScheduler::new(), &mut dag.clone());
-    assert_eq!(reverse_lookahead_makespan, 93.0);
+    let reverse_lookahead_makespan = run_sim(LookaheadScheduler::new(), dag);
+    assert_eq!(reverse_lookahead_makespan, 94.0);
     
     // 0:
-    // 1:                           [-------------E------------]
-    // 2:[-------A------][-----C-----][--------B--------][-------F-------][----H----]
-    // 3:                         [---D--]                   [------G------] [-----I----]      [--J--]
+    // 1:                         [-------D------]
+    // 2:[-------A------][-----C-----][--------B--------][-------F------][-----I----][----H----][--J--]
+    // 3:                           [------E-----]           [------G------]       
 
 }
 
