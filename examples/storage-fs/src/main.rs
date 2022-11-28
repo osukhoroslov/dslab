@@ -68,7 +68,7 @@ impl EventHandler for User {
                 match case {
                     0 => {
                         self.fs.borrow_mut().create_file(FILE_1_PATH).unwrap();
-                        self.fs.borrow_mut().get_file_size(FILE_1_PATH).unwrap();
+                        self.fs.borrow_mut().file_size(FILE_1_PATH).unwrap();
                         log_debug!(self.ctx, "Trying to read 3 bytes from empty file... should fail");
                         self.fs.borrow_mut().read(FILE_1_PATH, 3, self.ctx.id());
                     }
@@ -197,7 +197,7 @@ fn main() {
         println!(
             "Total FS used space after case {} is {} bytes",
             case,
-            fs.borrow().get_used_space()
+            fs.borrow().used_space()
         );
         println!("########################################################")
     }
