@@ -102,13 +102,13 @@ impl Scheduler for DlsScheduler {
                     if res.is_none() {
                         continue;
                     }
-                    let (est, finish_time, cores) = res.unwrap();
+                    let (start_time, finish_time, cores) = res.unwrap();
 
-                    let current_score = task_ranks[task_id] - est;
+                    let current_score = task_ranks[task_id] - start_time;
                     if current_score > best_dl {
                         best_dl = current_score;
                         best_pair = Some((task_id, resource));
-                        best_start = est;
+                        best_start = start_time;
                         best_finish = finish_time;
                         best_cores = cores;
                     }

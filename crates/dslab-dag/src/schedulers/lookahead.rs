@@ -95,14 +95,18 @@ impl Scheduler for LookaheadScheduler {
                 if res.is_none() {
                     continue;
                 }
-                let (est, finish_time, cores) = res.unwrap();
+                let (start_time, finish_time, cores) = res.unwrap();
 
                 let mut to_undo: Vec<(usize, Vec<u32>, ScheduledTask)> = Vec::new();
                 let old_task_location = task_locations.clone();
                 let old_data_location = data_locations.clone();
 
                 for &core in cores.iter() {
-                    scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(est, finish_time, task_id));
+                    scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(
+                        start_time,
+                        finish_time,
+                        task_id,
+                    ));
                 }
                 task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
@@ -110,7 +114,11 @@ impl Scheduler for LookaheadScheduler {
                     data_locations.insert(output, resources[resource].id);
                 }
                 task_locations.insert(task_id, resources[resource].id);
-                to_undo.push((resource, cores.clone(), ScheduledTask::new(est, finish_time, task_id)));
+                to_undo.push((
+                    resource,
+                    cores.clone(),
+                    ScheduledTask::new(start_time, finish_time, task_id),
+                ));
 
                 let mut unscheduled_tasks = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
                 unscheduled_tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
@@ -141,10 +149,10 @@ impl Scheduler for LookaheadScheduler {
                             if res.is_none() {
                                 continue;
                             }
-                            let (est, finish_time, cores) = res.unwrap();
+                            let (start_time, finish_time, cores) = res.unwrap();
 
                             if best_finish == -1. || best_finish > finish_time {
-                                best_start = est;
+                                best_start = start_time;
                                 best_finish = finish_time;
                                 best_resource = resource;
                                 best_cores = cores;
@@ -180,7 +188,7 @@ impl Scheduler for LookaheadScheduler {
                 task_locations = old_task_location;
 
                 if best_makespan == -1. || best_makespan > makespan {
-                    best_start = est;
+                    best_start = start_time;
                     best_finish = finish_time;
                     best_makespan = makespan;
                     best_resource = resource;

@@ -93,10 +93,10 @@ impl Scheduler for HeftScheduler {
                 if res.is_none() {
                     continue;
                 }
-                let (est, finish_time, cores) = res.unwrap();
+                let (start_time, finish_time, cores) = res.unwrap();
 
                 if best_finish == -1. || best_finish > finish_time {
-                    best_start = est;
+                    best_start = start_time;
                     best_finish = finish_time;
                     best_resource = resource;
                     best_cores = cores;

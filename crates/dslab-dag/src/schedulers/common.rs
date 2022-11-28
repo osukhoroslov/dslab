@@ -72,7 +72,7 @@ pub fn evaluate_assignment(
 
     let data_transfer_mode = &config.data_transfer_mode;
 
-    let est = match data_transfer_strategy {
+    let start_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => dag
             .get_task(task_id)
             .inputs
@@ -127,7 +127,7 @@ pub fn evaluate_assignment(
             .unwrap_or(0.),
         DataTransferStrategy::Lazy => 0.,
     };
-    let est = est.max(input_load_time);
+    let start_time = start_time.max(input_load_time);
 
     let download_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => 0.,
@@ -159,27 +159,27 @@ pub fn evaluate_assignment(
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
-    let (est, cores) = find_earliest_slot(&scheduled_tasks[resource], est, task_exec_time, need_cores);
+    let (start_time, cores) = find_earliest_slot(&scheduled_tasks[resource], start_time, task_exec_time, need_cores);
 
     assert!(cores.len() >= need_cores as usize);
 
     let cores = cores.iter().take(need_cores as usize).cloned().collect::<Vec<_>>();
 
-    Some((est, est + task_exec_time, cores))
+    Some((start_time, start_time + task_exec_time, cores))
 }
 
 fn find_earliest_slot(
     scheduled_tasks: &Vec<BTreeSet<ScheduledTask>>,
-    mut est: f64,
+    mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
         .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.finish_time))
-        .filter(|&a| a >= est)
+        .filter(|&a| a >= start_time)
         .collect::<Vec<_>>();
-    possible_starts.push(est);
+    possible_starts.push(start_time);
     possible_starts.sort_by(|a, b| a.total_cmp(&b));
     possible_starts.dedup();
 
@@ -205,13 +205,13 @@ fn find_earliest_slot(
             cores.push(core as u32);
         }
         if cores.len() >= need_cores as usize {
-            est = possible_start;
+            start_time = possible_start;
             break;
         } else {
             cores.clear();
         }
     }
-    (est, cores)
+    (start_time, cores)
 }
 
 pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
