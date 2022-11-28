@@ -87,7 +87,7 @@ pub struct FairThroughputSharingModelRational<T> {
 impl<T> FairThroughputSharingModelRational<T> {
     pub fn new(throughput: BigRational) -> Self {
         Self {
-            throughput: throughput,
+            throughput,
             time_fn: TimeFunction::ident(),
             entries: BinaryHeap::new(),
             next_id: 0,

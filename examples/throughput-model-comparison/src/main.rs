@@ -21,7 +21,7 @@ struct Transfer {
     weight: u32,
 }
 
-fn run_new_model(transfers: &Vec<Transfer>) -> Vec<f64> {
+fn run_new_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut model = FairThroughputSharingModel::<usize>::with_fixed_throughput(1.);
     let mut transfers = transfers.iter().enumerate().collect::<Vec<_>>();
     transfers.sort_by(|a, b| a.1.start_time.cmp(&b.1.start_time));
@@ -52,7 +52,7 @@ fn run_new_model(transfers: &Vec<Transfer>) -> Vec<f64> {
     result
 }
 
-fn run_old_model(transfers: &Vec<Transfer>) -> Vec<f64> {
+fn run_old_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut model = old_model::FairThroughputSharingModel::<usize>::with_fixed_throughput(1.);
     let mut transfers = transfers.iter().enumerate().collect::<Vec<_>>();
     transfers.sort_by(|a, b| a.1.start_time.cmp(&b.1.start_time));
@@ -83,7 +83,7 @@ fn run_old_model(transfers: &Vec<Transfer>) -> Vec<f64> {
     result
 }
 
-fn run_slow_model(transfers: &Vec<Transfer>) -> Vec<f64> {
+fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut model = SlowFairThroughputSharingModel::<usize>::with_fixed_throughput(1.);
     let mut transfers = transfers.iter().enumerate().collect::<Vec<_>>();
     transfers.sort_by(|a, b| a.1.start_time.cmp(&b.1.start_time));
@@ -132,7 +132,7 @@ fn approx_rational(x: BigRational) -> f64 {
     val as f64 / 1e18
 }
 
-fn run_rational_model(transfers: &Vec<Transfer>) -> Vec<f64> {
+fn run_rational_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut model = FairThroughputSharingModelRational::<usize>::new(make_rat(1));
     let mut transfers = transfers.iter().enumerate().collect::<Vec<_>>();
     transfers.sort_by(|a, b| a.1.start_time.cmp(&b.1.start_time));
@@ -207,7 +207,7 @@ impl Stats {
     }
 }
 
-fn get_stats(correct_values: &Vec<f64>, actual_values: &Vec<f64>) -> Stats {
+fn get_stats(correct_values: &[f64], actual_values: &[f64]) -> Stats {
     let mut max_abs_error = 0_f64;
     let mut max_rel_error = 0_f64;
     let mut mse = 0_f64;
@@ -215,12 +215,7 @@ fn get_stats(correct_values: &Vec<f64>, actual_values: &Vec<f64>) -> Stats {
     for (correct, actual) in zip(correct_values.iter(), actual_values.iter()) {
         let abs_error = (correct - actual).abs();
         max_abs_error = max_abs_error.max(abs_error);
-        let rel_error;
-        if correct < &1. {
-            rel_error = abs_error;
-        } else {
-            rel_error = abs_error / correct;
-        }
+        let rel_error = if correct < &1. { abs_error } else { abs_error / correct };
         max_rel_error = max_rel_error.max(rel_error);
 
         mse += abs_error * abs_error;
