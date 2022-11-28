@@ -8,14 +8,14 @@ use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::VmStatus;
-use dslab_iaas::core::vm_placement_algorithm::BestFit;
-use dslab_iaas::core::vm_placement_algorithm::BestFitThreshold;
-use dslab_iaas::core::vm_placement_algorithm::CosineSimilarity;
-use dslab_iaas::core::vm_placement_algorithm::DotProduct;
-use dslab_iaas::core::vm_placement_algorithm::FirstFit;
-use dslab_iaas::core::vm_placement_algorithm::NormBasedGreedy;
-use dslab_iaas::core::vm_placement_algorithm::PerpDistance;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
+use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
+use dslab_iaas::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
+use dslab_iaas::core::vm_placement_algorithms::dot_product::DotProduct;
+use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
+use dslab_iaas::core::vm_placement_algorithms::norm_based_greedy::NormBasedGreedy;
+use dslab_iaas::core::vm_placement_algorithms::perp_distance::PerpDistance;
 use dslab_iaas::simulation::CloudSimulation;
 
 fn name_wrapper(file_name: &str) -> String {
@@ -31,7 +31,7 @@ fn name_wrapper(file_name: &str) -> String {
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
@@ -58,7 +58,7 @@ fn test_energy_consumption() {
 fn test_first_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
@@ -108,7 +108,7 @@ fn test_first_fit() {
 fn test_best_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
@@ -158,7 +158,7 @@ fn test_best_fit() {
 fn test_no_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
@@ -190,7 +190,7 @@ fn test_no_overcommit() {
 fn test_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 200, 200);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
@@ -241,7 +241,7 @@ impl VMPlacementAlgorithm for BadScheduler {
 fn test_wrong_decision() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
@@ -343,7 +343,7 @@ fn test_wrong_decision() {
 fn test_migration_simple() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
@@ -413,7 +413,7 @@ fn test_migration_simple() {
 fn test_double_migration() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
@@ -460,7 +460,7 @@ fn test_double_migration() {
 fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
     let power_model = HostPowerModel::new(Box::new(ConstantPowerModel::new(1.))).with_zero_idle_power();
     cloud_sim.set_host_power_model(power_model);
 
@@ -492,7 +492,7 @@ fn test_energy_consumption_override() {
 fn test_slatah() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
     cloud_sim.set_slav_metric(Box::new(OverloadTimeFraction::new()));
 
     let h = cloud_sim.add_host("h", 40, 40);
@@ -530,7 +530,7 @@ fn test_slatah() {
 fn test_perp_dist() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
     let h2 = cloud_sim.add_host("h2", 40, 20);
@@ -540,8 +540,8 @@ fn test_perp_dist() {
         1,
         2,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -549,8 +549,8 @@ fn test_perp_dist() {
         2,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -569,7 +569,7 @@ fn test_perp_dist() {
 fn test_cosine_similarity() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
     let h2 = cloud_sim.add_host("h2", 40, 20);
@@ -579,8 +579,8 @@ fn test_cosine_similarity() {
         1,
         2,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -588,8 +588,8 @@ fn test_cosine_similarity() {
         2,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -604,23 +604,22 @@ fn test_cosine_similarity() {
 
 #[test]
 // Test dot product algorithm.
-// Despite all the VMs are more suited for first host, they are scheduled to second one
-// as long as there is large amount of memory available in.
+// All the VMs are scheduled to first VM as long as it has the same resources ratio
 fn test_dot_product() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
-    let h2 = cloud_sim.add_host("h2", 20, 80);
+    cloud_sim.add_host("h2", 20, 80);
     let s = cloud_sim.add_scheduler("s", Box::new(DotProduct::new()));
 
     let vm1 = cloud_sim.spawn_vm_now(
         1,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -628,8 +627,8 @@ fn test_dot_product() {
         1,
         2,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -637,8 +636,8 @@ fn test_dot_product() {
         1,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -648,8 +647,8 @@ fn test_dot_product() {
 
     assert_eq!(cur_time, 2.);
     assert_eq!(cloud_sim.vm_location(vm1), h1);
-    assert_eq!(cloud_sim.vm_location(vm2), h2);
-    assert_eq!(cloud_sim.vm_location(vm3), h2);
+    assert_eq!(cloud_sim.vm_location(vm2), h1);
+    assert_eq!(cloud_sim.vm_location(vm3), h1);
 }
 
 #[test]
@@ -659,7 +658,7 @@ fn test_dot_product() {
 fn test_norm_based_greedy() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.clone());
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
     cloud_sim.add_host("h2", 20, 80);
@@ -669,8 +668,8 @@ fn test_norm_based_greedy() {
         1,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -678,8 +677,8 @@ fn test_norm_based_greedy() {
         1,
         2,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );
@@ -687,8 +686,8 @@ fn test_norm_based_greedy() {
         1,
         1,
         4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
         None,
         s,
     );

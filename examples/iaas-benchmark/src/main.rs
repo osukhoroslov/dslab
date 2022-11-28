@@ -9,7 +9,7 @@ use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
-use dslab_iaas::core::vm_placement_algorithm::FirstFit;
+use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
 use dslab_iaas::simulation::CloudSimulation;
 
 const CPU_CAPACITY: u32 = 144;

@@ -13,3 +13,4 @@ pub mod slav_metric;
 pub mod vm;
 pub mod vm_api;
 pub mod vm_placement_algorithm;
+pub mod vm_placement_algorithms;
