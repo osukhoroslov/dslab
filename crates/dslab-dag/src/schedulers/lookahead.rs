@@ -115,7 +115,7 @@ impl LookaheadScheduler {
                         let mut best_finish = -1.;
                         let mut best_resource = 0 as usize;
                         let mut best_cores: Vec<u32> = Vec::new();
-                        for resource in 0..resources.len() {
+                        for resource in (0..resources.len()).rev() {
                             let res = evaluate_assignment(
                                 task,
                                 resource,
