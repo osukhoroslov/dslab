@@ -12,7 +12,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use dslab_core::component::Id;
 use dslab_core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
-use crate::{disk::Disk, events::*};
+use crate::{disk::Disk, disk::DiskInfo, events::*};
 
 struct File {
     size: u64,
@@ -34,17 +34,6 @@ pub struct FileSystem {
     requests: HashMap<(Id, u64), (u64, Id, String)>,
     next_request_id: u64,
     ctx: SimulationContext,
-}
-
-/// Struct for disk usage statistics
-#[derive(Debug, PartialEq)]
-pub struct DiskStatistics {
-    /// Disk capacity. Is equal to used_space + free_space
-    pub capacity: u64,
-    /// Amount of used space. Cannot be greater than capacity
-    pub used_space: u64,
-    /// Amount of free space. Cannot be greater than capacity
-    pub free_space: u64,
 }
 
 impl FileSystem {
@@ -275,19 +264,10 @@ impl FileSystem {
     }
 
     /// Returns vec of disk statistics associated to mount points
-    pub fn disks_info(&self) -> Vec<(String, DiskStatistics)> {
+    pub fn disks_info(&self) -> Vec<(String, DiskInfo)> {
         self.disks
             .iter()
-            .map(|(mount_point, v)| {
-                (
-                    mount_point.to_owned(),
-                    DiskStatistics {
-                        capacity: v.borrow().capacity(),
-                        used_space: v.borrow().used_space(),
-                        free_space: v.borrow().free_space(),
-                    },
-                )
-            })
+            .map(|(mount_point, disk)| (mount_point.to_owned(), disk.borrow().info()))
             .collect()
     }
 

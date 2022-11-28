@@ -6,9 +6,9 @@ use sugars::{rc, refcell};
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, Event, EventHandler};
 
-use crate::disk::Disk;
+use crate::disk::{Disk, DiskInfo};
 use crate::events::*;
-use crate::fs::{DiskStatistics, FileSystem};
+use crate::fs::FileSystem;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -137,7 +137,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            DiskStatistics {
+            DiskInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 0,
                 free_space: DISK_CAPACITY
@@ -158,7 +158,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            DiskStatistics {
+            DiskInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 1,
                 free_space: DISK_CAPACITY - 1
@@ -180,7 +180,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            DiskStatistics {
+            DiskInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 3,
                 free_space: DISK_CAPACITY - 3,
@@ -199,7 +199,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            DiskStatistics {
+            DiskInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 1,
                 free_space: DISK_CAPACITY - 1,
