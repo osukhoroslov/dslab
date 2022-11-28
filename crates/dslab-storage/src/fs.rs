@@ -263,7 +263,7 @@ impl FileSystem {
         self.disks.iter().map(|(_, v)| v.borrow().capacity()).sum()
     }
 
-    /// Returns vec of disk info associated to mount points.
+    /// Returns vec of disk info associated with mount points.
     pub fn disks_info(&self) -> Vec<(String, DiskInfo)> {
         self.disks
             .iter()
