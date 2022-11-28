@@ -72,9 +72,9 @@ impl Scheduler for LookaheadScheduler {
         let mut result: Vec<(f64, Action)> = Vec::new();
 
         for task_id in task_ids.into_iter() {
-            let mut best_task_finish_time = -1.;
-            let mut best_start = -1.;
             let mut best_makespan = -1.;
+            let mut best_start = -1.;
+            let mut best_finish = -1.;
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
@@ -114,7 +114,7 @@ impl Scheduler for LookaheadScheduler {
 
                 let mut unscheduled_tasks = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
                 unscheduled_tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
-                let mut max_task_finish_time = finish_time;
+                let mut makespan = finish_time;
                 for &child in unscheduled_tasks.iter() {
                     let (resource, cores, start, finish) = {
                         let task = child;
@@ -165,8 +165,8 @@ impl Scheduler for LookaheadScheduler {
                     }
                     task_locations.insert(child, resources[resource].id);
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
-                    if finish > max_task_finish_time {
-                        max_task_finish_time = finish;
+                    if finish > makespan {
+                        makespan = finish;
                     }
                 }
 
@@ -179,25 +179,25 @@ impl Scheduler for LookaheadScheduler {
                 data_locations = old_data_location;
                 task_locations = old_task_location;
 
-                if best_task_finish_time == -1. || best_task_finish_time > max_task_finish_time {
+                if best_makespan == -1. || best_makespan > makespan {
                     best_start = est;
-                    best_makespan = finish_time;
-                    best_task_finish_time = max_task_finish_time;
+                    best_finish = finish_time;
+                    best_makespan = makespan;
                     best_resource = resource;
                     best_cores = cores.clone();
                 }
             }
 
-            assert!(best_makespan != -1.);
+            assert!(best_finish != -1.);
 
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
                     best_start,
-                    best_makespan,
+                    best_finish,
                     task_id,
                 ));
             }
-            task_finish_times[task_id] = best_makespan;
+            task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((
                 best_start,
@@ -205,6 +205,7 @@ impl Scheduler for LookaheadScheduler {
                     task: task_id,
                     resource: best_resource,
                     cores: best_cores,
+                    expected_span: Some((best_start, best_finish)),
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {

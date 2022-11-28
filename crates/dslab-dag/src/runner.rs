@@ -206,7 +206,14 @@ impl DAGRunner {
         &self.trace_log
     }
 
-    fn process_schedule_action(&mut self, task: usize, resource: usize, need_cores: u32, allowed_cores: Vec<u32>) {
+    fn process_schedule_action(
+        &mut self,
+        task: usize,
+        resource: usize,
+        need_cores: u32,
+        allowed_cores: Vec<u32>,
+        expected_span: Option<(f64, f64)>,
+    ) {
         if need_cores > self.resources[resource].compute.borrow().cores_total() {
             log_error!(
                 self.ctx,
@@ -264,6 +271,9 @@ impl DAGRunner {
                 action_id: self.action_id,
             });
         }
+        if let Some((start, finish)) = expected_span {
+            log_debug!(self.ctx, "Expected span for task {} is {} - {}", task_id, start, finish);
+        }
         self.process_resource_queue(resource);
     }
 
@@ -274,22 +284,28 @@ impl DAGRunner {
         while let Some(action) = self.actions.pop_front() {
             log_debug!(self.ctx, "Got action: {:?}", action);
             match action {
-                Action::ScheduleTask { task, resource, cores } => {
+                Action::ScheduleTask {
+                    task,
+                    resource,
+                    cores,
+                    expected_span,
+                } => {
                     let allowed_cores =
                         (0..self.resources[resource].compute.borrow().cores_total()).collect::<Vec<_>>();
-                    self.process_schedule_action(task, resource, cores, allowed_cores);
+                    self.process_schedule_action(task, resource, cores, allowed_cores, expected_span);
                 }
                 Action::ScheduleTaskOnCores {
                     task,
                     resource,
                     mut cores,
+                    expected_span,
                 } => {
                     cores.sort();
                     if cores.windows(2).any(|window| window[0] == window[1]) {
                         log_error!(self.ctx, "Wrong action, cores list {:?} contains same cores", cores);
                         return;
                     }
-                    self.process_schedule_action(task, resource, cores.len() as u32, cores);
+                    self.process_schedule_action(task, resource, cores.len() as u32, cores, expected_span);
                 }
                 Action::TransferData { data_item, from, to } => {
                     self.add_data_transfer_task(data_item, from, to);

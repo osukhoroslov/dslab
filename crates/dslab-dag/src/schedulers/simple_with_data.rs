@@ -73,6 +73,7 @@ impl SimpleDataScheduler {
                     task: task_id,
                     resource: i,
                     cores,
+                    expected_span: None,
                 });
                 for &data_item in task.outputs.iter() {
                     self.data_location.insert(data_item, resource.id);

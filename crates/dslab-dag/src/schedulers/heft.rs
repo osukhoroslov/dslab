@@ -135,6 +135,7 @@ impl Scheduler for HeftScheduler {
                     task: task_id,
                     resource: best_resource,
                     cores: best_cores,
+                    expected_span: Some((best_start, best_finish)),
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {

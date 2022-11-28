@@ -184,6 +184,7 @@ impl PortfolioScheduler {
                 task,
                 resource: best_resource,
                 cores,
+                expected_span: None,
             });
             for &data_item in dag.get_task(task).outputs.iter() {
                 self.data_location.insert(data_item, best_resource);

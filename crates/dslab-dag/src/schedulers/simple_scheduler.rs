@@ -42,6 +42,7 @@ impl SimpleScheduler {
                     task: task_id,
                     resource: i,
                     cores,
+                    expected_span: None,
                 });
                 break;
             }

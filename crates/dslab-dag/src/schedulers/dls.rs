@@ -74,8 +74,8 @@ impl Scheduler for DlsScheduler {
         for _ in 0..task_ids.len() {
             let mut best_pair: Option<(usize, usize)> = None;
             let mut best_dl: f64 = f64::MIN;
+            let mut best_start = -1.;
             let mut best_finish = -1.;
-            let mut best_time = -1.;
             let mut best_cores: Vec<u32> = Vec::new();
             for &task_id in task_ids.iter().filter(|&i| !scheduled[*i]).filter(|&i| {
                 dag.get_task(*i)
@@ -108,7 +108,7 @@ impl Scheduler for DlsScheduler {
                     if current_score > best_dl {
                         best_dl = current_score;
                         best_pair = Some((task_id, resource));
-                        best_time = finish_time - est;
+                        best_start = est;
                         best_finish = finish_time;
                         best_cores = cores;
                     }
@@ -118,20 +118,17 @@ impl Scheduler for DlsScheduler {
             let (task_id, resource) = best_pair.unwrap();
 
             for &core in best_cores.iter() {
-                scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(
-                    best_finish - best_time,
-                    best_finish,
-                    task_id,
-                ));
+                scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(best_start, best_finish, task_id));
             }
             task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((
-                best_finish - best_time,
+                best_start,
                 Action::ScheduleTaskOnCores {
                     task: task_id,
                     resource,
                     cores: best_cores,
+                    expected_span: Some((best_start, best_finish)),
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {

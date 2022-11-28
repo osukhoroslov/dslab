@@ -12,12 +12,18 @@ use crate::task::TaskState;
 #[derive(Debug)]
 pub enum Action {
     /// Execute the task on the resource using a given *number* of cores.
-    ScheduleTask { task: usize, resource: usize, cores: u32 },
+    ScheduleTask {
+        task: usize,
+        resource: usize,
+        cores: u32,
+        expected_span: Option<(f64, f64)>,
+    },
     /// Execute the task on the resource using a given *set* of cores.
     ScheduleTaskOnCores {
         task: usize,
         resource: usize,
         cores: Vec<u32>,
+        expected_span: Option<(f64, f64)>,
     },
     /// Transfer data item between the specified resources.
     /// Action will be queued if there is no such data item right now.
