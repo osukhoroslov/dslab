@@ -32,14 +32,14 @@ pub struct Disk {
     ctx: SimulationContext,
 }
 
-/// Struct for disk usage statistics
+/// Information about disk, including its capacity and current usage.
 #[derive(Debug, PartialEq)]
 pub struct DiskInfo {
-    /// Disk capacity. Is equal to used_space + free_space
+    /// Disk capacity. Is equal to `used_space` + `free_space`.
     pub capacity: u64,
-    /// Amount of used space. Cannot be greater than capacity
+    /// Amount of used space. Cannot be greater than `capacity`.
     pub used_space: u64,
-    /// Amount of free space. Cannot be greater than capacity
+    /// Amount of free space. Cannot be greater than `capacity`.
     pub free_space: u64,
 }
 
@@ -178,7 +178,7 @@ impl Disk {
         self.ctx.id()
     }
 
-    /// Returns struct with information about disk space usage.
+    /// Returns struct with information about the disk.
     pub fn info(&self) -> DiskInfo {
         DiskInfo {
             capacity: self.capacity(),
