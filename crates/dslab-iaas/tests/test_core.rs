@@ -12,10 +12,10 @@ use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
 use dslab_iaas::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
+use dslab_iaas::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
 use dslab_iaas::core::vm_placement_algorithms::dot_product::DotProduct;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
-use dslab_iaas::core::vm_placement_algorithms::norm_based_greedy::NormBasedGreedy;
-use dslab_iaas::core::vm_placement_algorithms::perp_distance::PerpDistance;
+use dslab_iaas::core::vm_placement_algorithms::norm_diff::L2NormDiff;
 use dslab_iaas::simulation::CloudSimulation;
 
 fn name_wrapper(file_name: &str) -> String {
@@ -525,16 +525,16 @@ fn test_slatah() {
 }
 
 #[test]
-// Test perp dist algorithm which minimizes the distance to host resource usage vector.
+// Test delta perp distance algorithm which minimizes the distance to host resource usage vector.
 // First VM is perfectly suited for first host, second VM is perfect for second host.
-fn test_perp_dist() {
+fn test_delta_perp_dist() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
     let h2 = cloud_sim.add_host("h2", 40, 20);
-    let s = cloud_sim.add_scheduler("s", Box::new(PerpDistance::new()));
+    let s = cloud_sim.add_scheduler("s", Box::new(DeltaPerpDistance::new()));
 
     let vm1 = cloud_sim.spawn_vm_now(
         1,
@@ -652,17 +652,17 @@ fn test_dot_product() {
 }
 
 #[test]
-// Test norm based greedy algorithm.
+// Test L2 Norm Diff algorithm.
 // Greedy algorithm schedules all the VMs to first available host as it is more suited in
 // terms of resource normilized capacities.
-fn test_norm_based_greedy() {
+fn test_l2_norm_based_diff() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 20, 40);
     cloud_sim.add_host("h2", 20, 80);
-    let s = cloud_sim.add_scheduler("s", Box::new(NormBasedGreedy::new()));
+    let s = cloud_sim.add_scheduler("s", Box::new(L2NormDiff::new()));
 
     let vm1 = cloud_sim.spawn_vm_now(
         1,

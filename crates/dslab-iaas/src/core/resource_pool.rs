@@ -58,6 +58,11 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
+    /// Returns datacenter hosts count.
+    pub fn get_host_count(&self) -> u32 {
+        self.hosts.len() as u32
+    }
+
     /// Checks if the specified allocation is currently possible on the specified host.
     pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
         if !self.hosts.contains_key(&host_id) {

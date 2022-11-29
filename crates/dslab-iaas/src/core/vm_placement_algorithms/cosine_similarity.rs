@@ -6,8 +6,8 @@ use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
-/// Cosine similarity algorithm maximizes the cosine of angle between vector of host resources
-/// capacities and vector of resource usages including incoming VM
+/// Maximizes the cosine of the angle between the host's resource usage and resource capacity vectors
+/// after the allocation.
 pub struct CosineSimilarity;
 
 impl CosineSimilarity {
@@ -23,16 +23,14 @@ impl VMPlacementAlgorithm for CosineSimilarity {
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                let total_cpu: f64 = pool_state.get_total_cpu(host) as f64;
-                let total_memory: f64 = pool_state.get_total_memory(host) as f64;
-                let length_total = f64::sqrt(total_cpu.powi(2) + total_memory.powi(2));
-
-                let allocated_cpu: f64 = pool_state.get_allocated_cpu(host) as f64 + alloc.cpu_usage as f64;
-                let allocated_memory: f64 = pool_state.get_allocated_memory(host) as f64 + alloc.memory_usage as f64;
-                let length_allocated = f64::sqrt(allocated_cpu.powi(2) + allocated_memory.powi(2));
-
-                let scalar = total_cpu * allocated_cpu + total_memory * allocated_memory;
-                let cosine = scalar / length_total / length_allocated;
+                let capacity_cpu: f64 = pool_state.get_total_cpu(host) as f64;
+                let capacity_mem: f64 = pool_state.get_total_memory(host) as f64;
+                let capacity_norm = (capacity_cpu.powi(2) + capacity_mem.powi(2)).sqrt();
+                let usage_cpu: f64 = pool_state.get_allocated_cpu(host) as f64 + alloc.cpu_usage as f64;
+                let usage_mem: f64 = pool_state.get_allocated_memory(host) as f64 + alloc.memory_usage as f64;
+                let usage_norm = (usage_cpu.powi(2) + usage_mem.powi(2)).sqrt();
+                let dot_product = capacity_cpu * usage_cpu + capacity_mem * usage_mem;
+                let cosine = dot_product / (capacity_norm * usage_norm);
                 if cosine > max_cosine {
                     max_cosine = cosine;
                     result = Some(host);

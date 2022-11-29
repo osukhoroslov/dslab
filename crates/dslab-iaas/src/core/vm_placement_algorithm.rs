@@ -7,10 +7,10 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithms::best_fit::BestFit;
 use crate::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
 use crate::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
+use crate::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
 use crate::core::vm_placement_algorithms::dot_product::DotProduct;
 use crate::core::vm_placement_algorithms::first_fit::FirstFit;
-use crate::core::vm_placement_algorithms::norm_based_greedy::NormBasedGreedy;
-use crate::core::vm_placement_algorithms::perp_distance::PerpDistance;
+use crate::core::vm_placement_algorithms::norm_diff::L2NormDiff;
 use crate::core::vm_placement_algorithms::weighted_dot_product::WeightedDotProduct;
 use crate::core::vm_placement_algorithms::worst_fit::WorstFit;
 
@@ -37,8 +37,8 @@ pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAl
         "CosineSimilarity" => return Box::new(CosineSimilarity::new()),
         "DotProduct" => return Box::new(DotProduct::new()),
         "WeightedDotProduct" => return Box::new(WeightedDotProduct::new()),
-        "NormBasedGreedy" => return Box::new(NormBasedGreedy::new()),
-        "PerpDistance" => return Box::new(PerpDistance::new()),
+        "L2NormDiff" => return Box::new(L2NormDiff::new()),
+        "DeltaPerpDistance" => return Box::new(DeltaPerpDistance::new()),
         _ => panic!("Can't resolve: {}", config_str),
     }
 }
