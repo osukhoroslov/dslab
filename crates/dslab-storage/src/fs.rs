@@ -273,7 +273,7 @@ impl FileSystem {
 
     /// Returns disk info for a mount point.
     pub fn disk_info(&self, mount_point: &str) -> Result<DiskInfo, String> {
-        self.resolve_disk(mount_point).and_then(|disk| Ok(disk.borrow().info()))
+        self.resolve_disk(mount_point).map(|disk| disk.borrow().info())
     }
 
     /// Returns mount points present in this file system.
