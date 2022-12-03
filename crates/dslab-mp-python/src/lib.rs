@@ -85,12 +85,13 @@ impl PyProcess {
         for m in sent_local {
             ctx.send_local(Message::new(&m.0, &m.1));
         }
-        let timer_actions: Vec<(String, f64)> = py_ctx.getattr(py, "_timer_actions").unwrap().extract(py).unwrap();
+        let timer_actions: Vec<(String, f64, bool)> =
+            py_ctx.getattr(py, "_timer_actions").unwrap().extract(py).unwrap();
         for t in timer_actions {
             if t.1 < 0.0 {
                 ctx.cancel_timer(&t.0);
             } else {
-                ctx.set_timer(&t.0, t.1);
+                ctx.set_timer_detailed(&t.0, t.1, t.2);
             }
         }
     }

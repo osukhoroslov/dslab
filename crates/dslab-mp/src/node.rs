@@ -31,7 +31,7 @@ pub enum ProcessEvent {
     MessageReceived { msg: Message, src: String, dest: String },
     LocalMessageSent { msg: Message },
     LocalMessageReceived { msg: Message },
-    TimerSet { name: String, delay: f64 },
+    TimerSet { name: String, delay: f64, force: bool },
     TimerFired { name: String },
     TimerCancelled { name: String },
 }
@@ -171,9 +171,9 @@ impl Node {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, delay } => {
+                ProcessEvent::TimerSet { name, delay, force } => {
                     assert!(
-                        !proc_entry.pending_timers.contains_key(&name),
+                        force || !proc_entry.pending_timers.contains_key(&name),
                         "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
                         name,
                         proc
