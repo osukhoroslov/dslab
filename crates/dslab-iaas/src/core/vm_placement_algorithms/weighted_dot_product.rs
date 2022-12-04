@@ -33,11 +33,10 @@ impl VMPlacementAlgorithm for WeightedDotProduct {
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                let cpu_product = pool_state.get_available_cpu(host) as f64 * alloc.cpu_usage as f64 * cpu_weight;
-                let memory_product =
-                    pool_state.get_available_memory(host) as f64 * alloc.memory_usage as f64 * memory_weight;
-                let product = cpu_product / (pool_state.get_total_cpu(host) as f64).powi(2)
-                    + memory_product / (pool_state.get_total_memory(host) as f64).powi(2);
+                let cpu_product = (pool_state.get_available_cpu(host) * alloc.cpu_usage) as f64;
+                let memory_product = (pool_state.get_available_memory(host) * alloc.memory_usage) as f64;
+                let product = cpu_weight * cpu_product / (pool_state.get_total_cpu(host)).pow(2) as f64
+                    + memory_weight * memory_product / (pool_state.get_total_memory(host)).pow(2) as f64;
                 if product > max_product {
                     max_product = product;
                     result = Some(host);

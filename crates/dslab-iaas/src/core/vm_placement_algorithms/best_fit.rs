@@ -28,6 +28,6 @@ impl VMPlacementAlgorithm for BestFit {
                 }
             }
         }
-        return result;
+        result
     }
 }

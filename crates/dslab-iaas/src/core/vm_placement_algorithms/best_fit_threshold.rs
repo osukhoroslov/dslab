@@ -42,6 +42,6 @@ impl VMPlacementAlgorithm for BestFitThreshold {
                 }
             }
         }
-        return result;
+        result
     }
 }

@@ -23,11 +23,11 @@ impl VMPlacementAlgorithm for CosineSimilarity {
 
         for host in pool_state.get_hosts_list() {
             if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
-                let capacity_cpu: f64 = pool_state.get_total_cpu(host) as f64;
-                let capacity_mem: f64 = pool_state.get_total_memory(host) as f64;
+                let capacity_cpu = pool_state.get_total_cpu(host) as f64;
+                let capacity_mem = pool_state.get_total_memory(host) as f64;
                 let capacity_norm = (capacity_cpu.powi(2) + capacity_mem.powi(2)).sqrt();
-                let usage_cpu: f64 = pool_state.get_allocated_cpu(host) as f64 + alloc.cpu_usage as f64;
-                let usage_mem: f64 = pool_state.get_allocated_memory(host) as f64 + alloc.memory_usage as f64;
+                let usage_cpu = pool_state.get_allocated_cpu(host) as f64 + alloc.cpu_usage as f64;
+                let usage_mem = pool_state.get_allocated_memory(host) as f64 + alloc.memory_usage as f64;
                 let usage_norm = (usage_cpu.powi(2) + usage_mem.powi(2)).sqrt();
                 let dot_product = capacity_cpu * usage_cpu + capacity_mem * usage_mem;
                 let cosine = dot_product / (capacity_norm * usage_norm);

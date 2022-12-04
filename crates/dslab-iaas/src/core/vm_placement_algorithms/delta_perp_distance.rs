@@ -50,6 +50,5 @@ fn perp_distance(used_cpu: f64, used_memory: f64, total_cpu: f64, total_memory: 
     let used_norm = (used_cpu.powi(2) + used_memory.powi(2)).sqrt();
     let cos = dot_product / (total_norm * used_norm);
     let sin = (1. - cos.powi(2)).sqrt();
-    let distance = used_norm * sin;
-    distance
+    used_norm * sin
 }

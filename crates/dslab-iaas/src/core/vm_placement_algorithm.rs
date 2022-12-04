@@ -30,15 +30,15 @@ pub trait VMPlacementAlgorithm {
 pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAlgorithm> {
     let (algorithm_name, options) = parse_config_value(&config_str);
     match algorithm_name.as_str() {
-        "FirstFit" => return Box::new(FirstFit::new()),
-        "BestFit" => return Box::new(BestFit::new()),
-        "WorstFit" => return Box::new(WorstFit::new()),
-        "BestFitThreshold" => return Box::new(BestFitThreshold::from_str(&options.unwrap())),
-        "CosineSimilarity" => return Box::new(CosineSimilarity::new()),
-        "DotProduct" => return Box::new(DotProduct::new()),
-        "WeightedDotProduct" => return Box::new(WeightedDotProduct::new()),
-        "L2NormDiff" => return Box::new(L2NormDiff::new()),
-        "DeltaPerpDistance" => return Box::new(DeltaPerpDistance::new()),
+        "FirstFit" => Box::new(FirstFit::new()),
+        "BestFit" => Box::new(BestFit::new()),
+        "WorstFit" => Box::new(WorstFit::new()),
+        "BestFitThreshold" => Box::new(BestFitThreshold::from_str(&options.unwrap())),
+        "CosineSimilarity" => Box::new(CosineSimilarity::new()),
+        "DotProduct" => Box::new(DotProduct::new()),
+        "WeightedDotProduct" => Box::new(WeightedDotProduct::new()),
+        "L2NormDiff" => Box::new(L2NormDiff::new()),
+        "DeltaPerpDistance" => Box::new(DeltaPerpDistance::new()),
         _ => panic!("Can't resolve: {}", config_str),
     }
 }

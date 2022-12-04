@@ -122,6 +122,26 @@ impl PlacementStore {
         }
     }
 
+    /// Processes allocation commit request directly from runtime.
+    pub fn direct_commit(&mut self, vm_id: u32, host_id: u32) {
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
+        self.pool_state.allocate(&alloc, host_id);
+        log_debug!(
+            self.ctx,
+            "commited placement of vm {} to host {}",
+            vm_id,
+            self.ctx.lookup_name(host_id)
+        );
+
+        for scheduler in self.schedulers.iter() {
+            self.ctx.emit(
+                AllocationCommitSucceeded { vm_id, host_id },
+                *scheduler,
+                self.sim_config.message_delay,
+            );
+        }
+    }
+
     /// Processes AllocationFailed events from host managers.
     ///
     /// If host allocation fails, usually that means that the host is overloaded.
