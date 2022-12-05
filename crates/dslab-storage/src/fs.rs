@@ -12,7 +12,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use dslab_core::component::Id;
 use dslab_core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
-use crate::{disk::Disk, events::*};
+use crate::{disk::Disk, disk::DiskInfo, events::*};
 
 struct File {
     size: u64,
@@ -80,7 +80,7 @@ impl FileSystem {
         Err(format!("cannot resolve on which disk file [{}] is located", file_path))
     }
 
-    fn get_unique_request_id(&mut self) -> u64 {
+    fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
@@ -119,7 +119,7 @@ impl FileSystem {
     }
 
     fn read_impl(&mut self, file_path: &str, size: Option<u64>, requester: Id) -> u64 {
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
@@ -191,7 +191,7 @@ impl FileSystem {
             file_path,
             requester,
         );
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         match self.resolve_disk(file_path) {
             Ok(disk) => {
                 if let Some(file) = self.files.get_mut(file_path) {
@@ -241,16 +241,47 @@ impl FileSystem {
     }
 
     /// Returns size of the file located at `file_path` if there is any.
-    pub fn get_file_size(&self, file_path: &str) -> Result<u64, String> {
+    pub fn file_size(&self, file_path: &str) -> Result<u64, String> {
         self.files
             .get(file_path)
             .ok_or(format!("file [{}] does not exist", file_path))
             .map(|f| f.size)
     }
 
-    /// Returns amount of used space on all disks currently used by this file system.
-    pub fn get_used_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().get_used_space()).sum()
+    /// Returns amount of used space on all disks currently mounted to this file system.
+    pub fn used_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().used_space()).sum()
+    }
+
+    /// Returns amount of free space on all disks currently mounted to this file system.
+    pub fn free_space(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().free_space()).sum()
+    }
+
+    /// Returns cumulative capacity of all disks currently mounted to this file system.
+    pub fn capacity(&self) -> u64 {
+        self.disks.iter().map(|(_, v)| v.borrow().capacity()).sum()
+    }
+
+    /// Returns vec of disk info associated with mount points.
+    pub fn disks_info(&self) -> Vec<(String, DiskInfo)> {
+        self.disks
+            .iter()
+            .map(|(mount_point, disk)| (mount_point.to_owned(), disk.borrow().info()))
+            .collect()
+    }
+
+    /// Returns disk info for a mount point.
+    pub fn disk_info(&self, mount_point: &str) -> Result<DiskInfo, String> {
+        self.resolve_disk(mount_point).map(|disk| disk.borrow().info())
+    }
+
+    /// Returns mount points present in this file system.
+    pub fn mount_points(&self) -> Vec<String> {
+        self.disks
+            .iter()
+            .map(|(mount_point, _)| mount_point.to_owned())
+            .collect()
     }
 
     /// Deletes file located at `file_path` if there is any.    

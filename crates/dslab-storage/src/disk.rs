@@ -32,6 +32,17 @@ pub struct Disk {
     ctx: SimulationContext,
 }
 
+/// Information about disk, including its capacity and current usage.
+#[derive(Debug, PartialEq)]
+pub struct DiskInfo {
+    /// Disk capacity. Is equal to `used_space` + `free_space`.
+    pub capacity: u64,
+    /// Amount of used space. Cannot be greater than `capacity`.
+    pub used_space: u64,
+    /// Amount of free space. Cannot be greater than `capacity`.
+    pub free_space: u64,
+}
+
 impl Disk {
     /// Creates new disk.
     pub fn new(
@@ -61,7 +72,7 @@ impl Disk {
         )
     }
 
-    fn get_unique_request_id(&mut self) -> u64 {
+    fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
@@ -80,7 +91,7 @@ impl Disk {
             size,
             requester
         );
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         if size > self.capacity {
             let error = format!(
                 "requested read size is {} but only {} is available",
@@ -109,7 +120,7 @@ impl Disk {
     /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current disk.
     pub fn write(&mut self, size: u64, requester: Id) -> u64 {
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         log_debug!(
             self.ctx,
             "Received write request, size: {}, requester: {}",
@@ -148,12 +159,31 @@ impl Disk {
     }
 
     /// Returns the amount of used disk space.
-    pub fn get_used_space(&self) -> u64 {
+    pub fn used_space(&self) -> u64 {
         self.used
+    }
+
+    /// Returns the amount of free disk space.
+    pub fn free_space(&self) -> u64 {
+        self.capacity - self.used
+    }
+
+    /// Returns the capacity of disk.
+    pub fn capacity(&self) -> u64 {
+        self.capacity
     }
 
     /// Returns id of this disk.
     pub fn id(&self) -> Id {
         self.ctx.id()
+    }
+
+    /// Returns struct with information about the disk.
+    pub fn info(&self) -> DiskInfo {
+        DiskInfo {
+            capacity: self.capacity(),
+            used_space: self.used_space(),
+            free_space: self.free_space(),
+        }
     }
 }

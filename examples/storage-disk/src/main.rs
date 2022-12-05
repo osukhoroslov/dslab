@@ -56,17 +56,17 @@ impl EventHandler for User {
                 log_debug!(self.ctx, "Test #1: Then trying to read 6 bytes... should fail");
                 self.requests.insert(self.disk.borrow_mut().read(6, self.ctx.id()), 1);
 
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().get_used_space());
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
 
                 log_debug!(self.ctx, "Test #2: Writing 4 bytes... should be OK");
                 self.requests.insert(self.disk.borrow_mut().write(4, self.ctx.id()), 2);
 
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().get_used_space());
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
 
                 log_debug!(self.ctx, "Test #3: Writing 2 more bytes... should fail");
                 self.requests.insert(self.disk.borrow_mut().write(2, self.ctx.id()), 3);
 
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().get_used_space());
+                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
             }
             DataReadCompleted { request_id, size } => {
                 log_debug!(
