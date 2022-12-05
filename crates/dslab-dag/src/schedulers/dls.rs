@@ -27,23 +27,8 @@ impl DlsScheduler {
         self.data_transfer_strategy = data_transfer_strategy;
         self
     }
-}
 
-impl Scheduler for DlsScheduler {
-    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
-        assert_ne!(
-            config.data_transfer_mode,
-            DataTransferMode::Manual,
-            "DlsScheduler doesn't support DataTransferMode::Manual"
-        );
-
-        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
-            log_warn!(
-                ctx,
-                "some tasks support different number of cores, but DLS will always use min_cores"
-            );
-        }
-
+    fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
@@ -51,9 +36,11 @@ impl Scheduler for DlsScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
+        let median_flop_time = median(system.resources.iter().map(|r| 1. / r.speed as f64));
+
+        let task_static_levels = calc_ranks(median_flop_time, avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
-        task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
+        task_ids.sort_by(|&a, &b| task_static_levels[b].total_cmp(&task_static_levels[a]));
 
         let mut scheduled_tasks = resources
             .iter()
@@ -63,7 +50,7 @@ impl Scheduler for DlsScheduler {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let mut task_finish_times = vec![1e100; task_count];
+        let mut task_finish_times = vec![0.; task_count];
         let mut scheduled = vec![false; task_count];
 
         let mut data_locations: HashMap<usize, Id> = HashMap::new();
@@ -72,6 +59,7 @@ impl Scheduler for DlsScheduler {
         let mut result: Vec<(f64, Action)> = Vec::new();
 
         for _ in 0..task_ids.len() {
+            // stores (task_id, resource) pair with the best dynamic level value
             let mut best_pair: Option<(usize, usize)> = None;
             let mut best_dl: f64 = f64::MIN;
             let mut best_start = -1.;
@@ -104,7 +92,9 @@ impl Scheduler for DlsScheduler {
                     }
                     let (start_time, finish_time, cores) = res.unwrap();
 
-                    let current_score = task_ranks[task_id] - start_time;
+                    let delta = dag.get_task(task_id).flops as f64
+                        * (median_flop_time - 1. / system.resources[resource].speed as f64);
+                    let current_score = task_static_levels[task_id] - start_time + delta;
                     if current_score > best_dl {
                         best_dl = current_score;
                         best_pair = Some((task_id, resource));
@@ -146,6 +136,25 @@ impl Scheduler for DlsScheduler {
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result.into_iter().map(|(_, b)| b).collect()
     }
+}
+
+impl Scheduler for DlsScheduler {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "DlsScheduler doesn't support DataTransferMode::Manual"
+        );
+
+        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
+            log_warn!(
+                ctx,
+                "some tasks support different number of cores, but DLS will always use min_cores"
+            );
+        }
+
+        self.schedule(dag, system, config, ctx)
+    }
 
     fn on_task_state_changed(
         &mut self,
@@ -156,5 +165,15 @@ impl Scheduler for DlsScheduler {
         _ctx: &SimulationContext,
     ) -> Vec<Action> {
         Vec::new()
+    }
+}
+
+fn median(data: impl Iterator<Item = f64>) -> f64 {
+    let mut v: Vec<f64> = data.collect();
+    v.sort_by(|a, b| a.total_cmp(b));
+    if v.len() % 2 == 1 {
+        v[v.len() / 2]
+    } else {
+        (v[v.len() / 2] + v[v.len() / 2 - 1]) / 2.
     }
 }

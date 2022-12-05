@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::Id;
-use dslab_core::{log_error, log_info, log_warn};
+use dslab_core::{log_info, log_warn};
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
@@ -27,23 +27,8 @@ impl PeftScheduler {
         self.data_transfer_strategy = data_transfer_strategy;
         self
     }
-}
 
-impl Scheduler for PeftScheduler {
-    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
-        assert_ne!(
-            config.data_transfer_mode,
-            DataTransferMode::Manual,
-            "PeftScheduler doesn't support DataTransferMode::Manual"
-        );
-
-        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
-            log_warn!(
-                ctx,
-                "some tasks support different number of cores, but HEFT will always use min_cores"
-            );
-        }
-
+    fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
@@ -69,7 +54,7 @@ impl Scheduler for PeftScheduler {
                                         )
                             })
                             .min_by(|a, b| a.total_cmp(&b))
-                            .unwrap_or(0.)
+                            .unwrap()
                     })
                     .max_by(|a, b| a.total_cmp(&b))
                     .unwrap_or(0.);
@@ -115,6 +100,7 @@ impl Scheduler for PeftScheduler {
                 .unwrap();
             let mut best_finish = -1.;
             let mut best_start = -1.;
+            let mut best_oeft = -1.;
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
@@ -137,22 +123,18 @@ impl Scheduler for PeftScheduler {
                 }
                 let (start_time, finish_time, cores) = res.unwrap();
 
-                if best_finish == -1. || best_finish > finish_time {
+                let oeft = finish_time + oct[task_id][resource];
+
+                if best_oeft == -1. || best_oeft > oeft {
                     best_start = start_time;
                     best_finish = finish_time;
+                    best_oeft = oeft;
                     best_resource = resource;
                     best_cores = cores;
                 }
             }
 
-            if best_finish == -1. {
-                log_error!(
-                    ctx,
-                    "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task",
-                    dag.get_task(task_id ).name
-                );
-                return Vec::new();
-            }
+            assert_ne!(best_finish, -1.);
 
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
@@ -186,6 +168,25 @@ impl Scheduler for PeftScheduler {
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result.into_iter().map(|(_, b)| b).collect()
+    }
+}
+
+impl Scheduler for PeftScheduler {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "PeftScheduler doesn't support DataTransferMode::Manual"
+        );
+
+        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
+            log_warn!(
+                ctx,
+                "some tasks support different number of cores, but PEFT will always use min_cores"
+            );
+        }
+
+        self.schedule(dag, system, config, ctx)
     }
 
     fn on_task_state_changed(

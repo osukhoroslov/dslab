@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::Id;
-use dslab_core::{log_debug, log_error, log_info, log_warn};
+use dslab_core::{log_info, log_warn};
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
@@ -27,23 +27,8 @@ impl HeftScheduler {
         self.data_transfer_strategy = data_transfer_strategy;
         self
     }
-}
 
-impl Scheduler for HeftScheduler {
-    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
-        assert_ne!(
-            config.data_transfer_mode,
-            DataTransferMode::Manual,
-            "HeftScheduler doesn't support DataTransferMode::Manual"
-        );
-
-        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
-            log_warn!(
-                ctx,
-                "some tasks support different number of cores, but HEFT will always use min_cores"
-            );
-        }
-
+    fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
@@ -103,24 +88,8 @@ impl Scheduler for HeftScheduler {
                 }
             }
 
-            if best_finish == -1. {
-                log_error!(
-                    ctx,
-                    "couldn't schedule task {}, since every resource has less cores than minimum requirement for this task",
-                    dag.get_task(task_id ).name
-                );
-                return Vec::new();
-            }
+            assert_ne!(best_finish, -1.);
 
-            log_debug!(
-                ctx,
-                "scheduling [heft] task {} on resource {} on cores {:?} on time {:.3}-{:.3}",
-                dag.get_task(task_id).name,
-                resources[best_resource].name,
-                best_cores,
-                best_start,
-                best_finish
-            );
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
                     best_start,
@@ -152,6 +121,25 @@ impl Scheduler for HeftScheduler {
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result.into_iter().map(|(_, b)| b).collect()
+    }
+}
+
+impl Scheduler for HeftScheduler {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "HeftScheduler doesn't support DataTransferMode::Manual"
+        );
+
+        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
+            log_warn!(
+                ctx,
+                "some tasks support different number of cores, but HEFT will always use min_cores"
+            );
+        }
+
+        self.schedule(dag, system, config, ctx)
     }
 
     fn on_task_state_changed(

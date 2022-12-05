@@ -27,23 +27,8 @@ impl LookaheadScheduler {
         self.data_transfer_strategy = data_transfer_strategy;
         self
     }
-}
 
-impl Scheduler for LookaheadScheduler {
-    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
-        assert_ne!(
-            config.data_transfer_mode,
-            DataTransferMode::Manual,
-            "LookaheadScheduler doesn't support DataTransferMode::Manual"
-        );
-
-        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
-            log_warn!(
-                ctx,
-                "some tasks support different number of cores, but Lookahead will always use min_cores"
-            );
-        }
-
+    fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
@@ -159,7 +144,7 @@ impl Scheduler for LookaheadScheduler {
                             }
                         }
 
-                        assert!(best_finish != -1.);
+                        assert_ne!(best_finish, -1.);
 
                         (best_resource, best_cores, best_start, best_finish)
                     };
@@ -196,7 +181,7 @@ impl Scheduler for LookaheadScheduler {
                 }
             }
 
-            assert!(best_finish != -1.);
+            assert_ne!(best_finish, -1.);
 
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
@@ -230,6 +215,25 @@ impl Scheduler for LookaheadScheduler {
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result.into_iter().map(|(_, b)| b).collect()
+    }
+}
+
+impl Scheduler for LookaheadScheduler {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
+        assert_ne!(
+            config.data_transfer_mode,
+            DataTransferMode::Manual,
+            "LookaheadScheduler doesn't support DataTransferMode::Manual"
+        );
+
+        if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
+            log_warn!(
+                ctx,
+                "some tasks support different number of cores, but Lookahead will always use min_cores"
+            );
+        }
+
+        self.schedule(dag, system, config, ctx)
     }
 
     fn on_task_state_changed(
