@@ -16,18 +16,40 @@ pub enum Action {
         task: usize,
         resource: usize,
         cores: u32,
-        expected_span: Option<(f64, f64)>,
+        expected_span: Option<TimeSpan>,
     },
     /// Execute the task on the resource using a given *set* of cores.
     ScheduleTaskOnCores {
         task: usize,
         resource: usize,
         cores: Vec<u32>,
-        expected_span: Option<(f64, f64)>,
+        expected_span: Option<TimeSpan>,
     },
     /// Transfer data item between the specified resources.
     /// Action will be queued if there is no such data item right now.
     TransferData { data_item: usize, from: Id, to: Id },
+}
+
+#[derive(Debug)]
+pub struct TimeSpan {
+    start: f64,
+    finish: f64,
+}
+
+impl TimeSpan {
+    pub fn new(start: f64, finish: f64) -> Self {
+        Self { start, finish }
+    }
+
+    pub fn start(&self) -> f64 {
+        self.start
+    }
+    pub fn finish(&self) -> f64 {
+        self.finish
+    }
+    pub fn length(&self) -> f64 {
+        self.finish - self.start
+    }
 }
 
 /// Trait for implementing DAG scheduling algorithms.

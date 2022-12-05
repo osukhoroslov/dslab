@@ -7,7 +7,7 @@ use dslab_core::{log_info, log_warn};
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
-use crate::scheduler::{Action, Scheduler};
+use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::schedulers::common::*;
 use crate::system::System;
 use crate::task::*;
@@ -128,7 +128,7 @@ impl Scheduler for DlsScheduler {
                     task: task_id,
                     resource,
                     cores: best_cores,
-                    expected_span: Some((best_start, best_finish)),
+                    expected_span: Some(TimeSpan::new(best_start, best_finish)),
                 },
             ));
             for &output in dag.get_task(task_id).outputs.iter() {

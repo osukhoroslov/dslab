@@ -22,7 +22,7 @@ use dslab_network::network::Network;
 use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
-use crate::scheduler::{Action, Scheduler};
+use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::system::System;
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
@@ -212,7 +212,7 @@ impl DAGRunner {
         resource: usize,
         need_cores: u32,
         allowed_cores: Vec<u32>,
-        expected_span: Option<(f64, f64)>,
+        expected_span: Option<TimeSpan>,
     ) {
         if need_cores > self.resources[resource].compute.borrow().cores_total() {
             log_error!(
@@ -271,8 +271,14 @@ impl DAGRunner {
                 action_id: self.action_id,
             });
         }
-        if let Some((start, finish)) = expected_span {
-            log_debug!(self.ctx, "Expected span for task {} is {} - {}", task_id, start, finish);
+        if let Some(time_span) = expected_span {
+            log_debug!(
+                self.ctx,
+                "Expected span for task {} is {} - {}",
+                task_id,
+                time_span.start(),
+                time_span.finish()
+            );
         }
         self.process_resource_queue(resource);
     }
