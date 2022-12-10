@@ -2,194 +2,162 @@ use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
+use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
 use dslab_iaas::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
 use dslab_iaas::core::vm_placement_algorithms::dot_product::DotProduct;
+use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
 use dslab_iaas::core::vm_placement_algorithms::norm_diff::L2NormDiff;
+use dslab_iaas::core::vm_placement_algorithms::weighted_dot_product::WeightedDotProduct;
+use dslab_iaas::core::vm_placement_algorithms::worst_fit::WorstFit;
 use dslab_iaas::simulation::CloudSimulation;
 
-fn name_wrapper(file_name: &str) -> String {
-    format!("test-configs/{}", file_name)
-}
+// Runs the VM placement algorithm and checks its' placement decisions.
+//
+// The resource pool configuration and VMs sequence are chosen specially to show the difference between algorithms.
+// The resource pool contains four hosts: two with 5 CPUs and 5GB of memory, and two with 8 CPUs and 4 GB of memory.
+// The initial pool state consists of four VMs which are spawned directly on the hosts.
+// There are three VMs spawned in the main stage, which should be placed by the algorithm.
+// The hosts used for running each of these VMs are collected and compared to the expected hosts.
+fn check_placements(algorithm: Box<dyn VMPlacementAlgorithm>, expected_hosts: Vec<&str>) {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file("test-configs/config_zero_latency.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-// Configuration for algorithms tests, designed specially for showing their dirrerence.
-// There are four hosts in simulation two with 5 CPUs and 5GB memory amount
-// and two with 8 CPUs and 4 GB of memory.
-// There are some virtual machnes spawned directly on hosts to build some initial configuration
-// and skip the filling stage.
-// There are three VMs spawned in main stage while the tests check only three of these allocations only.
-// Function returns vector of VM IDs spawned during the main stage.
-fn spawn_multiple_vms(cloud_sim: &mut CloudSimulation, scheduler_id: u32) -> Vec<u32> {
-    let h1 = cloud_sim.add_host("h1", 5, 5);
-    let h2 = cloud_sim.add_host("h2", 5, 5);
-    let h3 = cloud_sim.add_host("h3", 8, 4);
-    let h4 = cloud_sim.add_host("h4", 8, 4);
+    let mut host_ids = Vec::<u32>::new();
+    host_ids.push(cloud_sim.add_host("h1", 5, 5));
+    host_ids.push(cloud_sim.add_host("h2", 5, 5));
+    host_ids.push(cloud_sim.add_host("h3", 8, 4));
+    host_ids.push(cloud_sim.add_host("h4", 8, 4));
 
-    cloud_sim.spawn_vm_directly(
+    cloud_sim.spawn_vm_on_host(
         1,
         2,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
-        h1,
+        host_ids[0],
     );
-    cloud_sim.spawn_vm_directly(
+    cloud_sim.spawn_vm_on_host(
         1,
         2,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
-        h2,
+        host_ids[1],
     );
-    cloud_sim.spawn_vm_directly(
+    cloud_sim.spawn_vm_on_host(
         2,
         1,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
-        h3,
+        host_ids[2],
     );
-    cloud_sim.spawn_vm_directly(
+    cloud_sim.spawn_vm_on_host(
         4,
         1,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
-        h4,
+        host_ids[3],
     );
 
-    let mut result = Vec::<u32>::new();
-    result.push(cloud_sim.spawn_vm_now(
+    cloud_sim.step_for_duration(1.);
+
+    let scheduler_id = cloud_sim.add_scheduler("s", algorithm);
+
+    let mut vm_ids = Vec::<u32>::new();
+    vm_ids.push(cloud_sim.spawn_vm_now(
         2,
         2,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
         scheduler_id,
     ));
-    result.push(cloud_sim.spawn_vm_now(
+    vm_ids.push(cloud_sim.spawn_vm_now(
         3,
         1,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
         scheduler_id,
     ));
-    result.push(cloud_sim.spawn_vm_now(
+    vm_ids.push(cloud_sim.spawn_vm_now(
         1,
         1,
-        4.0,
+        10.0,
         Box::new(ConstantLoadModel::new(1.0)),
         Box::new(ConstantLoadModel::new(1.0)),
         None,
         scheduler_id,
     ));
 
-    cloud_sim.step_for_duration(2.);
+    cloud_sim.step_for_duration(1.);
     let cur_time = cloud_sim.current_time();
     assert_eq!(cur_time, 2.);
 
-    result
+    for i in 0..vm_ids.len() {
+        assert_eq!(cloud_sim.vm_location(vm_ids[i]), cloud_sim.lookup_id(expected_hosts[i]));
+    }
 }
 
 #[test]
-// Test delta perp distance algorithm which minimizes the distance to host resource usage vector.
-// Algorithm skips third host as long as a balance of resources is already achieved there.
-fn test_delta_perp_dist() {
-    let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let s = cloud_sim.add_scheduler("s", Box::new(DeltaPerpDistance::new()));
-
-    let vms = spawn_multiple_vms(&mut cloud_sim, s);
-    assert_eq!(
-        cloud_sim.vm_location(vms[0]),
-        cloud_sim.host_by_name("h4").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[1]),
-        cloud_sim.host_by_name("h1").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[2]),
-        cloud_sim.host_by_name("h2").borrow_mut().id
-    );
+// Tests FirstFit algorithm.
+fn test_first_fit() {
+    check_placements(Box::new(FirstFit::new()), vec!["h1", "h2", "h1"]);
 }
 
 #[test]
-// Test cosine similarity algorithm.
-// Third host is bigger than first and second thus the cosine is relatively smaller than
-// other choices while dot product and perp distance are much bigger due to bigger linear sizes.
-fn test_cosine_similarity() {
-    let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let s = cloud_sim.add_scheduler("s", Box::new(CosineSimilarity::new()));
-
-    let vms = spawn_multiple_vms(&mut cloud_sim, s);
-    assert_eq!(
-        cloud_sim.vm_location(vms[0]),
-        cloud_sim.host_by_name("h4").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[1]),
-        cloud_sim.host_by_name("h3").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[2]),
-        cloud_sim.host_by_name("h3").borrow_mut().id
-    );
+// Tests BestFit algorithm.
+fn test_best_fit() {
+    check_placements(Box::new(BestFit::new()), vec!["h1", "h2", "h2"]);
 }
 
 #[test]
-// Test dot product algorithm.
+// Tests WorstFit algorithm.
+fn test_worst_fit() {
+    check_placements(Box::new(WorstFit::new()), vec!["h3", "h1", "h2"]);
+}
+
+#[test]
+// Tests Dot Product algorithm.
 fn test_dot_product() {
-    let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let s = cloud_sim.add_scheduler("s", Box::new(DotProduct::new()));
-
-    let vms = spawn_multiple_vms(&mut cloud_sim, s);
-    assert_eq!(
-        cloud_sim.vm_location(vms[0]),
-        cloud_sim.host_by_name("h3").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[1]),
-        cloud_sim.host_by_name("h1").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[2]),
-        cloud_sim.host_by_name("h2").borrow_mut().id
-    );
+    check_placements(Box::new(DotProduct::new()), vec!["h3", "h1", "h2"]);
 }
 
 #[test]
-// Test L2 Norm Diff algorithm.
-// Selects fourth host twice due to resources weights usage.
-fn test_l2_norm_based_diff() {
-    let sim = Simulation::new(123);
-    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let s = cloud_sim.add_scheduler("s", Box::new(L2NormDiff::new()));
+// Tests Weighted Dot Product algorithm.
+fn test_weighted_dot_product() {
+    check_placements(Box::new(WeightedDotProduct::new()), vec!["h3", "h1", "h2"]);
+}
 
-    let vms = spawn_multiple_vms(&mut cloud_sim, s);
-    assert_eq!(
-        cloud_sim.vm_location(vms[0]),
-        cloud_sim.host_by_name("h4").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[1]),
-        cloud_sim.host_by_name("h1").borrow_mut().id
-    );
-    assert_eq!(
-        cloud_sim.vm_location(vms[2]),
-        cloud_sim.host_by_name("h4").borrow_mut().id
-    );
+#[test]
+// Tests L2 Norm Diff algorithm.
+// Selects the fourth host twice due to resources weights usage.
+fn test_l2_norm_diff() {
+    check_placements(Box::new(L2NormDiff::new()), vec!["h4", "h1", "h4"]);
+}
+
+#[test]
+// Tests Cosine Similarity algorithm.
+// The third host is bigger than the first and the second ones thus the cosine is relatively smaller than
+// the other choices while dot product and perp distance are much bigger due to bigger linear sizes.
+fn test_cosine_similarity() {
+    check_placements(Box::new(CosineSimilarity::new()), vec!["h4", "h3", "h3"]);
+}
+
+#[test]
+// Tests Delta Perp-Distance algorithm.
+// Algorithm skips the third host as long as the balance of resources is already achieved there.
+fn test_delta_perp_distance() {
+    check_placements(Box::new(DeltaPerpDistance::new()), vec!["h4", "h1", "h2"]);
 }

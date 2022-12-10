@@ -1,4 +1,4 @@
-//! Delta Perp Distance algorithm.
+//! Delta Perp-Distance algorithm.
 
 use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;

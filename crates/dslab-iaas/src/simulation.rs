@@ -221,9 +221,9 @@ impl CloudSimulation {
         id
     }
 
-    /// Creates new VM with specified properties and spawns it directly on specified host
-    /// skipping the scheduler stage. For unit testing purposes only.
-    pub fn spawn_vm_directly(
+    /// Creates new VM with specified properties and spawns it on the specified host bypassing the scheduling step.
+    /// This is useful for creating the initial resource pool state.
+    pub fn spawn_vm_on_host(
         &mut self,
         cpu_usage: u32,
         memory_usage: u64,
@@ -245,12 +245,7 @@ impl CloudSimulation {
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.placement_store.borrow_mut().direct_commit(id, host_id);
-        self.hosts
-            .get(&host_id)
-            .unwrap()
-            .borrow_mut()
-            .direct_allocation_request(id);
+        self.placement_store.borrow_mut().direct_allocation_commit(id, host_id);
         id
     }
 

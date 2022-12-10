@@ -251,12 +251,6 @@ impl HostManager {
         }
     }
 
-    /// Processes allocation request, allocates resources to start new VM.
-    /// This function is called directly from Simulation crate.
-    pub fn direct_allocation_request(&mut self, vm_id: u32) -> bool {
-        self.on_allocation_request(vm_id)
-    }
-
     /// Processes migration request (as migration target), allocates resources to start new VM, updates VM status.
     fn on_migration_request(&mut self, source_host: u32, vm_id: u32) {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
