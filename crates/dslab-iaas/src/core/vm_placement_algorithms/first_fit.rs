@@ -6,7 +6,7 @@ use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
-/// FirstFit algorithm, which returns the first suitable host.
+/// Uses the first suitable host.
 pub struct FirstFit;
 
 impl FirstFit {

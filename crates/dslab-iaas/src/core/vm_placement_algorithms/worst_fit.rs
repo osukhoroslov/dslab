@@ -6,7 +6,7 @@ use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
-/// WorstFit algorithm, which returns the least loaded (by CPU) suitable host.
+/// Uses the least loaded (by allocated CPU) suitable host.
 pub struct WorstFit;
 
 impl WorstFit {

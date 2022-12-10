@@ -40,6 +40,7 @@ impl VMPlacementAlgorithm for DeltaPerpDistance {
         result
     }
 }
+
 /// Calculates perpendicular distance between {used_cpu, used_memory} and {total_cpu, total_memory} vectors.
 fn perp_distance(used_cpu: f64, used_memory: f64, total_cpu: f64, total_memory: f64) -> f64 {
     if used_cpu == 0. && used_memory == 0. {

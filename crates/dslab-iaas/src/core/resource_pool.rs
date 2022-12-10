@@ -58,7 +58,7 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
-    /// Returns datacenter hosts count.
+    /// Returns the number of hosts.
     pub fn get_host_count(&self) -> u32 {
         self.hosts.len() as u32
     }

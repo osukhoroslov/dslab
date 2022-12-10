@@ -88,7 +88,7 @@ impl PlacementStore {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
                 self.ctx,
-                "commited placement of vm {} to host {}",
+                "committed placement of vm {} to host {}",
                 vm_id,
                 self.ctx.lookup_name(host_id)
             );
@@ -128,7 +128,7 @@ impl PlacementStore {
         self.pool_state.allocate(&alloc, host_id);
         log_debug!(
             self.ctx,
-            "commited placement of vm {} to host {}",
+            "committed placement of vm {} to host {}",
             vm_id,
             self.ctx.lookup_name(host_id)
         );

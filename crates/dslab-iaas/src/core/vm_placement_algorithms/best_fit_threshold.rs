@@ -6,7 +6,9 @@ use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
-/// BestFit algorithm, which returns the most loaded (by actual CPU load) suitable host.
+/// Uses the most loaded (by actual CPU load) suitable host.
+/// The host load after placement should be less than the specified `threshold`.
+/// This algorithm can be used only in resource overcommitment mode.
 pub struct BestFitThreshold {
     threshold: f64,
 }
