@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
+use dslab_storage::resource::StorageResource;
 use env_logger::Builder;
 use serde::Serialize;
 use sugars::{rc, refcell};

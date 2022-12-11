@@ -12,7 +12,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use dslab_core::component::Id;
 use dslab_core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
-use crate::{disk::Disk, disk::DiskInfo, events::*};
+use crate::{events::*, resource::StorageResource, resource::StorageResourceInfo};
 
 struct File {
     size: u64,
@@ -29,7 +29,7 @@ impl File {
 /// Representation of file system.
 pub struct FileSystem {
     files: HashMap<String, File>,
-    disks: HashMap<String, Rc<RefCell<Disk>>>,
+    disks: HashMap<String, Rc<RefCell<dyn StorageResource>>>,
     /// Mapping (disk id, disk_request_id) -> (request_id, requester, file_path).
     requests: HashMap<(Id, u64), (u64, Id, String)>,
     next_request_id: u64,
@@ -49,7 +49,7 @@ impl FileSystem {
     }
 
     /// Mounts `disk` to `mount_point` if it is not taken yet.
-    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
+    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<dyn StorageResource>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
         if self.disks.get(mount_point).is_some() {
             return Err(format!("mount point [{}] is already is use", mount_point));
@@ -71,7 +71,7 @@ impl FileSystem {
         Ok(())
     }
 
-    fn resolve_disk(&self, file_path: &str) -> Result<Rc<RefCell<Disk>>, String> {
+    fn resolve_disk(&self, file_path: &str) -> Result<Rc<RefCell<dyn StorageResource>>, String> {
         for (mount_point, disk) in &self.disks {
             if file_path.starts_with(mount_point) {
                 return Ok(disk.clone());
@@ -264,7 +264,7 @@ impl FileSystem {
     }
 
     /// Returns vec of disk info associated with mount points.
-    pub fn disks_info(&self) -> Vec<(String, DiskInfo)> {
+    pub fn disks_info(&self) -> Vec<(String, StorageResourceInfo)> {
         self.disks
             .iter()
             .map(|(mount_point, disk)| (mount_point.to_owned(), disk.borrow().info()))
@@ -272,7 +272,7 @@ impl FileSystem {
     }
 
     /// Returns disk info for a mount point.
-    pub fn disk_info(&self, mount_point: &str) -> Result<DiskInfo, String> {
+    pub fn disk_info(&self, mount_point: &str) -> Result<StorageResourceInfo, String> {
         self.resolve_disk(mount_point).map(|disk| disk.borrow().info())
     }
 

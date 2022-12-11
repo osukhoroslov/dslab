@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use clap::Parser;
+use dslab_storage::resource::StorageResource;
 use env_logger::Builder;
 use random::CustomRandom;
 use serde::Serialize;

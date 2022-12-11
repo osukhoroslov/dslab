@@ -1,40 +1,40 @@
-//! Events produced by disk and file system.
+//! Events produced by storage resource and file system.
 
 use serde::Serialize;
 
-// Disk events
+// Storage resource events
 
 #[derive(Serialize)]
-/// Corresponds to completion of disk read request. Source: disk, destination: requester.
+/// Corresponds to completion of storage resource read request. Source: storage resource, destination: requester.
 pub struct DataReadCompleted {
-    /// Request id returned by [`crate::disk::Disk::read()`] method.
+    /// Request id returned by [`crate::resource::StorageResource::read()`] method.
     pub request_id: u64,
-    /// Size of data read from disk.
+    /// Size of data read from storage resource.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Corresponds to failure of disk read request. Source: disk, destination: requester.
+/// Corresponds to failure of storage resource read request. Source: storage resource, destination: requester.
 pub struct DataReadFailed {
-    /// Request id returned by [`crate::disk::Disk::read()`] method.
+    /// Request id returned by [`crate::resource::StorageResource::read()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
 }
 
 #[derive(Serialize)]
-/// Corresponds to completion of disk write request. Source: disk, destination: requester.
+/// Corresponds to completion of storage resource write request. Source: storage resource, destination: requester.
 pub struct DataWriteCompleted {
-    /// Request id returned by [`crate::disk::Disk::write()`] method.
+    /// Request id returned by [`crate::resource::StorageResource::write()`] method.
     pub request_id: u64,
-    /// Size of data written to disk.
+    /// Size of data written to storage resource.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Corresponds to failure of disk write request. Source: disk, destination: requester.
+/// Corresponds to failure of storage resource write request. Source: storage resource, destination: requester.
 pub struct DataWriteFailed {
-    /// Request id returned by [`crate::disk::Disk::write()`] method.
+    /// Request id returned by [`crate::resource::StorageResource::write()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,

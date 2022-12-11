@@ -14,6 +14,7 @@ use dslab_network::model::*;
 use dslab_network::network::Network;
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
+use dslab_storage::resource::StorageResource;
 
 use crate::common::Start;
 use crate::task::*;
