@@ -65,10 +65,15 @@ pub trait Scheduler {
     /// For static algorithms just return `Vec::new()`.
     fn on_task_state_changed(
         &mut self,
-        task: usize,
-        task_state: TaskState,
-        dag: &DAG,
-        system: System,
-        ctx: &SimulationContext,
-    ) -> Vec<Action>;
+        _task: usize,
+        _task_state: TaskState,
+        _dag: &DAG,
+        _system: System,
+        _ctx: &SimulationContext,
+    ) -> Vec<Action> {
+        Vec::new()
+    }
+
+    /// Should be true iff on_task_state_chaged always returns empty vector.
+    fn is_static(&self) -> bool;
 }

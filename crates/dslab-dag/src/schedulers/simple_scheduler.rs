@@ -71,4 +71,8 @@ impl Scheduler for SimpleScheduler {
     ) -> Vec<Action> {
         self.schedule(dag, system.resources)
     }
+
+    fn is_static(&self) -> bool {
+        false
+    }
 }

@@ -214,4 +214,8 @@ impl Scheduler for PortfolioScheduler {
     ) -> Vec<Action> {
         self.schedule(dag, system.resources)
     }
+
+    fn is_static(&self) -> bool {
+        false
+    }
 }

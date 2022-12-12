@@ -272,37 +272,3 @@ pub fn topsort(dag: &DAG) -> Vec<usize> {
     order.reverse();
     order
 }
-
-pub fn calc_makespan(
-    scheduled_tasks: &Vec<Vec<BTreeSet<ScheduledTask>>>,
-    dag: &DAG,
-    resources: &Vec<crate::resource::Resource>,
-    network: &Network,
-    ctx: &SimulationContext,
-) -> f64 {
-    scheduled_tasks
-        .iter()
-        .enumerate()
-        .map(|(resource, cores)| {
-            let cur_net_time = 1. / network.bandwidth(resources[resource].id, ctx.id());
-            cores
-                .iter()
-                .map(|schedule| {
-                    schedule.iter().next_back().map_or(0., |task| {
-                        task.finish_time
-                            + dag
-                                .get_task(task.task)
-                                .outputs
-                                .iter()
-                                .filter(|f| dag.get_outputs().contains(f))
-                                .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-                                .max_by(|a, b| a.total_cmp(&b))
-                                .unwrap_or(0.)
-                    })
-                })
-                .max_by(|a, b| a.total_cmp(&b))
-                .unwrap_or(0.)
-        })
-        .max_by(|a, b| a.total_cmp(&b))
-        .unwrap_or(0.)
-}

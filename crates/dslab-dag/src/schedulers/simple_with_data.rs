@@ -112,4 +112,8 @@ impl Scheduler for SimpleDataScheduler {
     ) -> Vec<Action> {
         self.schedule(dag, system.resources, ctx)
     }
+
+    fn is_static(&self) -> bool {
+        false
+    }
 }

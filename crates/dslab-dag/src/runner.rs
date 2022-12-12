@@ -164,7 +164,7 @@ impl DAGRunner {
             self.dag.get_data_items().len()
         );
         self.trace_config();
-        self.actions.extend(self.scheduler.borrow_mut().start(
+        let actions = self.scheduler.borrow_mut().start(
             &self.dag,
             System {
                 resources: &self.resources,
@@ -172,7 +172,46 @@ impl DAGRunner {
             },
             self.config.clone(),
             &self.ctx,
-        ));
+        );
+        if let Some(makespan) = actions
+            .iter()
+            .filter_map(|action| match action {
+                Action::ScheduleTask {
+                    expected_span,
+                    task,
+                    resource,
+                    ..
+                }
+                | Action::ScheduleTaskOnCores {
+                    expected_span,
+                    task,
+                    resource,
+                    ..
+                } => expected_span.as_ref().map(|x| {
+                    x.finish()
+                        + self
+                            .dag
+                            .get_task(*task)
+                            .outputs
+                            .iter()
+                            .filter(|f| self.dag.get_outputs().contains(f))
+                            .map(|&f| {
+                                self.dag.get_data_item(f).size as f64
+                                    / self
+                                        .network
+                                        .borrow()
+                                        .bandwidth(self.resources[*resource].id, self.ctx.id())
+                            })
+                            .max_by(|a, b| a.total_cmp(&b))
+                            .unwrap_or(0.)
+                }),
+                Action::TransferData { .. } => None,
+            })
+            .max_by(|a, b| a.total_cmp(&b))
+        {
+            log_info!(self.ctx, "expected makespan: {}", makespan);
+        }
+        self.actions.extend(actions);
         self.process_actions();
     }
 
@@ -529,16 +568,18 @@ impl DAGRunner {
             }
         }
 
-        self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
-            task_id,
-            TaskState::Done,
-            &self.dag,
-            System {
-                resources: &self.resources,
-                network: &self.network.borrow(),
-            },
-            &self.ctx,
-        ));
+        if !self.scheduler.borrow().is_static() {
+            self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
+                task_id,
+                TaskState::Done,
+                &self.dag,
+                System {
+                    resources: &self.resources,
+                    network: &self.network.borrow(),
+                },
+                &self.ctx,
+            ));
+        }
         self.process_actions();
 
         self.check_and_log_completed();
