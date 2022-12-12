@@ -13,12 +13,14 @@ use crate::system::System;
 
 pub struct PeftScheduler {
     data_transfer_strategy: DataTransferStrategy,
+    original_network_estimation: bool,
 }
 
 impl PeftScheduler {
     pub fn new() -> Self {
         PeftScheduler {
             data_transfer_strategy: DataTransferStrategy::Eager,
+            original_network_estimation: false,
         }
     }
 
@@ -27,11 +29,18 @@ impl PeftScheduler {
         self
     }
 
+    pub fn with_original_network_estimation(mut self) -> Self {
+        self.original_network_estimation = true;
+        self
+    }
+
     fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
         let task_count = dag.get_tasks().len();
+
+        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
 
         // optimistic cost table
         let mut oct = vec![vec![0.0; resources.len()]; task_count];
@@ -45,12 +54,21 @@ impl PeftScheduler {
                                 oct[succ][succ_resource]
                                     + dag.get_task(succ).flops as f64 / resources[succ_resource].speed as f64
                                     + weight as f64
-                                        * config.data_transfer_mode.net_time(
-                                            network,
-                                            resources[resource_id].id,
-                                            resources[succ_resource].id,
-                                            ctx.id(),
-                                        )
+                                        * match self.original_network_estimation {
+                                            false => config.data_transfer_mode.net_time(
+                                                network,
+                                                resources[resource_id].id,
+                                                resources[succ_resource].id,
+                                                ctx.id(),
+                                            ),
+                                            true => {
+                                                if resource_id == succ_resource {
+                                                    0.0
+                                                } else {
+                                                    avg_net_time
+                                                }
+                                            }
+                                        }
                             })
                             .min_by(|a, b| a.total_cmp(&b))
                             .unwrap()
