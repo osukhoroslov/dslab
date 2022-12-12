@@ -81,14 +81,19 @@ impl PlacementStore {
         self.pool_state.clone()
     }
 
+    /// Processes direct allocation commit request bypassing the schedulers.
+    pub fn direct_allocation_commit(&mut self, vm_id: u32, host_id: u32) {
+        self.on_allocation_commit_request(vm_id, host_id, None);
+    }
+
     /// Processes allocation commit requests from schedulers.
-    fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: u32) {
+    fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: Option<u32>) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
                 self.ctx,
-                "commited placement of vm {} to host {}",
+                "committed placement of vm {} to host {}",
                 vm_id,
                 self.ctx.lookup_name(host_id)
             );
@@ -109,16 +114,18 @@ impl PlacementStore {
                 vm_id,
                 self.ctx.lookup_name(host_id)
             );
-            self.ctx.emit(
-                AllocationCommitFailed { vm_id, host_id },
-                from_scheduler,
-                self.sim_config.message_delay,
-            );
-            self.ctx.emit(
-                AllocationRequest { vm_id },
-                from_scheduler,
-                self.sim_config.message_delay + self.sim_config.allocation_retry_period,
-            );
+            if let Some(scheduler) = from_scheduler {
+                self.ctx.emit(
+                    AllocationCommitFailed { vm_id, host_id },
+                    scheduler,
+                    self.sim_config.message_delay,
+                );
+                self.ctx.emit(
+                    AllocationRequest { vm_id },
+                    scheduler,
+                    self.sim_config.message_delay + self.sim_config.allocation_retry_period,
+                );
+            }
         }
     }
 
@@ -158,7 +165,7 @@ impl EventHandler for PlacementStore {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             AllocationCommitRequest { vm_id, host_id } => {
-                self.on_allocation_commit_request(vm_id, host_id, event.src)
+                self.on_allocation_commit_request(vm_id, host_id, Some(event.src))
             }
             AllocationFailed { vm_id, host_id } => {
                 self.on_allocation_failed(vm_id, host_id)

@@ -7,7 +7,7 @@ use log::warn;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::vm_placement_algorithm::BestFit;
+use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::extensions::azure_dataset_reader::AzureDatasetReader;
 use dslab_iaas::extensions::dataset_reader::DatasetReader;
 use dslab_iaas::extensions::huawei_dataset_reader::HuaweiDatasetReader;

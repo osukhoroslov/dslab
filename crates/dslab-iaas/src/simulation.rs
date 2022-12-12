@@ -221,6 +221,34 @@ impl CloudSimulation {
         id
     }
 
+    /// Creates new VM with specified properties and spawns it on the specified host bypassing the scheduling step.
+    /// This is useful for creating the initial resource pool state.
+    pub fn spawn_vm_on_host(
+        &mut self,
+        cpu_usage: u32,
+        memory_usage: u64,
+        lifetime: f64,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
+        vm_id: Option<u32>,
+        host_id: u32,
+    ) -> u32 {
+        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
+        let vm = VirtualMachine::new(
+            id,
+            cpu_usage,
+            memory_usage,
+            self.ctx.time(),
+            lifetime,
+            cpu_load_model,
+            memory_load_model,
+            self.sim_config.clone(),
+        );
+        self.vm_api.borrow_mut().register_new_vm(vm);
+        self.placement_store.borrow_mut().direct_allocation_commit(id, host_id);
+        id
+    }
+
     /// Sends VM migration request to the specified target host.
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let vm_api = self.vm_api.borrow();

@@ -58,6 +58,11 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
+    /// Returns the number of hosts.
+    pub fn get_host_count(&self) -> u32 {
+        self.hosts.len() as u32
+    }
+
     /// Checks if the specified allocation is currently possible on the specified host.
     pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
         if !self.hosts.contains_key(&host_id) {
@@ -118,23 +123,43 @@ impl ResourcePoolState {
         });
     }
 
+    /// Returns the total CPU capacity of the specified host.
+    pub fn get_total_cpu(&self, host_id: u32) -> u32 {
+        self.hosts[&host_id].cpu_total
+    }
+
+    /// Returns the total memory capacity of the specified host.
+    pub fn get_total_memory(&self, host_id: u32) -> u64 {
+        self.hosts[&host_id].memory_total
+    }
+
     /// Returns the amount of available vCPUs on the specified host.
     pub fn get_available_cpu(&self, host_id: u32) -> u32 {
-        return self.hosts[&host_id].cpu_available;
+        self.hosts[&host_id].cpu_available
     }
 
     /// Returns the amount of available memory on the specified host.
     pub fn get_available_memory(&self, host_id: u32) -> u64 {
-        return self.hosts[&host_id].memory_available;
+        self.hosts[&host_id].memory_available
+    }
+
+    /// Returns CPU capacity of the specified host currently in use by some VMs.
+    pub fn get_allocated_cpu(&self, host_id: u32) -> u32 {
+        self.get_total_cpu(host_id) - self.get_available_cpu(host_id)
+    }
+
+    /// Returns memory capacity of the specified host currently in use by some VMs.
+    pub fn get_allocated_memory(&self, host_id: u32) -> u64 {
+        self.get_total_memory(host_id) - self.get_available_memory(host_id)
     }
 
     /// Returns the CPU allocation rate (ratio of allocated to total resources) of the specified host
     pub fn get_cpu_load(&self, host_id: u32) -> f64 {
-        return 1. - self.hosts[&host_id].cpu_available as f64 / self.hosts[&host_id].cpu_total as f64;
+        1. - self.hosts[&host_id].cpu_available as f64 / self.hosts[&host_id].cpu_total as f64
     }
 
     /// Returns the memory allocation rate (ratio of allocated to total resources) of the specified host
     pub fn get_memory_load(&self, host_id: u32) -> f64 {
-        return 1. - self.hosts[&host_id].memory_available as f64 / self.hosts[&host_id].memory_total as f64;
+        1. - self.hosts[&host_id].memory_available as f64 / self.hosts[&host_id].memory_total as f64
     }
 }

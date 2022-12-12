@@ -6,7 +6,7 @@ use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::load_model::LoadModel;
-use dslab_iaas::core::vm_placement_algorithm::BestFit;
+use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
