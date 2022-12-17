@@ -121,8 +121,8 @@ class Process:
             self.__dict__[name] = value
 
     def __getattribute__(self, name):
-        if type(object.__getattribute__(self, name)) is StateMember:
-            elem = object.__getattribute__(self, name)
-            return elem.inner
+        attr_value = object.__getattribute__(self, name)
+        if type(attr_value) is StateMember:
+            return attr_value.inner
         else:
-            return object.__getattribute__(self, name)
+            return attr_value
