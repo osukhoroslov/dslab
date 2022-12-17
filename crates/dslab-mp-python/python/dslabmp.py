@@ -1,9 +1,11 @@
 from __future__ import annotations
 import abc
 import json
-from typing import Any, List, Dict, Tuple, Generic, Union
+from typing import Any, Dict, List, Tuple, Union
+
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
+
 
 class Message:
     def __init__(self, message_type: str, data: Dict[str, Any]):
@@ -60,11 +62,14 @@ class Context(object):
     def time(self) -> float:
         return self._time
 
+
 class StateMember:
     def __init__(self, t: JSON):
         self.inner = t
+
     def serialize(self):
         return json.dumps(self.inner)
+
     @staticmethod
     def deserialize(state):
         return StateMember(json.loads(state))
@@ -90,6 +95,9 @@ class Process:
         """
 
     def get_state(self):
+        """
+        This function returns string representation of process state.
+        """
         data = {}
         for name, member in self.__dict__.items():
             if type(member) is StateMember:
@@ -97,6 +105,9 @@ class Process:
         return json.dumps(data)
     
     def set_state(self, state_encoded):
+        """
+        This function restores process by it's serialized state.
+        """
         data = json.loads(state_encoded)
         for name in self.__dict__:
             self.__dict__[name] = None
