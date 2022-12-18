@@ -6,10 +6,10 @@ use dslab_mp::{message::Message, process::Process, system::System};
 fn build_system() -> (System, String) {
     let mut sys = System::new(0);
     sys.add_node("node");
-    let node_f = PyProcessFactory::new("python-tests/process.py", "TestProcess");
-    let node = node_f.build(("node",), 1);
-    let serialized = node.state();
-    sys.add_process("proc", Box::new(node), "node");
+    let proc_f = PyProcessFactory::new("python-tests/process.py", "TestProcess");
+    let process = proc_f.build(("node",), 1);
+    let serialized = process.state();
+    sys.add_process("proc", Box::new(process), "node");
     return (sys, serialized);
 }
 
