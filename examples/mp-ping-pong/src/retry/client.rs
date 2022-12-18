@@ -41,7 +41,7 @@ impl Process for RetryPingClient {
     }
 
     // not used in tests
-    fn get_state(&self) -> String {
+    fn state(&self) -> String {
         "".to_string()
     }
     fn set_state(&self, _: &String) {}

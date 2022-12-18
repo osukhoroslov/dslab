@@ -160,7 +160,7 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn get_state(&self) -> String {
+    fn state(&self) -> String {
         Python::with_gil(|py| {
             let res = self
                 .proc

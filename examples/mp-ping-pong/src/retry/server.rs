@@ -17,7 +17,7 @@ impl Process for RetryPingServer {
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 
     // not used in tests
-    fn get_state(&self) -> String {
+    fn state(&self) -> String {
         "".to_string()
     }
     fn set_state(&self, _: &String) {}
