@@ -1,6 +1,7 @@
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use rand::prelude::*;
@@ -44,13 +45,33 @@ impl Scheduler for BasicScheduler {
 }
 
 pub struct ApplicationHasher {
-    pub hash_fn: fn(u64) -> u64,
+    pub hash_fn: Box<dyn Fn(u64) -> u64>,
     pub name: String,
 }
 
 impl ApplicationHasher {
-    pub fn new(hash_fn: fn(u64) -> u64, name: String) -> Self {
+    pub fn new(hash_fn: Box<dyn Fn(u64) -> u64>, name: String) -> Self {
         Self { hash_fn, name }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        if s.eq_ignore_ascii_case("identity") {
+            return Self::new(Box::new(|a| a), "Identity".to_string());
+        }
+        let mut a: u64 = 0;
+        let mut b: u64 = 0;
+        for (i, x) in s.split(".").enumerate() {
+            if i >= 2 {
+                panic!("Too many tokens in hasher string.");
+            }
+            if i == 0 {
+                a = x.parse::<u64>().unwrap();
+            } else {
+                b = x.parse::<u64>().unwrap();
+            }
+        }
+        let name = format!("Linear[{} * x + {}]", a, b);
+        Self::new(Box::new(move |x| a.wrapping_mul(x).wrapping_add(b)), name)
     }
 
     pub fn hash(&self, app: u64) -> u64 {
@@ -68,7 +89,7 @@ pub struct LocalityBasedScheduler {
 
 impl LocalityBasedScheduler {
     pub fn new(hasher: Option<ApplicationHasher>, step: Option<usize>, warm_only: bool) -> Self {
-        let f = hasher.unwrap_or(ApplicationHasher::new(|a| a, "Identity".to_string()));
+        let f = hasher.unwrap_or(ApplicationHasher::new(Box::new(|a| a), "Identity".to_string()));
         let s = step.unwrap_or(1);
         Self {
             hasher: f,
@@ -78,10 +99,10 @@ impl LocalityBasedScheduler {
     }
 
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
-        // no hasher support yet
+        let hasher = ApplicationHasher::from_str(options.get("hasher").map(|a| a.deref()).unwrap_or("Identity"));
         let warm_only = options.get("warm_only").unwrap().parse::<bool>().unwrap();
         let step = options.get("step").map(|s| s.parse::<usize>().unwrap());
-        Self::new(None, step, warm_only)
+        Self::new(Some(hasher), step, warm_only)
     }
 }
 
