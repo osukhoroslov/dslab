@@ -1,4 +1,4 @@
-base_config:
+sim_config:
   hosts:
     - cores: 4
       resources:
@@ -6,7 +6,7 @@ base_config:
           quantity: 16384
       invoker: BasicInvoker
       count: 10
-  coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200.0,prewarm=0.0]
+  coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200,prewarm=0]
   idle_deployer: BasicDeployer
   disable_contention: false
 schedulers:

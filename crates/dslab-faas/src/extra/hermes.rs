@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::extra::simple_schedulers::LeastLoadedScheduler;
 use crate::function::Application;
 use crate::host::Host;
+use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
 /// Refer to https://arxiv.org/abs/2111.07226
@@ -56,7 +56,7 @@ impl Scheduler for HermesScheduler {
         self.high_load_fallback.select_host(app, hosts)
     }
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "HermesScheduler".to_string()
     }
 }

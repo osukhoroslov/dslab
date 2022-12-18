@@ -144,6 +144,25 @@ impl HybridHistogramPolicy {
         }
     }
 
+    pub fn from_options_map(options: &HashMap<String, String>) -> Self {
+        let range = options.get("range").unwrap().parse::<f64>().unwrap();
+        let bin_len = options
+            .get("bin_len")
+            .map(|s| s.parse::<f64>().unwrap())
+            .unwrap_or(60.0);
+        let cv_thr = options.get("cv_thr").map(|s| s.parse::<f64>().unwrap()).unwrap_or(2.0);
+        let oob_thr = options.get("oob_thr").map(|s| s.parse::<f64>().unwrap()).unwrap_or(0.5);
+        let arima_margin = options
+            .get("arima_margin")
+            .map(|s| s.parse::<f64>().unwrap())
+            .unwrap_or(0.15);
+        let hist_margin = options
+            .get("hist_margin")
+            .map(|s| s.parse::<f64>().unwrap())
+            .unwrap_or(0.1);
+        Self::new(range, bin_len, cv_thr, oob_thr, arima_margin, hist_margin)
+    }
+
     fn describe_pattern(&mut self, app_id: u64) -> Pattern {
         let cv_thr = self.cv_thr;
         let oob_thr = self.oob_thr;
@@ -204,7 +223,7 @@ impl ColdStartPolicy for HybridHistogramPolicy {
         self.last.insert(fn_id, invocation.finished.unwrap());
     }
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         format!("HybridHistogramPolicy[range={:.2},bin_len={:.2},cv_thr={:.2},oob_thr={:.2},arima_margin={:.2},hist_margin={:.2}]", self.range, self.bin_len, self.cv_thr, self.oob_thr, self.arima_margin, self.hist_margin)
     }
 }

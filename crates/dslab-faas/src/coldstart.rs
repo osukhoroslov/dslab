@@ -1,7 +1,9 @@
 use std::boxed::Box;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::config::parse_options;
 use crate::container::Container;
 use crate::function::Application;
 use crate::invocation::Invocation;
@@ -25,7 +27,7 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
     /// this function allows tuning policy on finished invocations
     fn update(&mut self, invocation: &Invocation, app: &Application);
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "STUB COLDSTART POLICY NAME".to_string()
     }
 }
@@ -42,6 +44,12 @@ impl FixedTimeColdStartPolicy {
             prewarm_window,
         }
     }
+
+    pub fn from_options_map(options: &HashMap<String, String>) -> Self {
+        let keepalive = options.get("keepalive").unwrap().parse::<f64>().unwrap();
+        let prewarm = options.get("prewarm").unwrap().parse::<f64>().unwrap();
+        Self::new(keepalive, prewarm)
+    }
 }
 
 impl ColdStartPolicy for FixedTimeColdStartPolicy {
@@ -55,10 +63,21 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
 
     fn update(&mut self, _invocation: &Invocation, _app: &Application) {}
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         format!(
             "FixedTimeColdStartPolicy[keepalive={:.2},prewarm{:.2}]",
             self.keepalive_window, self.prewarm_window
         )
     }
+}
+
+pub fn default_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
+    if s == "No unloading" {
+        return Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0));
+    }
+    if s.len() >= 26 && &s[0..25] == "FixedTimeColdStartPolicy[" && s.chars().next_back().unwrap() == ']' {
+        let opts = parse_options(&s[25..s.len() - 1]);
+        return Box::new(FixedTimeColdStartPolicy::from_options_map(&opts));
+    }
+    panic!("Can't resolve: {}", s);
 }

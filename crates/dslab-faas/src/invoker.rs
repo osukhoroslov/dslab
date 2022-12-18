@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -28,7 +29,7 @@ pub trait Invoker {
         time: f64,
     ) -> InvocationStatus;
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "STUB INVOKER NAME".to_string()
     }
 }
@@ -108,7 +109,15 @@ impl Invoker for BasicInvoker {
         status
     }
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "BasicInvoker".to_string()
+    }
+}
+
+pub fn default_invoker_resolver(s: &str) -> Box<dyn Invoker> {
+    if s == "BasicInvoker" {
+        Box::new(BasicInvoker::new())
+    } else {
+        panic!("Can't resolve: {}", s);
     }
 }

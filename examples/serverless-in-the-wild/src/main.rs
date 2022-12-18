@@ -13,7 +13,7 @@ use dslab_faas::stats::Stats;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
-    pub base_config: RawConfig,
+    pub sim_config: RawConfig,
     pub coldstart_policies: Vec<String>,
 }
 
@@ -64,11 +64,11 @@ fn main() {
     let experiment_config: ExperimentConfig =
         serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
     let policies = experiment_config.coldstart_policies;
-    let base_config = experiment_config.base_config;
+    let sim_config = experiment_config.sim_config;
     let configs: Vec<_> = policies
         .iter()
         .map(|x| {
-            let mut config = base_config.clone();
+            let mut config = sim_config.clone();
             config.coldstart_policy = x.to_string();
             config
         })

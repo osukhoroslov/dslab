@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -8,7 +9,7 @@ use crate::host::Host;
 pub trait IdleDeployer {
     fn deploy(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> Option<usize>;
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "STUB DEPLOYER NAME".to_string()
     }
 }
@@ -26,7 +27,15 @@ impl IdleDeployer for BasicDeployer {
         None
     }
 
-    fn get_name(&self) -> String {
+    fn to_string(&self) -> String {
         "BasicDeployer".to_string()
+    }
+}
+
+pub fn default_idle_deployer_resolver(s: &str) -> Box<dyn IdleDeployer> {
+    if s == "BasicDeployer" {
+        Box::new(BasicDeployer {})
+    } else {
+        panic!("Can't resolve: {}", s);
     }
 }
