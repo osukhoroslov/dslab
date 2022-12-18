@@ -82,7 +82,7 @@ impl SharedDisk {
         }
     }
 
-    fn get_unique_request_id(&mut self) -> u64 {
+    fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
@@ -135,7 +135,7 @@ impl StorageResource for SharedDisk {
             size,
             requester
         );
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         if size > self.capacity {
             let error = format!(
                 "requested read size is {} but only {} is available",
@@ -160,7 +160,7 @@ impl StorageResource for SharedDisk {
     }
 
     fn write(&mut self, size: u64, requester: Id) -> u64 {
-        let request_id = self.get_unique_request_id();
+        let request_id = self.make_unique_request_id();
         log_debug!(
             self.ctx,
             "Received write request, size: {}, requester: {}",
