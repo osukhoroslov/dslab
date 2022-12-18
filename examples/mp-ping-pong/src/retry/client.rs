@@ -39,10 +39,4 @@ impl Process for RetryPingClient {
             ctx.set_timer("check-pong", 3.);
         }
     }
-
-    // not used in tests
-    fn state(&self) -> String {
-        "".to_string()
-    }
-    fn set_state(&self, _: &String) {}
 }
