@@ -74,18 +74,27 @@ pub fn make_uniform_bw_model(low: u64, high: u64) -> RandomizedBWModel<Uniform<u
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// Struct for a bandwidth value associated to weight. Used by [`EmpiricalBWModel`].
+#[derive(Clone)]
+pub struct WeightedBandwidth {
+    /// Bandwidth value.
+    pub value: u64,
+    /// Weight of `value` in empirical distribution.
+    pub weight: u64,
+}
+
 /// Model which generates random bandwidth from specified weighted points distribution.
 pub struct EmpiricalBWModel {
     /// Pairs of (value, weight).
-    points: Vec<(u64, u64)>,
+    points: Vec<WeightedBandwidth>,
     /// Distribution used to pick a random index from `points`.
     dist: WeightedIndex<u64>,
 }
 
 impl EmpiricalBWModel {
     /// Creates new empirical bandwidth model with given weighted points.
-    pub fn new(points: &[(u64, u64)]) -> Result<Self, WeightedError> {
-        let dist = WeightedIndex::new(points.iter().map(|item| item.1))?;
+    pub fn new(points: &[WeightedBandwidth]) -> Result<Self, WeightedError> {
+        let dist = WeightedIndex::new(points.iter().map(|item| item.weight))?;
         Ok(Self {
             points: points.to_vec(),
             dist,
@@ -95,6 +104,6 @@ impl EmpiricalBWModel {
 
 impl BWModel for EmpiricalBWModel {
     fn get_bandwidth(&mut self, _: u64, ctx: &mut SimulationContext) -> u64 {
-        self.points[ctx.sample_from_distribution(&self.dist)].0
+        self.points[ctx.sample_from_distribution(&self.dist)].value
     }
 }

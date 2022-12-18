@@ -14,7 +14,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
-use dslab_storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel};
+use dslab_storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel, WeightedBandwidth};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::resource::StorageResource;
@@ -116,12 +116,30 @@ fn main() {
 
     // Creating empirical bandwidth model with weighted points distribution
     let points = [
-        (DISK_READ_BW - 20, 3),
-        (DISK_READ_BW - 10, 10),
-        (DISK_READ_BW, 31),
-        (DISK_READ_BW + 10, 15),
-        (DISK_READ_BW + 20, 5),
-        (DISK_READ_BW + 30, 6),
+        WeightedBandwidth {
+            value: DISK_READ_BW - 20,
+            weight: 3,
+        },
+        WeightedBandwidth {
+            value: DISK_READ_BW - 10,
+            weight: 10,
+        },
+        WeightedBandwidth {
+            value: DISK_READ_BW,
+            weight: 31,
+        },
+        WeightedBandwidth {
+            value: DISK_READ_BW + 10,
+            weight: 15,
+        },
+        WeightedBandwidth {
+            value: DISK_READ_BW + 20,
+            weight: 5,
+        },
+        WeightedBandwidth {
+            value: DISK_READ_BW + 30,
+            weight: 6,
+        },
     ];
     let model = EmpiricalBWModel::new(&points);
     assert!(model.is_ok());
