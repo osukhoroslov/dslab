@@ -2,7 +2,6 @@ use crate::context::Context;
 use crate::message::Message;
 
 pub trait Process {
-
     /// This method is called when a message is received.
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
 
