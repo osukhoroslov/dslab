@@ -17,8 +17,10 @@ pub trait Process {
     }
 
     /// This function returns string representation of process state.
-    fn state(&self) -> String;
+    fn state(&self) -> String {
+        "".to_string()
+    }
 
     /// This function restores process by it's serialized state.
-    fn set_state(&self, data: &String);
+    fn set_state(&self, _data: &String) {}
 }
