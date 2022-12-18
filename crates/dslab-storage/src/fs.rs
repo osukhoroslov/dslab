@@ -250,17 +250,17 @@ impl FileSystem {
 
     /// Returns amount of used space on all disks currently mounted to this file system.
     pub fn used_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().used_space()).sum()
+        self.disks.values().map(|v| v.borrow().used_space()).sum()
     }
 
     /// Returns amount of free space on all disks currently mounted to this file system.
     pub fn free_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().free_space()).sum()
+        self.disks.values().map(|v| v.borrow().free_space()).sum()
     }
 
     /// Returns cumulative capacity of all disks currently mounted to this file system.
     pub fn capacity(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().capacity()).sum()
+        self.disks.values().map(|v| v.borrow().capacity()).sum()
     }
 
     /// Returns vec of disk info associated with mount points.
@@ -278,10 +278,7 @@ impl FileSystem {
 
     /// Returns mount points present in this file system.
     pub fn mount_points(&self) -> Vec<String> {
-        self.disks
-            .iter()
-            .map(|(mount_point, _)| mount_point.to_owned())
-            .collect()
+        self.disks.keys().map(|mount_point| mount_point.to_owned()).collect()
     }
 
     /// Deletes file located at `file_path` if there is any.    

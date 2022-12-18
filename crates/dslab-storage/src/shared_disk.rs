@@ -54,8 +54,8 @@ impl SharedDisk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth as f64),
-            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth as f64),
+            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth),
+            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
