@@ -8,6 +8,12 @@ pub struct EnergyMeter {
     prev_time: f64,
 }
 
+impl Default for EnergyMeter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnergyMeter {
     /// Creates component.
     pub fn new() -> Self {
@@ -27,6 +33,6 @@ impl EnergyMeter {
 
     /// Returns the total energy consumption.
     pub fn energy_consumed(&self) -> f64 {
-        return self.energy_consumed;
+        self.energy_consumed
     }
 }

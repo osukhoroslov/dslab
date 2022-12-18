@@ -13,6 +13,7 @@ use dslab_core::Id;
 
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
+use crate::core::host_manager::HostCreationProperties;
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
 use crate::core::load_model::LoadModel;
@@ -23,12 +24,25 @@ use crate::core::power_model::LinearPowerModel;
 use crate::core::scheduler::Scheduler;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
-use crate::core::vm::{VirtualMachine, VmStatus};
+use crate::core::vm::{LoadModels, VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
+
+/// Represents information about a single virtual machine.
+#[derive(Clone)]
+pub struct VMRequest {
+    pub id: Option<u32>,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+    pub lifetime: f64,
+    pub start_time: f64,
+    pub cpu_load_model: Box<dyn LoadModel>,
+    pub memory_load_model: Box<dyn LoadModel>,
+    pub scheduler_id: Option<u32>,
+}
 
 /// Represents a simulation, provides methods for its configuration and execution.
 ///
@@ -117,18 +131,18 @@ impl CloudSimulation {
     /// Creates new host with specified name and resource capacity, and returns the host ID.
     pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
         // create host
-        let host = rc!(refcell!(HostManager::new(
+        let host = rc!(refcell!(HostManager::new(HostCreationProperties {
             cpu_total,
             memory_total,
-            self.monitoring.borrow().get_id(),
-            self.placement_store.borrow().get_id(),
-            self.vm_api.clone(),
-            self.sim_config.allow_vm_overcommit,
-            self.host_power_model.clone(),
-            self.slav_metric.clone(),
-            self.sim.create_context(name),
-            self.sim_config.clone(),
-        )));
+            monitoring_id: self.monitoring.borrow().get_id(),
+            placement_store_id: self.placement_store.borrow().get_id(),
+            vm_api: self.vm_api.clone(),
+            allow_vm_overcommit: self.sim_config.allow_vm_overcommit,
+            power_model: self.host_power_model.clone(),
+            slav_metric: self.slav_metric.clone(),
+            ctx: self.sim.create_context(name),
+            sim_config: self.sim_config.clone(),
+        })));
         let id = self.sim.add_handler(name, host.clone());
         self.hosts.insert(id, host);
         // add host to monitoring
@@ -136,7 +150,7 @@ impl CloudSimulation {
         // add host to placement store
         self.placement_store.borrow_mut().add_host(id, cpu_total, memory_total);
         // add host to schedulers
-        for (_, scheduler) in &self.schedulers {
+        for scheduler in self.schedulers.values() {
             scheduler.borrow_mut().add_host(id, cpu_total, memory_total);
         }
         // start sending host state to monitoring
@@ -166,82 +180,71 @@ impl CloudSimulation {
 
     /// Creates new VM with specified properties, registers it in VM API and immediately submits the allocation request
     /// to the specified scheduler. Returns VM ID.
-    pub fn spawn_vm_now(
-        &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
-        lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
-        vm_id: Option<u32>,
-        scheduler_id: u32,
-    ) -> u32 {
-        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
+    pub fn spawn_vm_now(&mut self, vm_request: VMRequest) -> u32 {
+        let id = vm_request
+            .id
+            .unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
+            vm_request.cpu_usage,
+            vm_request.memory_usage,
             self.ctx.time(),
-            lifetime,
-            cpu_load_model,
-            memory_load_model,
+            vm_request.lifetime,
+            LoadModels {
+                cpu_load_model: vm_request.cpu_load_model,
+                memory_load_model: vm_request.memory_load_model,
+            },
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.ctx.emit_now(AllocationRequest { vm_id: id }, scheduler_id);
+        self.ctx
+            .emit_now(AllocationRequest { vm_id: id }, vm_request.scheduler_id.unwrap_or(0));
         id
     }
 
     /// Creates new VM with specified properties, registers it in VM API and submits the allocation request
     /// to the specified scheduler with the specified delay. Returns VM ID.
-    pub fn spawn_vm_with_delay(
-        &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
-        lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
-        vm_id: Option<u32>,
-        scheduler_id: u32,
-        delay: f64,
-    ) -> u32 {
-        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
+    pub fn spawn_vm_with_delay(&mut self, vm_request: VMRequest, delay: f64) -> u32 {
+        let id = vm_request
+            .id
+            .unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
+            vm_request.cpu_usage,
+            vm_request.memory_usage,
             self.ctx.time() + delay,
-            lifetime,
-            cpu_load_model,
-            memory_load_model,
+            vm_request.lifetime,
+            LoadModels {
+                cpu_load_model: vm_request.cpu_load_model,
+                memory_load_model: vm_request.memory_load_model,
+            },
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.ctx.emit(AllocationRequest { vm_id: id }, scheduler_id, delay);
+        self.ctx.emit(
+            AllocationRequest { vm_id: id },
+            vm_request.scheduler_id.unwrap_or(0),
+            delay,
+        );
         id
     }
 
     /// Creates new VM with specified properties and spawns it on the specified host bypassing the scheduling step.
     /// This is useful for creating the initial resource pool state.
-    pub fn spawn_vm_on_host(
-        &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
-        lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
-        vm_id: Option<u32>,
-        host_id: u32,
-    ) -> u32 {
-        let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
+    pub fn spawn_vm_on_host(&mut self, vm_request: VMRequest, host_id: u32) -> u32 {
+        let id = vm_request
+            .id
+            .unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
+            vm_request.cpu_usage,
+            vm_request.memory_usage,
             self.ctx.time(),
-            lifetime,
-            cpu_load_model,
-            memory_load_model,
+            vm_request.lifetime,
+            LoadModels {
+                cpu_load_model: vm_request.cpu_load_model,
+                memory_load_model: vm_request.memory_load_model,
+            },
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -283,18 +286,21 @@ impl CloudSimulation {
             let request = request_opt.unwrap();
 
             let mut scheduler_id = default_scheduler_id;
-            if !request.scheduler_name.is_none() {
+            if request.scheduler_name.is_some() {
                 scheduler_id = self.sim.lookup_id(&request.scheduler_name.unwrap());
             }
 
             self.spawn_vm_with_delay(
-                request.cpu_usage,
-                request.memory_usage,
-                request.lifetime,
-                request.cpu_load_model.clone(),
-                request.memory_load_model.clone(),
-                request.id,
-                scheduler_id,
+                VMRequest {
+                    cpu_usage: request.cpu_usage,
+                    memory_usage: request.memory_usage,
+                    lifetime: request.lifetime,
+                    cpu_load_model: request.cpu_load_model.clone(),
+                    memory_load_model: request.memory_load_model.clone(),
+                    id: request.id,
+                    scheduler_id: Some(scheduler_id),
+                    start_time: request.start_time,
+                },
                 request.start_time,
             );
         }
@@ -326,12 +332,12 @@ impl CloudSimulation {
 
     /// Returns the main simulation context.
     pub fn context(&self) -> &SimulationContext {
-        return &self.ctx;
+        &self.ctx
     }
 
     /// Performs the specified number of steps through the simulation (see dslab-core docs).
     pub fn steps(&mut self, step_count: u64) -> bool {
-        return self.sim.steps(step_count);
+        self.sim.steps(step_count)
     }
 
     /// Steps through the simulation with duration limit (see dslab-core docs).
@@ -341,12 +347,12 @@ impl CloudSimulation {
 
     /// Returns the total number of created events.
     pub fn event_count(&self) -> u64 {
-        return self.sim.event_count();
+        self.sim.event_count()
     }
 
     /// Returns the current simulation time.
     pub fn current_time(&mut self) -> f64 {
-        return self.sim.time();
+        self.sim.time()
     }
 
     /// Returns the reference to host manager (host energy consumption, allocated resources etc.).

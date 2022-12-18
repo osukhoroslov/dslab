@@ -29,6 +29,12 @@ pub struct OverloadTimeFraction {
     total_overloaded_time: f64,
 }
 
+impl Default for OverloadTimeFraction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OverloadTimeFraction {
     pub fn new() -> Self {
         Self {

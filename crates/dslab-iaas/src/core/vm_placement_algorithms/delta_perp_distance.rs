@@ -16,12 +16,18 @@ impl DeltaPerpDistance {
     }
 }
 
+impl Default for DeltaPerpDistance {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VMPlacementAlgorithm for DeltaPerpDistance {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_delta: f64 = f64::MIN;
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host) as f64;
                 let total_memory = pool_state.get_total_memory(host) as f64;
                 let mut used_cpu = pool_state.get_allocated_cpu(host) as f64;

@@ -15,11 +15,17 @@ impl FirstFit {
     }
 }
 
+impl Default for FirstFit {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VMPlacementAlgorithm for FirstFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         pool_state
             .get_hosts_list()
             .into_iter()
-            .find(|&host| pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success)
+            .find(|&host| pool_state.can_allocate(alloc, host) == AllocationVerdict::Success)
     }
 }

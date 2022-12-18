@@ -103,6 +103,12 @@ pub struct SimulationConfig {
     pub schedulers: Vec<SchedulerConfig>,
 }
 
+impl Default for SimulationConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SimulationConfig {
     /// Creates simulation config with default parameter values.
     pub fn new() -> Self {

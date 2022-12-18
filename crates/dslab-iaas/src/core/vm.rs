@@ -31,6 +31,13 @@ impl Display for VmStatus {
     }
 }
 
+/// Represents virtual machine resource load models.
+#[derive(Clone)]
+pub struct LoadModels {
+    pub cpu_load_model: Box<dyn LoadModel>,
+    pub memory_load_model: Box<dyn LoadModel>,
+}
+
 /// Represents virtual machine (VM).
 ///
 /// VM is characterized by its ID, resource requirements (vCPUs and memory), start time, lifetime and load models.
@@ -68,8 +75,7 @@ impl VirtualMachine {
         memory_usage: u64,
         allocation_start_time: f64,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
+        load_models: LoadModels,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
@@ -79,8 +85,8 @@ impl VirtualMachine {
             allocation_start_time,
             lifetime,
             start_time: -1.,
-            cpu_load_model,
-            memory_load_model,
+            cpu_load_model: load_models.cpu_load_model,
+            memory_load_model: load_models.memory_load_model,
             sim_config,
         }
     }

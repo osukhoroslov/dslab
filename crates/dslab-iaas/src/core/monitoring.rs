@@ -92,7 +92,7 @@ impl Monitoring {
         recently_removed_vms: Vec<u32>,
     ) {
         log_trace!(self.ctx, "monitoring received stats from host #{}", host_id);
-        self.host_states.get_mut(&host_id).map(|host| {
+        if let Some(host) = self.host_states.get_mut(&host_id) {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;
 
@@ -103,7 +103,7 @@ impl Monitoring {
             for vm_id in recently_removed_vms {
                 host.vms.remove(&vm_id);
             }
-        });
+        }
     }
 }
 

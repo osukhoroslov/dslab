@@ -33,7 +33,7 @@ pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAl
         "FirstFit" => Box::new(FirstFit::new()),
         "BestFit" => Box::new(BestFit::new()),
         "WorstFit" => Box::new(WorstFit::new()),
-        "BestFitThreshold" => Box::new(BestFitThreshold::from_str(&options.unwrap())),
+        "BestFitThreshold" => Box::new(BestFitThreshold::from_string(&options.unwrap())),
         "CosineSimilarity" => Box::new(CosineSimilarity::new()),
         "DotProduct" => Box::new(DotProduct::new()),
         "WeightedDotProduct" => Box::new(WeightedDotProduct::new()),

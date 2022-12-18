@@ -28,6 +28,20 @@ use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 
+/// Represents host creation properties that are passed to the structure constructor
+pub struct HostCreationProperties {
+    pub cpu_total: u32,
+    pub memory_total: u64,
+    pub monitoring_id: u32,
+    pub placement_store_id: u32,
+    pub vm_api: Rc<RefCell<VmAPI>>,
+    pub allow_vm_overcommit: bool,
+    pub power_model: HostPowerModel,
+    pub slav_metric: Box<dyn HostSLAVMetric>,
+    pub ctx: SimulationContext,
+    pub sim_config: Rc<SimulationConfig>,
+}
+
 /// Represents a single physical machine or host for short, which possesses a certain amount of resources and performs
 /// execution of VMs assigned to it by a scheduler. It models the main VM lifecycle stages such as creation, deletion
 /// and migration, and reports the VM status changes to VM API component. Host manager periodically computes its
@@ -68,27 +82,16 @@ pub struct HostManager {
 
 impl HostManager {
     // Creates new host with specified capacity.
-    pub fn new(
-        cpu_total: u32,
-        memory_total: u64,
-        monitoring_id: u32,
-        placement_store_id: u32,
-        vm_api: Rc<RefCell<VmAPI>>,
-        allow_vm_overcommit: bool,
-        power_model: HostPowerModel,
-        slav_metric: Box<dyn HostSLAVMetric>,
-        ctx: SimulationContext,
-        sim_config: Rc<SimulationConfig>,
-    ) -> Self {
+    pub fn new(properties: HostCreationProperties) -> Self {
         Self {
-            id: ctx.id(),
-            name: ctx.name().to_string(),
-            cpu_total,
-            memory_total,
+            id: properties.ctx.id(),
+            name: properties.ctx.name().to_string(),
+            cpu_total: properties.cpu_total,
+            memory_total: properties.memory_total,
             cpu_allocated: 0,
             memory_allocated: 0,
-            cpu_available: cpu_total,
-            memory_available: memory_total,
+            cpu_available: properties.cpu_total,
+            memory_available: properties.memory_total,
             cpu_overcommit: 0,
             memory_overcommit: 0,
             vms: HashSet::new(),
@@ -96,14 +99,14 @@ impl HostManager {
             recently_removed_vms: Vec::new(),
             recent_vm_status_changes: HashMap::new(),
             energy_meter: EnergyMeter::new(),
-            monitoring_id,
-            placement_store_id,
-            vm_api,
-            allow_vm_overcommit,
-            power_model,
-            slav_metric,
-            ctx,
-            sim_config,
+            monitoring_id: properties.monitoring_id,
+            placement_store_id: properties.placement_store_id,
+            vm_api: properties.vm_api,
+            allow_vm_overcommit: properties.allow_vm_overcommit,
+            power_model: properties.power_model,
+            slav_metric: properties.slav_metric,
+            ctx: properties.ctx,
+            sim_config: properties.sim_config,
         }
     }
 
@@ -119,7 +122,7 @@ impl HostManager {
         if self.memory_available < vm.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
-        return AllocationVerdict::Success;
+        AllocationVerdict::Success
     }
 
     /// Allocates new virtual machine, updates resource and energy consumption.
@@ -192,7 +195,7 @@ impl HostManager {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             cpu_used += vm.cpu_usage as f64 * vm.get_cpu_load(time);
         }
-        return cpu_used / self.cpu_total as f64;
+        cpu_used / self.cpu_total as f64
     }
 
     /// Returns the current memory load (used/total) by summing the resource consumption of all active VMs on this host.
@@ -202,14 +205,14 @@ impl HostManager {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             memory_used += vm.memory_usage as f64 * vm.get_memory_load(time);
         }
-        return memory_used / self.memory_total as f64;
+        memory_used / self.memory_total as f64
     }
 
     /// Returns the current power consumption.
     pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        return self.power_model.get_power(time, cpu_util);
+        self.power_model.get_power(time, cpu_util)
     }
 
     /// Returns the total energy consumption.
@@ -217,7 +220,7 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let power = self.get_power(time, cpu_load);
         self.energy_meter.update(time, power);
-        return self.energy_meter.energy_consumed();
+        self.energy_meter.energy_consumed()
     }
 
     /// Returns the total SLAV value.

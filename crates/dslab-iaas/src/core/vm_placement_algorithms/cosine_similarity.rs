@@ -16,13 +16,19 @@ impl CosineSimilarity {
     }
 }
 
+impl Default for CosineSimilarity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VMPlacementAlgorithm for CosineSimilarity {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_cosine: f64 = f64::MIN;
 
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let capacity_cpu = pool_state.get_total_cpu(host) as f64;
                 let capacity_mem = pool_state.get_total_memory(host) as f64;
                 let capacity_norm = (capacity_cpu.powi(2) + capacity_mem.powi(2)).sqrt();

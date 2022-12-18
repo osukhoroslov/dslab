@@ -35,6 +35,12 @@ struct StandardVmRequest {
     pub count: Option<u32>,
 }
 
+impl Default for StandardDatasetReader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StandardDatasetReader {
     /// Creates dataset reader.
     pub fn new() -> Self {
@@ -74,6 +80,6 @@ impl DatasetReader for StandardDatasetReader {
         }
         self.current_vm += 1;
 
-        return Some(self.vm_requests[self.current_vm - 1].clone());
+        Some(self.vm_requests[self.current_vm - 1].clone())
     }
 }

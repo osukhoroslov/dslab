@@ -16,13 +16,19 @@ impl DotProduct {
     }
 }
 
+impl Default for DotProduct {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VMPlacementAlgorithm for DotProduct {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_product: f64 = f64::MIN;
 
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let cpu_product = pool_state.get_available_cpu(host) * alloc.cpu_usage;
                 let memory_product = pool_state.get_available_memory(host) * alloc.memory_usage;
                 let product = cpu_product as f64 / (pool_state.get_total_cpu(host)).pow(2) as f64
