@@ -16,7 +16,7 @@ fn build_system() -> (System, String) {
 #[test]
 fn test_set_state() {
     env::set_var("PYTHONPATH", "python");
-    let (mut sys, serialized) = build_system();
+    let (mut sys, proc_state) = build_system();
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("proc", Message::new("echo", data));
     sys.step_until_no_events();
@@ -26,7 +26,7 @@ fn test_set_state() {
     assert_eq!(msgs.len(), 1);
 
     // process should not have anything but state members after `set_state()`
-    sys.get_node("node").borrow().get_process("proc").set_state(&serialized);
+    sys.get_node("node").borrow().get_process("proc").set_state(&proc_state);
     sys.send_local_message("proc", Message::new("echo", data));
     sys.step_until_no_events();
     let msgs = sys.read_local_messages("proc");
