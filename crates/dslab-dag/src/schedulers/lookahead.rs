@@ -157,6 +157,19 @@ impl LookaheadScheduler {
                     }
                     task_locations.insert(child, resources[resource].id);
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
+
+                    let finish = finish
+                        + dag
+                            .get_task(child)
+                            .outputs
+                            .iter()
+                            .filter(|f| dag.get_outputs().contains(f))
+                            .map(|&f| {
+                                dag.get_data_item(f).size as f64 / network.bandwidth(resources[resource].id, ctx.id())
+                            })
+                            .max_by(|a, b| a.total_cmp(&b))
+                            .unwrap_or(0.);
+
                     if finish > makespan {
                         makespan = finish;
                     }
