@@ -20,38 +20,12 @@ use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::data_item::DataItemState;
+use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
-use crate::scheduler::{Action, Scheduler};
+use crate::scheduler::{Action, Scheduler, TimeSpan};
+use crate::system::System;
 use crate::task::TaskState;
 use crate::trace_log::TraceLog;
-
-/// Defines how data items are transferred during the DAG execution.
-#[derive(Clone, PartialEq, Debug)]
-pub enum DataTransferMode {
-    /// Every data item is automatically transferred between producer and consumer
-    /// via the master node (producer -> master -> consumer).
-    ViaMasterNode,
-    /// Every data item is automatically transferred between producer and consumer
-    /// directly (producer -> consumer)
-    Direct,
-    /// Data items are not transferred automatically,
-    /// all data transfers must be explicitly ordered by the scheduler.
-    Manual,
-}
-
-impl DataTransferMode {
-    /// Calculates the data transfer time per data unit between the specified resources (src, dest).
-    pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
-        match self {
-            DataTransferMode::ViaMasterNode => {
-                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
-            }
-            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
-            DataTransferMode::Manual => 0.,
-        }
-    }
-}
 
 /// Represents a DAG execution configuration.
 #[derive(Clone)]
@@ -168,9 +142,13 @@ impl DAGRunner {
 
     /// Starts DAG execution.
     pub fn start(&mut self) {
+        if !self.validate_input() {
+            return;
+        }
+
         for (id, data_item) in self.dag.get_data_items().iter().enumerate() {
             if data_item.state == DataItemState::Ready {
-                assert!(data_item.is_input, "Non-input data item has Ready state");
+                assert!(data_item.producer.is_none(), "Non-input data item has Ready state");
                 self.data_location.insert(id, self.id);
                 self.resource_data_items.entry(self.id).or_default().insert(id);
             } else if data_item.consumers.is_empty() {
@@ -186,14 +164,65 @@ impl DAGRunner {
             self.dag.get_data_items().len()
         );
         self.trace_config();
-        self.actions.extend(self.scheduler.borrow_mut().start(
+        let actions = self.scheduler.borrow_mut().start(
             &self.dag,
-            &self.resources,
-            &self.network.borrow(),
+            System {
+                resources: &self.resources,
+                network: &self.network.borrow(),
+            },
             self.config.clone(),
             &self.ctx,
-        ));
+        );
+        if let Some(makespan) = actions
+            .iter()
+            .filter_map(|action| match action {
+                Action::ScheduleTask {
+                    expected_span,
+                    task,
+                    resource,
+                    ..
+                }
+                | Action::ScheduleTaskOnCores {
+                    expected_span,
+                    task,
+                    resource,
+                    ..
+                } => expected_span.as_ref().map(|x| {
+                    x.finish()
+                        + self
+                            .dag
+                            .get_task(*task)
+                            .outputs
+                            .iter()
+                            .filter(|f| self.dag.get_outputs().contains(f))
+                            .map(|&f| {
+                                self.dag.get_data_item(f).size as f64
+                                    / self
+                                        .network
+                                        .borrow()
+                                        .bandwidth(self.resources[*resource].id, self.ctx.id())
+                            })
+                            .max_by(|a, b| a.total_cmp(&b))
+                            .unwrap_or(0.)
+                }),
+                Action::TransferData { .. } => None,
+            })
+            .max_by(|a, b| a.total_cmp(&b))
+        {
+            log_info!(self.ctx, "expected makespan: {}", makespan);
+        }
+        self.actions.extend(actions);
         self.process_actions();
+    }
+
+    fn validate_input(&self) -> bool {
+        if self.dag.get_tasks().iter().map(|task| task.min_cores).max()
+            > self.resources.iter().map(|r| r.compute.borrow().cores_total()).max()
+        {
+            log_error!(self.ctx, "some tasks require more cores than any resource can provide");
+            return false;
+        }
+        true
     }
 
     fn trace_config(&mut self) {
@@ -216,7 +245,14 @@ impl DAGRunner {
         &self.trace_log
     }
 
-    fn process_schedule_action(&mut self, task: usize, resource: usize, need_cores: u32, allowed_cores: Vec<u32>) {
+    fn process_schedule_action(
+        &mut self,
+        task: usize,
+        resource: usize,
+        need_cores: u32,
+        allowed_cores: Vec<u32>,
+        expected_span: Option<TimeSpan>,
+    ) {
         if need_cores > self.resources[resource].compute.borrow().cores_total() {
             log_error!(
                 self.ctx,
@@ -274,6 +310,15 @@ impl DAGRunner {
                 action_id: self.action_id,
             });
         }
+        if let Some(time_span) = expected_span {
+            log_debug!(
+                self.ctx,
+                "Expected span for task {} is {} - {}",
+                task_id,
+                time_span.start(),
+                time_span.finish()
+            );
+        }
         self.process_resource_queue(resource);
     }
 
@@ -281,25 +326,31 @@ impl DAGRunner {
         for i in 0..self.resources.len() {
             self.process_resource_queue(i);
         }
-        while !self.actions.is_empty() {
-            log_debug!(self.ctx, "Got action: {:?}", self.actions.front().unwrap());
-            match self.actions.pop_front().unwrap() {
-                Action::ScheduleTask { task, resource, cores } => {
+        while let Some(action) = self.actions.pop_front() {
+            log_debug!(self.ctx, "Got action: {:?}", action);
+            match action {
+                Action::ScheduleTask {
+                    task,
+                    resource,
+                    cores,
+                    expected_span,
+                } => {
                     let allowed_cores =
                         (0..self.resources[resource].compute.borrow().cores_total()).collect::<Vec<_>>();
-                    self.process_schedule_action(task, resource, cores, allowed_cores);
+                    self.process_schedule_action(task, resource, cores, allowed_cores, expected_span);
                 }
                 Action::ScheduleTaskOnCores {
                     task,
                     resource,
                     mut cores,
+                    expected_span,
                 } => {
                     cores.sort();
                     if cores.windows(2).any(|window| window[0] == window[1]) {
                         log_error!(self.ctx, "Wrong action, cores list {:?} contains same cores", cores);
                         return;
                     }
-                    self.process_schedule_action(task, resource, cores.len() as u32, cores);
+                    self.process_schedule_action(task, resource, cores.len() as u32, cores, expected_span);
                 }
                 Action::TransferData { data_item, from, to } => {
                     self.add_data_transfer_task(data_item, from, to);
@@ -494,11 +545,13 @@ impl DAGRunner {
             for &data_item_id in data_items.iter() {
                 for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
                     if let Some(consumer_location) = self.task_location.get(&consumer).cloned() {
-                        self.add_data_transfer_task(
-                            data_item_id,
-                            self.resources[location].id,
-                            self.resources[consumer_location].id,
-                        );
+                        if location != consumer_location {
+                            self.add_data_transfer_task(
+                                data_item_id,
+                                self.resources[location].id,
+                                self.resources[consumer_location].id,
+                            );
+                        }
                     }
                 }
             }
@@ -515,13 +568,18 @@ impl DAGRunner {
             }
         }
 
-        self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
-            task_id,
-            TaskState::Done,
-            &self.dag,
-            &self.resources,
-            &self.ctx,
-        ));
+        if !self.scheduler.borrow().is_static() {
+            self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
+                task_id,
+                TaskState::Done,
+                &self.dag,
+                System {
+                    resources: &self.resources,
+                    network: &self.network.borrow(),
+                },
+                &self.ctx,
+            ));
+        }
         self.process_actions();
 
         self.check_and_log_completed();

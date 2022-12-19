@@ -26,7 +26,8 @@ use threadpool::ThreadPool;
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
-use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::data_item::DataTransferMode;
+use dslab_dag::runner::Config;
 use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 

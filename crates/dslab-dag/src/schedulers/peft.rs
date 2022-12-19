@@ -11,14 +11,16 @@ use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::schedulers::common::*;
 use crate::system::System;
 
-pub struct HeftScheduler {
+pub struct PeftScheduler {
     data_transfer_strategy: DataTransferStrategy,
+    original_network_estimation: bool,
 }
 
-impl HeftScheduler {
+impl PeftScheduler {
     pub fn new() -> Self {
-        HeftScheduler {
+        PeftScheduler {
             data_transfer_strategy: DataTransferStrategy::Eager,
+            original_network_estimation: false,
         }
     }
 
@@ -27,15 +29,58 @@ impl HeftScheduler {
         self
     }
 
+    pub fn with_original_network_estimation(mut self) -> Self {
+        self.original_network_estimation = true;
+        self
+    }
+
     fn schedule(&self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         let resources = system.resources;
         let network = system.network;
 
-        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
-
         let task_count = dag.get_tasks().len();
 
-        let task_ranks = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
+        let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
+
+        // optimistic cost table
+        let mut oct = vec![vec![0.0; resources.len()]; task_count];
+        for task_id in topsort(dag).into_iter().rev() {
+            for resource_id in 0..resources.len() {
+                oct[task_id][resource_id] = task_successors(task_id, dag)
+                    .into_iter()
+                    .map(|(succ, weight)| {
+                        (0..resources.len())
+                            .map(|succ_resource| {
+                                oct[succ][succ_resource]
+                                    + dag.get_task(succ).flops as f64 / resources[succ_resource].speed as f64
+                                    + weight as f64
+                                        * if self.original_network_estimation {
+                                            if resource_id == succ_resource {
+                                                0.0
+                                            } else {
+                                                avg_net_time
+                                            }
+                                        } else {
+                                            config.data_transfer_mode.net_time(
+                                                network,
+                                                resources[resource_id].id,
+                                                resources[succ_resource].id,
+                                                ctx.id(),
+                                            )
+                                        }
+                            })
+                            .min_by(|a, b| a.total_cmp(&b))
+                            .unwrap()
+                    })
+                    .max_by(|a, b| a.total_cmp(&b))
+                    .unwrap_or(0.);
+            }
+        }
+        let task_ranks = oct
+            .iter()
+            .map(|ar| ar.iter().sum::<f64>() / ar.len() as f64)
+            .collect::<Vec<_>>();
+
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
 
@@ -48,15 +93,30 @@ impl HeftScheduler {
             })
             .collect::<Vec<_>>();
         let mut task_finish_times = vec![0.; task_count];
+        let mut scheduled = vec![false; task_count];
 
         let mut data_locations: HashMap<usize, Id> = HashMap::new();
         let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
-        for task_id in task_ids.into_iter() {
+        for _ in 0..task_ids.len() {
+            // first ready task in task_ids, which is already sorted by ranks
+            let task_id = *task_ids
+                .iter()
+                .filter(|&task| !scheduled[*task])
+                .filter(|&task| {
+                    dag.get_task(*task)
+                        .inputs
+                        .iter()
+                        .filter_map(|&id| dag.get_data_item(id).producer)
+                        .all(|task| scheduled[task])
+                })
+                .next()
+                .unwrap();
             let mut best_finish = -1.;
             let mut best_start = -1.;
+            let mut best_oeft = -1.;
             let mut best_resource = 0 as usize;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
@@ -79,9 +139,12 @@ impl HeftScheduler {
                 }
                 let (start_time, finish_time, cores) = res.unwrap();
 
-                if best_finish == -1. || best_finish > finish_time {
+                let oeft = finish_time + oct[task_id][resource];
+
+                if best_oeft == -1. || best_oeft > oeft {
                     best_start = start_time;
                     best_finish = finish_time;
+                    best_oeft = oeft;
                     best_resource = resource;
                     best_cores = cores;
                 }
@@ -110,6 +173,7 @@ impl HeftScheduler {
                 data_locations.insert(output, resources[best_resource].id);
             }
             task_locations.insert(task_id, resources[best_resource].id);
+            scheduled[task_id] = true;
         }
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -117,18 +181,18 @@ impl HeftScheduler {
     }
 }
 
-impl Scheduler for HeftScheduler {
+impl Scheduler for PeftScheduler {
     fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         assert_ne!(
             config.data_transfer_mode,
             DataTransferMode::Manual,
-            "HeftScheduler doesn't support DataTransferMode::Manual"
+            "PeftScheduler doesn't support DataTransferMode::Manual"
         );
 
         if dag.get_tasks().iter().any(|task| task.min_cores != task.max_cores) {
             log_warn!(
                 ctx,
-                "some tasks support different number of cores, but HEFT will always use min_cores"
+                "some tasks support different number of cores, but PEFT will always use min_cores"
             );
         }
 

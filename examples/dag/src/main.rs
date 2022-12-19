@@ -16,10 +16,14 @@ use env_logger::Builder;
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::data_item::{DataTransferMode, DataTransferStrategy};
 use dslab_dag::network::load_network;
-use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
-use dslab_dag::schedulers::heft::{DataTransferStrategy, HeftScheduler};
+use dslab_dag::schedulers::dls::DlsScheduler;
+use dslab_dag::schedulers::heft::HeftScheduler;
+use dslab_dag::schedulers::lookahead::LookaheadScheduler;
+use dslab_dag::schedulers::peft::PeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 use dslab_dag::schedulers::simple_with_data::SimpleDataScheduler;
 
@@ -34,7 +38,7 @@ struct Args {
     #[clap(long = "trace-log")]
     trace_log: bool,
 
-    /// Scheduler [heft, simple, simple-with-data]
+    /// Scheduler [heft, simple, simple-with-data, lookahead, dls]
     #[clap(long, default_value = "heft")]
     scheduler: String,
 
@@ -53,6 +57,21 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
         "heft" => {
             rc!(refcell!(
                 HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
+        }
+        "peft" => {
+            rc!(refcell!(
+                PeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
+        }
+        "lookahead" => {
+            rc!(refcell!(
+                LookaheadScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
+            ))
+        }
+        "dls" => {
+            rc!(refcell!(
+                DlsScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
             ))
         }
         _ => {
@@ -78,6 +97,7 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
 
     let t = Instant::now();
     sim.step_until_no_events();
+    println!("Makespan: {:.2}", sim.time());
     println!(
         "Processed {} events in {:.2?} ({:.0} events/sec)",
         sim.event_count(),
