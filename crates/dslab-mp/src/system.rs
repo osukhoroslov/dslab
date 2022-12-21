@@ -47,7 +47,10 @@ impl System {
             self.sim.create_context(name),
         )));
         let node_id = self.sim.add_handler(name, node.clone());
-        self.nodes.insert(name.to_string(), node);
+        assert!(
+            self.nodes.insert(name.to_string(), node).is_none(),
+            "nodes with same names are not allowed"
+        );
         self.net.borrow_mut().add_node(name.to_string(), node_id);
         t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
     }
