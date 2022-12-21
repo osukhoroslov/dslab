@@ -89,8 +89,8 @@ impl Node {
         self.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }
 
-    pub fn get_process(&self, name: &str) -> &Box<dyn Process> {
-        &self.processes.get(name).unwrap().proc_impl
+    pub fn get_process(&self, name: &str) -> Option<&Box<dyn Process>> {
+        self.processes.get(name).and_then(|entry| Some(&entry.proc_impl))
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {

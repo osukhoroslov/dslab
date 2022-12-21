@@ -77,7 +77,13 @@ impl System {
         self.net
             .borrow_mut()
             .set_proc_location(name.to_string(), node.to_string());
-        self.proc_nodes.insert(name.to_string(), self.nodes[node].clone());
+
+        assert!(
+            self.proc_nodes
+                .insert(name.to_string(), self.nodes[node].clone())
+                .is_none(),
+            "process with same names are not allowed"
+        );
         t!(format!(
             "{:>9.3} - process started: {} @ {}",
             self.sim.time(),
