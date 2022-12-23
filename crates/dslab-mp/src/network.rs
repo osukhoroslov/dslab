@@ -174,8 +174,7 @@ impl Network {
                         static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
                     }
                     let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                    let corrupted_msg = Message::new(msg.tip, corrupted_data);
-                    corrupted_msg
+                    Message::new(msg.tip, corrupted_data)
                 } else {
                     msg
                 };

@@ -140,9 +140,8 @@ impl System {
     pub fn step_until_local_message(&mut self, proc: &str) -> Result<Vec<Message>, &str> {
         let node = self.proc_nodes[proc].clone();
         while self.step() {
-            match node.borrow_mut().read_local_messages(proc) {
-                Some(messages) => return Ok(messages),
-                None => (),
+            if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+                return Ok(messages);
             }
         }
         Err("No messages")
@@ -152,9 +151,8 @@ impl System {
         let mut steps = 0;
         let node = self.proc_nodes[proc].clone();
         while self.step() && steps <= max_steps {
-            match node.borrow_mut().read_local_messages(proc) {
-                Some(messages) => return Ok(messages),
-                None => (),
+            if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+                return Ok(messages);
             }
             steps += 1;
         }
@@ -165,9 +163,8 @@ impl System {
         let end_time = self.time() + timeout;
         let node = self.proc_nodes[proc].clone();
         while self.step() && self.time() < end_time {
-            match node.borrow_mut().read_local_messages(proc) {
-                Some(messages) => return Ok(messages),
-                None => (),
+            if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+                return Ok(messages);
             }
         }
         Err("No messages")
