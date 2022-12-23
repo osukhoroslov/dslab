@@ -2,12 +2,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Default)]
 enum TopologyResolveType {
     Dijkstra,
+    #[default]
     FloydWarshall,
 }
 
+#[derive(Default)]
 pub struct TopologyResolver {
     resolve_type: TopologyResolveType,
     parent_path: Vec<Vec<NodeId>>,
@@ -15,10 +17,7 @@ pub struct TopologyResolver {
 
 impl TopologyResolver {
     pub fn new() -> TopologyResolver {
-        return TopologyResolver {
-            resolve_type: TopologyResolveType::FloydWarshall,
-            parent_path: Vec::new(),
-        };
+        Default::default()
     }
 
     pub fn resolve_topology(
@@ -31,18 +30,18 @@ impl TopologyResolver {
 
         if self.resolve_type == TopologyResolveType::Dijkstra {
             for node in nodes.keys() {
-                self.dijkstra_for_node(node, &links, &node_links_map);
+                self.dijkstra_for_node(node, links, node_links_map);
             }
         }
 
         if self.resolve_type == TopologyResolveType::FloydWarshall {
-            self.resolve_with_floyd_warshall(&nodes, &links, &node_links_map)
+            self.resolve_with_floyd_warshall(nodes, links, node_links_map)
         }
     }
 
     pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkID>> {
         let mut path = Vec::new();
-        let mut cur_node = dst.clone();
+        let mut cur_node = *dst;
         while cur_node != *src {
             if self.parent_path[*src][cur_node] == INVALID_NODE_ID {
                 return None;

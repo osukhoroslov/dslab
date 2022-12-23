@@ -22,7 +22,7 @@ pub struct LinkUsage {
 
 impl LinkUsage {
     pub fn get_path_bandwidth(&self) -> f64 {
-        return self.left_bandwidth / self.transfers_count as f64;
+        self.left_bandwidth / self.transfers_count as f64
     }
 }
 
@@ -45,7 +45,7 @@ impl PartialOrd for LinkUsage {
 
 impl PartialEq for LinkUsage {
     fn eq(&self, other: &Self) -> bool {
-        return self.link_id == other.link_id;
+        self.link_id == other.link_id
     }
 }
 
@@ -60,12 +60,12 @@ pub struct Transfer {
 
 impl Transfer {
     pub fn new(size: f64, data: Data) -> Transfer {
-        return Transfer {
+        Transfer {
             size_left: size,
             data,
             throughput: 0.0,
             last_update_time: 0.0,
-        };
+        }
     }
 }
 
@@ -78,12 +78,12 @@ pub struct TopologyNetwork {
 
 impl TopologyNetwork {
     pub fn new(topology: Rc<RefCell<Topology>>) -> TopologyNetwork {
-        return TopologyNetwork {
+        TopologyNetwork {
             topology,
             current_transfers: Vec::new(),
             next_event: None,
             next_event_index: None,
-        };
+        }
     }
 
     fn get_location(&self, node: Id) -> NodeId {
@@ -106,7 +106,7 @@ impl TopologyNetwork {
     }
 
     fn calculate_transfers(&mut self) {
-        if self.current_transfers.len() == 0 {
+        if self.current_transfers.is_empty() {
             return;
         }
 
@@ -139,20 +139,20 @@ impl TopologyNetwork {
                     );
                     link_paths.insert(*link_id, Vec::new());
                 }
-                link_paths.get_mut(&link_id).unwrap().push(idx);
-                link_data.get_mut(&link_id).unwrap().transfers_count += 1;
+                link_paths.get_mut(link_id).unwrap().push(idx);
+                link_data.get_mut(link_id).unwrap().transfers_count += 1;
             }
         }
 
         let mut current_link_usage = DoublePriorityQueue::new();
-        // Init current link uisage
+        // Init current link usage
         for (link_id, link_usage) in link_data {
             current_link_usage.push(link_id, link_usage);
         }
 
         let mut assigned_path = vec![false; paths.len()];
         // Calculate transfer bandwidths
-        while current_link_usage.len() != 0 {
+        while !current_link_usage.is_empty() {
             let (link_with_minimal_bandwidth_id, link_with_minimal_bandwidth_usage) =
                 current_link_usage.pop_min().unwrap();
             let mut links_decrease_paths = HashMap::new();
@@ -167,7 +167,7 @@ impl TopologyNetwork {
                     if !links_decrease_paths.contains_key(link) {
                         links_decrease_paths.insert(*link, 0);
                     }
-                    *links_decrease_paths.get_mut(&link).unwrap() += 1;
+                    *links_decrease_paths.get_mut(link).unwrap() += 1;
                 }
             }
             for (link_id, uses_amount) in links_decrease_paths {
@@ -236,7 +236,7 @@ impl NetworkConfiguration for TopologyNetwork {
 impl DataOperation for TopologyNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         if self.check_path_exists(data.src, data.dest) {
-            self.current_transfers.push(Transfer::new(data.size.clone(), data));
+            self.current_transfers.push(Transfer::new(data.size, data));
             self.recalculate_receive_time(ctx);
         }
     }

@@ -113,7 +113,7 @@ impl Master {
         self.memory_total += worker.memory_total;
         self.memory_available += worker.memory_available;
         self.worker_queue.push(worker.id, worker.score());
-        self.workers.insert(worker.id.clone(), worker);
+        self.workers.insert(worker.id, worker);
     }
 
     fn on_task_request(&mut self, req: TaskRequest) {
@@ -216,7 +216,7 @@ impl Master {
     }
 
     fn is_active(&self) -> bool {
-        self.unassigned_tasks.len() > 0 || self.assigned_tasks.len() > 0
+        !self.unassigned_tasks.is_empty() || !self.assigned_tasks.is_empty()
     }
 }
 

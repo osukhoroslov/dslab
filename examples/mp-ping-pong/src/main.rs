@@ -53,11 +53,11 @@ fn build_system(config: &TestConfig) -> System {
     };
     sys.add_process("server", server, "server-node");
     sys.add_process("client", client, "client-node");
-    return sys;
+    sys
 }
 
 fn check(messages: Vec<Message>, expected: &str) -> TestResult {
-    assume!(messages.len() > 0, "No messages returned by the client")?;
+    assume!(!messages.is_empty(), "No messages returned by the client")?;
     assume!(
         messages.len() == 1,
         format!("Wrong number of messages: {}", messages.len())

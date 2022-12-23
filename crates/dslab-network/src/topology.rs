@@ -10,6 +10,7 @@ use crate::shared_bandwidth_model::SharedBandwidthNetwork;
 use crate::topology_resolver::TopologyResolver;
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
+#[derive(Default)]
 pub struct Topology {
     link_id_counter: usize,
     node_id_counter: usize,
@@ -26,19 +27,7 @@ pub struct Topology {
 
 impl Topology {
     pub fn new() -> Self {
-        Self {
-            link_id_counter: 0,
-            node_id_counter: 0,
-            nodes_name_map: IndexMap::new(),
-            nodes: BTreeMap::new(),
-            links: BTreeMap::new(),
-            component_nodes: HashMap::new(),
-            node_links_map: BTreeMap::new(),
-            resolver: None,
-            bandwidth_cache: HashMap::new(),
-            latency_cache: HashMap::new(),
-            path_cache: HashMap::new(),
-        }
+        Default::default()
     }
 
     fn get_node_id(&self, node_name: &str) -> usize {
@@ -147,7 +136,7 @@ impl Topology {
 
     pub fn get_local_latency(&self, src: Id, dst: Id) -> f64 {
         let node = self.get_location(src).unwrap();
-        self.get_node_info(&node).unwrap().local_network.latency(src, dst)
+        self.get_node_info(node).unwrap().local_network.latency(src, dst)
     }
 
     pub fn get_link(&self, link_id: &LinkID) -> Option<&Link> {
@@ -201,7 +190,7 @@ impl Topology {
             self.latency_cache.insert((*dst, *src), latency);
             return latency;
         }
-        return f64::INFINITY;
+        f64::INFINITY
     }
 
     pub fn get_bandwidth(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
@@ -227,7 +216,7 @@ impl Topology {
 
             return bandwidth;
         }
-        return 0.0;
+        0.0
     }
 
     fn check_node_exists(&self, node_id: &NodeId) {

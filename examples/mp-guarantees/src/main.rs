@@ -55,7 +55,7 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
     }
     sys.add_process("receiver", boxed!(receiver), "receiver-node");
 
-    return sys;
+    sys
 }
 
 fn generate_message_texts(sys: &mut System, message_count: usize) -> Vec<String> {
@@ -69,7 +69,7 @@ fn generate_message_texts(sys: &mut System, message_count: usize) -> Vec<String>
             let msg = if message_count == 10 {
                 format!("{}C", sys.gen_range(20..30))
             } else {
-                format!("{}", sys.random_string(100))
+                sys.random_string(100)
             };
             messages.push(msg);
         }
@@ -93,7 +93,7 @@ fn send_messages(sys: &mut System, message_count: usize) -> Vec<Message> {
         }
         messages.push(msg);
     }
-    return messages;
+    messages
 }
 
 fn check_guarantees(sys: &mut System, sent: &[Message], config: &TestConfig) -> TestResult {
@@ -317,7 +317,7 @@ fn test_dropped(config: &TestConfig) -> TestResult {
 fn test_chaos_monkey(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     for i in 1..=config.monkeys {
-        let mut run_config = config.clone();
+        let mut run_config = *config;
         run_config.seed = rand.next_u64();
         println!("Run {} (seed: {})", i, run_config.seed);
         let mut sys = build_system(&run_config, false);
@@ -327,9 +327,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         let messages = send_messages(&mut sys, 10);
         sys.step_until_no_events();
         let res = check_guarantees(&mut sys, &messages, &run_config);
-        if res.is_err() {
-            return res;
-        }
+        res.as_ref()?;
     }
     Ok(true)
 }
@@ -344,10 +342,8 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
         }
         let messages = send_messages(&mut sys, message_count);
         sys.step_until_no_events();
-        let res = check_guarantees(&mut sys, &messages, &config);
-        if res.is_err() {
-            return res;
-        }
+        let res = check_guarantees(&mut sys, &messages, config);
+        res.as_ref()?;
         let sender_mem = sys.max_size("sender");
         let receiver_mem = sys.max_size("receiver");
         let net_message_count = sys.network().borrow().message_count();

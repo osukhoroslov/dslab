@@ -65,3 +65,9 @@ impl<T> TestSuite<T> {
         }
     }
 }
+
+impl<T> Default for TestSuite<T> {
+    fn default() -> Self {
+        TestSuite::new()
+    }
+}

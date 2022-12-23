@@ -101,8 +101,7 @@ fn main() {
     admin.emit_now(Start {}, master_id);
 
     // create and start workers
-    for i in 0..host_count {
-        let host = &hosts[i];
+    for host in hosts.iter() {
         // compute
         let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
