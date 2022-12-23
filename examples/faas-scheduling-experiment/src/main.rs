@@ -1,47 +1,19 @@
 use std::boxed::Box;
-use std::cell::RefCell;
+use std::fs::File;
 use std::path::Path;
-use std::rc::Rc;
 
-use dslab_core::simulation::Simulation;
-use dslab_faas::coldstart::FixedTimeColdStartPolicy;
-use dslab_faas::config::Config;
-use dslab_faas::function::{Application, Function};
-use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
-use dslab_faas::scheduler::Scheduler;
-use dslab_faas::simulation::ServerlessSimulation;
+use serde::{Deserialize, Serialize};
+
+use dslab_faas::config::{ConfigParamResolvers, RawConfig};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
+use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
+use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::Stats;
-use dslab_faas_extra::azure_trace::{process_azure_trace, Trace};
-use dslab_faas_extra::hermes::HermesScheduler;
-use dslab_faas_extra::simple_schedulers::*;
 
-fn test_scheduler(scheduler: Box<dyn Scheduler>, trace: &Trace, time_range: f64) -> Stats {
-    let mut config: Config = Default::default();
-    config.scheduler = scheduler;
-    config.coldstart_policy = Rc::new(RefCell::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0)));
-    let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
-    for _ in 0..10 {
-        let mem = sim.create_resource("mem", 4096 * 4);
-        sim.add_host(None, ResourceProvider::new(vec![mem]), 4);
-    }
-    for app in trace.app_records.iter() {
-        let mem = sim.create_resource_requirement("mem", app.mem);
-        sim.add_app(Application::new(
-            1,
-            app.cold_start,
-            1.,
-            ResourceConsumer::new(vec![mem]),
-        ));
-    }
-    for func in trace.function_records.iter() {
-        sim.add_function(Function::new(func.app_id));
-    }
-    for req in trace.trace_records.iter() {
-        sim.send_invocation_request(req.id as u64, req.dur, req.time);
-    }
-    sim.set_simulation_end(time_range);
-    sim.step_until_no_events();
-    sim.get_stats()
+#[derive(Serialize, Deserialize)]
+struct ExperimentConfig {
+    pub base_config: RawConfig,
+    pub schedulers: Vec<String>,
 }
 
 fn print_results(stats: Stats, name: &str) {
@@ -69,45 +41,30 @@ fn print_results(stats: Stats, name: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let trace = process_azure_trace(Path::new(&args[1]), 200000);
+    let mut trace_config: AzureTraceConfig = Default::default();
+    trace_config.invocations_limit = 200000;
+    let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
-    let mut time_range = 0.0;
-    for req in trace.trace_records.iter() {
-        time_range = f64::max(time_range, req.time + req.dur);
+    let experiment_config: ExperimentConfig =
+        serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
+    let schedulers = experiment_config.schedulers;
+    let base_config = experiment_config.base_config;
+    let configs: Vec<_> = schedulers
+        .iter()
+        .map(|x| {
+            let mut config = base_config.clone();
+            config.scheduler = x.to_string();
+            config
+        })
+        .collect();
+    let mut resolvers: ConfigParamResolvers = Default::default();
+    resolvers.coldstart_policy_resolver = Box::new(extra_coldstart_policy_resolver);
+    resolvers.scheduler_resolver = Box::new(extra_scheduler_resolver);
+    let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
+    for (i, s) in stats.drain(..).enumerate() {
+        print_results(s, &schedulers[i]);
     }
-    print_results(
-        test_scheduler(
-            Box::new(LocalityBasedScheduler::new(None, None, true)),
-            &trace,
-            time_range,
-        ),
-        "Locality-based, warm only",
-    );
-    print_results(
-        test_scheduler(
-            Box::new(LocalityBasedScheduler::new(None, None, false)),
-            &trace,
-            time_range,
-        ),
-        "Locality-based, allow cold",
-    );
-    print_results(
-        test_scheduler(Box::new(RandomScheduler::new(1)), &trace, time_range),
-        "Random",
-    );
-    print_results(
-        test_scheduler(Box::new(LeastLoadedScheduler::new(true)), &trace, time_range),
-        "Least-loaded",
-    );
-    print_results(
-        test_scheduler(Box::new(RoundRobinScheduler::new()), &trace, time_range),
-        "Round Robin",
-    );
-    print_results(
-        test_scheduler(Box::new(HermesScheduler::new()), &trace, time_range),
-        "Hermes",
-    );
 }

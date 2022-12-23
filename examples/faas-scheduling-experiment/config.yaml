@@ -1,0 +1,18 @@
+base_config:
+  hosts:
+    - cores: 4
+      resources:
+        - name: mem
+          quantity: 16384
+      invoker: BasicInvoker
+      count: 10
+  coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200,prewarm=0]
+  idle_deployer: BasicDeployer
+  disable_contention: false
+schedulers:
+  - LocalityBasedScheduler[warm_only=true]
+  - LocalityBasedScheduler[warm_only=false]
+  - RandomScheduler[seed=1]
+  - LeastLoadedScheduler[prefer_warm=true]
+  - RoundRobinScheduler
+  - HermesScheduler

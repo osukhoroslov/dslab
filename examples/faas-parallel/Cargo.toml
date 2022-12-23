@@ -1,5 +1,5 @@
 [package]
-name = "serverless-in-the-wild"
+name = "faas-parallel-example"
 version = "0.0.1"
 license = "MIT OR Apache-2.0"
 edition = "2021"
@@ -7,5 +7,3 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-faas = { path = "../../crates/dslab-faas" }
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"

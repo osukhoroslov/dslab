@@ -190,7 +190,7 @@ impl Host {
         let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
-            let prewarm = self.coldstart.borrow_mut().prewarm_window(app);
+            let prewarm = f64::max(0.0, self.coldstart.borrow_mut().prewarm_window(app));
             if prewarm != 0. {
                 self.ctx
                     .borrow_mut()
@@ -198,7 +198,7 @@ impl Host {
                 self.new_container_end_event(cont_id, expect, 0.0);
             } else {
                 let immut_container = self.container_manager.get_container(cont_id).unwrap();
-                let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
+                let keepalive = f64::max(0.0, self.coldstart.borrow_mut().keepalive_window(immut_container));
                 self.new_container_end_event(cont_id, expect, keepalive);
             }
         }

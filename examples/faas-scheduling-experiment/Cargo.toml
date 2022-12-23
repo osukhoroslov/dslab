@@ -7,4 +7,5 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-faas = { path = "../../crates/dslab-faas" }
-dslab-faas-extra = { path = "../../crates/dslab-faas-extra" }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"

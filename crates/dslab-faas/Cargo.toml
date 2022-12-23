@@ -6,6 +6,14 @@ edition = "2021"
 
 [dependencies]
 dslab-core = { path = "../dslab-core" }
+
+arima = "0.2"
+csv = "1.1"
 indexmap = "1.8.2"
+itertools = "0.10.3"
 num = "0.2.0"
+rand = "0.8"
+rand_pcg = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+threadpool = "1.8.1"
