@@ -35,16 +35,16 @@ fn print_results(stats: Stats, name: &str) {
 fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     match &s[s.len() - 9..] {
         "keepalive" => {
-            let s1 = s.split("-").next().unwrap();
+            let s1 = s.split('-').next().unwrap();
             let len = s1.parse::<f64>().unwrap();
             Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0))
         }
         "unloading" => Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0)),
         _ => {
-            let mut it = s.split(",");
+            let mut it = s.split(',');
             it.next();
             let s1 = it.next().unwrap();
-            let s2 = s1[1..].split(" ").next().unwrap();
+            let s2 = s1[1..].split(' ').next().unwrap();
             let len = s2.parse::<f64>().unwrap();
             Box::new(HybridHistogramPolicy::new(3600.0 * len, 60.0, 2.0, 0.5, 0.15, 0.1))
         }
