@@ -12,7 +12,7 @@ use dslab_faas::stats::Stats;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
-    pub sim_config: RawConfig,
+    pub base_config: RawConfig,
     pub schedulers: Vec<String>,
 }
 
@@ -51,11 +51,11 @@ fn main() {
     let experiment_config: ExperimentConfig =
         serde_yaml::from_reader(File::open(Path::new(&args[2])).unwrap()).unwrap();
     let schedulers = experiment_config.schedulers;
-    let sim_config = experiment_config.sim_config;
+    let base_config = experiment_config.base_config;
     let configs: Vec<_> = schedulers
         .iter()
         .map(|x| {
-            let mut config = sim_config.clone();
+            let mut config = base_config.clone();
             config.scheduler = x.to_string();
             config
         })

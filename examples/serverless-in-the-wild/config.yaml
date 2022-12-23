@@ -1,4 +1,4 @@
-sim_config:
+base_config:
   hosts:
     - cores: 8
       resources:
