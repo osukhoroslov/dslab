@@ -71,7 +71,6 @@ impl DlsScheduler {
                     .filter_map(|&id| dag.get_data_item(id).producer)
                     .all(|task| scheduled[task])
             }) {
-                let task_flops = dag.get_task(task_id).flops as f64;
                 for resource in 0..resources.len() {
                     let res = evaluate_assignment(
                         task_id,
