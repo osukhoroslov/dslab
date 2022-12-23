@@ -63,8 +63,8 @@ pub struct RawConfig {
 
 pub fn parse_options(s: &str) -> HashMap<String, String> {
     let mut ans = HashMap::new();
-    for t in s.split(",") {
-        let val = t.split_once("=");
+    for t in s.split(',') {
+        let val = t.split_once('=');
         if let Some((l, r)) = val {
             ans.insert(l.to_string(), r.to_string());
         }

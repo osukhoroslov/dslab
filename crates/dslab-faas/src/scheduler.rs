@@ -60,7 +60,7 @@ impl ApplicationHasher {
         }
         let mut a: u64 = 0;
         let mut b: u64 = 0;
-        for (i, x) in s.split(".").enumerate() {
+        for (i, x) in s.split('.').enumerate() {
             if i >= 2 {
                 panic!("Too many tokens in hasher string.");
             }
@@ -89,7 +89,7 @@ pub struct LocalityBasedScheduler {
 
 impl LocalityBasedScheduler {
     pub fn new(hasher: Option<ApplicationHasher>, step: Option<usize>, warm_only: bool) -> Self {
-        let f = hasher.unwrap_or(ApplicationHasher::new(Box::new(|a| a), "Identity".to_string()));
+        let f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), "Identity".to_string()));
         let s = step.unwrap_or(1);
         Self {
             hasher: f,
