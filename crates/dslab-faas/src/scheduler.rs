@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -49,29 +50,39 @@ pub struct ApplicationHasher {
     pub name: String,
 }
 
-impl ApplicationHasher {
-    pub fn new(hash_fn: Box<dyn Fn(u64) -> u64>, name: String) -> Self {
-        Self { hash_fn, name }
-    }
+impl FromStr for ApplicationHasher {
+    type Err = String;
 
-    pub fn from_str(s: &str) -> Self {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.eq_ignore_ascii_case("identity") {
-            return Self::new(Box::new(|a| a), "Identity".to_string());
+            return Ok(Self::new(Box::new(|a| a), "Identity".to_string()));
         }
         let mut a: u64 = 0;
         let mut b: u64 = 0;
         for (i, x) in s.split('.').enumerate() {
             if i >= 2 {
-                panic!("Too many tokens in hasher string.");
+                return Err("Too many tokens in hasher string.".to_string());
             }
             if i == 0 {
-                a = x.parse::<u64>().unwrap();
+                if let Ok(y) = x.parse::<u64>() {
+                    a = y;
+                } else {
+                    return Err("Couldn't parse parameter 'a'".to_string());
+                }
+            } else if let Ok(y) = x.parse::<u64>() {
+                b = y;
             } else {
-                b = x.parse::<u64>().unwrap();
+                return Err("Couldn't parse parameter 'b'".to_string());
             }
         }
         let name = format!("Linear[{} * x + {}]", a, b);
-        Self::new(Box::new(move |x| a.wrapping_mul(x).wrapping_add(b)), name)
+        Ok(Self::new(Box::new(move |x| a.wrapping_mul(x).wrapping_add(b)), name))
+    }
+}
+
+impl ApplicationHasher {
+    pub fn new(hash_fn: Box<dyn Fn(u64) -> u64>, name: String) -> Self {
+        Self { hash_fn, name }
     }
 
     pub fn hash(&self, app: u64) -> u64 {
@@ -99,7 +110,8 @@ impl LocalityBasedScheduler {
     }
 
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
-        let hasher = ApplicationHasher::from_str(options.get("hasher").map(|a| a.deref()).unwrap_or("Identity"));
+        let hasher =
+            ApplicationHasher::from_str(options.get("hasher").map(|a| a.deref()).unwrap_or("Identity")).unwrap();
         let warm_only = options.get("warm_only").unwrap().parse::<bool>().unwrap();
         let step = options.get("step").map(|s| s.parse::<usize>().unwrap());
         Self::new(Some(hasher), step, warm_only)
@@ -210,13 +222,14 @@ impl Scheduler for LeastLoadedScheduler {
 }
 
 /// RoundRobinScheduler chooses hosts in a circular fashion.
+#[derive(Default)]
 pub struct RoundRobinScheduler {
     index: usize,
 }
 
 impl RoundRobinScheduler {
     pub fn new() -> Self {
-        Self { index: 0 }
+        Default::default()
     }
 }
 
@@ -240,15 +253,15 @@ pub fn default_scheduler_resolver(s: &str) -> Box<dyn Scheduler> {
     if s == "RoundRobinScheduler" {
         return Box::new(RoundRobinScheduler::new());
     }
-    if s.len() >= 17 && &s[0..16] == "RandomScheduler[" && s.chars().next_back().unwrap() == ']' {
+    if s.len() >= 17 && &s[0..16] == "RandomScheduler[" && s.ends_with(']') {
         let opts = parse_options(&s[16..s.len() - 1]);
         return Box::new(RandomScheduler::from_options_map(&opts));
     }
-    if s.len() >= 22 && &s[0..21] == "LeastLoadedScheduler[" && s.chars().next_back().unwrap() == ']' {
+    if s.len() >= 22 && &s[0..21] == "LeastLoadedScheduler[" && s.ends_with(']') {
         let opts = parse_options(&s[21..s.len() - 1]);
         return Box::new(LeastLoadedScheduler::from_options_map(&opts));
     }
-    if s.len() >= 24 && &s[0..23] == "LocalityBasedScheduler[" && s.chars().next_back().unwrap() == ']' {
+    if s.len() >= 24 && &s[0..23] == "LocalityBasedScheduler[" && s.ends_with(']') {
         let opts = parse_options(&s[23..s.len() - 1]);
         return Box::new(LocalityBasedScheduler::from_options_map(&opts));
     }

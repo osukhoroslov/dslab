@@ -47,11 +47,11 @@ impl ApplicationData {
         let (coeff, ar_order, _) = autofit(&self.raw, 1).unwrap();
         let mut ar = Vec::new();
         let mut ma = Vec::new();
-        for i in 1..ar_order + 1 {
-            ar.push(coeff[i]);
+        for c in coeff.iter().copied().skip(1).take(ar_order) {
+            ar.push(c);
         }
-        for i in ar_order + 1..coeff.len() {
-            ma.push(coeff[i]);
+        for c in coeff.iter().copied().skip(ar_order + 1) {
+            ma.push(c);
         }
         arima_forecast(
             self.raw.as_slice(),
@@ -125,7 +125,7 @@ pub struct HybridHistogramPolicy {
 enum Pattern {
     Uncertain,
     Certain,
-    OOB,
+    OutOfBounds,
 }
 
 impl HybridHistogramPolicy {
@@ -168,7 +168,7 @@ impl HybridHistogramPolicy {
         let oob_thr = self.oob_thr;
         let data = self.get_app(app_id);
         if data.oob_rate() >= oob_thr {
-            Pattern::OOB
+            Pattern::OutOfBounds
         } else if data.cv < cv_thr {
             Pattern::Uncertain
         } else {
@@ -199,7 +199,7 @@ impl ColdStartPolicy for HybridHistogramPolicy {
                 let tail = 1 + self.get_app(container.app_id).get_tail();
                 (tail as f64) * self.bin_len * (1. + self.hist_margin)
             }
-            Pattern::OOB => self.get_app(container.app_id).arima() * self.arima_margin * 2.,
+            Pattern::OutOfBounds => self.get_app(container.app_id).arima() * self.arima_margin * 2.,
         }
     }
 
@@ -210,7 +210,7 @@ impl ColdStartPolicy for HybridHistogramPolicy {
                 let head = self.get_app(app.id).get_head();
                 (head as f64) * self.bin_len * (1. - self.hist_margin)
             }
-            Pattern::OOB => self.get_app(app.id).arima() * (1. - self.arima_margin),
+            Pattern::OutOfBounds => self.get_app(app.id).arima() * (1. - self.arima_margin),
         }
     }
 

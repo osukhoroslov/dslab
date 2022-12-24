@@ -94,8 +94,7 @@ impl ProgressComputer {
     fn remove_invocation(&mut self, id: u64) -> f64 {
         let it = self.work_map.remove(&id).unwrap();
         self.work_tree.remove(&it);
-        let delta = it.finish - self.work_total;
-        delta
+        it.finish - self.work_total
     }
 
     fn insert_invocation(&mut self, id: u64, remain: f64) {

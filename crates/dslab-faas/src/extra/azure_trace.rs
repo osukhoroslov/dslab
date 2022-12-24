@@ -251,8 +251,8 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                 }
                 let dur_vec = dur_dist.get(&func).unwrap();
                 let inv_vec = inv_cnt.get(&func).unwrap();
-                for i in 0..1440 {
-                    for _ in 0..inv_vec[i] {
+                for (i, inv) in inv_vec.iter().copied().enumerate() {
+                    for _ in 0..inv {
                         let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
                         let mut record = RequestData {
                             id: curr_id as u64,

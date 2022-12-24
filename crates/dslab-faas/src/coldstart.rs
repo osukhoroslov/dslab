@@ -75,7 +75,7 @@ pub fn default_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     if s == "No unloading" {
         return Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0));
     }
-    if s.len() >= 26 && &s[0..25] == "FixedTimeColdStartPolicy[" && s.chars().next_back().unwrap() == ']' {
+    if s.len() >= 26 && &s[0..25] == "FixedTimeColdStartPolicy[" && s.ends_with(']') {
         let opts = parse_options(&s[25..s.len() - 1]);
         return Box::new(FixedTimeColdStartPolicy::from_options_map(&opts));
     }

@@ -105,7 +105,7 @@ impl<'a> Iterator for OpenDCRequestIter<'a> {
                     return None;
                 }
             }
-            self.curr = self.trace[self.sample_id].clone();
+            self.curr = self.trace[self.sample_id];
             self.sample_id += 1;
             self.invocations = 0;
         }

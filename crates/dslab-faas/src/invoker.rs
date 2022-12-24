@@ -34,13 +34,14 @@ pub trait Invoker {
     }
 }
 
+#[derive(Default)]
 pub struct BasicInvoker {
     queue: Vec<InvocationRequest>,
 }
 
 impl BasicInvoker {
     pub fn new() -> Self {
-        Self { queue: Vec::new() }
+        Default::default()
     }
 
     fn try_invoke(

@@ -10,12 +10,16 @@ use dslab_faas::simulation::ServerlessSimulation;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut trace_config: OpenDCTraceConfig = Default::default();
-    trace_config.cold_start = 0.5;
+    let trace_config = OpenDCTraceConfig {
+        cold_start: 0.5,
+        ..Default::default()
+    };
     let trace = process_opendc_trace(Path::new(&args[1]), trace_config);
-    let mut config: Config = Default::default();
-    config.disable_contention = true;
-    config.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0));
+    let config = Config {
+        disable_contention: true,
+        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)),
+        ..Default::default()
+    };
     let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
     for _ in 0..18 {
         let mem = sim.create_resource("mem", 4096);
