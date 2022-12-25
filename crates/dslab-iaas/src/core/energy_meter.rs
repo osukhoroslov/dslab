@@ -1,27 +1,17 @@
 //! Energy meter calculates the host energy consumption.
 
 /// Energy meter structure.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct EnergyMeter {
     energy_consumed: f64,
     current_power: f64,
     prev_time: f64,
 }
 
-impl Default for EnergyMeter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl EnergyMeter {
     /// Creates component.
     pub fn new() -> Self {
-        Self {
-            prev_time: 0.0,
-            current_power: 0.0,
-            energy_consumed: 0.0,
-        }
+        Default::default()
     }
 
     /// Invoked each time the host power consumption is changed to update the total energy consumption.

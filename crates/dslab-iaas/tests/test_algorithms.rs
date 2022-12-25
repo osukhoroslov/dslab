@@ -12,7 +12,6 @@ use dslab_iaas::core::vm_placement_algorithms::norm_diff::L2NormDiff;
 use dslab_iaas::core::vm_placement_algorithms::weighted_dot_product::WeightedDotProduct;
 use dslab_iaas::core::vm_placement_algorithms::worst_fit::WorstFit;
 use dslab_iaas::simulation::CloudSimulation;
-use dslab_iaas::simulation::VMRequest;
 
 // Runs the VM placement algorithm and checks its' placement decisions.
 //
@@ -33,55 +32,39 @@ fn check_placements(algorithm: Box<dyn VMPlacementAlgorithm>, expected_hosts: Ve
     host_ids.push(cloud_sim.add_host("h4", 13, 4));
 
     cloud_sim.spawn_vm_on_host(
-        VMRequest {
-            cpu_usage: 6,
-            memory_usage: 2,
-            lifetime: 10.0,
-            start_time: 0.,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: None,
-        },
+        6,
+        2,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
         host_ids[0],
     );
     cloud_sim.spawn_vm_on_host(
-        VMRequest {
-            cpu_usage: 6,
-            memory_usage: 2,
-            lifetime: 10.0,
-            start_time: 0.,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: None,
-        },
+        6,
+        2,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
         host_ids[1],
     );
     cloud_sim.spawn_vm_on_host(
-        VMRequest {
-            cpu_usage: 7,
-            memory_usage: 1,
-            lifetime: 10.0,
-            start_time: 0.,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: None,
-        },
+        7,
+        1,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
         host_ids[2],
     );
     cloud_sim.spawn_vm_on_host(
-        VMRequest {
-            cpu_usage: 9,
-            memory_usage: 1,
-            lifetime: 10.0,
-            start_time: 0.,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: None,
-        },
+        9,
+        1,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
         host_ids[3],
     );
 
@@ -90,39 +73,36 @@ fn check_placements(algorithm: Box<dyn VMPlacementAlgorithm>, expected_hosts: Ve
     let scheduler_id = cloud_sim.add_scheduler("s", algorithm);
 
     let mut vm_ids = Vec::<u32>::new();
-    vm_ids.push(cloud_sim.spawn_vm_now(VMRequest {
-        cpu_usage: 2,
-        memory_usage: 2,
-        lifetime: 10.0,
-        start_time: 0.,
-        cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        id: None,
-        scheduler_id: Some(scheduler_id),
-    }));
-    vm_ids.push(cloud_sim.spawn_vm_now(VMRequest {
-        cpu_usage: 3,
-        memory_usage: 1,
-        lifetime: 10.0,
-        start_time: 0.,
-        cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        id: None,
-        scheduler_id: Some(scheduler_id),
-    }));
-    vm_ids.push(cloud_sim.spawn_vm_now(VMRequest {
-        cpu_usage: 1,
-        memory_usage: 1,
-        lifetime: 10.0,
-        start_time: 0.,
-        cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-        id: None,
-        scheduler_id: Some(scheduler_id),
-    }));
+    vm_ids.push(cloud_sim.spawn_vm_now(
+        2,
+        2,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
+        scheduler_id,
+    ));
+    vm_ids.push(cloud_sim.spawn_vm_now(
+        3,
+        1,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
+        scheduler_id,
+    ));
+    vm_ids.push(cloud_sim.spawn_vm_now(
+        1,
+        1,
+        10.0,
+        Box::new(ConstantLoadModel::new(1.0)),
+        Box::new(ConstantLoadModel::new(1.0)),
+        None,
+        scheduler_id,
+    ));
 
     cloud_sim.step_for_duration(1.);
-    let cur_time = cloud_sim.current_time().clone();
+    let cur_time = cloud_sim.current_time();
     assert_eq!(cur_time, 2.);
 
     for i in 0..vm_ids.len() {

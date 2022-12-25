@@ -28,20 +28,6 @@ use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 
-/// Represents host creation properties that are passed to the structure constructor
-pub struct HostCreationProperties {
-    pub cpu_total: u32,
-    pub memory_total: u64,
-    pub monitoring_id: u32,
-    pub placement_store_id: u32,
-    pub vm_api: Rc<RefCell<VmAPI>>,
-    pub allow_vm_overcommit: bool,
-    pub power_model: HostPowerModel,
-    pub slav_metric: Box<dyn HostSLAVMetric>,
-    pub ctx: SimulationContext,
-    pub sim_config: Rc<SimulationConfig>,
-}
-
 /// Represents a single physical machine or host for short, which possesses a certain amount of resources and performs
 /// execution of VMs assigned to it by a scheduler. It models the main VM lifecycle stages such as creation, deletion
 /// and migration, and reports the VM status changes to VM API component. Host manager periodically computes its
@@ -82,16 +68,28 @@ pub struct HostManager {
 
 impl HostManager {
     // Creates new host with specified capacity.
-    pub fn new(properties: HostCreationProperties) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        cpu_total: u32,
+        memory_total: u64,
+        monitoring_id: u32,
+        placement_store_id: u32,
+        vm_api: Rc<RefCell<VmAPI>>,
+        allow_vm_overcommit: bool,
+        power_model: HostPowerModel,
+        slav_metric: Box<dyn HostSLAVMetric>,
+        ctx: SimulationContext,
+        sim_config: Rc<SimulationConfig>,
+    ) -> Self {
         Self {
-            id: properties.ctx.id(),
-            name: properties.ctx.name().to_string(),
-            cpu_total: properties.cpu_total,
-            memory_total: properties.memory_total,
+            id: ctx.id(),
+            name: ctx.name().to_string(),
+            cpu_total,
+            memory_total,
             cpu_allocated: 0,
             memory_allocated: 0,
-            cpu_available: properties.cpu_total,
-            memory_available: properties.memory_total,
+            cpu_available: cpu_total,
+            memory_available: memory_total,
             cpu_overcommit: 0,
             memory_overcommit: 0,
             vms: HashSet::new(),
@@ -99,14 +97,14 @@ impl HostManager {
             recently_removed_vms: Vec::new(),
             recent_vm_status_changes: HashMap::new(),
             energy_meter: EnergyMeter::new(),
-            monitoring_id: properties.monitoring_id,
-            placement_store_id: properties.placement_store_id,
-            vm_api: properties.vm_api,
-            allow_vm_overcommit: properties.allow_vm_overcommit,
-            power_model: properties.power_model,
-            slav_metric: properties.slav_metric,
-            ctx: properties.ctx,
-            sim_config: properties.sim_config,
+            monitoring_id,
+            placement_store_id,
+            vm_api,
+            allow_vm_overcommit,
+            power_model,
+            slav_metric,
+            ctx,
+            sim_config,
         }
     }
 

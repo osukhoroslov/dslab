@@ -8,17 +8,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Maximizes the dot product between the host's available resources and the VM's resource usage vectors.
 /// The vectors are normalized to the host's capacity.
+#[derive(Default)]
 pub struct DotProduct;
 
 impl DotProduct {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for DotProduct {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

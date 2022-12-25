@@ -10,17 +10,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 /// under the L^2 norm with additional resource weights.
 /// The vectors are normalized to the host's capacity.
 /// The resource weight corresponds to its average usage across all hosts.
+#[derive(Default)]
 pub struct L2NormDiff;
 
 impl L2NormDiff {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for L2NormDiff {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

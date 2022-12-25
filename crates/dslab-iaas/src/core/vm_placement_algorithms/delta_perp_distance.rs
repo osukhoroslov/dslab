@@ -8,17 +8,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Maximizes the improvement (absolute decrease) of the perpendicular distance
 /// between the host's resource usage and resource capacity vectors after the allocation.
+#[derive(Default)]
 pub struct DeltaPerpDistance;
 
 impl DeltaPerpDistance {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for DeltaPerpDistance {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

@@ -16,6 +16,7 @@ use crate::extensions::dataset_reader::VMRequest;
 /// Example: see `examples/iaas/workload.json`.
 ///
 /// Pass the needed JSON file to [`parse()`](StandardDatasetReader::parse) method.
+#[derive(Default)]
 pub struct StandardDatasetReader {
     vm_requests: Vec<VMRequest>,
     current_vm: usize,
@@ -35,19 +36,10 @@ struct StandardVmRequest {
     pub count: Option<u32>,
 }
 
-impl Default for StandardDatasetReader {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl StandardDatasetReader {
     /// Creates dataset reader.
     pub fn new() -> Self {
-        Self {
-            vm_requests: Vec::new(),
-            current_vm: 0,
-        }
+        Default::default()
     }
 
     /// Loads the dataset from JSON file with VM requests.

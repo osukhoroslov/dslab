@@ -8,17 +8,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Maximizes the cosine of the angle between the host's resource usage and resource capacity vectors
 /// after the allocation.
+#[derive(Default)]
 pub struct CosineSimilarity;
 
 impl CosineSimilarity {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for CosineSimilarity {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

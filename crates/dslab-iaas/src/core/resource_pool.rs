@@ -34,21 +34,15 @@ impl HostInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ResourcePoolState {
     hosts: BTreeMap<u32, HostInfo>,
-}
-
-impl Default for ResourcePoolState {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl ResourcePoolState {
     /// Creates empty resource pool state.
     pub fn new() -> Self {
-        Self { hosts: BTreeMap::new() }
+        Default::default()
     }
 
     /// Adds host to resource pool.

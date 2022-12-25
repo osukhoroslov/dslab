@@ -31,13 +31,6 @@ impl Display for VmStatus {
     }
 }
 
-/// Represents virtual machine resource load models.
-#[derive(Clone)]
-pub struct LoadModels {
-    pub cpu_load_model: Box<dyn LoadModel>,
-    pub memory_load_model: Box<dyn LoadModel>,
-}
-
 /// Represents virtual machine (VM).
 ///
 /// VM is characterized by its ID, resource requirements (vCPUs and memory), start time, lifetime and load models.
@@ -69,13 +62,15 @@ impl Serialize for VirtualMachine {
 
 impl VirtualMachine {
     /// Creates virtual machine with specified parameters.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: u32,
         cpu_usage: u32,
         memory_usage: u64,
         allocation_start_time: f64,
         lifetime: f64,
-        load_models: LoadModels,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
@@ -85,8 +80,8 @@ impl VirtualMachine {
             allocation_start_time,
             lifetime,
             start_time: -1.,
-            cpu_load_model: load_models.cpu_load_model,
-            memory_load_model: load_models.memory_load_model,
+            cpu_load_model,
+            memory_load_model,
             sim_config,
         }
     }

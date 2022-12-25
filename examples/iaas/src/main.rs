@@ -11,7 +11,6 @@ use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
 use dslab_iaas::simulation::CloudSimulation;
-use dslab_iaas::simulation::VMRequest;
 
 fn init_logger() {
     use env_logger::Builder;
@@ -34,60 +33,52 @@ fn example_two_schedulers() {
 
     // spawn vm_0 - vm_4 on scheduler #1
     for _ in 0..5 {
-        let start_time = cloud_sim.current_time();
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: 10,
-            memory_usage: 10,
-            lifetime: 2.,
-            start_time,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: Some(s1),
-        });
+        cloud_sim.spawn_vm_now(
+            10,
+            10,
+            2.0,
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            None,
+            s1,
+        );
     }
     // spawn vm_5 - vm_9 on scheduler #2
     for _ in 5..10 {
-        let start_time = cloud_sim.current_time();
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: 10,
-            memory_usage: 10,
-            lifetime: 2.,
-            start_time,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: Some(s2),
-        });
+        cloud_sim.spawn_vm_now(
+            10,
+            10,
+            2.0,
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            None,
+            s2,
+        );
     }
 
     // spawn vm_10 - vm_14 on scheduler #1
     for _ in 10..15 {
-        let start_time = cloud_sim.current_time();
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: 10,
-            memory_usage: 10,
-            lifetime: 2.,
-            start_time,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: Some(s1),
-        });
+        cloud_sim.spawn_vm_now(
+            10,
+            10,
+            2.0,
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            None,
+            s1,
+        );
     }
     // spawn vm_15 - vm_19 on scheduler #2
     for _ in 15..20 {
-        let start_time = cloud_sim.current_time();
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: 10,
-            memory_usage: 10,
-            lifetime: 2.,
-            start_time,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: Some(s2),
-        });
+        cloud_sim.spawn_vm_now(
+            10,
+            10,
+            2.0,
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            None,
+            s2,
+        );
     }
 
     cloud_sim.step_for_duration(20.);
@@ -139,17 +130,15 @@ fn example_manual_migration() {
     let h2 = cloud_sim.add_host("h2", 30, 30);
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    let start_time = cloud_sim.current_time();
-    let vm = cloud_sim.spawn_vm_now(VMRequest {
-        cpu_usage: 10,
-        memory_usage: 10,
-        lifetime: 20.,
-        start_time,
-        cpu_load_model: Box::new(ConstantLoadModel::new(0.5)),
-        memory_load_model: Box::new(ConstantLoadModel::new(0.5)),
-        id: None,
-        scheduler_id: Some(scheduler_id),
-    });
+    let vm = cloud_sim.spawn_vm_now(
+        10,
+        10,
+        20.0,
+        Box::new(ConstantLoadModel::new(0.5)),
+        Box::new(ConstantLoadModel::new(0.5)),
+        None,
+        scheduler_id,
+    );
 
     cloud_sim.step_for_duration(10.);
     cloud_sim.migrate_vm_to_host(vm, h2);
@@ -166,18 +155,12 @@ fn example_manual_migration() {
     );
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DecreaseLoadModel {}
-
-impl Default for DecreaseLoadModel {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 impl DecreaseLoadModel {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -208,17 +191,15 @@ fn example_vm_migrator() {
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     for _ in 0..10 {
-        let start_time = cloud_sim.current_time();
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: 30,
-            memory_usage: 30,
-            lifetime: 1000.,
-            start_time,
-            cpu_load_model: Box::new(DecreaseLoadModel::new()),
-            memory_load_model: Box::new(DecreaseLoadModel::new()),
-            id: None,
-            scheduler_id: Some(scheduler_id),
-        });
+        cloud_sim.spawn_vm_now(
+            30,
+            30,
+            1000.0,
+            Box::new(DecreaseLoadModel::new()),
+            Box::new(DecreaseLoadModel::new()),
+            None,
+            scheduler_id,
+        );
     }
 
     let migrator = cloud_sim.build_custom_component::<VmMigrator>("migrator");

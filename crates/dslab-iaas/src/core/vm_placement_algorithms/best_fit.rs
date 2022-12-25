@@ -7,17 +7,12 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Uses the most loaded (by allocated CPU) suitable host.
+#[derive(Default)]
 pub struct BestFit;
 
 impl BestFit {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for BestFit {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

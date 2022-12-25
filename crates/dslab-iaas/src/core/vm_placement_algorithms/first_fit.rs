@@ -7,17 +7,12 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Uses the first suitable host.
+#[derive(Default)]
 pub struct FirstFit;
 
 impl FirstFit {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for FirstFit {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 

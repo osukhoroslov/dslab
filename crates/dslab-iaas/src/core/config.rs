@@ -69,7 +69,7 @@ pub struct HostConfig {
 }
 
 /// Represents simulation configuration.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfig {
     /// periodically send statistics from host to monitoring
     pub send_stats_period: f64,
@@ -101,12 +101,6 @@ pub struct SimulationConfig {
     pub hosts: Vec<HostConfig>,
     /// cloud schedulers
     pub schedulers: Vec<SchedulerConfig>,
-}
-
-impl Default for SimulationConfig {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl SimulationConfig {

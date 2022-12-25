@@ -11,7 +11,6 @@ use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
 use dslab_iaas::simulation::CloudSimulation;
-use dslab_iaas::simulation::VMRequest;
 
 const CPU_CAPACITY: u32 = 144;
 const RAM_CAPACITY: u64 = 204800;
@@ -52,18 +51,16 @@ fn simulation(sim_config: SimulationConfig) {
     let vm_cpu_distribution = [1, 2, 4, 8];
     let vm_ram_distribution = [512, 1024, 2048];
 
-    let start_time = cloud_sim.current_time();
     for _ in 1..=args.num_vms {
-        cloud_sim.spawn_vm_now(VMRequest {
-            cpu_usage: vm_cpu_distribution[rng.gen_range(0..4)],
-            memory_usage: vm_ram_distribution[rng.gen_range(0..3)],
-            lifetime: 100.,
-            start_time,
-            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
-            id: None,
-            scheduler_id: Some(s),
-        });
+        cloud_sim.spawn_vm_now(
+            vm_cpu_distribution[rng.gen_range(0..4)],
+            vm_ram_distribution[rng.gen_range(0..3)],
+            100.0,
+            Box::new(ConstantLoadModel::new(1.0)),
+            Box::new(ConstantLoadModel::new(1.0)),
+            None,
+            s,
+        );
     }
 
     cloud_sim.step_for_duration(10.);

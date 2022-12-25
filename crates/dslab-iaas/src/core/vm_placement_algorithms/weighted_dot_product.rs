@@ -9,17 +9,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 /// Maximizes the weighted dot product between the host's available resources and the VM's resource usage vectors.
 /// The vectors are normalized to the host's capacity.
 /// The weight of each resource corresponds to its average usage across all hosts.
+#[derive(Default)]
 pub struct WeightedDotProduct;
 
 impl WeightedDotProduct {
     pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for WeightedDotProduct {
-    fn default() -> Self {
-        Self::new()
+        Default::default()
     }
 }
 
