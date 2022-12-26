@@ -9,7 +9,7 @@ use dslab_core::{cast, Event, EventHandler};
 use crate::disk::Disk;
 use crate::events::*;
 use crate::fs::FileSystem;
-use crate::resource::{StorageResource, StorageResourceInfo};
+use crate::resource::{Storage, StorageInfo};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -138,7 +138,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            StorageResourceInfo {
+            StorageInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 0,
                 free_space: DISK_CAPACITY
@@ -159,7 +159,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            StorageResourceInfo {
+            StorageInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 1,
                 free_space: DISK_CAPACITY - 1
@@ -181,7 +181,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            StorageResourceInfo {
+            StorageInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 3,
                 free_space: DISK_CAPACITY - 3,
@@ -200,7 +200,7 @@ fn fs_files_metadata_consistence() {
         fs.borrow().disks_info(),
         vec![(
             "/mnt".to_owned(),
-            StorageResourceInfo {
+            StorageInfo {
                 capacity: DISK_CAPACITY,
                 used_space: 1,
                 free_space: DISK_CAPACITY - 1,

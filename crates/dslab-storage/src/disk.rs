@@ -17,7 +17,7 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use crate::resource::{StorageResource, StorageResourceInfo};
+use crate::resource::{Storage, StorageInfo};
 
 /// Representation of disk.
 ///
@@ -69,7 +69,7 @@ impl Disk {
     }
 }
 
-impl StorageResource for Disk {
+impl Storage for Disk {
     fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -151,8 +151,8 @@ impl StorageResource for Disk {
         self.ctx.id()
     }
 
-    fn info(&self) -> StorageResourceInfo {
-        StorageResourceInfo {
+    fn info(&self) -> StorageInfo {
+        StorageInfo {
             capacity: self.capacity(),
             used_space: self.used_space(),
             free_space: self.free_space(),

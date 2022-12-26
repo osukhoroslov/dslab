@@ -18,7 +18,7 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use crate::resource::{StorageResource, StorageResourceInfo};
+use crate::resource::{Storage, StorageInfo};
 
 #[derive(Clone)]
 struct DiskActivity {
@@ -127,7 +127,7 @@ impl SharedDisk {
     }
 }
 
-impl StorageResource for SharedDisk {
+impl Storage for SharedDisk {
     fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -213,8 +213,8 @@ impl StorageResource for SharedDisk {
         self.ctx.id()
     }
 
-    fn info(&self) -> crate::resource::StorageResourceInfo {
-        StorageResourceInfo {
+    fn info(&self) -> crate::resource::StorageInfo {
+        StorageInfo {
             capacity: self.capacity(),
             used_space: self.used_space(),
             free_space: self.free_space(),

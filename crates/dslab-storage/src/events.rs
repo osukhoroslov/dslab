@@ -7,7 +7,7 @@ use serde::Serialize;
 #[derive(Serialize)]
 /// Corresponds to completion of storage resource read request. Source: storage resource, destination: requester.
 pub struct DataReadCompleted {
-    /// Request id returned by [`crate::resource::StorageResource::read()`] method.
+    /// Request id returned by [`crate::resource::Storage::read()`] method.
     pub request_id: u64,
     /// Size of data read from storage resource.
     pub size: u64,
@@ -16,7 +16,7 @@ pub struct DataReadCompleted {
 #[derive(Serialize)]
 /// Corresponds to failure of storage resource read request. Source: storage resource, destination: requester.
 pub struct DataReadFailed {
-    /// Request id returned by [`crate::resource::StorageResource::read()`] method.
+    /// Request id returned by [`crate::resource::Storage::read()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
@@ -25,7 +25,7 @@ pub struct DataReadFailed {
 #[derive(Serialize)]
 /// Corresponds to completion of storage resource write request. Source: storage resource, destination: requester.
 pub struct DataWriteCompleted {
-    /// Request id returned by [`crate::resource::StorageResource::write()`] method.
+    /// Request id returned by [`crate::resource::Storage::write()`] method.
     pub request_id: u64,
     /// Size of data written to storage resource.
     pub size: u64,
@@ -34,7 +34,7 @@ pub struct DataWriteCompleted {
 #[derive(Serialize)]
 /// Corresponds to failure of storage resource write request. Source: storage resource, destination: requester.
 pub struct DataWriteFailed {
-    /// Request id returned by [`crate::resource::StorageResource::write()`] method.
+    /// Request id returned by [`crate::resource::Storage::write()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,

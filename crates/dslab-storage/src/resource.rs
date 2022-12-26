@@ -1,13 +1,13 @@
 //! Storage resource trait.
 //!
-//! This trait declares methods that every storage resource has, e.g. [`StorageResource::read()`] or
-//! [`StorageResource::write()`], and some methods that return information about resource.
+//! This trait declares methods that every storage resource has, e.g. [`Storage::read()`] or
+//! [`Storage::write()`], and some methods that return information about resource.
 
 use dslab_core::Id;
 
 /// Information about storage resource, including its capacity and current usage.
 #[derive(Debug, PartialEq)]
-pub struct StorageResourceInfo {
+pub struct StorageInfo {
     /// Storage resource capacity. Is equal to `used_space` + `free_space`.
     pub capacity: u64,
     /// Amount of used space. Cannot be greater than `capacity`.
@@ -17,7 +17,7 @@ pub struct StorageResourceInfo {
 }
 
 /// Trait for storage resource.
-pub trait StorageResource {
+pub trait Storage {
     /// Submits data read request and returns unique request id.
     ///
     /// The amount of data read from storage resource is specified in `size`.
@@ -54,5 +54,5 @@ pub trait StorageResource {
     fn id(&self) -> Id;
 
     /// Returns struct with information about the storage resource.
-    fn info(&self) -> StorageResourceInfo;
+    fn info(&self) -> StorageInfo;
 }
