@@ -278,7 +278,7 @@ impl FileSystem {
 
     /// Returns mount points present in this file system.
     pub fn mount_points(&self) -> Vec<String> {
-        self.disks.keys().map(|mount_point| mount_point.to_owned()).collect()
+        self.disks.keys().cloned().collect()
     }
 
     /// Deletes file located at `file_path` if there is any.    
