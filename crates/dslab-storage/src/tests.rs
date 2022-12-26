@@ -9,7 +9,7 @@ use dslab_core::{cast, Event, EventHandler};
 use crate::disk::Disk;
 use crate::events::*;
 use crate::fs::FileSystem;
-use crate::resource::{Storage, StorageInfo};
+use crate::storage::{Storage, StorageInfo};
 
 ///////////////////////////////////////////////////////////////////////////////
 
