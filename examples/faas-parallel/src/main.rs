@@ -22,8 +22,10 @@ fn print_results(stats: Stats, name: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut trace_config: AzureTraceConfig = Default::default();
-    trace_config.invocations_limit = 20000;
+    let trace_config = AzureTraceConfig {
+        invocations_limit: 20000,
+        ..Default::default()
+    };
     let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
@@ -38,12 +40,16 @@ fn main() {
     let configs: Vec<_> = policies
         .drain(..)
         .map(|x| {
-            let mut config: ParallelConfig = Default::default();
-            config.coldstart_policy = x;
+            let mut config = ParallelConfig {
+                coldstart_policy: x,
+                ..Default::default()
+            };
             for _ in 0..18 {
-                let mut host: ParallelHostConfig = Default::default();
-                host.resources = vec![("mem".to_string(), 4096 * 4)];
-                host.cores = 8;
+                let host = ParallelHostConfig {
+                    resources: vec![("mem".to_string(), 4096 * 4)],
+                    cores: 8,
+                    ..Default::default()
+                };
                 config.hosts.push(host);
             }
             config

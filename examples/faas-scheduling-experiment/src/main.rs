@@ -41,8 +41,10 @@ fn print_results(stats: Stats, name: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut trace_config: AzureTraceConfig = Default::default();
-    trace_config.invocations_limit = 200000;
+    let trace_config = AzureTraceConfig {
+        invocations_limit: 200000,
+        ..Default::default()
+    };
     let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
@@ -60,9 +62,11 @@ fn main() {
             config
         })
         .collect();
-    let mut resolvers: ConfigParamResolvers = Default::default();
-    resolvers.coldstart_policy_resolver = Box::new(extra_coldstart_policy_resolver);
-    resolvers.scheduler_resolver = Box::new(extra_scheduler_resolver);
+    let resolvers = ConfigParamResolvers {
+        coldstart_policy_resolver: Box::new(extra_coldstart_policy_resolver),
+        scheduler_resolver: Box::new(extra_scheduler_resolver),
+        ..Default::default()
+    };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
         print_results(s, &schedulers[i]);

@@ -10,7 +10,7 @@ use threadpool::ThreadPool;
 use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use crate::config::{Config, ConfigParamResolvers, HostConfig, RawConfig};
+use crate::config::{Config, ConfigParamResolvers, RawConfig};
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
@@ -34,16 +34,6 @@ impl Default for ParallelHostConfig {
     }
 }
 
-impl Into<HostConfig> for ParallelHostConfig {
-    fn into(self) -> HostConfig {
-        HostConfig {
-            invoker: self.invoker,
-            resources: self.resources,
-            cores: self.cores,
-        }
-    }
-}
-
 pub struct ParallelConfig {
     pub coldstart_policy: Box<dyn ColdStartPolicy + Send>,
     pub disable_contention: bool,
@@ -60,19 +50,6 @@ impl Default for ParallelConfig {
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),
-        }
-    }
-}
-
-impl Into<Config> for ParallelConfig {
-    fn into(self) -> Config {
-        let mut hosts = self.hosts;
-        Config {
-            coldstart_policy: self.coldstart_policy,
-            disable_contention: self.disable_contention,
-            idle_deployer: self.idle_deployer,
-            scheduler: self.scheduler,
-            hosts: hosts.drain(..).map(|x| x.into()).collect(),
         }
     }
 }

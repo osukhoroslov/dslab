@@ -86,11 +86,11 @@ pub(crate) fn arima_forecast<F: Fn(usize, &mut T) -> f64, T: Rng>(
     // get orders
     let ar_order = match ar {
         Some(par) => par.len(),
-        None => 0 as usize,
+        None => 0,
     };
     let ma_order = match ma {
         Some(par) => par.len(),
-        None => 0 as usize,
+        None => 0,
     };
 
     // initialize forecast with noise

@@ -31,6 +31,7 @@ pub struct Host {
 }
 
 impl Host {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: u64,
         cores: u32,

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::deployer::{default_idle_deployer_resolver, BasicDeployer, IdleDeployer};
 use crate::invoker::{default_invoker_resolver, BasicInvoker, Invoker};
+use crate::parallel::{ParallelConfig, ParallelHostConfig};
 use crate::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
 pub struct HostConfig {
@@ -16,12 +17,35 @@ pub struct HostConfig {
     pub cores: u32,
 }
 
+impl From<ParallelHostConfig> for HostConfig {
+    fn from(value: ParallelHostConfig) -> Self {
+        Self {
+            invoker: value.invoker,
+            resources: value.resources,
+            cores: value.cores,
+        }
+    }
+}
+
 impl Default for HostConfig {
     fn default() -> Self {
         Self {
             invoker: Box::new(BasicInvoker::new()),
             resources: Vec::new(),
             cores: 1,
+        }
+    }
+}
+
+impl From<ParallelConfig> for Config {
+    fn from(value: ParallelConfig) -> Self {
+        let mut hosts = value.hosts;
+        Self {
+            coldstart_policy: value.coldstart_policy,
+            disable_contention: value.disable_contention,
+            idle_deployer: value.idle_deployer,
+            scheduler: value.scheduler,
+            hosts: hosts.drain(..).map(HostConfig::from).collect(),
         }
     }
 }
@@ -148,12 +172,16 @@ impl Config {
                 resources.push((item.name, item.quantity));
             }
             for _ in 0..host.count {
-                let mut curr: HostConfig = Default::default();
-                curr.resources = resources.clone();
-                curr.cores = host.cores;
-                if !host.invoker.is_empty() {
-                    curr.invoker = invoker_resolver(&host.invoker);
-                }
+                let invoker = if !host.invoker.is_empty() {
+                    invoker_resolver(&host.invoker)
+                } else {
+                    Box::new(BasicInvoker::new())
+                };
+                let curr = HostConfig {
+                    invoker,
+                    resources: resources.clone(),
+                    cores: host.cores,
+                };
                 me.hosts.push(curr);
             }
         }

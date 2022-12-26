@@ -100,7 +100,7 @@ impl ResourceProvider {
                 return false;
             }
         }
-        return true;
+        true
     }
 
     pub fn allocate(&mut self, consumer: &ResourceConsumer) {

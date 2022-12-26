@@ -53,9 +53,11 @@ fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut trace_config: AzureTraceConfig = Default::default();
-    trace_config.invocations_limit = 200000;
-    trace_config.concurrency_level = 16;
+    let trace_config = AzureTraceConfig {
+        invocations_limit: 200000,
+        concurrency_level: 16,
+        ..Default::default()
+    };
     let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
@@ -73,8 +75,10 @@ fn main() {
             config
         })
         .collect();
-    let mut resolvers: ConfigParamResolvers = Default::default();
-    resolvers.coldstart_policy_resolver = Box::new(policy_resolver);
+    let resolvers = ConfigParamResolvers {
+        coldstart_policy_resolver: Box::new(policy_resolver),
+        ..Default::default()
+    };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
         print_results(s, &policies[i]);

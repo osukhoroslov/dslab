@@ -11,11 +11,17 @@ pub struct HermesScheduler {
     high_load_fallback: LeastLoadedScheduler,
 }
 
-impl HermesScheduler {
-    pub fn new() -> Self {
+impl Default for HermesScheduler {
+    fn default() -> Self {
         Self {
             high_load_fallback: LeastLoadedScheduler::new(true),
         }
+    }
+}
+
+impl HermesScheduler {
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -37,12 +43,10 @@ impl Scheduler for HermesScheduler {
                     } else {
                         curr_priority = 2;
                     }
+                } else if h.can_invoke(app, false) {
+                    curr_priority = 1;
                 } else {
-                    if h.can_invoke(app, false) {
-                        curr_priority = 1;
-                    } else {
-                        curr_priority = 0;
-                    }
+                    curr_priority = 0;
                 }
                 if curr_priority > priority {
                     priority = curr_priority;
