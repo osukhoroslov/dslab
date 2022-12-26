@@ -17,7 +17,7 @@ use dslab_core::simulation::Simulation;
 use dslab_storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel, WeightedBandwidth};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use dslab_storage::resource::Storage;
+use dslab_storage::storage::Storage;
 
 const SEED: u64 = 16;
 

@@ -17,7 +17,7 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use crate::resource::{Storage, StorageInfo};
+use crate::storage::{Storage, StorageInfo};
 
 /// Representation of disk.
 ///

@@ -12,7 +12,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use dslab_core::component::Id;
 use dslab_core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
-use crate::{events::*, resource::Storage, resource::StorageInfo};
+use crate::{events::*, storage::Storage, storage::StorageInfo};
 
 struct File {
     size: u64,
