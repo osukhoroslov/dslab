@@ -15,9 +15,10 @@ use threadpool::ThreadPool;
 
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::read_network;
 use dslab_dag::resource::read_resources;
-use dslab_dag::runner::{Config, DataTransferMode};
+use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
 use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
