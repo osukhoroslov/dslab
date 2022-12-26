@@ -21,34 +21,36 @@ pub trait StorageResource {
     /// Submits data read request and returns unique request id.
     ///
     /// The amount of data read from storage resource is specified in `size`.
-    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the
-    /// read size is larger than the storage resource capacity, `DataReadFailed` event will be immediately emitted instead. Note
-    /// that the returned request id is unique only within the current storage resource.
+    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion.
+    /// If the read size is larger than the storage resource capacity, `DataReadFailed` event will be immediately 
+    /// emitted instead. 
+    /// Note that the returned request id is unique only within the current storage resource.
     fn read(&mut self, size: u64, requester: Id) -> u64;
 
     /// Submits data write request and returns unique request id.
     ///
     /// The amount of data written to storage resource is specified in `size`.
-    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If
-    /// there is not enough available storage resource space, `DataWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. 
+    /// If there is not enough available storage resource space, `DataWriteFailed` event will be immediately emitted 
+    /// instead.
     /// Note that the returned request id is unique only within the current storage resource.
     fn write(&mut self, size: u64, requester: Id) -> u64;
 
-    /// Marks previously used storage resource space of given `size` as free.
+    /// Marks previously used storage space of given `size` as free.
     ///
     /// The `size` should not exceed the currently used storage resource space.
     fn mark_free(&mut self, size: u64) -> Result<(), String>;
 
-    /// Returns the amount of used storage resource space.
+    /// Returns the amount of used storage space.
     fn used_space(&self) -> u64;
 
-    /// Returns the amount of free storage resource space.
+    /// Returns the amount of free storage space.
     fn free_space(&self) -> u64;
 
     /// Returns the capacity of storage resource.
     fn capacity(&self) -> u64;
 
-    /// Returns id of this storage resource.
+    /// Returns identifier of simulation component representing this storage resource.
     fn id(&self) -> Id;
 
     /// Returns struct with information about the storage resource.
