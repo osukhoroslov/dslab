@@ -83,6 +83,13 @@ pub struct WeightedBandwidth {
     pub weight: u64,
 }
 
+impl WeightedBandwidth {
+    /// Creates new WeightedBandwidth.
+    pub fn new(value: u64, weight: u64) -> Self {
+        Self { value, weight }
+    }
+}
+
 /// Model which generates random bandwidth from specified weighted points distribution.
 pub struct EmpiricalBWModel {
     /// Pairs of (value, weight).

@@ -1,7 +1,7 @@
 //! Storage resource trait.
 //!
 //! This trait declares methods that every storage resource has, e.g. [`StorageResource::read()`] or
-//! [`StorageResource::write()`], and some constant methods that return information about resource.
+//! [`StorageResource::write()`], and some methods that return information about resource.
 
 use dslab_core::Id;
 

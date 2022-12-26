@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
-use dslab_storage::resource::StorageResource;
 use env_logger::Builder;
 use serde::Serialize;
 use sugars::{rc, refcell};
@@ -16,6 +15,7 @@ use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use dslab_storage::resource::StorageResource;
 use dslab_storage::shared_disk::SharedDisk;
 
 const SEED: u64 = 16;

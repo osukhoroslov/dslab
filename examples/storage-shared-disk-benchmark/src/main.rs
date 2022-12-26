@@ -7,7 +7,6 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use clap::Parser;
-use dslab_storage::resource::StorageResource;
 use env_logger::Builder;
 use random::CustomRandom;
 use serde::Serialize;
@@ -21,6 +20,7 @@ use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
+use dslab_storage::resource::StorageResource;
 use dslab_storage::shared_disk::SharedDisk;
 
 const SEED: u64 = 16;

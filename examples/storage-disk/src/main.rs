@@ -116,30 +116,12 @@ fn main() {
 
     // Creating empirical bandwidth model with weighted points distribution
     let points = [
-        WeightedBandwidth {
-            value: DISK_READ_BW - 20,
-            weight: 3,
-        },
-        WeightedBandwidth {
-            value: DISK_READ_BW - 10,
-            weight: 10,
-        },
-        WeightedBandwidth {
-            value: DISK_READ_BW,
-            weight: 31,
-        },
-        WeightedBandwidth {
-            value: DISK_READ_BW + 10,
-            weight: 15,
-        },
-        WeightedBandwidth {
-            value: DISK_READ_BW + 20,
-            weight: 5,
-        },
-        WeightedBandwidth {
-            value: DISK_READ_BW + 30,
-            weight: 6,
-        },
+        WeightedBandwidth::new(DISK_READ_BW - 20, 3),
+        WeightedBandwidth::new(DISK_READ_BW - 10, 10),
+        WeightedBandwidth::new(DISK_READ_BW, 31),
+        WeightedBandwidth::new(DISK_READ_BW + 10, 15),
+        WeightedBandwidth::new(DISK_READ_BW + 20, 5),
+        WeightedBandwidth::new(DISK_READ_BW + 30, 6),
     ];
     let model = EmpiricalBWModel::new(&points);
     assert!(model.is_ok());
