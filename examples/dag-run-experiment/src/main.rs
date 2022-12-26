@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::io::Write;
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -26,25 +27,17 @@ use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
 struct Args {
-    /// Folder with DAGs
-    #[clap(long)]
-    dags: String,
-
-    /// Folder with system configurations (resources + network)
-    #[clap(long)]
-    systems: String,
-
-    /// File with schedulers configuration
-    #[clap(long)]
-    schedulers: String,
+    /// File with configurations
+    #[clap(short, long)]
+    input: String,
 
     /// Output file
     #[clap(short, long)]
-    output: String,
+    output: Option<String>,
 
-    /// Number of parallel jobs
+    /// Number of threads for running experiment
     #[clap(short, long, default_value = "8")]
-    jobs: usize,
+    threads: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -63,46 +56,68 @@ impl YamlScheduler {
 }
 
 #[derive(Serialize)]
-struct ExperimentResult {
+struct RunResult {
     dag: String,
     system: String,
     scheduler: String,
     makespan: f64,
 }
 
+#[derive(Deserialize)]
+struct ExperimentConfig {
+    dags: Vec<String>,
+    systems: Vec<String>,
+    schedulers: Vec<YamlScheduler>,
+}
+
+fn get_all_files(paths: &[String]) -> Vec<String> {
+    let mut result = Vec::new();
+    for path in paths.iter() {
+        if Path::new(&path).is_dir() {
+            result.extend(get_all_files(
+                &std::fs::read_dir(path)
+                    .unwrap()
+                    .map(|s| s.unwrap().path().to_str().unwrap().to_string())
+                    .collect::<Vec<String>>(),
+            ));
+        } else {
+            result.push(path.to_string());
+        }
+    }
+    result
+}
+
 fn main() {
     let args = Args::parse();
 
-    let dags = std::fs::read_dir(args.dags).expect("Can't open directory with dags");
-    let dags = dags
-        .filter_map(|x| x.ok())
-        .filter(|path| path.path().is_file())
+    let config: ExperimentConfig = std::fs::read_to_string(&args.input)
+        .ok()
+        .and_then(|f| serde_yaml::from_str(&f).ok())
+        .expect(&format!("Can't read config from file {}", args.input));
+
+    let dags = get_all_files(&config.dags)
+        .into_iter()
         .map(|path| {
             (
-                path.file_name().to_str().unwrap().to_string(),
-                DAG::from_file(path.path().to_str().unwrap()),
+                Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
+                DAG::from_file(&path),
             )
         })
         .collect::<Vec<_>>();
 
-    let systems = std::fs::read_dir(args.systems).expect("Can't open directory with systems");
-    let systems = systems
-        .filter_map(|x| x.ok())
-        .filter(|path| path.path().is_file())
+    let systems = get_all_files(&config.systems)
+        .into_iter()
         .map(|path| {
             (
-                path.file_name().to_str().unwrap().to_string(),
-                path.path().to_str().unwrap().to_string(),
+                Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
+                path,
             )
         })
         .map(|(file_name, path)| (read_resources(&path), read_network(&path), file_name))
         .filter(|(resources, network, _file_name)| !resources.is_empty() && network.make_network().is_some())
         .collect::<Vec<_>>();
 
-    let schedulers: Vec<YamlScheduler> = serde_yaml::from_str(
-        &std::fs::read_to_string(&args.schedulers).expect(&format!("Can't read file {}", &args.schedulers)),
-    )
-    .expect(&format!("Can't parse YAML from file {}", &args.schedulers));
+    let schedulers = config.schedulers;
 
     eprintln!(
         "Found {} dags, {} systems, {} schedulers",
@@ -123,7 +138,7 @@ fn main() {
     let finished_runs = Arc::new(AtomicUsize::new(0));
     let result = Arc::new(Mutex::new(Vec::new()));
 
-    let pool = ThreadPool::new(args.jobs);
+    let pool = ThreadPool::new(args.threads);
     for ((dag_name, dag), (system_name, resources), network, scheduler_type) in experiments.into_iter() {
         let finished_runs = finished_runs.clone();
         let result = result.clone();
@@ -148,7 +163,7 @@ fn main() {
 
             let makespan = sim.time();
 
-            result.lock().unwrap().push(ExperimentResult {
+            result.lock().unwrap().push(RunResult {
                 dag: dag_name,
                 system: system_name,
                 scheduler: format!("{:?}", scheduler_type),
@@ -168,12 +183,20 @@ fn main() {
     pool.join();
     println!("\rFinished {} runs in {:.2?}", total_runs, t.elapsed());
 
-    std::fs::File::create(args.output)
-        .unwrap()
-        .write_all(
-            serde_json::to_string_pretty(&*result.lock().unwrap())
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
+    std::fs::File::create(args.output.unwrap_or_else(|| {
+        let input = Path::new(&args.input);
+        input
+            .with_file_name([input.file_stem().unwrap().to_str().unwrap(), "-results"].concat())
+            .with_extension("json")
+            .to_str()
+            .unwrap()
+            .to_string()
+    }))
+    .unwrap()
+    .write_all(
+        serde_json::to_string_pretty(&*result.lock().unwrap())
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap();
 }
