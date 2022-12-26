@@ -88,17 +88,14 @@ impl Experiment {
         let config: ExperimentConfig = std::fs::read_to_string(file)
             .ok()
             .and_then(|f| serde_yaml::from_str(&f).ok())
-            .expect(&format!("Can't read config from file {}", file));
+            .unwrap_or_else(|| panic!("Can't read config from file {}", file));
 
-        let dags = get_all_files(&config.dags)
-            .into_iter()
-            .map(|path| {
-                (
-                    Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
-                    DAG::from_file(&path),
-                )
-            })
-            .collect::<Vec<_>>();
+        let dags = get_all_files(&config.dags).into_iter().map(|path| {
+            (
+                Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
+                DAG::from_file(&path),
+            )
+        });
 
         let systems = get_all_files(&config.systems)
             .into_iter()
@@ -109,14 +106,12 @@ impl Experiment {
                 )
             })
             .map(|(file_name, path)| (read_resources(&path), read_network(&path), file_name))
-            .filter(|(resources, network, _file_name)| !resources.is_empty() && network.make_network().is_some())
-            .collect::<Vec<_>>();
+            .filter(|(resources, network, _file_name)| !resources.is_empty() && network.make_network().is_some());
 
         let schedulers = config.schedulers;
 
         let runs = dags
-            .into_iter()
-            .cartesian_product(systems.into_iter())
+            .cartesian_product(systems)
             .cartesian_product(schedulers.into_iter())
             .map(
                 |(((dag_name, dag), (resources, network, system_name)), scheduler)| Run {

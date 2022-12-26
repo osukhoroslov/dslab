@@ -68,7 +68,7 @@ pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
 
 pub fn read_resources(file: &str) -> Vec<YamlResource> {
     let resources: Resources =
-        serde_yaml::from_str(&std::fs::read_to_string(file).expect(&format!("Can't read file {}", file)))
-            .expect(&format!("Can't parse YAML from file {}", file));
+        serde_yaml::from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
+            .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file));
     resources.resources
 }
