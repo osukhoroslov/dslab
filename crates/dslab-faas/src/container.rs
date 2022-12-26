@@ -138,7 +138,7 @@ impl ContainerManager {
     }
 
     fn deploy_container(&mut self, app: &Application, time: f64) -> u64 {
-        let cont_id = self.container_counter.inc();
+        let cont_id = self.container_counter.increment();
         let container = Container {
             status: ContainerStatus::Deploying,
             id: cont_id,

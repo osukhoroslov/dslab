@@ -8,7 +8,7 @@ impl Counter {
         self.value
     }
 
-    pub fn inc(&mut self) -> u64 {
+    pub fn increment(&mut self) -> u64 {
         let curr = self.value;
         self.value += 1;
         curr

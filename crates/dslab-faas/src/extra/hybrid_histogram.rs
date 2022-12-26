@@ -47,11 +47,11 @@ impl ApplicationData {
         let (coeff, ar_order, _) = autofit(&self.raw, 1).unwrap();
         let mut ar = Vec::new();
         let mut ma = Vec::new();
-        for c in coeff.iter().copied().skip(1).take(ar_order) {
-            ar.push(c);
+        for c in &coeff[1..ar_order + 1] {
+            ar.push(*c);
         }
-        for c in coeff.iter().copied().skip(ar_order + 1) {
-            ma.push(c);
+        for c in &coeff[ar_order + 1..] {
+            ma.push(*c);
         }
         arima_forecast(
             self.raw.as_slice(),

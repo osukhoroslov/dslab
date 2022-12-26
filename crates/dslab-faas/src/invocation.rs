@@ -43,7 +43,7 @@ impl InvocationRegistry {
     }
 
     pub fn register_invocation(&mut self) -> u64 {
-        self.invocation_ctr.inc()
+        self.invocation_ctr.increment()
     }
 
     pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {
