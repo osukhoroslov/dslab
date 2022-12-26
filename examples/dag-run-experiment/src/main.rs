@@ -80,15 +80,7 @@ fn main() {
         .map(|path| {
             (
                 path.file_name().to_str().unwrap().to_string(),
-                match path.file_name().to_str().unwrap().split('.').last().unwrap() {
-                    "yaml" => DAG::from_yaml(path.path().to_str().unwrap()),
-                    "xml" => DAG::from_dax(path.path().to_str().unwrap(), 1000.),
-                    "dot" => DAG::from_dot(path.path().to_str().unwrap()),
-                    x => {
-                        eprintln!("Wrong file format for dag: {}", x);
-                        std::process::exit(1);
-                    }
-                },
+                DAG::from_file(path.path().to_str().unwrap()),
             )
         })
         .collect::<Vec<_>>();

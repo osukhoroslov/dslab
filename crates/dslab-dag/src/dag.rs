@@ -177,4 +177,17 @@ impl DAG {
     pub fn is_completed(&self) -> bool {
         self.tasks.len() == self.completed_task_count
     }
+
+    /// Reads dag from YAML, DAX or DOT file.
+    pub fn from_file(file: &str) -> Self {
+        match file.split('.').last().unwrap() {
+            "yaml" => DAG::from_yaml(file),
+            "xml" => DAG::from_dax(file, 1000.),
+            "dot" => DAG::from_dot(file),
+            _ => {
+                eprintln!("Unknown extension for dag: {}", file);
+                std::process::exit(1);
+            }
+        }
+    }
 }
