@@ -5,8 +5,8 @@ pub mod bandwidth;
 pub mod disk;
 pub mod events;
 pub mod fs;
-pub mod storage;
 pub mod shared_disk;
+pub mod storage;
 
 #[cfg(test)]
 mod tests;

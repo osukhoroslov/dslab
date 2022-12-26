@@ -20,8 +20,8 @@ use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
-use dslab_storage::storage::Storage;
 use dslab_storage::shared_disk::SharedDisk;
+use dslab_storage::storage::Storage;
 
 const SEED: u64 = 16;
 const DISK_CAPACITY: u64 = 10u64.pow(10);
