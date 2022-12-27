@@ -2,11 +2,11 @@ mod common;
 use common::assert_float_eq;
 
 use dslab_faas::invocation::{Invocation, InvocationRequest};
-use dslab_faas::stats::Stats;
+use dslab_faas::stats::InvocationStats;
 
 #[test]
 fn test_invocation_stats() {
-    let mut stats: Stats = Default::default();
+    let mut stats: InvocationStats = Default::default();
     let req1 = InvocationRequest {
         func_id: 0,
         duration: 1.0,
@@ -49,9 +49,9 @@ fn test_invocation_stats() {
         started: 2.0,
         finished: Some(3.0),
     };
-    stats.update_invocation_stats(&inv1);
-    stats.update_invocation_stats(&inv2);
-    stats.update_invocation_stats(&inv3);
+    stats.update(&inv1);
+    stats.update(&inv2);
+    stats.update(&inv3);
     assert_float_eq(stats.abs_total_slowdown.mean(), 1.8 / 3.0, 1e-9);
     assert_float_eq(stats.rel_total_slowdown.mean(), (1.0 + 0.8 / 1.2) / 3.0, 1e-9);
     assert_float_eq(stats.abs_exec_slowdown.mean(), 0.8 / 3.0, 1e-9);

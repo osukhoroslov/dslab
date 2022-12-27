@@ -21,17 +21,23 @@ struct ExperimentConfig {
 
 fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
-    println!("{} successful invocations", stats.invocations);
+    println!("{} successful invocations", stats.invocation_stats.invocations);
     println!(
         "- cold start rate = {}",
-        (stats.cold_starts as f64) / (stats.invocations as f64)
+        (stats.invocation_stats.cold_starts as f64) / (stats.invocation_stats.invocations as f64)
     );
     println!(
         "- wasted memory time = {}",
         stats.wasted_resource_time.get(&0).unwrap().sum()
     );
-    println!("- mean absolute total slowdown = {}", stats.abs_total_slowdown.mean());
-    println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
+    println!(
+        "- mean absolute total slowdown = {}",
+        stats.invocation_stats.abs_total_slowdown.mean()
+    );
+    println!(
+        "- mean relative total slowdown = {}",
+        stats.invocation_stats.rel_total_slowdown.mean()
+    );
 }
 
 fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
@@ -93,6 +99,6 @@ fn main() {
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &policies[i]);
+        print_results(s.global_stats, &policies[i]);
     }
 }

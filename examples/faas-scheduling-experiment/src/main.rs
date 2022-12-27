@@ -20,10 +20,10 @@ struct ExperimentConfig {
 
 fn print_results(stats: Stats, name: &str) {
     println!("describing {}", name);
-    println!("- {} successful invocations", stats.invocations);
+    println!("- {} successful invocations", stats.invocation_stats.invocations);
     println!(
         "- cold start rate = {}",
-        (stats.cold_starts as f64) / (stats.invocations as f64)
+        (stats.invocation_stats.cold_starts as f64) / (stats.invocation_stats.invocations as f64)
     );
     println!(
         "- wasted memory time = {}",
@@ -31,14 +31,20 @@ fn print_results(stats: Stats, name: &str) {
     );
     println!(
         "- mean absolute execution slowdown = {}",
-        stats.abs_exec_slowdown.mean()
+        stats.invocation_stats.abs_exec_slowdown.mean()
     );
     println!(
         "- mean relative execution slowdown = {}",
-        stats.rel_exec_slowdown.mean()
+        stats.invocation_stats.rel_exec_slowdown.mean()
     );
-    println!("- mean absolute total slowdown = {}", stats.abs_total_slowdown.mean());
-    println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
+    println!(
+        "- mean absolute total slowdown = {}",
+        stats.invocation_stats.abs_total_slowdown.mean()
+    );
+    println!(
+        "- mean relative total slowdown = {}",
+        stats.invocation_stats.rel_total_slowdown.mean()
+    );
 }
 
 #[derive(Parser, Debug)]
@@ -81,6 +87,6 @@ fn main() {
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &schedulers[i]);
+        print_results(s.global_stats, &schedulers[i]);
     }
 }

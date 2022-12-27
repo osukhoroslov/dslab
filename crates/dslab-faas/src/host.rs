@@ -15,7 +15,7 @@ use crate::invocation::{InvocationRegistry, InvocationRequest};
 use crate::invoker::{InvocationStatus, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
-use crate::stats::Stats;
+use crate::stats::StatsMonitor;
 
 pub struct Host {
     id: u64,
@@ -26,7 +26,7 @@ pub struct Host {
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller_id: HandlerId,
-    stats: Rc<RefCell<Stats>>,
+    stats: Rc<RefCell<StatsMonitor>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -42,7 +42,7 @@ impl Host {
         invocation_registry: Rc<RefCell<InvocationRegistry>>,
         coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
         controller_id: HandlerId,
-        stats: Rc<RefCell<Stats>>,
+        stats: Rc<RefCell<StatsMonitor>>,
         ctx: SimulationContext,
     ) -> Self {
         let ctx = Rc::new(RefCell::new(ctx));
@@ -96,15 +96,14 @@ impl Host {
             time,
         );
         let mut stats = self.stats.borrow_mut();
-        stats.invocations += 1;
+        stats.on_new_invocation(&request);
         match status {
             InvocationStatus::Warm(id) => {
                 drop(stats);
                 self.start_invocation(id, request, time);
             }
             InvocationStatus::Cold((id, delay)) => {
-                stats.cold_start_latency.add(delay);
-                stats.cold_starts += 1;
+                stats.on_cold_start(&request, delay);
                 drop(stats);
                 self.container_manager.reserve_container(id, request);
             }

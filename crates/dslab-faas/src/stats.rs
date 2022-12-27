@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use order_stat::kth_by;
 
-use crate::invocation::Invocation;
+use crate::invocation::{Invocation, InvocationRequest};
 use crate::resource::ResourceConsumer;
 
 #[derive(Clone, Default)]
@@ -79,19 +79,28 @@ impl SampleMetric {
 }
 
 #[derive(Clone, Default)]
-pub struct Stats {
+pub struct InvocationStats {
     pub invocations: u64,
     pub cold_starts: u64,
+    /// this metric counts latency of cold starts only, warm starts are not counted as zero
     pub cold_start_latency: SampleMetric,
-    pub wasted_resource_time: HashMap<usize, SampleMetric>,
     pub abs_exec_slowdown: SampleMetric,
     pub rel_exec_slowdown: SampleMetric,
     pub abs_total_slowdown: SampleMetric,
     pub rel_total_slowdown: SampleMetric,
 }
 
-impl Stats {
-    pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
+impl InvocationStats {
+    pub fn on_cold_start(&mut self, _request: &InvocationRequest, delay: f64) {
+        self.cold_start_latency.add(delay);
+        self.cold_starts += 1;
+    }
+
+    pub fn on_new_invocation(&mut self, _request: &InvocationRequest) {
+        self.invocations += 1;
+    }
+
+    pub fn update(&mut self, invocation: &Invocation) {
         let len = invocation.finished.unwrap() - invocation.started;
         let total_len = invocation.finished.unwrap() - invocation.request.time;
         self.abs_exec_slowdown.add(len - invocation.request.duration);
@@ -101,11 +110,67 @@ impl Stats {
         self.rel_total_slowdown
             .add((total_len - invocation.request.duration) / invocation.request.duration);
     }
+}
+
+#[derive(Clone, Default)]
+pub struct Stats {
+    pub invocation_stats: InvocationStats,
+    pub wasted_resource_time: HashMap<usize, SampleMetric>,
+}
+
+impl Stats {
+    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
+        self.invocation_stats.on_cold_start(request, delay);
+    }
+
+    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
+        self.invocation_stats.on_new_invocation(request);
+    }
+
+    pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
+        self.invocation_stats.update(invocation);
+    }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
             self.wasted_resource_time.entry(req.id).or_default().add(delta);
         }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct StatsMonitor {
+    pub func_stats: HashMap<u64, InvocationStats>,
+    pub global_stats: Stats,
+}
+
+impl StatsMonitor {
+    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
+        self.global_stats.on_cold_start(request, delay);
+        self.func_stats
+            .entry(request.func_id)
+            .or_default()
+            .on_cold_start(request, delay);
+    }
+
+    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
+        self.global_stats.on_new_invocation(request);
+        self.func_stats
+            .entry(request.func_id)
+            .or_default()
+            .on_new_invocation(request);
+    }
+
+    pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
+        self.global_stats.update_invocation_stats(invocation);
+        self.func_stats
+            .entry(invocation.request.func_id)
+            .or_default()
+            .update(invocation);
+    }
+
+    pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
+        self.global_stats.update_wasted_resources(time, resource);
     }
 }

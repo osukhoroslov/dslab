@@ -33,7 +33,7 @@ fn test_concurrency() {
         let invocation = serverless.get_invocation(id).unwrap();
         assert_float_eq(invocation.finished.unwrap(), 4., 1e-9);
     }
-    let stats = serverless.get_stats();
+    let stats = serverless.get_global_stats().invocation_stats;
     let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
     let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
     assert_float_eq(abs_exec_slowdown, 2.6, 1e-9);
@@ -65,7 +65,7 @@ fn test_different_shares() {
         let invocation = serverless.get_invocation(id).unwrap();
         assert_float_eq(invocation.finished.unwrap(), 5.714285714285714, 1e-9);
     }
-    let stats = serverless.get_stats();
+    let stats = serverless.get_global_stats().invocation_stats;
     let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
     let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
     assert_float_eq(abs_exec_slowdown, 3.1428571428571432, 1e-9);
@@ -97,7 +97,7 @@ fn test_different_start_times() {
         let invocation = serverless.get_invocation(id).unwrap();
         assert_float_eq(invocation.finished.unwrap(), 6.809523809523809, 1e-9);
     }
-    let stats = serverless.get_stats();
+    let stats = serverless.get_global_stats().invocation_stats;
     let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
     let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
     assert_float_eq(abs_exec_slowdown, 4.726190476190476, 1e-9);
@@ -121,7 +121,7 @@ fn test_equal_shares() {
         let invocation = serverless.get_invocation(id).unwrap();
         assert_float_eq(invocation.finished.unwrap(), 2.5, 1e-9);
     }
-    let stats = serverless.get_stats();
+    let stats = serverless.get_global_stats().invocation_stats;
     let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
     let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
     assert_float_eq(abs_exec_slowdown, 1.5, 1e-9);
@@ -145,7 +145,7 @@ fn test_no_contention() {
         let invocation = serverless.get_invocation(id).unwrap();
         assert_float_eq(invocation.finished.unwrap(), 1., 1e-9);
     }
-    let stats = serverless.get_stats();
+    let stats = serverless.get_global_stats().invocation_stats;
     let abs_exec_slowdown = stats.abs_exec_slowdown.mean();
     let rel_exec_slowdown = stats.rel_exec_slowdown.mean();
     assert_float_eq(abs_exec_slowdown, 0., 1e-9);
