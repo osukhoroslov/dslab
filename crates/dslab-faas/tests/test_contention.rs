@@ -1,11 +1,10 @@
+mod common;
+use common::assert_float_eq;
+
 use dslab_core::simulation::Simulation;
 use dslab_faas::function::Application;
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::simulation::ServerlessSimulation;
-
-fn assert_float_eq(x: f64, y: f64, eps: f64) {
-    assert!(x > y - eps && x < y + eps);
-}
 
 #[test]
 fn test_concurrency() {

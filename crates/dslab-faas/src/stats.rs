@@ -5,54 +5,6 @@ use order_stat::kth_by;
 use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
 
-#[derive(Copy, Clone)]
-pub enum QuantileEstimate {
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
-    R8,
-    R9,
-}
-
-impl QuantileEstimate {
-    pub fn get_h(&self, n: f64, q: f64) -> f64 {
-        debug_assert!(0. <= q && q <= 1.);
-        match *self {
-            QuantileEstimate::R1 => {
-                n * q
-            },
-            QuantileEstimate::R2 => {
-                n * q + 0.5
-            },
-            QuantileEstimate::R3 => {
-                n * q - 0.5
-            },
-            QuantileEstimate::R4 => {
-                n * q
-            },
-            QuantileEstimate::R5 => {
-                n * q + 0.5
-            },
-            QuantileEstimate::R6 => {
-                (n + 1.) * q
-            },
-            QuantileEstimate::R7 => {
-                (n - 1.) * q + 1.
-            },
-            QuantileEstimate::R8 => {
-                (n + 1.0/3.0) * q + 1.0/3.0
-            },
-            QuantileEstimate::R9 => {
-                (n + 0.25) * q + 0.375
-            },
-        }
-    }
-}
-
 #[derive(Clone, Default)]
 pub struct SampleMetric {
     data: Vec<f64>,
@@ -84,52 +36,36 @@ impl SampleMetric {
     }
 
     pub fn ordered_statistic(&self, idx: usize) -> f64 {
-        debug_assert!(idx < self.data.len());
+        debug_assert!(1 <= idx && idx <= self.data.len());
         let mut tmp = self.data.clone();
-        *kth_by(&mut tmp, idx, |x, y| x.total_cmp(y))
+        *kth_by(&mut tmp, idx - 1, |x, y| x.total_cmp(y))
     }
 
-    pub fn quantile(&self, q: f64, estimate: QuantileEstimate) -> f64 {
-        debug_assert!(0. <= q && q <= 1.);
-        let h = estimate.get_h(self.data.len() as f64, q);
-        match estimate {
-            QuantileEstimate::R1 => {
-                let k = (h.ceil() + 1e-9) as usize;
-                self.ordered_statistic(k)
-            },
-            QuantileEstimate::R2 => {
-                let k1 = ((h - 0.5).ceil() + 1e-9) as usize;
-                let k2 = ((h + 0.5).floor() + 1e-9) as usize;
-                (self.ordered_statistic(k1) + self.ordered_statistic(k2)) / 2.0
-            },
-            QuantileEstimate::R3 => {
-                let k = (h.round() + 1e-9) as usize;
-                self.ordered_statistic(k)
-            },
-            _ => {
-                let fl = h.floor();
-                let k1 = (fl + 1e-9) as usize;
-                let k2 = (h.ceil() + 1e-9) as usize;
-                let s1 = self.ordered_statistic(k1);
-                s1 + (h - fl) * (self.ordered_statistic(k2) - s1)
-            }
-        }
+    /// q-th sample quantile, 0 <= q <= 1
+    /// estimation method corresponds to R-7 (the default method in R.stats)
+    pub fn quantile(&self, q: f64) -> f64 {
+        debug_assert!((0. ..=1.).contains(&q));
+        debug_assert!(!self.data.is_empty());
+        let h = ((self.data.len() - 1) as f64) * q + 1.;
+        let fl = h.floor();
+        let k1 = (fl + 1e-9) as usize;
+        let k2 = (h.ceil() + 1e-9) as usize;
+        let s1 = self.ordered_statistic(k1);
+        s1 + (h - fl) * (self.ordered_statistic(k2) - s1)
     }
 
     pub fn variance(&self, biased: bool) -> f64 {
         let mean = self.mean();
-        let mut var = 0;
+        let mut var = 0.;
         for x in self.data.iter().copied() {
             var += (x - mean) * (x - mean);
         }
         if biased {
             var / (self.data.len() as f64)
+        } else if self.data.len() == 1 {
+            0.0
         } else {
-            if self.data.len() == 1 {
-                0.0
-            } else {
-                var / ((self.data.len() as f64) - 1.0)
-            }
+            var / ((self.data.len() as f64) - 1.0)
         }
     }
 
