@@ -81,7 +81,7 @@ impl ProgressComputer {
         }
         if !self.work_tree.is_empty() {
             let it = self.work_tree.iter().next().unwrap().clone();
-            let delta = it.finish - self.work_total;
+            let delta = 0.0_f64.max(it.finish - self.work_total);
             self.end_event = Some(self.ctx.borrow_mut().emit_self(
                 InvocationEndEvent { id: it.id },
                 delta * f64::max(self.cores, self.load),
