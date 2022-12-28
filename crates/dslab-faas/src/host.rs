@@ -12,7 +12,7 @@ use crate::cpu::CPU;
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::{InvocationStatus, Invoker};
+use crate::invoker::{DequeuedInvocation, InvocationStatus, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::StatsMonitor;
@@ -213,6 +213,18 @@ impl Host {
             delay,
         );
     }
+
+    fn process_dequeued_requests(&mut self, mut reqs: Vec<DequeuedInvocation>, time: f64) {
+        for req in reqs.drain(..) {
+            if req.delay.is_none() {
+                let mut ir = self.invocation_registry.borrow_mut();
+                ir.new_invocation(req.request, self.id, req.container_id, time);
+                let invocation = ir.get_invocation_mut(req.request.id).unwrap();
+                let container = self.container_manager.get_container_mut(req.container_id).unwrap();
+                self.cpu.on_new_invocation(invocation, container, time);
+            }
+        }
+    }
 }
 
 impl EventHandler for Host {
@@ -220,16 +232,34 @@ impl EventHandler for Host {
         cast!(match event.data {
             ContainerStartEvent { id } => {
                 self.on_container_start(id, event.time);
-                self.invoker
-                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
+                let mut stats = self.stats.borrow_mut();
+                let deq = self.invoker.dequeue(
+                    self.function_registry.clone(),
+                    &mut self.container_manager,
+                    &mut stats,
+                    event.time,
+                );
+                if !deq.is_empty() {
+                    drop(stats);
+                    self.process_dequeued_requests(deq, event.time);
+                }
             }
             ContainerEndEvent { id, expected_count } => {
                 self.on_container_end(id, expected_count, event.time);
             }
             InvocationEndEvent { id } => {
                 self.on_invocation_end(id, event.time);
-                self.invoker
-                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
+                let mut stats = self.stats.borrow_mut();
+                let deq = self.invoker.dequeue(
+                    self.function_registry.clone(),
+                    &mut self.container_manager,
+                    &mut stats,
+                    event.time,
+                );
+                if !deq.is_empty() {
+                    drop(stats);
+                    self.process_dequeued_requests(deq, event.time);
+                }
             }
         });
     }

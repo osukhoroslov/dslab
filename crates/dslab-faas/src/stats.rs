@@ -5,14 +5,26 @@ use order_stat::kth_by;
 use crate::invocation::{Invocation, InvocationRequest};
 use crate::resource::ResourceConsumer;
 
+/// This struct allows calculating statistical functions on some data sample.
+/// Almost all metrics computed by the simulator are stored using this struct.
 #[derive(Clone, Default)]
 pub struct SampleMetric {
     data: Vec<f64>,
 }
 
 impl SampleMetric {
+    /// adds a new element to the sample
     pub fn add(&mut self, x: f64) {
         self.data.push(x);
+    }
+
+    /// returns the number of elements in this sample
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 
     pub fn sum(&self) -> f64 {
@@ -54,6 +66,7 @@ impl SampleMetric {
         s1 + (h - fl) * (self.ordered_statistic(k2) - s1)
     }
 
+    /// returns biased/unbiased sample variance
     pub fn variance(&self, biased: bool) -> f64 {
         let mean = self.mean();
         let mut var = 0.;
@@ -76,6 +89,25 @@ impl SampleMetric {
     pub fn unbiased_variance(&self) -> f64 {
         self.variance(false)
     }
+
+    pub fn values(&self) -> &[f64] {
+        &self.data
+    }
+
+    /// extends current metric with zeros to given number of samples
+    /// if given number of samples is less than current number of samples, does nothing
+    pub fn extend_inplace(&mut self, len: usize) {
+        while self.data.len() < len {
+            self.data.push(0.);
+        }
+    }
+
+    /// same as extend_inplace, but makes a copy
+    pub fn extend(&self, len: usize) -> Self {
+        let mut result = self.clone();
+        result.extend_inplace(len);
+        result
+    }
 }
 
 #[derive(Clone, Default)]
@@ -84,6 +116,9 @@ pub struct InvocationStats {
     pub cold_starts: u64,
     /// this metric counts latency of cold starts only, warm starts are not counted as zero
     pub cold_start_latency: SampleMetric,
+    /// measures queueing time of requests stuck in the invoker queue (other requests are not
+    /// counted at all)
+    pub queueing_time: SampleMetric,
     pub abs_exec_slowdown: SampleMetric,
     pub rel_exec_slowdown: SampleMetric,
     pub abs_total_slowdown: SampleMetric,
@@ -110,6 +145,10 @@ impl InvocationStats {
         self.rel_total_slowdown
             .add((total_len - invocation.request.duration) / invocation.request.duration);
     }
+
+    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
+        self.queueing_time.add(curr_time - request.time);
+    }
 }
 
 #[derive(Clone, Default)]
@@ -129,6 +168,10 @@ impl Stats {
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.invocation_stats.update(invocation);
+    }
+
+    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
+        self.invocation_stats.update_queueing_time(request, curr_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
@@ -168,6 +211,14 @@ impl StatsMonitor {
             .entry(invocation.request.func_id)
             .or_default()
             .update(invocation);
+    }
+
+    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
+        self.global_stats.update_queueing_time(request, curr_time);
+        self.func_stats
+            .entry(request.func_id)
+            .or_default()
+            .update_queueing_time(request, curr_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
