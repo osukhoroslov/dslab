@@ -1,11 +1,11 @@
 base_config:
   hosts:
-    - cores: 4
+    - cores: 12
       resources:
         - name: mem
-          quantity: 16384
+          quantity: 26624
       invoker: BasicInvoker
-      count: 10
+      count: 9
   coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200,prewarm=0]
   idle_deployer: BasicDeployer
   disable_contention: false

@@ -45,6 +45,11 @@ fn print_results(stats: Stats, name: &str) {
         "- mean relative total slowdown = {}",
         stats.invocation_stats.rel_total_slowdown.mean()
     );
+    println!(
+        "- {} queued invocations with {} mean queueing time",
+        stats.invocation_stats.queueing_time.len(),
+        stats.invocation_stats.queueing_time.mean()
+    );
 }
 
 #[derive(Parser, Debug)]
