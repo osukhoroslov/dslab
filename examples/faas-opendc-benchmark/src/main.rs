@@ -38,7 +38,7 @@ fn main() {
     let t = Instant::now();
     sim.step_until_no_events();
     let elapsed = t.elapsed().as_secs_f64();
-    let stats = sim.get_stats();
+    let stats = sim.get_global_stats().invocation_stats;
     println!(
         "processed {} invocations and {} events in {:.2} seconds ({:.2} events per sec)",
         stats.invocations,
