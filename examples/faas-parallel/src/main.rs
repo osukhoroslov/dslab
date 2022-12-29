@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use clap::{arg, command};
+
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
@@ -21,12 +23,15 @@ fn print_results(stats: Stats, name: &str) {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let matches = command!().arg(arg!(<trace> "Trace folder")).get_matches();
     let trace_config = AzureTraceConfig {
         invocations_limit: 20000,
         ..Default::default()
     };
-    let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
+    let trace = Box::new(process_azure_trace(
+        Path::new(&matches.get_one::<String>("trace").unwrap()),
+        trace_config,
+    ));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
