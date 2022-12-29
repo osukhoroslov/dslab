@@ -53,6 +53,8 @@ pub trait Invoker {
         time: f64,
     ) -> InvocationStatus;
 
+    fn queue_len(&self) -> usize;
+
     fn to_string(&self) -> String {
         "STUB INVOKER NAME".to_string()
     }
@@ -163,6 +165,10 @@ impl Invoker for BasicInvoker {
             return InvocationStatus::Queued;
         }
         status
+    }
+
+    fn queue_len(&self) -> usize {
+        self.queue.len()
     }
 
     fn to_string(&self) -> String {

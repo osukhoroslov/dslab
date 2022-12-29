@@ -100,6 +100,7 @@ pub struct AzureTraceConfig {
     pub invocations_limit: usize,
     pub concurrency_level: usize,
     pub memory_name: String,
+    pub force_fixed_memory: Option<u64>,
 }
 
 impl Default for AzureTraceConfig {
@@ -108,6 +109,7 @@ impl Default for AzureTraceConfig {
             invocations_limit: 0,
             concurrency_level: 1,
             memory_name: "mem".to_string(),
+            force_fixed_memory: None,
         }
     }
 }
@@ -278,7 +280,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     let mut funcs: Vec<FunctionRecord> = vec![Default::default(); fn_id.len()];
     for (_, data) in app_data.iter() {
         apps[data.0] = ApplicationRecord {
-            mem: data.2,
+            mem: config.force_fixed_memory.unwrap_or(data.2),
             cold_start: data.1,
         };
     }

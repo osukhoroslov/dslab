@@ -30,25 +30,20 @@ fn print_results(stats: Stats, name: &str) {
         stats.wasted_resource_time.get(&0).unwrap().sum()
     );
     println!(
-        "- mean absolute execution slowdown = {}",
-        stats.invocation_stats.abs_exec_slowdown.mean()
+        "- 99% absolute execution slowdown = {}",
+        stats.invocation_stats.abs_exec_slowdown.quantile(0.99)
     );
     println!(
-        "- mean relative execution slowdown = {}",
-        stats.invocation_stats.rel_exec_slowdown.mean()
+        "- 99% relative execution slowdown = {}",
+        stats.invocation_stats.rel_exec_slowdown.quantile(0.99)
     );
     println!(
-        "- mean absolute total slowdown = {}",
-        stats.invocation_stats.abs_total_slowdown.mean()
+        "- 99% absolute total slowdown = {}",
+        stats.invocation_stats.abs_total_slowdown.quantile(0.99)
     );
     println!(
-        "- mean relative total slowdown = {}",
-        stats.invocation_stats.rel_total_slowdown.mean()
-    );
-    println!(
-        "- {} queued invocations with {} mean queueing time",
-        stats.invocation_stats.queueing_time.len(),
-        stats.invocation_stats.queueing_time.mean()
+        "- 99% relative total slowdown = {}",
+        stats.invocation_stats.rel_total_slowdown.quantile(0.99)
     );
 }
 
@@ -65,7 +60,8 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let trace_config = AzureTraceConfig {
-        invocations_limit: 200000,
+        invocations_limit: 100000,
+        force_fixed_memory: Some(256),
         ..Default::default()
     };
     let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));

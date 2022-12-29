@@ -75,6 +75,14 @@ impl Host {
         self.container_manager.get_active_invocations()
     }
 
+    pub fn get_queued_invocations(&self) -> u64 {
+        self.invoker.queue_len() as u64
+    }
+
+    pub fn get_all_invocations(&self) -> u64 {
+        self.get_active_invocations() + self.get_queued_invocations()
+    }
+
     pub fn get_total_resource(&self, id: usize) -> u64 {
         self.container_manager.get_total_resource(id)
     }

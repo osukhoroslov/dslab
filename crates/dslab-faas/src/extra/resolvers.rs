@@ -14,8 +14,9 @@ pub fn extra_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
 }
 
 pub fn extra_scheduler_resolver(s: &str) -> Box<dyn Scheduler> {
-    if s == "HermesScheduler" {
-        return Box::new(HermesScheduler::new());
+    if s.len() >= 17 && &s[0..16] == "HermesScheduler[" && s.ends_with(']') {
+        let opts = parse_options(&s[16..s.len() - 1]);
+        return Box::new(HermesScheduler::from_options_map(&opts));
     }
     default_scheduler_resolver(s)
 }

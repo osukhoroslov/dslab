@@ -182,26 +182,49 @@ impl Scheduler for RandomScheduler {
 pub struct LeastLoadedScheduler {
     /// break ties by preferring instances with warm containers
     prefer_warm: bool,
+    /// use total invocation count instead of CPU load
+    use_invocation_count: bool,
+    /// strictly prefer hosts where the request won't get queued
+    avoid_queueing: bool,
 }
 
 impl LeastLoadedScheduler {
-    pub fn new(prefer_warm: bool) -> Self {
-        Self { prefer_warm }
+    pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
+        Self {
+            prefer_warm,
+            use_invocation_count,
+            avoid_queueing,
+        }
     }
 
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
-        Self::new(prefer_warm)
+        let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();
+        let avoid_queueing = options.get("avoid_queueing").unwrap().parse::<bool>().unwrap();
+        Self::new(prefer_warm, use_invocation_count, avoid_queueing)
     }
 }
 
 impl Scheduler for LeastLoadedScheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let mut best = 0;
-        let mut best_load = f64::MAX;
+        let mut best_load = (0, f64::MAX);
         let mut warm = false;
         for (i, host) in hosts.iter().enumerate() {
-            let load = host.borrow().get_cpu_load();
+            let mut token = 0;
+            if self.avoid_queueing
+                && (host.borrow().can_invoke(app, true) || host.borrow().can_allocate(app.get_resources()))
+            {
+                token = 1;
+            }
+            let load = (
+                token,
+                if self.use_invocation_count {
+                    host.borrow().get_all_invocations() as f64
+                } else {
+                    host.borrow().get_cpu_load()
+                },
+            );
             if load < best_load {
                 best_load = load;
                 best = i;
@@ -217,7 +240,10 @@ impl Scheduler for LeastLoadedScheduler {
     }
 
     fn to_string(&self) -> String {
-        format!("LeastLoadedScheduler[prefer_warm={}]", self.prefer_warm)
+        format!(
+            "LeastLoadedScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]",
+            self.prefer_warm, self.use_invocation_count, self.avoid_queueing
+        )
     }
 }
 
