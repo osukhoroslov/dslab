@@ -172,11 +172,7 @@ impl LookaheadScheduler {
                     task_locations.insert(child, resources[resource].id);
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
 
-                    let finish = finish + output_time;
-
-                    if finish > makespan {
-                        makespan = finish;
-                    }
+                    makespan = makespan.max(finish + output_time);
                 }
 
                 for (resource, cores, scheduled_task) in to_undo.into_iter() {
