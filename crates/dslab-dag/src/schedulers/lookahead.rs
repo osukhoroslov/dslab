@@ -94,8 +94,14 @@ impl LookaheadScheduler {
                 }
                 task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
+                let mut output_time: f64 = 0.;
                 for &output in dag.get_task(task_id).outputs.iter() {
                     data_locations.insert(output, resources[resource].id);
+                    if dag.get_outputs().contains(&output) {
+                        output_time = output_time.max(
+                            dag.get_data_item(output).size as f64 / network.bandwidth(resources[resource].id, ctx.id()),
+                        )
+                    }
                 }
                 task_locations.insert(task_id, resources[resource].id);
                 to_undo.push((
@@ -106,7 +112,8 @@ impl LookaheadScheduler {
 
                 let mut unscheduled_tasks = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
                 unscheduled_tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
-                let mut makespan = finish_time;
+                let mut makespan = finish_time + output_time;
+
                 for &child in unscheduled_tasks.iter() {
                     let (resource, cores, start, finish) = {
                         let task = child;
@@ -152,23 +159,20 @@ impl LookaheadScheduler {
                     }
                     task_finish_times[child] = finish;
                     scheduled[child] = true;
+                    output_time = 0.;
                     for &output in dag.get_task(child).outputs.iter() {
                         data_locations.insert(output, resources[resource].id);
+                        if dag.get_outputs().contains(&output) {
+                            output_time = output_time.max(
+                                dag.get_data_item(output).size as f64
+                                    / network.bandwidth(resources[resource].id, ctx.id()),
+                            )
+                        }
                     }
                     task_locations.insert(child, resources[resource].id);
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
 
-                    let finish = finish
-                        + dag
-                            .get_task(child)
-                            .outputs
-                            .iter()
-                            .filter(|f| dag.get_outputs().contains(f))
-                            .map(|&f| {
-                                dag.get_data_item(f).size as f64 / network.bandwidth(resources[resource].id, ctx.id())
-                            })
-                            .max_by(|a, b| a.total_cmp(&b))
-                            .unwrap_or(0.);
+                    let finish = finish + output_time;
 
                     if finish > makespan {
                         makespan = finish;
