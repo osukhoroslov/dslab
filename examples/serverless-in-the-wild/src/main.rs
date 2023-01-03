@@ -2,7 +2,7 @@ use std::boxed::Box;
 use std::fs::File;
 use std::path::Path;
 
-use clap::{arg, command};
+use clap::Parser;
 
 use serde::{Deserialize, Serialize};
 
@@ -53,26 +53,29 @@ fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     }
 }
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap()]
+    trace: String,
+    #[clap(long)]
+    config: String,
+}
+
 fn main() {
-    let matches = command!()
-        .arg(arg!(--config <CONFIG> "YAML config").required(true))
-        .arg(arg!(<trace> "Trace folder"))
-        .get_matches();
+    let args = Args::parse();
     let trace_config = AzureTraceConfig {
         invocations_limit: 200000,
         concurrency_level: 16,
         ..Default::default()
     };
-    let trace = Box::new(process_azure_trace(
-        Path::new(&matches.get_one::<String>("trace").unwrap()),
-        trace_config,
-    ));
+    let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
     );
     let experiment_config: ExperimentConfig =
-        serde_yaml::from_reader(File::open(Path::new(&matches.get_one::<String>("config").unwrap())).unwrap()).unwrap();
+        serde_yaml::from_reader(File::open(Path::new(&args.config)).unwrap()).unwrap();
     let policies = experiment_config.coldstart_policies;
     let base_config = experiment_config.base_config;
     let configs: Vec<_> = policies

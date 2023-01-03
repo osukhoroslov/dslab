@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::time::Instant;
 
-use clap::{arg, command};
+use clap::Parser;
 
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
@@ -10,13 +10,20 @@ use dslab_faas::extra::opendc_trace::{process_opendc_trace, OpenDCTraceConfig};
 use dslab_faas::resource::ResourceProvider;
 use dslab_faas::simulation::ServerlessSimulation;
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap()]
+    trace: String,
+}
+
 fn main() {
-    let matches = command!().arg(arg!(<trace> "Trace folder")).get_matches();
+    let args = Args::parse();
     let trace_config = OpenDCTraceConfig {
         cold_start: 0.5,
         ..Default::default()
     };
-    let trace = process_opendc_trace(Path::new(&matches.get_one::<String>("trace").unwrap()), trace_config);
+    let trace = process_opendc_trace(Path::new(&args.trace), trace_config);
     let config = Config {
         disable_contention: true,
         coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)),
