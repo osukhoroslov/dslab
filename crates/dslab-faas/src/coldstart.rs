@@ -19,12 +19,12 @@ impl<T: 'static + ColdStartPolicy> ColdStartConvertHelper for T {
 }
 
 pub trait ColdStartPolicy: ColdStartConvertHelper {
-    /// maximum allowed idle time until container destruction
+    /// Maximum allowed idle time until container destruction.
     fn keepalive_window(&mut self, container: &Container) -> f64;
-    /// prewarm = x > 0 => destroy container, deploy new container after x time units since execution
-    /// prewarm = 0 => do not destroy container immediately after execution
+    /// Prewarm = x > 0 => destroy container, deploy new container after x time units since execution.
+    /// Prewarm = 0 => do not destroy container immediately after execution.
     fn prewarm_window(&mut self, app: &Application) -> f64;
-    /// this function allows tuning policy on finished invocations
+    /// This function allows tuning policy on finished invocations.
     fn update(&mut self, invocation: &Invocation, app: &Application);
 
     fn to_string(&self) -> String {

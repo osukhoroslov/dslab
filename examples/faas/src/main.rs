@@ -24,7 +24,7 @@ fn main() {
     sim.send_invocation_request(slow, 1.0, 0.0);
     sim.send_invocation_request(slow, 1.0, 3.1);
     sim.step_until_no_events();
-    let stats = sim.get_global_stats();
+    let stats = sim.global_stats();
     println!(
         "invocations = {}, cold starts = {}, mean cold start latency = {}",
         stats.invocation_stats.invocations,

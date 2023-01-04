@@ -29,7 +29,7 @@ fn test_simulation() {
     sim.send_invocation_request(f2, 1.0, 0.0);
     sim.send_invocation_request(f1, 1.0, 4.0 - 1e-9);
     sim.step_until_no_events();
-    let monitor = sim.get_stats_monitor();
+    let monitor = sim.stats();
     let stats = monitor.global_stats.invocation_stats;
     assert_eq!(stats.invocations, 3);
     assert_eq!(stats.cold_starts, 2);
@@ -39,14 +39,10 @@ fn test_simulation() {
     assert_float_eq(stats.rel_exec_slowdown.mean(), 2.0 / 3.0, 1e-9);
     assert_float_eq(stats.abs_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
     assert_float_eq(stats.rel_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
-    assert_float_eq(
-        monitor.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
-        3.0 - 1e-9,
-        1e-9,
-    );
-    let stats1 = monitor.func_stats.get(&0).unwrap();
+    assert_float_eq(monitor.global_stats.wasted_resource_time[&0].sum(), 3.0 - 1e-9, 1e-9);
+    let stats1 = &monitor.func_stats[&0];
     assert_float_eq(stats1.abs_total_slowdown.mean(), 1.0, 1e-9);
-    let stats2 = monitor.func_stats.get(&1).unwrap();
+    let stats2 = &monitor.func_stats[&1];
     assert_float_eq(stats2.abs_total_slowdown.mean(), 2.0, 1e-9);
 }
 
@@ -69,7 +65,7 @@ fn test_simulation_with_invoker_queueing() {
     sim.send_invocation_request(f2, 1.0, 0.0);
     sim.send_invocation_request(f1, 1.0, 2.9);
     sim.step_until_no_events();
-    let monitor = sim.get_stats_monitor();
+    let monitor = sim.stats();
     let stats = monitor.global_stats.invocation_stats;
     assert_eq!(stats.invocations, 3);
     assert_eq!(stats.cold_starts, 2);
@@ -85,12 +81,8 @@ fn test_simulation_with_invoker_queueing() {
         0.1 / 3.0,
         1e-9,
     );
-    assert_float_eq(
-        monitor.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
-        2.0,
-        1e-9,
-    );
-    let stats1 = monitor.func_stats.get(&0).unwrap();
+    assert_float_eq(monitor.global_stats.wasted_resource_time[&0].sum(), 2.0, 1e-9);
+    let stats1 = &monitor.func_stats[&0];
     assert_float_eq(stats1.abs_total_slowdown.mean(), 1.05, 1e-9);
     assert_float_eq(stats1.queueing_time.mean(), 0.1, 1e-9);
     assert_float_eq(
@@ -98,7 +90,7 @@ fn test_simulation_with_invoker_queueing() {
         0.05,
         1e-9,
     );
-    let stats2 = monitor.func_stats.get(&1).unwrap();
+    let stats2 = &monitor.func_stats[&1];
     assert_float_eq(stats2.abs_total_slowdown.mean(), 2.0, 1e-9);
     assert!(stats2.queueing_time.is_empty());
 }

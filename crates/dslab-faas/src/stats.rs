@@ -13,12 +13,12 @@ pub struct SampleMetric {
 }
 
 impl SampleMetric {
-    /// adds a new element to the sample
+    /// Adds a new element to the sample.
     pub fn add(&mut self, x: f64) {
         self.data.push(x);
     }
 
-    /// returns the number of elements in this sample
+    /// Returns the number of elements in this sample.
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -47,14 +47,14 @@ impl SampleMetric {
         self.data.iter().copied().reduce(f64::max)
     }
 
+    /// Returns k-th ordered statistic of the sample.
     pub fn ordered_statistic(&self, idx: usize) -> f64 {
         debug_assert!(1 <= idx && idx <= self.data.len());
         let mut tmp = self.data.clone();
         *kth_by(&mut tmp, idx - 1, |x, y| x.total_cmp(y))
     }
 
-    /// q-th sample quantile, 0 <= q <= 1
-    /// estimation method corresponds to R-7 (the default method in R.stats)
+    /// Returns q-th sample quantile, 0 <= q <= 1. Estimation method corresponds to R-7 (the default method in R.stats).
     pub fn quantile(&self, q: f64) -> f64 {
         debug_assert!((0. ..=1.).contains(&q));
         debug_assert!(!self.data.is_empty());
@@ -66,7 +66,7 @@ impl SampleMetric {
         s1 + (h - fl) * (self.ordered_statistic(k2) - s1)
     }
 
-    /// returns biased/unbiased sample variance
+    /// Returns biased/unbiased sample variance.
     pub fn variance(&self, biased: bool) -> f64 {
         let mean = self.mean();
         let mut var = 0.;
@@ -94,15 +94,14 @@ impl SampleMetric {
         &self.data
     }
 
-    /// extends current metric with zeros to given number of samples
-    /// if given number of samples is less than current number of samples, does nothing
+    /// Extends current metric with zeros to given number of samples. If given number of samples is less than current number of samples, does nothing.
     pub fn extend_inplace(&mut self, len: usize) {
         while self.data.len() < len {
             self.data.push(0.);
         }
     }
 
-    /// same as extend_inplace, but makes a copy
+    /// Same as extend_inplace, but makes a copy.
     pub fn extend(&self, len: usize) -> Self {
         let mut result = self.clone();
         result.extend_inplace(len);
@@ -114,10 +113,9 @@ impl SampleMetric {
 pub struct InvocationStats {
     pub invocations: u64,
     pub cold_starts: u64,
-    /// this metric counts latency of cold starts only, warm starts are not counted as zero
+    /// This metric counts latency of cold starts only, warm starts are not counted as zero.
     pub cold_start_latency: SampleMetric,
-    /// measures queueing time of requests stuck in the invoker queue (other requests are not
-    /// counted at all)
+    /// Measures queueing time of requests stuck in the invoker queue (other requests are not counted at all).
     pub queueing_time: SampleMetric,
     pub abs_exec_slowdown: SampleMetric,
     pub rel_exec_slowdown: SampleMetric,
@@ -152,12 +150,12 @@ impl InvocationStats {
 }
 
 #[derive(Clone, Default)]
-pub struct Stats {
+pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
     pub wasted_resource_time: HashMap<usize, SampleMetric>,
 }
 
-impl Stats {
+impl GlobalStats {
     pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
         self.invocation_stats.on_cold_start(request, delay);
     }
@@ -183,12 +181,12 @@ impl Stats {
 }
 
 #[derive(Clone, Default)]
-pub struct StatsMonitor {
+pub struct Stats {
     pub func_stats: HashMap<u64, InvocationStats>,
-    pub global_stats: Stats,
+    pub global_stats: GlobalStats,
 }
 
-impl StatsMonitor {
+impl Stats {
     pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
         self.global_stats.on_cold_start(request, delay);
         self.func_stats

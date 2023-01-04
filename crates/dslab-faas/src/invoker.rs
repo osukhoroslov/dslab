@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::container::{ContainerManager, ContainerStatus};
 use crate::function::FunctionRegistry;
 use crate::invocation::InvocationRequest;
-use crate::stats::StatsMonitor;
+use crate::stats::Stats;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum InvocationStatus {
@@ -35,16 +35,16 @@ impl DequeuedInvocation {
 /// Invoker handles invocations at host level.
 /// It chooses containers for execution, deploys new containers and manages invocation queue.
 pub trait Invoker {
-    /// try to invoke some of the queued functions
+    /// Try to invoke some of the queued functions.
     fn dequeue(
         &mut self,
         fr: Rc<RefCell<FunctionRegistry>>,
         cm: &mut ContainerManager,
-        stats: &mut StatsMonitor,
+        stats: &mut Stats,
         time: f64,
     ) -> Vec<DequeuedInvocation>;
 
-    /// invoke or queue new invocation request
+    /// Invoke or queue new invocation request.
     fn invoke(
         &mut self,
         request: InvocationRequest,
@@ -111,7 +111,7 @@ impl Invoker for BasicInvoker {
         &mut self,
         fr: Rc<RefCell<FunctionRegistry>>,
         cm: &mut ContainerManager,
-        stats: &mut StatsMonitor,
+        stats: &mut Stats,
         time: f64,
     ) -> Vec<DequeuedInvocation> {
         if self.queue.is_empty() {
@@ -144,7 +144,7 @@ impl Invoker for BasicInvoker {
                     new_queue.push(item);
                 }
                 _ => {
-                    panic!();
+                    panic!("try_invoke should only return Warm, Cold or Rejected");
                 }
             }
         }

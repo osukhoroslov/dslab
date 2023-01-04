@@ -41,13 +41,13 @@ impl Scheduler for HermesScheduler {
         for (i, host) in hosts.iter().enumerate() {
             let h = host.borrow();
             let val = if self.use_invocation_count {
-                (h.get_all_invocations() as f64) + 1e-9
+                (h.total_invocation_count() as f64) + 1e-9
             } else {
                 h.get_cpu_load() + 1e-9
             };
             if val < (h.get_cpu_cores() as f64) {
                 let mut curr_priority = -1;
-                if h.get_all_invocations() > 0 {
+                if h.total_invocation_count() > 0 {
                     if h.can_invoke(app, false) {
                         curr_priority = 3;
                     } else if !self.avoid_queueing || h.can_allocate(app.get_resources()) {

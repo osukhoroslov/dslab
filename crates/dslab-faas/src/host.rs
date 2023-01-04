@@ -12,10 +12,10 @@ use crate::cpu::CPU;
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::{DequeuedInvocation, InvocationStatus, Invoker};
+use crate::invoker::{InvocationStatus, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
-use crate::stats::StatsMonitor;
+use crate::stats::Stats;
 
 pub struct Host {
     id: u64,
@@ -26,7 +26,7 @@ pub struct Host {
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller_id: HandlerId,
-    stats: Rc<RefCell<StatsMonitor>>,
+    stats: Rc<RefCell<Stats>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -42,7 +42,7 @@ impl Host {
         invocation_registry: Rc<RefCell<InvocationRegistry>>,
         coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
         controller_id: HandlerId,
-        stats: Rc<RefCell<StatsMonitor>>,
+        stats: Rc<RefCell<Stats>>,
         ctx: SimulationContext,
     ) -> Self {
         let ctx = Rc::new(RefCell::new(ctx));
@@ -71,16 +71,16 @@ impl Host {
             .is_some()
     }
 
-    pub fn get_active_invocations(&self) -> u64 {
-        self.container_manager.get_active_invocations()
+    pub fn active_invocation_count(&self) -> u64 {
+        self.container_manager.active_invocation_count()
     }
 
-    pub fn get_queued_invocations(&self) -> u64 {
+    pub fn queued_invocation_count(&self) -> u64 {
         self.invoker.queue_len() as u64
     }
 
-    pub fn get_all_invocations(&self) -> u64 {
-        self.get_active_invocations() + self.get_queued_invocations()
+    pub fn total_invocation_count(&self) -> u64 {
+        self.active_invocation_count() + self.queued_invocation_count()
     }
 
     pub fn get_total_resource(&self, id: usize) -> u64 {
@@ -222,7 +222,16 @@ impl Host {
         );
     }
 
-    fn process_dequeued_requests(&mut self, mut reqs: Vec<DequeuedInvocation>, time: f64) {
+    fn dequeue_requests(&mut self, time: f64) {
+        let mut reqs = self.invoker.dequeue(
+            self.function_registry.clone(),
+            &mut self.container_manager,
+            &mut self.stats.borrow_mut(),
+            time,
+        );
+        if reqs.is_empty() {
+            return;
+        }
         for req in reqs.drain(..) {
             if req.delay.is_none() {
                 let mut ir = self.invocation_registry.borrow_mut();
@@ -240,34 +249,14 @@ impl EventHandler for Host {
         cast!(match event.data {
             ContainerStartEvent { id } => {
                 self.on_container_start(id, event.time);
-                let mut stats = self.stats.borrow_mut();
-                let deq = self.invoker.dequeue(
-                    self.function_registry.clone(),
-                    &mut self.container_manager,
-                    &mut stats,
-                    event.time,
-                );
-                if !deq.is_empty() {
-                    drop(stats);
-                    self.process_dequeued_requests(deq, event.time);
-                }
+                self.dequeue_requests(event.time);
             }
             ContainerEndEvent { id, expected_count } => {
                 self.on_container_end(id, expected_count, event.time);
             }
             InvocationEndEvent { id } => {
                 self.on_invocation_end(id, event.time);
-                let mut stats = self.stats.borrow_mut();
-                let deq = self.invoker.dequeue(
-                    self.function_registry.clone(),
-                    &mut self.container_manager,
-                    &mut stats,
-                    event.time,
-                );
-                if !deq.is_empty() {
-                    drop(stats);
-                    self.process_dequeued_requests(deq, event.time);
-                }
+                self.dequeue_requests(event.time);
             }
         });
     }

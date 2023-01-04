@@ -180,11 +180,11 @@ impl Scheduler for RandomScheduler {
 
 /// LeastLoadedScheduler chooses a host with the least number of active (running and queued) invocations.
 pub struct LeastLoadedScheduler {
-    /// break ties by preferring instances with warm containers
+    /// Break ties by preferring instances with warm containers.
     prefer_warm: bool,
-    /// use total invocation count instead of CPU load
+    /// Use total invocation count instead of CPU load.
     use_invocation_count: bool,
-    /// strictly prefer hosts where the request won't get queued
+    /// Strictly prefer hosts where the request won't get queued.
     avoid_queueing: bool,
 }
 
@@ -220,7 +220,7 @@ impl Scheduler for LeastLoadedScheduler {
             let load = (
                 token,
                 if self.use_invocation_count {
-                    host.borrow().get_all_invocations() as f64
+                    host.borrow().total_invocation_count() as f64
                 } else {
                     host.borrow().get_cpu_load()
                 },

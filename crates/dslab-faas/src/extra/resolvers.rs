@@ -1,4 +1,4 @@
-/// This file contains additional resolvers for YAML configs
+/// This file contains additional resolvers for YAML configs.
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy};
 use crate::config::parse_options;
 use crate::extra::hermes::HermesScheduler;
