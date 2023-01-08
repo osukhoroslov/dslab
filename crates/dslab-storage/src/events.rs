@@ -1,40 +1,40 @@
-//! Events produced by storage resource and file system.
+//! Events produced by storage and file system.
 
 use serde::Serialize;
 
-// Storage resource events
+// Storage events
 
 #[derive(Serialize)]
-/// Corresponds to completion of storage resource read request. Source: storage resource, destination: requester.
+/// Corresponds to completion of storage read request. Source: storage, destination: requester.
 pub struct DataReadCompleted {
-    /// Request id returned by [`crate::resource::Storage::read()`] method.
+    /// Request id returned by [`crate::storage::Storage::read()`] method.
     pub request_id: u64,
-    /// Size of data read from storage resource.
+    /// Size of data read from storage.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Corresponds to failure of storage resource read request. Source: storage resource, destination: requester.
+/// Corresponds to failure of storage read request. Source: storage, destination: requester.
 pub struct DataReadFailed {
-    /// Request id returned by [`crate::resource::Storage::read()`] method.
+    /// Request id returned by [`crate::storage::Storage::read()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
 }
 
 #[derive(Serialize)]
-/// Corresponds to completion of storage resource write request. Source: storage resource, destination: requester.
+/// Corresponds to completion of storage write request. Source: storage, destination: requester.
 pub struct DataWriteCompleted {
-    /// Request id returned by [`crate::resource::Storage::write()`] method.
+    /// Request id returned by [`crate::storage::Storage::write()`] method.
     pub request_id: u64,
-    /// Size of data written to storage resource.
+    /// Size of data written to storage.
     pub size: u64,
 }
 
 #[derive(Serialize)]
-/// Corresponds to failure of storage resource write request. Source: storage resource, destination: requester.
+/// Corresponds to failure of storage write request. Source: storage, destination: requester.
 pub struct DataWriteFailed {
-    /// Request id returned by [`crate::resource::Storage::write()`] method.
+    /// Request id returned by [`crate::storage::Storage::write()`] method.
     pub request_id: u64,
     /// Reason of failure.
     pub error: String,
