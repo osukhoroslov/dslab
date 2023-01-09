@@ -1,6 +1,7 @@
 //! DAG model of computation.
 
 use std::collections::BTreeSet;
+use std::path::Path;
 
 use dslab_compute::multicore::CoresDependency;
 
@@ -34,6 +35,18 @@ impl DAG {
             completed_task_count: 0,
             inputs: BTreeSet::new(),
             outputs: BTreeSet::new(),
+        }
+    }
+
+    /// Reads dag from YAML, DAX or DOT file.
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
+        match file.as_ref().extension().unwrap().to_str().unwrap() {
+            "yaml" => DAG::from_yaml(file),
+            "xml" => DAG::from_dax(file, 1000.),
+            "dot" => DAG::from_dot(file),
+            _ => {
+                panic!("Unknown extension for dag: {}", file.as_ref().display());
+            }
         }
     }
 
@@ -176,18 +189,5 @@ impl DAG {
     /// Checks whether all tasks are completed.
     pub fn is_completed(&self) -> bool {
         self.tasks.len() == self.completed_task_count
-    }
-
-    /// Reads dag from YAML, DAX or DOT file.
-    pub fn from_file(file: &str) -> Self {
-        match file.split('.').last().unwrap() {
-            "yaml" => DAG::from_yaml(file),
-            "xml" => DAG::from_dax(file, 1000.),
-            "dot" => DAG::from_dot(file),
-            _ => {
-                eprintln!("Unknown extension for dag: {}", file);
-                std::process::exit(1);
-            }
-        }
     }
 }

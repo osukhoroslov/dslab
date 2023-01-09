@@ -5,3 +5,7 @@ systems:
 schedulers:
   - Heft
   - Simple
+  - Lookahead
+  - Peft
+  - Dls
+data_transfer_mode: ViaMasterNode

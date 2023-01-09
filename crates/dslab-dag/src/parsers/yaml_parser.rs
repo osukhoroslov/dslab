@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
@@ -46,10 +47,11 @@ struct Yaml {
 impl DAG {
     /// Reads DAG from a file in
     /// [YAML format](https://github.com/osukhoroslov/dslab/blob/main/examples/dag/dags/diamond.yaml).
-    pub fn from_yaml(file: &str) -> Self {
-        let yaml: Yaml =
-            serde_yaml::from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
-                .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file));
+    pub fn from_yaml<P: AsRef<Path>>(file: P) -> Self {
+        let yaml: Yaml = serde_yaml::from_str(
+            &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file.as_ref().display()));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for data_item in yaml.inputs.iter() {

@@ -8,29 +8,30 @@ use dslab_dag::experiment::Experiment;
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
 struct Args {
-    /// File with configurations
+    /// Path to file with experiment configuration
     #[clap(short, long)]
-    input: String,
+    config: String,
 
-    /// Output file
+    /// Path to output file with experiment results
     #[clap(short, long)]
     output: Option<String>,
 
     /// Number of threads for running experiment
-    #[clap(short, long, default_value = "8")]
+    #[clap(short, long, default_value_t = std::thread::available_parallelism().unwrap().get())]
     threads: usize,
 }
+
 fn main() {
     let args = Args::parse();
 
-    let experiment = Experiment::load(&args.input);
+    let experiment = Experiment::load(&args.config);
 
     let result = experiment.run(args.threads);
 
     std::fs::File::create(args.output.unwrap_or_else(|| {
-        let input = Path::new(&args.input);
-        input
-            .with_file_name([input.file_stem().unwrap().to_str().unwrap(), "-results"].concat())
+        let config = Path::new(&args.config);
+        config
+            .with_file_name([config.file_stem().unwrap().to_str().unwrap(), "-results"].concat())
             .with_extension("json")
             .to_str()
             .unwrap()

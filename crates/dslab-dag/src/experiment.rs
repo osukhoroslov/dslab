@@ -1,32 +1,37 @@
+//! Tool for running multiple experiments.
+
 use std::cell::RefCell;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
-
-use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
 
 use itertools::Itertools;
-
+use serde::{Deserialize, Serialize};
 use threadpool::ThreadPool;
 
 use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
-use crate::network::read_network;
-use crate::network::Network;
-use crate::resource::read_resources;
-use crate::resource::YamlResource;
+use crate::network::{read_network_config, NetworkConfig};
+use crate::resource::{read_resources, ResourceConfig};
 use crate::runner::Config;
 use crate::scheduler::Scheduler;
+use crate::schedulers::dls::DlsScheduler;
 use crate::schedulers::heft::HeftScheduler;
+use crate::schedulers::lookahead::LookaheadScheduler;
+use crate::schedulers::peft::PeftScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 #[derive(Debug, Deserialize, Clone)]
 enum YamlScheduler {
     Simple,
     Heft,
+    Lookahead,
+    Peft,
+    Dls,
 }
 
 impl YamlScheduler {
@@ -34,65 +39,55 @@ impl YamlScheduler {
         match self {
             YamlScheduler::Simple => Rc::new(RefCell::new(SimpleScheduler::new())),
             YamlScheduler::Heft => Rc::new(RefCell::new(HeftScheduler::new())),
+            YamlScheduler::Lookahead => Rc::new(RefCell::new(LookaheadScheduler::new())),
+            YamlScheduler::Peft => Rc::new(RefCell::new(PeftScheduler::new())),
+            YamlScheduler::Dls => Rc::new(RefCell::new(DlsScheduler::new())),
         }
     }
 }
 
+/// Contains result of one run.
 #[derive(Serialize, Debug)]
 pub struct RunResult {
-    dag: String,
-    system: String,
-    scheduler: String,
-    makespan: f64,
+    pub dag: String,
+    pub system: String,
+    pub scheduler: String,
+    pub makespan: f64,
 }
 
 #[derive(Deserialize)]
 struct ExperimentConfig {
-    dags: Vec<String>,
-    systems: Vec<String>,
+    dags: Vec<PathBuf>,
+    systems: Vec<PathBuf>,
     schedulers: Vec<YamlScheduler>,
-}
-
-fn get_all_files(paths: &[String]) -> Vec<String> {
-    let mut result = Vec::new();
-    for path in paths.iter() {
-        if Path::new(&path).is_dir() {
-            result.extend(get_all_files(
-                &std::fs::read_dir(path)
-                    .unwrap()
-                    .map(|s| s.unwrap().path().to_str().unwrap().to_string())
-                    .collect::<Vec<String>>(),
-            ));
-        } else {
-            result.push(path.to_string());
-        }
-    }
-    result
+    data_transfer_mode: DataTransferMode,
 }
 
 struct Run {
     dag_name: String,
     dag: DAG,
-    resources: Vec<YamlResource>,
-    network: Network,
     system_name: String,
+    resources: Vec<ResourceConfig>,
+    network: NetworkConfig,
     scheduler: YamlScheduler,
 }
 
 pub struct Experiment {
     runs: Vec<Run>,
+    data_transfer_mode: DataTransferMode,
 }
 
 impl Experiment {
-    pub fn load(file: &str) -> Self {
-        let config: ExperimentConfig = std::fs::read_to_string(file)
+    /// Load config from a file.
+    pub fn load(config_path: &str) -> Self {
+        let config: ExperimentConfig = std::fs::read_to_string(config_path)
             .ok()
             .and_then(|f| serde_yaml::from_str(&f).ok())
-            .unwrap_or_else(|| panic!("Can't read config from file {}", file));
+            .unwrap_or_else(|| panic!("Can't read config from file {}", config_path));
 
         let dags = get_all_files(&config.dags).into_iter().map(|path| {
             (
-                Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
+                path.file_name().unwrap().to_str().unwrap().to_string(),
                 DAG::from_file(&path),
             )
         });
@@ -101,12 +96,21 @@ impl Experiment {
             .into_iter()
             .map(|path| {
                 (
-                    Path::new(&path).file_name().unwrap().to_str().unwrap().to_string(),
-                    path,
+                    path.file_name().unwrap().to_str().unwrap().to_string(),
+                    read_resources(&path),
+                    read_network_config(&path),
                 )
             })
-            .map(|(file_name, path)| (read_resources(&path), read_network(&path), file_name))
-            .filter(|(resources, network, _file_name)| !resources.is_empty() && network.make_network().is_some());
+            .inspect(|(file_name, resources, _network)| {
+                if resources.is_empty() {
+                    panic!("Can't have empty list of resources: {file_name}");
+                }
+            })
+            .inspect(|(file_name, _resources, network)| {
+                if network.make_network().is_none() {
+                    panic!("Unknown network model in {file_name}: {network:?}");
+                }
+            });
 
         let schedulers = config.schedulers;
 
@@ -114,27 +118,32 @@ impl Experiment {
             .cartesian_product(systems)
             .cartesian_product(schedulers.into_iter())
             .map(
-                |(((dag_name, dag), (resources, network, system_name)), scheduler)| Run {
+                |(((dag_name, dag), (system_name, resources, network)), scheduler)| Run {
                     dag_name,
                     dag,
+                    system_name,
                     resources,
                     network,
-                    system_name,
                     scheduler,
                 },
             )
             .collect::<Vec<_>>();
 
-        Self { runs }
+        Self {
+            runs,
+            data_transfer_mode: config.data_transfer_mode,
+        }
     }
 
-    pub fn run(self, threads: usize) -> Vec<RunResult> {
+    /// Run all experiments.
+    pub fn run(self, num_threads: usize) -> Vec<RunResult> {
         let total_runs = self.runs.len();
 
         let finished_runs = Arc::new(AtomicUsize::new(0));
         let result = Arc::new(Mutex::new(Vec::new()));
 
-        let pool = ThreadPool::new(threads);
+        let pool = ThreadPool::new(num_threads);
+        let start_time = Instant::now();
         for run in self.runs.into_iter() {
             let finished_runs = finished_runs.clone();
             let result = result.clone();
@@ -147,7 +156,7 @@ impl Experiment {
                     network,
                     scheduler,
                     Config {
-                        data_transfer_mode: DataTransferMode::ViaMasterNode,
+                        data_transfer_mode: self.data_transfer_mode,
                     },
                 );
                 for resource in run.resources.into_iter() {
@@ -167,19 +176,46 @@ impl Experiment {
                 });
 
                 finished_runs.fetch_add(1, Ordering::SeqCst);
+                let finished = finished_runs.load(Ordering::SeqCst);
+
+                let elapsed = start_time.elapsed();
+                let remaining =
+                    Duration::from_secs_f64(elapsed.as_secs_f64() / finished as f64 * (total_runs - finished) as f64);
+                print!("\r{}", " ".repeat(70));
                 print!(
-                    "\rFinished {}/{} runs",
-                    finished_runs.load(Ordering::SeqCst),
-                    total_runs
+                    "\rFinished {}/{} [{}%] runs in {:.2?}, remaining time: {:.2?}",
+                    finished,
+                    total_runs,
+                    (finished as f64 * 100. / total_runs as f64).round() as i32,
+                    elapsed,
+                    remaining
                 );
+                std::io::stdout().flush().unwrap();
             });
         }
 
-        let t = Instant::now();
         pool.join();
 
-        println!("\rFinished {} runs in {:.2?}", total_runs, t.elapsed());
+        print!("\r{}", " ".repeat(70));
+        println!("\rFinished {} runs in {:.2?}", total_runs, start_time.elapsed());
 
         Arc::try_unwrap(result).unwrap().into_inner().unwrap()
     }
+}
+
+fn get_all_files(paths: &[PathBuf]) -> Vec<PathBuf> {
+    let mut result = Vec::new();
+    for path in paths.iter() {
+        if Path::new(&path).is_dir() {
+            result.extend(get_all_files(
+                &std::fs::read_dir(path)
+                    .unwrap()
+                    .map(|s| s.unwrap().path())
+                    .collect::<Vec<_>>(),
+            ));
+        } else {
+            result.push(path.clone());
+        }
+    }
+    result
 }

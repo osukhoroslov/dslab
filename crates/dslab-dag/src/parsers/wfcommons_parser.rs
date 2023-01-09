@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
@@ -58,10 +59,11 @@ struct Json {
 
 impl DAG {
     /// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
-    pub fn from_wfcommons(file: &str, reference_flops: f64) -> Self {
-        let json: Json =
-            from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
-                .unwrap_or_else(|_| panic!("Can't parse WfCommons json from file {}", file));
+    pub fn from_wfcommons<P: AsRef<Path>>(file: P, reference_flops: f64) -> Self {
+        let json: Json = from_str(
+            &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse WfCommons json from file {}", file.as_ref().display()));
         let workflow = json.workflow;
         let machine_speed: HashMap<String, u64> = workflow
             .machines

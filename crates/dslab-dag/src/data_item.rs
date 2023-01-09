@@ -1,5 +1,7 @@
 //! Data item.
 
+use serde::Deserialize;
+
 use dslab_core::component::Id;
 use dslab_network::network::Network;
 
@@ -43,7 +45,7 @@ impl DataItem {
 }
 
 /// Defines how data items are transferred during the DAG execution.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
 pub enum DataTransferMode {
     /// Every data item is automatically transferred between producer and consumer
     /// via the master node (producer -> master -> consumer).
