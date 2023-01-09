@@ -8,6 +8,7 @@ use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
+use crate::scheduler_resolver::SchedulerParams;
 use crate::schedulers::common::*;
 use crate::system::System;
 
@@ -19,6 +20,14 @@ impl LookaheadScheduler {
     pub fn new() -> Self {
         LookaheadScheduler {
             data_transfer_strategy: DataTransferStrategy::Eager,
+        }
+    }
+
+    pub fn from_scheduler_params(params: &SchedulerParams) -> Self {
+        Self {
+            data_transfer_strategy: params
+                .get("data_transfer_strategy")
+                .unwrap_or(DataTransferStrategy::Eager),
         }
     }
 

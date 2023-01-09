@@ -6,6 +6,7 @@ use crate::dag::DAG;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler};
+use crate::scheduler_resolver::SchedulerParams;
 use crate::system::System;
 use crate::task::*;
 
@@ -74,6 +75,10 @@ impl PortfolioScheduler {
             },
             data_location: HashMap::new(),
         }
+    }
+
+    pub fn from_scheduler_params(params: &SchedulerParams) -> Self {
+        Self::new(params.get("algo").unwrap())
     }
 
     fn successors(v: usize, dag: &DAG) -> Vec<usize> {
@@ -178,6 +183,9 @@ impl PortfolioScheduler {
                 CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
                 CoresCriterion::MaxCores => resources[best_resource].cores_available,
             };
+            let cores = cores
+                .min(dag.get_task(task).max_cores)
+                .max(dag.get_task(task).min_cores);
 
             resources[best_resource].cores_available -= cores;
             result.push(Action::ScheduleTask {

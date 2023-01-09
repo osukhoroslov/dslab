@@ -4,6 +4,7 @@ use std::path::Path;
 use clap::Parser;
 
 use dslab_dag::experiment::Experiment;
+use dslab_dag::scheduler_resolver::default_scheduler_resolver;
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
@@ -24,7 +25,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let experiment = Experiment::load(&args.config);
+    let experiment = Experiment::load(&args.config, default_scheduler_resolver);
 
     let result = experiment.run(args.threads);
 

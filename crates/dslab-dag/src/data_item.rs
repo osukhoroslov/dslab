@@ -1,5 +1,7 @@
 //! Data item.
 
+use std::str::FromStr;
+
 use serde::Deserialize;
 
 use dslab_core::component::Id;
@@ -74,4 +76,16 @@ impl DataTransferMode {
 pub enum DataTransferStrategy {
     Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
     Lazy,  // data transfer starts only when the destination node is ready to execute the task
+}
+
+impl FromStr for DataTransferStrategy {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Eager" => Ok(DataTransferStrategy::Eager),
+            "Lazy" => Ok(DataTransferStrategy::Lazy),
+            _ => Err(()),
+        }
+    }
 }

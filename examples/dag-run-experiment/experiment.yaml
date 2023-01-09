@@ -8,4 +8,6 @@ schedulers:
   - Lookahead
   - Peft
   - Dls
+  - Portfolio[algo=5]
+  - Portfolio[algo=8]
 data_transfer_mode: ViaMasterNode

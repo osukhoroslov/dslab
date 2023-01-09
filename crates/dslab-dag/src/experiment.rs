@@ -19,32 +19,7 @@ use crate::network::{read_network_config, NetworkConfig};
 use crate::resource::{read_resources, ResourceConfig};
 use crate::runner::Config;
 use crate::scheduler::Scheduler;
-use crate::schedulers::dls::DlsScheduler;
-use crate::schedulers::heft::HeftScheduler;
-use crate::schedulers::lookahead::LookaheadScheduler;
-use crate::schedulers::peft::PeftScheduler;
-use crate::schedulers::simple_scheduler::SimpleScheduler;
-
-#[derive(Debug, Deserialize, Clone)]
-enum YamlScheduler {
-    Simple,
-    Heft,
-    Lookahead,
-    Peft,
-    Dls,
-}
-
-impl YamlScheduler {
-    fn make_scheduler(&self) -> Rc<RefCell<dyn Scheduler>> {
-        match self {
-            YamlScheduler::Simple => Rc::new(RefCell::new(SimpleScheduler::new())),
-            YamlScheduler::Heft => Rc::new(RefCell::new(HeftScheduler::new())),
-            YamlScheduler::Lookahead => Rc::new(RefCell::new(LookaheadScheduler::new())),
-            YamlScheduler::Peft => Rc::new(RefCell::new(PeftScheduler::new())),
-            YamlScheduler::Dls => Rc::new(RefCell::new(DlsScheduler::new())),
-        }
-    }
-}
+use crate::scheduler_resolver::SchedulerParams;
 
 /// Contains result of one run.
 #[derive(Serialize, Debug)]
@@ -59,7 +34,7 @@ pub struct RunResult {
 struct ExperimentConfig {
     dags: Vec<PathBuf>,
     systems: Vec<PathBuf>,
-    schedulers: Vec<YamlScheduler>,
+    schedulers: Vec<String>,
     data_transfer_mode: DataTransferMode,
 }
 
@@ -69,17 +44,21 @@ struct Run {
     system_name: String,
     resources: Vec<ResourceConfig>,
     network: NetworkConfig,
-    scheduler: YamlScheduler,
+    scheduler: SchedulerParams,
 }
 
 pub struct Experiment {
     runs: Vec<Run>,
     data_transfer_mode: DataTransferMode,
+    scheduler_resolver: fn(&SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>>,
 }
 
 impl Experiment {
     /// Load config from a file.
-    pub fn load(config_path: &str) -> Self {
+    pub fn load(
+        config_path: &str,
+        scheduler_resolver: fn(&SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>>,
+    ) -> Self {
         let config: ExperimentConfig = std::fs::read_to_string(config_path)
             .ok()
             .and_then(|f| serde_yaml::from_str(&f).ok())
@@ -112,7 +91,15 @@ impl Experiment {
                 }
             });
 
-        let schedulers = config.schedulers;
+        let schedulers = config
+            .schedulers
+            .into_iter()
+            .map(|s| SchedulerParams::from_str(&s).unwrap_or_else(|| panic!("Can't parse scheduler params from {s}")))
+            .inspect(|params| {
+                if scheduler_resolver(params).is_none() {
+                    panic!("Can't parse scheduler params from params {params:?}")
+                }
+            });
 
         let runs = dags
             .cartesian_product(systems)
@@ -132,6 +119,7 @@ impl Experiment {
         Self {
             runs,
             data_transfer_mode: config.data_transfer_mode,
+            scheduler_resolver,
         }
     }
 
@@ -149,7 +137,7 @@ impl Experiment {
             let result = result.clone();
             pool.execute(move || {
                 let network = run.network.make_network().unwrap();
-                let scheduler = run.scheduler.make_scheduler();
+                let scheduler = (self.scheduler_resolver)(&run.scheduler).unwrap();
 
                 let mut sim = DagSimulation::new(
                     123,
@@ -171,7 +159,7 @@ impl Experiment {
                 result.lock().unwrap().push(RunResult {
                     dag: run.dag_name,
                     system: run.system_name,
-                    scheduler: format!("{:?}", run.scheduler),
+                    scheduler: run.scheduler.to_string(),
                     makespan,
                 });
 
@@ -199,7 +187,9 @@ impl Experiment {
         print!("\r{}", " ".repeat(70));
         println!("\rFinished {} runs in {:.2?}", total_runs, start_time.elapsed());
 
-        Arc::try_unwrap(result).unwrap().into_inner().unwrap()
+        let mut result = Arc::try_unwrap(result).unwrap().into_inner().unwrap();
+        result.sort_by(|a, b| a.makespan.total_cmp(&b.makespan));
+        result
     }
 }
 
