@@ -135,8 +135,10 @@ impl Neighborhood for DestroyRepairNeighborhood {
                 //into one
                 let mut target = 0;
                 let mut can_insert = false;
+                // search for container that allows appending this invocation
                 for (i, c) in conts.iter().enumerate() {
                     if c.app == instance.req_app[id]
+                        && c.host == host
                         && c.end - w <= instance.req_start[id] + EPS
                         && c.end + EPS >= instance.req_start[id]
                     {
@@ -161,10 +163,12 @@ impl Neighborhood for DestroyRepairNeighborhood {
                 let atleast =
                     instance.req_start[id] + instance.req_dur[id] + instance.app_coldstart[instance.req_app[id]];
                 let mut end_delta = 0.0;
+                // search for container that allows prepending this invocation
                 for (i, c) in conts.iter().enumerate() {
                     if c.app == instance.req_app[id]
-                        && instance.req_start[c.invocations[0]] >= atleast
-                        && instance.req_start[c.invocations[0]] <= atleast + w
+                        && c.host == host
+                        && instance.req_start[c.invocations[0]] > atleast - EPS
+                        && instance.req_start[c.invocations[0]] < atleast + w + EPS
                     {
                         let mut end = instance.req_start[c.invocations[0]];
                         for id in c.invocations.iter().copied() {

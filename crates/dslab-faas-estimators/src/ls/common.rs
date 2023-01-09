@@ -85,6 +85,9 @@ impl State {
                         sum += events[h][ptr2].1;
                         ptr2 += 1;
                     }
+                    if sum < 0 {
+                        return Err(format!("Resource {} underflow on host {} at time {}", r, h, events[h][ptr].0));
+                    }
                     if TryInto::<u64>::try_into(sum).unwrap() > instance.hosts[h][r] {
                         return Err(format!(
                             "Resource {} exceeded on host {} at time {}",

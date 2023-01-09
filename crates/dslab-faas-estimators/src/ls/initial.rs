@@ -57,7 +57,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
         let n = instance.req_app.len();
         let mut cont = BTreeSet::<EndEvent>::new();
         let mut alive = IndexMap::<usize, IndexSet<usize>>::new();
-        let mut alive_by_host = IndexMap::<(usize, usize), IndexSet<usize>>::new();
+        let mut alive_by_host = IndexMap::<usize, IndexSet<usize>>::new();
         for i in 0..n {
             let app = instance.req_app[i];
             let t = instance.req_start[i];
@@ -68,7 +68,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
                     let f = s.containers[it.id].app;
                     alive.get_mut(&f).unwrap().remove(&it.id);
                     alive_by_host
-                        .get_mut(&(s.containers[it.id].host, f))
+                        .get_mut(&s.containers[it.id].host)
                         .unwrap()
                         .remove(&it.id);
                     cont.remove(&it);
@@ -79,7 +79,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
             let mut placed = false;
             let set = alive.entry(app).or_insert(IndexSet::<usize>::new());
             for id in set.iter().copied() {
-                if s.containers[id].end - w < t {
+                if s.containers[id].end - w < t - EPS && s.containers[id].end > t - EPS {
                     let item = EndEvent {
                         t: s.containers[id].end,
                         id,
@@ -103,19 +103,19 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
             for i in 0..instance.hosts.len() {
                 let mut can_start = vec![t; instance.hosts[i].len()];
                 let mut curr = alive_by_host
-                    .entry((i, app))
+                    .entry(i)
                     .or_default()
                     .iter()
-                    .map(|x| (s.containers[*x].end, x))
+                    .map(|x| (s.containers[*x].end, *x))
                     .collect::<Vec<_>>();
                 curr.sort_by(|a, b| a.0.total_cmp(&b.0));
                 for r in 0..can_start.len() {
-                    let mut s: u64 = curr.iter().map(|x| s.containers[*x.1].resources[r]).sum();
-                    for (end, _) in curr.iter().copied() {
-                        if s + instance.apps[app][r] <= instance.hosts[i][r] {
+                    let mut sum: u64 = curr.iter().map(|x| s.containers[x.1].resources[r]).sum();
+                    for (end, x) in curr.iter().copied() {
+                        if sum + instance.apps[app][r] <= instance.hosts[i][r] {
                             break;
                         }
-                        s -= instance.apps[app][r];
+                        sum -= instance.apps[s.containers[x].app][r];
                         can_start[r] = end;
                     }
                 }
@@ -137,7 +137,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
                 end: best_t + dur + w + instance.app_coldstart[app],
             };
             let id = s.containers.len();
-            alive_by_host.entry((chosen, app)).or_default().insert(id);
+            alive_by_host.entry(chosen).or_default().insert(id);
             alive.entry(app).or_default().insert(id);
             cont.insert(EndEvent { t: c.end, id });
             s.containers.push(c);

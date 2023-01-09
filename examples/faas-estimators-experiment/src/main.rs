@@ -4,6 +4,8 @@ use std::path::Path;
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::{Config, HostConfig};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
+use dslab_faas::scheduler::LeastLoadedScheduler;
 use dslab_faas::simulation::ServerlessSimulation;
 use dslab_faas_estimators::estimator::{Estimation, Estimator};
 use dslab_faas_estimators::local_search_estimator::LocalSearchEstimator;
@@ -13,13 +15,14 @@ use dslab_faas_estimators::ls::common::OptimizationGoal;
 use dslab_faas_estimators::ls::initial::GreedyInitialSolutionGenerator;
 use dslab_faas_estimators::ls::local_search::LocalSearch;
 use dslab_faas_estimators::ls::neighborhood::DestroyRepairNeighborhood;
-use dslab_faas_extra::azure_trace::{process_azure_trace, AzureTraceConfig};
-use dslab_faas_extra::simple_schedulers::LeastLoadedScheduler;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut trace_config: AzureTraceConfig = Default::default();
-    trace_config.invocations_limit = 5000;
+    let trace_config = AzureTraceConfig {
+        time_period: 120,
+        app_preferences: vec![AppPreference::new(1, 0.2, 0.3), AppPreference::new(60, 0.45, 0.55)],
+        .. Default::default()
+    };
     let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
     println!(
         "trace processed successfully, {} invocations",
@@ -27,16 +30,17 @@ fn main() {
     );
     let mut config1: Config = Default::default();
     let mut config2: Config = Default::default();
+    config1.disable_contention = true;
     config1.scheduler = Box::new(LeastLoadedScheduler::new(true));
     config1.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
     config2.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
-    for _ in 0..10 {
+    for _ in 0..18 {
         let mut host1: HostConfig = Default::default();
-        host1.resources = vec![("mem".to_string(), 4096 * 4)];
+        host1.resources = vec![("mem".to_string(), 4096)];
         host1.cores = 4;
         config1.hosts.push(host1);
         let mut host2: HostConfig = Default::default();
-        host2.resources = vec![("mem".to_string(), 4096 * 4)];
+        host2.resources = vec![("mem".to_string(), 4096)];
         host2.cores = 4;
         config2.hosts.push(host2);
     }

@@ -8,4 +8,3 @@ edition = "2021"
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-faas = { path = "../../crates/dslab-faas" }
 dslab-faas-estimators = { path = "../../crates/dslab-faas-estimators" }
-dslab-faas-extra = { path = "../../crates/dslab-faas-extra" }
