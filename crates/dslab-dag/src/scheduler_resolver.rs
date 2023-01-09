@@ -30,17 +30,13 @@ impl SchedulerParams {
         }
 
         let open = open.unwrap();
-        if s.chars().last().unwrap() != ']' {
+        if !s.ends_with(']') {
             return None;
         }
 
         let mut params = BTreeMap::new();
         for param in s[open + 1..s.len() - 1].split(',') {
-            let pos = param.find('=');
-            if pos.is_none() {
-                return None;
-            }
-            let pos = pos.unwrap();
+            let pos = param.find('=')?;
             params.insert(param[..pos].to_string(), param[pos + 1..].to_string());
         }
 
@@ -57,12 +53,15 @@ impl SchedulerParams {
     pub fn get<T: FromStr, K: AsRef<str>>(&self, name: K) -> Option<T> {
         self.params.get(name.as_ref()).and_then(|s| s.parse().ok())
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for SchedulerParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.params.is_empty() {
-            self.name.clone()
+            write!(f, "{}", self.name)
         } else {
-            format!(
+            write!(
+                f,
                 "{}[{}]",
                 self.name,
                 self.params.iter().map(|(k, v)| format!("{k}={v}")).join(",")

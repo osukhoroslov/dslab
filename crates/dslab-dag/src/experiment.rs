@@ -159,7 +159,7 @@ impl Experiment {
                 result.lock().unwrap().push(RunResult {
                     dag: run.dag_name,
                     system: run.system_name,
-                    scheduler: run.scheduler.to_string(),
+                    scheduler: format!("{}", run.scheduler),
                     makespan,
                 });
 
