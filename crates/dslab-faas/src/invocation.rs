@@ -17,6 +17,7 @@ pub enum InvocationStatus {
 #[derive(Copy, Clone)]
 pub struct Invocation {
     pub id: usize,
+    pub app_id: usize,
     pub func_id: usize,
     pub duration: f64,
     pub arrival_time: f64,
@@ -47,10 +48,11 @@ pub struct InvocationRegistry {
 }
 
 impl InvocationRegistry {
-    pub fn add_invocation(&mut self, func_id: usize, duration: f64, arrival_time: f64) -> usize {
+    pub fn add_invocation(&mut self, app_id: usize, func_id: usize, duration: f64, arrival_time: f64) -> usize {
         let id = self.invocations.len();
         let invocation = Invocation {
             id,
+            app_id,
             func_id,
             duration,
             arrival_time,

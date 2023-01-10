@@ -204,28 +204,33 @@ impl GlobalStats {
 
 #[derive(Clone, Default)]
 pub struct Stats {
+    pub app_stats: DefaultVecMap<InvocationStats>,
     pub func_stats: DefaultVecMap<InvocationStats>,
     pub global_stats: GlobalStats,
 }
 
 impl Stats {
-    pub fn on_cold_start(&mut self, func_id: usize, delay: f64) {
+    pub fn on_cold_start(&mut self, app_id: usize, func_id: usize, delay: f64) {
         self.global_stats.on_cold_start(delay);
+        self.app_stats.get_mut(app_id).on_cold_start(delay);
         self.func_stats.get_mut(func_id).on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, func_id: usize) {
+    pub fn on_new_invocation(&mut self, app_id: usize, func_id: usize) {
         self.global_stats.on_new_invocation();
+        self.app_stats.get_mut(app_id).on_new_invocation();
         self.func_stats.get_mut(func_id).on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
+        self.app_stats.get_mut(invocation.app_id).update(invocation);
         self.func_stats.get_mut(invocation.func_id).update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, func_id: usize, queueing_time: f64) {
+    pub fn update_queueing_time(&mut self, app_id: usize, func_id: usize, queueing_time: f64) {
         self.global_stats.update_queueing_time(queueing_time);
+        self.app_stats.get_mut(app_id).update_queueing_time(queueing_time);
         self.func_stats.get_mut(func_id).update_queueing_time(queueing_time);
     }
 

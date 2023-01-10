@@ -11,11 +11,15 @@ base_config:
   disable_contention: false
 coldstart_policies:
   - No unloading
+  - 5-minute keepalive
+  - 10-minute keepalive
   - 20-minute keepalive
+  - 30-minute keepalive
   - 45-minute keepalive
   - 60-minute keepalive
   - 90-minute keepalive
   - 120-minute keepalive
+  - Hybrid Histogram policy, 1 hour bound
   - Hybrid Histogram policy, 2 hours bound
   - Hybrid Histogram policy, 3 hours bound
   - Hybrid Histogram policy, 4 hours bound

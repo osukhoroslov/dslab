@@ -174,12 +174,21 @@ impl ServerlessSimulation {
     /// invocations have consecutive ids that follow their order inside the iterator.
     pub fn send_requests_from_ordered_iter(&mut self, iterator: &mut dyn Iterator<Item = RequestData>) -> Range<usize> {
         let mut ir = self.invocation_registry.borrow_mut();
+        let fr = self.function_registry.borrow();
         let mut iter = iterator.peekable();
         let first_idx = ir.len();
         if let Some(item) = iter.peek() {
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 for req in iter {
-                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    let app_id = fr
+                        .get_function(req.id)
+                        .ok_or(format!(
+                            "Non-existing function id {} passed to send_requests_from_ordered_iter.",
+                            req.id
+                        ))
+                        .unwrap()
+                        .app_id;
+                    let id = ir.add_invocation(app_id, req.id, req.duration, req.time);
                     self.ctx.emit_ordered(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -188,7 +197,15 @@ impl ServerlessSimulation {
                 }
             } else {
                 for req in iter {
-                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    let app_id = fr
+                        .get_function(req.id)
+                        .ok_or(format!(
+                            "Non-existing function id {} passed to send_requests_from_ordered_iter.",
+                            req.id
+                        ))
+                        .unwrap()
+                        .app_id;
+                    let id = ir.add_invocation(app_id, req.id, req.duration, req.time);
                     self.ctx.emit(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -201,7 +218,20 @@ impl ServerlessSimulation {
     }
 
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
-        let invocation_id = self.invocation_registry.borrow_mut().add_invocation(id, duration, time);
+        let app_id = self
+            .function_registry
+            .borrow()
+            .get_function(id)
+            .ok_or(format!(
+                "Non-existing function id {} passed to send_invocation_request.",
+                id
+            ))
+            .unwrap()
+            .app_id;
+        let invocation_id = self
+            .invocation_registry
+            .borrow_mut()
+            .add_invocation(app_id, id, duration, time);
         self.ctx.emit(
             InvocationStartEvent {
                 id: invocation_id,

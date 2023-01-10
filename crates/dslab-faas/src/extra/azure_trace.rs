@@ -370,7 +370,9 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     let mut app_indices = HashMap::<String, usize>::new();
     for (i, app) in apps.iter().enumerate() {
         app_records[i] = ApplicationRecord {
-            mem: config.force_fixed_memory.unwrap_or_else(|| app_mem.get(app).copied().unwrap() as u64),
+            mem: config
+                .force_fixed_memory
+                .unwrap_or_else(|| app_mem.get(app).copied().unwrap() as u64),
             cold_start: 0.1,
         };
         app_indices.insert(app.clone(), i);

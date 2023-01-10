@@ -107,7 +107,7 @@ impl Host {
             time,
         );
         let mut stats = self.stats.borrow_mut();
-        stats.on_new_invocation(invocation.func_id);
+        stats.on_new_invocation(invocation.app_id, invocation.func_id);
         match status {
             InvokerDecision::Warm(container_id) => {
                 drop(stats);
@@ -117,7 +117,7 @@ impl Host {
             InvokerDecision::Cold((container_id, delay)) => {
                 invocation.status = InvocationStatus::WaitingForContainer;
                 invocation.container_id = Some(container_id);
-                stats.on_cold_start(invocation.func_id, delay);
+                stats.on_cold_start(invocation.app_id, invocation.func_id, delay);
                 drop(stats);
                 self.container_manager.reserve_container(container_id, id);
             }

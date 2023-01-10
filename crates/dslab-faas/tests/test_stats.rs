@@ -9,6 +9,7 @@ fn test_invocation_stats() {
     let mut stats: InvocationStats = Default::default();
     let inv1 = Invocation {
         id: 0,
+        app_id: 0,
         func_id: 0,
         duration: 1.0,
         arrival_time: 0.0,
@@ -20,6 +21,7 @@ fn test_invocation_stats() {
     };
     let inv2 = Invocation {
         id: 1,
+        app_id: 0,
         func_id: 0,
         duration: 1.2,
         arrival_time: 0.0,
@@ -31,6 +33,7 @@ fn test_invocation_stats() {
     };
     let inv3 = Invocation {
         id: 2,
+        app_id: 0,
         func_id: 0,
         duration: 1.0,
         arrival_time: 2.0,

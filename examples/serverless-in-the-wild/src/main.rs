@@ -1,3 +1,5 @@
+mod plot;
+
 use std::boxed::Box;
 use std::fs::File;
 use std::path::Path;
@@ -11,6 +13,9 @@ use dslab_faas::config::{ConfigParamResolvers, RawConfig};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
 use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
+use dslab_faas::stats::SampleMetric;
+
+use crate::plot::plot_results;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
@@ -77,7 +82,29 @@ fn main() {
         ..Default::default()
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
+    let mut results = Vec::with_capacity(stats.len());
     for (i, s) in stats.drain(..).enumerate() {
         s.global_stats.print_summary(&policies[i]);
+        let mut apps: SampleMetric = Default::default();
+        for (_, app_stats) in s.app_stats.iter() {
+            apps.add((app_stats.cold_starts as f64) / (app_stats.invocations as f64) * 100.);
+        }
+        results.push((
+            apps.quantile(0.75),
+            s.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
+        ));
     }
+    let mut pos = usize::MAX;
+    for (i, p) in policies.iter().enumerate() {
+        if p.contains("10-minute keepalive") {
+            pos = i;
+            break;
+        }
+    }
+    assert!(pos != usize::MAX);
+    let base = results[pos].1;
+    for p in results.iter_mut() {
+        p.1 = p.1 / base * 100.;
+    }
+    plot_results("plot.png", policies, results);
 }
