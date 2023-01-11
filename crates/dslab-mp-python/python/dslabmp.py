@@ -98,9 +98,9 @@ class Process:
         This method is called when a timer fires.
         """
 
-    def get_state(self):
+    def get_state(self) -> str:
         """
-        This function returns string representation of process state.
+        This method returns the string representation of process state.
         """
         data = {}
         for name, member in self.__dict__.items():
@@ -108,9 +108,9 @@ class Process:
                 data[name] = member.serialize()
         return json.dumps(data)
 
-    def set_state(self, state_encoded):
+    def set_state(self, state_encoded: str):
         """
-        This function restores process by it's serialized state.
+        This method restores the process state by its string representation.
         """
         data = json.loads(state_encoded)
         for name in self.__dict__:

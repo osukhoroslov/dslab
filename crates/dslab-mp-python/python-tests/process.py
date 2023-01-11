@@ -8,7 +8,7 @@ class TestProcess(Process):
 
         # examples of set/get state member
         self._id = 'new_node_id'
-        self.secret = '''YOU SHOLDN'T SEE IT AFTER RELOAD,
+        self.secret = '''YOU SHOULDN'T SEE IT AFTER RELOAD,
                          IT IS NOT A STATE MEMBER OF NODE %s''' % self._id
 
     def on_local_message(self, msg: Message, ctx: Context):
