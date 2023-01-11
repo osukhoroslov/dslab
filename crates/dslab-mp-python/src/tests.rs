@@ -27,6 +27,7 @@ fn test_set_state() {
 
     // process should not have anything but state members after `set_state()`
     sys.get_node("node")
+        .unwrap()
         .borrow()
         .get_process("proc")
         .unwrap()

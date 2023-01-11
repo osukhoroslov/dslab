@@ -69,8 +69,8 @@ impl System {
         t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
     }
 
-    pub fn get_node(&self, name: &str) -> Rc<RefCell<Node>> {
-        self.nodes[name].clone()
+    pub fn get_node(&self, name: &str) -> Option<Rc<RefCell<Node>>> {
+        self.nodes.get(name).and_then(|res| Some(res.clone()))
     }
 
     // Processes -------------------------------------------------------------------------------------------------------
