@@ -49,7 +49,8 @@ impl System {
         let node_id = self.sim.add_handler(name, node.clone());
         assert!(
             self.nodes.insert(name.to_string(), node).is_none(),
-            "nodes with same names are not allowed"
+            "Node with name {} already exists, node names must be unique",
+            name
         );
         self.net.borrow_mut().add_node(name.to_string(), node_id);
         t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
@@ -80,12 +81,12 @@ impl System {
         self.net
             .borrow_mut()
             .set_proc_location(name.to_string(), node.to_string());
-
         assert!(
             self.proc_nodes
                 .insert(name.to_string(), self.nodes[node].clone())
                 .is_none(),
-            "process with same names are not allowed"
+            "Process with name {} already exists, process names must be unique",
+            name
         );
         t!(format!(
             "{:>9.3} - process started: {} @ {}",
