@@ -47,7 +47,11 @@ impl System {
             self.sim.create_context(name),
         )));
         let node_id = self.sim.add_handler(name, node.clone());
-        self.nodes.insert(name.to_string(), node);
+        assert!(
+            self.nodes.insert(name.to_string(), node).is_none(),
+            "Node with name {} already exists, node names must be unique",
+            name
+        );
         self.net.borrow_mut().add_node(name.to_string(), node_id);
         t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
     }
@@ -66,6 +70,10 @@ impl System {
         t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
     }
 
+    pub fn get_node(&self, name: &str) -> Option<Rc<RefCell<Node>>> {
+        self.nodes.get(name).and_then(|res| Some(res.clone()))
+    }
+
     // Processes -------------------------------------------------------------------------------------------------------
 
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>, node: &str) {
@@ -73,7 +81,13 @@ impl System {
         self.net
             .borrow_mut()
             .set_proc_location(name.to_string(), node.to_string());
-        self.proc_nodes.insert(name.to_string(), self.nodes[node].clone());
+        assert!(
+            self.proc_nodes
+                .insert(name.to_string(), self.nodes[node].clone())
+                .is_none(),
+            "Process with name {} already exists, process names must be unique",
+            name
+        );
         t!(format!(
             "{:>9.3} - process started: {} @ {}",
             self.sim.time(),

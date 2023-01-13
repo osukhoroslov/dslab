@@ -2,11 +2,14 @@ use std::fs;
 use std::rc::Rc;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyModule, PyTuple};
+use pyo3::types::{PyModule, PyString, PyTuple};
 
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
+
+#[cfg(test)]
+mod tests;
 
 pub struct PyProcessFactory {
     proc_class: PyObject,
@@ -155,6 +158,26 @@ impl Process for PyProcess {
     fn max_size(&mut self) -> u64 {
         Python::with_gil(|py| self.update_max_size(py, true));
         self.max_size
+    }
+
+    fn state(&self) -> String {
+        Python::with_gil(|py| {
+            let res = self
+                .proc
+                .call_method0(py, "get_state")
+                .map_err(|e| log_python_error(e, py))
+                .unwrap();
+            res.as_ref(py).downcast::<PyString>().unwrap().to_string()
+        })
+    }
+
+    fn set_state(&self, data: &String) {
+        Python::with_gil(|py| {
+            self.proc
+                .call_method1(py, "set_state", (data,))
+                .map_err(|e| log_python_error(e, py))
+                .unwrap();
+        });
     }
 }
 

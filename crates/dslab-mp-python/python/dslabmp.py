@@ -1,7 +1,10 @@
 from __future__ import annotations
 import abc
 import json
-from typing import Any, List, Dict, Tuple
+from typing import Any, Dict, List, Tuple, Union
+
+
+JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
 
 class Message:
@@ -60,6 +63,18 @@ class Context(object):
         return self._time
 
 
+class StateMember:
+    def __init__(self, t: JSON):
+        self.inner = t
+
+    def serialize(self):
+        return json.dumps(self.inner)
+
+    @staticmethod
+    def deserialize(state):
+        return StateMember(json.loads(state))
+
+
 class Process:
     @abc.abstractmethod
     def on_local_message(self, msg: Message, ctx: Context):
@@ -78,3 +93,36 @@ class Process:
         """
         This method is called when a timer fires.
         """
+
+    def get_state(self) -> str:
+        """
+        This method returns the string representation of process state.
+        """
+        data = {}
+        for name, member in self.__dict__.items():
+            if type(member) is StateMember:
+                data[name] = member.serialize()
+        return json.dumps(data)
+
+    def set_state(self, state_encoded: str):
+        """
+        This method restores the process state by its string representation.
+        """
+        data = json.loads(state_encoded)
+        for name in self.__dict__:
+            self.__dict__[name] = None
+        for name, member in data.items():
+            self.__dict__[name] = StateMember.deserialize(member)
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__ and type(self.__dict__[name]) is StateMember:
+            self.__dict__[name].inner = value
+        else:
+            self.__dict__[name] = value
+
+    def __getattribute__(self, name):
+        attr_value = object.__getattribute__(self, name)
+        if type(attr_value) is StateMember:
+            return attr_value.inner
+        else:
+            return attr_value
