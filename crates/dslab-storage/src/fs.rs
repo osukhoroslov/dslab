@@ -89,8 +89,8 @@ impl FileSystem {
     /// Submits file read request and returns unique request id.
     ///
     /// The amount of data read from file located at `file_path` is specified in `size`.
-    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the
-    /// read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion.
+    /// If the read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn read(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
@@ -180,8 +180,8 @@ impl FileSystem {
     /// Submits file write request and returns unique request id.
     ///
     /// The amount of data written to file located at `file_path` is specified in `size`.
-    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If
-    /// there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion.
+    /// If there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn write(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(

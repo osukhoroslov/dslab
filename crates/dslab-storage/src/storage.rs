@@ -15,7 +15,8 @@ pub struct StorageInfo {
 
 /// A trait for modeling an abstract storage resource, i.e. any device, system or service for storing data.
 ///
-/// The main operations are reading and writing data to/from storage. Implementations should model the delays associated with these operations.
+/// The main operations are reading and writing data to/from storage.
+/// Implementations should model the delays associated with these operations.
 /// The trait also includes operations to get information about the storage, including its capacity, current usage, etc.
 pub trait Storage {
     /// Submits data read request and returns unique request id.
@@ -31,8 +32,7 @@ pub trait Storage {
     ///
     /// The amount of data written to storage is specified in `size`.
     /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion.
-    /// If there is not enough available storage space, `DataWriteFailed` event will be immediately emitted
-    /// instead.
+    /// If there is not enough available storage space, `DataWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current storage.
     fn write(&mut self, size: u64, requester: Id) -> u64;
 
