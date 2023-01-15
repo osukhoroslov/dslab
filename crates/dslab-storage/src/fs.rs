@@ -12,7 +12,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use dslab_core::component::Id;
 use dslab_core::{cast, context::SimulationContext, event::Event, handler::EventHandler, log_debug, log_error};
 
-use crate::{disk::Disk, disk::DiskInfo, events::*};
+use crate::{events::*, storage::Storage, storage::StorageInfo};
 
 struct File {
     size: u64,
@@ -29,7 +29,7 @@ impl File {
 /// Representation of file system.
 pub struct FileSystem {
     files: HashMap<String, File>,
-    disks: HashMap<String, Rc<RefCell<Disk>>>,
+    disks: HashMap<String, Rc<RefCell<dyn Storage>>>,
     /// Mapping (disk id, disk_request_id) -> (request_id, requester, file_path).
     requests: HashMap<(Id, u64), (u64, Id, String)>,
     next_request_id: u64,
@@ -49,7 +49,7 @@ impl FileSystem {
     }
 
     /// Mounts `disk` to `mount_point` if it is not taken yet.
-    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<Disk>>) -> Result<(), String> {
+    pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<dyn Storage>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
         if self.disks.get(mount_point).is_some() {
             return Err(format!("mount point [{}] is already is use", mount_point));
@@ -71,7 +71,7 @@ impl FileSystem {
         Ok(())
     }
 
-    fn resolve_disk(&self, file_path: &str) -> Result<Rc<RefCell<Disk>>, String> {
+    fn resolve_disk(&self, file_path: &str) -> Result<Rc<RefCell<dyn Storage>>, String> {
         for (mount_point, disk) in &self.disks {
             if file_path.starts_with(mount_point) {
                 return Ok(disk.clone());
@@ -89,8 +89,8 @@ impl FileSystem {
     /// Submits file read request and returns unique request id.
     ///
     /// The amount of data read from file located at `file_path` is specified in `size`.
-    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion. If the
-    /// read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileReadCompleted` event upon the read completion.
+    /// If the read size is larger than the file size, `FileReadFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn read(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
@@ -180,8 +180,8 @@ impl FileSystem {
     /// Submits file write request and returns unique request id.
     ///
     /// The amount of data written to file located at `file_path` is specified in `size`.
-    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion. If
-    /// there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
+    /// The component specified in `requester` will receive `FileWriteCompleted` event upon the write completion.
+    /// If there is not enough available disk space, `FileWriteFailed` event will be immediately emitted instead.
     /// Note that the returned request id is unique only within the current file system.
     pub fn write(&mut self, file_path: &str, size: u64, requester: Id) -> u64 {
         log_debug!(
@@ -250,21 +250,21 @@ impl FileSystem {
 
     /// Returns amount of used space on all disks currently mounted to this file system.
     pub fn used_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().used_space()).sum()
+        self.disks.values().map(|v| v.borrow().used_space()).sum()
     }
 
     /// Returns amount of free space on all disks currently mounted to this file system.
     pub fn free_space(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().free_space()).sum()
+        self.disks.values().map(|v| v.borrow().free_space()).sum()
     }
 
     /// Returns cumulative capacity of all disks currently mounted to this file system.
     pub fn capacity(&self) -> u64 {
-        self.disks.iter().map(|(_, v)| v.borrow().capacity()).sum()
+        self.disks.values().map(|v| v.borrow().capacity()).sum()
     }
 
     /// Returns vec of disk info associated with mount points.
-    pub fn disks_info(&self) -> Vec<(String, DiskInfo)> {
+    pub fn disks_info(&self) -> Vec<(String, StorageInfo)> {
         self.disks
             .iter()
             .map(|(mount_point, disk)| (mount_point.to_owned(), disk.borrow().info()))
@@ -272,16 +272,13 @@ impl FileSystem {
     }
 
     /// Returns disk info for a mount point.
-    pub fn disk_info(&self, mount_point: &str) -> Result<DiskInfo, String> {
+    pub fn disk_info(&self, mount_point: &str) -> Result<StorageInfo, String> {
         self.resolve_disk(mount_point).map(|disk| disk.borrow().info())
     }
 
     /// Returns mount points present in this file system.
     pub fn mount_points(&self) -> Vec<String> {
-        self.disks
-            .iter()
-            .map(|(mount_point, _)| mount_point.to_owned())
-            .collect()
+        self.disks.keys().cloned().collect()
     }
 
     /// Deletes file located at `file_path` if there is any.    

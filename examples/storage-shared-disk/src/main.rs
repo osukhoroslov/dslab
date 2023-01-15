@@ -16,6 +16,7 @@ use dslab_core::simulation::Simulation;
 
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::shared_disk::SharedDisk;
+use dslab_storage::storage::Storage;
 
 const SEED: u64 = 16;
 

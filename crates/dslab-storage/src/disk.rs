@@ -17,6 +17,7 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use crate::bandwidth::{BWModel, ConstantBWModel};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use crate::storage::{Storage, StorageInfo};
 
 /// Representation of disk.
 ///
@@ -30,17 +31,6 @@ pub struct Disk {
     ready_time: f64,
     next_request_id: u64,
     ctx: SimulationContext,
-}
-
-/// Information about disk, including its capacity and current usage.
-#[derive(Debug, PartialEq)]
-pub struct DiskInfo {
-    /// Disk capacity. Is equal to `used_space` + `free_space`.
-    pub capacity: u64,
-    /// Amount of used space. Cannot be greater than `capacity`.
-    pub used_space: u64,
-    /// Amount of free space. Cannot be greater than `capacity`.
-    pub free_space: u64,
 }
 
 impl Disk {
@@ -77,14 +67,10 @@ impl Disk {
         self.next_request_id += 1;
         request_id
     }
+}
 
-    /// Submits data read request and returns unique request id.
-    ///
-    /// The amount of data read from disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataReadCompleted` event upon the read completion. If the
-    /// read size is larger than the disk capacity, `DataReadFailed` event will be immediately emitted instead. Note
-    /// that the returned request id is unique only within the current disk.
-    pub fn read(&mut self, size: u64, requester: Id) -> u64 {
+impl Storage for Disk {
+    fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
             "Received read request, size: {}, requester: {}",
@@ -113,13 +99,7 @@ impl Disk {
         request_id
     }
 
-    /// Submits data write request and returns unique request id.
-    ///
-    /// The amount of data written to disk is specified in `size`.
-    /// The component specified in `requester` will receive `DataWriteCompleted` event upon the write completion. If
-    /// there is not enough available disk space, `DataWriteFailed` event will be immediately emitted instead.
-    /// Note that the returned request id is unique only within the current disk.
-    pub fn write(&mut self, size: u64, requester: Id) -> u64 {
+    fn write(&mut self, size: u64, requester: Id) -> u64 {
         let request_id = self.make_unique_request_id();
         log_debug!(
             self.ctx,
@@ -147,10 +127,7 @@ impl Disk {
         request_id
     }
 
-    /// Marks previously used disk space of given `size` as free.
-    ///
-    /// The `size` should not exceed the currently used disk space.
-    pub fn mark_free(&mut self, size: u64) -> Result<(), String> {
+    fn mark_free(&mut self, size: u64) -> Result<(), String> {
         if size <= self.used {
             self.used -= size;
             return Ok(());
@@ -158,29 +135,24 @@ impl Disk {
         Err(format!("invalid size: {}", size))
     }
 
-    /// Returns the amount of used disk space.
-    pub fn used_space(&self) -> u64 {
+    fn used_space(&self) -> u64 {
         self.used
     }
 
-    /// Returns the amount of free disk space.
-    pub fn free_space(&self) -> u64 {
+    fn free_space(&self) -> u64 {
         self.capacity - self.used
     }
 
-    /// Returns the capacity of disk.
-    pub fn capacity(&self) -> u64 {
+    fn capacity(&self) -> u64 {
         self.capacity
     }
 
-    /// Returns id of this disk.
-    pub fn id(&self) -> Id {
+    fn id(&self) -> Id {
         self.ctx.id()
     }
 
-    /// Returns struct with information about the disk.
-    pub fn info(&self) -> DiskInfo {
-        DiskInfo {
+    fn info(&self) -> StorageInfo {
+        StorageInfo {
             capacity: self.capacity(),
             used_space: self.used_space(),
             free_space: self.free_space(),
