@@ -10,11 +10,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 /// under the L^2 norm with additional resource weights.
 /// The vectors are normalized to the host's capacity.
 /// The resource weight corresponds to its average usage across all hosts.
+#[derive(Default)]
 pub struct L2NormDiff;
 
 impl L2NormDiff {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -33,7 +34,7 @@ impl VMPlacementAlgorithm for L2NormDiff {
         memory_weight /= pool_state.get_hosts_list().len() as f64;
 
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host);
                 let total_memory = pool_state.get_total_memory(host);
                 let available_cpu = pool_state.get_available_cpu(host);

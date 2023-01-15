@@ -152,6 +152,12 @@ impl SimulationConfig {
     }
 }
 
+impl Default for SimulationConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Parses config value string, which consists of two parts - name and options.
 /// Example: ConstLoadModel[load=0.8] parts are name ConstLoadModel and options string "load=0.8".
 pub fn parse_config_value(config_str: &str) -> (String, Option<String>) {

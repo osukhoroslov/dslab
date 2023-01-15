@@ -31,7 +31,7 @@ impl HostPowerModel {
     /// Returns the current power consumption of a physical host.
     pub fn get_power(&self, time: f64, cpu_util: f64) -> f64 {
         if cpu_util == 0. && self.zero_idle_power {
-            return 0.;
+            0.
         } else {
             self.power_model.get_power(time, cpu_util)
         }

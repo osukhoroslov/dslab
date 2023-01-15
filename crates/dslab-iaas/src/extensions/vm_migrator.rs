@@ -134,7 +134,7 @@ impl VmMigrator {
 
         // migrate VMs using Best Fit ----------------------------------------------------------------------------------
 
-        if vms_to_migrate.len() > 0 {
+        if !vms_to_migrate.is_empty() {
             log_debug!(self.ctx, "try to migrate {} vms", vms_to_migrate.len());
         }
 
@@ -183,11 +183,12 @@ impl VmMigrator {
                     continue;
                 }
 
-                if cpu_load_new_target < self.overload_threshold && memory_load_new_target < self.overload_threshold {
-                    if cpu_load_new_target > best_cpu_load {
-                        best_cpu_load = cpu_load_new_target;
-                        target_host_opt = Some(*host);
-                    }
+                if cpu_load_new_target < self.overload_threshold
+                    && memory_load_new_target < self.overload_threshold
+                    && cpu_load_new_target > best_cpu_load
+                {
+                    best_cpu_load = cpu_load_new_target;
+                    target_host_opt = Some(*host);
                 }
             }
 

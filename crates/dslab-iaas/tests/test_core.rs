@@ -2,12 +2,11 @@ use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
-use dslab_iaas::core::vm::VmStatus;
+use dslab_iaas::core::vm::{ResourceConsumer, VmStatus};
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
@@ -32,15 +31,7 @@ fn test_energy_consumption() {
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        10,
-        10,
-        2.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s);
 
     cloud_sim.step_for_duration(10.);
     let end_time = cloud_sim.current_time();
@@ -60,15 +51,7 @@ fn test_first_fit() {
     let h2 = cloud_sim.add_host("h2", 80, 80);
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        20,
-        10,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 10), 100.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     let mut current_time = cloud_sim.current_time();
@@ -79,15 +62,7 @@ fn test_first_fit() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.1);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.);
 
-    cloud_sim.spawn_vm_now(
-        20,
-        20,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 20), 100.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
@@ -110,15 +85,7 @@ fn test_best_fit() {
     let h2 = cloud_sim.add_host("h2", 80, 80);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        20,
-        20,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 20), 100.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     let mut current_time = cloud_sim.current_time();
@@ -129,15 +96,7 @@ fn test_best_fit() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 0.);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.25);
 
-    cloud_sim.spawn_vm_now(
-        20,
-        20,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 20), 100.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
@@ -161,15 +120,7 @@ fn test_no_overcommit() {
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     for _ in 1..12 {
-        cloud_sim.spawn_vm_now(
-            10,
-            10,
-            100.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
-            None,
-            s,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
         cloud_sim.step_for_duration(5.);
     }
 
@@ -192,15 +143,7 @@ fn test_overcommit() {
     let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
 
     for _ in 1..95 {
-        cloud_sim.spawn_vm_now(
-            100,
-            100,
-            1000.0,
-            Box::new(ConstantLoadModel::new(0.01)),
-            Box::new(ConstantLoadModel::new(0.01)),
-            None,
-            s,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.01), 1000.0, None, s);
         cloud_sim.step_for_duration(1.);
     }
 
@@ -243,15 +186,7 @@ fn test_wrong_decision() {
     let h2 = cloud_sim.add_host("h2", 100, 100);
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
-    let first_vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        s,
-    );
+    let first_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, s);
     cloud_sim.step_for_duration(5.);
 
     // now host one is overloaded
@@ -262,15 +197,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Running);
 
     let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(h1)));
-    let second_vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        bad_s,
-    );
+    let second_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, bad_s);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
 
@@ -284,15 +211,7 @@ fn test_wrong_decision() {
     // now host does not exist
     let random_wrong_id = 47;
     let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(random_wrong_id)));
-    let third_vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        bad_s2,
-    );
+    let third_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, bad_s2);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
 
@@ -305,15 +224,7 @@ fn test_wrong_decision() {
 
     // finally right decision
     let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(h2)));
-    let fourth_vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        fine_s,
-    );
+    let fourth_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, fine_s);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
 
@@ -346,15 +257,7 @@ fn test_migration_simple() {
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
     // VM spawns on host 1
-    let vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        20.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        s,
-    );
+    let vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 20.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     let mut current_time = cloud_sim.current_time();
@@ -416,15 +319,7 @@ fn test_double_migration() {
     let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
 
     // VM spawns on host 1
-    let vm = cloud_sim.spawn_vm_now(
-        100,
-        100,
-        100.0,
-        Box::new(ConstantLoadModel::new(1.)),
-        Box::new(ConstantLoadModel::new(1.)),
-        None,
-        s,
-    );
+    let vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, s);
 
     // migration 1
     cloud_sim.step_for_duration(20.);
@@ -463,15 +358,7 @@ fn test_energy_consumption_override() {
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        10,
-        10,
-        2.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s);
 
     cloud_sim.step_for_duration(10.);
     let end_time = cloud_sim.current_time();
@@ -494,24 +381,8 @@ fn test_slatah() {
     let h = cloud_sim.add_host("h", 40, 40);
     let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
-    cloud_sim.spawn_vm_now(
-        10,
-        10,
-        4.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
-        None,
-        s,
-    );
-    cloud_sim.spawn_vm_now(
-        10,
-        10,
-        2.0,
-        Box::new(ConstantLoadModel::new(2.0)),
-        Box::new(ConstantLoadModel::new(2.0)),
-        None,
-        s,
-    );
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(10, 10, 2.0, 2.0), 4.0, None, s);
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(10, 10, 2.0, 2.0), 2.0, None, s);
 
     cloud_sim.step_for_duration(10.);
     let end_time = cloud_sim.current_time();

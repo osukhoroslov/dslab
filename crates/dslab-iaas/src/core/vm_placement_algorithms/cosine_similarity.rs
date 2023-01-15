@@ -8,11 +8,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Maximizes the cosine of the angle between the host's resource usage and resource capacity vectors
 /// after the allocation.
+#[derive(Default)]
 pub struct CosineSimilarity;
 
 impl CosineSimilarity {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -22,7 +23,7 @@ impl VMPlacementAlgorithm for CosineSimilarity {
         let mut max_cosine: f64 = f64::MIN;
 
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let capacity_cpu = pool_state.get_total_cpu(host) as f64;
                 let capacity_mem = pool_state.get_total_memory(host) as f64;
                 let capacity_norm = (capacity_cpu.powi(2) + capacity_mem.powi(2)).sqrt();

@@ -95,6 +95,6 @@ impl DatasetReader for HuaweiDatasetReader {
         }
         self.current_vm += 1;
 
-        return Some(self.vm_requests[self.current_vm - 1].clone());
+        Some(self.vm_requests[self.current_vm - 1].clone())
     }
 }

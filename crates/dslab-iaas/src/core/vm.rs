@@ -7,7 +7,7 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 
 use crate::core::config::SimulationConfig;
-use crate::core::load_model::LoadModel;
+use crate::core::load_model::{ConstantLoadModel, LoadModel};
 
 /// Status of virtual machine.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -27,6 +27,52 @@ impl Display for VmStatus {
             VmStatus::Finished => write!(f, "finished"),
             VmStatus::Migrating => write!(f, "migrating"),
             VmStatus::FailedToAllocate => write!(f, "failed_to_allocate"),
+        }
+    }
+}
+
+/// Used to define resource consumption of virtual machine.
+#[derive(Clone)]
+pub struct ResourceConsumer {
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
+    pub cpu_load_model: Box<dyn LoadModel>,
+    pub memory_load_model: Box<dyn LoadModel>,
+}
+
+impl ResourceConsumer {
+    /// Creates resource consumer with specified parameters.
+    pub fn new(
+        cpu_usage: u32,
+        memory_usage: u64,
+        cpu_load_model: Box<dyn LoadModel>,
+        memory_load_model: Box<dyn LoadModel>,
+    ) -> Self {
+        Self {
+            cpu_usage,
+            memory_usage,
+            cpu_load_model,
+            memory_load_model,
+        }
+    }
+
+    /// Creates resource consumer with constant 100% load.
+    pub fn with_full_load(cpu_usage: u32, memory_usage: u64) -> Self {
+        Self {
+            cpu_usage,
+            memory_usage,
+            cpu_load_model: Box::new(ConstantLoadModel::new(1.0)),
+            memory_load_model: Box::new(ConstantLoadModel::new(1.0)),
+        }
+    }
+
+    /// Creates resource consumer with specified constant load.
+    pub fn with_const_load(cpu_usage: u32, memory_usage: u64, cpu_load: f64, memory_load: f64) -> Self {
+        Self {
+            cpu_usage,
+            memory_usage,
+            cpu_load_model: Box::new(ConstantLoadModel::new(cpu_load)),
+            memory_load_model: Box::new(ConstantLoadModel::new(memory_load)),
         }
     }
 }
@@ -62,25 +108,23 @@ impl Serialize for VirtualMachine {
 
 impl VirtualMachine {
     /// Creates virtual machine with specified parameters.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: u32,
-        cpu_usage: u32,
-        memory_usage: u64,
         allocation_start_time: f64,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
+        resource_consumer: ResourceConsumer,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
             id,
-            cpu_usage,
-            memory_usage,
+            cpu_usage: resource_consumer.cpu_usage,
+            memory_usage: resource_consumer.memory_usage,
             allocation_start_time,
             lifetime,
             start_time: -1.,
-            cpu_load_model,
-            memory_load_model,
+            cpu_load_model: resource_consumer.cpu_load_model,
+            memory_load_model: resource_consumer.memory_load_model,
             sim_config,
         }
     }

@@ -34,7 +34,7 @@ impl HostInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ResourcePoolState {
     hosts: BTreeMap<u32, HostInfo>,
 }
@@ -42,7 +42,7 @@ pub struct ResourcePoolState {
 impl ResourcePoolState {
     /// Creates empty resource pool state.
     pub fn new() -> Self {
-        Self { hosts: BTreeMap::new() }
+        Default::default()
     }
 
     /// Adds host to resource pool.
@@ -74,12 +74,12 @@ impl ResourcePoolState {
         if self.hosts[&host_id].memory_available < alloc.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
-        return AllocationVerdict::Success;
+        AllocationVerdict::Success
     }
 
     /// Applies the specified application on the specified host.
     pub fn allocate(&mut self, alloc: &Allocation, host_id: u32) {
-        self.hosts.get_mut(&host_id).map(|host| {
+        if let Some(host) = self.hosts.get_mut(&host_id) {
             if host.allocations.contains_key(&alloc.id) {
                 return;
             }
@@ -99,12 +99,12 @@ impl ResourcePoolState {
             }
 
             host.allocations.insert(alloc.id, alloc.clone());
-        });
+        }
     }
 
     /// Removes the specified allocation on the specified host.
     pub fn release(&mut self, alloc: &Allocation, host_id: u32) {
-        self.hosts.get_mut(&host_id).map(|host| {
+        if let Some(host) = self.hosts.get_mut(&host_id) {
             if host.cpu_overcommit >= alloc.cpu_usage {
                 host.cpu_overcommit -= alloc.cpu_usage;
             } else {
@@ -120,7 +120,7 @@ impl ResourcePoolState {
             }
 
             host.allocations.remove(&alloc.id);
-        });
+        }
     }
 
     /// Returns the total CPU capacity of the specified host.

@@ -68,6 +68,7 @@ pub struct HostManager {
 
 impl HostManager {
     // Creates new host with specified capacity.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         cpu_total: u32,
         memory_total: u64,
@@ -119,7 +120,7 @@ impl HostManager {
         if self.memory_available < vm.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
-        return AllocationVerdict::Success;
+        AllocationVerdict::Success
     }
 
     /// Allocates new virtual machine, updates resource and energy consumption.
@@ -192,7 +193,7 @@ impl HostManager {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             cpu_used += vm.cpu_usage as f64 * vm.get_cpu_load(time);
         }
-        return cpu_used / self.cpu_total as f64;
+        cpu_used / self.cpu_total as f64
     }
 
     /// Returns the current memory load (used/total) by summing the resource consumption of all active VMs on this host.
@@ -202,14 +203,14 @@ impl HostManager {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             memory_used += vm.memory_usage as f64 * vm.get_memory_load(time);
         }
-        return memory_used / self.memory_total as f64;
+        memory_used / self.memory_total as f64
     }
 
     /// Returns the current power consumption.
     pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        return self.power_model.get_power(time, cpu_util);
+        self.power_model.get_power(time, cpu_util)
     }
 
     /// Returns the total energy consumption.
@@ -217,7 +218,7 @@ impl HostManager {
         let cpu_load = self.get_cpu_load(time);
         let power = self.get_power(time, cpu_load);
         self.energy_meter.update(time, power);
-        return self.energy_meter.energy_consumed();
+        self.energy_meter.energy_consumed()
     }
 
     /// Returns the total SLAV value.

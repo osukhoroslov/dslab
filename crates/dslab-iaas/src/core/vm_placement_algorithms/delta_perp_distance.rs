@@ -8,11 +8,12 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Maximizes the improvement (absolute decrease) of the perpendicular distance
 /// between the host's resource usage and resource capacity vectors after the allocation.
+#[derive(Default)]
 pub struct DeltaPerpDistance;
 
 impl DeltaPerpDistance {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -21,7 +22,7 @@ impl VMPlacementAlgorithm for DeltaPerpDistance {
         let mut result: Option<u32> = None;
         let mut max_delta: f64 = f64::MIN;
         for host in pool_state.get_hosts_list() {
-            if pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host) as f64;
                 let total_memory = pool_state.get_total_memory(host) as f64;
                 let mut used_cpu = pool_state.get_allocated_cpu(host) as f64;

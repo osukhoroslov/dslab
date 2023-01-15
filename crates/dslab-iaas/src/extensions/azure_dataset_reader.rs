@@ -136,8 +136,8 @@ impl DatasetReader for AzureDatasetReader {
             .unwrap_or(self.simulation_length)
             .min(self.simulation_length);
         let lifetime = end_time - start_time;
-        return Some(VMRequest {
-            id: Some(raw_vm.vm_id.clone()),
+        Some(VMRequest {
+            id: Some(raw_vm.vm_id),
             cpu_usage,
             memory_usage,
             lifetime,
@@ -145,6 +145,6 @@ impl DatasetReader for AzureDatasetReader {
             cpu_load_model: Box::new(ConstantLoadModel::new(1.)),
             memory_load_model: Box::new(ConstantLoadModel::new(1.)),
             scheduler_name: None,
-        });
+        })
     }
 }

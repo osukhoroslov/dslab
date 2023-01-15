@@ -7,11 +7,12 @@ use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 
 /// Uses the first suitable host.
+#[derive(Default)]
 pub struct FirstFit;
 
 impl FirstFit {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -20,6 +21,6 @@ impl VMPlacementAlgorithm for FirstFit {
         pool_state
             .get_hosts_list()
             .into_iter()
-            .find(|&host| pool_state.can_allocate(&alloc, host) == AllocationVerdict::Success)
+            .find(|&host| pool_state.can_allocate(alloc, host) == AllocationVerdict::Success)
     }
 }

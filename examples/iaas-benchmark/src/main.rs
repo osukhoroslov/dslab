@@ -8,7 +8,7 @@ use rand::SeedableRng;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstantLoadModel;
+use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
 use dslab_iaas::simulation::CloudSimulation;
 
@@ -53,11 +53,11 @@ fn simulation(sim_config: SimulationConfig) {
 
     for _ in 1..=args.num_vms {
         cloud_sim.spawn_vm_now(
-            vm_cpu_distribution[rng.gen_range(0..4)],
-            vm_ram_distribution[rng.gen_range(0..3)],
+            ResourceConsumer::with_full_load(
+                vm_cpu_distribution[rng.gen_range(0..4)],
+                vm_ram_distribution[rng.gen_range(0..3)],
+            ),
             100.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
             None,
             s,
         );

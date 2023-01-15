@@ -4,8 +4,8 @@ use clap::Parser;
 
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstantLoadModel;
 use dslab_iaas::core::load_model::LoadModel;
+use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
@@ -33,52 +33,20 @@ fn example_two_schedulers() {
 
     // spawn vm_0 - vm_4 on scheduler #1
     for _ in 0..5 {
-        cloud_sim.spawn_vm_now(
-            10,
-            10,
-            2.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
-            None,
-            s1,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s1);
     }
     // spawn vm_5 - vm_9 on scheduler #2
     for _ in 5..10 {
-        cloud_sim.spawn_vm_now(
-            10,
-            10,
-            2.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
-            None,
-            s2,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s2);
     }
 
     // spawn vm_10 - vm_14 on scheduler #1
     for _ in 10..15 {
-        cloud_sim.spawn_vm_now(
-            10,
-            10,
-            2.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
-            None,
-            s1,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s1);
     }
     // spawn vm_15 - vm_19 on scheduler #2
     for _ in 15..20 {
-        cloud_sim.spawn_vm_now(
-            10,
-            10,
-            2.0,
-            Box::new(ConstantLoadModel::new(1.0)),
-            Box::new(ConstantLoadModel::new(1.0)),
-            None,
-            s2,
-        );
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s2);
     }
 
     cloud_sim.step_for_duration(20.);
@@ -131,11 +99,8 @@ fn example_manual_migration() {
     let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
 
     let vm = cloud_sim.spawn_vm_now(
-        10,
-        10,
+        ResourceConsumer::with_const_load(10, 10, 0.5, 0.5),
         20.0,
-        Box::new(ConstantLoadModel::new(0.5)),
-        Box::new(ConstantLoadModel::new(0.5)),
         None,
         scheduler_id,
     );
@@ -155,12 +120,12 @@ fn example_manual_migration() {
     );
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DecreaseLoadModel {}
 
 impl DecreaseLoadModel {
     pub fn new() -> Self {
-        Self {}
+        Default::default()
     }
 }
 
@@ -168,13 +133,13 @@ impl LoadModel for DecreaseLoadModel {
     fn get_resource_load(&self, time: f64, _time_from_start: f64) -> f64 {
         // linear drop from 100% to zero within the first 500 time points
         // then linear growth back from zero to 100% during the next 500 time points
-        return if time <= 500. {
+        if time <= 500. {
             let linear = (500. - time) / 500.;
             linear.max(0.)
         } else {
             let linear = (time - 500.) / 500.;
             linear.min(1.)
-        };
+        }
     }
 }
 
@@ -192,11 +157,13 @@ fn example_vm_migrator() {
 
     for _ in 0..10 {
         cloud_sim.spawn_vm_now(
-            30,
-            30,
+            ResourceConsumer::new(
+                30,
+                30,
+                Box::new(DecreaseLoadModel::new()),
+                Box::new(DecreaseLoadModel::new()),
+            ),
             1000.0,
-            Box::new(DecreaseLoadModel::new()),
-            Box::new(DecreaseLoadModel::new()),
             None,
             scheduler_id,
         );

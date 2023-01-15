@@ -15,7 +15,6 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
-use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::power_model::HostPowerModel;
@@ -23,7 +22,7 @@ use crate::core::power_model::LinearPowerModel;
 use crate::core::scheduler::Scheduler;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
-use crate::core::vm::{VirtualMachine, VmStatus};
+use crate::core::vm::{ResourceConsumer, VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -136,7 +135,7 @@ impl CloudSimulation {
         // add host to placement store
         self.placement_store.borrow_mut().add_host(id, cpu_total, memory_total);
         // add host to schedulers
-        for (_, scheduler) in &self.schedulers {
+        for scheduler in self.schedulers.values() {
             scheduler.borrow_mut().add_host(id, cpu_total, memory_total);
         }
         // start sending host state to monitoring
@@ -168,23 +167,17 @@ impl CloudSimulation {
     /// to the specified scheduler. Returns VM ID.
     pub fn spawn_vm_now(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
+        resource_consumer: ResourceConsumer,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
         vm_id: Option<u32>,
         scheduler_id: u32,
     ) -> u32 {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time(),
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -196,11 +189,8 @@ impl CloudSimulation {
     /// to the specified scheduler with the specified delay. Returns VM ID.
     pub fn spawn_vm_with_delay(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
+        resource_consumer: ResourceConsumer,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
         vm_id: Option<u32>,
         scheduler_id: u32,
         delay: f64,
@@ -208,12 +198,9 @@ impl CloudSimulation {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time() + delay,
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -225,23 +212,17 @@ impl CloudSimulation {
     /// This is useful for creating the initial resource pool state.
     pub fn spawn_vm_on_host(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
+        resource_consumer: ResourceConsumer,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
         vm_id: Option<u32>,
         host_id: u32,
     ) -> u32 {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time(),
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -283,16 +264,18 @@ impl CloudSimulation {
             let request = request_opt.unwrap();
 
             let mut scheduler_id = default_scheduler_id;
-            if !request.scheduler_name.is_none() {
+            if request.scheduler_name.is_some() {
                 scheduler_id = self.sim.lookup_id(&request.scheduler_name.unwrap());
             }
 
             self.spawn_vm_with_delay(
-                request.cpu_usage,
-                request.memory_usage,
+                ResourceConsumer::new(
+                    request.cpu_usage,
+                    request.memory_usage,
+                    request.cpu_load_model.clone(),
+                    request.memory_load_model.clone(),
+                ),
                 request.lifetime,
-                request.cpu_load_model.clone(),
-                request.memory_load_model.clone(),
                 request.id,
                 scheduler_id,
                 request.start_time,
@@ -326,12 +309,12 @@ impl CloudSimulation {
 
     /// Returns the main simulation context.
     pub fn context(&self) -> &SimulationContext {
-        return &self.ctx;
+        &self.ctx
     }
 
     /// Performs the specified number of steps through the simulation (see dslab-core docs).
     pub fn steps(&mut self, step_count: u64) -> bool {
-        return self.sim.steps(step_count);
+        self.sim.steps(step_count)
     }
 
     /// Steps through the simulation with duration limit (see dslab-core docs).
@@ -341,12 +324,12 @@ impl CloudSimulation {
 
     /// Returns the total number of created events.
     pub fn event_count(&self) -> u64 {
-        return self.sim.event_count();
+        self.sim.event_count()
     }
 
     /// Returns the current simulation time.
     pub fn current_time(&mut self) -> f64 {
-        return self.sim.time();
+        self.sim.time()
     }
 
     /// Returns the reference to host manager (host energy consumption, allocated resources etc.).

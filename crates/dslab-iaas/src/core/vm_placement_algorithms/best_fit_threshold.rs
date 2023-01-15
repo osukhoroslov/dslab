@@ -18,10 +18,16 @@ impl BestFitThreshold {
         Self { threshold }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_string(s: &str) -> Self {
         let options = parse_options(s);
         let threshold = options.get("threshold").unwrap().parse::<f64>().unwrap();
         Self { threshold }
+    }
+}
+
+impl Default for BestFitThreshold {
+    fn default() -> Self {
+        Self::new(1.0)
     }
 }
 
@@ -37,11 +43,9 @@ impl VMPlacementAlgorithm for BestFitThreshold {
             let cpu_load_new = (cpu_used + alloc.cpu_usage as f64) / state.cpu_total as f64;
             let memory_load_new = (memory_used + alloc.memory_usage as f64) / state.memory_total as f64;
 
-            if best_cpu_load < cpu_load_new {
-                if cpu_load_new < self.threshold && memory_load_new < self.threshold {
-                    best_cpu_load = cpu_load_new;
-                    result = Some(*host);
-                }
+            if best_cpu_load < cpu_load_new && cpu_load_new < self.threshold && memory_load_new < self.threshold {
+                best_cpu_load = cpu_load_new;
+                result = Some(*host);
             }
         }
         result

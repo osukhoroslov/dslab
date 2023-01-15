@@ -21,7 +21,7 @@ clone_trait_object!(HostSLAVMetric);
 /// `OTF = T_overload / T_active`
 /// - `T_overload` is the total time during which the host was overloaded (leading to an SLA violation).
 /// - `T_active` is the total time the host was active (running VMs).
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct OverloadTimeFraction {
     prev_time: f64,
     prev_cpu_load: f64,
@@ -31,12 +31,7 @@ pub struct OverloadTimeFraction {
 
 impl OverloadTimeFraction {
     pub fn new() -> Self {
-        Self {
-            prev_time: 0.,
-            prev_cpu_load: 0.,
-            total_active_time: 0.,
-            total_overloaded_time: 0.,
-        }
+        Default::default()
     }
 }
 
