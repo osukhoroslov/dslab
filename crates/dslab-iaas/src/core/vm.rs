@@ -108,7 +108,6 @@ impl Serialize for VirtualMachine {
 
 impl VirtualMachine {
     /// Creates virtual machine with specified parameters.
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: u32,
         allocation_start_time: f64,
