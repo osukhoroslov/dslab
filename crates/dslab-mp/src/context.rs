@@ -53,11 +53,11 @@ impl Context {
         self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
-    pub fn set_timer_detailed(&mut self, name: &str, delay: f64, force: bool) {
+    pub fn set_timer_detailed(&mut self, name: &str, delay: f64, once: bool) {
         self.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,
-            force,
+            once,
         });
     }
 

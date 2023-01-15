@@ -31,7 +31,7 @@ pub enum ProcessEvent {
     MessageReceived { msg: Message, src: String, dest: String },
     LocalMessageSent { msg: Message },
     LocalMessageReceived { msg: Message },
-    TimerSet { name: String, delay: f64, force: bool },
+    TimerSet { name: String, delay: f64, once: bool },
     TimerFired { name: String },
     TimerCancelled { name: String },
 }
@@ -171,19 +171,15 @@ impl Node {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, delay, force } => {
-                    assert!(
-                        force || !proc_entry.pending_timers.contains_key(&name),
-                        "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
-                        name,
-                        proc
-                    );
-                    let event = TimerFired {
-                        timer: name.clone(),
-                        proc: proc.clone(),
-                    };
-                    let event_id = self.ctx.borrow_mut().emit_self(event, delay);
-                    proc_entry.pending_timers.insert(name, event_id);
+                ProcessEvent::TimerSet { name, delay, once } => {
+                    if !once || !proc_entry.pending_timers.contains_key(&name) {
+                        let event = TimerFired {
+                            timer: name.clone(),
+                            proc: proc.clone(),
+                        };
+                        let event_id = self.ctx.borrow_mut().emit_self(event, delay);
+                        proc_entry.pending_timers.insert(name, event_id);
+                    }
                 }
                 ProcessEvent::TimerCancelled { name } => {
                     if let Some(event_id) = proc_entry.pending_timers.remove(&name) {
