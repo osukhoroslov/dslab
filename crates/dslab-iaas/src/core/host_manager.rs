@@ -114,10 +114,10 @@ impl HostManager {
         if self.allow_vm_overcommit {
             return AllocationVerdict::Success;
         }
-        if self.cpu_available < vm.cpu_usage() {
+        if self.cpu_available < vm.cpu_usage {
             return AllocationVerdict::NotEnoughCPU;
         }
-        if self.memory_available < vm.memory_usage() {
+        if self.memory_available < vm.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
         AllocationVerdict::Success
@@ -126,21 +126,21 @@ impl HostManager {
     /// Allocates new virtual machine, updates resource and energy consumption.
     fn allocate(&mut self, time: f64, vm_ref: Rc<RefCell<VirtualMachine>>) {
         let vm = vm_ref.borrow();
-        if self.cpu_available < vm.cpu_usage() {
-            self.cpu_overcommit += vm.cpu_usage() - self.cpu_available;
+        if self.cpu_available < vm.cpu_usage {
+            self.cpu_overcommit += vm.cpu_usage - self.cpu_available;
             self.cpu_available = 0;
             self.cpu_allocated = self.cpu_total;
         } else {
-            self.cpu_available -= vm.cpu_usage();
-            self.cpu_allocated += vm.cpu_usage();
+            self.cpu_available -= vm.cpu_usage;
+            self.cpu_allocated += vm.cpu_usage;
         }
-        if self.memory_available < vm.memory_usage() {
-            self.memory_overcommit += vm.memory_usage() - self.memory_available;
+        if self.memory_available < vm.memory_usage {
+            self.memory_overcommit += vm.memory_usage - self.memory_available;
             self.memory_available = 0;
             self.memory_allocated = self.memory_total;
         } else {
-            self.memory_available -= vm.memory_usage();
-            self.memory_allocated += vm.memory_usage();
+            self.memory_available -= vm.memory_usage;
+            self.memory_allocated += vm.memory_usage;
         }
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
@@ -153,19 +153,19 @@ impl HostManager {
     /// Releases resources when VM is deleted, updates resource and energy consumption.
     fn release(&mut self, time: f64, vm_id: u32) {
         let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
-        if self.cpu_overcommit >= vm.cpu_usage() {
-            self.cpu_overcommit -= vm.cpu_usage();
+        if self.cpu_overcommit >= vm.cpu_usage {
+            self.cpu_overcommit -= vm.cpu_usage;
         } else {
-            self.cpu_available += vm.cpu_usage() - self.cpu_overcommit;
-            self.cpu_allocated -= vm.cpu_usage() - self.cpu_overcommit;
+            self.cpu_available += vm.cpu_usage - self.cpu_overcommit;
+            self.cpu_allocated -= vm.cpu_usage - self.cpu_overcommit;
             self.cpu_overcommit = 0;
         }
 
-        if self.memory_overcommit >= vm.memory_usage() {
-            self.memory_overcommit -= vm.memory_usage();
+        if self.memory_overcommit >= vm.memory_usage {
+            self.memory_overcommit -= vm.memory_usage;
         } else {
-            self.memory_available += vm.memory_usage() - self.memory_overcommit;
-            self.memory_allocated -= vm.memory_usage() - self.memory_overcommit;
+            self.memory_available += vm.memory_usage - self.memory_overcommit;
+            self.memory_allocated -= vm.memory_usage - self.memory_overcommit;
             self.memory_overcommit = 0;
         }
         self.vms.remove(&vm.id);
@@ -191,7 +191,7 @@ impl HostManager {
         let mut cpu_used = 0.;
         for vm_id in &self.vms {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
-            cpu_used += vm.cpu_usage() as f64 * vm.get_cpu_load(time);
+            cpu_used += vm.cpu_usage as f64 * vm.get_cpu_load(time);
         }
         cpu_used / self.cpu_total as f64
     }
@@ -201,7 +201,7 @@ impl HostManager {
         let mut memory_used = 0.;
         for vm_id in &self.vms {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
-            memory_used += vm.memory_usage() as f64 * vm.get_memory_load(time);
+            memory_used += vm.memory_usage as f64 * vm.get_memory_load(time);
         }
         memory_used / self.memory_total as f64
     }
@@ -256,7 +256,7 @@ impl HostManager {
     fn on_migration_request(&mut self, source_host: u32, vm_id: u32) {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
-            let migration_duration = (vm.borrow().memory_usage() as f64) / (self.sim_config.network_throughput as f64);
+            let migration_duration = (vm.borrow().memory_usage as f64) / (self.sim_config.network_throughput as f64);
             let start_duration = vm.borrow().start_duration();
 
             self.allocate(self.ctx.time(), vm);

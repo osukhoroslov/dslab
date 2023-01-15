@@ -53,11 +53,11 @@ fn simulation(sim_config: SimulationConfig) {
 
     for _ in 1..=args.num_vms {
         cloud_sim.spawn_vm_now(
-            100.0,
             ResourceConsumer::with_full_load(
                 vm_cpu_distribution[rng.gen_range(0..4)],
                 vm_ram_distribution[rng.gen_range(0..3)],
             ),
+            100.0,
             None,
             s,
         );

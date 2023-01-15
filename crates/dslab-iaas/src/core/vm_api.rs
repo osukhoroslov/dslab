@@ -75,8 +75,8 @@ impl VmAPI {
     pub fn get_vm_allocation(&self, vm_id: u32) -> Allocation {
         Allocation {
             id: vm_id,
-            cpu_usage: self.vms.get(&vm_id).unwrap().borrow().cpu_usage(),
-            memory_usage: self.vms.get(&vm_id).unwrap().borrow().memory_usage(),
+            cpu_usage: self.vms.get(&vm_id).unwrap().borrow().cpu_usage,
+            memory_usage: self.vms.get(&vm_id).unwrap().borrow().memory_usage,
         }
     }
 

@@ -31,7 +31,7 @@ impl Display for VmStatus {
     }
 }
 
-/// Represents virtual machine resource consumption.
+/// Used to define resource consumption of virtual machine.
 #[derive(Clone)]
 pub struct ResourceConsumer {
     pub cpu_usage: u32,
@@ -41,6 +41,7 @@ pub struct ResourceConsumer {
 }
 
 impl ResourceConsumer {
+    /// Creates resource consumer with specified parameters.
     pub fn new(
         cpu_usage: u32,
         memory_usage: u64,
@@ -55,6 +56,7 @@ impl ResourceConsumer {
         }
     }
 
+    /// Creates resource consumer with constant 100% load.
     pub fn with_full_load(cpu_usage: u32, memory_usage: u64) -> Self {
         Self {
             cpu_usage,
@@ -64,6 +66,7 @@ impl ResourceConsumer {
         }
     }
 
+    /// Creates resource consumer with specified constant load.
     pub fn with_const_load(cpu_usage: u32, memory_usage: u64, cpu_load: f64, memory_load: f64) -> Self {
         Self {
             cpu_usage,
@@ -82,10 +85,13 @@ impl ResourceConsumer {
 #[derive(Clone)]
 pub struct VirtualMachine {
     pub id: u32,
+    pub cpu_usage: u32,
+    pub memory_usage: u64,
     pub allocation_start_time: f64,
-    pub resource_consumer: ResourceConsumer,
     lifetime: f64,
     start_time: f64,
+    cpu_load_model: Box<dyn LoadModel>,
+    memory_load_model: Box<dyn LoadModel>,
     sim_config: Rc<SimulationConfig>,
 }
 
@@ -112,10 +118,13 @@ impl VirtualMachine {
     ) -> Self {
         Self {
             id,
+            cpu_usage: resource_consumer.cpu_usage,
+            memory_usage: resource_consumer.memory_usage,
             allocation_start_time,
             lifetime,
             start_time: -1.,
-            resource_consumer,
+            cpu_load_model: resource_consumer.cpu_load_model,
+            memory_load_model: resource_consumer.memory_load_model,
             sim_config,
         }
     }
@@ -152,25 +161,11 @@ impl VirtualMachine {
 
     /// Returns the current CPU load of VM by invoking the CPU load model.
     pub fn get_cpu_load(&self, time: f64) -> f64 {
-        self.resource_consumer
-            .cpu_load_model
-            .get_resource_load(time, time - self.start_time)
+        self.cpu_load_model.get_resource_load(time, time - self.start_time)
     }
 
     /// Returns the current memory load of VM by invoking the memory load model.
     pub fn get_memory_load(&self, time: f64) -> f64 {
-        self.resource_consumer
-            .memory_load_model
-            .get_resource_load(time, time - self.start_time)
-    }
-
-    /// Returns the guaranteed CPU capacity.
-    pub fn cpu_usage(&self) -> u32 {
-        self.resource_consumer.cpu_usage
-    }
-
-    /// Returns the guaranteed memory capacity.
-    pub fn memory_usage(&self) -> u64 {
-        self.resource_consumer.memory_usage
+        self.memory_load_model.get_resource_load(time, time - self.start_time)
     }
 }

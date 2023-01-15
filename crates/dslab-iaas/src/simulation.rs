@@ -167,8 +167,8 @@ impl CloudSimulation {
     /// to the specified scheduler. Returns VM ID.
     pub fn spawn_vm_now(
         &mut self,
-        lifetime: f64,
         resource_consumer: ResourceConsumer,
+        lifetime: f64,
         vm_id: Option<u32>,
         scheduler_id: u32,
     ) -> u32 {
@@ -189,8 +189,8 @@ impl CloudSimulation {
     /// to the specified scheduler with the specified delay. Returns VM ID.
     pub fn spawn_vm_with_delay(
         &mut self,
-        lifetime: f64,
         resource_consumer: ResourceConsumer,
+        lifetime: f64,
         vm_id: Option<u32>,
         scheduler_id: u32,
         delay: f64,
@@ -212,8 +212,8 @@ impl CloudSimulation {
     /// This is useful for creating the initial resource pool state.
     pub fn spawn_vm_on_host(
         &mut self,
-        lifetime: f64,
         resource_consumer: ResourceConsumer,
+        lifetime: f64,
         vm_id: Option<u32>,
         host_id: u32,
     ) -> u32 {
@@ -269,13 +269,13 @@ impl CloudSimulation {
             }
 
             self.spawn_vm_with_delay(
-                request.lifetime,
                 ResourceConsumer::new(
                     request.cpu_usage,
                     request.memory_usage,
                     request.cpu_load_model.clone(),
                     request.memory_load_model.clone(),
                 ),
+                request.lifetime,
                 request.id,
                 scheduler_id,
                 request.start_time,
