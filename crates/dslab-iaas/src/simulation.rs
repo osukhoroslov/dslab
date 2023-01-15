@@ -15,7 +15,6 @@ use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
-use crate::core::load_model::LoadModel;
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::power_model::HostPowerModel;
@@ -23,7 +22,7 @@ use crate::core::power_model::LinearPowerModel;
 use crate::core::scheduler::Scheduler;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::slav_metric::OverloadTimeFraction;
-use crate::core::vm::{VirtualMachine, VmStatus};
+use crate::core::vm::{ResourceConsumer, VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -166,26 +165,19 @@ impl CloudSimulation {
 
     /// Creates new VM with specified properties, registers it in VM API and immediately submits the allocation request
     /// to the specified scheduler. Returns VM ID.
-    #[allow(clippy::too_many_arguments)]
     pub fn spawn_vm_now(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
+        resource_consumer: ResourceConsumer,
         vm_id: Option<u32>,
         scheduler_id: u32,
     ) -> u32 {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time(),
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -195,14 +187,10 @@ impl CloudSimulation {
 
     /// Creates new VM with specified properties, registers it in VM API and submits the allocation request
     /// to the specified scheduler with the specified delay. Returns VM ID.
-    #[allow(clippy::too_many_arguments)]
     pub fn spawn_vm_with_delay(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
+        resource_consumer: ResourceConsumer,
         vm_id: Option<u32>,
         scheduler_id: u32,
         delay: f64,
@@ -210,12 +198,9 @@ impl CloudSimulation {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time() + delay,
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -225,26 +210,19 @@ impl CloudSimulation {
 
     /// Creates new VM with specified properties and spawns it on the specified host bypassing the scheduling step.
     /// This is useful for creating the initial resource pool state.
-    #[allow(clippy::too_many_arguments)]
     pub fn spawn_vm_on_host(
         &mut self,
-        cpu_usage: u32,
-        memory_usage: u64,
         lifetime: f64,
-        cpu_load_model: Box<dyn LoadModel>,
-        memory_load_model: Box<dyn LoadModel>,
+        resource_consumer: ResourceConsumer,
         vm_id: Option<u32>,
         host_id: u32,
     ) -> u32 {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
         let vm = VirtualMachine::new(
             id,
-            cpu_usage,
-            memory_usage,
             self.ctx.time(),
             lifetime,
-            cpu_load_model,
-            memory_load_model,
+            resource_consumer,
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
@@ -291,11 +269,13 @@ impl CloudSimulation {
             }
 
             self.spawn_vm_with_delay(
-                request.cpu_usage,
-                request.memory_usage,
                 request.lifetime,
-                request.cpu_load_model.clone(),
-                request.memory_load_model.clone(),
+                ResourceConsumer::new(
+                    request.cpu_usage,
+                    request.memory_usage,
+                    request.cpu_load_model.clone(),
+                    request.memory_load_model.clone(),
+                ),
                 request.id,
                 scheduler_id,
                 request.start_time,

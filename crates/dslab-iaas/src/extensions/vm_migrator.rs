@@ -120,8 +120,8 @@ impl VmMigrator {
                     }
                     vms_to_migrate.push((*vm_id, *host));
 
-                    cpu_usage -= vm.cpu_usage as f64;
-                    memory_usage -= vm.memory_usage as f64;
+                    cpu_usage -= vm.cpu_usage() as f64;
+                    memory_usage -= vm.memory_usage() as f64;
                     let new_cpu_load = cpu_usage / (state.cpu_total as f64);
                     let new_memory_load = memory_usage / (state.memory_total as f64);
 
@@ -168,13 +168,13 @@ impl VmMigrator {
 
                 let source_state = host_states.get(&source_host).unwrap();
                 let cpu_usage_source = source_state.cpu_load * (source_state.cpu_total as f64);
-                let cpu_load_new_source = (cpu_usage_source - vm.cpu_usage as f64) / (source_state.cpu_total as f64);
+                let cpu_load_new_source = (cpu_usage_source - vm.cpu_usage() as f64) / (source_state.cpu_total as f64);
 
                 let cpu_usage_target = state.cpu_load * (state.cpu_total as f64);
                 let memory_usage_target = state.memory_load * (state.memory_total as f64);
-                let cpu_load_new_target = (cpu_usage_target + vm.cpu_usage as f64) / (state.cpu_total as f64);
+                let cpu_load_new_target = (cpu_usage_target + vm.cpu_usage() as f64) / (state.cpu_total as f64);
                 let memory_load_new_target =
-                    (memory_usage_target + vm.memory_usage as f64) / (state.memory_total as f64);
+                    (memory_usage_target + vm.memory_usage() as f64) / (state.memory_total as f64);
 
                 if !overloaded_hosts.contains(&source_host)
                     && source_state.cpu_load > state.cpu_load
@@ -218,8 +218,8 @@ impl VmMigrator {
                 let source_state = host_states.get_mut(&source_host).unwrap();
                 let cpu_usage = source_state.cpu_load * (source_state.cpu_total as f64);
                 let memory_usage = source_state.memory_load * (source_state.memory_total as f64);
-                let cpu_load_new = (cpu_usage - vm.cpu_usage as f64) / (source_state.cpu_total as f64);
-                let memory_load_new = (memory_usage + vm.memory_usage as f64) / (source_state.memory_total as f64);
+                let cpu_load_new = (cpu_usage - vm.cpu_usage() as f64) / (source_state.cpu_total as f64);
+                let memory_load_new = (memory_usage + vm.memory_usage() as f64) / (source_state.memory_total as f64);
                 source_state.cpu_load = cpu_load_new;
                 source_state.memory_load = memory_load_new;
 
@@ -227,8 +227,8 @@ impl VmMigrator {
                 let target_state = host_states.get_mut(&target_host).unwrap();
                 let cpu_usage = target_state.cpu_load * (target_state.cpu_total as f64);
                 let memory_usage = target_state.memory_load * (target_state.memory_total as f64);
-                let cpu_load_new = (cpu_usage + vm.cpu_usage as f64) / (target_state.cpu_total as f64);
-                let memory_load_new = (memory_usage + vm.memory_usage as f64) / (target_state.memory_total as f64);
+                let cpu_load_new = (cpu_usage + vm.cpu_usage() as f64) / (target_state.cpu_total as f64);
+                let memory_load_new = (memory_usage + vm.memory_usage() as f64) / (target_state.memory_total as f64);
                 target_state.cpu_load = cpu_load_new;
                 target_state.memory_load = memory_load_new;
             } else {

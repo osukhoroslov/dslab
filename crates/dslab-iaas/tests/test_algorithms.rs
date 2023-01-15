@@ -1,7 +1,7 @@
 use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::config::SimulationConfig;
-use dslab_iaas::core::load_model::ConstantLoadModel;
+use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
@@ -31,75 +31,19 @@ fn check_placements(algorithm: Box<dyn VMPlacementAlgorithm>, expected_hosts: Ve
     host_ids.push(cloud_sim.add_host("h3", 13, 4));
     host_ids.push(cloud_sim.add_host("h4", 13, 4));
 
-    cloud_sim.spawn_vm_on_host(
-        6,
-        2,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        host_ids[0],
-    );
-    cloud_sim.spawn_vm_on_host(
-        6,
-        2,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        host_ids[1],
-    );
-    cloud_sim.spawn_vm_on_host(
-        7,
-        1,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        host_ids[2],
-    );
-    cloud_sim.spawn_vm_on_host(
-        9,
-        1,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        host_ids[3],
-    );
+    cloud_sim.spawn_vm_on_host(10.0, ResourceConsumer::with_full_load(6, 2), None, host_ids[0]);
+    cloud_sim.spawn_vm_on_host(10.0, ResourceConsumer::with_full_load(6, 2), None, host_ids[1]);
+    cloud_sim.spawn_vm_on_host(10.0, ResourceConsumer::with_full_load(7, 1), None, host_ids[2]);
+    cloud_sim.spawn_vm_on_host(10.0, ResourceConsumer::with_full_load(9, 1), None, host_ids[3]);
 
     cloud_sim.step_for_duration(1.);
 
     let scheduler_id = cloud_sim.add_scheduler("s", algorithm);
 
     let mut vm_ids = Vec::<u32>::new();
-    vm_ids.push(cloud_sim.spawn_vm_now(
-        2,
-        2,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        scheduler_id,
-    ));
-    vm_ids.push(cloud_sim.spawn_vm_now(
-        3,
-        1,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        scheduler_id,
-    ));
-    vm_ids.push(cloud_sim.spawn_vm_now(
-        1,
-        1,
-        10.0,
-        Box::new(ConstantLoadModel::new(1.0)),
-        Box::new(ConstantLoadModel::new(1.0)),
-        None,
-        scheduler_id,
-    ));
+    vm_ids.push(cloud_sim.spawn_vm_now(10.0, ResourceConsumer::with_full_load(2, 2), None, scheduler_id));
+    vm_ids.push(cloud_sim.spawn_vm_now(10.0, ResourceConsumer::with_full_load(3, 1), None, scheduler_id));
+    vm_ids.push(cloud_sim.spawn_vm_now(10.0, ResourceConsumer::with_full_load(1, 1), None, scheduler_id));
 
     cloud_sim.step_for_duration(1.);
     let cur_time = cloud_sim.current_time();
