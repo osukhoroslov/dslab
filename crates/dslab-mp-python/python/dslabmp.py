@@ -49,7 +49,7 @@ class Context(object):
             raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
-        self._timer_actions.append((timer_name, delay, True))
+        self._timer_actions.append((timer_name, delay, False))
 
     def set_timer_once(self, timer_name: str, delay: float):
         if not isinstance(timer_name, str):
@@ -58,7 +58,7 @@ class Context(object):
             raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
-        self._timer_actions.append((timer_name, delay, False))
+        self._timer_actions.append((timer_name, delay, True))
 
     def cancel_timer(self, timer_name: str):
         if not isinstance(timer_name, str):
