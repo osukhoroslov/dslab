@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use clap::Parser;
+
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
@@ -20,13 +22,20 @@ fn print_results(stats: Stats, name: &str) {
     println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
 }
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Path to a directory with Azure Functions trace.
+    trace: String,
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args = Args::parse();
     let trace_config = AzureTraceConfig {
         invocations_limit: 20000,
         ..Default::default()
     };
-    let trace = Box::new(process_azure_trace(Path::new(&args[1]), trace_config));
+    let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
