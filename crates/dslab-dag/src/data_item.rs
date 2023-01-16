@@ -1,5 +1,9 @@
 //! Data item.
 
+use std::str::FromStr;
+
+use serde::Deserialize;
+
 use dslab_core::component::Id;
 use dslab_network::network::Network;
 
@@ -43,7 +47,7 @@ impl DataItem {
 }
 
 /// Defines how data items are transferred during the DAG execution.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
 pub enum DataTransferMode {
     /// Every data item is automatically transferred between producer and consumer
     /// via the master node (producer -> master -> consumer).
@@ -72,4 +76,16 @@ impl DataTransferMode {
 pub enum DataTransferStrategy {
     Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
     Lazy,  // data transfer starts only when the destination node is ready to execute the task
+}
+
+impl FromStr for DataTransferStrategy {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Eager" => Ok(DataTransferStrategy::Eager),
+            "Lazy" => Ok(DataTransferStrategy::Lazy),
+            _ => Err(()),
+        }
+    }
 }

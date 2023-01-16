@@ -7,7 +7,7 @@ use dslab_core::Id;
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
-use crate::scheduler::{Action, Scheduler, TimeSpan};
+use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
 use crate::system::System;
 
@@ -19,6 +19,14 @@ impl HeftScheduler {
     pub fn new() -> Self {
         HeftScheduler {
             data_transfer_strategy: DataTransferStrategy::Eager,
+        }
+    }
+
+    pub fn from_params(params: &SchedulerParams) -> Self {
+        Self {
+            data_transfer_strategy: params
+                .get("data_transfer_strategy")
+                .unwrap_or(DataTransferStrategy::Eager),
         }
     }
 

@@ -1,6 +1,7 @@
 //! DAG model of computation.
 
 use std::collections::BTreeSet;
+use std::path::Path;
 
 use dslab_compute::multicore::CoresDependency;
 
@@ -34,6 +35,23 @@ impl DAG {
             completed_task_count: 0,
             inputs: BTreeSet::new(),
             outputs: BTreeSet::new(),
+        }
+    }
+
+    /// Reads DAG from file in one of supported formats:
+    /// - YAML format (.yaml extension)
+    /// - WfCommons format (.json extension)
+    /// - DAX format (.xml extension)
+    /// - DOT format (.dot extension)
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
+        match file.as_ref().extension().unwrap().to_str().unwrap() {
+            "yaml" => DAG::from_yaml(file),
+            "json" => DAG::from_wfcommons(file, 1.0e9),
+            "xml" => DAG::from_dax(file, 1000.),
+            "dot" => DAG::from_dot(file),
+            _ => {
+                panic!("Unknown extension for dag: {}", file.as_ref().display());
+            }
         }
     }
 

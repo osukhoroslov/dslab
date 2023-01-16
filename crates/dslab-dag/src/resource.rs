@@ -1,6 +1,7 @@
 //! Resource model.
 
 use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
@@ -27,28 +28,27 @@ pub struct Resource {
     pub memory_available: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct YamlResource {
-    name: String,
-    speed: u64,
-    cores: u32,
-    memory: u64,
+/// Contains parameters of computing resource, can be used later to create a compute resource instance.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ResourceConfig {
+    pub name: String,
+    pub speed: u64,
+    pub cores: u32,
+    pub memory: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Resources {
-    resources: Vec<YamlResource>,
+    resources: Vec<ResourceConfig>,
 }
 
 /// Loads resources from YAML file.
 ///
 /// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/resources/cluster1.yaml.
-pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
-    let resources: Resources =
-        serde_yaml::from_str(&std::fs::read_to_string(file).unwrap_or_else(|_| panic!("Can't read file {}", file)))
-            .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file));
+pub fn load_resources<P: AsRef<Path>>(file: P, sim: &mut Simulation) -> Vec<Resource> {
+    let resources = read_resources(&file);
     let mut result: Vec<Resource> = Vec::new();
-    for resource in resources.resources.into_iter() {
+    for resource in resources.into_iter() {
         let compute = Rc::new(RefCell::new(Compute::new(
             resource.speed,
             resource.cores,
@@ -66,4 +66,13 @@ pub fn load_resources(file: &str, sim: &mut Simulation) -> Vec<Resource> {
         });
     }
     result
+}
+
+/// Reads resources from YAML file into simple structs without creating resource instances.
+pub fn read_resources<P: AsRef<Path>>(file: P) -> Vec<ResourceConfig> {
+    let resources: Resources = serde_yaml::from_str(
+        &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
+    )
+    .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file.as_ref().display()));
+    resources.resources
 }
