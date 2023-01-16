@@ -19,6 +19,7 @@ pub struct NetworkConfig {
 }
 
 impl NetworkConfig {
+    /// Creates network model.
     pub fn make_network(&self) -> Option<Rc<RefCell<dyn NetworkModel>>> {
         if self.model == "ConstantBandwidthNetwork" {
             Some(Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
@@ -49,12 +50,11 @@ pub fn load_network<P: AsRef<Path>>(file: P) -> Rc<RefCell<dyn NetworkModel>> {
 
     match network.make_network() {
         Some(x) => x,
-        None => {
-            panic!("Unknown network model {}", network.model);
-        }
+        None => panic!("Unknown network model {}", network.model),
     }
 }
 
+/// Reads network model configuration from YAML file into simple struct without creating network model.
 pub fn read_network_config<P: AsRef<Path>>(file: P) -> NetworkConfig {
     let network: Yaml = serde_yaml::from_str(
         &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),

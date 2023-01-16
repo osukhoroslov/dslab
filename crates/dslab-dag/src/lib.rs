@@ -9,7 +9,6 @@ pub mod parsers;
 pub mod resource;
 pub mod runner;
 pub mod scheduler;
-pub mod scheduler_resolver;
 pub mod schedulers;
 pub mod system;
 pub mod task;

@@ -5,8 +5,7 @@ use dslab_core::context::SimulationContext;
 use crate::dag::DAG;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
-use crate::scheduler::{Action, Scheduler};
-use crate::scheduler_resolver::SchedulerParams;
+use crate::scheduler::{Action, Scheduler, SchedulerParams};
 use crate::system::System;
 use crate::task::*;
 
@@ -77,7 +76,7 @@ impl PortfolioScheduler {
         }
     }
 
-    pub fn from_scheduler_params(params: &SchedulerParams) -> Self {
+    pub fn from_params(params: &SchedulerParams) -> Self {
         Self::new(params.get("algo").unwrap())
     }
 

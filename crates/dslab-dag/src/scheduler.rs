@@ -1,5 +1,12 @@
 //! DAG scheduling.
 
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::rc::Rc;
+use std::str::FromStr;
+
+use itertools::Itertools;
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
@@ -7,6 +14,13 @@ use crate::dag::DAG;
 use crate::runner::Config;
 use crate::system::System;
 use crate::task::TaskState;
+
+use crate::schedulers::dls::DlsScheduler;
+use crate::schedulers::heft::HeftScheduler;
+use crate::schedulers::lookahead::LookaheadScheduler;
+use crate::schedulers::peft::PeftScheduler;
+use crate::schedulers::portfolio_scheduler::PortfolioScheduler;
+use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 /// Represents an action ordered by the scheduler.
 #[derive(Debug)]
@@ -76,4 +90,77 @@ pub trait Scheduler {
 
     /// Should be true iff on_task_state_chaged always returns empty vector.
     fn is_static(&self) -> bool;
+}
+
+/// Contains parsed scheduler params.
+#[derive(Debug, Clone)]
+pub struct SchedulerParams {
+    name: String,
+    params: BTreeMap<String, String>,
+}
+
+impl SchedulerParams {
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        let open = s.find('[');
+        if open.is_none() {
+            return Ok(Self {
+                name: s.to_string(),
+                params: BTreeMap::new(),
+            });
+        }
+
+        let open = open.unwrap();
+        if !s.ends_with(']') {
+            return Err("Input string doesn't end with matching ]".to_string());
+        }
+
+        let mut params = BTreeMap::new();
+        for param in s[open + 1..s.len() - 1].split(',') {
+            let pos = param.find('=').ok_or(format!("Can't find \"=\" in param {param}"))?;
+            params.insert(param[..pos].to_string(), param[pos + 1..].to_string());
+        }
+
+        Ok(Self {
+            name: s[..open].to_string(),
+            params,
+        })
+    }
+
+    /// Returns scheduler name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns scheduler parameter by name.
+    pub fn get<T: FromStr, K: AsRef<str>>(&self, name: K) -> Option<T> {
+        self.params.get(name.as_ref()).and_then(|s| s.parse().ok())
+    }
+}
+
+impl std::fmt::Display for SchedulerParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.params.is_empty() {
+            write!(f, "{}", self.name)
+        } else {
+            write!(
+                f,
+                "{}[{}]",
+                self.name,
+                self.params.iter().map(|(k, v)| format!("{k}={v}")).join(",")
+            )
+        }
+    }
+}
+
+/// Resolves params into one of default schedulers.
+pub fn default_scheduler_resolver(params: &SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>> {
+    match params.name.as_str() {
+        "Simple" => Some(Rc::new(RefCell::new(SimpleScheduler::new()))),
+        "HEFT" => Some(Rc::new(RefCell::new(HeftScheduler::from_params(params)))),
+        "Lookahead" => Some(Rc::new(RefCell::new(LookaheadScheduler::from_params(params)))),
+        "PEFT" => Some(Rc::new(RefCell::new(PeftScheduler::from_params(params)))),
+        "DLS" => Some(Rc::new(RefCell::new(DlsScheduler::from_params(params)))),
+        "Portfolio" => Some(Rc::new(RefCell::new(PortfolioScheduler::from_params(params)))),
+        _ => None,
+    }
 }

@@ -38,10 +38,15 @@ impl DAG {
         }
     }
 
-    /// Reads dag from YAML, DAX or DOT file.
+    /// Reads DAG from file in one of supported formats:
+    /// - YAML format (.yaml extension)
+    /// - WfCommons format (.json extension)
+    /// - DAX format (.xml extension)
+    /// - DOT format (.dot extension)
     pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
         match file.as_ref().extension().unwrap().to_str().unwrap() {
             "yaml" => DAG::from_yaml(file),
+            "json" => DAG::from_wfcommons(file, 1.0e9),
             "xml" => DAG::from_dax(file, 1000.),
             "dot" => DAG::from_dot(file),
             _ => {

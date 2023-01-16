@@ -7,8 +7,7 @@ use dslab_core::Id;
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
-use crate::scheduler::{Action, Scheduler, TimeSpan};
-use crate::scheduler_resolver::SchedulerParams;
+use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
 use crate::system::System;
 
@@ -23,7 +22,7 @@ impl DlsScheduler {
         }
     }
 
-    pub fn from_scheduler_params(params: &SchedulerParams) -> Self {
+    pub fn from_params(params: &SchedulerParams) -> Self {
         Self {
             data_transfer_strategy: params
                 .get("data_transfer_strategy")

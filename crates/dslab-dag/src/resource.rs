@@ -28,6 +28,7 @@ pub struct Resource {
     pub memory_available: u64,
 }
 
+/// Contains parameters of computing resource, can be used later to create a compute actor.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceConfig {
     pub name: String,
@@ -67,6 +68,7 @@ pub fn load_resources<P: AsRef<Path>>(file: P, sim: &mut Simulation) -> Vec<Reso
     result
 }
 
+/// Reads resources from YAML file into simple structs without creating actors.
 pub fn read_resources<P: AsRef<Path>>(file: P) -> Vec<ResourceConfig> {
     let resources: Resources = serde_yaml::from_str(
         &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
