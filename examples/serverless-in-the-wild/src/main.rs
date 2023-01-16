@@ -54,11 +54,11 @@ fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
 }
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
 struct Args {
-    #[clap()]
+    #[arg()]
     trace: String,
-    #[clap(long)]
+    #[arg(long)]
     config: String,
 }
 

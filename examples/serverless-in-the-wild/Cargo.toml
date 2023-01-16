@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "3.0.14", features = ["derive"] }
+clap = { version = "4.1.1", features = ["derive"] }
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-faas = { path = "../../crates/dslab-faas" }
 serde = { version = "1.0", features = ["derive"] }
