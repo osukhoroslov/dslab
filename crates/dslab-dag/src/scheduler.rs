@@ -100,7 +100,7 @@ pub struct SchedulerParams {
 }
 
 impl SchedulerParams {
-    /// Creates SchedulerParams from string, for example `Porfolio[algo=8,other_param=xyz]`.
+    /// Creates SchedulerParams from a string in the following format: `SchedulerName[param1=value1,param2=value2...]`.
     pub fn from_str(s: &str) -> Result<Self, String> {
         let open = s.find('[');
         if open.is_none() {
