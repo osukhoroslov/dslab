@@ -22,7 +22,7 @@ struct Args {
     threads: usize,
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     let experiment = Experiment::load(&args.config, default_scheduler_resolver);
@@ -33,8 +33,6 @@ fn main() {
         args.config
             .with_file_name([args.config.file_stem().unwrap().to_str().unwrap(), "-results"].concat())
             .with_extension("json")
-    }))
-    .unwrap()
+    }))?
     .write_all(serde_json::to_string_pretty(&result).unwrap().as_bytes())
-    .unwrap();
 }
