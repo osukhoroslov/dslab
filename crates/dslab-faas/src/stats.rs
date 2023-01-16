@@ -179,6 +179,28 @@ impl GlobalStats {
             self.wasted_resource_time.entry(req.id).or_default().add(delta);
         }
     }
+
+    pub fn overview(&self, name: &str) {
+        println!("describing {}", name);
+        println!("{} successful invocations", self.invocation_stats.invocations);
+        println!(
+            "- mean cold start latency = {}",
+            self.invocation_stats
+                .cold_start_latency
+                .extend(self.invocation_stats.invocations as usize)
+                .mean()
+        );
+        // assuming that resource 0 is memory
+        println!("- wasted memory time = {}", self.wasted_resource_time[&0].sum());
+        println!(
+            "- mean absolute total slowdown = {}",
+            self.invocation_stats.abs_total_slowdown.mean()
+        );
+        println!(
+            "- mean relative total slowdown = {}",
+            self.invocation_stats.rel_total_slowdown.mean()
+        );
+    }
 }
 
 #[derive(Clone, Default)]

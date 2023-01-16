@@ -11,30 +11,11 @@ use dslab_faas::config::{ConfigParamResolvers, RawConfig};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
-use dslab_faas::stats::GlobalStats;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
     pub base_config: RawConfig,
     pub coldstart_policies: Vec<String>,
-}
-
-fn print_results(stats: GlobalStats, name: &str) {
-    println!("describing {}", name);
-    println!("{} successful invocations", stats.invocation_stats.invocations);
-    println!(
-        "- cold start rate = {}",
-        (stats.invocation_stats.cold_starts as f64) / (stats.invocation_stats.invocations as f64)
-    );
-    println!("- wasted memory time = {}", stats.wasted_resource_time[&0].sum());
-    println!(
-        "- mean absolute total slowdown = {}",
-        stats.invocation_stats.abs_total_slowdown.mean()
-    );
-    println!(
-        "- mean relative total slowdown = {}",
-        stats.invocation_stats.rel_total_slowdown.mean()
-    );
 }
 
 fn policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
@@ -96,6 +77,6 @@ fn main() {
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s.global_stats, &policies[i]);
+        s.global_stats.overview(&policies[i]);
     }
 }
