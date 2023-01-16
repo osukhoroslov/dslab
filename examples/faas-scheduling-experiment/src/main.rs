@@ -57,6 +57,6 @@ fn main() {
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        s.global_stats.overview(&schedulers[i]);
+        s.global_stats.print_summary(&schedulers[i]);
     }
 }

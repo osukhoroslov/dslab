@@ -180,7 +180,7 @@ impl GlobalStats {
         }
     }
 
-    pub fn overview(&self, name: &str) {
+    pub fn print_summary(&self, name: &str) {
         println!("describing {}", name);
         println!("{} successful invocations", self.invocation_stats.invocations);
         println!(

@@ -50,6 +50,6 @@ fn main() {
         .collect();
     let mut stats = parallel_simulation(configs, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        s.global_stats.overview(&descr[i]);
+        s.global_stats.print_summary(&descr[i]);
     }
 }
