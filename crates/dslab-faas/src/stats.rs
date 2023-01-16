@@ -94,7 +94,8 @@ impl SampleMetric {
         &self.data
     }
 
-    /// Extends current metric with zeros to given number of samples. If given number of samples is less than current number of samples, does nothing.
+    /// Extends current metric with zeros to given number of samples.
+    /// If given number of samples is less than current number of samples, does nothing.
     pub fn extend_inplace(&mut self, len: usize) {
         while self.data.len() < len {
             self.data.push(0.);
