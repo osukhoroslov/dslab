@@ -13,7 +13,7 @@ use dslab_faas::simulation::ServerlessSimulation;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg()]
+    /// Path to a directory with OpenDC trace.
     trace: String,
 }
 

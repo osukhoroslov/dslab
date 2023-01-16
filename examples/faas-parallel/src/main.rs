@@ -25,7 +25,7 @@ fn print_results(stats: Stats, name: &str) {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg()]
+    /// Path to a directory with Azure Functions trace.
     trace: String,
 }
 
