@@ -13,7 +13,7 @@ use crate::host::Host;
 use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
-use crate::stats::Stats;
+use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::Trace;
 use crate::util::Counter;
 
@@ -85,8 +85,16 @@ impl ServerlessSimulation {
         self.invocation_registry.borrow().get_invocation(id).cloned()
     }
 
-    pub fn get_stats(&self) -> Stats {
+    pub fn stats(&self) -> Stats {
         self.stats.borrow().clone()
+    }
+
+    pub fn global_stats(&self) -> GlobalStats {
+        self.stats.borrow().global_stats.clone()
+    }
+
+    pub fn invocation_stats(&self) -> InvocationStats {
+        self.stats.borrow().global_stats.invocation_stats.clone()
     }
 
     pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {

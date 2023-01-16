@@ -5,6 +5,7 @@ use std::rc::Rc;
 use crate::container::{ContainerManager, ContainerStatus};
 use crate::function::FunctionRegistry;
 use crate::invocation::InvocationRequest;
+use crate::stats::Stats;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum InvocationStatus {
@@ -14,13 +15,36 @@ pub enum InvocationStatus {
     Rejected,
 }
 
+#[derive(Clone, Copy)]
+pub struct DequeuedInvocation {
+    pub request: InvocationRequest,
+    pub container_id: u64,
+    pub delay: Option<f64>,
+}
+
+impl DequeuedInvocation {
+    pub fn new(request: InvocationRequest, container_id: u64, delay: Option<f64>) -> Self {
+        Self {
+            request,
+            container_id,
+            delay,
+        }
+    }
+}
+
 /// Invoker handles invocations at host level.
 /// It chooses containers for execution, deploys new containers and manages invocation queue.
 pub trait Invoker {
-    /// try to invoke some of the queued functions
-    fn dequeue(&mut self, fr: Rc<RefCell<FunctionRegistry>>, cm: &mut ContainerManager, time: f64);
+    /// Try to invoke some of the queued functions.
+    fn dequeue(
+        &mut self,
+        fr: Rc<RefCell<FunctionRegistry>>,
+        cm: &mut ContainerManager,
+        stats: &mut Stats,
+        time: f64,
+    ) -> Vec<DequeuedInvocation>;
 
-    /// invoke or queue new invocation request
+    /// Invoke or queue new invocation request.
     fn invoke(
         &mut self,
         request: InvocationRequest,
@@ -28,6 +52,8 @@ pub trait Invoker {
         cm: &mut ContainerManager,
         time: f64,
     ) -> InvocationStatus;
+
+    fn queue_len(&self) -> usize;
 
     fn to_string(&self) -> String {
         "STUB INVOKER NAME".to_string()
@@ -81,18 +107,49 @@ impl BasicInvoker {
 }
 
 impl Invoker for BasicInvoker {
-    fn dequeue(&mut self, fr: Rc<RefCell<FunctionRegistry>>, cm: &mut ContainerManager, time: f64) {
+    fn dequeue(
+        &mut self,
+        fr: Rc<RefCell<FunctionRegistry>>,
+        cm: &mut ContainerManager,
+        stats: &mut Stats,
+        time: f64,
+    ) -> Vec<DequeuedInvocation> {
         if self.queue.is_empty() {
-            return;
+            return Vec::new();
         }
         let mut new_queue = Vec::new();
+        let mut dequeued = Vec::new();
         for item in self.queue.clone().drain(..) {
             let status = self.try_invoke(item, fr.clone(), cm, time);
-            if status == InvocationStatus::Rejected {
-                new_queue.push(item);
+            match status {
+                InvocationStatus::Warm(id) => {
+                    stats.update_queueing_time(&item, time);
+                    let container = cm.get_container_mut(id).unwrap();
+                    if container.status == ContainerStatus::Idle {
+                        let delta = time - container.last_change;
+                        stats.update_wasted_resources(delta, &container.resources);
+                    }
+                    container.last_change = time;
+                    container.status = ContainerStatus::Running;
+                    container.start_invocation(item.id);
+                    dequeued.push(DequeuedInvocation::new(item, id, None));
+                }
+                InvocationStatus::Cold((id, delay)) => {
+                    stats.update_queueing_time(&item, time);
+                    cm.reserve_container(id, item);
+                    stats.on_cold_start(&item, delay);
+                    dequeued.push(DequeuedInvocation::new(item, id, Some(delay)));
+                }
+                InvocationStatus::Rejected => {
+                    new_queue.push(item);
+                }
+                _ => {
+                    panic!("try_invoke should only return Warm, Cold or Rejected");
+                }
             }
         }
         self.queue = new_queue;
+        dequeued
     }
 
     fn invoke(
@@ -108,6 +165,10 @@ impl Invoker for BasicInvoker {
             return InvocationStatus::Queued;
         }
         status
+    }
+
+    fn queue_len(&self) -> usize {
+        self.queue.len()
     }
 
     fn to_string(&self) -> String {

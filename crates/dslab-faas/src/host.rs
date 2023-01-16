@@ -71,8 +71,16 @@ impl Host {
             .is_some()
     }
 
-    pub fn get_active_invocations(&self) -> u64 {
-        self.container_manager.get_active_invocations()
+    pub fn active_invocation_count(&self) -> u64 {
+        self.container_manager.active_invocation_count()
+    }
+
+    pub fn queued_invocation_count(&self) -> u64 {
+        self.invoker.queue_len() as u64
+    }
+
+    pub fn total_invocation_count(&self) -> u64 {
+        self.active_invocation_count() + self.queued_invocation_count()
     }
 
     pub fn get_total_resource(&self, id: usize) -> u64 {
@@ -96,15 +104,14 @@ impl Host {
             time,
         );
         let mut stats = self.stats.borrow_mut();
-        stats.invocations += 1;
+        stats.on_new_invocation(&request);
         match status {
             InvocationStatus::Warm(id) => {
                 drop(stats);
                 self.start_invocation(id, request, time);
             }
             InvocationStatus::Cold((id, delay)) => {
-                stats.cold_start_latency.add(delay);
-                stats.cold_starts += 1;
+                stats.on_cold_start(&request, delay);
                 drop(stats);
                 self.container_manager.reserve_container(id, request);
             }
@@ -214,6 +221,27 @@ impl Host {
             delay,
         );
     }
+
+    fn dequeue_requests(&mut self, time: f64) {
+        let mut reqs = self.invoker.dequeue(
+            self.function_registry.clone(),
+            &mut self.container_manager,
+            &mut self.stats.borrow_mut(),
+            time,
+        );
+        if reqs.is_empty() {
+            return;
+        }
+        for req in reqs.drain(..) {
+            if req.delay.is_none() {
+                let mut ir = self.invocation_registry.borrow_mut();
+                ir.new_invocation(req.request, self.id, req.container_id, time);
+                let invocation = ir.get_invocation_mut(req.request.id).unwrap();
+                let container = self.container_manager.get_container_mut(req.container_id).unwrap();
+                self.cpu.on_new_invocation(invocation, container, time);
+            }
+        }
+    }
 }
 
 impl EventHandler for Host {
@@ -221,16 +249,14 @@ impl EventHandler for Host {
         cast!(match event.data {
             ContainerStartEvent { id } => {
                 self.on_container_start(id, event.time);
-                self.invoker
-                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
+                self.dequeue_requests(event.time);
             }
             ContainerEndEvent { id, expected_count } => {
                 self.on_container_end(id, expected_count, event.time);
             }
             InvocationEndEvent { id } => {
                 self.on_invocation_end(id, event.time);
-                self.invoker
-                    .dequeue(self.function_registry.clone(), &mut self.container_manager, event.time);
+                self.dequeue_requests(event.time);
             }
         });
     }

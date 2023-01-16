@@ -10,35 +10,11 @@ use dslab_faas::config::{ConfigParamResolvers, RawConfig};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
-use dslab_faas::stats::Stats;
 
 #[derive(Serialize, Deserialize)]
 struct ExperimentConfig {
     pub base_config: RawConfig,
     pub schedulers: Vec<String>,
-}
-
-fn print_results(stats: Stats, name: &str) {
-    println!("describing {}", name);
-    println!("- {} successful invocations", stats.invocations);
-    println!(
-        "- cold start rate = {}",
-        (stats.cold_starts as f64) / (stats.invocations as f64)
-    );
-    println!(
-        "- wasted memory time = {}",
-        stats.wasted_resource_time.get(&0).unwrap().sum()
-    );
-    println!(
-        "- mean absolute execution slowdown = {}",
-        stats.abs_exec_slowdown.mean()
-    );
-    println!(
-        "- mean relative execution slowdown = {}",
-        stats.rel_exec_slowdown.mean()
-    );
-    println!("- mean absolute total slowdown = {}", stats.abs_total_slowdown.mean());
-    println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
 }
 
 #[derive(Parser, Debug)]
@@ -50,11 +26,11 @@ struct Args {
     #[arg(long)]
     config: String,
 }
-
 fn main() {
     let args = Args::parse();
     let trace_config = AzureTraceConfig {
-        invocations_limit: 200000,
+        invocations_limit: 100000,
+        force_fixed_memory: Some(256),
         ..Default::default()
     };
     let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
@@ -81,6 +57,6 @@ fn main() {
     };
     let mut stats = parallel_simulation_raw(configs, resolvers, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &schedulers[i]);
+        s.global_stats.print_summary(&schedulers[i]);
     }
 }

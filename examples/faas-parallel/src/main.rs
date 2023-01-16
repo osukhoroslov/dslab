@@ -5,22 +5,6 @@ use clap::Parser;
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
 use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
-use dslab_faas::stats::Stats;
-
-fn print_results(stats: Stats, name: &str) {
-    println!("describing {}", name);
-    println!("{} successful invocations", stats.invocations);
-    println!(
-        "- cold start rate = {}",
-        (stats.cold_starts as f64) / (stats.invocations as f64)
-    );
-    println!(
-        "- wasted memory time = {}",
-        stats.wasted_resource_time.get(&0).unwrap().sum()
-    );
-    println!("- mean absolute total slowdown = {}", stats.abs_total_slowdown.mean());
-    println!("- mean relative total slowdown = {}", stats.rel_total_slowdown.mean());
-}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -66,6 +50,6 @@ fn main() {
         .collect();
     let mut stats = parallel_simulation(configs, vec![trace], vec![1]);
     for (i, s) in stats.drain(..).enumerate() {
-        print_results(s, &descr[i]);
+        s.global_stats.print_summary(&descr[i]);
     }
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 pub mod coldstart;
 pub mod config;
 pub mod container;

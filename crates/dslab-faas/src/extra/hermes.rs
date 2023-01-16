@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::function::Application;
@@ -9,19 +10,23 @@ use crate::scheduler::Scheduler;
 /// Refer to https://arxiv.org/abs/2111.07226
 pub struct HermesScheduler {
     high_load_fallback: LeastLoadedScheduler,
-}
-
-impl Default for HermesScheduler {
-    fn default() -> Self {
-        Self {
-            high_load_fallback: LeastLoadedScheduler::new(true),
-        }
-    }
+    use_invocation_count: bool,
+    avoid_queueing: bool,
 }
 
 impl HermesScheduler {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(use_invocation_count: bool, avoid_queueing: bool) -> Self {
+        Self {
+            high_load_fallback: LeastLoadedScheduler::new(true, use_invocation_count, avoid_queueing),
+            use_invocation_count,
+            avoid_queueing,
+        }
+    }
+
+    pub fn from_options_map(options: &HashMap<String, String>) -> Self {
+        let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();
+        let avoid_queueing = options.get("avoid_queueing").unwrap().parse::<bool>().unwrap();
+        Self::new(use_invocation_count, avoid_queueing)
     }
 }
 
@@ -35,17 +40,22 @@ impl Scheduler for HermesScheduler {
         let mut priority = -1;
         for (i, host) in hosts.iter().enumerate() {
             let h = host.borrow();
-            if h.get_cpu_load() < (h.get_cpu_cores() as f64) {
-                let curr_priority;
-                if h.get_active_invocations() > 0 {
+            let val = if self.use_invocation_count {
+                (h.total_invocation_count() as f64) + 1e-9
+            } else {
+                h.get_cpu_load() + 1e-9
+            };
+            if val < (h.get_cpu_cores() as f64) {
+                let mut curr_priority = -1;
+                if h.total_invocation_count() > 0 {
                     if h.can_invoke(app, false) {
                         curr_priority = 3;
-                    } else {
+                    } else if !self.avoid_queueing || h.can_allocate(app.get_resources()) {
                         curr_priority = 2;
                     }
                 } else if h.can_invoke(app, false) {
                     curr_priority = 1;
-                } else {
+                } else if !self.avoid_queueing || h.can_allocate(app.get_resources()) {
                     curr_priority = 0;
                 }
                 if curr_priority > priority {
@@ -61,6 +71,9 @@ impl Scheduler for HermesScheduler {
     }
 
     fn to_string(&self) -> String {
-        "HermesScheduler".to_string()
+        format!(
+            "HermesScheduler[use_invocation_count={},avoid_queueing={}]",
+            self.use_invocation_count, self.avoid_queueing
+        )
     }
 }

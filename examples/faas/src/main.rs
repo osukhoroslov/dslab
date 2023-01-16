@@ -24,17 +24,23 @@ fn main() {
     sim.send_invocation_request(slow, 1.0, 0.0);
     sim.send_invocation_request(slow, 1.0, 3.1);
     sim.step_until_no_events();
-    let stats = sim.get_stats();
+    let stats = sim.global_stats();
     println!(
         "invocations = {}, cold starts = {}, mean cold start latency = {}",
-        stats.invocations,
-        stats.cold_starts,
-        stats.cold_start_latency.mean()
+        stats.invocation_stats.invocations,
+        stats.invocation_stats.cold_starts,
+        stats.invocation_stats.cold_start_latency.mean()
     );
     println!(
         "wasted memory time = {}",
         stats.wasted_resource_time.get(&0).unwrap().sum()
     );
-    println!("mean abs exec slowdown = {}", stats.abs_exec_slowdown.mean());
-    println!("mean abs total slowdown = {}", stats.abs_total_slowdown.mean());
+    println!(
+        "mean abs exec slowdown = {}",
+        stats.invocation_stats.abs_exec_slowdown.mean()
+    );
+    println!(
+        "mean abs total slowdown = {}",
+        stats.invocation_stats.abs_total_slowdown.mean()
+    );
 }

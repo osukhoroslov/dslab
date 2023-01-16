@@ -84,7 +84,7 @@ impl ContainerManager {
         self.active_invocations += 1;
     }
 
-    pub fn get_active_invocations(&self) -> u64 {
+    pub fn active_invocation_count(&self) -> u64 {
         self.active_invocations
     }
 

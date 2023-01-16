@@ -93,7 +93,7 @@ pub fn parallel_simulation_n_workers(
             let mut sim = ServerlessSimulation::new(Simulation::new(seed), config.into());
             sim.load_trace(trace.as_ref());
             sim.step_until_no_events();
-            tx.send((id, sim.get_stats())).unwrap();
+            tx.send((id, sim.stats())).unwrap();
         });
     }
     let mut results: Vec<_> = rx.iter().take(len).collect();
@@ -168,7 +168,7 @@ pub fn parallel_simulation_raw_n_workers(
             let mut sim = ServerlessSimulation::new(Simulation::new(seed), config);
             sim.load_trace(trace.as_ref());
             sim.step_until_no_events();
-            tx.send((id, sim.get_stats())).unwrap();
+            tx.send((id, sim.stats())).unwrap();
         });
     }
     let mut results: Vec<_> = rx.iter().take(len).collect();
