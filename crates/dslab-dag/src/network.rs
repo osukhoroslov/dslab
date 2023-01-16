@@ -19,7 +19,7 @@ pub struct NetworkConfig {
 }
 
 impl NetworkConfig {
-    /// Creates network model.
+    /// Creates network model based on stored parameters.
     pub fn make_network(&self) -> Option<Rc<RefCell<dyn NetworkModel>>> {
         if self.model == "ConstantBandwidthNetwork" {
             Some(Rc::new(RefCell::new(ConstantBandwidthNetwork::new(

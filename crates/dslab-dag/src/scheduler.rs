@@ -1,10 +1,10 @@
 //! DAG scheduling.
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use indexmap::map::IndexMap;
 use itertools::Itertools;
 
 use dslab_core::component::Id;
@@ -96,16 +96,17 @@ pub trait Scheduler {
 #[derive(Debug, Clone)]
 pub struct SchedulerParams {
     name: String,
-    params: BTreeMap<String, String>,
+    params: IndexMap<String, String>,
 }
 
 impl SchedulerParams {
+    /// Creates SchedulerParams from string, for example `Porfolio[algo=8,other_param=xyz]`.
     pub fn from_str(s: &str) -> Result<Self, String> {
         let open = s.find('[');
         if open.is_none() {
             return Ok(Self {
                 name: s.to_string(),
-                params: BTreeMap::new(),
+                params: IndexMap::new(),
             });
         }
 
@@ -114,7 +115,7 @@ impl SchedulerParams {
             return Err("Input string doesn't end with matching ]".to_string());
         }
 
-        let mut params = BTreeMap::new();
+        let mut params = IndexMap::new();
         for param in s[open + 1..s.len() - 1].split(',') {
             let pos = param.find('=').ok_or(format!("Can't find \"=\" in param {param}"))?;
             params.insert(param[..pos].to_string(), param[pos + 1..].to_string());
@@ -152,7 +153,7 @@ impl std::fmt::Display for SchedulerParams {
     }
 }
 
-/// Resolves params into one of default schedulers.
+/// Resolves params into one of supported schedulers.
 pub fn default_scheduler_resolver(params: &SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>> {
     match params.name.as_str() {
         "Simple" => Some(Rc::new(RefCell::new(SimpleScheduler::new()))),
