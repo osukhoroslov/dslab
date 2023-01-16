@@ -91,7 +91,11 @@ impl PyProcess {
             if t.1 < 0.0 {
                 ctx.cancel_timer(&t.0);
             } else {
-                ctx.set_timer_detailed(&t.0, t.1, t.2);
+                if t.2 {
+                    ctx.set_timer_once(&t.0, t.1);
+                } else {
+                    ctx.set_timer(&t.0, t.1);
+                }
             }
         }
     }

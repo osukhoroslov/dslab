@@ -6,7 +6,7 @@ use colored::*;
 use dslab_core::SimulationContext;
 
 use crate::message::Message;
-use crate::node::ProcessEvent;
+use crate::node::{ProcessEvent, TimerBehavior};
 use crate::util::t;
 
 pub struct Context {
@@ -53,16 +53,20 @@ impl Context {
         self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
-    pub fn set_timer_detailed(&mut self, name: &str, delay: f64, once: bool) {
+    pub fn set_timer(&mut self, name: &str, delay: f64) {
         self.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,
-            once,
+            behavior: TimerBehavior::OverrideExisting,
         });
     }
 
-    pub fn set_timer(&mut self, name: &str, delay: f64) {
-        self.set_timer_detailed(name, delay, false)
+    pub fn set_timer_once(&mut self, name: &str, delay: f64) {
+        self.actions.push(ProcessEvent::TimerSet {
+            name: name.to_string(),
+            delay,
+            behavior: TimerBehavior::SetOnce,
+        });
     }
 
     pub fn cancel_timer(&mut self, name: &str) {

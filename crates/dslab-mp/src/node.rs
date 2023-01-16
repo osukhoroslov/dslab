@@ -24,16 +24,41 @@ impl EventLogEntry {
         Self { time, event }
     }
 }
+#[derive(Clone, PartialEq)]
+pub enum TimerBehavior {
+    SetOnce,
+    OverrideExisting,
+}
 
 #[derive(Clone)]
 pub enum ProcessEvent {
-    MessageSent { msg: Message, src: String, dest: String },
-    MessageReceived { msg: Message, src: String, dest: String },
-    LocalMessageSent { msg: Message },
-    LocalMessageReceived { msg: Message },
-    TimerSet { name: String, delay: f64, once: bool },
-    TimerFired { name: String },
-    TimerCancelled { name: String },
+    MessageSent {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    MessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    LocalMessageSent {
+        msg: Message,
+    },
+    LocalMessageReceived {
+        msg: Message,
+    },
+    TimerSet {
+        name: String,
+        delay: f64,
+        behavior: TimerBehavior,
+    },
+    TimerFired {
+        name: String,
+    },
+    TimerCancelled {
+        name: String,
+    },
 }
 
 struct ProcessEntry {
@@ -171,8 +196,8 @@ impl Node {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, delay, once } => {
-                    if !once || !proc_entry.pending_timers.contains_key(&name) {
+                ProcessEvent::TimerSet { name, delay, behavior } => {
+                    if TimerBehavior::OverrideExisting == behavior || !proc_entry.pending_timers.contains_key(&name) {
                         let event = TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
