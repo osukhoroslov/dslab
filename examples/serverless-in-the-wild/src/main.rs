@@ -50,6 +50,9 @@ struct Args {
     /// Path to a simulation config in YAML format.
     #[arg(long)]
     config: String,
+    /// Plot output path (if needed).
+    #[arg(long)]
+    plot: Option<String>,
 }
 
 fn main() {
@@ -85,26 +88,30 @@ fn main() {
     let mut results = Vec::with_capacity(stats.len());
     for (i, s) in stats.drain(..).enumerate() {
         s.global_stats.print_summary(&policies[i]);
-        let mut apps: SampleMetric = Default::default();
-        for (_, app_stats) in s.app_stats.iter() {
-            apps.add((app_stats.cold_starts as f64) / (app_stats.invocations as f64) * 100.);
-        }
-        results.push((
-            apps.quantile(0.75),
-            s.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
-        ));
-    }
-    let mut pos = usize::MAX;
-    for (i, p) in policies.iter().enumerate() {
-        if p.contains("10-minute keepalive") {
-            pos = i;
-            break;
+        if args.plot.is_some() {
+            let mut apps: SampleMetric = Default::default();
+            for (_, app_stats) in s.app_stats.iter() {
+                apps.add((app_stats.cold_starts as f64) / (app_stats.invocations as f64) * 100.);
+            }
+            results.push((
+                apps.quantile(0.75),
+                s.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
+            ));
         }
     }
-    assert!(pos != usize::MAX);
-    let base = results[pos].1;
-    for p in results.iter_mut() {
-        p.1 = p.1 / base * 100.;
+    if let Some(plot) = args.plot {
+        let mut pos = usize::MAX;
+        for (i, p) in policies.iter().enumerate() {
+            if p.contains("10-minute keepalive") {
+                pos = i;
+                break;
+            }
+        }
+        assert!(pos != usize::MAX);
+        let base = results[pos].1;
+        for p in results.iter_mut() {
+            p.1 = p.1 / base * 100.;
+        }
+        plot_results(&plot, policies, results);
     }
-    plot_results("plot.png", policies, results);
 }
