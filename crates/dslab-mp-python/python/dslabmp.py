@@ -36,7 +36,7 @@ class Context(object):
 
     def send(self, msg: Message, to: str):
         """
-        Sends message to specified process
+        Sends a message to the specified process.
         """
         if not isinstance(to, str):
             raise TypeError('to argument has to be string, not {}'.format(type(to)))
@@ -44,13 +44,14 @@ class Context(object):
 
     def send_local(self, msg: Message):
         """
-        Sends a local message
+        Sends a _local_ message.
         """
         self._sent_local_messages.append((msg.type, json.dumps(msg._data)))
 
     def set_timer(self, timer_name: str, delay: float):
         """
-        Sets timer that will trigger on_timer callback after specified delay. Overrides previous timer with the same name.
+        Sets a timer that will trigger on_timer callback after the specified delay. 
+        If there is an active timer with this name, its delay is overridden.
         """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
@@ -62,7 +63,8 @@ class Context(object):
 
     def set_timer_once(self, timer_name: str, delay: float):
         """
-        Sets timer that will trigger on_timer callback after specified delay. Is ignored if there is an active timer with the same name.
+        Sets a timer that will trigger on_timer callback after the specified delay.
+        If there is an active timer with this name, this call is ignored.
         """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
@@ -74,7 +76,7 @@ class Context(object):
 
     def cancel_timer(self, timer_name: str):
         """
-        Cancels timer with specified name.
+        Cancels timer with the specified name.
         """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
@@ -82,7 +84,7 @@ class Context(object):
 
     def time(self) -> float:
         """
-        Returns current system time.
+        Returns the current system time.
         """ 
         return self._time
 
