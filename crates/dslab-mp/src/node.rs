@@ -33,13 +33,33 @@ pub enum TimerBehavior {
 
 #[derive(Clone)]
 pub enum ProcessEvent {
-    MessageSent { msg: Message, src: String, dest: String },
-    MessageReceived { msg: Message, src: String, dest: String },
-    LocalMessageSent { msg: Message },
-    LocalMessageReceived { msg: Message },
-    TimerSet { name: String, delay: f64, behavior: TimerBehavior },
-    TimerFired { name: String },
-    TimerCancelled { name: String },
+    MessageSent {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    MessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    LocalMessageSent {
+        msg: Message,
+    },
+    LocalMessageReceived {
+        msg: Message,
+    },
+    TimerSet {
+        name: String,
+        delay: f64,
+        behavior: TimerBehavior,
+    },
+    TimerFired {
+        name: String,
+    },
+    TimerCancelled {
+        name: String,
+    },
 }
 
 struct ProcessEntry {
