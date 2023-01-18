@@ -184,4 +184,8 @@ impl SimulationState {
     pub fn event_count(&self) -> u64 {
         self.event_count
     }
+
+    pub fn events(&self) -> BinaryHeap<Event> {
+        self.events.clone()
+    }
 }

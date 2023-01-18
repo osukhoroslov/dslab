@@ -62,13 +62,14 @@ pub enum ProcessEvent {
     },
 }
 
-struct ProcessEntry {
-    proc_impl: Box<dyn Process>,
-    event_log: Vec<EventLogEntry>,
-    local_outbox: Vec<Message>,
-    pending_timers: HashMap<String, u64>,
-    sent_message_count: u64,
-    received_message_count: u64,
+#[derive(Clone)]
+pub(crate) struct ProcessEntry {
+    pub(crate) proc_impl: Box<dyn Process>,
+    pub(crate) event_log: Vec<EventLogEntry>,
+    pub(crate) local_outbox: Vec<Message>,
+    pub(crate) pending_timers: HashMap<String, u64>,
+    pub(crate) sent_message_count: u64,
+    pub(crate) received_message_count: u64,
 }
 
 impl ProcessEntry {
@@ -241,6 +242,18 @@ impl Node {
                 _ => {}
             }
         }
+    }
+
+    pub(crate) fn processes(&self) -> HashMap<String, ProcessEntry> {
+        self.processes.clone()
+    }
+
+    pub fn id(&self) -> Id {
+        self.id
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
     }
 }
 
