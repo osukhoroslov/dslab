@@ -35,31 +35,60 @@ class Context(object):
         self._time = time
         self._sent_messages: List[Tuple[str, str, str]] = list()
         self._sent_local_messages: List[tuple[str, str]] = list()
-        self._timer_actions: List[Tuple[str, float]] = list()
+        self._timer_actions: List[Tuple[str, float, bool]] = list()
 
     def send(self, msg: Message, to: str):
+        """
+        Sends a message to the specified process.
+        """
         if not isinstance(to, str):
             raise TypeError('to argument has to be string, not {}'.format(type(to)))
         self._sent_messages.append((msg.type, json.dumps(msg._data), to))
 
     def send_local(self, msg: Message):
+        """
+        Sends a _local_ message.
+        """
         self._sent_local_messages.append((msg.type, json.dumps(msg._data)))
 
     def set_timer(self, timer_name: str, delay: float):
+        """
+        Sets a timer that will trigger on_timer callback after the specified delay. 
+        If there is an active timer with this name, its delay is overridden.
+        """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
         if not isinstance(delay, (int, float)):
             raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
-        self._timer_actions.append((timer_name, delay))
+        self._timer_actions.append((timer_name, delay, False))
 
-    def cancel_timer(self, timer_name: str):
+    def set_timer_once(self, timer_name: str, delay: float):
+        """
+        Sets a timer that will trigger on_timer callback after the specified delay.
+        If there is an active timer with this name, this call is ignored.
+        """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
-        self._timer_actions.append((timer_name, -1))
+        if not isinstance(delay, (int, float)):
+            raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
+        if delay < 0:
+            raise ValueError('delay argument has to be non-negative')
+        self._timer_actions.append((timer_name, delay, True))
+
+    def cancel_timer(self, timer_name: str):
+        """
+        Cancels timer with the specified name.
+        """
+        if not isinstance(timer_name, str):
+            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+        self._timer_actions.append((timer_name, -1, False))
 
     def time(self) -> float:
+        """
+        Returns the current system time.
+        """ 
         return self._time
 
 

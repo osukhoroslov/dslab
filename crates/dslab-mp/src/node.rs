@@ -25,15 +25,41 @@ impl EventLogEntry {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub enum TimerBehavior {
+    SetOnce,
+    OverrideExisting,
+}
+
 #[derive(Clone)]
 pub enum ProcessEvent {
-    MessageSent { msg: Message, src: String, dest: String },
-    MessageReceived { msg: Message, src: String, dest: String },
-    LocalMessageSent { msg: Message },
-    LocalMessageReceived { msg: Message },
-    TimerSet { name: String, delay: f64 },
-    TimerFired { name: String },
-    TimerCancelled { name: String },
+    MessageSent {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    MessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    LocalMessageSent {
+        msg: Message,
+    },
+    LocalMessageReceived {
+        msg: Message,
+    },
+    TimerSet {
+        name: String,
+        delay: f64,
+        behavior: TimerBehavior,
+    },
+    TimerFired {
+        name: String,
+    },
+    TimerCancelled {
+        name: String,
+    },
 }
 
 struct ProcessEntry {
@@ -175,19 +201,15 @@ impl Node {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, delay } => {
-                    assert!(
-                        !proc_entry.pending_timers.contains_key(&name),
-                        "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
-                        name,
-                        proc
-                    );
-                    let event = TimerFired {
-                        timer: name.clone(),
-                        proc: proc.clone(),
-                    };
-                    let event_id = self.ctx.borrow_mut().emit_self(event, delay);
-                    proc_entry.pending_timers.insert(name, event_id);
+                ProcessEvent::TimerSet { name, delay, behavior } => {
+                    if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
+                        let event = TimerFired {
+                            timer: name.clone(),
+                            proc: proc.clone(),
+                        };
+                        let event_id = self.ctx.borrow_mut().emit_self(event, delay);
+                        proc_entry.pending_timers.insert(name, event_id);
+                    }
                 }
                 ProcessEvent::TimerCancelled { name } => {
                     if let Some(event_id) = proc_entry.pending_timers.remove(&name) {
