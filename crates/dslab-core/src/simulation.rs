@@ -37,6 +37,10 @@ impl Simulation {
         }
     }
 
+    pub fn names(&self) -> Rc<RefCell<Vec<String>>> {
+        return self.names.clone();
+    }
+
     fn register(&mut self, name: &str) -> Id {
         if let Some(&id) = self.name_to_id.get(name) {
             return id;
@@ -587,5 +591,9 @@ impl Simulation {
         F: Fn(&Event) -> bool,
     {
         self.sim_state.borrow_mut().cancel_events(pred);
+    }
+
+    pub fn sim_state(&self) -> Rc<RefCell<SimulationState>> {
+        self.sim_state.clone()
     }
 }

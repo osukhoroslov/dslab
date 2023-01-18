@@ -11,6 +11,7 @@ use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
 /// A facade for accessing the simulation state and producing events from simulation components.
+#[derive(Clone)]
 pub struct SimulationContext {
     id: Id,
     name: String,
@@ -19,12 +20,7 @@ pub struct SimulationContext {
 }
 
 impl SimulationContext {
-    pub(crate) fn new(
-        id: Id,
-        name: &str,
-        sim_state: Rc<RefCell<SimulationState>>,
-        names: Rc<RefCell<Vec<String>>>,
-    ) -> Self {
+    pub fn new(id: Id, name: &str, sim_state: Rc<RefCell<SimulationState>>, names: Rc<RefCell<Vec<String>>>) -> Self {
         Self {
             id,
             name: name.to_owned(),
@@ -250,7 +246,7 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id, dest, 0.)
+        self.sim_state.borrow_mut().add_event(data, self.id.clone(), dest, 0.)
     }
 
     /// Creates new event for itself with specified payload and delay, returns event id.
