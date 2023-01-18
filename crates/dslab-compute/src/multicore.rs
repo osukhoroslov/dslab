@@ -10,7 +10,7 @@ use dslab_core::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Allocation {
     pub cores: u32,
     pub memory: u64,
@@ -45,7 +45,7 @@ impl CoresDependency {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
@@ -77,7 +77,7 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct CompRequest {
     pub flops: f64,
     pub memory: u64,
@@ -87,52 +87,52 @@ pub struct CompRequest {
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct CompStarted {
     pub id: u64,
     pub cores: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct AllocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct AllocationFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DeallocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DeallocationFailed {
     pub id: u64,
     pub reason: FailReason,

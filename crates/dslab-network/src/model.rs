@@ -24,37 +24,37 @@ pub struct Message {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct MessageSend {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct MessageReceive {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct MessageDelivery {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DataTransferRequest {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct StartDataTransfer {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DataReceive {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DataTransferCompleted {
     pub data: Data,
 }

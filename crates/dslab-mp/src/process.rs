@@ -1,7 +1,11 @@
+use dyn_clone::{clone_trait_object, DynClone};
+
 use crate::context::Context;
 use crate::message::Message;
 
-pub trait Process {
+pub trait ProcessState {}
+
+pub trait Process: DynClone {
     /// Called when a message is received.
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
 
@@ -17,10 +21,10 @@ pub trait Process {
     }
 
     /// Returns the string representation of process state.
-    fn state(&self) -> String {
-        "".to_string()
-    }
+    fn state(&self) -> Box<dyn ProcessState>;
 
     /// Restores the process state by its string representation.
-    fn set_state(&self, _data: &str) {}
+    fn set_state(&self, state: Box<dyn ProcessState>);
 }
+
+clone_trait_object!(Process);
