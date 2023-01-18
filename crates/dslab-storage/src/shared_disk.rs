@@ -27,10 +27,10 @@ struct DiskActivity {
     size: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct DiskReadActivityCompleted {}
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct DiskWriteActivityCompleted {}
 
 /// Representation of shared disk.

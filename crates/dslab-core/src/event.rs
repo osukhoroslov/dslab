@@ -1,5 +1,6 @@
 //! Simulation events.
 
+use dyn_clone::{clone_trait_object, DynClone};
 use std::cmp::Ordering;
 
 use downcast_rs::{impl_downcast, Downcast};
@@ -11,15 +12,18 @@ use crate::component::Id;
 pub type EventId = u64;
 
 /// Trait that should be implemented by event payload.
-pub trait EventData: Downcast + erased_serde::Serialize {}
+pub trait EventData: Downcast + erased_serde::Serialize + DynClone {}
 
 impl_downcast!(EventData);
 
 erased_serde::serialize_trait_object!(EventData);
 
-impl<T: Serialize + 'static> EventData for T {}
+clone_trait_object!(EventData);
+
+impl<T: Serialize + DynClone + 'static> EventData for T {}
 
 /// Representation of event.
+#[derive(Clone)]
 pub struct Event {
     /// Unique event identifier.
     ///

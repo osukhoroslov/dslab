@@ -40,6 +40,10 @@ impl System {
 
     // Nodes -----------------------------------------------------------------------------------------------------------
 
+    pub fn nodes(&self) -> &HashMap<String, Rc<RefCell<Node>>> {
+        &self.nodes
+    }
+
     pub fn add_node(&mut self, name: &str) {
         let node = Rc::new(RefCell::new(Node::new(
             name.to_string(),
@@ -130,6 +134,10 @@ impl System {
     }
 
     // Simulation ------------------------------------------------------------------------------------------------------
+
+    pub fn sim(&self) -> &Simulation {
+        return &self.sim;
+    }
 
     pub fn time(&self) -> f64 {
         self.sim.time()

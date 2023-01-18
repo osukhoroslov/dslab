@@ -11,6 +11,7 @@ use crate::events::MessageReceived;
 use crate::message::Message;
 use crate::util::t;
 
+#[derive(Clone)]
 pub struct Network {
     min_delay: f64,
     max_delay: f64,
@@ -52,6 +53,10 @@ impl Network {
 
     pub fn set_proc_location(&mut self, proc: String, node: String) {
         self.proc_locations.insert(proc, node);
+    }
+
+    pub fn proc_locations(&self) -> &HashMap<String, String> {
+        &self.proc_locations
     }
 
     pub fn set_delay(&mut self, delay: f64) {
@@ -149,11 +154,44 @@ impl Network {
         self.traffic
     }
 
+    pub fn dest_node_id(&self, dest: &str) -> Id {
+        let dest_node = self.proc_locations.get(dest).unwrap();
+        *self.node_ids.get(dest_node).unwrap()
+    }
+
+    pub fn check_if_dropped(&mut self, src: &String, dest: &String) -> bool {
+        self.ctx.rand() < self.drop_rate
+            || self.drop_outgoing.contains(src)
+            || self.drop_incoming.contains(dest)
+            || self.disabled_links.contains(&(src.clone(), dest.clone()))
+    }
+
+    pub fn corrupt_if_needed(&mut self, msg: Message) -> Message {
+        if self.ctx.rand() < self.corrupt_rate {
+            lazy_static! {
+                static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+            }
+            let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+            let corrupted_msg = Message::new(msg.tip, corrupted_data);
+            corrupted_msg
+        } else {
+            msg
+        }
+    }
+
+    pub fn duplicate_if_needed(&mut self) -> u32 {
+        if self.ctx.rand() >= self.dupl_rate {
+            1
+        } else {
+            (self.ctx.rand() * 2.).ceil() as u32 + 1
+        }
+    }
+
     pub fn send_message(&mut self, msg: Message, src: &str, dest: &str) {
         let msg_size = msg.size();
-        let src_node = self.proc_locations.get(src).unwrap();
-        let dest_node = self.proc_locations.get(dest).unwrap();
-        let dest_node_id = *self.node_ids.get(dest_node).unwrap();
+        let src_node = (*self.proc_locations.get(src).unwrap()).clone();
+        let dest_node = (*self.proc_locations.get(dest).unwrap()).clone();
+        let dest_node_id = *self.node_ids.get(&dest_node).unwrap();
         // local communication inside a node is reliable and fast
         if src_node == dest_node {
             let e = MessageReceived {
@@ -164,34 +202,17 @@ impl Network {
             self.ctx.emit(e, dest_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
-            if self.ctx.rand() >= self.drop_rate
-                && !self.drop_outgoing.contains(src_node)
-                && !self.drop_incoming.contains(dest_node)
-                && !self.disabled_links.contains(&(src_node.clone(), dest_node.clone()))
-            {
-                let msg = if self.ctx.rand() < self.corrupt_rate {
-                    lazy_static! {
-                        static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
-                    }
-                    let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                    Message::new(msg.tip, corrupted_data)
-                } else {
-                    msg
-                };
+            if !self.check_if_dropped(&src_node, &dest_node) {
+                let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
                     msg,
                     src: src.to_string(),
                     dest: dest.to_string(),
                 };
-                if self.ctx.rand() >= self.dupl_rate {
+                let dups = self.duplicate_if_needed();
+                for _i in 0..dups {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                    self.ctx.emit(e, dest_node_id, delay);
-                } else {
-                    let dups = (self.ctx.rand() * 2.).ceil() as u32 + 1;
-                    for _i in 0..dups {
-                        let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                        self.ctx.emit(e.clone(), dest_node_id, delay);
-                    }
+                    self.ctx.emit(e.clone(), dest_node_id, delay);
                 }
             } else {
                 t!(format!(
