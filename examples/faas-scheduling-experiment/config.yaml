@@ -4,9 +4,9 @@ base_config:
       resources:
         - name: mem
           quantity: 26624
-      invoker: BasicInvoker
+      invoker: FIFOInvoker
       count: 9
-  coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200,prewarm=0]
+  coldstart_policy: FixedTimeColdStartPolicy[keepalive=600,prewarm=0]
   idle_deployer: BasicDeployer
   disable_contention: false
 schedulers:

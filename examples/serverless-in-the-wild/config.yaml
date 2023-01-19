@@ -4,7 +4,7 @@ base_config:
       resources:
         - name: mem
           quantity: 4096
-      invoker: BasicInvoker
+      invoker: FIFOInvoker
       count: 18
   scheduler: BasicScheduler
   idle_deployer: BasicDeployer

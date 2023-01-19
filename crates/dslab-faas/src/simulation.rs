@@ -12,7 +12,7 @@ use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{Invocation, InvocationRegistry};
-use crate::invoker::{BasicInvoker, Invoker};
+use crate::invoker::{FIFOInvoker, Invoker};
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::{RequestData, Trace};
@@ -104,7 +104,7 @@ impl ServerlessSimulation {
 
     pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {
         let id = self.host_ctr.increment();
-        let real_invoker = invoker.unwrap_or_else(|| Box::new(BasicInvoker::new()));
+        let real_invoker = invoker.unwrap_or_else(|| Box::new(FIFOInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,

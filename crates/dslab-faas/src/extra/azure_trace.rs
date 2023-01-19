@@ -352,8 +352,8 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                     id.push('_');
                     id.push_str(&record[2]);
                     if let Some((begin, len)) = inv_map.get(&id).copied() {
-                        let mean = f64::from_str(&record[3]).unwrap();
-                        let median = f64::from_str(&record[10]).unwrap();
+                        let mean = f64::from_str(&record[3]).unwrap() * 0.001;
+                        let median = f64::from_str(&record[10]).unwrap() * 0.001;
                         let squared_dev = 2. * (mean / median).ln();
                         assert!(squared_dev >= 0.);
                         let dist = LogNormal::new(median.ln(), squared_dev.sqrt()).unwrap();

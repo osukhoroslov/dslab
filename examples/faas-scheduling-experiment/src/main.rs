@@ -7,7 +7,7 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
-use dslab_faas::extra::azure_trace::{process_azure_trace, AzureTraceConfig};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig, DurationGenerator};
 use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
 
@@ -29,7 +29,9 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let trace_config = AzureTraceConfig {
-        invocations_limit: 100000,
+        time_period: 60,
+        duration_generator: DurationGenerator::PrefittedLognormal,
+        app_preferences: vec![AppPreference::new(1, 0., 0.05), AppPreference::new(49, 0.45, 0.55)],
         force_fixed_memory: Some(256),
         ..Default::default()
     };

@@ -12,7 +12,7 @@ use dslab_core::simulation::Simulation;
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::config::{Config, ConfigParamResolvers, RawConfig};
 use crate::deployer::{BasicDeployer, IdleDeployer};
-use crate::invoker::{BasicInvoker, Invoker};
+use crate::invoker::{FIFOInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::simulation::ServerlessSimulation;
 use crate::stats::Stats;
@@ -27,7 +27,7 @@ pub struct ParallelHostConfig {
 impl Default for ParallelHostConfig {
     fn default() -> Self {
         Self {
-            invoker: Box::new(BasicInvoker::new()),
+            invoker: Box::new(FIFOInvoker::new()),
             resources: Vec::new(),
             cores: 1,
         }

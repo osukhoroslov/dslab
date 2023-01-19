@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::deployer::{default_idle_deployer_resolver, BasicDeployer, IdleDeployer};
-use crate::invoker::{default_invoker_resolver, BasicInvoker, Invoker};
+use crate::invoker::{default_invoker_resolver, FIFOInvoker, Invoker};
 use crate::parallel::{ParallelConfig, ParallelHostConfig};
 use crate::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
@@ -30,7 +30,7 @@ impl From<ParallelHostConfig> for HostConfig {
 impl Default for HostConfig {
     fn default() -> Self {
         Self {
-            invoker: Box::new(BasicInvoker::new()),
+            invoker: Box::new(FIFOInvoker::new()),
             resources: Vec::new(),
             cores: 1,
         }
@@ -175,7 +175,7 @@ impl Config {
                 let invoker = if !host.invoker.is_empty() {
                     invoker_resolver(&host.invoker)
                 } else {
-                    Box::new(BasicInvoker::new())
+                    Box::new(FIFOInvoker::new())
                 };
                 let curr = HostConfig {
                     invoker,

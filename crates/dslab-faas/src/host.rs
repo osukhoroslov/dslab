@@ -138,7 +138,7 @@ impl Host {
             if container.status == ContainerStatus::Idle {
                 let delta = time - container.last_change;
                 stats.update_wasted_resources(delta, &container.resources);
-                container.status = ContainerStatus::Deploying;
+                container.last_change = time;
             }
         }
     }
