@@ -1,122 +1,56 @@
-use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::fs;
 use std::io::Write;
-use std::rc::Rc;
-use std::time::Instant;
 
 use clap::Parser;
-
-use sugars::{rc, refcell};
-
+use env_logger::Builder;
+use indexmap::IndexMap;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-
-use env_logger::Builder;
 
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
-use dslab_dag::data_item::{DataTransferMode, DataTransferStrategy};
+use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::load_network;
 use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
-use dslab_dag::scheduler::Scheduler;
-use dslab_dag::schedulers::dls::DlsScheduler;
-use dslab_dag::schedulers::heft::HeftScheduler;
-use dslab_dag::schedulers::lookahead::LookaheadScheduler;
-use dslab_dag::schedulers::peft::PeftScheduler;
-use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
-use dslab_dag::schedulers::simple_with_data::SimpleDataScheduler;
+use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
 
-#[derive(Parser, Debug)]
-#[clap(about, long_about = None)]
-struct Args {
-    /// Run only one experiment
-    #[clap(long = "run-one")]
-    run_one: Option<String>,
-
-    /// Save trace_log to a file
-    #[clap(long = "trace-log")]
-    trace_log: bool,
-
-    /// Scheduler [heft, simple, simple-with-data, lookahead, dls]
-    #[clap(long, default_value = "heft")]
+struct RunParams {
     scheduler: String,
-
-    /// Data transfer mode (via-master-node, direct or manual)
-    #[clap(long = "data-transfer-mode", default_value = "via-master-node")]
-    data_transfer_mode: String,
+    data_transfer_mode: DataTransferMode,
+    trace_path: Option<String>,
 }
 
-fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
-    let enable_trace_log = args.trace_log;
-    let scheduler: Rc<RefCell<dyn Scheduler>> = match args.scheduler.as_str() {
-        "simple" => rc!(refcell!(SimpleScheduler::new())),
-        "simple-with-data" => rc!(refcell!(SimpleDataScheduler::new())),
-        "heft" => {
-            rc!(refcell!(
-                HeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
-            ))
-        }
-        "peft" => {
-            rc!(refcell!(
-                PeftScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
-            ))
-        }
-        "lookahead" => {
-            rc!(refcell!(
-                LookaheadScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
-            ))
-        }
-        "dls" => {
-            rc!(refcell!(
-                DlsScheduler::new().with_data_transfer_strategy(DataTransferStrategy::Eager)
-            ))
-        }
-        _ => {
-            eprintln!("Wrong scheduler");
-            std::process::exit(1);
-        }
-    };
+fn run_simulation(dag: DAG, resources_file: &str, network_file: &str, params: RunParams) -> f64 {
+    let scheduler_params = SchedulerParams::from_str(&params.scheduler).expect("Can't parse scheduler params");
+    let scheduler = default_scheduler_resolver(&scheduler_params).expect("Cannot create scheduler");
 
-    let data_transfer_mode = match args.data_transfer_mode.as_str() {
-        "via-master-node" => DataTransferMode::ViaMasterNode,
-        "direct" => DataTransferMode::Direct,
-        "manual" => DataTransferMode::Manual,
-        _ => {
-            eprintln!("Wrong data-transfer-mode");
-            std::process::exit(1);
-        }
-    };
     let mut sim = DagSimulation::new(
         123,
         read_resources(resources_file),
         load_network(network_file),
         scheduler,
-        Config { data_transfer_mode },
+        Config {
+            data_transfer_mode: params.data_transfer_mode,
+        },
     );
 
     let runner = sim.init(dag);
-    runner.borrow_mut().enable_trace_log(enable_trace_log);
-
-    let t = Instant::now();
-    sim.step_until_no_events();
-    println!("Makespan: {:.2}", sim.time());
-    println!(
-        "Processed {} events in {:.2?} ({:.0} events/sec)",
-        sim.event_count(),
-        t.elapsed(),
-        sim.event_count() as f64 / t.elapsed().as_secs_f64()
-    );
-    runner.borrow().validate_completed();
-    if enable_trace_log {
-        runner.borrow().trace_log().save_to_file(trace_file).unwrap();
+    if params.trace_path.is_some() {
+        runner.borrow_mut().enable_trace_log(true);
     }
 
-    println!();
+    sim.step_until_no_events();
+    runner.borrow().validate_completed();
+    if let Some(trace_path) = params.trace_path {
+        runner.borrow().trace_log().save_to_file(&trace_path).unwrap();
+    }
+
+    sim.time()
 }
 
-fn map_reduce(args: &Args) {
+fn map_reduce(params: RunParams) -> f64 {
     let mut dag = DAG::new();
 
     let data_part1 = dag.add_data_item("part1", 128);
@@ -157,46 +91,37 @@ fn map_reduce(args: &Args) {
     dag.add_task_output(reduce3, "result3", 32);
     dag.add_task_output(reduce4, "result4", 32);
 
-    run_simulation(
-        args,
-        dag,
-        "resources/cluster1.yaml",
-        "networks/network1.yaml",
-        "traces/trace_map_reduce.json",
-    );
+    run_simulation(dag, "resources/cluster1.yaml", "networks/network1.yaml", params)
 }
 
-fn epigenomics(args: &Args) {
+fn epigenomics(params: RunParams) -> f64 {
     run_simulation(
-        args,
         DAG::from_dax("dags/Epigenomics_100.xml", 1000.),
         "resources/cluster2.yaml",
         "networks/network2.yaml",
-        "traces/trace_epigenomics.json",
-    );
+        params,
+    )
 }
 
-fn montage(args: &Args) {
+fn montage(params: RunParams) -> f64 {
     run_simulation(
-        args,
         DAG::from_dot("dags/Montage.dot"),
         "resources/cluster2.yaml",
         "networks/network3.yaml",
-        "traces/trace_montage.json",
-    );
+        params,
+    )
 }
 
-fn diamond(args: &Args) {
+fn diamond(params: RunParams) -> f64 {
     run_simulation(
-        args,
         DAG::from_yaml("dags/diamond.yaml"),
         "resources/cluster3.yaml",
         "networks/network4.yaml",
-        "traces/trace_diamond.json",
-    );
+        params,
+    )
 }
 
-fn reuse_files(args: &Args) {
+fn reuse_files(params: RunParams) -> f64 {
     let mut dag = DAG::new();
 
     let input = dag.add_data_item("input", 128);
@@ -224,13 +149,27 @@ fn reuse_files(args: &Args) {
         dag.add_task_output(task, &format!("b{}_out", i), 10);
     }
 
-    run_simulation(
-        args,
-        dag,
-        "resources/cluster1.yaml",
-        "networks/network1.yaml",
-        "traces/trace_reuse_files.json",
-    );
+    run_simulation(dag, "resources/cluster1.yaml", "networks/network1.yaml", params)
+}
+
+#[derive(Parser, Debug)]
+#[clap(about, long_about = None)]
+struct Args {
+    /// Run a single experiment (e.g. "Montage")
+    #[clap(short, long)]
+    experiment: Option<String>,
+
+    /// Run a single scheduler (Simple, HEFT, Lookahead, etc.)
+    #[clap(short, long)]
+    scheduler: Option<String>,
+
+    /// Data transfer mode (via-master-node, direct or manual)
+    #[clap(short = 'm', long = "mode", default_value = "via-master-node")]
+    data_transfer_mode: String,
+
+    /// Save trace logs to files in 'traces' dir
+    #[clap(short = 't', long = "traces")]
+    save_traces: bool,
 }
 
 fn main() {
@@ -239,22 +178,47 @@ fn main() {
         .init();
 
     let args = Args::parse();
+    let data_transfer_mode = match args.data_transfer_mode.as_str() {
+        "via-master-node" => DataTransferMode::ViaMasterNode,
+        "direct" => DataTransferMode::Direct,
+        "manual" => DataTransferMode::Manual,
+        _ => panic!("Wrong data-transfer-mode"),
+    };
+    if args.save_traces {
+        fs::create_dir_all("traces").expect("Failed to create traces dir");
+    }
 
-    let mut experiments: BTreeMap<String, fn(&Args)> = BTreeMap::new();
-    experiments.insert("map_reduce".to_string(), map_reduce);
-    experiments.insert("epigenomics".to_string(), epigenomics); // dax
-    experiments.insert("montage".to_string(), montage); // dot
-    experiments.insert("diamond".to_string(), diamond); // yaml
-    experiments.insert("reuse_files".to_string(), reuse_files);
+    let mut experiment_fns: IndexMap<&str, fn(RunParams) -> f64> = IndexMap::new();
+    experiment_fns.insert("Diamond", diamond);
+    experiment_fns.insert("MapReduce", map_reduce);
+    experiment_fns.insert("Montage", montage);
+    experiment_fns.insert("Epigenomics", epigenomics);
+    experiment_fns.insert("ReuseFiles", reuse_files);
 
-    if args.run_one.is_some() {
-        let name = args.run_one.as_ref().unwrap();
-        println!("Running {}", name);
-        experiments.get(name).unwrap()(&args);
-    } else {
-        for (name, experiment) in experiments.into_iter() {
-            println!("Running {}", name);
-            experiment(&args);
+    let experiments = match args.experiment {
+        Some(ref experiment) => vec![experiment.as_str()],
+        None => experiment_fns.keys().cloned().collect(),
+    };
+
+    let schedulers = match args.scheduler {
+        Some(ref scheduler) => vec![scheduler.as_str()],
+        None => vec!["Simple", "HEFT", "Lookahead", "DLS", "PEFT"],
+    };
+
+    for experiment in experiments.iter() {
+        let experiment_fn = experiment_fns.get(experiment).unwrap();
+        println!("{} ------------------------------------------\n", experiment);
+        for scheduler in schedulers.iter() {
+            let params = RunParams {
+                scheduler: scheduler.to_string(),
+                data_transfer_mode,
+                trace_path: args
+                    .save_traces
+                    .then(|| format!("traces/{}_{}_{}.json", experiment, scheduler, args.data_transfer_mode)),
+            };
+            let makespan = experiment_fn(params);
+            println!("Scheduler: {}", scheduler);
+            println!("Makespan: {:.2}\n", makespan);
         }
     }
 }
