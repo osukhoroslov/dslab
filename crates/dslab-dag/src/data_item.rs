@@ -67,7 +67,13 @@ impl DataTransferMode {
             DataTransferMode::ViaMasterNode => {
                 1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
             }
-            DataTransferMode::Direct => 1. / network.bandwidth(src, dst),
+            DataTransferMode::Direct => {
+                if src == dst {
+                    0.
+                } else {
+                    1. / network.bandwidth(src, dst)
+                }
+            }
             DataTransferMode::Manual => 0.,
         }
     }

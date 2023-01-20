@@ -159,7 +159,7 @@ fn test_2() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 30.5806369781494140625);
+    assert_eq!(result, 30.71847152709961);
 }
 
 #[test]
