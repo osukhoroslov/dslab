@@ -9,9 +9,11 @@ dslab-core = { path = "../../crates/dslab-core" }
 dslab-compute = { path = "../../crates/dslab-compute" }
 dslab-network = { path = "../../crates/dslab-network" }
 dslab-dag = { path = "../../crates/dslab-dag" }
-sugars = "3.0.0"
+clap = { version = "3.0.14", features = ["cargo", "derive"] }
+env_logger = "0.9.0"
+indexmap = "1.9.2"
+log = "0.4"
 rand = "0.8.4"
 rand_pcg = "0.3.1"
-env_logger = "0.9.0"
-log = "0.4"
-clap = { version = "3.0.14", features = ["cargo", "derive"] }
+sugars = "3.0.0"
+
