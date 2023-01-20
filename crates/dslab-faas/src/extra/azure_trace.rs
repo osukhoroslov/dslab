@@ -1,5 +1,6 @@
 /// This file contains functions responsible for parsing Azure functions trace.
 use std::collections::{BTreeSet, HashMap};
+use std::iter::repeat_with;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -142,12 +143,22 @@ pub enum DurationGenerator {
 pub struct AzureTraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,
+    /// This option controls the method used to generate execution durations.
     pub duration_generator: DurationGenerator,
+    /// This option controls which apps to use for trace generation.
     pub app_preferences: Vec<AppPreference>,
+    /// This option sets concurrency level for all apps in the trace.
     pub concurrency_level: usize,
+    /// This option sets the seed used to initialize random generator.
     pub random_seed: u64,
+    /// This options sets name for the memory resource.
     pub memory_name: String,
+    /// This option forces trace generator to use given amount of memory for all apps.
     pub force_fixed_memory: Option<u64>,
+    /// If `rps` is not None, trace generator attempts to scale trace to the given number of requests
+    /// per second by either removing random requests or duplicating random requests (yes, that
+    /// doesn't sound very solid).
+    pub rps: Option<f64>,
 }
 
 impl Default for AzureTraceConfig {
@@ -160,6 +171,7 @@ impl Default for AzureTraceConfig {
             random_seed: 1,
             memory_name: "mem".to_string(),
             force_fixed_memory: None,
+            rps: None,
         }
     }
 }
@@ -383,6 +395,18 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             app_id: *app_indices.get(&app).unwrap(),
         };
     }
+
+    if let Some(rps) = config.rps {
+        let need = (rps * (config.time_period as f64) * 60.).round() as usize;
+        if need < invocations.len() {
+            invocations.shuffle(&mut gen);
+            invocations.truncate(need);
+        } else if need > invocations.len() {
+            let mut tmp = repeat_with(|| invocations.choose(&mut gen).copied().unwrap()).take(need - invocations.len()).collect::<Vec<_>>();
+            invocations.extend(tmp.drain(..));
+        }
+    }
+
     invocations.sort_by(|x: &(usize, f64, f64), y: &(usize, f64, f64)| x.1.total_cmp(&y.1));
     let mut time_range = 0.0;
     for req in invocations.iter() {
