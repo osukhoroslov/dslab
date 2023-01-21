@@ -45,6 +45,10 @@ impl SimulationState {
         self.rand.gen_range(0.0..1.0)
     }
 
+    pub fn clone_rand(&self) -> Pcg64 {
+        self.rand.clone()
+    }
+
     pub fn gen_range<T, R>(&mut self, range: R) -> T
     where
         T: SampleUniform,
