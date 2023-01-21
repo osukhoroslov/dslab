@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use crate::mc::network::McNetwork;
 
 use crate::mc::strategy::Strategy;
 
@@ -28,6 +29,19 @@ impl ModelChecker {
 
         let event_count = Rc::new(RefCell::new(sim_state.borrow().event_count().clone()));
 
+        let net = sys.network().borrow();
+        let mc_net = Rc::new(RefCell::new(McNetwork::new(
+            sim_state.borrow().clone_rand(),
+            net.corrupt_rate(),
+            net.dupl_rate(),
+            net.drop_rate(),
+            net.get_drop_incoming().clone(),
+            net.get_drop_outgoing().clone(),
+            net.disabled_links().clone(),
+            net.proc_locations().clone(),
+            net.node_ids().clone(),
+        )));
+
         let mut nodes: HashMap<String, Rc<RefCell<McNode>>> = HashMap::new();
         for (name, node_cell) in sys.nodes() {
             let node = node_cell.borrow();
@@ -37,16 +51,15 @@ impl ModelChecker {
                     node.id(),
                     node.name(),
                     node.processes(),
-                    sys.network().clone(),
                     events.clone(),
                     event_count.clone(),
+                    mc_net.clone(),
                 ))),
             );
         }
 
         Self {
             system: Rc::new(RefCell::new(McSystem::new(
-                sys.network().clone(),
                 nodes,
                 proc_names,
                 events,
