@@ -1,7 +1,8 @@
 /// This file contains functions responsible for parsing Azure functions trace.
+use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
-use std::iter::repeat_with;
 use std::fs::read_dir;
+use std::iter::repeat_with;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -283,7 +284,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                 pref.count, pref.left, pref.right
             );
         }
-        apps.extend((&all_apps[l..=r]).choose_multiple(&mut gen, pref.count).cloned());
+        apps.extend(all_apps[l..=r].choose_multiple(&mut gen, pref.count).cloned());
     }
     let mut fn_id = IndexMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
@@ -398,12 +399,18 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
 
     if let Some(rps) = config.rps {
         let need = (rps * (config.time_period as f64) * 60.).round() as usize;
-        if need < invocations.len() {
-            invocations.shuffle(&mut gen);
-            invocations.truncate(need);
-        } else if need > invocations.len() {
-            let mut tmp = repeat_with(|| invocations.choose(&mut gen).copied().unwrap()).take(need - invocations.len()).collect::<Vec<_>>();
-            invocations.extend(tmp.drain(..));
+        match need.cmp(&invocations.len()) {
+            Ordering::Less => {
+                invocations.shuffle(&mut gen);
+                invocations.truncate(need);
+            }
+            Ordering::Greater => {
+                let mut tmp = repeat_with(|| invocations.choose(&mut gen).copied().unwrap())
+                    .take(need - invocations.len())
+                    .collect::<Vec<_>>();
+                invocations.append(&mut tmp);
+            }
+            _ => {}
         }
     }
 

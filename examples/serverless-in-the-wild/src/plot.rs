@@ -47,8 +47,8 @@ pub(crate) fn plot_results(plot: &str, mut labels: Vec<String>, mut points: Vec<
         }
     }
     ctx.configure_series_labels()
-        .border_style(&BLACK)
-        .background_style(&WHITE.mix(0.8))
+        .border_style(BLACK)
+        .background_style(WHITE.mix(0.8))
         .draw()
         .unwrap();
 }
