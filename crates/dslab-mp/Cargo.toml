@@ -13,3 +13,4 @@ rand = "0.8.4"
 regex = "1.6.0"
 serde = { version = "1.0", features = ["derive"] }
 dyn-clone = "1.0"
+downcast-rs = "1.2.0"
