@@ -226,4 +226,32 @@ impl Network {
             self.traffic += msg_size as u64;
         }
     }
+
+    pub fn corrupt_rate(&self) -> f64 {
+        self.corrupt_rate
+    }
+
+    pub fn node_ids(&self) -> &HashMap<String, Id> {
+        &self.node_ids
+    }
+
+    pub fn dupl_rate(&self) -> f64 {
+        self.dupl_rate
+    }
+
+    pub fn drop_rate(&self) -> f64 {
+        self.drop_rate
+    }
+
+    pub fn get_drop_outgoing(&self) -> &HashSet<String> {
+        &self.drop_outgoing
+    }
+
+    pub fn get_drop_incoming(&self) -> &HashSet<String> {
+        &self.drop_incoming
+    }
+
+    pub fn disabled_links(&self) -> &HashSet<(String, String)> {
+        &self.disabled_links
+    }
 }
