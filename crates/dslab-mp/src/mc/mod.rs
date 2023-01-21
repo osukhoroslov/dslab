@@ -1,5 +1,6 @@
 pub mod model_checker;
-pub mod node;
+mod node;
 pub mod strategies;
 pub mod strategy;
-pub mod system;
+mod system;
+mod network;

@@ -7,6 +7,7 @@ use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 use crate::context::Context;
 use crate::events::{MessageReceived, TimerFired};
+use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::network::Network;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent};
@@ -20,9 +21,9 @@ pub struct McNode {
     id: Id,
     name: String,
     processes: HashMap<String, ProcessEntry>,
-    net: Rc<RefCell<Network>>,
     sys_events: Rc<RefCell<Vec<Event>>>,
     sys_event_count: Rc<RefCell<u64>>,
+    net: Rc<RefCell<McNetwork>>,
 }
 
 impl McNode {
@@ -30,17 +31,17 @@ impl McNode {
         id: Id,
         name: String,
         processes: HashMap<String, ProcessEntry>,
-        net: Rc<RefCell<Network>>,
         sys_events: Rc<RefCell<Vec<Event>>>,
         sys_event_count: Rc<RefCell<u64>>,
+        net: Rc<RefCell<McNetwork>>,
     ) -> Self {
         Self {
             id,
             name,
             processes,
-            net,
             sys_events,
             sys_event_count,
+            net,
         }
     }
 
