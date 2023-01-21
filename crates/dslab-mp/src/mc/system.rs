@@ -22,7 +22,6 @@ impl McState {
 }
 
 pub struct McSystem {
-    net: Rc<RefCell<Network>>,
     nodes: HashMap<String, Rc<RefCell<McNode>>>,
     proc_names: Rc<RefCell<Vec<String>>>,
     pub(crate) events: Rc<RefCell<Vec<Event>>>,
@@ -31,14 +30,12 @@ pub struct McSystem {
 
 impl McSystem {
     pub fn new(
-        net: Rc<RefCell<Network>>,
         nodes: HashMap<String, Rc<RefCell<McNode>>>,
         proc_names: Rc<RefCell<Vec<String>>>,
         events: Rc<RefCell<Vec<Event>>>,
         event_count: Rc<RefCell<u64>>,
     ) -> Self {
         Self {
-            net,
             nodes,
             proc_names,
             events,
