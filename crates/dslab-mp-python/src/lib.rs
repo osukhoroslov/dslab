@@ -62,7 +62,7 @@ impl PyProcessFactory {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyProcessState {
     str: String,
 }
@@ -187,7 +187,7 @@ impl Process for PyProcess {
     }
 
     fn set_state(&self, state: Box<dyn ProcessState>) {
-        let data = (*state.as_any().downcast_ref::<PyProcessState>().unwrap()).clone();
+        let data = *state.downcast::<PyProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
                 .call_method1(py, "set_state", (data.str,))
