@@ -1,9 +1,13 @@
+use std::fmt::Debug;
+use downcast_rs::{Downcast, impl_downcast};
 use dyn_clone::{clone_trait_object, DynClone};
 
 use crate::context::Context;
 use crate::message::Message;
 
-pub trait ProcessState {}
+pub trait ProcessState: Downcast + Debug {}
+
+impl_downcast!(ProcessState);
 
 pub trait Process: DynClone {
     /// Called when a message is received.
