@@ -5,7 +5,6 @@ use std::rc::Rc;
 use dslab_core::{Event, EventHandler, Id};
 
 use crate::mc::node::{McNode, McNodeState};
-use crate::network::Network;
 
 pub struct McState {
     pub node_states: HashMap<String, McNodeState>,
@@ -25,7 +24,6 @@ pub struct McSystem {
     nodes: HashMap<String, Rc<RefCell<McNode>>>,
     proc_names: Rc<RefCell<Vec<String>>>,
     pub(crate) events: Rc<RefCell<Vec<Event>>>,
-    pub(crate) event_count: Rc<RefCell<u64>>,
 }
 
 impl McSystem {
@@ -33,13 +31,11 @@ impl McSystem {
         nodes: HashMap<String, Rc<RefCell<McNode>>>,
         proc_names: Rc<RefCell<Vec<String>>>,
         events: Rc<RefCell<Vec<Event>>>,
-        event_count: Rc<RefCell<u64>>,
     ) -> Self {
         Self {
             nodes,
             proc_names,
             events,
-            event_count,
         }
     }
 
