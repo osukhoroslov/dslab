@@ -100,11 +100,11 @@ impl ResourcePoolState {
         if !self.hosts.contains_key(&host_id) {
             return AllocationVerdict::HostNotFound;
         }
-        if self.hosts[&host_id].cpu_available < alloc.cpu_usage {
-            return AllocationVerdict::NotEnoughCPU;
-        }
         if self.hosts[&host_id].memory_available < alloc.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
+        }
+        if self.hosts[&host_id].cpu_available < alloc.cpu_usage {
+            return AllocationVerdict::NotEnoughCPU;
         }
         AllocationVerdict::Success
     }

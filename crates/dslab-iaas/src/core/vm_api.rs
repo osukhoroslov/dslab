@@ -81,8 +81,8 @@ impl VmAPI {
     }
 
     // Returns the ID of host that runs the specified VM.
-    pub fn find_host_by_vm(&self, vm_id: u32) -> u32 {
-        self.vm_location[&vm_id]
+    pub fn find_host_by_vm(&self, vm_id: u32) -> Option<u32> {
+        self.vm_location.get(&vm_id).copied()
     }
 
     /// Generates new VM ID if user did not pass any.

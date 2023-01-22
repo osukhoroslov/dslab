@@ -59,7 +59,10 @@ fn check_placements(algorithm: VMPlacementAlgorithm, batch: bool, expected_hosts
     assert_eq!(cur_time, 2.);
 
     for i in 0..vm_ids.len() {
-        assert_eq!(cloud_sim.vm_location(vm_ids[i]), cloud_sim.lookup_id(expected_hosts[i]));
+        assert_eq!(
+            cloud_sim.vm_location(vm_ids[i]),
+            Some(cloud_sim.lookup_id(expected_hosts[i]))
+        );
     }
 }
 
