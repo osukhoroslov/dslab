@@ -27,8 +27,6 @@ impl ModelChecker {
             events.borrow_mut().push(event);
         }
 
-        let event_count = Rc::new(RefCell::new(sim_state.borrow().event_count().clone()));
-
         let net = sys.network().borrow();
         let mc_net = Rc::new(RefCell::new(McNetwork::new(
             sim_state.borrow().clone_rand(),
@@ -40,6 +38,8 @@ impl ModelChecker {
             net.disabled_links().clone(),
             net.proc_locations().clone(),
             net.node_ids().clone(),
+            events.clone(),
+            sim_state.borrow().event_count(),
         )));
 
         let mut nodes: HashMap<String, Rc<RefCell<McNode>>> = HashMap::new();
@@ -51,8 +51,6 @@ impl ModelChecker {
                     node.id(),
                     node.name(),
                     node.processes(),
-                    events.clone(),
-                    event_count.clone(),
                     mc_net.clone(),
                 ))),
             );
@@ -63,7 +61,6 @@ impl ModelChecker {
                 nodes,
                 proc_names,
                 events,
-                event_count,
             ))),
             strategy,
         }

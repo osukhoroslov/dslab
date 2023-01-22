@@ -9,7 +9,6 @@ use crate::context::Context;
 use crate::events::{MessageReceived, TimerFired};
 use crate::mc::network::McNetwork;
 use crate::message::Message;
-use crate::network::Network;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent};
 use crate::process::ProcessState;
 
@@ -21,8 +20,6 @@ pub struct McNode {
     id: Id,
     name: String,
     processes: HashMap<String, ProcessEntry>,
-    sys_events: Rc<RefCell<Vec<Event>>>,
-    sys_event_count: Rc<RefCell<u64>>,
     net: Rc<RefCell<McNetwork>>,
 }
 
@@ -31,16 +28,12 @@ impl McNode {
         id: Id,
         name: String,
         processes: HashMap<String, ProcessEntry>,
-        sys_events: Rc<RefCell<Vec<Event>>>,
-        sys_event_count: Rc<RefCell<u64>>,
         net: Rc<RefCell<McNetwork>>,
     ) -> Self {
         Self {
             id,
             name,
             processes,
-            sys_events,
-            sys_event_count,
             net,
         }
     }
@@ -91,31 +84,9 @@ impl McNode {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src, dest } => {
-                    let mut net = self.net.borrow_mut();
-                    let msg = net.corrupt_if_needed(msg);
-                    let data = MessageReceived {
-                        msg,
-                        src: src.clone(),
-                        dest: dest.clone(),
-                    };
-                    let event = Event {
-                        id: self.sys_event_count.borrow().clone(),
-                        time: 0.0,
-                        src: self.id,
-                        dest: net.dest_node_id(&dest),
-                        data: Box::new(data),
-                    };
-                    let proc_locations = net.proc_locations();
-                    if event.src != event.dest
-                        && self.net.borrow_mut().check_if_dropped(proc_locations.get(&src).unwrap(), proc_locations.get(&dest).unwrap())
-                    {
+                    if !self.net.borrow_mut().send_message(msg, src, dest, self.id) {
                         return;
                     }
-                    let dups = net.duplicate_if_needed();
-                    for _i in 0..dups {
-                        self.sys_events.borrow_mut().push(event.clone());
-                    }
-                    *self.sys_event_count.borrow_mut() += 1;
                     proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
@@ -128,22 +99,8 @@ impl McNode {
                         name,
                         proc
                     );
-                    let data = TimerFired {
-                        timer: name.clone(),
-                        proc: proc.clone(),
-                    };
-                    let event = Event {
-                        id: self.sys_event_count.borrow().clone(),
-                        time: 0.0,
-                        src: self.id,
-                        dest: self.id,
-                        data: Box::new(data),
-                    };
-                    self.sys_events.borrow_mut().push(event);
-                    proc_entry
-                        .pending_timers
-                        .insert(name, self.sys_event_count.borrow().clone());
-                    *self.sys_event_count.borrow_mut() += 1;
+                    let event_id = self.net.borrow_mut().set_timer(name.clone(), proc.clone(), self.id);
+                    proc_entry.pending_timers.insert(name, event_id);
                 }
                 // TODO: Add handling of timer cancellation after adding of event dependencies resolver
                 /* ProcessEvent::TimerCancelled { name } => {
