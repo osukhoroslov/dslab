@@ -1,12 +1,15 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use lazy_static::lazy_static;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use regex::Regex;
 
-use dslab_core::Id;
+use dslab_core::{Event, Id};
 
+use crate::events::{MessageReceived, TimerFired};
 use crate::message::Message;
 
 pub struct McNetwork {
@@ -19,6 +22,8 @@ pub struct McNetwork {
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
     node_ids: HashMap<String, Id>,
+    events: Rc<RefCell<Vec<Event>>>,
+    event_count: u64,
 }
 
 impl McNetwork {
@@ -32,6 +37,8 @@ impl McNetwork {
         disabled_links: HashSet<(String, String)>,
         proc_locations: HashMap<String, String>,
         node_ids: HashMap<String, Id>,
+        events: Rc<RefCell<Vec<Event>>>,
+        event_count: u64,
     ) -> Self {
         Self {
             rand,
@@ -43,6 +50,8 @@ impl McNetwork {
             disabled_links,
             proc_locations,
             node_ids,
+            events,
+            event_count,
         }
     }
 
@@ -85,5 +94,52 @@ impl McNetwork {
             || self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
             || self.disabled_links.contains(&(src.clone(), dest.clone()))
+    }
+
+    pub fn send_message(&mut self, msg: Message, src: String, dest: String, src_id: Id) -> bool {
+        let msg = self.corrupt_if_needed(msg);
+        let data = MessageReceived {
+            msg,
+            src: src.clone(),
+            dest: dest.clone(),
+        };
+        let event = Event {
+            id: self.event_count,
+            time: 0.0,
+            src: src_id,
+            dest: self.dest_node_id(&dest),
+            data: Box::new(data),
+        };
+        let proc_locations = self.proc_locations();
+        let src_node = proc_locations[&src].clone();
+        let dest_node = proc_locations[&dest].clone();
+        if event.src != event.dest
+            && self.check_if_dropped(&src_node, &dest_node)
+        {
+            return false;
+        }
+        let dups = self.duplicate_if_needed();
+        for _i in 0..dups {
+            self.events.borrow_mut().push(event.clone());
+        }
+        self.event_count += 1;
+        return true;
+    }
+
+    pub fn set_timer(&mut self, name: String, proc: String, src_id: Id) -> u64 {
+        let data = TimerFired {
+            timer: name.clone(),
+            proc: proc.clone(),
+        };
+        let event = Event {
+            id: self.event_count,
+            time: 0.0,
+            src: src_id,
+            dest: src_id,
+            data: Box::new(data),
+        };
+        self.events.borrow_mut().push(event);
+        self.event_count += 1;
+        self.event_count
     }
 }
