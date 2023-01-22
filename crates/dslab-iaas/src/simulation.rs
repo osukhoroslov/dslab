@@ -114,9 +114,11 @@ impl CloudSimulation {
     }
 
     /// Creates new host with specified name and resource capacity, and returns the host ID.
-    pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
+    /// Internal implementation.
+    fn add_host_impl(&mut self, name: &str, cpu_total: u32, memory_total: u64, rack_id: Option<u32>) -> u32 {
         // create host
         let host = rc!(refcell!(HostManager::new(
+            rack_id,
             cpu_total,
             memory_total,
             self.monitoring.borrow().get_id(),
@@ -133,14 +135,27 @@ impl CloudSimulation {
         // add host to monitoring
         self.monitoring.borrow_mut().add_host(id, cpu_total, memory_total);
         // add host to placement store
-        self.placement_store.borrow_mut().add_host(id, cpu_total, memory_total);
+        self.placement_store
+            .borrow_mut()
+            .add_host(id, rack_id, cpu_total, memory_total);
         // add host to schedulers
         for scheduler in self.schedulers.values() {
-            scheduler.borrow_mut().add_host(id, cpu_total, memory_total);
+            scheduler.borrow_mut().add_host(id, rack_id, cpu_total, memory_total);
         }
         // start sending host state to monitoring
         self.ctx.emit_now(SendHostState {}, id);
         id
+    }
+
+    /// Creates new host with specified name and resource capacity, and returns the host ID.
+    pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
+        self.add_host_impl(name, cpu_total, memory_total, None)
+    }
+
+    /// Creates new host with specified name and resource capacity, and returns the host ID.
+    /// Also assigns the host to specified rack by ID.
+    pub fn add_host_inside_rack(&mut self, name: &str, cpu_total: u32, memory_total: u64, rack_id: u32) -> u32 {
+        self.add_host_impl(name, cpu_total, memory_total, Some(rack_id))
     }
 
     /// Creates new scheduler with specified name and VM placement algorithm, and returns the scheduler ID.

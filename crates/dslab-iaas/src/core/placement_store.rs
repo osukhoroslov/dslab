@@ -66,9 +66,9 @@ impl PlacementStore {
     }
 
     /// Adds new host to resource pool state.
-    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64) {
+    pub fn add_host(&mut self, id: u32, rack_id: Option<u32>, cpu_total: u32, memory_total: u64) {
         self.pool_state
-            .add_host(id, cpu_total, memory_total, cpu_total, memory_total);
+            .add_host(id, rack_id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
     /// Registers scheduler so that PS can notify it about allocation events.

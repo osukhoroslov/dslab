@@ -36,6 +36,7 @@ use crate::core::vm_api::VmAPI;
 /// defined as a function of CPU load.
 pub struct HostManager {
     pub id: u32,
+    pub rack_id: Option<u32>,
     name: String,
 
     cpu_total: u32,
@@ -54,6 +55,7 @@ pub struct HostManager {
     recently_removed_vms: Vec<u32>,
     recent_vm_status_changes: HashMap<u32, VmStatus>,
     energy_meter: EnergyMeter,
+
     monitoring_id: u32,
     placement_store_id: u32,
     vm_api: Rc<RefCell<VmAPI>>,
@@ -70,6 +72,7 @@ impl HostManager {
     // Creates new host with specified capacity.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        rack_id: Option<u32>,
         cpu_total: u32,
         memory_total: u64,
         monitoring_id: u32,
@@ -83,6 +86,7 @@ impl HostManager {
     ) -> Self {
         Self {
             id: ctx.id(),
+            rack_id,
             name: ctx.name().to_string(),
             cpu_total,
             memory_total,
@@ -106,6 +110,11 @@ impl HostManager {
             ctx,
             sim_config,
         }
+    }
+
+    /// Get rack ID if exists.
+    pub fn rack_id(&self) -> Option<u32> {
+        self.rack_id
     }
 
     /// Checks if incoming VM can be allocated on this host.

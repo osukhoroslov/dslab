@@ -7,6 +7,8 @@ use crate::core::common::{Allocation, AllocationVerdict};
 /// Stores host properties (resource capacity) and state (available resources, current allocations).
 #[derive(Clone)]
 pub struct HostInfo {
+    pub rack_id: Option<u32>,
+
     pub cpu_total: u32,
     pub memory_total: u64,
 
@@ -21,8 +23,15 @@ pub struct HostInfo {
 
 impl HostInfo {
     /// Creates host info with specified total and available host capacity.
-    pub fn new(cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) -> Self {
+    pub fn new(
+        rack_id: Option<u32>,
+        cpu_total: u32,
+        memory_total: u64,
+        cpu_available: u32,
+        memory_available: u64,
+    ) -> Self {
         Self {
+            rack_id,
             cpu_total,
             memory_total,
             cpu_available,
@@ -46,10 +55,18 @@ impl ResourcePoolState {
     }
 
     /// Adds host to resource pool.
-    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
+    pub fn add_host(
+        &mut self,
+        id: u32,
+        rack_id: Option<u32>,
+        cpu_total: u32,
+        memory_total: u64,
+        cpu_available: u32,
+        memory_available: u64,
+    ) {
         self.hosts.insert(
             id,
-            HostInfo::new(cpu_total, memory_total, cpu_available, memory_available),
+            HostInfo::new(rack_id, cpu_total, memory_total, cpu_available, memory_available),
         );
     }
 

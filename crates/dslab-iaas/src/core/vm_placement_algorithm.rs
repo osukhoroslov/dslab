@@ -42,3 +42,23 @@ pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAl
         _ => panic!("Can't resolve: {}", config_str),
     }
 }
+
+/// Trait for implementation of multi VM placement algorithms.
+///
+/// The algorithm is defined as a function of multiple VM allocation request and current resource pool state, which returns an
+/// IDs of hosts selected for each of given VM placement or `None` if there is not suitable host set found.
+///
+/// The reference to monitoring service is also passed to the algorithm so that it can use the information about
+/// current host load.
+///
+/// It is possible to implement arbitrary placement algorithm and use it in scheduler.
+pub trait MultiVMPlacementAlgorithm {
+  fn select_hosts(&self, alloc: &Vec<Allocation>, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<Vec<u32>>;
+}
+
+pub fn multi_placement_algorithm_resolver(config_str: String) -> Box<dyn MultiVMPlacementAlgorithm> {
+    let (algorithm_name, options) = parse_config_value(&config_str);
+    match algorithm_name.as_str() {
+        "Dummy" => Box::new(DummyMultiVMPlacement::new()),
+    }
+}
