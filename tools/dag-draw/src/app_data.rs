@@ -82,7 +82,7 @@ impl AppData {
         for event in trace_log.events.iter() {
             let time = event["time"].as_f64().unwrap();
             total_time = time;
-            match event["type"].as_str().unwrap().as_ref() {
+            match event["type"].as_str().unwrap() {
                 "start_uploading" => {
                     uploads
                         .entry(event["data_id"].as_u64().unwrap())
