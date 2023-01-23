@@ -143,7 +143,7 @@ fn run_rational_model(transfers: &[Transfer]) -> Vec<f64> {
         eprint!("\r[1/3] {}     ", i);
         loop {
             let first = model.peek();
-            if first.is_none() || first.unwrap().0 > make_rat(transfer.start_time as u32) {
+            if first.is_none() || first.unwrap().0 > make_rat(transfer.start_time) {
                 break;
             }
             let (time, id) = model.pop().unwrap();
