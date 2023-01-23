@@ -248,39 +248,31 @@ fn test_4() {
     }
 
     let heft_makespan = run_scheduler(HeftScheduler::new(), dag.clone());
-
     // 0:
     // 1:                           [-------------E------------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]
     // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
-
     assert_eq!(heft_makespan, 98.0);
 
     let lookahead_makespan = run_scheduler(LookaheadScheduler::new(), dag.clone());
-
     // 0:
     // 1:                         [-------D------]
     // 2:[-------A------][-----C-----][--------B--------][-------F------][-----I----][----H----][--J--]
     // 3:                           [------E-----]           [------G------]
-
     assert_eq!(lookahead_makespan, 94.0);
 
     let dls_makespan = run_scheduler(DlsScheduler::new(), dag.clone());
-
     // 0:
     // 1:                           [--------------E-----------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]     [-----I----]
     // 3:                         [---D--][-------F------]                  [----H----]           [--J--]
-
     assert_eq!(dls_makespan, 96.0);
 
     let peft_makespan = run_scheduler(PeftScheduler::new().with_original_network_estimation(), dag.clone());
-
     // 0:
     // 1:
     // 2:[-------A------][-----C-----][--------B--------][------G------][-----I----]
     // 3:                         [---D--][------E-----][-------F------]    [----H----]          [--J--]
-
     assert_eq!(peft_makespan, 95.0);
 
     let simple_makespan = run_scheduler(SimpleScheduler::new(), dag);
