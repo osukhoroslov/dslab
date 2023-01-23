@@ -13,7 +13,11 @@ use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
+use crate::scheduler::Scheduler;
+use crate::schedulers::dls::DlsScheduler;
 use crate::schedulers::heft::HeftScheduler;
+use crate::schedulers::lookahead::LookaheadScheduler;
+use crate::schedulers::peft::PeftScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
@@ -220,30 +224,59 @@ fn test_4() {
     add_edge(7, 9, 11, "n");
     add_edge(8, 9, 13, "o");
 
-    let mut sim = DagSimulation::new(
-        123,
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
-        Rc::new(RefCell::new(HeftScheduler::new())),
-        Config {
-            data_transfer_mode: DataTransferMode::Direct,
-        },
-    );
-    sim.add_resource("0", 1, 1, 0);
-    sim.add_resource("1", 2, 1, 0);
-    sim.add_resource("2", 4, 1, 0);
-    sim.add_resource("3", 4, 1, 0);
+    fn run_scheduler(scheduler: impl Scheduler + 'static, dag: DAG) -> f64 {
+        let mut sim = DagSimulation::new(
+            123,
+            Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
+            Rc::new(RefCell::new(scheduler)),
+            Config {
+                data_transfer_mode: DataTransferMode::Direct,
+            },
+        );
+        sim.add_resource("0", 1, 1, 0);
+        sim.add_resource("1", 2, 1, 0);
+        sim.add_resource("2", 4, 1, 0);
+        sim.add_resource("3", 4, 1, 0);
 
-    let runner = sim.init(dag);
-    sim.step_until_no_events();
-    assert!(runner.borrow().is_completed());
+        let runner = sim.init(dag);
+        runner.borrow_mut().enable_trace_log(true);
+        sim.step_until_no_events();
+        assert!(runner.borrow().is_completed());
 
-    let result = sim.time();
-    assert_eq!(result, 98.0);
+        runner.borrow().trace_log().save_to_file("simple.log").unwrap();
+        return sim.time();
+    }
 
+    let heft_makespan = run_scheduler(HeftScheduler::new(), dag.clone());
     // 0:
     // 1:                           [-------------E------------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]
     // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
+    assert_eq!(heft_makespan, 98.0);
+
+    let lookahead_makespan = run_scheduler(LookaheadScheduler::new(), dag.clone());
+    // 0:
+    // 1:                         [-------D------]
+    // 2:[-------A------][-----C-----][--------B--------][-------F------][-----I----][----H----][--J--]
+    // 3:                           [------E-----]           [------G------]
+    assert_eq!(lookahead_makespan, 94.0);
+
+    let dls_makespan = run_scheduler(DlsScheduler::new(), dag.clone());
+    // 0:
+    // 1:                           [--------------E-----------]
+    // 2:[-------A------][-----C-----][--------B--------][------G------]     [-----I----]
+    // 3:                         [---D--][-------F------]                  [----H----]           [--J--]
+    assert_eq!(dls_makespan, 96.0);
+
+    let peft_makespan = run_scheduler(PeftScheduler::new().with_original_network_estimation(), dag.clone());
+    // 0:
+    // 1:
+    // 2:[-------A------][-----C-----][--------B--------][------G------][-----I----]
+    // 3:                         [---D--][------E-----][-------F------]    [----H----]          [--J--]
+    assert_eq!(peft_makespan, 95.0);
+
+    let simple_makespan = run_scheduler(SimpleScheduler::new(), dag);
+    assert_eq!(simple_makespan, 256.0);
 }
 
 #[test]
