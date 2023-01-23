@@ -16,23 +16,17 @@ struct Resource {
     id: Id,
 }
 
+#[derive(Default)]
 pub struct SimpleDataScheduler {
     data_location: HashMap<usize, Id>,
 }
 
 impl SimpleDataScheduler {
     pub fn new() -> Self {
-        SimpleDataScheduler {
-            data_location: HashMap::new(),
-        }
+        Self::default()
     }
 
-    fn schedule(
-        &mut self,
-        dag: &DAG,
-        resources: &Vec<crate::resource::Resource>,
-        ctx: &SimulationContext,
-    ) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &[crate::resource::Resource], ctx: &SimulationContext) -> Vec<Action> {
         let mut resources: Vec<Resource> = resources
             .iter()
             .map(|resource| Resource {

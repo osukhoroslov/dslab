@@ -1,9 +1,8 @@
 //! Tool for running experiments across many (dag, system. scheduler) combinations.
 
-use std::cell::RefCell;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -18,7 +17,7 @@ use crate::data_item::DataTransferMode;
 use crate::network::{read_network_config, NetworkConfig};
 use crate::resource::{read_resources, ResourceConfig};
 use crate::runner::Config;
-use crate::scheduler::{Scheduler, SchedulerParams};
+use crate::scheduler::{RcScheduler, SchedulerParams};
 
 /// Contains result of a single simulation run.
 #[derive(Serialize, Debug)]
@@ -51,14 +50,14 @@ struct Run {
 pub struct Experiment {
     runs: Vec<Run>,
     data_transfer_mode: DataTransferMode,
-    scheduler_resolver: fn(&SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>>,
+    scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
 }
 
 impl Experiment {
     /// Loads experiment from YAML config file.
     pub fn load<P: AsRef<Path>>(
         config_path: P,
-        scheduler_resolver: fn(&SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>>,
+        scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
     ) -> Self {
         let config: ExperimentConfig = std::fs::read_to_string(config_path.as_ref())
             .ok()

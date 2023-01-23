@@ -99,9 +99,11 @@ pub struct SchedulerParams {
     params: IndexMap<String, String>,
 }
 
-impl SchedulerParams {
+impl std::str::FromStr for SchedulerParams {
+    type Err = String;
+
     /// Creates SchedulerParams from a string in the following format: `SchedulerName[param1=value1,param2=value2...]`.
-    pub fn from_str(s: &str) -> Result<Self, String> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let open = s.find('[');
         if open.is_none() {
             return Ok(Self {
@@ -126,7 +128,9 @@ impl SchedulerParams {
             params,
         })
     }
+}
 
+impl SchedulerParams {
     /// Returns scheduler name.
     pub fn name(&self) -> &str {
         &self.name
@@ -153,8 +157,10 @@ impl std::fmt::Display for SchedulerParams {
     }
 }
 
+pub type RcScheduler = Rc<RefCell<dyn Scheduler>>;
+
 /// Resolves params into one of supported schedulers.
-pub fn default_scheduler_resolver(params: &SchedulerParams) -> Option<Rc<RefCell<dyn Scheduler>>> {
+pub fn default_scheduler_resolver(params: &SchedulerParams) -> Option<RcScheduler> {
     match params.name.as_str() {
         "Simple" => Some(Rc::new(RefCell::new(SimpleScheduler::new()))),
         "HEFT" => Some(Rc::new(RefCell::new(HeftScheduler::from_params(params)))),

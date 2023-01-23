@@ -51,16 +51,17 @@ impl PartialEq for ScheduledTask {
 
 impl Eq for ScheduledTask {}
 
+#[allow(clippy::too_many_arguments)]
 pub fn evaluate_assignment(
     task_id: usize,
     resource: usize,
-    task_finish_times: &Vec<f64>,
-    scheduled_tasks: &Vec<Vec<BTreeSet<ScheduledTask>>>,
+    task_finish_times: &[f64],
+    scheduled_tasks: &[Vec<BTreeSet<ScheduledTask>>],
     data_location: &HashMap<usize, Id>,
     task_location: &HashMap<usize, Id>,
     data_transfer_strategy: &DataTransferStrategy,
     dag: &DAG,
-    resources: &Vec<crate::resource::Resource>,
+    resources: &[crate::resource::Resource],
     network: &Network,
     config: &Config,
     ctx: &SimulationContext,
@@ -94,7 +95,7 @@ pub fn evaluate_assignment(
                             )
                 }
             })
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
         DataTransferStrategy::Lazy => dag
             .get_task(task_id)
@@ -111,7 +112,7 @@ pub fn evaluate_assignment(
                 };
                 task_finish_times[task] + data_upload_time
             })
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
     };
 
@@ -123,7 +124,7 @@ pub fn evaluate_assignment(
             .iter()
             .filter(|f| dag.get_inputs().contains(f))
             .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
         DataTransferStrategy::Lazy => 0.,
     };
@@ -151,7 +152,7 @@ pub fn evaluate_assignment(
                 }
                 DataTransferMode::Manual => 0.,
             })
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
     };
     let task_exec_time = dag.get_task(task_id).flops as f64
@@ -169,7 +170,7 @@ pub fn evaluate_assignment(
 }
 
 fn find_earliest_slot(
-    scheduled_tasks: &Vec<BTreeSet<ScheduledTask>>,
+    scheduled_tasks: &[BTreeSet<ScheduledTask>],
     mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
@@ -180,16 +181,16 @@ fn find_earliest_slot(
         .filter(|&a| a >= start_time)
         .collect::<Vec<_>>();
     possible_starts.push(start_time);
-    possible_starts.sort_by(|a, b| a.total_cmp(&b));
+    possible_starts.sort_by(|a, b| a.total_cmp(b));
     possible_starts.dedup();
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
-        for core in 0..scheduled_tasks.len() {
-            let next = scheduled_tasks[core]
+        for (core, tasks) in scheduled_tasks.iter().enumerate() {
+            let next = tasks
                 .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))
                 .next();
-            let prev = scheduled_tasks[core]
+            let prev = tasks
                 .range((Unbounded, Included(ScheduledTask::new(possible_start, 0., 0))))
                 .next_back();
             if let Some(scheduled_task) = prev {

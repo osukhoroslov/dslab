@@ -17,9 +17,7 @@ pub struct DlsScheduler {
 
 impl DlsScheduler {
     pub fn new() -> Self {
-        DlsScheduler {
-            data_transfer_strategy: DataTransferStrategy::Eager,
-        }
+        Self::default()
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
@@ -159,6 +157,14 @@ impl Scheduler for DlsScheduler {
 
     fn is_static(&self) -> bool {
         true
+    }
+}
+
+impl Default for DlsScheduler {
+    fn default() -> Self {
+        Self {
+            data_transfer_strategy: DataTransferStrategy::Eager,
+        }
     }
 }
 

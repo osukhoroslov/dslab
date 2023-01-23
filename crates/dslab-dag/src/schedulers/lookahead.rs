@@ -17,9 +17,7 @@ pub struct LookaheadScheduler {
 
 impl LookaheadScheduler {
     pub fn new() -> Self {
-        LookaheadScheduler {
-            data_transfer_strategy: DataTransferStrategy::Eager,
-        }
+        Self::default()
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
@@ -67,7 +65,7 @@ impl LookaheadScheduler {
             let mut best_makespan = -1.;
             let mut best_start = -1.;
             let mut best_finish = -1.;
-            let mut best_resource = 0 as usize;
+            let mut best_resource = 0;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
                 let res = evaluate_assignment(
@@ -128,7 +126,7 @@ impl LookaheadScheduler {
 
                         let mut best_start = -1.;
                         let mut best_finish = -1.;
-                        let mut best_resource = 0 as usize;
+                        let mut best_resource = 0;
                         let mut best_cores: Vec<u32> = Vec::new();
                         for resource in 0..resources.len() {
                             let res = evaluate_assignment(
@@ -252,5 +250,13 @@ impl Scheduler for LookaheadScheduler {
 
     fn is_static(&self) -> bool {
         true
+    }
+}
+
+impl Default for LookaheadScheduler {
+    fn default() -> Self {
+        Self {
+            data_transfer_strategy: DataTransferStrategy::Eager,
+        }
     }
 }

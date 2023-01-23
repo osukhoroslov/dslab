@@ -76,7 +76,7 @@ impl DAG {
         for task in workflow.tasks().iter() {
             let mut task_size = task.runtime;
 
-            if let Some(machine_speed) = task.machine.as_ref().map(|m| machine_speed.get(m)).flatten() {
+            if let Some(machine_speed) = task.machine.as_ref().and_then(|m| machine_speed.get(m)) {
                 task_size *= *machine_speed as f64;
             } else {
                 task_size *= reference_flops;

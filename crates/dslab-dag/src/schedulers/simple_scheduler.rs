@@ -12,6 +12,7 @@ struct Resource {
     memory_available: u64,
 }
 
+#[derive(Default)]
 pub struct SimpleScheduler {}
 
 impl SimpleScheduler {
@@ -19,7 +20,7 @@ impl SimpleScheduler {
         SimpleScheduler {}
     }
 
-    fn schedule(&mut self, dag: &DAG, resources: &Vec<crate::resource::Resource>) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &[crate::resource::Resource]) -> Vec<Action> {
         let mut resources: Vec<Resource> = resources
             .iter()
             .map(|resource| Resource {

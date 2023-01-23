@@ -6,6 +6,7 @@ use crate::dag::DAG;
 use crate::data_item::DataTransferMode;
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams};
+use crate::schedulers::common::calc_ranks;
 use crate::system::System;
 use crate::task::*;
 
@@ -80,30 +81,7 @@ impl PortfolioScheduler {
         Self::new(params.get("algo").unwrap())
     }
 
-    fn successors(v: usize, dag: &DAG) -> Vec<usize> {
-        let mut result = Vec::new();
-        for &data_item_id in dag.get_task(v).outputs.iter() {
-            let data_item = dag.get_data_item(data_item_id);
-            result.extend(data_item.consumers.iter());
-        }
-        result
-    }
-
-    fn calc_rank(&self, v: usize, dag: &DAG, rank: &mut Vec<f64>, used: &mut Vec<bool>) {
-        if used[v] {
-            return;
-        }
-        used[v] = true;
-
-        rank[v] = 0.;
-        for &succ in PortfolioScheduler::successors(v, dag).iter() {
-            self.calc_rank(succ, dag, rank, used);
-            rank[v] = rank[v].max(rank[succ]);
-        }
-        rank[v] += dag.get_task(v).flops as f64;
-    }
-
-    fn schedule(&mut self, dag: &DAG, resources: &Vec<crate::resource::Resource>) -> Vec<Action> {
+    fn schedule(&mut self, dag: &DAG, resources: &[crate::resource::Resource]) -> Vec<Action> {
         let mut resources: Vec<Resource> = resources
             .iter()
             .map(|resource| Resource {
@@ -113,14 +91,7 @@ impl PortfolioScheduler {
             .collect();
         let mut result: Vec<Action> = Vec::new();
 
-        let total_tasks = dag.get_tasks().len();
-
-        let mut used = vec![false; total_tasks];
-        let mut rank = vec![0.; total_tasks];
-
-        for i in 0..total_tasks {
-            self.calc_rank(i, dag, &mut rank, &mut used);
-        }
+        let rank = calc_ranks(1., 0., dag);
 
         let get_data_size = |task_id: usize| -> u64 {
             let task = dag.get_task(task_id);
@@ -151,13 +122,13 @@ impl PortfolioScheduler {
                 }
             }
 
-            let best_resource = (0..resources.len() as usize)
+            let best_resource = (0..resources.len())
                 .filter(|&r| resources[r].cores_available > 0)
                 .min_by(|&a, &b| match self.cluster_criterion {
                     ClusterCriterion::TaskData => total_task_data
                         .get(&b)
-                        .unwrap_or(&(0 as u64))
-                        .cmp(&total_task_data.get(&a).unwrap_or(&(0 as u64))),
+                        .unwrap_or(&0)
+                        .cmp(total_task_data.get(&a).unwrap_or(&0)),
                     ClusterCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
                     ClusterCriterion::Speed => resources[b].speed.cmp(&resources[a].speed),
                 });
@@ -182,9 +153,7 @@ impl PortfolioScheduler {
                 CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
                 CoresCriterion::MaxCores => resources[best_resource].cores_available,
             };
-            let cores = cores
-                .min(dag.get_task(task).max_cores)
-                .max(dag.get_task(task).min_cores);
+            let cores = cores.clamp(dag.get_task(task).max_cores, dag.get_task(task).min_cores);
 
             resources[best_resource].cores_available -= cores;
             result.push(Action::ScheduleTask {
