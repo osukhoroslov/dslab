@@ -64,7 +64,7 @@ impl EventHandler for Task {
                     self.memory,
                     self.min_cores,
                     self.max_cores,
-                    self.cores_dependency.clone(),
+                    self.cores_dependency,
                     self.id,
                 );
             }
