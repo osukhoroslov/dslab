@@ -12,8 +12,17 @@ use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent};
 use crate::process::ProcessState;
 
+pub struct ProcessEntryState {
+    pub process_state: Box<dyn ProcessState>,
+    pub event_log: Vec<EventLogEntry>,
+    pub local_outbox: Vec<Message>,
+    pub pending_timers: HashMap<String, u64>,
+    pub sent_message_count: u64,
+    pub received_message_count: u64,
+}
+
 pub struct McNodeState {
-    process_states: HashMap<String, Box<dyn ProcessState>>,
+    pub process_entry_states: HashMap<String, ProcessEntryState>,
 }
 
 pub struct McNode {
@@ -115,18 +124,30 @@ impl McNode {
 
     pub fn get_state(&self) -> McNodeState {
         let mut state = McNodeState {
-            process_states: HashMap::new(),
+            process_entry_states: HashMap::new(),
         };
         for (proc, proc_entry) in &self.processes {
-            *state.process_states.get_mut(proc).unwrap() = proc_entry.proc_impl.state();
+            *state.process_entry_states.get_mut(proc).unwrap() = ProcessEntryState {
+                process_state: proc_entry.proc_impl.state(),
+                event_log: proc_entry.event_log.clone(),
+                local_outbox: proc_entry.local_outbox.clone(),
+                pending_timers: proc_entry.pending_timers.clone(),
+                sent_message_count: proc_entry.sent_message_count,
+                received_message_count: proc_entry.received_message_count,
+            }
         }
         state
     }
 
     pub fn set_state(&mut self, state: McNodeState) {
-        for (proc, proc_state) in state.process_states {
+        for (proc, proc_entry_state) in state.process_entry_states {
             if let Some(proc_entry) = self.processes.get_mut(&proc) {
-                proc_entry.proc_impl.set_state(proc_state);
+                proc_entry.proc_impl.set_state(proc_entry_state.process_state);
+                proc_entry.event_log = proc_entry_state.event_log;
+                proc_entry.local_outbox = proc_entry_state.local_outbox;
+                proc_entry.pending_timers = proc_entry_state.pending_timers;
+                proc_entry.sent_message_count = proc_entry_state.sent_message_count;
+                proc_entry.received_message_count = proc_entry_state.received_message_count;
             }
         }
     }
