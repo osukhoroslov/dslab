@@ -332,7 +332,7 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id.clone(), dest, 0.)
+        self.sim_state.borrow_mut().add_event(data, self.id, dest, 0.)
     }
 
     /// See [`Self::emit_ordered`].
