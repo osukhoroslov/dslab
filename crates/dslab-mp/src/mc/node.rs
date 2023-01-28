@@ -92,7 +92,7 @@ impl McNode {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, delay: _delay } => {
+                ProcessEvent::TimerSet { name, .. } => {
                     assert!(
                         !proc_entry.pending_timers.contains_key(&name),
                         "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
