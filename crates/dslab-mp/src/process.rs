@@ -9,6 +9,11 @@ pub trait ProcessState: Downcast + Debug {}
 
 impl_downcast!(ProcessState);
 
+#[derive(Clone, Debug)]
+struct ProcessStateStub {}
+
+impl ProcessState for ProcessStateStub {}
+
 pub trait Process: DynClone {
     /// Called when a message is received.
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
@@ -25,10 +30,12 @@ pub trait Process: DynClone {
     }
 
     /// Returns the string representation of process state.
-    fn state(&self) -> Box<dyn ProcessState>;
+    fn state(&self) -> Box<dyn ProcessState> {
+        return Box::new(ProcessStateStub {});
+    }
 
     /// Restores the process state by its string representation.
-    fn set_state(&self, state: Box<dyn ProcessState>);
+    fn set_state(&self, _state: Box<dyn ProcessState>) {}
 }
 
 clone_trait_object!(Process);
