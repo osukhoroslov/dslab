@@ -1,6 +1,6 @@
-use std::fmt::Debug;
-use downcast_rs::{Downcast, impl_downcast};
+use downcast_rs::{impl_downcast, Downcast};
 use dyn_clone::{clone_trait_object, DynClone};
+use std::fmt::Debug;
 
 use crate::context::Context;
 use crate::message::Message;
