@@ -2,6 +2,7 @@ use dslab_mp::context::Context;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 
+#[derive(Clone)]
 pub struct RetryPingServer {}
 
 impl Process for RetryPingServer {
