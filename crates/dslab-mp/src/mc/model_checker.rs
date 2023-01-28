@@ -1,13 +1,13 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::mc::network::McNetwork;
 
-use crate::mc::strategy::Strategy;
-
-use crate::mc::node::McNode;
-use crate::mc::system::McSystem;
 use crate::system::System;
+
+use crate::mc::network::McNetwork;
+use crate::mc::node::McNode;
+use crate::mc::strategy::Strategy;
+use crate::mc::system::McSystem;
 
 pub struct ModelChecker {
     system: Rc<RefCell<McSystem>>,
@@ -57,11 +57,7 @@ impl ModelChecker {
         }
 
         Self {
-            system: Rc::new(RefCell::new(McSystem::new(
-                nodes,
-                proc_names,
-                events,
-            ))),
+            system: Rc::new(RefCell::new(McSystem::new(nodes, proc_names, events))),
             strategy,
         }
     }

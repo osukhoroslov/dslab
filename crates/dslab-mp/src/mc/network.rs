@@ -113,9 +113,7 @@ impl McNetwork {
         let proc_locations = self.proc_locations();
         let src_node = proc_locations[&src].clone();
         let dest_node = proc_locations[&dest].clone();
-        if event.src != event.dest
-            && self.check_if_dropped(&src_node, &dest_node)
-        {
+        if event.src != event.dest && self.check_if_dropped(&src_node, &dest_node) {
             return false;
         }
         let dups = self.duplicate_if_needed();
