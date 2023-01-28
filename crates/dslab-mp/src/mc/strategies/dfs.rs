@@ -11,7 +11,7 @@ pub struct Dfs {
 }
 
 impl Dfs {
-    fn new(
+    pub fn new(
         prune: Box<dyn Fn(&McState) -> bool>,
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
