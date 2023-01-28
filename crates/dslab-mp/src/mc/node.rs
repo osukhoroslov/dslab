@@ -9,7 +9,7 @@ use crate::context::Context;
 use crate::events::{MessageReceived, TimerFired};
 use crate::mc::network::McNetwork;
 use crate::message::Message;
-use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent};
+use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
 
 pub struct ProcessEntryState {
@@ -101,15 +101,15 @@ impl McNode {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet { name, .. } => {
-                    assert!(
-                        !proc_entry.pending_timers.contains_key(&name),
-                        "Timer \"{}\" is already set by process \"{}\" (active timer names should be unique!)",
-                        name,
-                        proc
-                    );
-                    let event_id = self.net.borrow_mut().set_timer(name.clone(), proc.clone(), self.id);
-                    proc_entry.pending_timers.insert(name, event_id);
+                ProcessEvent::TimerSet {
+                    name,
+                    delay: _delay,
+                    behavior,
+                } => {
+                    if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
+                        let event_id = self.net.borrow_mut().set_timer(name.clone(), proc.clone(), self.id);
+                        proc_entry.pending_timers.insert(name, event_id);
+                    }
                 }
                 // TODO: Add handling of timer cancellation after adding of event dependencies resolver
                 /* ProcessEvent::TimerCancelled { name } => {
