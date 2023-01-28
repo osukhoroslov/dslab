@@ -9,7 +9,7 @@ use std::str::FromStr;
 use csv::ReaderBuilder;
 use indexmap::{IndexMap, IndexSet};
 use rand::prelude::*;
-use rand_distr::{Distribution, LogNormal};
+use rand_distr::{Distribution, Exp, LogNormal};
 use rand_pcg::Pcg64;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
@@ -132,6 +132,7 @@ impl AppPreference {
     }
 }
 
+#[derive(PartialEq, Eq)]
 pub enum DurationGenerator {
     /// Simple duration generator from quantiles.
     Piecewise,
@@ -141,11 +142,21 @@ pub enum DurationGenerator {
     Lognormal,
 }
 
+#[derive(PartialEq, Eq)]
+pub enum StartGenerator {
+    /// For each 1-minute bucket select each starting time uniformly at random within that bucket.
+    BucketUniform,
+    /// Fit Poisson process to buckets and generate the invocations from it.
+    PoissonFit,
+}
+
 pub struct AzureTraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,
     /// This option controls the method used to generate execution durations.
     pub duration_generator: DurationGenerator,
+    /// This option controls the method used to generate start times.
+    pub start_generator: StartGenerator,
     /// This option controls which apps to use for trace generation.
     pub app_preferences: Vec<AppPreference>,
     /// This option sets concurrency level for all apps in the trace.
@@ -167,6 +178,7 @@ impl Default for AzureTraceConfig {
         Self {
             time_period: 60,
             duration_generator: DurationGenerator::Piecewise,
+            start_generator: StartGenerator::BucketUniform,
             app_preferences: Default::default(),
             concurrency_level: 1,
             random_seed: 1,
@@ -289,6 +301,35 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     let mut fn_id = IndexMap::<String, usize>::new();
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mut invocations = Vec::<(usize, f64, f64)>::new();
+    let mut poisson_scale_factor = 1.;
+    if let Some(rps) = config.rps {
+        if config.start_generator == StartGenerator::PoissonFit {
+            let mut total = 0;
+            for (part_id, part) in parts.iter().take(parts_needed).enumerate() {
+                let bound = if part_id + 1 == parts_needed { tail_part } else { 1440 };
+                let mut inv_file = ReaderBuilder::new()
+                    .from_path(inv.get(part).unwrap().as_path())
+                    .unwrap();
+                for inv_rec in inv_file.records() {
+                    let record = inv_rec.unwrap();
+                    let mut id = record[0].to_string();
+                    id.push('_');
+                    id.push_str(&record[1]);
+                    id.push('_');
+                    id.push_str(&record[2]);
+                    let app = app_id(&id);
+                    if apps.contains(&app) {
+                        for t in 0..bound {
+                            let cnt = usize::from_str(&record[4 + t]).unwrap();
+                            total += cnt;
+                        }
+                    }
+                }
+            }
+            let need = (rps * (config.time_period as f64) * 60.).round();
+            poisson_scale_factor = need / (total as f64);
+        }
+    }
     for (part_id, part) in parts.iter().take(parts_needed).enumerate() {
         let bound = if part_id + 1 == parts_needed { tail_part } else { 1440 };
         let mut inv_file = ReaderBuilder::new()
@@ -298,7 +339,8 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             .from_path(dur.get(part).unwrap().as_path())
             .unwrap();
 
-        let mut inv_map = HashMap::<String, (usize, usize)>::new();
+        let mut inv_map = IndexMap::<String, (usize, usize)>::new();
+        let mut poisson_data = IndexMap::<String, (usize, usize)>::new();
         for inv_rec in inv_file.records() {
             let record = inv_rec.unwrap();
             let mut id = record[0].to_string();
@@ -308,24 +350,59 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             id.push_str(&record[2]);
             let app = app_id(&id);
             if apps.contains(&app) {
+                if config.start_generator == StartGenerator::BucketUniform {
+                    let mut int_id = fn_id.len();
+                    if let Some(idx) = fn_id.get(&id).copied() {
+                        int_id = idx;
+                    } else {
+                        fn_id.insert(id.clone(), fn_id.len());
+                    }
+                    let begin = invocations.len();
+                    let mut total = 0;
+                    for t in 0..bound {
+                        let cnt = usize::from_str(&record[4 + t]).unwrap();
+                        total += cnt;
+                        for _ in 0..cnt {
+                            let second = gen.gen_range(0.0..1.0) * 60.0 + ((t * 60 + part_id * 1440 * 60) as f64);
+                            invocations.push((int_id, second, 0.));
+                        }
+                    }
+                    if total > 0 {
+                        inv_map.insert(id.clone(), (begin, total));
+                    }
+                } else {
+                    let mut total = 0;
+                    for t in 0..bound {
+                        let cnt = usize::from_str(&record[4 + t]).unwrap();
+                        total += cnt;
+                    }
+                    if total > 0 {
+                        let mut entry = poisson_data.entry(id).or_default();
+                        entry.0 += total;
+                        entry.1 += bound;
+                    }
+                }
+            }
+        }
+        if config.start_generator == StartGenerator::PoissonFit {
+            let limit = (config.time_period as f64).min(((part_id + 1) as f64) * 1440.);
+            for (id, (s, k)) in poisson_data.drain(..) {
+                let lambda = (s as f64) / (k as f64) * poisson_scale_factor;
+                let dist = Exp::new(lambda).unwrap();
+                let mut t = (part_id as f64) * 1440. + dist.sample(&mut gen);
+                let begin = invocations.len();
                 let mut int_id = fn_id.len();
                 if let Some(idx) = fn_id.get(&id).copied() {
                     int_id = idx;
                 } else {
                     fn_id.insert(id.clone(), fn_id.len());
                 }
-                let begin = invocations.len();
-                let mut total = 0;
-                for t in 0..bound {
-                    let cnt = usize::from_str(&record[4 + t]).unwrap();
-                    total += cnt;
-                    for _ in 0..cnt {
-                        let second = gen.gen_range(0.0..1.0) * 60.0 + ((t * 60 + part_id * 1440 * 60) as f64);
-                        invocations.push((int_id, second, 0.));
-                    }
+                while t < limit {
+                    invocations.push((int_id, t * 60., 0.));
+                    t += dist.sample(&mut gen);
                 }
-                if total > 0 {
-                    inv_map.insert(id.clone(), (begin, total));
+                if begin != invocations.len() {
+                    inv_map.insert(id, (begin, invocations.len() - begin));
                 }
             }
         }

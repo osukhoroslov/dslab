@@ -6,7 +6,7 @@ base_config:
           quantity: 26624
       invoker: FIFOInvoker
       count: 8
-  coldstart_policy: FixedTimeColdStartPolicy[keepalive=600,prewarm=0]
+  coldstart_policy: FixedTimeColdStartPolicy[keepalive=900,prewarm=0]
   idle_deployer: BasicDeployer
   disable_contention: false
 schedulers:
