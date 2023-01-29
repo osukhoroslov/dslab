@@ -182,8 +182,8 @@ impl Host {
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();
         let function_registry = fr.borrow();
-        invocation_registry.get_invocation_mut(id).unwrap().finished = Some(time);
         let invocation = invocation_registry.get_invocation_mut(id).unwrap();
+        invocation.finished = Some(time);
         let func_id = invocation.request.func_id;
         let cont_id = invocation.container_id;
         let app_id = function_registry.get_function(func_id).unwrap().app_id;

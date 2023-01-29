@@ -1,15 +1,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use indexmap::{IndexMap, IndexSet};
-
 use dslab_core::context::SimulationContext;
 
 use crate::event::ContainerStartEvent;
 use crate::function::Application;
 use crate::invocation::InvocationRequest;
 use crate::resource::{ResourceConsumer, ResourceProvider};
-use crate::util::Counter;
+use crate::util::{Counter, FxIndexMap, FxIndexSet, RawVecMap};
 
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {
@@ -23,7 +21,7 @@ pub struct Container {
     pub id: u64,
     pub deployment_time: f64,
     pub app_id: u64,
-    pub invocations: IndexSet<u64>,
+    pub invocations: FxIndexSet<u64>,
     pub resources: ResourceConsumer,
     pub started_invocations: u64,
     pub last_change: f64,
@@ -48,10 +46,10 @@ impl Container {
 pub struct ContainerManager {
     active_invocations: u64,
     resources: ResourceProvider,
-    containers: IndexMap<u64, Container>,
-    containers_by_app: IndexMap<u64, IndexSet<u64>>,
+    containers: FxIndexMap<u64, Container>,
+    containers_by_app: RawVecMap<FxIndexSet<u64>>,
     container_counter: Counter,
-    reservations: IndexMap<u64, Vec<InvocationRequest>>,
+    reservations: FxIndexMap<u64, Vec<InvocationRequest>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -60,10 +58,10 @@ impl ContainerManager {
         Self {
             active_invocations: 0,
             resources,
-            containers: IndexMap::new(),
-            containers_by_app: IndexMap::new(),
+            containers: FxIndexMap::default(),
+            containers_by_app: Default::default(),
             container_counter: Counter::default(),
-            reservations: IndexMap::new(),
+            reservations: FxIndexMap::default(),
             ctx,
         }
     }
@@ -96,14 +94,14 @@ impl ContainerManager {
         self.containers.get_mut(&id)
     }
 
-    pub fn get_containers(&mut self) -> &mut IndexMap<u64, Container> {
+    pub fn get_containers(&mut self) -> &mut FxIndexMap<u64, Container> {
         &mut self.containers
     }
 
     pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
-        let id = app.id;
+        let id = app.id as usize;
         let limit = app.get_concurrent_invocations();
-        if let Some(set) = self.containers_by_app.get(&id) {
+        if let Some(set) = self.containers_by_app.get(id) {
             return PossibleContainerIterator::new(
                 Some(set.iter()),
                 &self.containers,
@@ -133,7 +131,7 @@ impl ContainerManager {
 
     pub fn delete_container(&mut self, id: u64) {
         let container = self.containers.remove(&id).unwrap();
-        self.containers_by_app.get_mut(&container.app_id).unwrap().remove(&id);
+        self.containers_by_app.get_mut(container.app_id as usize).remove(&id);
         self.resources.release(&container.resources);
     }
 
@@ -152,10 +150,7 @@ impl ContainerManager {
         };
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);
-        if !self.containers_by_app.contains_key(&app.id) {
-            self.containers_by_app.insert(app.id, IndexSet::new());
-        }
-        self.containers_by_app.get_mut(&app.id).unwrap().insert(cont_id);
+        self.containers_by_app.get_mut(app.id as usize).insert(cont_id);
         self.ctx
             .borrow_mut()
             .emit_self(ContainerStartEvent { id: cont_id }, app.get_deployment_time());
@@ -165,8 +160,8 @@ impl ContainerManager {
 
 pub struct PossibleContainerIterator<'a> {
     inner: Option<indexmap::set::Iter<'a, u64>>,
-    containers: &'a IndexMap<u64, Container>,
-    reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
+    containers: &'a FxIndexMap<u64, Container>,
+    reserve: &'a FxIndexMap<u64, Vec<InvocationRequest>>,
     limit: usize,
     allow_deploying: bool,
 }
@@ -174,8 +169,8 @@ pub struct PossibleContainerIterator<'a> {
 impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
         inner: Option<indexmap::set::Iter<'a, u64>>,
-        containers: &'a IndexMap<u64, Container>,
-        reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
+        containers: &'a FxIndexMap<u64, Container>,
+        reserve: &'a FxIndexMap<u64, Vec<InvocationRequest>>,
         limit: usize,
         allow_deploying: bool,
     ) -> Self {

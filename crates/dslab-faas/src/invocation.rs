@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use serde::Serialize;
 
-use crate::util::Counter;
+use crate::util::{Counter, VecMap};
 
 #[derive(Copy, Clone, Debug, Serialize)]
 pub struct InvocationRequest {
@@ -25,7 +23,7 @@ pub struct Invocation {
 #[derive(Default)]
 pub struct InvocationRegistry {
     invocation_ctr: Counter,
-    invocations: HashMap<u64, Invocation>,
+    invocations: VecMap<Invocation>,
 }
 
 impl InvocationRegistry {
@@ -39,7 +37,7 @@ impl InvocationRegistry {
             started: time,
             finished: None,
         };
-        self.invocations.insert(id, invocation);
+        self.invocations.insert(id as usize, invocation);
     }
 
     pub fn register_invocation(&mut self) -> u64 {
@@ -47,10 +45,10 @@ impl InvocationRegistry {
     }
 
     pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {
-        self.invocations.get(&id)
+        self.invocations.get(id as usize)
     }
 
     pub fn get_invocation_mut(&mut self, id: u64) -> Option<&mut Invocation> {
-        self.invocations.get_mut(&id)
+        self.invocations.get_mut(id as usize)
     }
 }
