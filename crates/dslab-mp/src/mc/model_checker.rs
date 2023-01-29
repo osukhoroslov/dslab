@@ -20,16 +20,14 @@ impl ModelChecker {
 
         let proc_names = Rc::new(RefCell::new((*sim.names().borrow()).clone()));
 
-        let sim_state = sim.sim_state();
-
         let events = Rc::new(RefCell::new(Vec::new()));
-        for event in sim_state.borrow().events() {
+        for event in sim.state_events() {
             events.borrow_mut().push(event);
         }
 
         let net = sys.network().borrow();
         let mc_net = Rc::new(RefCell::new(McNetwork::new(
-            sim_state.borrow().clone_rand(),
+            sim.clone_state_rand(),
             net.corrupt_rate(),
             net.dupl_rate(),
             net.drop_rate(),
@@ -39,7 +37,7 @@ impl ModelChecker {
             net.proc_locations().clone(),
             net.node_ids().clone(),
             events.clone(),
-            sim_state.borrow().event_count(),
+            sim.state_event_count(),
         )));
 
         let mut nodes: HashMap<String, Rc<RefCell<McNode>>> = HashMap::new();
