@@ -1,13 +1,14 @@
 //! Simulation configuration and execution.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 use std::rc::Rc;
 
 use log::Level::Trace;
 use log::{debug, log_enabled, trace};
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
+use rand_pcg::Pcg64;
 use serde_json::json;
 use serde_type_name::type_name;
 
@@ -593,7 +594,21 @@ impl Simulation {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
-    pub fn sim_state(&self) -> Rc<RefCell<SimulationState>> {
-        self.sim_state.clone()
+    /// Returns clone of random generator state from SimulationState.
+    /// Now is used for model checking.
+    pub fn clone_state_rand(&self) -> Pcg64 {
+        self.sim_state.borrow().clone_rand()
+    }
+
+    /// Returns event_count of SimulationState.
+    /// Now is used for model checking.
+    pub fn state_event_count(&self) -> u64 {
+        self.sim_state.borrow().event_count()
+    }
+
+    /// Returns clone of events heap from SimulationState.
+    /// Now is used for model checking.
+    pub fn state_events(&self) -> BinaryHeap<Event> {
+        self.sim_state.borrow().events()
     }
 }

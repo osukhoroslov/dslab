@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use dslab_core::state::SimulationState;
 use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 use crate::context::Context;
@@ -47,18 +46,8 @@ impl McNode {
         }
     }
 
-    // TODO trait Context with optional using of Simulation
     fn create_ctx(proc_name: String) -> Context {
-        Context::new(
-            proc_name,
-            Rc::new(RefCell::new(SimulationContext::new(
-                0,
-                "",
-                Rc::new(RefCell::new(SimulationState::new(0))),
-                Rc::new(RefCell::new(Vec::new())),
-            ))),
-            0.0,
-        )
+        Context::new(proc_name, None, 0.0)
     }
 
     pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) {
