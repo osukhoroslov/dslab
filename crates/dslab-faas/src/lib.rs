@@ -13,6 +13,7 @@ pub mod host;
 pub mod invocation;
 pub mod invoker;
 pub mod parallel;
+pub mod request_buffer;
 pub mod resource;
 pub mod scheduler;
 pub mod simulation;

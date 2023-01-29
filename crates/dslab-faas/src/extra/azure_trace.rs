@@ -52,6 +52,10 @@ impl Trace for AzureTrace {
         Box::new(self.function_records.iter().map(|x| x.app_id))
     }
 
+    fn ordered_requests(&self) -> bool {
+        true
+    }
+
     fn simulation_end(&self) -> Option<f64> {
         if self.sim_end.is_some() {
             self.sim_end

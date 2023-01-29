@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 #[derive(Default, Clone)]
 pub struct ApplicationData {
     pub concurrent_invocations: usize,
@@ -29,9 +31,32 @@ pub struct RequestData {
     pub time: f64,
 }
 
+impl PartialEq for RequestData {
+    fn eq(&self, other: &Self) -> bool {
+        self.time == other.time
+    }
+}
+
+impl Eq for RequestData {}
+
+impl PartialOrd for RequestData {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RequestData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.time.total_cmp(&other.time)
+    }
+}
+
 pub trait Trace {
     fn app_iter(&self) -> Box<dyn Iterator<Item = ApplicationData> + '_>;
     fn request_iter(&self) -> Box<dyn Iterator<Item = RequestData> + '_>;
     fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_>;
+    /// Indicates whether the requests produced by `request_iter` are ordered in increasing order
+    /// by time.
+    fn ordered_requests(&self) -> bool;
     fn simulation_end(&self) -> Option<f64>;
 }
