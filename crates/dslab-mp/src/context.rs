@@ -12,13 +12,17 @@ use crate::util::t;
 pub struct Context {
     proc_name: String,
     time: f64,
-    sim_ctx: Rc<RefCell<SimulationContext>>,
+    sim_ctx: Option<Rc<RefCell<SimulationContext>>>,
     actions: Vec<ProcessEvent>,
 }
 
 impl Context {
-    pub fn new(proc_name: String, sim_ctx: Rc<RefCell<SimulationContext>>, clock_skew: f64) -> Self {
-        let time = sim_ctx.borrow().time() + clock_skew;
+    pub fn new(proc_name: String, sim_ctx: Option<Rc<RefCell<SimulationContext>>>, clock_skew: f64) -> Self {
+        let time = if sim_ctx.is_some() {
+            sim_ctx.as_ref().expect("").borrow().time() + clock_skew
+        } else {
+            0.0
+        };
         Self {
             proc_name,
             time,
@@ -32,11 +36,13 @@ impl Context {
     }
 
     pub fn rand(&mut self) -> f64 {
-        self.sim_ctx.borrow_mut().rand()
+        self.sim_ctx.as_mut().expect("sim_ctx is None").borrow_mut().rand()
     }
 
     pub fn send(&mut self, msg: Message, dest: String) {
-        t!("{:>9.3} {:>10} --> {:<10} {:?}", self.time, self.proc_name, dest, msg);
+        if self.sim_ctx.is_some() {
+            t!("{:>9.3} {:>10} --> {:<10} {:?}", self.time, self.proc_name, dest, msg);
+        }
         self.actions.push(ProcessEvent::MessageSent {
             msg,
             src: self.proc_name.clone(),
@@ -45,11 +51,13 @@ impl Context {
     }
 
     pub fn send_local(&mut self, msg: Message) {
-        t!(format!(
-            "{:>9.3} {:>10} >>> {:<10} {:?}",
-            self.time, self.proc_name, "local", msg
-        )
-        .green());
+        if self.sim_ctx.is_some() {
+            t!(format!(
+                "{:>9.3} {:>10} >>> {:<10} {:?}",
+                self.time, self.proc_name, "local", msg
+            )
+            .green());
+        }
         self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
