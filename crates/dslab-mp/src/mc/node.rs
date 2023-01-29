@@ -116,14 +116,17 @@ impl McNode {
             process_entry_states: HashMap::new(),
         };
         for (proc, proc_entry) in &self.processes {
-            *state.process_entry_states.get_mut(proc).unwrap() = ProcessEntryState {
-                process_state: proc_entry.proc_impl.state(),
-                event_log: proc_entry.event_log.clone(),
-                local_outbox: proc_entry.local_outbox.clone(),
-                pending_timers: proc_entry.pending_timers.clone(),
-                sent_message_count: proc_entry.sent_message_count,
-                received_message_count: proc_entry.received_message_count,
-            }
+            state.process_entry_states.insert(
+                proc.to_owned(),
+                ProcessEntryState {
+                    process_state: proc_entry.proc_impl.state(),
+                    event_log: proc_entry.event_log.clone(),
+                    local_outbox: proc_entry.local_outbox.clone(),
+                    pending_timers: proc_entry.pending_timers.clone(),
+                    sent_message_count: proc_entry.sent_message_count,
+                    received_message_count: proc_entry.received_message_count,
+                },
+            );
         }
         state
     }
