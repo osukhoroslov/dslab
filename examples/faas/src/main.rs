@@ -33,7 +33,7 @@ fn main() {
     );
     println!(
         "wasted memory time = {}",
-        stats.wasted_resource_time.get(&0).unwrap().sum()
+        stats.wasted_resource_time.get(0).unwrap().sum()
     );
     println!(
         "mean abs exec slowdown = {}",
