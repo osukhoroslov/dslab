@@ -39,7 +39,11 @@ fn test_simulation() {
     assert_float_eq(inv_stats.rel_exec_slowdown.mean(), 2.0 / 3.0, 1e-9);
     assert_float_eq(inv_stats.abs_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
     assert_float_eq(inv_stats.rel_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
-    assert_float_eq(stats.global_stats.wasted_resource_time.get(0).unwrap().sum(), 3.0 - 1e-9, 1e-9);
+    assert_float_eq(
+        stats.global_stats.wasted_resource_time.get(0).unwrap().sum(),
+        3.0 - 1e-9,
+        1e-9,
+    );
     let f1_stats = stats.func_stats.get(0).unwrap();
     assert_float_eq(f1_stats.abs_total_slowdown.mean(), 1.0, 1e-9);
     let f2_stats = stats.func_stats.get(1).unwrap();
