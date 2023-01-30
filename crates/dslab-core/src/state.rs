@@ -19,7 +19,7 @@ pub struct SimulationState {
 }
 
 impl SimulationState {
-    pub(crate) fn new(seed: u64) -> Self {
+    pub fn new(seed: u64) -> Self {
         Self {
             clock: 0.0,
             rand: Pcg64::seed_from_u64(seed),
