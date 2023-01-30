@@ -45,7 +45,7 @@ impl CoresDependency {
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
@@ -75,7 +75,7 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
@@ -85,52 +85,52 @@ pub struct CompRequest {
     pub requester: Id,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompStarted {
     pub id: u64,
     pub cores: u32,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct AllocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct AllocationFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct DeallocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct DeallocationFailed {
     pub id: u64,
     pub reason: FailReason,

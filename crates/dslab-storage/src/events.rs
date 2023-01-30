@@ -64,7 +64,7 @@ pub struct FileReadFailed {
     pub error: String,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 /// Corresponds to completion of file system write request. Source: file system, destination: requester.
 pub struct FileWriteCompleted {
     /// Id which was returned from `write` file system method.

@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -34,8 +34,8 @@ impl System {
 
     // Network ---------------------------------------------------------------------------------------------------------
 
-    pub fn network(&self) -> Ref<Network> {
-        self.net.borrow()
+    pub fn network(&self) -> RefMut<Network> {
+        self.net.borrow_mut()
     }
 
     // Nodes -----------------------------------------------------------------------------------------------------------
@@ -76,6 +76,10 @@ impl System {
 
     pub fn get_node(&self, name: &str) -> Option<Ref<Node>> {
         self.nodes.get(name).and_then(|res| Some(res.borrow()))
+    }
+
+    pub fn get_mut_node(&self, name: &str) -> Option<RefMut<Node>> {
+        self.nodes.get(name).and_then(|res| Some(res.borrow_mut()))
     }
 
     // Processes -------------------------------------------------------------------------------------------------------
