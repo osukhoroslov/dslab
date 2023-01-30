@@ -20,6 +20,7 @@ impl Counter {
     }
 }
 
+#[derive(Clone)]
 /// A simple mapping type for storing (key, value) pairs where the keys are assumed to be taken
 /// from some unknown but not very big interval [0, MAX_KEY].
 pub struct VecMap<T> {
@@ -59,7 +60,7 @@ impl<T> VecMap<T> {
 
 /// Similar to VecMap, but returns default value instead of None and auto-extends to keys in
 /// `get_mut` query.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct RawVecMap<T: Default> {
     data: Vec<T>,
 }

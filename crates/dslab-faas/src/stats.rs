@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use order_stat::kth_by;
 
 use crate::invocation::{Invocation, InvocationRequest};
 use crate::resource::ResourceConsumer;
+use crate::util::RawVecMap;
 
 /// This struct allows calculating statistical functions on some data sample.
 /// Almost all metrics computed by the simulator are stored using this struct.
@@ -153,7 +152,7 @@ impl InvocationStats {
 #[derive(Clone, Default)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
-    pub wasted_resource_time: HashMap<usize, SampleMetric>,
+    pub wasted_resource_time: RawVecMap<SampleMetric>,
 }
 
 impl GlobalStats {
@@ -176,7 +175,7 @@ impl GlobalStats {
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
-            self.wasted_resource_time.entry(req.id).or_default().add(delta);
+            self.wasted_resource_time.get_mut(req.id).add(delta);
         }
     }
 
@@ -191,7 +190,10 @@ impl GlobalStats {
                 .mean()
         );
         // assuming that resource 0 is memory
-        println!("- wasted memory time = {}", self.wasted_resource_time[&0].sum());
+        println!(
+            "- wasted memory time = {}",
+            self.wasted_resource_time.get(0).unwrap().sum()
+        );
         println!(
             "- mean absolute total slowdown = {}",
             self.invocation_stats.abs_total_slowdown.mean()
@@ -205,7 +207,7 @@ impl GlobalStats {
 
 #[derive(Clone, Default)]
 pub struct Stats {
-    pub func_stats: HashMap<u64, InvocationStats>,
+    pub func_stats: RawVecMap<InvocationStats>,
     pub global_stats: GlobalStats,
 }
 
@@ -213,32 +215,28 @@ impl Stats {
     pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
         self.global_stats.on_cold_start(request, delay);
         self.func_stats
-            .entry(request.func_id)
-            .or_default()
+            .get_mut(request.func_id as usize)
             .on_cold_start(request, delay);
     }
 
     pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
         self.global_stats.on_new_invocation(request);
         self.func_stats
-            .entry(request.func_id)
-            .or_default()
+            .get_mut(request.func_id as usize)
             .on_new_invocation(request);
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
         self.func_stats
-            .entry(invocation.request.func_id)
-            .or_default()
+            .get_mut(invocation.request.func_id as usize)
             .update(invocation);
     }
 
     pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
         self.global_stats.update_queueing_time(request, curr_time);
         self.func_stats
-            .entry(request.func_id)
-            .or_default()
+            .get_mut(request.func_id as usize)
             .update_queueing_time(request, curr_time);
     }
 

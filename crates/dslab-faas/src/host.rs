@@ -139,11 +139,12 @@ impl Host {
         self.invocation_registry
             .borrow_mut()
             .new_invocation(request, self.id, cont_id, time);
-        let stats = self.stats.clone();
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let delta = time - container.last_change;
-            stats.borrow_mut().update_wasted_resources(delta, &container.resources);
+            self.stats
+                .borrow_mut()
+                .update_wasted_resources(delta, &container.resources);
         }
         container.last_change = time;
         container.status = ContainerStatus::Running;
