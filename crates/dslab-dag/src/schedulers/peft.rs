@@ -18,7 +18,10 @@ pub struct PeftScheduler {
 
 impl PeftScheduler {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            data_transfer_strategy: DataTransferStrategy::Eager,
+            original_network_estimation: false,
+        }
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
@@ -211,9 +214,6 @@ impl Scheduler for PeftScheduler {
 
 impl Default for PeftScheduler {
     fn default() -> Self {
-        Self {
-            data_transfer_strategy: DataTransferStrategy::Eager,
-            original_network_estimation: false,
-        }
+        Self::new()
     }
 }

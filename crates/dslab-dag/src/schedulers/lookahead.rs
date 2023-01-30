@@ -17,7 +17,9 @@ pub struct LookaheadScheduler {
 
 impl LookaheadScheduler {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            data_transfer_strategy: DataTransferStrategy::Eager,
+        }
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
@@ -255,8 +257,6 @@ impl Scheduler for LookaheadScheduler {
 
 impl Default for LookaheadScheduler {
     fn default() -> Self {
-        Self {
-            data_transfer_strategy: DataTransferStrategy::Eager,
-        }
+        Self::new()
     }
 }

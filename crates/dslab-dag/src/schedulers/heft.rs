@@ -17,7 +17,9 @@ pub struct HeftScheduler {
 
 impl HeftScheduler {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            data_transfer_strategy: DataTransferStrategy::Eager,
+        }
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
@@ -148,8 +150,6 @@ impl Scheduler for HeftScheduler {
 
 impl Default for HeftScheduler {
     fn default() -> Self {
-        Self {
-            data_transfer_strategy: DataTransferStrategy::Eager,
-        }
+        Self::new()
     }
 }

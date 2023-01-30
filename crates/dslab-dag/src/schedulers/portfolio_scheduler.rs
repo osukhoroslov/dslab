@@ -153,7 +153,7 @@ impl PortfolioScheduler {
                 CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
                 CoresCriterion::MaxCores => resources[best_resource].cores_available,
             };
-            let cores = cores.clamp(dag.get_task(task).max_cores, dag.get_task(task).min_cores);
+            let cores = cores.clamp(dag.get_task(task).min_cores, dag.get_task(task).max_cores);
 
             resources[best_resource].cores_available -= cores;
             result.push(Action::ScheduleTask {
