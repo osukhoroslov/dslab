@@ -70,6 +70,9 @@ pub fn evaluate_assignment(
     if resources[resource].compute.borrow().cores_total() < need_cores {
         return None;
     }
+    if resources[resource].compute.borrow().memory_total() < dag.get_task(task_id).memory {
+        return None;
+    }
 
     let data_transfer_mode = &config.data_transfer_mode;
 
@@ -160,7 +163,21 @@ pub fn evaluate_assignment(
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
-    let (start_time, cores) = find_earliest_slot(&scheduled_tasks[resource], start_time, task_exec_time, need_cores);
+    let memory_usage = build_memory_usage(&scheduled_tasks[resource], dag);
+    let blocked_intervals = memory_usage
+        .into_iter()
+        .filter(|(_start, _finish, usage)| {
+            usage + dag.get_task(task_id).memory > resources[resource].compute.borrow().memory_total()
+        })
+        .map(|(start, finish, _usage)| (start, finish))
+        .collect::<Vec<_>>();
+    let (start_time, cores) = find_earliest_slot(
+        &scheduled_tasks[resource],
+        start_time,
+        task_exec_time,
+        need_cores,
+        &blocked_intervals,
+    );
 
     assert!(cores.len() >= need_cores as usize);
 
@@ -169,11 +186,48 @@ pub fn evaluate_assignment(
     Some((start_time, start_time + task_exec_time, cores))
 }
 
+fn build_memory_usage(scheduled_tasks: &[BTreeSet<ScheduledTask>], dag: &DAG) -> Vec<(f64, f64, u64)> {
+    let mut events = Vec::new();
+    for tasks in scheduled_tasks.iter() {
+        for task in tasks.iter() {
+            events.push((task.start_time, dag.get_task(task.task).memory as i64));
+            events.push((task.finish_time, -(dag.get_task(task.task).memory as i64)));
+        }
+    }
+    events.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    events = {
+        let mut tmp: Vec<(f64, i64)> = Vec::new();
+        for (time, delta) in events {
+            if tmp.last().map(|x| x.0) == Some(time) {
+                tmp.last_mut().unwrap().1 += delta;
+            } else {
+                tmp.push((time, delta));
+            }
+        }
+        tmp.into_iter().filter(|&(_time, delta)| delta != 0).collect()
+    };
+
+    let mut current_memory = 0i64;
+
+    let mut result = Vec::new();
+
+    for w in events.windows(2) {
+        current_memory += w[0].1;
+        if current_memory != 0 {
+            result.push((w[0].0, w[1].0, current_memory as u64));
+        }
+    }
+
+    result
+}
+
 fn find_earliest_slot(
     scheduled_tasks: &[BTreeSet<ScheduledTask>],
     mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
+    blocked_intervals: &[(f64, f64)],
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
@@ -186,6 +240,21 @@ fn find_earliest_slot(
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
+        if blocked_intervals
+            .binary_search_by(|&(start, finish)| {
+                if finish <= possible_start {
+                    Ordering::Less
+                } else if start >= possible_start + task_exec_time {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
+        {
+            continue;
+        }
+
         for (core, tasks) in scheduled_tasks.iter().enumerate() {
             let next = tasks
                 .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))
