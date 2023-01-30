@@ -10,7 +10,7 @@ use dslab_core::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct Allocation {
     pub cores: u32,
     pub memory: u64,
