@@ -83,7 +83,7 @@ impl McNode {
             match action {
                 ProcessEvent::MessageSent { msg, src, dest } => {
                     if !self.net.borrow_mut().send_message(msg, src, dest, self.id) {
-                        return;
+                        continue;
                     }
                     proc_entry.sent_message_count += 1;
                 }
