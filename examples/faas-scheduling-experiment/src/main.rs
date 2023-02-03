@@ -1,6 +1,7 @@
 mod plot;
 
 use std::boxed::Box;
+use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
@@ -14,6 +15,7 @@ use dslab_faas::extra::azure_trace::{
 };
 use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
+use dslab_faas::trace::Trace;
 
 use crate::plot::plot_results;
 
@@ -49,7 +51,7 @@ fn main() {
             time_period: 60,
             duration_generator: DurationGenerator::PrefittedLognormal,
             start_generator: StartGenerator::PoissonFit,
-            app_preferences: vec![AppPreference::new(1, 0., 0.05), AppPreference::new(49, 0.45, 0.55)],
+            app_preferences: vec![AppPreference::new(1, 0.02, 0.05), AppPreference::new(49, 0.45, 0.55)],
             force_fixed_memory: Some(256),
             rps: Some(*rps),
             ..Default::default()
@@ -77,7 +79,7 @@ fn main() {
         for (i, s) in stats.drain(..).enumerate() {
             let inv = s.global_stats.invocation_stats;
             points[i].push([
-                inv.rel_total_slowdown.quantile(0.99),
+                inv.rel_total_slowdown.quantile(0.99) + 1.,
                 (inv.cold_starts as f64) / (inv.invocations as f64) * 100.,
             ]);
         }

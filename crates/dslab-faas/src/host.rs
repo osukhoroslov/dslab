@@ -8,7 +8,7 @@ use dslab_core::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{ContainerManager, ContainerStatus};
-use crate::cpu::CPU;
+use crate::cpu::{CPUPolicy, CPU};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationStatus};
@@ -35,7 +35,7 @@ impl Host {
     pub fn new(
         id: usize,
         cores: u32,
-        disable_contention: bool,
+        cpu_policy: Box<dyn CPUPolicy>,
         resources: ResourceProvider,
         invoker: Box<dyn Invoker>,
         function_registry: Rc<RefCell<FunctionRegistry>>,
@@ -50,7 +50,7 @@ impl Host {
             id,
             invoker,
             container_manager: ContainerManager::new(resources, ctx.clone()),
-            cpu: CPU::new(cores, disable_contention, ctx.clone()),
+            cpu: CPU::new(cores, cpu_policy, ctx.clone()),
             function_registry,
             invocation_registry,
             coldstart,

@@ -144,6 +144,7 @@ impl Invoker for NaiveInvoker {
                         let delta = time - container.last_change;
                         stats.update_wasted_resources(delta, &container.resources);
                     }
+                    stats.on_cold_start(item.app_id, item.func_id, time - item.time);
                     container.last_change = time;
                     container.status = ContainerStatus::Running;
                     container.start_invocation(item.invocation_id);
@@ -152,7 +153,7 @@ impl Invoker for NaiveInvoker {
                 InvokerDecision::Cold((id, delay)) => {
                     stats.update_queueing_time(item.app_id, item.func_id, time - item.time);
                     cm.reserve_container(id, item.invocation_id);
-                    stats.on_cold_start(item.app_id, item.func_id, delay);
+                    stats.on_cold_start(item.app_id, item.func_id, time - item.time + delay);
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, Some(delay)));
                 }
                 InvokerDecision::Rejected => {
@@ -230,6 +231,7 @@ impl Invoker for FIFOInvoker {
                         let delta = time - container.last_change;
                         stats.update_wasted_resources(delta, &container.resources);
                     }
+                    stats.on_cold_start(item.app_id, item.func_id, time - item.time);
                     container.last_change = time;
                     container.status = ContainerStatus::Running;
                     container.start_invocation(item.invocation_id);
@@ -239,7 +241,7 @@ impl Invoker for FIFOInvoker {
                 InvokerDecision::Cold((id, delay)) => {
                     stats.update_queueing_time(item.app_id, item.func_id, time - item.time);
                     cm.reserve_container(id, item.invocation_id);
-                    stats.on_cold_start(item.app_id, item.func_id, delay);
+                    stats.on_cold_start(item.app_id, item.func_id, time - item.time + delay);
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, Some(delay)));
                     self.queue.pop_front();
                 }

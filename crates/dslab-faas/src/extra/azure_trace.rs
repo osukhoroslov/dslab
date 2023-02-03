@@ -167,6 +167,8 @@ pub struct AzureTraceConfig {
     pub memory_name: String,
     /// This option forces trace generator to use given amount of memory for all apps.
     pub force_fixed_memory: Option<u64>,
+    /// Cold start latency, currently it's the same for all apps.
+    pub cold_start_latency: f64,
     /// If `rps` is not None, trace generator attempts to scale trace to the given number of requests
     /// per second by either removing random requests or duplicating random requests (yes, that
     /// doesn't sound very solid).
@@ -184,6 +186,7 @@ impl Default for AzureTraceConfig {
             random_seed: 1,
             memory_name: "mem".to_string(),
             force_fixed_memory: None,
+            cold_start_latency: 1.,
             rps: None,
         }
     }
@@ -463,7 +466,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             mem: config
                 .force_fixed_memory
                 .unwrap_or_else(|| app_mem.get(app).copied().unwrap() as u64),
-            cold_start: 0.1,
+            cold_start: config.cold_start_latency,
         };
         app_indices.insert(app.clone(), i);
     }

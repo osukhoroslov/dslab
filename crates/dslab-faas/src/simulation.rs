@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
@@ -8,6 +9,7 @@ use dslab_core::simulation::Simulation;
 use crate::coldstart::ColdStartPolicy;
 use crate::config::Config;
 use crate::controller::Controller;
+use crate::cpu::CPUPolicy;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
@@ -24,7 +26,7 @@ pub struct ServerlessSimulation {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
     controller_id: HandlerId,
-    disable_contention: bool,
+    cpu_policy: Box<dyn CPUPolicy>,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     host_ctr: Counter,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
@@ -50,7 +52,7 @@ impl ServerlessSimulation {
             coldstart: config.coldstart_policy.box_to_rc(),
             controller,
             controller_id,
-            disable_contention: config.disable_contention,
+            cpu_policy: config.cpu_policy,
             function_registry,
             host_ctr: Default::default(),
             invocation_registry,
@@ -109,7 +111,7 @@ impl ServerlessSimulation {
         let host = Rc::new(RefCell::new(Host::new(
             id,
             cores,
-            self.disable_contention,
+            self.cpu_policy.clean_copy(),
             resources,
             real_invoker,
             self.function_registry.clone(),
