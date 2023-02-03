@@ -1,3 +1,4 @@
+use std::collections::binary_heap::Iter;
 use std::collections::{BinaryHeap, HashSet};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
@@ -28,19 +29,25 @@ impl SimulationState {
         }
     }
 
-    pub fn time(&self) -> f64 {
-        self.clock
+    /// Returns an iterator visiting all currently stored pending events, in arbitrary order.
+    pub fn events(&self) -> Iter<'_, Event> {
+        self.events.iter()
     }
 
-    pub fn rand(&mut self) -> f64 {
-        self.rand.gen_range(0.0..1.0)
-    }
-
-    pub fn clone_rand(&self) -> Pcg64 {
+    /// Returns a copy of internal RNG state.
+    pub fn rand_copy(&self) -> Pcg64 {
         self.rand.clone()
     }
 
-    pub fn gen_range<T, R>(&mut self, range: R) -> T
+    pub(crate) fn time(&self) -> f64 {
+        self.clock
+    }
+
+    pub(crate) fn rand(&mut self) -> f64 {
+        self.rand.gen_range(0.0..1.0)
+    }
+
+    pub(crate) fn gen_range<T, R>(&mut self, range: R) -> T
     where
         T: SampleUniform,
         R: SampleRange<T>,
@@ -52,11 +59,11 @@ impl SimulationState {
         dist.sample(&mut self.rand)
     }
 
-    pub fn random_string(&mut self, len: usize) -> String {
+    pub(crate) fn random_string(&mut self, len: usize) -> String {
         Alphanumeric.sample_string(&mut self.rand, len)
     }
 
-    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub(crate) fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
@@ -78,7 +85,7 @@ impl SimulationState {
         }
     }
 
-    pub fn next_event(&mut self) -> Option<Event> {
+    pub(crate) fn next_event(&mut self) -> Option<Event> {
         loop {
             if let Some(event) = self.events.pop() {
                 if !self.canceled_events.remove(&event.id) {
@@ -91,15 +98,15 @@ impl SimulationState {
         }
     }
 
-    pub fn peek_event(&self) -> Option<&Event> {
+    pub(crate) fn peek_event(&self) -> Option<&Event> {
         self.events.peek()
     }
 
-    pub fn cancel_event(&mut self, id: EventId) {
+    pub(crate) fn cancel_event(&mut self, id: EventId) {
         self.canceled_events.insert(id);
     }
 
-    pub fn cancel_events<F>(&mut self, pred: F)
+    pub(crate) fn cancel_events<F>(&mut self, pred: F)
     where
         F: Fn(&Event) -> bool,
     {
@@ -110,11 +117,7 @@ impl SimulationState {
         }
     }
 
-    pub fn event_count(&self) -> u64 {
+    pub(crate) fn event_count(&self) -> u64 {
         self.event_count
-    }
-
-    pub fn events(&self) -> BinaryHeap<Event> {
-        self.events.clone()
     }
 }

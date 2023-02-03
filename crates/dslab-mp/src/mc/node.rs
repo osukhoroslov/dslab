@@ -2,17 +2,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
-
 use crate::context::Context;
-use crate::events::{MessageReceived, TimerFired};
+use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
 
 pub struct ProcessEntryState {
-    pub process_state: Box<dyn ProcessState>,
+    pub proc_state: Box<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,
     pub local_outbox: Vec<Message>,
     pub pending_timers: HashMap<String, u64>,
@@ -20,34 +18,47 @@ pub struct ProcessEntryState {
     pub received_message_count: u64,
 }
 
-pub struct McNodeState {
-    pub process_entry_states: HashMap<String, ProcessEntryState>,
+impl ProcessEntry {
+    fn get_state(&self) -> ProcessEntryState {
+        ProcessEntryState {
+            proc_state: self.proc_impl.state(),
+            event_log: self.event_log.clone(),
+            local_outbox: self.local_outbox.clone(),
+            pending_timers: self.pending_timers.clone(),
+            sent_message_count: self.sent_message_count,
+            received_message_count: self.received_message_count,
+        }
+    }
+
+    fn set_state(&mut self, state: ProcessEntryState) {
+        self.proc_impl.set_state(state.proc_state);
+        self.event_log = state.event_log;
+        self.local_outbox = state.local_outbox;
+        self.pending_timers = state.pending_timers;
+        self.sent_message_count = state.sent_message_count;
+        self.received_message_count = state.received_message_count;
+    }
 }
 
+pub type McNodeState = HashMap<String, ProcessEntryState>;
+
 pub struct McNode {
-    id: Id,
-    name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<McNetwork>>,
+    events: Rc<RefCell<Vec<McEvent>>>,
 }
 
 impl McNode {
     pub(crate) fn new(
-        id: Id,
-        name: String,
         processes: HashMap<String, ProcessEntry>,
         net: Rc<RefCell<McNetwork>>,
+        events: Rc<RefCell<Vec<McEvent>>>,
     ) -> Self {
-        Self {
-            id,
-            name,
-            processes,
-            net,
-        }
+        Self { processes, net, events }
     }
 
-    fn create_ctx(proc_name: String) -> Context {
-        Context::new(proc_name, None, 0.0)
+    fn create_ctx(proc_name: &String) -> Context {
+        Context::new(proc_name.clone(), None, 0.0)
     }
 
     pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) {
@@ -62,7 +73,7 @@ impl McNode {
         ));
         proc_entry.received_message_count += 1;
 
-        let mut proc_ctx = Self::create_ctx(proc.clone());
+        let mut proc_ctx = Self::create_ctx(&proc);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions());
     }
@@ -71,7 +82,7 @@ impl McNode {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
-        let mut proc_ctx = Self::create_ctx(proc.clone());
+        let mut proc_ctx = Self::create_ctx(&proc);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions());
     }
@@ -82,9 +93,7 @@ impl McNode {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src, dest } => {
-                    if !self.net.borrow_mut().send_message(msg, src, dest, self.id) {
-                        continue;
-                    }
+                    self.net.borrow_mut().send_message(msg, src, dest);
                     proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
@@ -96,8 +105,13 @@ impl McNode {
                     behavior,
                 } => {
                     if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
-                        let event_id = self.net.borrow_mut().set_timer(name.clone(), proc.clone(), self.id);
-                        proc_entry.pending_timers.insert(name, event_id);
+                        let data = McEvent::TimerFired {
+                            timer: name.clone(),
+                            proc: proc.clone(),
+                        };
+                        self.events.borrow_mut().push(data);
+                        // event_id is 0 since it is not used in model checking
+                        proc_entry.pending_timers.insert(name, 0);
                     }
                 }
                 // TODO: Add handling of timer cancellation after adding of event dependencies resolver
@@ -112,48 +126,15 @@ impl McNode {
     }
 
     pub fn get_state(&self) -> McNodeState {
-        let mut state = McNodeState {
-            process_entry_states: HashMap::new(),
-        };
-        for (proc, proc_entry) in &self.processes {
-            state.process_entry_states.insert(
-                proc.to_owned(),
-                ProcessEntryState {
-                    process_state: proc_entry.proc_impl.state(),
-                    event_log: proc_entry.event_log.clone(),
-                    local_outbox: proc_entry.local_outbox.clone(),
-                    pending_timers: proc_entry.pending_timers.clone(),
-                    sent_message_count: proc_entry.sent_message_count,
-                    received_message_count: proc_entry.received_message_count,
-                },
-            );
-        }
-        state
+        self.processes
+            .iter()
+            .map(|(proc, entry)| (proc.clone(), entry.get_state()))
+            .collect()
     }
 
     pub fn set_state(&mut self, state: McNodeState) {
-        for (proc, proc_entry_state) in state.process_entry_states {
-            if let Some(proc_entry) = self.processes.get_mut(&proc) {
-                proc_entry.proc_impl.set_state(proc_entry_state.process_state);
-                proc_entry.event_log = proc_entry_state.event_log;
-                proc_entry.local_outbox = proc_entry_state.local_outbox;
-                proc_entry.pending_timers = proc_entry_state.pending_timers;
-                proc_entry.sent_message_count = proc_entry_state.sent_message_count;
-                proc_entry.received_message_count = proc_entry_state.received_message_count;
-            }
+        for (proc, state) in state {
+            self.processes.get_mut(&proc).unwrap().set_state(state);
         }
-    }
-}
-
-impl EventHandler for McNode {
-    fn on(&mut self, event: Event) {
-        cast!(match event.data {
-            MessageReceived { msg, src, dest } => {
-                self.on_message_received(dest, msg, src);
-            }
-            TimerFired { proc, timer } => {
-                self.on_timer_fired(proc, timer);
-            }
-        })
     }
 }

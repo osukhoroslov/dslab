@@ -18,7 +18,7 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_info, log_trace, log_warn};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct PerformMigrations {}
 
 /// This component performs automatic migration of VMs to improve host utilization while avoiding SLA violations.

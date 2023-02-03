@@ -1,9 +1,10 @@
 use std::env;
 
 use crate::PyProcessFactory;
+use dslab_mp::process::ProcessState;
 use dslab_mp::{message::Message, process::Process, system::System};
 
-fn build_system() -> (System, String) {
+fn build_system() -> (System, Box<dyn ProcessState>) {
     let mut sys = System::new(0);
     sys.add_node("node");
     let proc_f = PyProcessFactory::new("python-tests/process.py", "TestProcess");
@@ -26,12 +27,11 @@ fn test_set_state() {
     assert_eq!(msgs.len(), 1);
 
     // process should not have anything but state members after `set_state()`
-    sys.get_node("node")
+    sys.get_mut_node("node")
         .unwrap()
-        .borrow()
         .get_process("proc")
         .unwrap()
-        .set_state(&proc_state);
+        .set_state(proc_state);
     sys.send_local_message("proc", Message::new("echo", data));
     sys.step_until_no_events();
     let msgs = sys.read_local_messages("proc");

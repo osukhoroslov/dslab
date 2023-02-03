@@ -1,14 +1,13 @@
 //! Simulation configuration and execution.
 
-use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashMap};
+use std::cell::{Ref, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use log::Level::Trace;
 use log::{debug, log_enabled, trace};
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
-use rand_pcg::Pcg64;
 use serde_json::json;
 use serde_type_name::type_name;
 
@@ -36,10 +35,6 @@ impl Simulation {
             names: Rc::new(RefCell::new(Vec::new())),
             handlers: Vec::new(),
         }
-    }
-
-    pub fn names(&self) -> Rc<RefCell<Vec<String>>> {
-        return self.names.clone();
     }
 
     fn register(&mut self, name: &str) -> Id {
@@ -594,21 +589,11 @@ impl Simulation {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
-    /// Returns clone of random generator state from SimulationState.
-    /// Now is used for model checking.
-    pub fn clone_state_rand(&self) -> Pcg64 {
-        self.sim_state.borrow().clone_rand()
-    }
-
-    /// Returns event_count of SimulationState.
-    /// Now is used for model checking.
-    pub fn state_event_count(&self) -> u64 {
-        self.sim_state.borrow().event_count()
-    }
-
-    /// Returns clone of events heap from SimulationState.
-    /// Now is used for model checking.
-    pub fn state_events(&self) -> BinaryHeap<Event> {
-        self.sim_state.borrow().events()
+    /// Returns a read-only reference to internal simulation state.
+    ///
+    /// Can be used to examine pending events and get a copy of RNG state.
+    /// Currently used for model checking in dslab-mp.
+    pub fn state(&self) -> Ref<SimulationState> {
+        self.sim_state.borrow()
     }
 }

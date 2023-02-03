@@ -283,7 +283,7 @@ fn test_normal_non_unique(config: &TestConfig) -> TestResult {
 
 fn test_delayed(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    sys.network().borrow_mut().set_delays(1., 3.);
+    sys.network().set_delays(1., 3.);
     let messages = send_messages(&mut sys, 5);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
@@ -291,7 +291,7 @@ fn test_delayed(config: &TestConfig) -> TestResult {
 
 fn test_duplicated(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    sys.network().borrow_mut().set_dupl_rate(0.3);
+    sys.network().set_dupl_rate(0.3);
     let messages = send_messages(&mut sys, 5);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
@@ -299,8 +299,8 @@ fn test_duplicated(config: &TestConfig) -> TestResult {
 
 fn test_delayed_duplicated(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    sys.network().borrow_mut().set_delays(1., 3.);
-    sys.network().borrow_mut().set_dupl_rate(0.3);
+    sys.network().set_delays(1., 3.);
+    sys.network().set_dupl_rate(0.3);
     let messages = send_messages(&mut sys, 5);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
@@ -308,7 +308,7 @@ fn test_delayed_duplicated(config: &TestConfig) -> TestResult {
 
 fn test_dropped(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    sys.network().borrow_mut().set_drop_rate(0.3);
+    sys.network().set_drop_rate(0.3);
     let messages = send_messages(&mut sys, 5);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
@@ -321,9 +321,9 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         run_config.seed = rand.next_u64();
         println!("Run {} (seed: {})", i, run_config.seed);
         let mut sys = build_system(&run_config, false);
-        sys.network().borrow_mut().set_delays(1., 3.);
-        sys.network().borrow_mut().set_dupl_rate(0.3);
-        sys.network().borrow_mut().set_drop_rate(0.3);
+        sys.network().set_delays(1., 3.);
+        sys.network().set_dupl_rate(0.3);
+        sys.network().set_drop_rate(0.3);
         let messages = send_messages(&mut sys, 10);
         sys.step_until_no_events();
         let res = check_guarantees(&mut sys, &messages, &run_config);
@@ -336,9 +336,9 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
     for message_count in [100, 500, 1000] {
         let mut sys = build_system(config, true);
         if faulty {
-            sys.network().borrow_mut().set_delays(1., 3.);
-            sys.network().borrow_mut().set_dupl_rate(0.3);
-            sys.network().borrow_mut().set_drop_rate(0.3);
+            sys.network().set_delays(1., 3.);
+            sys.network().set_dupl_rate(0.3);
+            sys.network().set_drop_rate(0.3);
         }
         let messages = send_messages(&mut sys, message_count);
         sys.step_until_no_events();
@@ -346,8 +346,8 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
         res.as_ref()?;
         let sender_mem = sys.max_size("sender");
         let receiver_mem = sys.max_size("receiver");
-        let net_message_count = sys.network().borrow().message_count();
-        let net_traffic = sys.network().borrow().traffic();
+        let net_message_count = sys.network().message_count();
+        let net_traffic = sys.network().traffic();
         println!(
             "{:<6} Send Mem: {:<8} Recv Mem: {:<8} Messages: {:<8} Traffic: {}",
             message_count, sender_mem, receiver_mem, net_message_count, net_traffic

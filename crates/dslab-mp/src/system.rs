@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -34,14 +34,14 @@ impl System {
 
     // Network ---------------------------------------------------------------------------------------------------------
 
-    pub fn network(&self) -> &Rc<RefCell<Network>> {
-        &self.net
+    pub fn network(&self) -> RefMut<Network> {
+        self.net.borrow_mut()
     }
 
     // Nodes -----------------------------------------------------------------------------------------------------------
 
-    pub fn nodes(&self) -> &HashMap<String, Rc<RefCell<Node>>> {
-        &self.nodes
+    pub fn nodes(&self) -> Vec<String> {
+        self.nodes.keys().cloned().collect()
     }
 
     pub fn add_node(&mut self, name: &str) {
@@ -79,8 +79,12 @@ impl System {
         t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
     }
 
-    pub fn get_node(&self, name: &str) -> Option<Rc<RefCell<Node>>> {
-        self.nodes.get(name).and_then(|res| Some(res.clone()))
+    pub fn get_node(&self, name: &str) -> Option<Ref<Node>> {
+        self.nodes.get(name).and_then(|res| Some(res.borrow()))
+    }
+
+    pub fn get_mut_node(&self, name: &str) -> Option<RefMut<Node>> {
+        self.nodes.get(name).and_then(|res| Some(res.borrow_mut()))
     }
 
     pub fn node_is_crashed(&self, node: &str) -> bool {
