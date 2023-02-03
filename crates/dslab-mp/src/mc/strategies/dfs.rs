@@ -49,6 +49,6 @@ impl Strategy for Dfs {
             }
             system.set_state(state);
         }
-        return true;
+        true
     }
 }
