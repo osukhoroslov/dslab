@@ -32,7 +32,7 @@ pub trait Process: DynClone {
 
     /// Returns the process state.
     fn state(&self) -> Box<dyn ProcessState> {
-        return Box::new(ProcessStateStub {});
+        Box::new(ProcessStateStub {})
     }
 
     /// Restores the process state.
