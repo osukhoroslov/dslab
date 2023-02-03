@@ -164,7 +164,7 @@ impl System {
     // Simulation ------------------------------------------------------------------------------------------------------
 
     pub fn sim(&self) -> &Simulation {
-        return &self.sim;
+        &self.sim
     }
 
     pub fn time(&self) -> f64 {
