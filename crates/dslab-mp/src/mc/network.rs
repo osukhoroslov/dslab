@@ -60,8 +60,8 @@ impl McNetwork {
         let msg = self.corrupt_if_needed(msg);
         let data = McEvent::MessageReceived {
             msg,
-            src: src.clone(),
-            dest: dest.clone(),
+            src,
+            dest,
         };
         let dups = self.duplicate_if_needed();
         for _ in 0..dups {
