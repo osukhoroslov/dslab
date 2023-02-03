@@ -1,16 +1,18 @@
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::rc::Rc;
+use std::vec::Vec;
+
+use float_ord::FloatOrd;
+use itertools::Itertools;
+use serde::Serialize;
+
 use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::event::EventId;
-use itertools::Itertools;
-use rand::prelude::SliceRandom;
-use serde::Serialize;
-use std::cell::RefCell;
-use std::hash::Hash;
-
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::rc::Rc;
-use std::vec::Vec;
 
 #[derive(Debug)]
 struct DependencyWrapper<T: Copy + PartialEq + Debug> {
@@ -25,7 +27,9 @@ struct DependencyWrapper<T: Copy + PartialEq + Debug> {
 /// It is guaranteed that if t is not the earliest timer it is connected with at least one timer before it in queue.
 ///
 struct TimerDependencyResolver {
-    node_timers: HashMap<Id, Vec<(f64, Rc<RefCell<DependencyWrapper<EventId>>>)>>,
+    node_timers: HashMap<Id, BTreeMap<FloatOrd<f64>, Vec<EventId>>>,
+    event_to_dependency: HashMap<EventId, Rc<RefCell<DependencyWrapper<EventId>>>>,
+    dependency_stubs: HashMap<Id, HashMap<FloatOrd<f64>, Rc<RefCell<DependencyWrapper<EventId>>>>>,
     event_to_node: HashMap<EventId, Id>,
 }
 
@@ -38,96 +42,99 @@ impl TimerDependencyResolver {
     pub fn new() -> Self {
         TimerDependencyResolver {
             node_timers: HashMap::new(),
+            event_to_dependency: HashMap::new(),
+            dependency_stubs: HashMap::new(),
             event_to_node: HashMap::new(),
         }
     }
+
     pub fn add(&mut self, node: Id, time: f64, event: Rc<RefCell<DependencyWrapper<EventId>>>) {
         assert!(
             self.event_to_node.insert(event.as_ref().borrow().inner, node).is_none(),
             "duplicate EventId not allowed"
         );
+        self.event_to_dependency
+            .insert(event.as_ref().borrow().inner, event.clone());
         let timers = self.node_timers.entry(node).or_default();
-        let mut max_time_before_idx = None;
-        let mut min_time_after_idx = None;
-        for (idx, timer) in timers.iter().enumerate() {
-            if timer.0 < time {
-                max_time_before_idx = Some(idx);
+        self.dependency_stubs.entry(node).or_default();
+        let min_time_after = timers.range(FloatOrd(time)..).next();
+        let next_events = min_time_after.and_then(|x| Some(x.1.clone())).unwrap_or_default();
+        let timer_group = timers.entry(FloatOrd(time)).or_insert_with(|| {
+            self.dependency_stubs.get_mut(&node).unwrap().insert(
+                FloatOrd(time),
+                Rc::new(RefCell::new(DependencyWrapper::<EventId>::new(u64::MAX))),
+            );
+
+            for next_event in next_events {
+                let fake_dependency = &self.dependency_stubs[&node][&FloatOrd(time)];
+                let next_event = &self.event_to_dependency[&next_event];
+                println!(
+                    "{} -> {}",
+                    fake_dependency.as_ref().borrow().inner,
+                    next_event.as_ref().borrow().inner
+                );
+
+                fake_dependency.as_ref().borrow_mut().add_child(&next_event);
+                next_event.as_ref().borrow_mut().add_parent(&fake_dependency);
             }
-            if timer.0 > time && min_time_after_idx.is_none() {
-                min_time_after_idx = Some(idx);
-            }
-        }
-        if let Some(min_time_after_idx) = min_time_after_idx {
-            for event_after in timers.iter() {
-                if event_after.0 == timers[min_time_after_idx].0 {
-                    println!(
-                        "{} -> {}",
-                        event.as_ref().borrow().inner,
-                        event_after.1.as_ref().borrow().inner
-                    );
-                    event.as_ref().borrow_mut().add_child(&event_after.1);
-                    event_after.1.as_ref().borrow_mut().add_parent(&event);
-                }
-            }
-        }
-        if let Some(idx) = max_time_before_idx {
-            let (before, after) = timers.split_at(idx + 1);
-            *timers = before
-                .into_iter()
-                .cloned()
-                .chain(vec![(time, event.clone())].iter().cloned())
-                .chain(after.into_iter().cloned())
-                .collect();
+            Vec::default()
+        });
+        timer_group.push(event.as_ref().borrow().inner);
+        let max_time_before = timers.range(..FloatOrd(time)).next_back();
+        if let Some((max_time_before, _)) = max_time_before {
+            let dependency_before = &self.dependency_stubs[&node][max_time_before];
             println!(
                 "{} -> {}",
-                timers[idx].1.as_ref().borrow().inner,
+                dependency_before.as_ref().borrow().inner,
                 event.as_ref().borrow().inner
             );
-            timers[idx].1.as_ref().borrow_mut().add_child(&event);
-            event.as_ref().borrow_mut().add_parent(&timers[idx].1);
-        } else {
-            *timers = vec![(time, event)]
-                .into_iter()
-                .chain(timers.as_slice().into_iter().cloned())
-                .collect();
+            dependency_before.as_ref().borrow_mut().add_child(&event);
+            event.as_ref().borrow_mut().add_parent(&dependency_before);
         }
     }
 
-    fn find(&self, node: &Id, event_id: EventId) -> Option<usize> {
-        for (idx, elem) in self.node_timers.get(node).unwrap().iter().enumerate() {
-            if elem.1.as_ref().borrow().inner == event_id {
-                return Some(idx);
-            }
-        }
-        None
-    }
-
-    pub fn pop(&mut self, event_id: EventId, childs: &Vec<Rc<RefCell<DependencyWrapper<EventId>>>>) {
+    pub fn pop(&mut self, event_id: EventId) -> Vec<Rc<RefCell<DependencyWrapper<u64>>>> {
         let node = self.event_to_node.remove(&event_id).unwrap();
-        let data = self.node_timers.get_mut(&node).unwrap();
-        assert!(data.len() > 0, "cannot pop from empty vector");
-        let event_pos = self.find(&node, event_id);
-        assert!(event_pos.is_some());
-        let data = self.node_timers.get_mut(&node).unwrap();
-        let event_pos = event_pos.unwrap();
-        assert!(data[event_pos].0 == data[0].0);
-
-        let mut other_idx = None;
-        for (idx, timer) in data.iter().enumerate() {
-            if timer.0 <= data[event_pos].0 && idx != event_pos {
-                other_idx = Some(idx);
+        let node_timers = self.node_timers.get_mut(&node).unwrap();
+        let mut new_available_events = Vec::new();
+        while !node_timers.is_empty() {
+            let (timer, list) = node_timers.into_iter().next().unwrap();
+            let timer = timer.clone();
+            if list.is_empty() {
+                node_timers.remove(&timer).unwrap();
+                let fake_dependency = &self.dependency_stubs[&node][&timer];
+                new_available_events.extend(fake_dependency.as_ref().borrow_mut().pop_dependencies());
+                self.dependency_stubs.get_mut(&node).unwrap().remove(&timer);
+            } else {
+                let idx = list.iter().position(|elem| *elem == event_id);
+                assert!(idx.is_some(), "event to pop was not first in queue");
+                let idx = idx.unwrap();
+                list.remove(idx);
+                let dependency = self.event_to_dependency.remove(&event_id).unwrap();
+                new_available_events.extend(dependency.as_ref().borrow_mut().pop_dependencies());
+                if list.is_empty() {
+                    node_timers.remove(&timer).unwrap();
+                    let fake_dependency = &self.dependency_stubs[&node][&timer];
+                    let tmp_available_events = fake_dependency.as_ref().borrow_mut().pop_dependencies();
+                    for event in &tmp_available_events {
+                        let idx = event
+                            .as_ref()
+                            .borrow()
+                            .dependencies_before
+                            .iter()
+                            .enumerate()
+                            .find(|elem| elem.1.as_ref().borrow().inner == fake_dependency.as_ref().borrow().inner)
+                            .unwrap()
+                            .0;
+                        event.borrow_mut().dependencies_before.remove(idx);
+                    }
+                    new_available_events.extend(tmp_available_events.into_iter());
+                    self.dependency_stubs.get_mut(&node).unwrap().remove(&timer);
+                }
                 break;
             }
         }
-
-        if let Some(idx) = other_idx {
-            // need to link over removed elem
-            for child in childs {
-                data[idx].1.as_ref().borrow_mut().add_child(&child);
-                child.as_ref().borrow_mut().add_parent(&data[idx].1);
-            }
-        }
-        data.remove(event_pos);
+        new_available_events
     }
 }
 
@@ -167,21 +174,8 @@ impl DependencyResolver {
             .enumerate()
             .find(|x| x.1.as_ref().borrow().inner == event_id)
             .unwrap();
-        let next_events = event.1.as_ref().borrow_mut().pop_dependencies();
-        for dependency in next_events.iter() {
-            let idx = dependency
-                .as_ref()
-                .borrow()
-                .dependencies_before
-                .iter()
-                .enumerate()
-                .find(|elem| elem.1.as_ref().borrow().inner == event.1.as_ref().borrow().inner)
-                .unwrap()
-                .0;
-            dependency.borrow_mut().dependencies_before.remove(idx);
-        }
         self.available_events.remove(event.0);
-        self.timer_resolver.pop(event_id, &next_events);
+        let next_events = self.timer_resolver.pop(event_id);
         for dependency in next_events.iter() {
             if dependency.as_ref().borrow().is_available() {
                 self.available_events.push(dependency.clone());
@@ -221,124 +215,139 @@ impl<T: Copy + PartialEq + Debug + Hash + Eq> DependencyWrapper<T> {
 #[derive(Serialize)]
 struct SamplePayload {}
 
-#[test]
-fn test_dependency_resolver_simple() {
-    let mut resolver = DependencyResolver::new();
-    let mut sequence = Vec::new();
-    for node_id in 0..3 {
-        let mut times: Vec<u64> = (0..3).into_iter().collect();
-        times.shuffle(&mut rand::thread_rng());
-        for event_time in times {
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::prelude::SliceRandom;
+
+    #[test]
+    fn test_float_ord() {
+        let a = FloatOrd(0.0);
+        let b = FloatOrd(0.0);
+        assert!(b <= a);
+        assert!(a <= b);
+        assert!(a == b);
+    }
+
+    #[test]
+    fn test_dependency_resolver_simple() {
+        let mut resolver = DependencyResolver::new();
+        let mut sequence = Vec::new();
+        for node_id in 0..3 {
+            let mut times: Vec<u64> = (0..3).into_iter().collect();
+            times.shuffle(&mut rand::thread_rng());
+            for event_time in times {
+                let event = Event {
+                    id: event_time * 3 + node_id,
+                    src: node_id as u32,
+                    dest: 0,
+                    time: event_time as f64,
+                    data: Box::new(SamplePayload {}),
+                };
+                resolver.add_event(&event);
+            }
+        }
+        while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
+            let id = *id;
+            sequence.push(id);
+            resolver.pop_event(id);
+        }
+        println!("{:?}", sequence);
+        assert!(sequence.len() == 9);
+        let mut timers = vec![0, 0, 0];
+        for event_id in sequence {
+            let time = event_id / 3;
+            let node = event_id % 3;
+            assert!(timers[node as usize] == time);
+            timers[node as usize] += 1;
+        }
+    }
+
+    #[test]
+    fn test_dependency_resolver_pop() {
+        let mut resolver = DependencyResolver::new();
+        let mut sequence = Vec::new();
+        for node_id in 0..3 {
+            let mut times: Vec<u64> = (0..3).into_iter().collect();
+            times.shuffle(&mut rand::thread_rng());
+            for event_time in times {
+                let event = Event {
+                    id: event_time * 3 + node_id,
+                    src: node_id as u32,
+                    dest: 0,
+                    time: event_time as f64,
+                    data: Box::new(SamplePayload {}),
+                };
+                resolver.add_event(&event);
+            }
+        }
+
+        // remove most of elements
+        // timer resolver should clear its queues before it
+        // can add next events without broken dependencies
+        for _ in 0..7 {
+            let id = *resolver.available_events().choose(&mut rand::thread_rng()).unwrap();
+            sequence.push(id);
+            resolver.pop_event(id);
+        }
+        for node_id in 0..3 {
             let event = Event {
-                id: event_time * 3 + node_id,
+                id: 9 + node_id,
                 src: node_id as u32,
                 dest: 0,
-                time: event_time as f64,
+                time: 3.0,
                 data: Box::new(SamplePayload {}),
             };
             resolver.add_event(&event);
         }
-    }
-    while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
-        let id = *id;
-        sequence.push(id);
-        resolver.pop_event(id);
-    }
-    println!("{:?}", sequence);
-    assert!(sequence.len() == 9);
-    let mut timers = vec![0, 0, 0];
-    for event_id in sequence {
-        let time = event_id / 3;
-        let node = event_id % 3;
-        assert!(timers[node as usize] == time);
-        timers[node as usize] += 1;
-    }
-}
-
-#[test]
-fn test_dependency_resolver_pop() {
-    let mut resolver = DependencyResolver::new();
-    let mut sequence = Vec::new();
-    for node_id in 0..3 {
-        let mut times: Vec<u64> = (0..3).into_iter().collect();
-        times.shuffle(&mut rand::thread_rng());
-        for event_time in times {
-            let event = Event {
-                id: event_time * 3 + node_id,
-                src: node_id as u32,
-                dest: 0,
-                time: event_time as f64,
-                data: Box::new(SamplePayload {}),
-            };
-            resolver.add_event(&event);
+        while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
+            let id = *id;
+            sequence.push(id);
+            resolver.pop_event(id);
+        }
+        println!("{:?}", sequence);
+        assert!(sequence.len() == 12);
+        let mut timers = vec![0, 0, 0];
+        for event_id in sequence {
+            let time = event_id / 3;
+            let node = event_id % 3;
+            assert!(timers[node as usize] == time);
+            timers[node as usize] += 1;
         }
     }
 
-    // remove most of elements
-    // timer resolver should clear its queues before it
-    // can add next events without broken dependencies
-    for _ in 0..7 {
-        let id = *resolver.available_events().choose(&mut rand::thread_rng()).unwrap();
-        sequence.push(id);
-        resolver.pop_event(id);
-    }
-    for node_id in 0..3 {
-        let event = Event {
-            id: 9 + node_id,
-            src: node_id as u32,
-            dest: 0,
-            time: 3.0,
-            data: Box::new(SamplePayload {}),
-        };
-        resolver.add_event(&event);
-    }
-    while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
-        let id = *id;
-        sequence.push(id);
-        resolver.pop_event(id);
-    }
-    println!("{:?}", sequence);
-    assert!(sequence.len() == 12);
-    let mut timers = vec![0, 0, 0];
-    for event_id in sequence {
-        let time = event_id / 3;
-        let node = event_id % 3;
-        assert!(timers[node as usize] == time);
-        timers[node as usize] += 1;
-    }
-}
-
-#[test]
-fn test_timer_dependency_resolver_same_time() {
-    let mut resolver = DependencyResolver::new();
-    let mut sequence = Vec::new();
-    for node_id in 0..1 {
-        let mut times: Vec<u64> = (0..100).into_iter().collect();
-        times.shuffle(&mut rand::thread_rng());
-        for event_time in times {
-            println!("{}", event_time);
-            let event = Event {
-                id: event_time,
-                src: node_id as u32,
-                dest: 0,
-                time: (event_time / 5) as f64,
-                data: Box::new(SamplePayload {}),
-            };
-            resolver.add_event(&event);
+    #[test]
+    fn test_timer_dependency_resolver_same_time() {
+        let mut resolver = DependencyResolver::new();
+        let mut sequence = Vec::new();
+        for node_id in 0..1 {
+            let mut times: Vec<u64> = (0..100).into_iter().collect();
+            times.shuffle(&mut rand::thread_rng());
+            for event_time in times {
+                println!("{}", event_time);
+                let event = Event {
+                    id: event_time,
+                    src: node_id as u32,
+                    dest: 0,
+                    time: (event_time / 5) as f64,
+                    data: Box::new(SamplePayload {}),
+                };
+                resolver.add_event(&event);
+            }
         }
-    }
-    while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
-        println!("{:?}", resolver.available_events());
-        let id = *id;
-        println!("{}", id);
-        sequence.push(id);
-        resolver.pop_event(id);
-    }
-    let mut timers = vec![0];
-    for event_id in sequence {
-        let time = event_id / 5;
-        let node = 0;
-        assert!(timers[node as usize] <= time);
-        timers[node as usize] = time;
+        while let Some(id) = resolver.available_events().choose(&mut rand::thread_rng()) {
+            println!("{:?}", resolver.available_events());
+            let id = *id;
+            println!("{}", id);
+            sequence.push(id);
+            resolver.pop_event(id);
+        }
+        let mut timers = vec![0];
+        for event_id in sequence {
+            let time = event_id / 5;
+            let node = 0;
+            assert!(timers[node as usize] <= time);
+            timers[node as usize] = time;
+        }
     }
 }
