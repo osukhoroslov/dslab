@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::mc::strategy::Strategy;
 use crate::mc::system::{McState, McSystem};
 
@@ -21,11 +18,11 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
-    fn run(&mut self, system: Rc<RefCell<McSystem>>) -> bool {
-        let events_num = system.borrow().events.borrow().len();
+    fn run(&mut self, system: &mut McSystem) -> bool {
+        let events_num = system.events.borrow().len();
 
         {
-            let state = system.borrow().get_state();
+            let state = system.get_state();
 
             // Checking invariant on every step
             if !(self.invariant)(&state) {
@@ -44,13 +41,13 @@ impl Strategy for Dfs {
         }
 
         for i in 0..events_num {
-            let state = system.borrow().get_state();
-            let event = system.borrow_mut().events.borrow_mut().remove(i);
-            system.borrow_mut().apply_event(event);
-            if !self.run(system.clone()) {
+            let state = system.get_state();
+            let event = system.events.borrow_mut().remove(i);
+            system.apply_event(event);
+            if !self.run(system) {
                 return false;
             }
-            system.borrow_mut().set_state(state);
+            system.set_state(state);
         }
         return true;
     }

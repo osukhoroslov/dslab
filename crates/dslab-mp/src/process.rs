@@ -1,6 +1,7 @@
+use std::fmt::Debug;
+
 use downcast_rs::{impl_downcast, Downcast};
 use dyn_clone::{clone_trait_object, DynClone};
-use std::fmt::Debug;
 
 use crate::context::Context;
 use crate::message::Message;
@@ -29,12 +30,12 @@ pub trait Process: DynClone {
         0
     }
 
-    /// Returns the string representation of process state.
+    /// Returns the process state.
     fn state(&self) -> Box<dyn ProcessState> {
         return Box::new(ProcessStateStub {});
     }
 
-    /// Restores the process state by its string representation.
+    /// Restores the process state.
     fn set_state(&self, _state: Box<dyn ProcessState>) {}
 }
 
