@@ -25,13 +25,13 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 pub enum FailReason {
     NotEnoughResources { available_memory: u64 },
     Other { reason: String },
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompRequest {
     pub flops: u64,
     pub memory: u64,
@@ -43,17 +43,17 @@ pub struct CompStarted {
     pub id: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 struct InternalCompFinished {
     computation: RunningComputation,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,

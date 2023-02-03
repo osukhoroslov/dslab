@@ -40,8 +40,8 @@ impl System {
 
     // Nodes -----------------------------------------------------------------------------------------------------------
 
-    pub fn nodes(&self) -> &HashMap<String, Rc<RefCell<Node>>> {
-        &self.nodes
+    pub fn nodes(&self) -> Vec<String> {
+        self.nodes.keys().cloned().collect()
     }
 
     pub fn add_node(&mut self, name: &str) {

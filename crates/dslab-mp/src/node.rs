@@ -86,9 +86,8 @@ impl ProcessEntry {
 }
 
 pub struct Node {
-    #[allow(dead_code)]
-    id: Id,
-    name: String,
+    pub id: Id,
+    pub name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
     clock_skew: f64,
@@ -248,14 +247,6 @@ impl Node {
 
     pub(crate) fn processes(&self) -> HashMap<String, ProcessEntry> {
         self.processes.clone()
-    }
-
-    pub fn id(&self) -> Id {
-        self.id
-    }
-
-    pub fn name(&self) -> String {
-        self.name.clone()
     }
 }
 
