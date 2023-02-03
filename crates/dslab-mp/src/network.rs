@@ -11,7 +11,6 @@ use crate::events::MessageReceived;
 use crate::message::Message;
 use crate::util::t;
 
-#[derive(Clone)]
 pub struct Network {
     min_delay: f64,
     max_delay: f64,
@@ -229,10 +228,6 @@ impl Network {
 
     pub fn corrupt_rate(&self) -> f64 {
         self.corrupt_rate
-    }
-
-    pub fn node_ids(&self) -> &HashMap<String, Id> {
-        &self.node_ids
     }
 
     pub fn dupl_rate(&self) -> f64 {

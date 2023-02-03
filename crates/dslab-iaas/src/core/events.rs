@@ -5,36 +5,36 @@
 pub mod allocation {
     use serde::Serialize;
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationRequest {
         pub vm_ids: Vec<u32>,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationCommitRequest {
         pub vm_ids: Vec<u32>,
         pub host_ids: Vec<u32>,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationCommitSucceeded {
         pub vm_ids: Vec<u32>,
         pub host_ids: Vec<u32>,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationCommitFailed {
         pub vm_ids: Vec<u32>,
         pub host_ids: Vec<u32>,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationFailed {
         pub vm_id: u32,
         pub host_id: u32,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct AllocationReleased {
         pub vm_id: u32,
         pub host_id: u32,
@@ -51,7 +51,7 @@ pub mod allocation {
         pub is_migrating: bool,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct MigrationRequest {
         pub source_host: u32,
         pub vm_id: u32,
@@ -63,12 +63,12 @@ pub mod allocation {
 pub mod vm {
     use serde::Serialize;
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct VMStarted {
         pub vm_id: u32,
     }
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct VMDeleted {
         pub vm_id: u32,
     }
@@ -79,7 +79,7 @@ pub mod vm {
 pub mod monitoring {
     use serde::Serialize;
 
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct HostStateUpdate {
         pub host_id: u32,
         pub cpu_load: f64,
@@ -93,7 +93,7 @@ pub mod vm_api {
     use serde::Serialize;
 
     use crate::core::vm::VmStatus;
-    #[derive(Serialize, Clone)]
+    #[derive(Serialize)]
     pub struct VmStatusChanged {
         pub vm_id: u32,
         pub status: VmStatus,

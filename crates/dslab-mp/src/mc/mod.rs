@@ -1,3 +1,4 @@
+mod events;
 pub mod model_checker;
 mod network;
 mod node;

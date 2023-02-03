@@ -376,7 +376,7 @@ impl HostManager {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct SendHostState {}
 
 impl EventHandler for HostManager {

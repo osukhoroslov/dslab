@@ -7,7 +7,7 @@ pub mod event;
 pub mod handler;
 pub mod log;
 pub mod simulation;
-pub(crate) mod state;
+mod state;
 
 pub use colored;
 pub use component::Id;
