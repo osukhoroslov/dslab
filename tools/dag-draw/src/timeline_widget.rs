@@ -116,8 +116,8 @@ impl TimelineWidget {
                         Point::new(self.get_time_x(usage.start), cury),
                         Point::new(self.get_time_x(usage.end), cury + current_height),
                     );
-                    ctx.fill(rect.clone(), &usage.color);
-                    self.clickable_rectangles.push((rect.clone(), usage.task));
+                    ctx.fill(rect, &usage.color);
+                    self.clickable_rectangles.push((rect, usage.task));
                     if usage.selected {
                         highlighted_borders.push(rect);
                     }
@@ -153,7 +153,7 @@ impl TimelineWidget {
                     Point::new(self.get_time_x(left), cury),
                     Point::new(self.get_time_x(right), cury + current_height),
                 );
-                ctx.fill(rect.clone(), &usage.color);
+                ctx.fill(rect, &usage.color);
                 self.clickable_rectangles.push((rect, usage.task));
                 cury += current_height;
             }
@@ -193,29 +193,26 @@ impl TimelineWidget {
         if task.outputs.iter().any(|&x| x == transfer.data_item_id) {
             return true;
         }
-        return false;
+        false
     }
 }
 
 impl Widget<AppData> for TimelineWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _: &Env) {
-        match event {
-            Event::MouseDown(e) => {
-                data.selected_task = None;
-                for (rect, task) in self.clickable_rectangles.iter() {
-                    if rect.contains(e.pos) {
-                        data.selected_task = Some(task.clone());
-                        break;
-                    }
+        if let Event::MouseDown(e) = event {
+            data.selected_task = None;
+            for (rect, task) in self.clickable_rectangles.iter() {
+                if rect.contains(e.pos) {
+                    data.selected_task = Some(*task);
+                    break;
                 }
-                if let Some(task_id) = data.selected_task {
-                    data.selected_task_info = get_text_task_info(data, task_id);
-                } else {
-                    data.selected_task_info = String::new();
-                }
-                ctx.request_paint();
             }
-            _ => {}
+            if let Some(task_id) = data.selected_task {
+                data.selected_task_info = get_text_task_info(data, task_id);
+            } else {
+                data.selected_task_info = String::new();
+            }
+            ctx.request_paint();
         }
     }
 
@@ -272,7 +269,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if self.transfer_selected(&transfer, &data) {
+                            if self.transfer_selected(transfer, data) {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY
@@ -380,7 +377,7 @@ impl Widget<AppData> for TimelineWidget {
                                 Point::new(self.get_time_x(transfer.start), y + 5.),
                                 Point::new(self.get_time_x(transfer.end), y + ROW_STEP - 5.),
                             ),
-                            if self.transfer_selected(&transfer, &data) {
+                            if self.transfer_selected(transfer, data) {
                                 &Color::WHITE
                             } else {
                                 &Color::GRAY

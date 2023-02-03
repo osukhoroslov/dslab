@@ -27,6 +27,7 @@ struct Job {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "adag")]
+#[allow(clippy::upper_case_acronyms)]
 struct DAX {
     #[serde(rename = "job")]
     jobs: Vec<Job>,

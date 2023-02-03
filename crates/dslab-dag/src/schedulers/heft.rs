@@ -17,7 +17,7 @@ pub struct HeftScheduler {
 
 impl HeftScheduler {
     pub fn new() -> Self {
-        HeftScheduler {
+        Self {
             data_transfer_strategy: DataTransferStrategy::Eager,
         }
     }
@@ -65,7 +65,7 @@ impl HeftScheduler {
         for task_id in task_ids.into_iter() {
             let mut best_finish = -1.;
             let mut best_start = -1.;
-            let mut best_resource = 0 as usize;
+            let mut best_resource = 0;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
                 let res = evaluate_assignment(
@@ -145,5 +145,11 @@ impl Scheduler for HeftScheduler {
 
     fn is_static(&self) -> bool {
         true
+    }
+}
+
+impl Default for HeftScheduler {
+    fn default() -> Self {
+        Self::new()
     }
 }

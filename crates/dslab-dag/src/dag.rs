@@ -15,7 +15,7 @@ use crate::task::*;
 /// other tasks. Entry tasks consume separate data items corresponding to the DAG inputs. The data dependencies between
 /// the tasks define constraints on task execution - a task cannot start its execution on some resource until all its
 /// inputs are produced (parent tasks are completed) and transferred to this resource.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DAG {
     tasks: Vec<Task>,
     data_items: Vec<DataItem>,
@@ -28,14 +28,7 @@ pub struct DAG {
 impl DAG {
     /// Creates empty DAG.
     pub fn new() -> Self {
-        Self {
-            tasks: Vec::new(),
-            data_items: Vec::new(),
-            ready_tasks: BTreeSet::new(),
-            completed_task_count: 0,
-            inputs: BTreeSet::new(),
-            outputs: BTreeSet::new(),
-        }
+        Self::default()
     }
 
     /// Reads DAG from file in one of supported formats:
@@ -152,14 +145,11 @@ impl DAG {
         if task.state != TaskState::Ready {
             self.ready_tasks.remove(&task_id);
         }
-        match task.state {
-            TaskState::Done => {
-                self.completed_task_count += 1;
-                for &data_item in task.outputs.clone().iter() {
-                    self.update_data_item_state(data_item, DataItemState::Ready);
-                }
+        if task.state == TaskState::Done {
+            self.completed_task_count += 1;
+            for &data_item in task.outputs.clone().iter() {
+                self.update_data_item_state(data_item, DataItemState::Ready);
             }
-            _ => {}
         }
     }
 
@@ -167,28 +157,25 @@ impl DAG {
     pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
         let mut data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
-        match data_item.state {
-            DataItemState::Ready => {
-                for t in data_item.consumers.iter() {
-                    let mut consumer = self.tasks.get_mut(*t).unwrap();
-                    consumer.ready_inputs += 1;
-                    if consumer.ready_inputs == consumer.inputs.len() {
-                        if consumer.state == TaskState::Pending {
-                            consumer.state = TaskState::Ready;
-                            self.ready_tasks.insert(*t);
-                        } else if consumer.state == TaskState::Scheduled {
-                            consumer.state = TaskState::Runnable;
-                        } else {
-                            panic!(
-                                "Error: task {} reached needed number of ready inputs in state {:?}",
-                                consumer.name, consumer.state
-                            );
-                        }
+        if data_item.state == DataItemState::Ready {
+            for t in data_item.consumers.iter() {
+                let mut consumer = self.tasks.get_mut(*t).unwrap();
+                consumer.ready_inputs += 1;
+                if consumer.ready_inputs == consumer.inputs.len() {
+                    if consumer.state == TaskState::Pending {
+                        consumer.state = TaskState::Ready;
+                        self.ready_tasks.insert(*t);
+                    } else if consumer.state == TaskState::Scheduled {
+                        consumer.state = TaskState::Runnable;
+                    } else {
+                        panic!(
+                            "Error: task {} reached needed number of ready inputs in state {:?}",
+                            consumer.name, consumer.state
+                        );
                     }
                 }
             }
-            _ => {}
-        };
+        }
     }
 
     /// Checks whether all tasks are completed.

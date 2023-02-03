@@ -45,14 +45,14 @@ impl DagSimulation {
             speed,
             cores,
             memory,
-            self.sim.create_context(&name),
+            self.sim.create_context(name),
         )));
-        let id = self.sim.add_handler(&name, compute.clone());
+        let id = self.sim.add_handler(name, compute.clone());
         self.resources.push(Resource {
             id,
             name: name.to_string(),
             compute,
-            speed: speed,
+            speed,
             cores_available: cores,
             memory_available: memory,
         });
@@ -90,7 +90,7 @@ impl DagSimulation {
     ///
     /// See [Simulation::steps()](dslab_core::simulation::Simulation::steps).
     pub fn steps(&mut self, step_count: u64) -> bool {
-        return self.sim.steps(step_count);
+        self.sim.steps(step_count)
     }
 
     /// Steps through the simulation with duration limit.
@@ -111,13 +111,13 @@ impl DagSimulation {
     ///
     /// See [Simulation::event_count()](dslab_core::simulation::Simulation::event_count).
     pub fn event_count(&self) -> u64 {
-        return self.sim.event_count();
+        self.sim.event_count()
     }
 
     /// Returns the current simulation time.
     ///
     /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
     pub fn time(&mut self) -> f64 {
-        return self.sim.time();
+        self.sim.time()
     }
 }

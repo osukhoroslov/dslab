@@ -90,7 +90,7 @@ pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
         }
         for task in data.graph.borrow().tasks.iter() {
             for data_item in task.outputs.iter() {
-                inputs.remove(&data_item);
+                inputs.remove(data_item);
             }
         }
         return format!(
@@ -111,7 +111,7 @@ pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
         }
         for task in data.graph.borrow().tasks.iter() {
             for data_item in task.inputs.iter() {
-                outputs.remove(&data_item);
+                outputs.remove(data_item);
             }
         }
         return format!(

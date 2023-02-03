@@ -11,7 +11,7 @@ use serde_json::Value;
 
 use crate::dag::DAG;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Task {
     pub name: String,
     pub flops: u64,
@@ -22,20 +22,20 @@ pub struct Task {
     pub outputs: Vec<usize>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct DataItem {
     pub name: String,
     pub size: u64,
     pub consumers: Vec<usize>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Graph {
     pub tasks: Vec<Task>,
     pub data_items: Vec<DataItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct TraceLog {
     pub resources: Vec<Value>,
     pub graph: Graph,
@@ -44,19 +44,12 @@ pub struct TraceLog {
 
 impl TraceLog {
     pub fn new() -> Self {
-        TraceLog {
-            resources: Vec::new(),
-            events: Vec::new(),
-            graph: Graph {
-                tasks: Vec::new(),
-                data_items: Vec::new(),
-            },
-        }
+        Self::default()
     }
 
     pub fn log_event(&mut self, ctx: &SimulationContext, event: Value) {
         let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
-        let log_message = match event["type"].as_str().unwrap().as_ref() {
+        let log_message = match event["type"].as_str().unwrap() {
             "task_scheduled" => {
                 format!(
                     "scheduled task {} to {} on {} cores",
