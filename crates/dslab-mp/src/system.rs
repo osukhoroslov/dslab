@@ -80,7 +80,7 @@ impl System {
     }
 
     pub fn get_node(&self, name: &str) -> Option<Ref<Node>> {
-        self.nodes.get(name).and_then(|res| Some(res.borrow()))
+        self.nodes.get(name).map(|res| res.borrow())
     }
 
     pub fn get_mut_node(&self, name: &str) -> Option<RefMut<Node>> {
