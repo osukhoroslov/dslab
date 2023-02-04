@@ -9,7 +9,7 @@ pub struct MessageReceived {
     pub dest: String,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct TimerFired {
     pub proc: String,
     pub timer: String,
