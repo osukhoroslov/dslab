@@ -62,7 +62,7 @@ impl PyProcessFactory {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PyProcessState {
     str: String,
 }
