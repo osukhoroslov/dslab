@@ -20,24 +20,21 @@ impl Dfs {
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> bool {
         let events_num = system.events.borrow().len();
+        let state = system.get_state();
 
-        {
-            let state = system.get_state();
+        // Checking invariant on every step
+        if !(self.invariant)(&state) {
+            return false;
+        }
 
-            // Checking invariant on every step
-            if !(self.invariant)(&state) {
-                return false;
-            }
+        // Check final state of the system
+        if events_num == 0 {
+            return (self.goal)(&state);
+        }
 
-            // Check final state of the system
-            if events_num == 0 {
-                return (self.goal)(&state);
-            }
-
-            // Check if execution branch is pruned
-            if (self.prune)(&state) {
-                return true;
-            }
+        // Check if execution branch is pruned
+        if (self.prune)(&state) {
+            return true;
         }
 
         for i in 0..events_num {
