@@ -158,7 +158,7 @@ impl Network {
         *self.node_ids.get(dest_node).unwrap()
     }
 
-    pub fn check_if_dropped(&mut self, src: &String, dest: &String) -> bool {
+    pub fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
         self.ctx.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
@@ -201,7 +201,7 @@ impl Network {
             self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
-            if !self.check_if_dropped(&src_node, &dest_node) {
+            if !self.message_is_dropped(&src_node, &dest_node) {
                 let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
                     msg,
