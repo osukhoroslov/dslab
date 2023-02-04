@@ -10,7 +10,7 @@ pub trait ProcessState: Downcast + Debug {}
 
 impl_downcast!(ProcessState);
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct ProcessStateStub {}
 
 impl ProcessState for ProcessStateStub {}
