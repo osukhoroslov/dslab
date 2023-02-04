@@ -158,14 +158,14 @@ impl Network {
         *self.node_ids.get(dest_node).unwrap()
     }
 
-    pub fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
+    fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
         self.ctx.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
             || self.disabled_links.contains(&(src.clone(), dest.clone()))
     }
 
-    pub fn corrupt_if_needed(&mut self, msg: Message) -> Message {
+    fn corrupt_if_needed(&mut self, msg: Message) -> Message {
         if self.ctx.rand() < self.corrupt_rate {
             lazy_static! {
                 static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
@@ -177,7 +177,7 @@ impl Network {
         }
     }
 
-    pub fn get_message_count(&mut self) -> u32 {
+    fn get_message_count(&mut self) -> u32 {
         if self.ctx.rand() >= self.dupl_rate {
             1
         } else {
