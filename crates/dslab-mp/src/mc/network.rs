@@ -54,12 +54,12 @@ impl McNetwork {
     pub fn send_message(&mut self, msg: Message, src: String, dest: String) {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
-        if src_node != dest_node && self.check_if_dropped(&src_node, &dest_node) {
+        if src_node != dest_node && self.message_is_dropped(&src_node, &dest_node) {
             return;
         }
         let msg = self.corrupt_if_needed(msg);
         let data = McEvent::MessageReceived { msg, src, dest };
-        let dups = self.duplicate_if_needed();
+        let dups = self.get_message_count();
         for _ in 0..dups {
             self.events.borrow_mut().push(data.clone());
         }
@@ -69,7 +69,7 @@ impl McNetwork {
         self.rand.gen_range(0.0..1.0)
     }
 
-    fn check_if_dropped(&mut self, src: &String, dest: &String) -> bool {
+    fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
         self.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
@@ -88,7 +88,7 @@ impl McNetwork {
         }
     }
 
-    fn duplicate_if_needed(&mut self) -> u32 {
+    fn get_message_count(&mut self) -> u32 {
         if self.rand() >= self.dupl_rate {
             1
         } else {
