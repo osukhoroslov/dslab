@@ -18,8 +18,8 @@ pub struct Context {
 
 impl Context {
     pub fn new(proc_name: String, sim_ctx: Option<Rc<RefCell<SimulationContext>>>, clock_skew: f64) -> Self {
-        let time = if sim_ctx.is_some() {
-            sim_ctx.as_ref().expect("").borrow().time() + clock_skew
+        let time = if let Some(sim_ctx) = sim_ctx.as_ref() {
+            sim_ctx.borrow().time() + clock_skew
         } else {
             0.0
         };
