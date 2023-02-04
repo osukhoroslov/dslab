@@ -84,7 +84,7 @@ impl System {
     }
 
     pub fn get_mut_node(&self, name: &str) -> Option<RefMut<Node>> {
-        self.nodes.get(name).and_then(|res| Some(res.borrow_mut()))
+        self.nodes.get(name).map(|res| res.borrow_mut())
     }
 
     pub fn node_is_crashed(&self, node: &str) -> bool {
