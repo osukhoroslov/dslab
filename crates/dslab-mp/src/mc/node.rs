@@ -57,8 +57,8 @@ impl McNode {
         Self { processes, net, events }
     }
 
-    fn create_ctx(proc_name: &String) -> Context {
-        Context::new(proc_name.clone(), None, 0.0)
+    fn create_ctx(proc_name: &str) -> Context {
+        Context::new(proc_name.to_string(), None, 0.0)
     }
 
     pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) {
