@@ -177,7 +177,7 @@ impl Network {
         }
     }
 
-    pub fn duplicate_if_needed(&mut self) -> u32 {
+    pub fn get_message_count(&mut self) -> u32 {
         if self.ctx.rand() >= self.dupl_rate {
             1
         } else {
@@ -208,7 +208,7 @@ impl Network {
                     src: src.to_string(),
                     dest: dest.to_string(),
                 };
-                let dups = self.duplicate_if_needed();
+                let dups = self.get_message_count();
                 for _i in 0..dups {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                     self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
