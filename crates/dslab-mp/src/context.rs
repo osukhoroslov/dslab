@@ -33,7 +33,7 @@ impl Context {
     }
 
     pub fn rand(&mut self) -> f64 {
-        self.sim_ctx.as_mut().expect("sim_ctx is None").borrow_mut().rand()
+        self.sim_ctx.as_ref().expect("sim_ctx is None").borrow_mut().rand()
     }
 
     pub fn send(&mut self, msg: Message, dest: String) {
