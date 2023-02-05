@@ -14,7 +14,12 @@ impl Dfs {
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
     ) -> Self {
-        Self { prune, goal, invariant, search_depth: 0 }
+        Self {
+            prune,
+            goal,
+            invariant,
+            search_depth: 0,
+        }
     }
 }
 
