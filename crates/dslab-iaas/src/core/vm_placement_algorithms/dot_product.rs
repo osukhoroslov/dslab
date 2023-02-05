@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Maximizes the dot product between the host's available resources and the VM's resource usage vectors.
 /// The vectors are normalized to the host's capacity.
@@ -17,7 +17,7 @@ impl DotProduct {
     }
 }
 
-impl VMPlacementAlgorithm for DotProduct {
+impl SingleVMPlacementAlgorithm for DotProduct {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_product: f64 = f64::MIN;

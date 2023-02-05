@@ -25,7 +25,7 @@ use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{ResourceConsumer, VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::{SingleVMPlacementAlgorithm, VMPlacementAlgorithm};
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
 
@@ -159,7 +159,7 @@ impl CloudSimulation {
     }
 
     /// Creates new scheduler with specified name and VM placement algorithm, and returns the scheduler ID.
-    pub fn add_scheduler(&mut self, name: &str, vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>) -> u32 {
+    pub fn add_scheduler(&mut self, name: &str, vm_placement_algorithm: Box<dyn SingleVMPlacementAlgorithm>) -> u32 {
         // create scheduler using current state from placement store
         let pool_state = self.placement_store.borrow_mut().get_pool_state();
         let scheduler = rc!(refcell!(Scheduler::new(
@@ -167,7 +167,7 @@ impl CloudSimulation {
             self.monitoring.clone(),
             self.vm_api.clone(),
             self.placement_store.borrow().get_id(),
-            vm_placement_algorithm,
+            VMPlacementAlgorithm::Single(vm_placement_algorithm),
             self.sim.create_context(name),
             self.sim_config.clone(),
         )));

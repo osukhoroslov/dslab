@@ -88,8 +88,10 @@ impl PlacementStore {
 
     /// Processes allocation commit requests from schedulers.
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: Option<u32>) {
-        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id).borrow().clone();
+        if self.allow_vm_overcommit
+            || self.pool_state.can_allocate(&alloc.clone(), host_id) == AllocationVerdict::Success
+        {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
                 self.ctx,
@@ -135,7 +137,7 @@ impl PlacementStore {
     /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc, host_id);
+        self.pool_state.release(&alloc.borrow(), host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationFailed { vm_id, host_id },
@@ -150,7 +152,7 @@ impl PlacementStore {
     /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc, host_id);
+        self.pool_state.release(&alloc.borrow(), host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationReleased { vm_id, host_id },

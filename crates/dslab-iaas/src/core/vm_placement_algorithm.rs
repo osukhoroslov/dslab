@@ -1,5 +1,8 @@
 //! Virtual machine placement algorithms.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::core::common::Allocation;
 use crate::core::config::parse_config_value;
 use crate::core::monitoring::Monitoring;
@@ -10,9 +13,15 @@ use crate::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
 use crate::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
 use crate::core::vm_placement_algorithms::dot_product::DotProduct;
 use crate::core::vm_placement_algorithms::first_fit::FirstFit;
+use crate::core::vm_placement_algorithms::multi_vm_dummy::DummyMultiVMPlacement;
 use crate::core::vm_placement_algorithms::norm_diff::L2NormDiff;
 use crate::core::vm_placement_algorithms::weighted_dot_product::WeightedDotProduct;
 use crate::core::vm_placement_algorithms::worst_fit::WorstFit;
+
+pub enum VMPlacementAlgorithm {
+    Single(Box<dyn SingleVMPlacementAlgorithm>),
+    Multi(Box<dyn MultiVMPlacementAlgorithm>),
+}
 
 /// Trait for implementation of VM placement algorithms.
 ///
@@ -23,11 +32,11 @@ use crate::core::vm_placement_algorithms::worst_fit::WorstFit;
 /// current host load.
 ///
 /// It is possible to implement arbitrary placement algorithm and use it in scheduler.
-pub trait VMPlacementAlgorithm {
+pub trait SingleVMPlacementAlgorithm {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32>;
 }
 
-pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAlgorithm> {
+pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn SingleVMPlacementAlgorithm> {
     let (algorithm_name, options) = parse_config_value(&config_str);
     match algorithm_name.as_str() {
         "FirstFit" => Box::new(FirstFit::new()),
@@ -53,12 +62,18 @@ pub fn placement_algorithm_resolver(config_str: String) -> Box<dyn VMPlacementAl
 ///
 /// It is possible to implement arbitrary placement algorithm and use it in scheduler.
 pub trait MultiVMPlacementAlgorithm {
-  fn select_hosts(&self, alloc: &Vec<Allocation>, pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<Vec<u32>>;
+    fn select_hosts(
+        &self,
+        alloc: Vec<Rc<RefCell<Allocation>>>,
+        pool_state: &ResourcePoolState,
+        monitoring: &Monitoring,
+    ) -> Option<Vec<u32>>;
 }
 
 pub fn multi_placement_algorithm_resolver(config_str: String) -> Box<dyn MultiVMPlacementAlgorithm> {
-    let (algorithm_name, options) = parse_config_value(&config_str);
+    let (algorithm_name, _options) = parse_config_value(&config_str);
     match algorithm_name.as_str() {
         "Dummy" => Box::new(DummyMultiVMPlacement::new()),
+        _ => panic!("Can't resolve: {}", config_str),
     }
 }

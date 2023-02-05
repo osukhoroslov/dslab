@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Uses the most loaded (by allocated CPU) suitable host.
 #[derive(Default)]
@@ -16,7 +16,7 @@ impl BestFit {
     }
 }
 
-impl VMPlacementAlgorithm for BestFit {
+impl SingleVMPlacementAlgorithm for BestFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut min_available_cpu: u32 = u32::MAX;

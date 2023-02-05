@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Minimizes the difference between the VM's resource usage and the host's available resources vectors
 /// under the L^2 norm with additional resource weights.
@@ -19,7 +19,7 @@ impl L2NormDiff {
     }
 }
 
-impl VMPlacementAlgorithm for L2NormDiff {
+impl SingleVMPlacementAlgorithm for L2NormDiff {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut min_diff: f64 = f64::MAX;

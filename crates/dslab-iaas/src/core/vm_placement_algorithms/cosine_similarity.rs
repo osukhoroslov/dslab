@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Maximizes the cosine of the angle between the host's resource usage and resource capacity vectors
 /// after the allocation.
@@ -17,7 +17,7 @@ impl CosineSimilarity {
     }
 }
 
-impl VMPlacementAlgorithm for CosineSimilarity {
+impl SingleVMPlacementAlgorithm for CosineSimilarity {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_cosine: f64 = f64::MIN;

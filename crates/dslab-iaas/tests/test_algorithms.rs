@@ -2,7 +2,7 @@ use dslab_core::simulation::Simulation;
 
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;
-use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use dslab_iaas::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
 use dslab_iaas::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
@@ -20,7 +20,7 @@ use dslab_iaas::simulation::CloudSimulation;
 // The initial pool state consists of four VMs which are spawned directly on the hosts.
 // There are three VMs spawned in the main stage, which should be placed by the algorithm.
 // The hosts used for running each of these VMs are collected and compared to the expected hosts.
-fn check_placements(algorithm: Box<dyn VMPlacementAlgorithm>, expected_hosts: Vec<&str>) {
+fn check_placements(algorithm: Box<dyn SingleVMPlacementAlgorithm>, expected_hosts: Vec<&str>) {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file("test-configs/config_zero_latency.yaml");
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);

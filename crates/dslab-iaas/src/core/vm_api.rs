@@ -72,12 +72,12 @@ impl VmAPI {
     }
 
     /// Returns resource allocation for specified VM.
-    pub fn get_vm_allocation(&self, vm_id: u32) -> Allocation {
-        Allocation {
+    pub fn get_vm_allocation(&self, vm_id: u32) -> Rc<RefCell<Allocation>> {
+        rc!(refcell!(Allocation {
             id: vm_id,
             cpu_usage: self.vms.get(&vm_id).unwrap().borrow().cpu_usage,
             memory_usage: self.vms.get(&vm_id).unwrap().borrow().memory_usage,
-        }
+        }))
     }
 
     // Returns the ID of host that runs the specified VM.

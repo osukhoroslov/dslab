@@ -7,7 +7,7 @@ use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::{ResourceConsumer, VmStatus};
-use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use dslab_iaas::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
@@ -164,7 +164,7 @@ impl BadScheduler {
     }
 }
 
-impl VMPlacementAlgorithm for BadScheduler {
+impl SingleVMPlacementAlgorithm for BadScheduler {
     fn select_host(
         &self,
         _alloc: &Allocation,
