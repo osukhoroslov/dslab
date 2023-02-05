@@ -57,10 +57,6 @@ impl McNode {
         Self { processes, net, events }
     }
 
-    fn create_ctx(proc_name: &str) -> Context {
-        Context::new(proc_name.to_string(), None, 0.0)
-    }
-
     pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
@@ -73,7 +69,7 @@ impl McNode {
         ));
         proc_entry.received_message_count += 1;
 
-        let mut proc_ctx = Self::create_ctx(&proc);
+        let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions());
     }
@@ -82,9 +78,22 @@ impl McNode {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
-        let mut proc_ctx = Self::create_ctx(&proc);
+        let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions());
+    }
+
+    pub fn get_state(&self) -> McNodeState {
+        self.processes
+            .iter()
+            .map(|(proc, entry)| (proc.clone(), entry.get_state()))
+            .collect()
+    }
+
+    pub fn set_state(&mut self, state: McNodeState) {
+        for (proc, state) in state {
+            self.processes.get_mut(&proc).unwrap().set_state(state);
+        }
     }
 
     fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) {
@@ -122,19 +131,6 @@ impl McNode {
                 }*/
                 _ => {}
             }
-        }
-    }
-
-    pub fn get_state(&self) -> McNodeState {
-        self.processes
-            .iter()
-            .map(|(proc, entry)| (proc.clone(), entry.get_state()))
-            .collect()
-    }
-
-    pub fn set_state(&mut self, state: McNodeState) {
-        for (proc, state) in state {
-            self.processes.get_mut(&proc).unwrap().set_state(state);
         }
     }
 }
