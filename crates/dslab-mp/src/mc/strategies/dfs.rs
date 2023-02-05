@@ -21,7 +21,7 @@ impl Dfs {
             goal,
             invariant,
             search_depth: 0,
-            mode
+            mode,
         }
     }
 }
