@@ -5,6 +5,7 @@ pub struct Dfs {
     prune: Box<dyn Fn(&McState) -> bool>,
     goal: Box<dyn Fn(&McState) -> bool>,
     invariant: Box<dyn Fn(&McState) -> bool>,
+    search_depth: u64,
 }
 
 impl Dfs {
@@ -13,14 +14,14 @@ impl Dfs {
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
     ) -> Self {
-        Self { prune, goal, invariant }
+        Self { prune, goal, invariant, search_depth: 0 }
     }
 }
 
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> bool {
         let events_num = system.events.borrow().len();
-        let state = system.get_state();
+        let state = system.get_state(self.search_depth);
 
         // Checking invariant on every step
         if !(self.invariant)(&state) {
@@ -38,12 +39,18 @@ impl Strategy for Dfs {
         }
 
         for i in 0..events_num {
-            let state = system.get_state();
+            let state = system.get_state(self.search_depth);
             let event = system.events.borrow_mut().remove(i);
             system.apply_event(event);
-            if !self.run(system) {
+
+            self.search_depth += 1;
+            let run_success = self.run(system);
+            self.search_depth -= 1;
+
+            if !run_success {
                 return false;
             }
+
             system.set_state(state);
         }
         true
