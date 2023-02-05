@@ -25,16 +25,10 @@ pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &
             .map(|v| v.iter().fold(0., |acc, x| f64::max(acc, x[idx])))
             .fold(0., f64::max)
             * 1.1;
-        /*let repr = points
-        .iter()
-        .map(|v| v.iter().fold(0., |acc, x| f64::max(acc, x[idx])))
-        .fold(f64::MAX, f64::min)
-        * 2.;*/
-        let repr = 100.;
         let mut ctx = ChartBuilder::on(&areas[idx])
             .set_label_area_size(LabelAreaPosition::Left, 60)
             .set_label_area_size(LabelAreaPosition::Bottom, 60)
-            .build_cartesian_2d(rps[0]..rps.last().copied().unwrap(), 0.0..f64::min(max, repr))
+            .build_cartesian_2d(rps[0]..rps.last().copied().unwrap(), 0.0..f64::min(max, 100.))
             .unwrap();
         ctx.configure_mesh()
             .y_desc(METRICS[idx])
