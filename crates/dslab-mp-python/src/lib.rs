@@ -1,4 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use pyo3::prelude::*;
@@ -67,7 +69,13 @@ pub struct PyProcessState {
     str: String,
 }
 
-impl ProcessState for PyProcessState {}
+impl ProcessState for PyProcessState {
+    fn hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.str.hash(&mut hasher);
+        hasher.finish()
+    }
+}
 
 #[derive(Clone)]
 pub struct PyProcess {
