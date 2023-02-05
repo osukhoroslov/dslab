@@ -221,9 +221,14 @@ impl Network {
                     dest: dest.to_string(),
                 };
                 let dups = self.get_message_count();
-                for _i in 0..dups {
+                if dups == 1 {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                    self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
+                    self.ctx.emit_as(e, src_node_id, dest_node_id, delay);
+                } else {
+                    for _i in 0..dups {
+                        let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
+                        self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
+                    }
                 }
             } else {
                 t!(format!(
