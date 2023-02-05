@@ -262,7 +262,7 @@ impl CPUPolicy for ContendedCPUPolicy {
         invocation: &mut Invocation,
         container: &mut Container,
         time: f64,
-        ctx: &mut SimulationContext
+        ctx: &mut SimulationContext,
     ) {
         self.shift_time(time);
         if container.invocations.len() > 1 {

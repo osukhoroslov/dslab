@@ -68,8 +68,9 @@ fn test_simulation_with_invoker_queueing() {
     let stats = sim.stats();
     let inv_stats = stats.global_stats.invocation_stats;
     assert_eq!(inv_stats.invocations, 3);
-    assert_eq!(inv_stats.cold_starts, 2);
-    assert_float_eq(inv_stats.cold_start_latency.min().unwrap(), 1.0, 1e-9);
+    assert_eq!(inv_stats.cold_starts, 3);
+    assert_eq!(inv_stats.queueing_time.len(), 1);
+    assert_float_eq(inv_stats.cold_start_latency.min().unwrap(), 0.1, 1e-9);
     assert_float_eq(inv_stats.cold_start_latency.max().unwrap(), 1.0, 1e-9);
     assert_float_eq(inv_stats.abs_exec_slowdown.mean(), 2.0 / 3.0, 1e-9);
     assert_float_eq(inv_stats.rel_exec_slowdown.mean(), 2.0 / 3.0, 1e-9);
