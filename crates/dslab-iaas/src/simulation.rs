@@ -12,7 +12,7 @@ use dslab_core::simulation::Simulation;
 use dslab_core::Id;
 
 use crate::core::config::SimulationConfig;
-use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
+use crate::core::events::allocation::{AllocationRequest, MigrationRequest, MultiAllocationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
 use crate::core::monitoring::Monitoring;
@@ -25,7 +25,9 @@ use crate::core::slav_metric::OverloadTimeFraction;
 use crate::core::vm::{ResourceConsumer, VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
-use crate::core::vm_placement_algorithm::{SingleVMPlacementAlgorithm, VMPlacementAlgorithm};
+use crate::core::vm_placement_algorithm::{
+    MultiVMPlacementAlgorithm, SingleVMPlacementAlgorithm, VMPlacementAlgorithm,
+};
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
 
@@ -178,6 +180,30 @@ impl CloudSimulation {
         id
     }
 
+    /// Creates new multi VM scheduler with specified name and VM placement algorithm, and returns the scheduler ID.
+    pub fn add_multi_scheduler(
+        &mut self,
+        name: &str,
+        vm_placement_algorithm: Box<dyn MultiVMPlacementAlgorithm>,
+    ) -> u32 {
+        // create scheduler using current state from placement store
+        let pool_state = self.placement_store.borrow_mut().get_pool_state();
+        let scheduler = rc!(refcell!(Scheduler::new(
+            pool_state,
+            self.monitoring.clone(),
+            self.vm_api.clone(),
+            self.placement_store.borrow().get_id(),
+            VMPlacementAlgorithm::Multi(vm_placement_algorithm),
+            self.sim.create_context(name),
+            self.sim_config.clone(),
+        )));
+        let id = self.sim.add_handler(name, scheduler.clone());
+        self.schedulers.insert(id, scheduler);
+        // notify placement store
+        self.placement_store.borrow_mut().add_scheduler(id);
+        id
+    }
+
     /// Creates new VM with specified properties, registers it in VM API and immediately submits the allocation request
     /// to the specified scheduler. Returns VM ID.
     pub fn spawn_vm_now(
@@ -198,6 +224,33 @@ impl CloudSimulation {
         self.vm_api.borrow_mut().register_new_vm(vm);
         self.ctx.emit_now(AllocationRequest { vm_id: id }, scheduler_id);
         id
+    }
+
+    /// Creates new VM with specified properties, registers it in VM API and immediately submits the allocation request
+    /// to the specified scheduler. Returns VM ID.
+    pub fn spawn_vms_now(
+        &mut self,
+        resource_consumers: Vec<ResourceConsumer>,
+        lifetime: f64,
+        scheduler_id: u32,
+    ) -> Vec<u32> {
+        let mut vm_ids = Vec::<u32>::new();
+        for resource_consumer in resource_consumers {
+            let id = self.vm_api.borrow_mut().generate_vm_id();
+            let vm = VirtualMachine::new(
+                id,
+                self.ctx.time(),
+                lifetime,
+                resource_consumer,
+                self.sim_config.clone(),
+            );
+            self.vm_api.borrow_mut().register_new_vm(vm);
+            vm_ids.push(id);
+        }
+
+        self.ctx
+            .emit_now(MultiAllocationRequest { vm_ids: vm_ids.clone() }, scheduler_id);
+        vm_ids
     }
 
     /// Creates new VM with specified properties, registers it in VM API and submits the allocation request

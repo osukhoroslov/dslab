@@ -146,9 +146,8 @@ impl Scheduler {
         }
 
         let allocs: Vec<Rc<RefCell<Allocation>>> = vm_ids
-            .clone()
             .iter()
-            .map(|vm_id| self.vm_api.borrow().get_vm_allocation(*vm_id).clone())
+            .map(|vm_id| self.vm_api.borrow().get_vm_allocation(*vm_id))
             .collect();
 
         match &self.vm_placement_algorithm {
