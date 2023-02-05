@@ -8,7 +8,10 @@ use crate::util::t;
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> bool;
 
-    fn debug_log(event: &McEvent, depth: u64) where Self: Sized {
+    fn debug_log(event: &McEvent, depth: u64)
+    where
+        Self: Sized,
+    {
         match event {
             MessageReceived { msg, src, dest } => {
                 t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
