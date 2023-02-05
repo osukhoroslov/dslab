@@ -457,6 +457,14 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                 }
             }
         }
+        // it's possible that some functions don't have a record in duration file
+        // in this case we use Lognormal(-0.38, 2.36) distribution
+        let dist = LogNormal::new(-0.38, 2.36).unwrap();
+        for inv in invocations.iter_mut() {
+            if inv.2 == 0. {
+                inv.2 = f64::max(0.001, dist.sample(&mut gen));
+            }
+        }
     }
     let mut app_records: Vec<ApplicationRecord> = vec![Default::default(); apps.len()];
     let mut func_records: Vec<FunctionRecord> = vec![Default::default(); fn_id.len()];

@@ -47,7 +47,7 @@ impl Default for ParallelConfig {
     fn default() -> Self {
         Self {
             coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
-            cpu_policy: Box::new(ContendedCPUPolicy::default()),
+            cpu_policy: Box::<ContendedCPUPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),

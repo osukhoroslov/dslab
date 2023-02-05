@@ -1,7 +1,6 @@
 mod plot;
 
 use std::boxed::Box;
-use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
@@ -15,7 +14,6 @@ use dslab_faas::extra::azure_trace::{
 };
 use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
-use dslab_faas::trace::Trace;
 
 use crate::plot::plot_results;
 

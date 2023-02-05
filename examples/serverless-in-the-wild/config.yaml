@@ -8,7 +8,7 @@ base_config:
       count: 18
   scheduler: BasicScheduler
   idle_deployer: BasicDeployer
-  disable_contention: false
+  cpu_policy: contended
 coldstart_policies:
   - No unloading
   - 5-minute keepalive

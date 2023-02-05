@@ -71,7 +71,7 @@ pub struct IgnoredCPUPolicy {
 
 impl CPUPolicy for IgnoredCPUPolicy {
     fn clean_copy(&self) -> Box<dyn CPUPolicy> {
-        Box::new(Self::default())
+        Box::<Self>::default()
     }
 
     fn get_load(&self) -> f64 {
@@ -120,7 +120,7 @@ pub struct IsolatedCPUPolicy {
 
 impl CPUPolicy for IsolatedCPUPolicy {
     fn clean_copy(&self) -> Box<dyn CPUPolicy> {
-        Box::new(Self::default())
+        Box::<Self>::default()
     }
 
     fn get_load(&self) -> f64 {
@@ -163,17 +163,15 @@ impl CPUPolicy for IsolatedCPUPolicy {
     ) {
         if let Some(invs) = self.invocation_map.get_mut(&container.id) {
             invs.push((invocation.id, invocation.duration));
+        } else if container.invocations.len() == 1 && self.load + container.cpu_share > self.cores + 1e-9 {
+            self.invocation_map
+                .insert(container.id, vec![(invocation.id, invocation.duration)]);
+            self.queue.push_back((container.id, container.cpu_share));
         } else {
-            if container.invocations.len() == 1 && self.load + container.cpu_share > self.cores + 1e-9 {
-                self.invocation_map
-                    .insert(container.id, vec![(invocation.id, invocation.duration)]);
-                self.queue.push_back((container.id, container.cpu_share));
-            } else {
-                if container.invocations.len() == 1 {
-                    self.load += container.cpu_share;
-                }
-                ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
+            if container.invocations.len() == 1 {
+                self.load += container.cpu_share;
             }
+            ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
         }
     }
 }
@@ -248,7 +246,7 @@ impl ContendedCPUPolicy {
 
 impl CPUPolicy for ContendedCPUPolicy {
     fn clean_copy(&self) -> Box<dyn CPUPolicy> {
-        Box::new(Self::default())
+        Box::<Self>::default()
     }
 
     fn get_load(&self) -> f64 {
@@ -313,11 +311,11 @@ impl CPUPolicy for ContendedCPUPolicy {
 pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CPUPolicy> {
     let lower = s.to_lowercase();
     if lower == "ignored" {
-        Box::new(IgnoredCPUPolicy::default())
+        Box::<IgnoredCPUPolicy>::default()
     } else if lower == "isolated" {
-        Box::new(IsolatedCPUPolicy::default())
+        Box::<IsolatedCPUPolicy>::default()
     } else if lower == "contended" {
-        Box::new(ContendedCPUPolicy::default())
+        Box::<ContendedCPUPolicy>::default()
     } else {
         panic!("Can't resolve: {}", s);
     }
