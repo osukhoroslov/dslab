@@ -5,7 +5,7 @@ Note that console output is just a default description of simulation results, fo
 ## Steps to reproduce
 - download and unpack Azure functions [dataset](https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md)
 - build
-- run `serverless-in-the-wild %path_to_dataset% --config %config% --plot %plot_name%`
+- run `serverless-in-the-wild %path_to_dataset% --config %config% --plot %output_plot_file%`
 
 It is recommended to build strictly in release mode and leave only one day out of 14 since the dataset is really large.
 Note that the last two days in the dataset have no memory percentiles. Such days are ignored.

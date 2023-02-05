@@ -108,7 +108,7 @@ impl CPUPolicy for IgnoredCPUPolicy {
 
 /// CPU shares of active containers should not exceed the number of cores. If this limit is
 /// exceeded, extra invocations are stalled until some cores are freed.
-/// This model ignores possible effects related to multiple concurrent invocations on the same
+/// This model currently ignores possible effects related to multiple concurrent invocations on the same
 /// container.
 #[derive(Default)]
 pub struct IsolatedCPUPolicy {
