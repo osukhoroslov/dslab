@@ -36,16 +36,9 @@ impl ModelChecker {
         }
         let events = Rc::new(RefCell::new(events));
 
-        let net = sys.network();
         let mc_net = Rc::new(RefCell::new(McNetwork::new(
             sim.state().rand_copy(),
-            net.corrupt_rate(),
-            net.dupl_rate(),
-            net.drop_rate(),
-            net.get_drop_incoming().clone(),
-            net.get_drop_outgoing().clone(),
-            net.disabled_links().clone(),
-            net.proc_locations().clone(),
+            sys.network(),
             events.clone(),
         )));
 
