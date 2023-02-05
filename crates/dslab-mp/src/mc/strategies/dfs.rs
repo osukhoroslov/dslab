@@ -6,6 +6,7 @@ pub struct Dfs {
     goal: Box<dyn Fn(&McState) -> bool>,
     invariant: Box<dyn Fn(&McState) -> bool>,
     search_depth: u64,
+    mode: String,
 }
 
 impl Dfs {
@@ -13,12 +14,14 @@ impl Dfs {
         prune: Box<dyn Fn(&McState) -> bool>,
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
+        mode: String,
     ) -> Self {
         Self {
             prune,
             goal,
             invariant,
             search_depth: 0,
+            mode
         }
     }
 }
@@ -46,6 +49,11 @@ impl Strategy for Dfs {
         for i in 0..events_num {
             let state = system.get_state(self.search_depth);
             let event = system.events.borrow_mut().remove(i);
+
+            if self.mode == "debug" {
+                Self::debug_log(&event, self.search_depth);
+            }
+
             system.apply_event(event);
 
             self.search_depth += 1;
