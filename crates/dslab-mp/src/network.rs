@@ -68,12 +68,24 @@ impl Network {
         self.max_delay = max_delay;
     }
 
+    pub fn drop_rate(&self) -> f64 {
+        self.drop_rate
+    }
+
     pub fn set_drop_rate(&mut self, drop_rate: f64) {
         self.drop_rate = drop_rate;
     }
 
+    pub fn dupl_rate(&self) -> f64 {
+        self.dupl_rate
+    }
+
     pub fn set_dupl_rate(&mut self, dupl_rate: f64) {
         self.dupl_rate = dupl_rate;
+    }
+
+    pub fn corrupt_rate(&self) -> f64 {
+        self.corrupt_rate
     }
 
     pub fn set_corrupt_rate(&mut self, corrupt_rate: f64) {
@@ -223,18 +235,6 @@ impl Network {
             self.message_count += 1;
             self.traffic += msg_size as u64;
         }
-    }
-
-    pub fn corrupt_rate(&self) -> f64 {
-        self.corrupt_rate
-    }
-
-    pub fn dupl_rate(&self) -> f64 {
-        self.dupl_rate
-    }
-
-    pub fn drop_rate(&self) -> f64 {
-        self.drop_rate
     }
 
     pub fn get_drop_outgoing(&self) -> &HashSet<String> {
