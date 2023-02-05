@@ -26,7 +26,7 @@ fn main() {
     };
     let trace = process_opendc_trace(Path::new(&args.trace), trace_config);
     let config = Config {
-        cpu_policy: Box::new(IgnoredCPUPolicy::default()),
+        cpu_policy: Box::<IgnoredCPUPolicy>::default(),
         coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)),
         ..Default::default()
     };
