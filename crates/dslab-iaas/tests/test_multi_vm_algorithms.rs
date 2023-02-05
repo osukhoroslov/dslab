@@ -4,6 +4,7 @@ use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::MultiVMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::multi_vm_dummy::DummyMultiVMPlacement;
+use dslab_iaas::core::vm_placement_algorithms::multi_vm_separate_racks::SeparateRacksMultiVMPlacement;
 use dslab_iaas::simulation::CloudSimulation;
 
 // Runs the multi VM placement algorithm and checks its' placement decisions.
@@ -19,10 +20,10 @@ fn check_placements(algorithm: Box<dyn MultiVMPlacementAlgorithm>, expected_host
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let host_ids = vec![
-        cloud_sim.add_host("h1", 10, 5),
-        cloud_sim.add_host("h2", 10, 5),
-        cloud_sim.add_host("h3", 13, 4),
-        cloud_sim.add_host("h4", 13, 4),
+        cloud_sim.add_host_inside_rack("h1", 10, 5, 0),
+        cloud_sim.add_host_inside_rack("h2", 10, 5, 1),
+        cloud_sim.add_host_inside_rack("h3", 13, 4, 2),
+        cloud_sim.add_host_inside_rack("h4", 13, 4, 3),
     ];
 
     cloud_sim.spawn_vm_on_host(ResourceConsumer::with_full_load(6, 2), 10.0, None, host_ids[0]);
@@ -51,7 +52,14 @@ fn check_placements(algorithm: Box<dyn MultiVMPlacementAlgorithm>, expected_host
 }
 
 #[test]
-// Tests Dummy VM placement algorithm with Worst Fit as basic.
+// Tests Dummy VM placement algorithm with First Fit as basic.
 fn test_dummy_multi_first_fit() {
-    check_placements(Box::new(DummyMultiVMPlacement::new()), vec!["h3", "h1", "h2"]);
+    check_placements(Box::new(DummyMultiVMPlacement::new()), vec!["h1", "h2", "h1"]);
+}
+
+#[test]
+// Tests different racks placement algorithm with First Fit as basic algorithm for host search.
+// For the third VM host #3 is selected instead of #1 to satisfy the condition of different racks
+fn test_different_racks_first_fit() {
+    check_placements(Box::new(SeparateRacksMultiVMPlacement::new()), vec!["h1", "h2", "h3"]);
 }

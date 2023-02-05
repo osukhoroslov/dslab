@@ -1,4 +1,4 @@
-//! Dummy multi-VM packing algorithms. Just packs VM one-by-one using Worst Fit algorithm.
+//! Dummy multi-VM packing algorithms. Just packs VM one-by-one using First Fit algorithm.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,7 +7,7 @@ use crate::core::common::Allocation;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::{MultiVMPlacementAlgorithm, SingleVMPlacementAlgorithm};
-use crate::core::vm_placement_algorithms::worst_fit::WorstFit;
+use crate::core::vm_placement_algorithms::first_fit::FirstFit;
 
 /// Uses the first suitable host.
 #[derive(Default)]
@@ -26,7 +26,7 @@ impl MultiVMPlacementAlgorithm for DummyMultiVMPlacement {
         pool_state: &ResourcePoolState,
         monitoring: &Monitoring,
     ) -> Option<Vec<u32>> {
-        let single_algo = WorstFit::new();
+        let single_algo = FirstFit::new();
         let mut result = Vec::<u32>::new();
         let mut pool = pool_state.clone();
 
