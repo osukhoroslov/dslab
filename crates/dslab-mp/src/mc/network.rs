@@ -24,11 +24,7 @@ pub struct McNetwork {
 }
 
 impl McNetwork {
-    pub(crate) fn new(
-        rand: Pcg64,
-        net: RefMut<Network>,
-        events: Rc<RefCell<Vec<McEvent>>>,
-    ) -> Self {
+    pub(crate) fn new(rand: Pcg64, net: RefMut<Network>, events: Rc<RefCell<Vec<McEvent>>>) -> Self {
         Self {
             rand,
             corrupt_rate: net.corrupt_rate(),
