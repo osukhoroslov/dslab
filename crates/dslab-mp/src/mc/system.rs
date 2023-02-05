@@ -9,13 +9,15 @@ use crate::mc::node::{McNode, McNodeState};
 pub struct McState {
     pub node_states: HashMap<String, McNodeState>,
     pub events: Vec<McEvent>,
+    pub search_depth: u64,
 }
 
 impl McState {
-    pub fn new(events: Vec<McEvent>) -> Self {
+    pub fn new(events: Vec<McEvent>, search_depth: u64) -> Self {
         Self {
             node_states: HashMap::new(),
             events,
+            search_depth,
         }
     }
 }
@@ -48,8 +50,8 @@ impl McSystem {
         }
     }
 
-    pub fn get_state(&self) -> McState {
-        let mut state = McState::new(self.events.borrow().clone());
+    pub fn get_state(&self, search_depth: u64) -> McState {
+        let mut state = McState::new(self.events.borrow().clone(), search_depth);
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
