@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
@@ -9,6 +9,7 @@ use regex::Regex;
 
 use crate::mc::events::McEvent;
 use crate::message::Message;
+use crate::network::Network;
 
 pub struct McNetwork {
     rand: Pcg64,
@@ -25,24 +26,18 @@ pub struct McNetwork {
 impl McNetwork {
     pub(crate) fn new(
         rand: Pcg64,
-        corrupt_rate: f64,
-        dupl_rate: f64,
-        drop_rate: f64,
-        drop_incoming: HashSet<String>,
-        drop_outgoing: HashSet<String>,
-        disabled_links: HashSet<(String, String)>,
-        proc_locations: HashMap<String, String>,
+        net: RefMut<Network>,
         events: Rc<RefCell<Vec<McEvent>>>,
     ) -> Self {
         Self {
             rand,
-            corrupt_rate,
-            dupl_rate,
-            drop_rate,
-            drop_incoming,
-            drop_outgoing,
-            disabled_links,
-            proc_locations,
+            corrupt_rate: net.corrupt_rate(),
+            dupl_rate: net.dupl_rate(),
+            drop_rate: net.drop_rate(),
+            drop_incoming: net.get_drop_incoming().clone(),
+            drop_outgoing: net.get_drop_outgoing().clone(),
+            disabled_links: net.disabled_links().clone(),
+            proc_locations: net.proc_locations().clone(),
             events,
         }
     }
