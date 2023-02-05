@@ -6,14 +6,20 @@ use dyn_clone::{clone_trait_object, DynClone};
 use crate::context::Context;
 use crate::message::Message;
 
-pub trait ProcessState: Downcast + Debug {}
+pub trait ProcessState: Downcast + Debug {
+    fn hash(&self) -> u64;
+}
 
 impl_downcast!(ProcessState);
 
 #[derive(Debug)]
 struct ProcessStateStub {}
 
-impl ProcessState for ProcessStateStub {}
+impl ProcessState for ProcessStateStub {
+    fn hash(&self) -> u64 {
+        0
+    }
+}
 
 pub trait Process: DynClone {
     /// Called when a message is received.
