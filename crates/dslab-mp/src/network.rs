@@ -92,6 +92,10 @@ impl Network {
         self.corrupt_rate = corrupt_rate;
     }
 
+    pub fn get_drop_incoming(&self) -> &HashSet<String> {
+        &self.drop_incoming
+    }
+
     pub fn drop_incoming(&mut self, node: &str) {
         self.drop_incoming.insert(node.to_string());
         t!(format!("{:>9.3} - drop messages to {}", self.ctx.time(), node).red());
@@ -100,6 +104,10 @@ impl Network {
     pub fn pass_incoming(&mut self, node: &str) {
         self.drop_incoming.remove(node);
         t!(format!("{:>9.3} - pass messages to {}", self.ctx.time(), node).green());
+    }
+
+    pub fn get_drop_outgoing(&self) -> &HashSet<String> {
+        &self.drop_outgoing
     }
 
     pub fn drop_outgoing(&mut self, node: &str) {
@@ -122,6 +130,10 @@ impl Network {
         self.drop_incoming.remove(node);
         self.drop_outgoing.remove(node);
         t!(format!("{:>9.3} - connected node: {}", self.ctx.time(), node).green());
+    }
+
+    pub fn disabled_links(&self) -> &HashSet<(String, String)> {
+        &self.disabled_links
     }
 
     pub fn disable_link(&mut self, from: &str, to: &str) {
@@ -240,17 +252,5 @@ impl Network {
             self.message_count += 1;
             self.traffic += msg_size as u64;
         }
-    }
-
-    pub fn get_drop_outgoing(&self) -> &HashSet<String> {
-        &self.drop_outgoing
-    }
-
-    pub fn get_drop_incoming(&self) -> &HashSet<String> {
-        &self.drop_incoming
-    }
-
-    pub fn disabled_links(&self) -> &HashSet<(String, String)> {
-        &self.disabled_links
     }
 }
