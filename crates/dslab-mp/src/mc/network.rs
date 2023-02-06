@@ -50,9 +50,13 @@ impl McNetwork {
         }
         let msg = self.corrupt_if_needed(msg);
         let data = McEvent::MessageReceived { msg, src, dest };
-        let dups = self.get_message_count();
-        for _ in 0..dups {
-            self.events.borrow_mut().push(data.clone());
+        let msg_count = self.get_message_count();
+        if msg_count == 1 {
+            self.events.borrow_mut().push(data);
+        } else {
+            for _ in 0..msg_count {
+                self.events.borrow_mut().push(data.clone());
+            }
         }
     }
 
