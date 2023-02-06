@@ -232,12 +232,12 @@ impl Network {
                     src: src.to_string(),
                     dest: dest.to_string(),
                 };
-                let dups = self.get_message_count();
-                if dups == 1 {
+                let msg_count = self.get_message_count();
+                if msg_count == 1 {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                     self.ctx.emit_as(e, src_node_id, dest_node_id, delay);
                 } else {
-                    for _i in 0..dups {
+                    for _ in 0..msg_count {
                         let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                         self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
                     }
