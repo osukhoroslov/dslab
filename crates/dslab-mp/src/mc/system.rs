@@ -37,7 +37,7 @@ impl McSystem {
         match event {
             McEvent::MessageReceived { msg, src, dest } => {
                 self.nodes
-                    .get_mut(self.net.borrow().get_proc_node(&src))
+                    .get_mut(self.net.borrow().get_proc_node(&dest))
                     .unwrap()
                     .on_message_received(dest, msg, src);
             }
