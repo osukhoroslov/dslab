@@ -1,11 +1,15 @@
 mod basic;
 mod retry;
 
+
+use std::borrow::BorrowMut;
 use std::env;
 use std::io::Write;
 
 use assertables::assume;
 use clap::Parser;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::strategies::dfs::Dfs;
 use env_logger::Builder;
 use log::LevelFilter;
 use sugars::boxed;
@@ -179,6 +183,79 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn test_mc(config: &TestConfig) -> TestResult {
+    let mut system = build_system(config);
+    let data = format!(r#"{{"value": 0}}"#);
+    // let data2 = format!(r#"{{"value": 1}}"#);
+    system.send_local_message("client", Message::new("PING", &data.clone()));
+    // system.send_local_message("client", Message::new("PING", &data2.clone()));
+    let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
+        Box::new(|state|{
+            if state.search_depth > 7 {
+                Some("too deep".to_owned())
+            } else {
+                None
+            }
+        }),        
+        Box::new(|state|{
+            if !state.events.available_events().is_empty() {
+                return None;
+            }
+
+            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
+                println!("local message delivered");
+                return Some("got message".to_owned());
+            }
+            return None;
+        }),
+        Box::new(|_|{
+            Ok(())
+        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
+    )));
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    println!("{:?}", res.unwrap());
+    Ok(true)
+}
+
+fn test_mc_unreliable(config: &TestConfig) -> TestResult {
+    let mut system = build_system(config);
+    let data = format!(r#"{{"value": 0}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
+    system.send_local_message("client", Message::new("PING", &data.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.network().borrow_mut().set_drop_rate(0.3);
+    let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
+        Box::new(|state| {
+            if state.search_depth > 8 {
+                Some("too deep".to_owned())
+            } else {
+                None
+            }
+        }),
+        Box::new(|state|{
+            if state.node_states["client-node"]["client"].local_outbox.len() == 1 {
+                println!("local message delivered");
+                return Some("got two messages".to_owned());
+            }
+            return None;
+        }),
+        Box::new(|_|{
+            Ok(())
+        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
+    )));
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    println!("{:?}", res.unwrap());
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Ping-Pong Tests
@@ -222,7 +299,9 @@ fn main() {
     tests.add("DROP PING 2", test_drop_ping2, config.clone());
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
-    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config);
+    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config.clone());
+    tests.add("MODEL CHECKING", test_mc, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable, config);
 
     if args.test.is_none() {
         tests.run();
