@@ -36,16 +36,12 @@ impl McSystem {
     pub fn apply_event(&mut self, event: McEvent) {
         match event {
             McEvent::MessageReceived { msg, src, dest } => {
-                self.nodes
-                    .get_mut(self.net.borrow().get_proc_node(&dest))
-                    .unwrap()
-                    .on_message_received(dest, msg, src);
+                let name = self.net.borrow().get_proc_node(&dest).clone();
+                self.nodes.get_mut(&name).unwrap().on_message_received(dest, msg, src);
             }
             McEvent::TimerFired { proc, timer } => {
-                self.nodes
-                    .get_mut(self.net.borrow().get_proc_node(&proc))
-                    .unwrap()
-                    .on_timer_fired(proc, timer);
+                let name = self.net.borrow().get_proc_node(&proc).clone();
+                self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer);
             }
         }
     }
