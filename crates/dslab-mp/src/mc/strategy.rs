@@ -4,6 +4,7 @@ use crate::mc::events::McEvent;
 use crate::mc::events::McEvent::{MessageReceived, TimerFired};
 use crate::mc::system::McSystem;
 use crate::util::t;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub enum LogMode {
@@ -11,8 +12,13 @@ pub enum LogMode {
     Debug,
 }
 
+#[derive(Debug, Default)]
+pub struct McSummary {
+    pub(crate) states: HashMap<String, u32>,
+}
+
 pub trait Strategy {
-    fn run(&mut self, system: &mut McSystem) -> bool;
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
     fn debug_log(event: &McEvent, depth: u64)
     where
