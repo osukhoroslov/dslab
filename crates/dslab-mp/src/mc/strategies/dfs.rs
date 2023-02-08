@@ -1,19 +1,19 @@
-use crate::mc::strategy::{LogMode, Strategy};
+use crate::mc::strategy::{LogMode, McSummary, Strategy};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Dfs {
-    prune: Box<dyn Fn(&McState) -> bool>,
-    goal: Box<dyn Fn(&McState) -> bool>,
-    invariant: Box<dyn Fn(&McState) -> bool>,
+    prune: Box<dyn Fn(&McState) -> Option<String>>,
+    goal: Box<dyn Fn(&McState) -> Option<String>>,
+    invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
     search_depth: u64,
     mode: LogMode,
 }
 
 impl Dfs {
     pub fn new(
-        prune: Box<dyn Fn(&McState) -> bool>,
-        goal: Box<dyn Fn(&McState) -> bool>,
-        invariant: Box<dyn Fn(&McState) -> bool>,
+        prune: Box<dyn Fn(&McState) -> Option<String>>,
+        goal: Box<dyn Fn(&McState) -> Option<String>>,
+        invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
         mode: LogMode,
     ) -> Self {
         Self {
@@ -27,24 +27,35 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
-    fn run(&mut self, system: &mut McSystem) -> bool {
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
         let events_num = system.events.borrow().len();
         let state = system.get_state(self.search_depth);
 
         // Checking invariant on every step
-        if !(self.invariant)(&state) {
-            return false;
+        if let Err(inv_broken) = (self.invariant)(&state) {
+            return Err(inv_broken);
         }
 
         // Check final state of the system
         if events_num == 0 {
-            return (self.goal)(&state);
+            if let Some(status) = (self.goal)(&state) {
+                let mut summary = McSummary::default();
+                let counter = summary.states.entry(status).or_insert(0);
+                *counter = *counter + 1;
+                return Ok(summary);
+            }
+            return Ok(McSummary::default());
         }
 
         // Check if execution branch is pruned
-        if (self.prune)(&state) {
-            return true;
+        if let Some(status) = (self.prune)(&state) {
+            let mut summary = McSummary::default();
+            let counter = summary.states.entry(status).or_insert(0);
+            *counter = *counter + 1;
+            return Ok(summary);
         }
+
+        let mut summary = McSummary::default();
 
         for i in 0..events_num {
             let state = system.get_state(self.search_depth);
@@ -60,13 +71,18 @@ impl Strategy for Dfs {
             let run_success = self.run(system);
             self.search_depth -= 1;
 
-            if !run_success {
-                return false;
+            if let Ok(rec_summary) = run_success {
+                for (status, cnt) in rec_summary.states.into_iter() {
+                    let cnt_ref = summary.states.entry(status).or_insert(0);
+                    *cnt_ref = *cnt_ref + cnt;
+                }
+            } else {
+                return run_success;
             }
 
             system.set_state(state);
         }
-        true
+        Ok(summary)
     }
 
     fn log_mode(&self) -> LogMode {

@@ -58,7 +58,7 @@ impl ModelChecker {
         }
     }
 
-    pub fn start(&mut self) -> bool {
+    pub fn start(&mut self) -> Result<super::strategy::McSummary, String> {
         self.strategy.run(&mut self.system)
     }
 }
