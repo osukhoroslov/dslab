@@ -92,6 +92,7 @@ pub struct Node {
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
     clock_skew: f64,
+    is_crashed: bool,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -103,8 +104,13 @@ impl Node {
             processes: HashMap::new(),
             net,
             clock_skew: 0.,
+            is_crashed: false,
             ctx: Rc::new(RefCell::new(ctx)),
         }
+    }
+
+    pub fn is_crashed(&self) -> bool {
+        self.is_crashed
     }
 
     pub fn set_clock_skew(&mut self, clock_skew: f64) {
@@ -117,6 +123,10 @@ impl Node {
 
     pub fn get_process(&self, name: &str) -> Option<&Box<dyn Process>> {
         self.processes.get(name).and_then(|entry| Some(&entry.proc_impl))
+    }
+
+    pub fn crash(&mut self) {
+        self.is_crashed = true;
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {
