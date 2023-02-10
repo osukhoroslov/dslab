@@ -107,6 +107,10 @@ impl Node {
         }
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn set_clock_skew(&mut self, clock_skew: f64) {
         self.clock_skew = clock_skew;
     }
