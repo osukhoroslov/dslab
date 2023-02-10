@@ -105,7 +105,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
         let mut uniq = HashSet::new();
         for msg in delivered_msgs {
             if uniq.contains(msg) {
-                println!("{}", "Message is duplicated!");
+                println!("Message '{}' is duplicated!", msg);
                 no_duplication = false;
             };
             uniq.insert(msg);
@@ -117,7 +117,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     for (_, delivered_msgs) in &delivered {
         for msg in delivered_msgs {
             if !all_sent.contains(msg) {
-                println!("{}", "Message was not sent!");
+                println!("Message '{}' was not sent!", msg);
                 no_creation = false;
             }
         }
@@ -132,7 +132,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
         let delivered_msgs = delivered.get(proc).unwrap();
         for msg in sent_msgs {
             if !delivered_msgs.contains(msg) {
-                println!("Process {} has not delivered its own message {}!", proc, msg);
+                println!("Process {} has not delivered its own message '{}'!", proc, msg);
                 validity = false;
             }
         }
