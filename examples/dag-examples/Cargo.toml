@@ -1,5 +1,5 @@
 [package]
-name = "dag-example"
+name = "dag-examples"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 edition = "2021"
@@ -11,7 +11,6 @@ dslab-network = { path = "../../crates/dslab-network" }
 dslab-dag = { path = "../../crates/dslab-dag" }
 clap = { version = "3.0.14", features = ["cargo", "derive"] }
 env_logger = "0.9.0"
-indexmap = "1.9.2"
 log = "0.4"
 rand = "0.8.4"
 rand_pcg = "0.3.1"
