@@ -133,7 +133,7 @@ impl System {
         self.proc_nodes[proc].borrow().received_message_count(proc)
     }
 
-    pub fn node_name(&self, proc: &str) -> String {
+    pub fn proc_node_name(&self, proc: &str) -> String {
         self.proc_nodes[proc].borrow().name().to_owned()
     }
 
