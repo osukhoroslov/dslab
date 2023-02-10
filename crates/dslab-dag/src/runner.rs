@@ -123,7 +123,7 @@ impl DAGRunner {
             trace_log: TraceLog::new(),
             scheduler,
             actions: VecDeque::new(),
-            action_id: 0 as usize,
+            action_id: 0,
             scheduled_actions: HashSet::new(),
             resource_queue,
             data_transfer_tasks: HashMap::new(),
@@ -202,12 +202,12 @@ impl DAGRunner {
                                         .borrow()
                                         .bandwidth(self.resources[*resource].id, self.ctx.id())
                             })
-                            .max_by(|a, b| a.total_cmp(&b))
+                            .max_by(|a, b| a.total_cmp(b))
                             .unwrap_or(0.)
                 }),
                 Action::TransferData { .. } => None,
             })
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
         {
             log_info!(self.ctx, "expected makespan: {}", makespan);
         }
@@ -544,7 +544,7 @@ impl DAGRunner {
 
             for &data_item_id in data_items.iter() {
                 for consumer in self.dag.get_data_item(data_item_id).consumers.clone().iter() {
-                    if let Some(consumer_location) = self.task_location.get(&consumer).cloned() {
+                    if let Some(consumer_location) = self.task_location.get(consumer).cloned() {
                         if location != consumer_location {
                             self.add_data_transfer_task(
                                 data_item_id,
@@ -623,7 +623,7 @@ impl DAGRunner {
                 json!({
                     "time": self.ctx.time(),
                     "type": "finish_uploading",
-                    "from": self.ctx.lookup_name(data_transfer.from.clone()),
+                    "from": self.ctx.lookup_name(data_transfer.from),
                     "to": self.ctx.lookup_name(data_transfer.to),
                     "data_id": data_event_id,
                     "data_name": data_item.name.clone(),

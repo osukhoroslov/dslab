@@ -56,6 +56,10 @@ impl System {
         t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
     }
 
+    pub fn node_names(&self) -> Vec<String> {
+        self.nodes.keys().cloned().collect()
+    }
+
     pub fn set_node_clock_skew(&mut self, node: &str, clock_skew: f64) {
         self.nodes[node].borrow_mut().set_clock_skew(clock_skew);
     }
@@ -134,6 +138,10 @@ impl System {
         self.proc_nodes[proc].borrow().received_message_count(proc)
     }
 
+    pub fn proc_node_name(&self, proc: &str) -> String {
+        self.proc_nodes[proc].borrow().name().to_owned()
+    }
+
     // Simulation ------------------------------------------------------------------------------------------------------
 
     pub fn time(&self) -> f64 {
@@ -158,20 +166,25 @@ impl System {
 
     pub fn step_until_local_message(&mut self, proc: &str) -> Result<Vec<Message>, &str> {
         let node = self.proc_nodes[proc].clone();
-        while self.step() {
+        loop {
             if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
                 return Ok(messages);
             }
+            if !self.step() {
+                return Err("No messages");
+            }
         }
-        Err("No messages")
     }
 
     pub fn step_until_local_message_max_steps(&mut self, proc: &str, max_steps: u32) -> Result<Vec<Message>, &str> {
         let mut steps = 0;
         let node = self.proc_nodes[proc].clone();
-        while self.step() && steps <= max_steps {
+        while steps < max_steps {
             if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
                 return Ok(messages);
+            }
+            if !self.step() {
+                break;
             }
             steps += 1;
         }
@@ -181,9 +194,12 @@ impl System {
     pub fn step_until_local_message_timeout(&mut self, proc: &str, timeout: f64) -> Result<Vec<Message>, &str> {
         let end_time = self.time() + timeout;
         let node = self.proc_nodes[proc].clone();
-        while self.step() && self.time() < end_time {
+        while self.time() < end_time {
             if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
                 return Ok(messages);
+            }
+            if !self.step() {
+                break;
             }
         }
         Err("No messages")

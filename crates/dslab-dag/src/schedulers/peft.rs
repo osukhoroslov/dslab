@@ -18,7 +18,7 @@ pub struct PeftScheduler {
 
 impl PeftScheduler {
     pub fn new() -> Self {
-        PeftScheduler {
+        Self {
             data_transfer_strategy: DataTransferStrategy::Eager,
             original_network_estimation: false,
         }
@@ -78,10 +78,10 @@ impl PeftScheduler {
                                             )
                                         }
                             })
-                            .min_by(|a, b| a.total_cmp(&b))
+                            .min_by(|a, b| a.total_cmp(b))
                             .unwrap()
                     })
-                    .max_by(|a, b| a.total_cmp(&b))
+                    .max_by(|a, b| a.total_cmp(b))
                     .unwrap_or(0.);
             }
         }
@@ -114,19 +114,18 @@ impl PeftScheduler {
             let task_id = *task_ids
                 .iter()
                 .filter(|&task| !scheduled[*task])
-                .filter(|&task| {
+                .find(|&task| {
                     dag.get_task(*task)
                         .inputs
                         .iter()
                         .filter_map(|&id| dag.get_data_item(id).producer)
                         .all(|task| scheduled[task])
                 })
-                .next()
                 .unwrap();
             let mut best_finish = -1.;
             let mut best_start = -1.;
             let mut best_oeft = -1.;
-            let mut best_resource = 0 as usize;
+            let mut best_resource = 0;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
                 let res = evaluate_assignment(
@@ -210,5 +209,11 @@ impl Scheduler for PeftScheduler {
 
     fn is_static(&self) -> bool {
         true
+    }
+}
+
+impl Default for PeftScheduler {
+    fn default() -> Self {
+        Self::new()
     }
 }

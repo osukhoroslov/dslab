@@ -25,7 +25,7 @@ impl PanelsWidget {
         actor: &str,
         middlex: f64,
         downy: &mut f64,
-        files: &Vec<File>,
+        files: &[File],
     ) {
         let time = data.slider * data.total_time;
 
@@ -104,7 +104,7 @@ impl PanelsWidget {
         data: &AppData,
         middlex: f64,
         downy: &mut f64,
-        tasks: &Vec<usize>,
+        tasks: &[usize],
     ) {
         let time = data.slider * data.total_time;
 
@@ -362,7 +362,7 @@ impl PanelsWidget {
 
         // block with files
         if let Some(files) = files {
-            self.draw_actor_files_block(ctx, data, name, middlex, &mut downy, &files);
+            self.draw_actor_files_block(ctx, data, name, middlex, &mut downy, files);
         }
 
         // line below files
@@ -374,7 +374,7 @@ impl PanelsWidget {
     }
 
     fn get_actor_height(&self, data: &AppData) -> f64 {
-        let actor_height = 0.
+        0.
             + 35.  // title
             + 50.  // cores
             + 50.  // memory
@@ -385,8 +385,7 @@ impl PanelsWidget {
             + match data.files_limit_str.parse::<usize>() {
                 Ok(x) => x as f64 * ROW_STEP + 30.,
                 Err(_) => 0.
-            }; // files
-        actor_height
+            } // files
     }
 
     fn get_actors_per_row(&self, width: f64) -> usize {
@@ -432,7 +431,7 @@ impl Widget<AppData> for PanelsWidget {
                 size.width / (actors_per_row as f64) * ((i % actors_per_row) as f64 + 0.5),
                 row as f64 * (actor_height + BLOCK_Y_PADDING) + BLOCK_Y_PADDING,
             );
-            self.draw_actor(ctx, data, position, &compute.name, Some(&compute), Some(&compute.files));
+            self.draw_actor(ctx, data, position, &compute.name, Some(compute), Some(&compute.files));
         }
     }
 }

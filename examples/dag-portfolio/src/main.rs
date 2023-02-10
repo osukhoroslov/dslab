@@ -105,7 +105,7 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(&format!("{}{}", dags_folder, filename), 1.0e11);
+        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 1.0e11);
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);
@@ -156,20 +156,18 @@ fn run_experiments(args: &Args) {
     let results = Arc::new(Mutex::new(Vec::<(usize, usize, usize, f64)>::new()));
 
     for algo in 0..algos {
-        for dag_id in 0..dags.len() {
-            for platform_id in 0..platform_configs.len() {
+        for (dag_id, dag) in dags.iter().enumerate() {
+            for (platform_id, platform_config) in platform_configs.iter().enumerate() {
                 if let Some((one_algo, one_dag, one_platform)) = run_one {
                     if algo != one_algo || dag_id != one_dag || one_platform != platform_id {
                         continue;
                     }
                 }
-                let dag = dags[dag_id].clone();
-                let platform_config = platform_configs[platform_id].clone();
+                let dag = dag.clone();
+                let platform_config = platform_config.clone();
                 let algo = algo;
                 let total_runs = total_runs;
                 let finished_runs = finished_runs.clone();
-                let dag_id = dag_id.clone();
-                let platform_id = platform_id.clone();
                 let results = results.clone();
                 pool.execute(move || {
                     let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0e+8, 0.)));
@@ -186,7 +184,7 @@ fn run_experiments(args: &Args) {
                     );
                     let mut create_resource = |speed: i32, cluster: usize, node: usize| {
                         let name = format!("compute-{}-{}", cluster, node);
-                        let speed = speed as u64 * 1_000_000_000 as u64;
+                        let speed = speed as u64 * 1_000_000_000;
                         let cores = 8;
                         let memory = 0;
                         sim.add_resource(&name, speed, cores, memory);
@@ -318,11 +316,11 @@ fn process_results() {
     println!("| algo | average place | average ratio to best | number of first places |");
     println!("|------|---------------|-----------------------|------------------------|");
     algos.sort_by(|&a, &b| avg_ratio_to_best[a].total_cmp(&avg_ratio_to_best[b]));
-    for i in 0..algos.len() {
-        let algo_ind = *algo_ind.get(&algos[i]).unwrap();
+    for algo in algos {
+        let algo_ind = *algo_ind.get(&algo).unwrap();
         println!(
             "| {: >4} | {: >13.3} | {: >21.3} | {: >22.3} |",
-            algos[i], avg_place[algo_ind], avg_ratio_to_best[algo_ind], first_places_cnt[algo_ind],
+            algo, avg_place[algo_ind], avg_ratio_to_best[algo_ind], first_places_cnt[algo_ind],
         );
     }
 }

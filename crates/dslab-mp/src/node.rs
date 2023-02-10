@@ -87,7 +87,6 @@ impl ProcessEntry {
 pub struct Node {
     #[allow(dead_code)]
     id: Id,
-    #[allow(dead_code)]
     name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
@@ -109,12 +108,20 @@ impl Node {
         }
     }
 
-    pub fn is_crashed(&self) -> bool {
-        self.is_crashed
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn set_clock_skew(&mut self, clock_skew: f64) {
         self.clock_skew = clock_skew;
+    }
+
+    pub fn is_crashed(&self) -> bool {
+        self.is_crashed
+    }
+
+    pub fn crash(&mut self) {
+        self.is_crashed = true;
     }
 
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>) {
@@ -123,10 +130,6 @@ impl Node {
 
     pub fn get_process(&self, name: &str) -> Option<&Box<dyn Process>> {
         self.processes.get(name).and_then(|entry| Some(&entry.proc_impl))
-    }
-
-    pub fn crash(&mut self) {
-        self.is_crashed = true;
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {

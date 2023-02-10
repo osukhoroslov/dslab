@@ -10,7 +10,7 @@ use crate::draw_utils::*;
 
 const NODE_RADIUS: f64 = 30.;
 
-const BACKGROUND: Color = Color::rgb8(0x29 as u8, 0x29 as u8, 0x29 as u8);
+const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
 pub struct GraphWidget {
     nodes: Vec<Point>,
@@ -92,7 +92,7 @@ impl GraphWidget {
                 continue;
             }
             if !used[v] {
-                self.dfs(v, &g, &mut level, &mut used, &mut by_level)
+                Self::dfs(v, &g, &mut level, &mut used, &mut by_level)
             }
         }
 
@@ -115,7 +115,6 @@ impl GraphWidget {
     }
 
     fn dfs(
-        &self,
         v: usize,
         g: &Vec<Vec<usize>>,
         level: &mut Vec<i32>,
@@ -125,7 +124,7 @@ impl GraphWidget {
         used[v] = true;
         for &k in g[v].iter() {
             if !used[k] {
-                self.dfs(k, g, level, used, by_level);
+                Self::dfs(k, g, level, used, by_level);
             }
             level[v] = level[v].max(level[k] + 1);
         }

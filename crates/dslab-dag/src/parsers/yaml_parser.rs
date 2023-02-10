@@ -68,13 +68,10 @@ impl DAG {
                 task.min_cores,
                 task.max_cores,
                 match &task.cores_dependency {
-                    Some(value) => match value {
-                        Value::Number(number) => CoresDependency::LinearWithFixed {
-                            fixed_part: number.as_f64().unwrap(),
-                        },
-                        _ => CoresDependency::Linear,
+                    Some(Value::Number(number)) => CoresDependency::LinearWithFixed {
+                        fixed_part: number.as_f64().unwrap(),
                     },
-                    None => CoresDependency::Linear,
+                    _ => CoresDependency::Linear,
                 },
             );
             for output in task.outputs.iter() {
