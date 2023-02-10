@@ -153,6 +153,7 @@ impl Network {
         let msg_size = msg.size();
         let src_node = self.proc_locations.get(src).unwrap();
         let dest_node = self.proc_locations.get(dest).unwrap();
+        let src_node_id = *self.node_ids.get(src_node).unwrap();
         let dest_node_id = *self.node_ids.get(dest_node).unwrap();
         // local communication inside a node is reliable and fast
         if src_node == dest_node {
@@ -161,7 +162,7 @@ impl Network {
                 src: src.to_string(),
                 dest: dest.to_string(),
             };
-            self.ctx.emit(e, dest_node_id, 0.);
+            self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
             if self.ctx.rand() >= self.drop_rate
@@ -185,12 +186,12 @@ impl Network {
                 };
                 if self.ctx.rand() >= self.dupl_rate {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                    self.ctx.emit(e, dest_node_id, delay);
+                    self.ctx.emit_as(e, src_node_id, dest_node_id, delay);
                 } else {
                     let dups = (self.ctx.rand() * 2.).ceil() as u32 + 1;
                     for _i in 0..dups {
                         let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                        self.ctx.emit(e.clone(), dest_node_id, delay);
+                        self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
                     }
                 }
             } else {
