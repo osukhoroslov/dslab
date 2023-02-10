@@ -91,6 +91,7 @@ pub struct Node {
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
     clock_skew: f64,
+    is_crashed: bool,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -102,6 +103,7 @@ impl Node {
             processes: HashMap::new(),
             net,
             clock_skew: 0.,
+            is_crashed: false,
             ctx: Rc::new(RefCell::new(ctx)),
         }
     }
@@ -112,6 +114,14 @@ impl Node {
 
     pub fn set_clock_skew(&mut self, clock_skew: f64) {
         self.clock_skew = clock_skew;
+    }
+
+    pub fn is_crashed(&self) -> bool {
+        self.is_crashed
+    }
+
+    pub fn crash(&mut self) {
+        self.is_crashed = true;
     }
 
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>) {

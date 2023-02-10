@@ -65,6 +65,7 @@ impl System {
     }
 
     pub fn crash_node(&mut self, node: &str) {
+        self.nodes.get(node).unwrap().borrow_mut().crash();
         self.sim.remove_handler(node);
 
         // cancel pending events from the crashed node
@@ -76,6 +77,10 @@ impl System {
 
     pub fn get_node(&self, name: &str) -> Option<Rc<RefCell<Node>>> {
         self.nodes.get(name).and_then(|res| Some(res.clone()))
+    }
+
+    pub fn node_is_crashed(&self, node: &str) -> bool {
+        self.nodes.get(node).unwrap().borrow().is_crashed()
     }
 
     // Processes -------------------------------------------------------------------------------------------------------
