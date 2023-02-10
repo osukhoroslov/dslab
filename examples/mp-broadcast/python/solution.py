@@ -2,10 +2,10 @@ from dslabmp import Context, Message, Process
 from typing import List
 
 
-class BroadcastNode(Process):
-    def __init__(self, node_id: str, nodes: List[str]):
-        self._id = node_id
-        self._nodes = nodes
+class BroadcastProcess(Process):
+    def __init__(self, process_name: str, processes: List[str]):
+        self._name = process_name
+        self._processes = processes
 
     def on_local_message(self, msg: Message, ctx: Context):
         if msg.type == 'SEND':
@@ -13,8 +13,8 @@ class BroadcastNode(Process):
                 'text': msg['text']
             })
             # best-effort broadcast
-            for node in self._nodes:
-                ctx.send(bcast_msg, node)
+            for process in self._processes:
+                ctx.send(bcast_msg, process)
 
     def on_message(self, msg: Message, sender: str, ctx: Context):
         if msg.type == 'BCAST':

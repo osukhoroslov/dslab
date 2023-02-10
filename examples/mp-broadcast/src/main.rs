@@ -18,10 +18,10 @@ use dslab_mp_python::PyProcessFactory;
 
 // UTILS -------------------------------------------------------------------------------------------
 
-#[derive(Clone)]
-struct TestConfig {
-    solution_path: String,
-    node_count: u64,
+#[derive(Copy, Clone)]
+struct TestConfig<'a> {
+    proc_factory: &'a PyProcessFactory,
+    proc_count: u64,
     seed: u64,
     monkeys: u32,
     debug: bool,
@@ -37,14 +37,13 @@ fn init_logger(level: LevelFilter) {
 fn build_system(config: &TestConfig) -> System {
     let mut sys = System::new(config.seed);
     let mut proc_names = Vec::new();
-    for n in 0..config.node_count {
+    for n in 0..config.proc_count {
         proc_names.push(format!("proc-{}", n));
     }
-    let process_factory = PyProcessFactory::new(&config.solution_path, "BroadcastNode");
-    for n in 0..config.node_count {
+    for n in 0..config.proc_count {
         let proc_name = &proc_names[n as usize];
+        let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
         let node_name = &format!("node-{}", n);
-        let proc = process_factory.build((proc_name, proc_names.clone()), config.seed);
         sys.add_node(node_name);
         sys.add_process(proc_name, boxed!(proc), node_name);
     }
@@ -93,7 +92,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
         println!("Process histories:");
         for proc in sys.process_names() {
             println!(
-                "- [proc {}] {}",
+                "- [{}] {}",
                 proc,
                 histories.get(&proc).unwrap().join(", ")
             );
@@ -127,7 +126,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     // VALIDITY
     let mut validity = true;
     for (proc, sent_msgs) in &sent {
-        if sys.process_is_crashed(&proc) {
+        if sys.node_is_crashed(&sys.node_name(&proc)) {
             continue;
         }
         let delivered_msgs = delivered.get(proc).unwrap();
@@ -143,11 +142,11 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     let mut uniform_agreement = true;
     for msg in all_delivered.iter() {
         for (proc, delivered_msgs) in &delivered {
-            if sys.process_is_crashed(&proc) {
+            if sys.node_is_crashed(&sys.node_name(&proc)) {
                 continue;
             }
             if !delivered_msgs.contains(&msg) {
-                println!("Message {} is not delivered by correct process {}!", msg, proc);
+                println!("Message '{}' is not delivered by correct process {}!", msg, proc);
                 uniform_agreement = false;
             }
         }
@@ -171,7 +170,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
             }
             // check that other correct nodes have delivered all past events before delivering the message
             for (dst, delivered_msgs) in &delivered {
-                if sys.process_is_crashed(&dst) {
+                if sys.node_is_crashed(&sys.node_name(&dst)) {
                     continue;
                 }
                 let mut dst_past = HashSet::new();
@@ -237,12 +236,7 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
     sys.send_local_message("proc-0", msg.clone());
     // let 2 messages to deliver (sender and one other node)
-    sys.step();
-    if sys.event_log("proc-0").len() == 1 {
-        sys.steps(2);
-    } else {
-        sys.step();
-    }
+    sys.steps(2);
     // crash source node
     sys.crash_node("node-0");
     sys.step_until_no_events();
@@ -255,9 +249,6 @@ fn test_sender_crash2(config: &TestConfig) -> TestResult {
     sys.send_local_message("proc-0", msg.clone());
     // let 1 message to deliver (sender only)
     sys.step();
-    if sys.event_log("proc-0").len() == 1 {
-        sys.step();
-    }
     sys.crash_node("node-0");
     sys.step_until_no_events();
     check(&mut sys, config)
@@ -265,13 +256,13 @@ fn test_sender_crash2(config: &TestConfig) -> TestResult {
 
 fn test_two_crashes(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
+    // simulate that 0 and 1 communicated only with each other and then crashed
+    for n in 2..config.proc_count {
+        sys.network().borrow_mut().disconnect_node(&format!("node-{}", &n.to_string()));
+    }
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
     sys.send_local_message("proc-0", msg.clone());
-    // simulate that 0 and 1 communicated only with each other and then crashed
-    for n in 2..config.node_count {
-        sys.network().borrow_mut().disconnect_node(&n.to_string());
-    }
-    sys.steps(config.node_count.pow(2));
+    sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-0");
     sys.crash_node("node-1");
     sys.step_until_no_events();
@@ -280,12 +271,12 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
 
 fn test_two_crashes2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
     // simulate that 1 and 2 communicated only with 0 and then crashed
     sys.network().borrow_mut().drop_outgoing("node-1");
     sys.network().borrow_mut().drop_outgoing("node-2");
-    sys.steps(config.node_count.pow(2));
+    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    sys.send_local_message("proc-0", msg.clone());
+    sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-1");
     sys.crash_node("node-2");
     sys.step_until_no_events();
@@ -322,13 +313,13 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         run_config.seed = rand.next_u64();
         println!("- Run {} (seed: {})", i, run_config.seed);
         let mut sys = build_system(config);
-        let victim1 = format!("node-{}", rand.gen_range(0..config.node_count));
-        let mut victim2 = format!("node-{}", rand.gen_range(0..config.node_count));
+        let victim1 = format!("node-{}", rand.gen_range(0..config.proc_count));
+        let mut victim2 = format!("node-{}", rand.gen_range(0..config.proc_count));
         while victim2 == victim1 {
-            victim2 = format!("node-{}", rand.gen_range(0..config.node_count));
+            victim2 = format!("node-{}", rand.gen_range(0..config.proc_count));
         }
         for i in 0..10 {
-            let user = rand.gen_range(0..config.node_count).to_string();
+            let user = rand.gen_range(0..config.proc_count).to_string();
             let msg = Message::new("SEND", &format!(r#"{{"text": "{}:{}"}}"#, user, i));
             sys.send_local_message(&format!("proc-{}", user), msg.clone());
             if i % 2 == 0 {
@@ -361,15 +352,15 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
 #[allow(dead_code)]
 fn test_scalability(config: &TestConfig) -> TestResult {
     let sys_sizes = [
-        config.node_count,
-        config.node_count * 2,
-        config.node_count * 4,
-        config.node_count * 10,
+        config.proc_count,
+        config.proc_count * 2,
+        config.proc_count * 4,
+        config.proc_count * 10,
     ];
     let mut msg_counts = Vec::new();
     for node_count in sys_sizes {
         let mut run_config = config.clone();
-        run_config.node_count = node_count;
+        run_config.proc_count = node_count;
         let mut sys = build_system(&run_config);
         let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
         sys.send_local_message("proc-0", msg.clone());
@@ -432,23 +423,24 @@ fn main() {
 
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
 
+    let proc_factory = PyProcessFactory::new(&args.solution_path, "BroadcastProcess");
     let config = TestConfig {
-        solution_path: args.solution_path,
-        node_count: args.node_count,
+        proc_factory: &proc_factory,
+        proc_count: args.node_count,
         seed: args.seed,
         monkeys: args.monkeys,
         debug: args.debug,
     };
     let mut tests = TestSuite::new();
 
-    tests.add("NORMAL", test_normal, config.clone());
-    tests.add("SENDER CRASH", test_sender_crash, config.clone());
-    tests.add("SENDER CRASH 2", test_sender_crash2, config.clone());
-    tests.add("TWO CRASHES", test_two_crashes, config.clone());
-    tests.add("TWO CRASHES 2", test_two_crashes2, config.clone());
-    tests.add("CAUSAL ORDER", test_causal_order, config.clone());
-    tests.add("CHAOS MONKEY", test_chaos_monkey, config.clone());
-    tests.add("SCALABILITY", test_scalability, config.clone());
+    tests.add("NORMAL", test_normal, config);
+    tests.add("SENDER CRASH", test_sender_crash, config);
+    tests.add("SENDER CRASH 2", test_sender_crash2, config);
+    tests.add("TWO CRASHES", test_two_crashes, config);
+    tests.add("TWO CRASHES 2", test_two_crashes2, config);
+    tests.add("CAUSAL ORDER", test_causal_order, config);
+    tests.add("CHAOS MONKEY", test_chaos_monkey, config);
+    tests.add("SCALABILITY", test_scalability, config);
 
     if args.test.is_none() {
         tests.run();
