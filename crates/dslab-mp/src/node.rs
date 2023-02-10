@@ -87,7 +87,6 @@ impl ProcessEntry {
 pub struct Node {
     #[allow(dead_code)]
     id: Id,
-    #[allow(dead_code)]
     name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
