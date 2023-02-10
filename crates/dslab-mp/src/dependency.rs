@@ -1,100 +1,75 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::vec::Vec;
+use std::ops::Bound::{Excluded, Unbounded};
 
-use float_ord::FloatOrd;
+use ordered_float::OrderedFloat;
 use serde::Serialize;
 
 use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::event::EventId;
 
-///
-/// Timer Dependency Resolver stores queue with timers and create dependencies between timers on one node based on their time (because timer with t_0 happens earlier than t_0 + t)
-/// It has several priority queues for each node and groups timers with same time
-///
+/// Tracks and enforces dependencies between the TimerFired events on the same node.
+/// Any timer with time T should be fired before any timer with time T+x.  
+#[derive(Default)]
 struct TimerDependencyResolver {
-    node_timers: HashMap<Id, BTreeMap<FloatOrd<f64>, Vec<EventId>>>,
+    node_timers: HashMap<Id, BTreeMap<OrderedFloat<f64>, HashSet<EventId>>>,
     event_to_node: HashMap<EventId, Id>,
 }
 
-pub struct DependencyResolver {
-    available_events: HashSet<EventId>,
-    timer_resolver: TimerDependencyResolver,
-}
-
 impl TimerDependencyResolver {
-    pub fn new() -> Self {
-        TimerDependencyResolver {
-            node_timers: HashMap::new(),
-            event_to_node: HashMap::new(),
-        }
-    }
-
-    pub fn add(&mut self, node: Id, time: f64, event: EventId) -> (bool, Vec<EventId>) {
+    pub fn add(&mut self, node: Id, time: f64, event: EventId) -> (bool, Option<HashSet<EventId>>) {
         assert!(
             self.event_to_node.insert(event, node).is_none(),
             "duplicate EventId not allowed"
         );
         let timers = self.node_timers.entry(node).or_default();
-        let mut new_unavailable = Vec::new();
-        let mut is_now_available = false;
-        let min_time_after = timers.range(FloatOrd(time)..).next();
-        if let Some(next_events) = min_time_after.map(|x| x.1) {
-            // next_events might become unavailable
-            new_unavailable = next_events.clone();
-        }
-        let timer_group = timers.entry(FloatOrd(time)).or_default();
-        timer_group.push(event);
-        let max_time_before = timers.range(..FloatOrd(time)).next_back();
-        if max_time_before.is_none() {
-            // new event is available
-            is_now_available = true;
-        }
-        (is_now_available, new_unavailable)
+        timers.entry(OrderedFloat(time)).or_default().insert(event);
+
+        let prev_time = timers.range(..OrderedFloat(time)).next_back();
+        let is_available = prev_time.is_none();
+
+        let next_time = timers.range((Excluded(OrderedFloat(time)), Unbounded)).next();
+        let blocked_events = next_time.map(|e| e.1).cloned();
+
+        (is_available, blocked_events)
     }
 
-    pub fn pop(&mut self, event_id: EventId) -> Vec<EventId> {
-        let node = self.event_to_node.remove(&event_id).unwrap();
-        let node_timers = self.node_timers.get_mut(&node).unwrap();
-        let mut new_available_events = Vec::new();
-        let (timer, list) = node_timers.iter_mut().next().unwrap();
-        let timer = *timer;
-        let idx = list.iter().position(|elem| *elem == event_id);
-        assert!(idx.is_some(), "event to pop was not first in queue");
-        let idx = idx.unwrap();
-        list.remove(idx);
-        if list.is_empty() {
-            node_timers.remove(&timer).unwrap();
-            if let Some(data) = node_timers.iter().next() {
-                new_available_events.extend(data.1);
+    pub fn pop(&mut self, event: EventId) -> Option<HashSet<EventId>> {
+        let node = self.event_to_node.remove(&event).unwrap();
+        let timers = self.node_timers.get_mut(&node).unwrap();
+        let (_, events) = timers.iter_mut().next().unwrap();
+        assert!(events.remove(&event), "event to pop was not first in queue");
+        if events.is_empty() {
+            timers.pop_first();
+            if let Some((_, next_events)) = timers.iter().next() {
+                return Some(next_events.clone());
             }
         }
-        new_available_events
+        None
     }
+}
+
+#[derive(Default)]
+pub struct DependencyResolver {
+    available_events: HashSet<EventId>,
+    timer_resolver: TimerDependencyResolver,
 }
 
 impl DependencyResolver {
     pub fn new() -> Self {
-        DependencyResolver {
-            available_events: HashSet::default(),
-            timer_resolver: TimerDependencyResolver::new(),
-        }
+        Default::default()
     }
 
     pub fn add_event(&mut self, event: &Event) {
-        let dependent_event = event.id;
-
-        let time = event.time;
-
-        let (now_available, new_unavailable) = self.timer_resolver.add(event.src, time, dependent_event.clone());
-        if now_available {
-            self.available_events.insert(dependent_event);
+        let (is_available, blocked_events) = self.timer_resolver.add(event.src, event.time, event.id);
+        if is_available {
+            self.available_events.insert(event.id);
         }
-        // earlier events can now be blocked
-        self.available_events
-            .retain(|elem| new_unavailable.iter().find(|x| *x == elem).is_none());
+        if let Some(blocked) = blocked_events {
+            self.available_events.retain(|e| !blocked.contains(e));
+        }
     }
 
     pub fn available_events(&self) -> &HashSet<EventId> {
@@ -102,11 +77,10 @@ impl DependencyResolver {
     }
 
     pub fn pop_event(&mut self, event_id: EventId) {
-        self.available_events.remove(&event_id);
-        let next_events = self.timer_resolver.pop(event_id);
-        for dependency in next_events.iter() {
-            self.available_events.insert(dependency.clone());
-        }
+        assert!(self.available_events.remove(&event_id));
+        if let Some(unblocked_events) = self.timer_resolver.pop(event_id) {
+            self.available_events.extend(unblocked_events);
+        };
     }
 }
 
@@ -120,9 +94,9 @@ mod tests {
     use rand::prelude::SliceRandom;
 
     #[test]
-    fn test_float_ord() {
-        let a = FloatOrd(0.0);
-        let b = FloatOrd(0.0);
+    fn test_ordered_float() {
+        let a = OrderedFloat(0.0);
+        let b = OrderedFloat(0.0);
         assert!(b <= a);
         assert!(a <= b);
         assert!(a == b);
