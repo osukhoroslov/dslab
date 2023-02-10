@@ -87,7 +87,6 @@ impl ProcessEntry {
 pub struct Node {
     #[allow(dead_code)]
     id: Id,
-    #[allow(dead_code)]
     name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
@@ -105,6 +104,10 @@ impl Node {
             clock_skew: 0.,
             ctx: Rc::new(RefCell::new(ctx)),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn set_clock_skew(&mut self, clock_skew: f64) {

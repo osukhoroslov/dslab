@@ -56,6 +56,10 @@ impl System {
         t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
     }
 
+    pub fn node_names(&self) -> Vec<String> {
+        self.nodes.keys().cloned().collect()
+    }
+
     pub fn set_node_clock_skew(&mut self, node: &str, clock_skew: f64) {
         self.nodes[node].borrow_mut().set_clock_skew(clock_skew);
     }
@@ -127,6 +131,10 @@ impl System {
 
     pub fn received_message_count(&self, proc: &str) -> u64 {
         self.proc_nodes[proc].borrow().received_message_count(proc)
+    }
+
+    pub fn proc_node_name(&self, proc: &str) -> String {
+        self.proc_nodes[proc].borrow().name().to_owned()
     }
 
     // Simulation ------------------------------------------------------------------------------------------------------
