@@ -123,12 +123,20 @@ impl McNode {
                         proc_entry.pending_timers.insert(name, 0);
                     }
                 }
-                // TODO: Add handling of timer cancellation after adding of event dependencies resolver
-                /* ProcessEvent::TimerCancelled { name } => {
-                    if let Some(event_id) = proc_entry.pending_timers.remove(&name) {
-                        self.ctx.borrow_mut().cancel_event(event_id);
+                ProcessEvent::TimerCancelled { name } => {
+                    if let Some(_) = proc_entry.pending_timers.remove(&name) {
+                        self.events.borrow_mut().retain(|event| {
+                            match event {
+                                McEvent::MessageReceived { .. } => {
+                                    true
+                                }
+                                McEvent::TimerFired { proc, .. } => {
+                                    *proc != name
+                                }
+                            }
+                        });
                     }
-                }*/
+                }
                 _ => {}
             }
         }
