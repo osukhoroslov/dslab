@@ -5,6 +5,11 @@ use crate::mc::events::McEvent::{MessageReceived, TimerFired};
 use crate::mc::system::McSystem;
 use crate::util::t;
 
+pub enum LogMode {
+    Default,
+    Debug,
+}
+
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> bool;
 
