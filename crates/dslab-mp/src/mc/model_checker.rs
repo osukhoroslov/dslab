@@ -40,6 +40,7 @@ impl ModelChecker {
             sim.state().rand_copy(),
             sys.network(),
             events.clone(),
+            strategy.log_mode(),
         )));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();

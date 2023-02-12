@@ -68,4 +68,8 @@ impl Strategy for Dfs {
         }
         true
     }
+
+    fn log_mode(&self) -> LogMode {
+        self.mode.clone()
+    }
 }
