@@ -2,6 +2,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use colored::*;
 use lazy_static::lazy_static;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -10,6 +11,7 @@ use regex::Regex;
 use crate::mc::events::McEvent;
 use crate::message::Message;
 use crate::network::Network;
+use crate::util::t;
 
 pub struct McNetwork {
     rand: Pcg64,
@@ -46,11 +48,17 @@ impl McNetwork {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
         if src_node != dest_node && self.message_is_dropped(&src_node, &dest_node) {
+            t!(format!(
+                "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
+                "!!!", src, dest, msg
+            )
+            .red());
             return;
         }
         let msg = self.corrupt_if_needed(msg);
-        let data = McEvent::MessageReceived { msg, src, dest };
         let msg_count = self.get_message_count();
+        t!("x{:<8} {:>10} --> {:<10} {:?}", msg_count, src, dest, msg);
+        let data = McEvent::MessageReceived { msg, src, dest };
         if msg_count == 1 {
             self.events.borrow_mut().push(data);
         } else {
@@ -77,7 +85,9 @@ impl McNetwork {
                 static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
             }
             let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-            Message::new(msg.tip, corrupted_data)
+            let new_msg = Message::new(msg.tip.clone(), corrupted_data);
+            t!(format!("{:?} => {:?} <-- message corrupted", msg, new_msg).red());
+            new_msg
         } else {
             msg
         }
