@@ -167,56 +167,56 @@ impl ServerlessSimulation {
             let mut ir = self.invocation_registry.borrow_mut();
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 self.ctx.emit_ordered(
+                    InvocationStartEvent {
+                        request: InvocationRequest {
+                            func_id: item.id,
+                            duration: item.duration,
+                            time: item.time,
+                            id: ir.register_invocation(),
+                        },
+                    },
+                    self.controller_id,
+                    item.time - self.sim.time(),
+                );
+                for req in iter {
+                    self.ctx.emit_ordered(
                         InvocationStartEvent {
                             request: InvocationRequest {
-                                func_id: item.id,
-                                duration: item.duration,
-                                time: item.time,
+                                func_id: req.id,
+                                duration: req.duration,
+                                time: req.time,
                                 id: ir.register_invocation(),
                             },
                         },
                         self.controller_id,
-                        item.time - self.sim.time(),
-                );
-                for req in iter {
-                    self.ctx.emit_ordered(
-                            InvocationStartEvent {
-                                request: InvocationRequest {
-                                    func_id: req.id,
-                                    duration: req.duration,
-                                    time: req.time,
-                                    id: ir.register_invocation(),
-                                },
-                            },
-                            self.controller_id,
-                            req.time - self.sim.time(),
+                        req.time - self.sim.time(),
                     );
                 }
             } else {
                 self.ctx.emit(
+                    InvocationStartEvent {
+                        request: InvocationRequest {
+                            func_id: item.id,
+                            duration: item.duration,
+                            time: item.time,
+                            id: ir.register_invocation(),
+                        },
+                    },
+                    self.controller_id,
+                    item.time - self.sim.time(),
+                );
+                for req in iter {
+                    self.ctx.emit(
                         InvocationStartEvent {
                             request: InvocationRequest {
-                                func_id: item.id,
-                                duration: item.duration,
-                                time: item.time,
+                                func_id: req.id,
+                                duration: req.duration,
+                                time: req.time,
                                 id: ir.register_invocation(),
                             },
                         },
                         self.controller_id,
-                        item.time - self.sim.time(),
-                );
-                for req in iter {
-                    self.ctx.emit(
-                            InvocationStartEvent {
-                                request: InvocationRequest {
-                                    func_id: req.id,
-                                    duration: req.duration,
-                                    time: req.time,
-                                    id: ir.register_invocation(),
-                                },
-                            },
-                            self.controller_id,
-                            req.time - self.sim.time(),
+                        req.time - self.sim.time(),
                     );
                 }
             }

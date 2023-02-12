@@ -210,7 +210,9 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dest, delay)
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, dest, delay)
     }
 
     /// Checks whether emitting event with specified delay will break the ordering contract.
@@ -340,7 +342,9 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_ordered_event(data, self.id, self.id, delay)
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, self.id, delay)
     }
 
     /// Creates new immediate event for itself with specified payload, returns event id.
@@ -405,7 +409,9 @@ impl SimulationContext {
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_ordered_event(data, self.id, self.id, 0.)
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, self.id, 0.)
     }
 
     /// Creates new event with specified payload, source, destination and delay, returns event id.
