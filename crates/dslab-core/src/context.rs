@@ -202,6 +202,24 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
     }
 
+    /// This and all other `emit_..._ordered` functions are special variants of normal `emit_...` functions
+    /// that allow adding events to ordered event deque instead of heap, which may reduce the time
+    /// required to get next event. All events inside event deque must be ordered in increasing
+    /// order of time, otherwise the simulation will panic.
+    pub fn emit_ordered<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dest, delay)
+    }
+
+    /// Checks whether emitting event with specified delay will break the ordering contract.
+    ///
+    /// Returns true if and only if new event will **not** break the contract.
+    pub fn can_emit_ordered(&self, delay: f64) -> bool {
+        self.sim_state.borrow().can_add_ordered_event(delay)
+    }
+
     /// Creates new immediate (zero-delay) event with specified payload and destination, returns event id.
     ///
     /// This is a shorthand for [`emit()`](Self::emit()) with zero delay.
@@ -251,6 +269,14 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, 0.)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_now<T>(&mut self, data: T, dest: Id) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dest, 0.)
     }
 
     /// Creates new event for itself with specified payload and delay, returns event id.
@@ -307,6 +333,14 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, delay)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_self<T>(&mut self, data: T, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, self.id, delay)
     }
 
     /// Creates new immediate event for itself with specified payload, returns event id.
@@ -366,6 +400,14 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
     }
 
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_self_now<T>(&mut self, data: T) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, self.id, 0.)
+    }
+
     /// Creates new event with specified payload, source, destination and delay, returns event id.
     ///
     /// This is an extended version of [`emit()`](Self::emit()) for special cases when the event should be emitted
@@ -417,6 +459,14 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, src, dest, delay)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_as<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, src, dest, delay)
     }
 
     /// Cancels the specified event.

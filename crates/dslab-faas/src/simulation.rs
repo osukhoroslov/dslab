@@ -12,7 +12,6 @@ use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
 use crate::invoker::{BasicInvoker, Invoker};
-use crate::request_buffer::RequestBuffer;
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::{RequestData, Trace};
@@ -32,7 +31,6 @@ pub struct ServerlessSimulation {
     resource_name_resolver: ResourceNameResolver,
     sim: Simulation,
     stats: Rc<RefCell<Stats>>,
-    buffer: Rc<RefCell<RequestBuffer>>,
 }
 
 impl ServerlessSimulation {
@@ -41,13 +39,10 @@ impl ServerlessSimulation {
         let ctx = sim.create_context("entry point");
         let function_registry: Rc<RefCell<FunctionRegistry>> = Rc::new(RefCell::new(Default::default()));
         let invocation_registry: Rc<RefCell<InvocationRegistry>> = Rc::new(RefCell::new(Default::default()));
-        let buffer = Rc::new(RefCell::new(RequestBuffer::new()));
         let controller = Rc::new(RefCell::new(Controller::new(
             function_registry.clone(),
             config.idle_deployer,
             config.scheduler,
-            buffer.clone(),
-            &mut sim,
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
         let mut this_sim = Self {
@@ -62,7 +57,6 @@ impl ServerlessSimulation {
             resource_name_resolver: Default::default(),
             sim,
             stats,
-            buffer,
         };
         for host in config.hosts {
             let resources: Vec<_> = host
@@ -166,33 +160,65 @@ impl ServerlessSimulation {
         }
     }
 
-    /// This function provides a way to send invocation requests in a lazy way, so that not all
-    /// requests will be present inside event queue at each moment of time. It may reduce
-    /// simulation time since next event extraction is logarithmic in the number of pending events.
+    /// This function provides a way to send invocation requests to a special ordered deque inside
+    /// the simulation, which works faster than the default heap.
     pub fn send_requests_from_ordered_iter(&mut self, iter: &mut dyn Iterator<Item = RequestData>) {
-        if self.buffer.borrow().is_empty() {
-            // technically we can append iterator contents to buffer even if it is not empty; in case
-            // when requests in the buffer happen before requests in the iterator, but it's tedious
-            // to implement and you can always chain iterators to emulate this behavior
-            if let Some(item) = iter.next() {
-                let update_id = self.send_invocation_request(item.id, item.duration, item.time);
-                let mut buffer = self.buffer.borrow_mut();
-                buffer.set_update_id(update_id);
-                let mut ir = self.invocation_registry.borrow_mut();
-                for it in iter {
-                    let invocation_id = ir.register_invocation();
-                    let request = InvocationRequest {
-                        func_id: it.id,
-                        duration: it.duration,
-                        time: it.time,
-                        id: invocation_id,
-                    };
-                    buffer.push(request);
+        if let Some(item) = iter.next() {
+            let mut ir = self.invocation_registry.borrow_mut();
+            if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
+                self.ctx.emit_ordered(
+                        InvocationStartEvent {
+                            request: InvocationRequest {
+                                func_id: item.id,
+                                duration: item.duration,
+                                time: item.time,
+                                id: ir.register_invocation(),
+                            },
+                        },
+                        self.controller_id,
+                        item.time - self.sim.time(),
+                );
+                for req in iter {
+                    self.ctx.emit_ordered(
+                            InvocationStartEvent {
+                                request: InvocationRequest {
+                                    func_id: req.id,
+                                    duration: req.duration,
+                                    time: req.time,
+                                    id: ir.register_invocation(),
+                                },
+                            },
+                            self.controller_id,
+                            req.time - self.sim.time(),
+                    );
                 }
-            }
-        } else {
-            for item in iter {
-                self.send_invocation_request(item.id, item.duration, item.time);
+            } else {
+                self.ctx.emit(
+                        InvocationStartEvent {
+                            request: InvocationRequest {
+                                func_id: item.id,
+                                duration: item.duration,
+                                time: item.time,
+                                id: ir.register_invocation(),
+                            },
+                        },
+                        self.controller_id,
+                        item.time - self.sim.time(),
+                );
+                for req in iter {
+                    self.ctx.emit(
+                            InvocationStartEvent {
+                                request: InvocationRequest {
+                                    func_id: req.id,
+                                    duration: req.duration,
+                                    time: req.time,
+                                    id: ir.register_invocation(),
+                                },
+                            },
+                            self.controller_id,
+                            req.time - self.sim.time(),
+                    );
+                }
             }
         }
     }

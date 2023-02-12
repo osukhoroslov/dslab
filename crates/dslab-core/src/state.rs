@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashSet};
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::distributions::{Alphanumeric, DistString};
@@ -13,6 +13,7 @@ pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
     events: BinaryHeap<Event>,
+    ordered_events: VecDeque<Event>,
     canceled_events: HashSet<EventId>,
     event_count: u64,
 }
@@ -23,6 +24,7 @@ impl SimulationState {
             clock: 0.0,
             rand: Pcg64::seed_from_u64(seed),
             events: BinaryHeap::new(),
+            ordered_events: VecDeque::new(),
             canceled_events: HashSet::new(),
             event_count: 0,
         }
@@ -74,9 +76,52 @@ impl SimulationState {
         }
     }
 
+    pub fn add_ordered_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        if !self.can_add_ordered_event(delay) {
+            panic!("Event order is broken! Make sure you are passing events to emit_*_ordered functions in non-decreasing order of time.");
+        }
+        let event_id = self.event_count;
+        let event = Event {
+            id: event_id,
+            time: self.clock + delay,
+            src,
+            dest,
+            data: Box::new(data),
+        };
+        if delay >= 0. {
+            self.ordered_events.push_back(event);
+            self.event_count += 1;
+            event_id
+        } else {
+            log_incorrect_event(event, &format!("negative delay {}", delay));
+            panic!("Event delay is negative! It is not allowed to add events from the past.");
+        }
+    }
+
+    pub fn can_add_ordered_event(&self, delay: f64) -> bool {
+        if let Some(evt) = self.ordered_events.back() {
+            if delay + self.clock < evt.time - 1e-12 {
+                return false;
+            }
+        }
+        true
+    }
+
     pub fn next_event(&mut self) -> Option<Event> {
         loop {
-            if let Some(event) = self.events.pop() {
+            let maybe_heap = self.events.peek();
+            let maybe_deque = self.ordered_events.front();
+            if maybe_heap.is_some() && (maybe_deque.is_none() || maybe_heap.unwrap() > maybe_deque.unwrap()) {
+                let event = self.events.pop().unwrap();
+                if !self.canceled_events.remove(&event.id) {
+                    self.clock = event.time;
+                    return Some(event);
+                }
+            } else if maybe_deque.is_some() {
+                let event = self.ordered_events.pop_front().unwrap();
                 if !self.canceled_events.remove(&event.id) {
                     self.clock = event.time;
                     return Some(event);
@@ -88,7 +133,13 @@ impl SimulationState {
     }
 
     pub fn peek_event(&self) -> Option<&Event> {
-        self.events.peek()
+        let maybe_heap = self.events.peek();
+        let maybe_deque = self.ordered_events.front();
+        if maybe_heap.is_some() && (maybe_deque.is_none() || maybe_heap.unwrap() > maybe_deque.unwrap()) {
+            maybe_heap
+        } else {
+            maybe_deque
+        }
     }
 
     pub fn cancel_event(&mut self, id: EventId) {
@@ -104,6 +155,7 @@ impl SimulationState {
                 self.canceled_events.insert(event.id);
             }
         }
+        self.ordered_events.retain(|x| !pred(x));
     }
 
     pub fn event_count(&self) -> u64 {

@@ -3,10 +3,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use dslab_core::cast;
-use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::simulation::Simulation;
 
 use crate::deployer::IdleDeployer;
 use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};
@@ -14,7 +12,6 @@ use crate::function::FunctionRegistry;
 use crate::host::Host;
 use crate::invocation::InvocationRequest;
 use crate::invoker::InvocationStatus;
-use crate::request_buffer::RequestBuffer;
 use crate::scheduler::Scheduler;
 
 pub struct Controller {
@@ -22,8 +19,6 @@ pub struct Controller {
     hosts: Vec<Rc<RefCell<Host>>>,
     idle_deployer: Box<dyn IdleDeployer>,
     scheduler: Box<dyn Scheduler>,
-    ctx: SimulationContext,
-    buffer: Rc<RefCell<RequestBuffer>>,
 }
 
 impl Controller {
@@ -31,16 +26,12 @@ impl Controller {
         function_registry: Rc<RefCell<FunctionRegistry>>,
         idle_deployer: Box<dyn IdleDeployer>,
         scheduler: Box<dyn Scheduler>,
-        buffer: Rc<RefCell<RequestBuffer>>,
-        sim: &mut Simulation,
     ) -> Self {
         Self {
             function_registry,
             hosts: Vec::new(),
             idle_deployer,
             scheduler,
-            buffer,
-            ctx: sim.create_context("controller"),
         }
     }
 
@@ -78,12 +69,7 @@ impl EventHandler for Controller {
                 self.idle_deploy(id, event.time);
             }
             InvocationStartEvent { request } => {
-                let id = request.id;
                 self.invoke(request, event.time);
-                if let Some(next) = self.buffer.borrow_mut().try_update(id) {
-                    self.ctx
-                        .emit_self(InvocationStartEvent { request: next }, next.time - event.time);
-                }
             }
             SimulationEndEvent {} => {
                 self.update_end_metrics(event.time);
