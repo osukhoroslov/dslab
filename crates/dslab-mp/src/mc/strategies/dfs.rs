@@ -1,4 +1,4 @@
-use crate::mc::strategy::Strategy;
+use crate::mc::strategy::{LogMode, Strategy};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Dfs {
@@ -6,7 +6,7 @@ pub struct Dfs {
     goal: Box<dyn Fn(&McState) -> bool>,
     invariant: Box<dyn Fn(&McState) -> bool>,
     search_depth: u64,
-    mode: String,
+    mode: LogMode,
 }
 
 impl Dfs {
@@ -14,7 +14,7 @@ impl Dfs {
         prune: Box<dyn Fn(&McState) -> bool>,
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
-        mode: String,
+        mode: LogMode,
     ) -> Self {
         Self {
             prune,
@@ -50,7 +50,7 @@ impl Strategy for Dfs {
             let state = system.get_state(self.search_depth);
             let event = system.events.borrow_mut().remove(i);
 
-            if self.mode == "debug" {
+            if let LogMode::Debug = self.mode {
                 Self::debug_log(&event, self.search_depth);
             }
 
