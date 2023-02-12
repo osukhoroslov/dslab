@@ -1,8 +1,5 @@
 //! Dummy multi-VM packing algorithms. Just packs VM one-by-one using First Fit algorithm.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::core::common::Allocation;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
@@ -22,7 +19,7 @@ impl DummyMultiVMPlacement {
 impl MultiVMPlacementAlgorithm for DummyMultiVMPlacement {
     fn select_hosts(
         &self,
-        allocs: Vec<Rc<RefCell<Allocation>>>,
+        allocs: Vec<Allocation>,
         pool_state: &ResourcePoolState,
         monitoring: &Monitoring,
     ) -> Option<Vec<u32>> {
@@ -31,11 +28,11 @@ impl MultiVMPlacementAlgorithm for DummyMultiVMPlacement {
         let mut pool = pool_state.clone();
 
         for alloc in allocs {
-            let verdict = single_algo.select_host(&alloc.borrow(), &pool, monitoring);
+            let verdict = single_algo.select_host(&alloc, &pool, monitoring);
             verdict?;
 
             result.push(verdict.unwrap());
-            pool.allocate(&alloc.borrow(), verdict.unwrap());
+            pool.allocate(&alloc, verdict.unwrap());
         }
         Some(result)
     }

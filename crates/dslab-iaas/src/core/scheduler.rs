@@ -13,7 +13,7 @@ use crate::core::common::Allocation;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
-    AllocationRequest, MultiAllocationRequest,
+    AllocationRequest,
 };
 use crate::core::events::vm_api::VmStatusChanged;
 use crate::core::monitoring::Monitoring;
@@ -73,55 +73,6 @@ impl Scheduler {
             .add_host(id, rack_id, cpu_total, memory_total, cpu_total, memory_total);
     }
 
-    /// Processes VM allocation request by selecting a host for running the VM.
-    ///
-    /// Host selection is performed by invoking the configured VM placement algorithm.
-    /// If a suitable host is found, the scheduler updates its local state with new allocation and tries to commit its
-    /// decision in the placement store.
-    /// If not suitable host is found, the request is rescheduled for retry after the configured period.
-    fn on_allocation_request(&mut self, vm_id: u32) {
-        let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
-        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-
-        if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
-            self.ctx.emit(
-                VmStatusChanged {
-                    vm_id,
-                    status: VmStatus::FailedToAllocate,
-                },
-                self.vm_api.borrow().get_id(),
-                self.sim_config.message_delay,
-            );
-            return;
-        }
-
-        match &self.vm_placement_algorithm {
-            VMPlacementAlgorithm::Single(alg) => {
-                if let Some(host) = alg.select_host(&alloc.borrow(), &self.pool_state, &self.monitoring.borrow()) {
-                    log_debug!(
-                        self.ctx,
-                        "decided to place vm {} on host {}",
-                        alloc.borrow().id,
-                        self.ctx.lookup_name(host)
-                    );
-                    self.pool_state.allocate(&alloc.borrow(), host);
-                    self.ctx.emit(
-                        AllocationCommitRequest { vm_id, host_id: host },
-                        self.placement_store_id,
-                        self.sim_config.message_delay,
-                    );
-                } else {
-                    log_debug!(self.ctx, "failed to place vm {}", vm_id);
-                    self.ctx
-                        .emit_self(AllocationRequest { vm_id }, self.sim_config.allocation_retry_period);
-                }
-            }
-            VMPlacementAlgorithm::Multi(_alg) => {
-                panic!("VMPlacementAlgorithm::Single do not support multi allocation request");
-            }
-        }
-    }
-
     fn mark_vms_failed_to_allocate(&mut self, vm_ids: Vec<u32>) {
         for vm_id in vm_ids {
             self.ctx.emit(
@@ -135,8 +86,13 @@ impl Scheduler {
         }
     }
 
-    /// Processes multiple VMs allocation request by selecting a hosts for running each of passed VMs.
-    fn on_multi_allocation_request(&mut self, vm_ids: Vec<u32>) {
+    /// Processes VM allocation request by selecting a host for running the VM.
+    ///
+    /// Host selection is performed by invoking the configured VM placement algorithm.
+    /// If a suitable host is found, the scheduler updates its local state with new allocation and tries to commit its
+    /// decision in the placement store.
+    /// If not suitable host is found, the request is rescheduled for retry after the configured period.
+    fn on_allocation_request(&mut self, vm_ids: Vec<u32>) {
         for vm_id in &vm_ids {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
@@ -145,14 +101,46 @@ impl Scheduler {
             }
         }
 
-        let allocs: Vec<Rc<RefCell<Allocation>>> = vm_ids
+        let allocs: Vec<Allocation> = vm_ids
             .iter()
             .map(|vm_id| self.vm_api.borrow().get_vm_allocation(*vm_id))
             .collect();
 
         match &self.vm_placement_algorithm {
-            VMPlacementAlgorithm::Single(_alg) => {
-                panic!("VMPlacementAlgorithm::Multi do not support single allocation request");
+            VMPlacementAlgorithm::Single(alg) => {
+                let mut failed_to_allocate_vms = Vec::<u32>::new();
+                for vm_id in &vm_ids {
+                    let alloc = &allocs[0];
+                    if let Some(host) = alg.select_host(alloc, &self.pool_state, &self.monitoring.borrow()) {
+                        log_debug!(
+                            self.ctx,
+                            "decided to place vm {} on host {}",
+                            alloc.id,
+                            self.ctx.lookup_name(host)
+                        );
+                        self.pool_state.allocate(alloc, host);
+                        self.ctx.emit(
+                            AllocationCommitRequest {
+                                vm_id: alloc.id,
+                                host_id: host,
+                            },
+                            self.placement_store_id,
+                            self.sim_config.message_delay,
+                        );
+                    } else {
+                        failed_to_allocate_vms.push(*vm_id);
+                    }
+                }
+
+                if !failed_to_allocate_vms.is_empty() {
+                    log_debug!(self.ctx, "failed to place vms");
+                    self.ctx.emit_self(
+                        AllocationRequest {
+                            vm_ids: failed_to_allocate_vms,
+                        },
+                        self.sim_config.allocation_retry_period,
+                    );
+                }
             }
             VMPlacementAlgorithm::Multi(alg) => {
                 if let Some(hosts) = alg.select_hosts(allocs.clone(), &self.pool_state, &self.monitoring.borrow()) {
@@ -161,13 +149,13 @@ impl Scheduler {
                         log_debug!(
                             self.ctx,
                             "decided to place vm {} on host {}",
-                            alloc.borrow().id,
+                            alloc.id,
                             self.ctx.lookup_name(*host)
                         );
-                        self.pool_state.allocate(&alloc.borrow(), *host);
+                        self.pool_state.allocate(alloc, *host);
                         self.ctx.emit(
                             AllocationCommitRequest {
-                                vm_id: alloc.borrow().id,
+                                vm_id: alloc.id,
                                 host_id: *host,
                             },
                             self.placement_store_id,
@@ -176,10 +164,8 @@ impl Scheduler {
                     }
                 } else {
                     log_debug!(self.ctx, "failed to place vms");
-                    self.ctx.emit_self(
-                        MultiAllocationRequest { vm_ids },
-                        self.sim_config.allocation_retry_period,
-                    );
+                    self.ctx
+                        .emit_self(AllocationRequest { vm_ids }, self.sim_config.allocation_retry_period);
                 }
             }
         }
@@ -188,36 +174,33 @@ impl Scheduler {
     /// Applies committed allocation to the local resource pool state.
     fn on_allocation_commit_succeeded(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.allocate(&alloc.borrow(), host_id);
+        self.pool_state.allocate(&alloc, host_id);
     }
 
     /// Removes allocation failed during commit from the local resource pool state.
     fn on_allocation_commit_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc.borrow(), host_id);
+        self.pool_state.release(&alloc, host_id);
     }
 
     /// Removes released allocation from the local resource pool state.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc.borrow(), host_id);
+        self.pool_state.release(&alloc, host_id);
     }
 
     /// Removes failed allocation from the local resource pool state.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc.borrow(), host_id);
+        self.pool_state.release(&alloc, host_id);
     }
 }
 
 impl EventHandler for Scheduler {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            AllocationRequest { vm_id } => {
-                self.on_allocation_request(vm_id);
-            }
-            MultiAllocationRequest { vm_ids } => {
-                self.on_multi_allocation_request(vm_ids);
+            AllocationRequest { vm_ids } => {
+                self.on_allocation_request(vm_ids);
             }
             AllocationCommitSucceeded { vm_id, host_id } => {
                 self.on_allocation_commit_succeeded(vm_id, host_id);

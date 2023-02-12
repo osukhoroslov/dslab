@@ -7,10 +7,11 @@ use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::{ResourceConsumer, VmStatus};
-use dslab_iaas::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
+use dslab_iaas::core::vm_placement_algorithm::{SingleVMPlacementAlgorithm, VMPlacementAlgorithm};
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
+use dslab_iaas::core::vm_placement_algorithms::multi_vm_dummy::DummyMultiVMPlacement;
 use dslab_iaas::simulation::CloudSimulation;
 
 fn name_wrapper(file_name: &str) -> String {
@@ -29,7 +30,7 @@ fn test_energy_consumption() {
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 30, 30);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s);
 
@@ -49,7 +50,7 @@ fn test_first_fit() {
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
-    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));
 
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 10), 100.0, None, s);
 
@@ -83,7 +84,7 @@ fn test_best_fit() {
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(20, 20), 100.0, None, s);
 
@@ -117,7 +118,7 @@ fn test_no_overcommit() {
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     for _ in 1..12 {
         cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
@@ -140,7 +141,7 @@ fn test_overcommit() {
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 200, 200);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
 
     for _ in 1..95 {
         cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.01), 1000.0, None, s);
@@ -184,7 +185,7 @@ fn test_wrong_decision() {
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
-    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));
 
     let first_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, s);
     cloud_sim.step_for_duration(5.);
@@ -196,7 +197,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.host(h1).borrow_mut().get_memory_load(current_time), 1.);
     assert_eq!(cloud_sim.vm_status(first_vm), VmStatus::Running);
 
-    let bad_s = cloud_sim.add_scheduler("bad_s", Box::new(BadScheduler::new(h1)));
+    let bad_s = cloud_sim.add_scheduler("bad_s", VMPlacementAlgorithm::single(BadScheduler::new(h1)));
     let second_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, bad_s);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
@@ -210,7 +211,10 @@ fn test_wrong_decision() {
 
     // now host does not exist
     let random_wrong_id = 47;
-    let bad_s2 = cloud_sim.add_scheduler("bad_s2", Box::new(BadScheduler::new(random_wrong_id)));
+    let bad_s2 = cloud_sim.add_scheduler(
+        "bad_s2",
+        VMPlacementAlgorithm::single(BadScheduler::new(random_wrong_id)),
+    );
     let third_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, bad_s2);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
@@ -223,7 +227,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(third_vm), VmStatus::Initializing);
 
     // finally right decision
-    let fine_s = cloud_sim.add_scheduler("fine_s", Box::new(BadScheduler::new(h2)));
+    let fine_s = cloud_sim.add_scheduler("fine_s", VMPlacementAlgorithm::single(BadScheduler::new(h2)));
     let fourth_vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, fine_s);
     cloud_sim.step_for_duration(5.);
     current_time = cloud_sim.current_time();
@@ -254,7 +258,7 @@ fn test_migration_simple() {
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
-    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));
 
     // VM spawns on host 1
     let vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 20.0, None, s);
@@ -316,7 +320,7 @@ fn test_double_migration() {
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
-    let s = cloud_sim.add_scheduler("s", Box::new(FirstFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));
 
     // VM spawns on host 1
     let vm = cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(100, 100), 100.0, None, s);
@@ -356,7 +360,7 @@ fn test_energy_consumption_override() {
     cloud_sim.set_host_power_model(power_model);
 
     let h = cloud_sim.add_host("h", 30, 30);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s);
 
@@ -379,7 +383,7 @@ fn test_slatah() {
     cloud_sim.set_slav_metric(Box::new(OverloadTimeFraction::new()));
 
     let h = cloud_sim.add_host("h", 40, 40);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(10, 10, 2.0, 2.0), 4.0, None, s);
     cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(10, 10, 2.0, 2.0), 2.0, None, s);
@@ -389,4 +393,35 @@ fn test_slatah() {
 
     assert_eq!(end_time, 10.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_accumulated_slav(end_time), 0.5);
+}
+
+#[test]
+fn test_batch_request() {
+    let sim = Simulation::new(123);
+    let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
+
+    let h = cloud_sim.add_host("h", 50, 50);
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()));
+
+    cloud_sim.begin_batch_request();
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
+
+    cloud_sim.step_for_duration(10.);
+    let mut current_time = cloud_sim.current_time();
+
+    assert_eq!(current_time, 10.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.);
+
+    let vm_ids = cloud_sim.end_batch_request();
+    cloud_sim.step_for_duration(1.);
+    current_time = cloud_sim.current_time();
+
+    assert_eq!(current_time, 11.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.6);
+    assert_eq!(cloud_sim.vm_location(vm_ids[0]), h);
+    assert_eq!(cloud_sim.vm_location(vm_ids[1]), h);
+    assert_eq!(cloud_sim.vm_location(vm_ids[2]), h);
 }

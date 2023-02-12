@@ -88,7 +88,7 @@ impl PlacementStore {
 
     /// Processes allocation commit requests from schedulers.
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: Option<u32>) {
-        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id).borrow().clone();
+        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
         if self.allow_vm_overcommit
             || self.pool_state.can_allocate(&alloc.clone(), host_id) == AllocationVerdict::Success
         {
@@ -99,8 +99,11 @@ impl PlacementStore {
                 vm_id,
                 self.ctx.lookup_name(host_id)
             );
-            self.ctx
-                .emit(AllocationRequest { vm_id }, host_id, self.sim_config.message_delay);
+            self.ctx.emit(
+                AllocationRequest { vm_ids: vec![vm_id] },
+                host_id,
+                self.sim_config.message_delay,
+            );
 
             for scheduler in self.schedulers.iter() {
                 self.ctx.emit(
@@ -123,7 +126,7 @@ impl PlacementStore {
                     self.sim_config.message_delay,
                 );
                 self.ctx.emit(
-                    AllocationRequest { vm_id },
+                    AllocationRequest { vm_ids: vec![vm_id] },
                     scheduler,
                     self.sim_config.message_delay + self.sim_config.allocation_retry_period,
                 );
@@ -137,7 +140,7 @@ impl PlacementStore {
     /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_failed(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc.borrow(), host_id);
+        self.pool_state.release(&alloc, host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationFailed { vm_id, host_id },
@@ -152,7 +155,7 @@ impl PlacementStore {
     /// Updates the local state by releasing the corresponding resources and forwards this event to all schedulers.
     fn on_allocation_released(&mut self, vm_id: u32, host_id: u32) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        self.pool_state.release(&alloc.borrow(), host_id);
+        self.pool_state.release(&alloc, host_id);
         for scheduler in self.schedulers.iter() {
             self.ctx.emit(
                 AllocationReleased { vm_id, host_id },

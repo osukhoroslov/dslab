@@ -75,7 +75,7 @@ impl ResourcePoolState {
         self.hosts.keys().cloned().collect()
     }
 
-    /// Returns host state by its ID.
+    /// Returns host info by its ID.
     pub fn get_host(&self, host_id: u32) -> &HostInfo {
         self.hosts.get(&host_id).unwrap()
     }
