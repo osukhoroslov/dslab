@@ -9,6 +9,7 @@ use rand_pcg::Pcg64;
 use regex::Regex;
 
 use crate::mc::events::McEvent;
+use crate::mc::strategy::LogMode;
 use crate::message::Message;
 use crate::network::Network;
 use crate::util::t;
@@ -23,10 +24,11 @@ pub struct McNetwork {
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
     events: Rc<RefCell<Vec<McEvent>>>,
+    mode: LogMode,
 }
 
 impl McNetwork {
-    pub(crate) fn new(rand: Pcg64, net: RefMut<Network>, events: Rc<RefCell<Vec<McEvent>>>) -> Self {
+    pub(crate) fn new(rand: Pcg64, net: RefMut<Network>, events: Rc<RefCell<Vec<McEvent>>>, mode: LogMode) -> Self {
         Self {
             rand,
             corrupt_rate: net.corrupt_rate(),
@@ -37,6 +39,7 @@ impl McNetwork {
             disabled_links: net.disabled_links().clone(),
             proc_locations: net.proc_locations().clone(),
             events,
+            mode,
         }
     }
 
@@ -47,17 +50,26 @@ impl McNetwork {
     pub fn send_message(&mut self, msg: Message, src: String, dest: String) {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
+
         if src_node != dest_node && self.message_is_dropped(&src_node, &dest_node) {
-            t!(format!(
-                "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                "!!!", src, dest, msg
-            )
-            .red());
+            if let LogMode::Debug = self.mode {
+                t!(format!(
+                    "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
+                    "!!!", src, dest, msg
+                )
+                .red());
+            }
             return;
         }
+
         let msg = self.corrupt_if_needed(msg);
+
         let msg_count = self.get_message_count();
-        t!("x{:<8} {:>10} --> {:<10} {:?}", msg_count, src, dest, msg);
+
+        if let LogMode::Debug = self.mode {
+            t!("x{:<8} {:>10} --> {:<10} {:?}", msg_count, src, dest, msg);
+        }
+
         let data = McEvent::MessageReceived { msg, src, dest };
         if msg_count == 1 {
             self.events.borrow_mut().push(data);
@@ -86,7 +98,11 @@ impl McNetwork {
             }
             let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
             let new_msg = Message::new(msg.tip.clone(), corrupted_data);
-            t!(format!("{:?} => {:?} <-- message corrupted", msg, new_msg).red());
+
+            if let LogMode::Debug = self.mode {
+                t!(format!("{:?} => {:?} <-- message corrupted", msg, new_msg).red());
+            }
+
             new_msg
         } else {
             msg

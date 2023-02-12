@@ -5,6 +5,7 @@ use crate::mc::events::McEvent::{MessageReceived, TimerFired};
 use crate::mc::system::McSystem;
 use crate::util::t;
 
+#[derive(Clone)]
 pub enum LogMode {
     Default,
     Debug,
@@ -26,4 +27,6 @@ pub trait Strategy {
             }
         }
     }
+
+    fn log_mode(&self) -> LogMode;
 }
