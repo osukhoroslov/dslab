@@ -8,7 +8,7 @@ pub enum McEvent {
     TimerFired { proc: String, timer: String },
 }
 
-pub struct NewEvent {
+pub struct EventInfo {
     pub event: McEvent,
     pub can_be_dropped: bool,
     pub can_be_duplicated: bool,
