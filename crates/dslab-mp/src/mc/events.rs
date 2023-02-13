@@ -7,3 +7,10 @@ pub enum McEvent {
     MessageReceived { msg: Message, src: String, dest: String },
     TimerFired { proc: String, timer: String },
 }
+
+pub struct NewEvent {
+    pub event: McEvent,
+    pub can_be_dropped: bool,
+    pub can_be_duplicated: bool,
+    pub can_be_corrupted: bool,
+}
