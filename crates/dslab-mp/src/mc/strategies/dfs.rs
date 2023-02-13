@@ -52,7 +52,16 @@ impl Strategy for Dfs {
 
             self.debug_log(&event, self.search_depth);
 
-            system.apply_event(event);
+            let new_events = system.apply_event(event);
+            let mut possible_events = Vec::new();
+            for e in new_events {
+                if !e.can_be_dropped {
+                    system.events.borrow_mut().push(e.event);
+                } else {
+                    possible_events.push(e.event);
+                }
+            }
+            // TODO: explore system executions that contain subsets of possible events!
 
             self.search_depth += 1;
             let run_success = self.run(system);
