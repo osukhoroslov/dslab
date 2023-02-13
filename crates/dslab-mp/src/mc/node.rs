@@ -124,12 +124,14 @@ impl McNode {
                     }
                 }
                 ProcessEvent::TimerCancelled { name } => {
-                    if let Some(_) = proc_entry.pending_timers.remove(&name) {
-                        self.events.borrow_mut().retain(|event| match event {
-                            McEvent::MessageReceived { .. } => true,
-                            McEvent::TimerFired { proc, .. } => *proc != name,
-                        });
-                    }
+                    proc_entry.pending_timers.remove(&name);
+                    self.events.borrow_mut().retain(|event| match event {
+                        McEvent::TimerFired {
+                            proc: timer_proc,
+                            timer: timer_name,
+                        } => *timer_proc != proc || *timer_name != name,
+                        _ => true,
+                    });
                 }
                 _ => {}
             }
