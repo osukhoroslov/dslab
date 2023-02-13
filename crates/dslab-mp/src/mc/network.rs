@@ -24,11 +24,16 @@ pub struct McNetwork {
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
     events: Rc<RefCell<Vec<McEvent>>>,
-    mode: LogMode,
+    log_mode: LogMode,
 }
 
 impl McNetwork {
-    pub(crate) fn new(rand: Pcg64, net: RefMut<Network>, events: Rc<RefCell<Vec<McEvent>>>, mode: LogMode) -> Self {
+    pub(crate) fn new(
+        rand: Pcg64,
+        net: RefMut<Network>,
+        events: Rc<RefCell<Vec<McEvent>>>,
+        log_mode: &LogMode,
+    ) -> Self {
         Self {
             rand,
             corrupt_rate: net.corrupt_rate(),
@@ -39,7 +44,7 @@ impl McNetwork {
             disabled_links: net.disabled_links().clone(),
             proc_locations: net.proc_locations().clone(),
             events,
-            mode,
+            log_mode: log_mode.clone(),
         }
     }
 
@@ -52,7 +57,7 @@ impl McNetwork {
         let dest_node = self.get_proc_node(&dest).clone();
 
         if src_node != dest_node && self.message_is_dropped(&src_node, &dest_node) {
-            if let LogMode::Debug = self.mode {
+            if self.log_mode == LogMode::Debug {
                 t!(format!(
                     "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
                     "!!!", src, dest, msg
@@ -66,7 +71,7 @@ impl McNetwork {
 
         let msg_count = self.get_message_count();
 
-        if let LogMode::Debug = self.mode {
+        if self.log_mode == LogMode::Debug {
             t!("x{:<8} {:>10} --> {:<10} {:?}", msg_count, src, dest, msg);
         }
 
@@ -99,7 +104,7 @@ impl McNetwork {
             let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
             let new_msg = Message::new(msg.tip.clone(), corrupted_data);
 
-            if let LogMode::Debug = self.mode {
+            if self.log_mode == LogMode::Debug {
                 t!(format!("{:?} => {:?} <-- message corrupted", msg, new_msg).red());
             }
 
