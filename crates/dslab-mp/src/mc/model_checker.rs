@@ -6,10 +6,10 @@ use crate::events::{MessageReceived, TimerFired};
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
+use crate::mc::strategy::McSummary;
 use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
-use crate::mc::strategy::McSummary;
 
 pub struct ModelChecker {
     system: McSystem,
