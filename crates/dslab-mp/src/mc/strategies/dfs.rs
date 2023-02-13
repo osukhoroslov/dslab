@@ -15,14 +15,14 @@ impl Dfs {
         prune: Box<dyn Fn(&McState) -> Option<String>>,
         goal: Box<dyn Fn(&McState) -> Option<String>>,
         invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
-        mode: LogMode,
+        log_mode: LogMode,
     ) -> Self {
         Self {
             prune,
             goal,
             invariant,
             search_depth: 0,
-            mode,
+            mode: log_mode,
             summary: McSummary::default(),
         }
     }
