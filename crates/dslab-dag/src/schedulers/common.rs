@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 
 use dslab_core::context::SimulationContext;
@@ -70,7 +70,8 @@ pub fn evaluate_assignment(
     if resources[resource].compute.borrow().cores_total() < need_cores {
         return None;
     }
-    if resources[resource].compute.borrow().memory_total() < dag.get_task(task_id).memory {
+    let need_memory = dag.get_task(task_id).memory;
+    if resources[resource].compute.borrow().memory_total() < need_memory {
         return None;
     }
 
@@ -166,9 +167,7 @@ pub fn evaluate_assignment(
     let memory_usage = build_memory_usage(&scheduled_tasks[resource], dag);
     let blocked_intervals = memory_usage
         .into_iter()
-        .filter(|(_start, _finish, usage)| {
-            usage + dag.get_task(task_id).memory > resources[resource].compute.borrow().memory_total()
-        })
+        .filter(|(_start, _finish, usage)| usage + need_memory > resources[resource].compute.borrow().memory_total())
         .map(|(start, finish, _usage)| (start, finish))
         .collect::<Vec<_>>();
     let (start_time, cores) = find_earliest_slot(
@@ -188,8 +187,13 @@ pub fn evaluate_assignment(
 
 fn build_memory_usage(scheduled_tasks: &[BTreeSet<ScheduledTask>], dag: &DAG) -> Vec<(f64, f64, u64)> {
     let mut events = Vec::new();
+    let mut added_tasks = HashSet::new();
     for tasks in scheduled_tasks.iter() {
         for task in tasks.iter() {
+            if added_tasks.contains(&task.task) {
+                continue;
+            }
+            added_tasks.insert(task.task);
             events.push((task.start_time, dag.get_task(task.task).memory as i64));
             events.push((task.finish_time, -(dag.get_task(task.task).memory as i64)));
         }
