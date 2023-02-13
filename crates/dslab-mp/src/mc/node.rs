@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::context::Context;
-use crate::mc::events::McEvent;
+use crate::mc::events::{McEvent, NewEvent};
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
@@ -57,7 +57,7 @@ impl McNode {
         Self { processes, net, events }
     }
 
-    pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) {
+    pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) -> Vec<NewEvent> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             0.0,
@@ -71,16 +71,16 @@ impl McNode {
 
         let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
-        self.handle_process_actions(proc, 0.0, proc_ctx.actions());
+        self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
-    pub fn on_timer_fired(&mut self, proc: String, timer: String) {
+    pub fn on_timer_fired(&mut self, proc: String, timer: String) -> Vec<NewEvent> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
         let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
-        self.handle_process_actions(proc, 0.0, proc_ctx.actions());
+        self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
     pub fn get_state(&self) -> McNodeState {
@@ -96,7 +96,8 @@ impl McNode {
         }
     }
 
-    fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) {
+    fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) -> Vec<NewEvent> {
+        let mut new_events = Vec::new();
         for action in actions {
             let proc_entry = self.processes.get_mut(&proc).unwrap();
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
@@ -114,11 +115,16 @@ impl McNode {
                     behavior,
                 } => {
                     if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
-                        let data = McEvent::TimerFired {
+                        let event = McEvent::TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
                         };
-                        self.events.borrow_mut().push(data);
+                        new_events.push(NewEvent {
+                            event,
+                            can_be_dropped: false,
+                            can_be_duplicated: false,
+                            can_be_corrupted: false,
+                        });
                         // event_id is 0 since it is not used in model checking
                         proc_entry.pending_timers.insert(name, 0);
                     }
@@ -136,5 +142,6 @@ impl McNode {
                 _ => {}
             }
         }
+        new_events
     }
 }

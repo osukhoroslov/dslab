@@ -8,7 +8,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use regex::Regex;
 
-use crate::mc::events::McEvent;
+use crate::mc::events::{McEvent, NewEvent};
 use crate::mc::strategy::LogMode;
 use crate::message::Message;
 use crate::network::Network;
@@ -52,37 +52,27 @@ impl McNetwork {
         &self.proc_locations[proc]
     }
 
-    pub fn send_message(&mut self, msg: Message, src: String, dest: String) {
+    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> Option<NewEvent> {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
 
-        if src_node != dest_node && self.message_is_dropped(&src_node, &dest_node) {
-            if self.log_mode == LogMode::Debug {
-                t!(format!(
-                    "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                    "!!!", src, dest, msg
-                )
-                .red());
-            }
-            return;
+        let receive_event = McEvent::MessageReceived { msg, src, dest };
+        if src_node == dest_node {
+            return Some(NewEvent {
+                event: receive_event,
+                can_be_dropped: false,
+                can_be_duplicated: false,
+                can_be_corrupted: false,
+            });
+        } else if !self.message_is_definitely_dropped(&src_node, &dest_node) {
+            return Some(NewEvent {
+                event: receive_event,
+                can_be_dropped: self.drop_rate > 0.,
+                can_be_duplicated: self.drop_rate > 0.,
+                can_be_corrupted: self.corrupt_rate > 0.,
+            });
         }
-
-        let msg = self.corrupt_if_needed(msg);
-
-        let msg_count = self.get_message_count();
-
-        if self.log_mode == LogMode::Debug {
-            t!("x{:<8} {:>10} --> {:<10} {:?}", msg_count, src, dest, msg);
-        }
-
-        let data = McEvent::MessageReceived { msg, src, dest };
-        if msg_count == 1 {
-            self.events.borrow_mut().push(data);
-        } else {
-            for _ in 0..msg_count {
-                self.events.borrow_mut().push(data.clone());
-            }
-        }
+        None
     }
 
     fn rand(&mut self) -> f64 {
@@ -92,6 +82,12 @@ impl McNetwork {
     fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
         self.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
+            || self.drop_incoming.contains(dest)
+            || self.disabled_links.contains(&(src.clone(), dest.clone()))
+    }
+
+    fn message_is_definitely_dropped(&mut self, src: &String, dest: &String) -> bool {
+        self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
             || self.disabled_links.contains(&(src.clone(), dest.clone()))
     }
