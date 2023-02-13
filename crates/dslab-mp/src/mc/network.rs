@@ -8,7 +8,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use regex::Regex;
 
-use crate::mc::events::{McEvent, NewEvent};
+use crate::mc::events::{EventInfo, McEvent};
 use crate::mc::strategy::LogMode;
 use crate::message::Message;
 use crate::network::Network;
@@ -52,20 +52,20 @@ impl McNetwork {
         &self.proc_locations[proc]
     }
 
-    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> Option<NewEvent> {
+    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> Option<EventInfo> {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
 
         let receive_event = McEvent::MessageReceived { msg, src, dest };
         if src_node == dest_node {
-            return Some(NewEvent {
+            return Some(EventInfo {
                 event: receive_event,
                 can_be_dropped: false,
                 can_be_duplicated: false,
                 can_be_corrupted: false,
             });
         } else if !self.message_is_definitely_dropped(&src_node, &dest_node) {
-            return Some(NewEvent {
+            return Some(EventInfo {
                 event: receive_event,
                 can_be_dropped: self.drop_rate > 0.,
                 can_be_duplicated: self.dupl_rate > 0.,
