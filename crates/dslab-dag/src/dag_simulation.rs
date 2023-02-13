@@ -9,14 +9,14 @@ use dslab_network::model::NetworkModel;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
-use crate::resource::{load_resources, Resource};
+use crate::resource::{Resource, ResourceConfig};
 use crate::runner::{Config, DAGRunner, Start};
 use crate::scheduler::Scheduler;
 
 /// Provides a convenient API for configuring and running simulations of DAG execution.
 pub struct DagSimulation {
     pub sim: Simulation,
-    resources: Vec<Resource>,
+    resources: Vec<ResourceConfig>,
     network_model: Rc<RefCell<dyn NetworkModel>>,
     scheduler: Rc<RefCell<dyn Scheduler>>,
     config: Config,
@@ -26,13 +26,14 @@ impl DagSimulation {
     /// Creates simulation with provided random seed, network model, scheduler and config.
     pub fn new(
         seed: u64,
+        resources: Vec<ResourceConfig>,
         network_model: Rc<RefCell<dyn NetworkModel>>,
         scheduler: Rc<RefCell<dyn Scheduler>>,
         config: Config,
     ) -> Self {
         DagSimulation {
             sim: Simulation::new(seed),
-            resources: Vec::new(),
+            resources,
             network_model,
             scheduler,
             config,
@@ -41,28 +42,12 @@ impl DagSimulation {
 
     /// Adds a resource with provided parameters.
     pub fn add_resource(&mut self, name: &str, speed: u64, cores: u32, memory: u64) {
-        let compute = Rc::new(RefCell::new(Compute::new(
+        self.resources.push(ResourceConfig {
+            name: name.to_string(),
             speed,
             cores,
             memory,
-            self.sim.create_context(name),
-        )));
-        let id = self.sim.add_handler(name, compute.clone());
-        self.resources.push(Resource {
-            id,
-            name: name.to_string(),
-            compute,
-            speed,
-            cores_available: cores,
-            memory_available: memory,
         });
-    }
-
-    /// Loads a set of resources from a file.
-    ///
-    /// See [resource::load_resources()](crate::resource::load_resources).
-    pub fn load_resources(&mut self, filename: &str) {
-        self.resources = load_resources(filename, &mut self.sim);
     }
 
     /// Initializes DAG simulation.
@@ -72,10 +57,31 @@ impl DagSimulation {
             self.sim.create_context("net"),
         )));
         self.sim.add_handler("net", network.clone());
+        let resources = self
+            .resources
+            .iter()
+            .map(|r| {
+                let compute = Rc::new(RefCell::new(Compute::new(
+                    r.speed,
+                    r.cores,
+                    r.memory,
+                    self.sim.create_context(&r.name),
+                )));
+                let id = self.sim.add_handler(&r.name, compute.clone());
+                Resource {
+                    id,
+                    name: r.name.clone(),
+                    compute,
+                    speed: r.speed,
+                    cores_available: r.cores,
+                    memory_available: r.memory,
+                }
+            })
+            .collect::<Vec<_>>();
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
             network,
-            self.resources.clone(),
+            resources,
             self.scheduler.clone(),
             self.config.clone(),
             self.sim.create_context("runner"),

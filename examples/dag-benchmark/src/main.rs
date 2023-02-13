@@ -9,6 +9,7 @@ use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::load_network;
+use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
@@ -35,13 +36,13 @@ fn main() {
 
     let mut sim = DagSimulation::new(
         123,
+        read_resources(system_file),
         load_network(system_file),
         rc!(refcell!(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
         },
     );
-    sim.load_resources(system_file);
 
     let dag = DAG::from_wfcommons(dag_file, 1.0e11);
     let total_tasks = dag.get_tasks().len();

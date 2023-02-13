@@ -176,6 +176,7 @@ fn run_experiments(args: &Args) {
 
                     let mut sim = DagSimulation::new(
                         123,
+                        Vec::new(),
                         network_model,
                         rc!(refcell!(scheduler)),
                         Config {
