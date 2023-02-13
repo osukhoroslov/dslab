@@ -14,14 +14,14 @@ impl Dfs {
         prune: Box<dyn Fn(&McState) -> bool>,
         goal: Box<dyn Fn(&McState) -> bool>,
         invariant: Box<dyn Fn(&McState) -> bool>,
-        mode: LogMode,
+        log_mode: LogMode,
     ) -> Self {
         Self {
             prune,
             goal,
             invariant,
             search_depth: 0,
-            mode,
+            mode: log_mode,
         }
     }
 }
