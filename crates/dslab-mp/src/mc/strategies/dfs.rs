@@ -65,9 +65,7 @@ impl Dfs {
             let state = system.get_state(self.search_depth);
             let event = system.events.borrow_mut().remove(i);
 
-            if let LogMode::Debug = self.mode {
-                Self::debug_log(&event, self.search_depth);
-            }
+            self.debug_log(&event, self.search_depth);
 
             system.apply_event(event);
 
@@ -94,7 +92,7 @@ impl Strategy for Dfs {
         }
     }
 
-    fn log_mode(&self) -> LogMode {
-        self.mode.clone()
+    fn log_mode(&self) -> &LogMode {
+        &self.mode
     }
 }
