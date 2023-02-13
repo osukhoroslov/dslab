@@ -12,7 +12,7 @@ pub enum LogMode {
     Debug,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
