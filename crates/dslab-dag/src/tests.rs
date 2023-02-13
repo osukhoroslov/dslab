@@ -107,6 +107,7 @@ fn simple_test() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         gen_network(&mut rng),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -129,6 +130,7 @@ fn test_1() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         gen_network(&mut rng),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -151,6 +153,7 @@ fn test_2() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         gen_network(&mut rng),
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
@@ -173,6 +176,7 @@ fn test_3() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         gen_network(&mut rng),
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
@@ -227,6 +231,7 @@ fn test_4() {
     fn run_scheduler(scheduler: impl Scheduler + 'static, dag: DAG) -> f64 {
         let mut sim = DagSimulation::new(
             123,
+            Vec::new(),
             Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
             Rc::new(RefCell::new(scheduler)),
             Config {
@@ -305,6 +310,7 @@ fn test_chain_1() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -352,6 +358,7 @@ fn test_chain_2() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -389,6 +396,7 @@ fn test_fork_join() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
