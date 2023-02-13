@@ -29,7 +29,7 @@ impl Dfs {
 }
 
 impl Dfs {
-    fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> { 
+    fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         let events_num = system.events.borrow().len();
         let state = system.get_state(self.search_depth);
 
@@ -48,7 +48,7 @@ impl Dfs {
         }
 
         // Check if execution branch is pruned
-        if let Some(status) = (self.prune)(&state) { 
+        if let Some(status) = (self.prune)(&state) {
             if let LogMode::Debug = self.mode {
                 let counter = self.summary.states.entry(status).or_insert(0);
                 *counter = *counter + 1;
