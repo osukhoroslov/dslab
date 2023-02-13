@@ -68,7 +68,7 @@ impl McNetwork {
             return Some(NewEvent {
                 event: receive_event,
                 can_be_dropped: self.drop_rate > 0.,
-                can_be_duplicated: self.drop_rate > 0.,
+                can_be_duplicated: self.dupl_rate > 0.,
                 can_be_corrupted: self.corrupt_rate > 0.,
             });
         }
