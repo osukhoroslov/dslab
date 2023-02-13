@@ -6,7 +6,7 @@ pub struct Dfs {
     goal: Box<dyn Fn(&McState) -> Option<String>>,
     invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
     search_depth: u64,
-    mode: LogMode,
+    log_mode: LogMode,
     summary: McSummary,
 }
 
@@ -22,7 +22,7 @@ impl Dfs {
             goal,
             invariant,
             search_depth: 0,
-            mode: log_mode,
+            log_mode,
             summary: McSummary::default(),
         }
     }
@@ -40,7 +40,7 @@ impl Dfs {
 
         // Check final state of the system
         if let Some(status) = (self.goal)(&state) {
-            if let LogMode::Debug = self.mode {
+            if let LogMode::Debug = self.log_mode {
                 let counter = self.summary.states.entry(status).or_insert(0);
                 *counter = *counter + 1;
             }
@@ -49,7 +49,7 @@ impl Dfs {
 
         // Check if execution branch is pruned
         if let Some(status) = (self.prune)(&state) {
-            if let LogMode::Debug = self.mode {
+            if let LogMode::Debug = self.log_mode {
                 let counter = self.summary.states.entry(status).or_insert(0);
                 *counter = *counter + 1;
             }
@@ -93,6 +93,6 @@ impl Strategy for Dfs {
     }
 
     fn log_mode(&self) -> &LogMode {
-        &self.mode
+        &self.log_mode
     }
 }

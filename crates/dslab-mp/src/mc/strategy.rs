@@ -20,10 +20,7 @@ pub struct McSummary {
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
-    fn debug_log(&self, event: &McEvent, depth: u64)
-    where
-        Self: Sized,
-    {
+    fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.log_mode() == &LogMode::Debug {
             match event {
                 MessageReceived { msg, src, dest } => {
