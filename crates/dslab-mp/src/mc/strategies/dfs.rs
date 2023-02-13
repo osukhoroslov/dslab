@@ -7,6 +7,7 @@ pub struct Dfs {
     invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
     search_depth: u64,
     mode: LogMode,
+    summary: McSummary,
 }
 
 impl Dfs {
@@ -22,12 +23,13 @@ impl Dfs {
             invariant,
             search_depth: 0,
             mode,
+            summary: McSummary::default(),
         }
     }
 }
 
-impl Strategy for Dfs {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+impl Dfs {
+    fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> { 
         let events_num = system.events.borrow().len();
         let state = system.get_state(self.search_depth);
 
@@ -37,25 +39,27 @@ impl Strategy for Dfs {
         }
 
         // Check final state of the system
-        if events_num == 0 {
-            if let Some(status) = (self.goal)(&state) {
-                let mut summary = McSummary::default();
-                let counter = summary.states.entry(status).or_insert(0);
+        if let Some(status) = (self.goal)(&state) {
+            if let LogMode::Debug = self.mode {
+                let counter = self.summary.states.entry(status).or_insert(0);
                 *counter = *counter + 1;
-                return Ok(summary);
             }
-            return Ok(McSummary::default());
+            return Ok(());
         }
 
         // Check if execution branch is pruned
-        if let Some(status) = (self.prune)(&state) {
-            let mut summary = McSummary::default();
-            let counter = summary.states.entry(status).or_insert(0);
-            *counter = *counter + 1;
-            return Ok(summary);
+        if let Some(status) = (self.prune)(&state) { 
+            if let LogMode::Debug = self.mode {
+                let counter = self.summary.states.entry(status).or_insert(0);
+                *counter = *counter + 1;
+            }
+            return Ok(());
         }
 
-        let mut summary = McSummary::default();
+        // exhausted without goal completed
+        if events_num == 0 {
+            return Err("nothing left to do to reach the goal".to_owned());
+        }
 
         for i in 0..events_num {
             let state = system.get_state(self.search_depth);
@@ -68,21 +72,26 @@ impl Strategy for Dfs {
             system.apply_event(event);
 
             self.search_depth += 1;
-            let run_success = self.run(system);
+            let run_success = self.dfs(system);
             self.search_depth -= 1;
 
-            if let Ok(rec_summary) = run_success {
-                for (status, cnt) in rec_summary.states.into_iter() {
-                    let cnt_ref = summary.states.entry(status).or_insert(0);
-                    *cnt_ref = *cnt_ref + cnt;
-                }
-            } else {
-                return run_success;
+            if let Err(err) = run_success {
+                return Err(err);
             }
 
             system.set_state(state);
         }
-        Ok(summary)
+        Ok(())
+    }
+}
+
+impl Strategy for Dfs {
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+        let res = self.dfs(system);
+        match res {
+            Ok(()) => Ok(self.summary.clone()),
+            Err(err) => Err(err),
+        }
     }
 
     fn log_mode(&self) -> LogMode {

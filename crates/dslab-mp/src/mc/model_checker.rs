@@ -9,6 +9,7 @@ use crate::mc::node::McNode;
 use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
+use crate::mc::strategy::McSummary;
 
 pub struct ModelChecker {
     system: McSystem,
@@ -58,7 +59,7 @@ impl ModelChecker {
         }
     }
 
-    pub fn start(&mut self) -> Result<super::strategy::McSummary, String> {
+    pub fn start(&mut self) -> Result<McSummary, String> {
         self.strategy.run(&mut self.system)
     }
 }
