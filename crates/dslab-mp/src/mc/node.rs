@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::context::Context;
-use crate::mc::events::{McEvent, NewEvent};
+use crate::mc::events::{EventInfo, McEvent};
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
@@ -57,7 +57,7 @@ impl McNode {
         Self { processes, net, events }
     }
 
-    pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) -> Vec<NewEvent> {
+    pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) -> Vec<EventInfo> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             0.0,
@@ -74,7 +74,7 @@ impl McNode {
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
-    pub fn on_timer_fired(&mut self, proc: String, timer: String) -> Vec<NewEvent> {
+    pub fn on_timer_fired(&mut self, proc: String, timer: String) -> Vec<EventInfo> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
@@ -96,7 +96,7 @@ impl McNode {
         }
     }
 
-    fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) -> Vec<NewEvent> {
+    fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) -> Vec<EventInfo> {
         let mut new_events = Vec::new();
         for action in actions {
             let proc_entry = self.processes.get_mut(&proc).unwrap();
@@ -119,7 +119,7 @@ impl McNode {
                             timer: name.clone(),
                             proc: proc.clone(),
                         };
-                        new_events.push(NewEvent {
+                        new_events.push(EventInfo {
                             event,
                             can_be_dropped: false,
                             can_be_duplicated: false,
