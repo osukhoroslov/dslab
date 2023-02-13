@@ -6,7 +6,7 @@ pub struct Dfs {
     goal: Box<dyn Fn(&McState) -> bool>,
     invariant: Box<dyn Fn(&McState) -> bool>,
     search_depth: u64,
-    mode: LogMode,
+    log_mode: LogMode,
 }
 
 impl Dfs {
@@ -21,7 +21,7 @@ impl Dfs {
             goal,
             invariant,
             search_depth: 0,
-            mode: log_mode,
+            log_mode,
         }
     }
 }
@@ -68,6 +68,6 @@ impl Strategy for Dfs {
     }
 
     fn log_mode(&self) -> &LogMode {
-        &self.mode
+        &self.log_mode
     }
 }

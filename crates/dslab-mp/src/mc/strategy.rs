@@ -14,10 +14,7 @@ pub enum LogMode {
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> bool;
 
-    fn debug_log(&self, event: &McEvent, depth: u64)
-    where
-        Self: Sized,
-    {
+    fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.log_mode() == &LogMode::Debug {
             match event {
                 MessageReceived { msg, src, dest } => {
