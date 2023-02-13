@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::mc::events::{McEvent, NewEvent};
+use crate::mc::events::{EventInfo, McEvent};
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 
@@ -33,7 +33,7 @@ impl McSystem {
         Self { nodes, net, events }
     }
 
-    pub fn apply_event(&mut self, event: McEvent) -> Vec<NewEvent> {
+    pub fn apply_event(&mut self, event: McEvent) -> Vec<EventInfo> {
         match event {
             McEvent::MessageReceived { msg, src, dest } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
