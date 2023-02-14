@@ -1,4 +1,5 @@
 use std::hash::BuildHasherDefault;
+use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxHasher;
@@ -58,6 +59,20 @@ impl<T> VecMap<T> {
     }
 }
 
+impl<T> Index<usize> for VecMap<T> {
+    type Output = T;
+
+    fn index(&self, id: usize) -> &Self::Output {
+        self.data[id].as_ref().unwrap()
+    }
+}
+
+impl<T> IndexMut<usize> for VecMap<T> {
+    fn index_mut(&mut self, id: usize) -> &mut Self::Output {
+        self.data[id].as_mut().unwrap()
+    }
+}
+
 /// Similar to VecMap, but returns the default value instead of None and auto-extends to keys in
 /// `get_mut` query.
 #[derive(Clone, Default)]
@@ -90,6 +105,26 @@ where
 
     pub fn get_mut(&mut self, id: usize) -> &mut T {
         self.extend(id);
+        &mut self.data[id]
+    }
+}
+
+impl<T> Index<usize> for DefaultVecMap<T>
+where
+    T: Default,
+{
+    type Output = T;
+
+    fn index(&self, id: usize) -> &Self::Output {
+        &self.data[id]
+    }
+}
+
+impl<T> IndexMut<usize> for DefaultVecMap<T>
+where
+    T: Default,
+{
+    fn index_mut(&mut self, id: usize) -> &mut Self::Output {
         &mut self.data[id]
     }
 }

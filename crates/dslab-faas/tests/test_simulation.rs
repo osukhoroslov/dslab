@@ -39,14 +39,10 @@ fn test_simulation() {
     assert_float_eq(inv_stats.rel_exec_slowdown.mean(), 2.0 / 3.0, 1e-9);
     assert_float_eq(inv_stats.abs_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
     assert_float_eq(inv_stats.rel_total_slowdown.mean(), 4.0 / 3.0, 1e-9);
-    assert_float_eq(
-        stats.global_stats.wasted_resource_time.get(0).unwrap().sum(),
-        3.0 - 1e-9,
-        1e-9,
-    );
-    let f1_stats = stats.func_stats.get(0).unwrap();
+    assert_float_eq(stats.global_stats.wasted_resource_time[0].sum(), 3.0 - 1e-9, 1e-9);
+    let f1_stats = &stats.func_stats[0];
     assert_float_eq(f1_stats.abs_total_slowdown.mean(), 1.0, 1e-9);
-    let f2_stats = stats.func_stats.get(1).unwrap();
+    let f2_stats = &stats.func_stats[1];
     assert_float_eq(f2_stats.abs_total_slowdown.mean(), 2.0, 1e-9);
 }
 
@@ -85,8 +81,8 @@ fn test_simulation_with_invoker_queueing() {
         0.1 / 3.0,
         1e-9,
     );
-    assert_float_eq(stats.global_stats.wasted_resource_time.get(0).unwrap().sum(), 2.0, 1e-9);
-    let f1_stats = stats.func_stats.get(0).unwrap();
+    assert_float_eq(stats.global_stats.wasted_resource_time[0].sum(), 2.0, 1e-9);
+    let f1_stats = &stats.func_stats[0];
     assert_float_eq(f1_stats.abs_total_slowdown.mean(), 1.05, 1e-9);
     assert_float_eq(f1_stats.queueing_time.mean(), 0.1, 1e-9);
     assert_float_eq(
@@ -94,7 +90,7 @@ fn test_simulation_with_invoker_queueing() {
         0.05,
         1e-9,
     );
-    let f2_stats = stats.func_stats.get(1).unwrap();
+    let f2_stats = &stats.func_stats[1];
     assert_float_eq(f2_stats.abs_total_slowdown.mean(), 2.0, 1e-9);
     assert!(f2_stats.queueing_time.is_empty());
 }

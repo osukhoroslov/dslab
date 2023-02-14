@@ -190,10 +190,7 @@ impl GlobalStats {
                 .mean()
         );
         // assuming that resource 0 is memory
-        println!(
-            "- wasted memory time = {}",
-            self.wasted_resource_time.get(0).unwrap().sum()
-        );
+        println!("- wasted memory time = {}", self.wasted_resource_time[0].sum());
         println!(
             "- mean absolute total slowdown = {}",
             self.invocation_stats.abs_total_slowdown.mean()
