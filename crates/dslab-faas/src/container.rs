@@ -7,7 +7,7 @@ use crate::event::ContainerStartEvent;
 use crate::function::Application;
 use crate::invocation::InvocationRequest;
 use crate::resource::{ResourceConsumer, ResourceProvider};
-use crate::util::{Counter, FxIndexMap, FxIndexSet, RawVecMap};
+use crate::util::{Counter, DefaultVecMap, FxIndexMap, FxIndexSet};
 
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {
@@ -47,7 +47,7 @@ pub struct ContainerManager {
     active_invocations: u64,
     resources: ResourceProvider,
     containers: FxIndexMap<u64, Container>,
-    containers_by_app: RawVecMap<FxIndexSet<u64>>,
+    containers_by_app: DefaultVecMap<FxIndexSet<u64>>,
     container_counter: Counter,
     reservations: FxIndexMap<u64, Vec<InvocationRequest>>,
     ctx: Rc<RefCell<SimulationContext>>,

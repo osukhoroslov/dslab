@@ -2,7 +2,7 @@ use order_stat::kth_by;
 
 use crate::invocation::{Invocation, InvocationRequest};
 use crate::resource::ResourceConsumer;
-use crate::util::RawVecMap;
+use crate::util::DefaultVecMap;
 
 /// This struct allows calculating statistical functions on some data sample.
 /// Almost all metrics computed by the simulator are stored using this struct.
@@ -152,7 +152,7 @@ impl InvocationStats {
 #[derive(Clone, Default)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
-    pub wasted_resource_time: RawVecMap<SampleMetric>,
+    pub wasted_resource_time: DefaultVecMap<SampleMetric>,
 }
 
 impl GlobalStats {
@@ -207,7 +207,7 @@ impl GlobalStats {
 
 #[derive(Clone, Default)]
 pub struct Stats {
-    pub func_stats: RawVecMap<InvocationStats>,
+    pub func_stats: DefaultVecMap<InvocationStats>,
     pub global_stats: GlobalStats,
 }
 

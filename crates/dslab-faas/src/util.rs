@@ -21,8 +21,8 @@ impl Counter {
 }
 
 #[derive(Clone)]
-/// A simple mapping type for storing (key, value) pairs where the keys are assumed to be taken
-/// from some unknown but not very big interval [0, MAX_KEY].
+/// A simple mapping type for storing (key, value) pairs where the keys are assumed to be integers taken
+/// from some unknown but not very big interval [0, MAX_KEY]. This map does not support deletion.
 pub struct VecMap<T> {
     data: Vec<Option<T>>,
 }
@@ -58,14 +58,14 @@ impl<T> VecMap<T> {
     }
 }
 
-/// Similar to VecMap, but returns default value instead of None and auto-extends to keys in
+/// Similar to VecMap, but returns the default value instead of None and auto-extends to keys in
 /// `get_mut` query.
 #[derive(Clone, Default)]
-pub struct RawVecMap<T: Default> {
+pub struct DefaultVecMap<T: Default> {
     data: Vec<T>,
 }
 
-impl<T> RawVecMap<T>
+impl<T> DefaultVecMap<T>
 where
     T: Default,
 {

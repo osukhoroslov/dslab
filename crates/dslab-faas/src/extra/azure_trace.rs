@@ -52,7 +52,7 @@ impl Trace for AzureTrace {
         Box::new(self.function_records.iter().map(|x| x.app_id))
     }
 
-    fn ordered_requests(&self) -> bool {
+    fn is_ordered_by_time(&self) -> bool {
         true
     }
 

@@ -55,8 +55,7 @@ pub trait Trace {
     fn app_iter(&self) -> Box<dyn Iterator<Item = ApplicationData> + '_>;
     fn request_iter(&self) -> Box<dyn Iterator<Item = RequestData> + '_>;
     fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_>;
-    /// Indicates whether the requests produced by `request_iter` are ordered in increasing order
-    /// by time.
-    fn ordered_requests(&self) -> bool;
+    /// Indicates whether the requests produced by `request_iter` are ordered in increasing order by time.
+    fn is_ordered_by_time(&self) -> bool;
     fn simulation_end(&self) -> Option<f64>;
 }

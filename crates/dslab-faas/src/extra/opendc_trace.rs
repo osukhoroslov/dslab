@@ -51,7 +51,7 @@ impl Trace for OpenDCTrace {
         Box::new(0..(self.funcs.len() as u64))
     }
 
-    fn ordered_requests(&self) -> bool {
+    fn is_ordered_by_time(&self) -> bool {
         let mut t = 0;
         for func in self.funcs.iter() {
             for item in func.iter() {

@@ -148,7 +148,7 @@ impl ServerlessSimulation {
         for func in trace.function_iter() {
             self.add_function(Function::new(func));
         }
-        if trace.ordered_requests() {
+        if trace.is_ordered_by_time() {
             self.send_requests_from_ordered_iter(trace.request_iter().as_mut());
         } else {
             let mut reqs = trace.request_iter().collect::<Vec<_>>();
