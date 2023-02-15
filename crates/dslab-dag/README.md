@@ -22,10 +22,10 @@ use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
-// load network model configuration
-let network_model = load_network("../../examples/dag/networks/network1.yaml");
 // load resources configuration
 let resources = read_resources("../../examples/dag/resources/cluster1.yaml");
+// load network model configuration
+let network_model = load_network("../../examples/dag/networks/network1.yaml");
 // use simple scheduler implementation
 let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
