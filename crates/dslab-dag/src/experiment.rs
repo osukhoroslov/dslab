@@ -141,15 +141,13 @@ impl Experiment {
 
                 let mut sim = DagSimulation::new(
                     123,
+                    run.resources,
                     network,
                     scheduler,
                     Config {
                         data_transfer_mode: self.data_transfer_mode,
                     },
                 );
-                for resource in run.resources.into_iter() {
-                    sim.add_resource(&resource.name, resource.speed, resource.cores, resource.memory);
-                }
 
                 sim.init(run.dag);
                 sim.step_until_no_events();

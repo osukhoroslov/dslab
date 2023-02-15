@@ -18,6 +18,7 @@ use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::{DataTransferMode, DataTransferStrategy};
 use dslab_dag::network::load_network;
+use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
 use dslab_dag::schedulers::dls::DlsScheduler;
@@ -48,8 +49,6 @@ struct Args {
 }
 
 fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &str, trace_file: &str) {
-    let network_model = load_network(network_file);
-
     let enable_trace_log = args.trace_log;
     let scheduler: Rc<RefCell<dyn Scheduler>> = match args.scheduler.as_str() {
         "simple" => rc!(refcell!(SimpleScheduler::new())),
@@ -89,8 +88,13 @@ fn run_simulation(args: &Args, dag: DAG, resources_file: &str, network_file: &st
             std::process::exit(1);
         }
     };
-    let mut sim = DagSimulation::new(123, network_model, scheduler, Config { data_transfer_mode });
-    sim.load_resources(resources_file);
+    let mut sim = DagSimulation::new(
+        123,
+        read_resources(resources_file),
+        load_network(network_file),
+        scheduler,
+        Config { data_transfer_mode },
+    );
 
     let runner = sim.init(dag);
     runner.borrow_mut().enable_trace_log(enable_trace_log);

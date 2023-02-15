@@ -12,6 +12,7 @@ use dslab_network::model::NetworkModel;
 use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
+use crate::resource::ResourceConfig;
 use crate::runner::Config;
 use crate::scheduler::Scheduler;
 use crate::schedulers::dls::DlsScheduler;
@@ -78,19 +79,19 @@ fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
     dag
 }
 
-fn gen_resources(rng: &mut Pcg64, sim: &mut DagSimulation, num_resources: usize, infinite_memory: bool) {
-    for i in 0..num_resources {
-        sim.add_resource(
-            &i.to_string(),
-            rng.gen_range(1..1_000_000_000),
-            rng.gen_range(1..10),
-            if infinite_memory {
+fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -> Vec<ResourceConfig> {
+    (0..num_resources)
+        .map(|i| ResourceConfig {
+            name: i.to_string(),
+            speed: rng.gen_range(1..1_000_000_000),
+            cores: rng.gen_range(1..10),
+            memory: if infinite_memory {
                 1_u64 << 60
             } else {
                 rng.gen_range(32..1024)
             },
-        );
-    }
+        })
+        .collect()
 }
 
 fn gen_network(rng: &mut Pcg64) -> Rc<RefCell<dyn NetworkModel>> {
@@ -107,19 +108,19 @@ fn simple_test() {
 
     let mut sim = DagSimulation::new(
         123,
+        gen_resources(&mut rng, 3, false),
         gen_network(&mut rng),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
         },
     );
-    gen_resources(&mut rng, &mut sim, 3, false);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 2559.57426166534423828125);
+    assert_eq!(result, 1183.88168430328369140625);
 }
 
 #[test]
@@ -129,19 +130,19 @@ fn test_1() {
 
     let mut sim = DagSimulation::new(
         123,
+        gen_resources(&mut rng, 10, false),
         gen_network(&mut rng),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
         },
     );
-    gen_resources(&mut rng, &mut sim, 10, false);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 87.13579273223876953125);
+    assert_eq!(result, 109.53108978271484375);
 }
 
 #[test]
@@ -151,19 +152,19 @@ fn test_2() {
 
     let mut sim = DagSimulation::new(
         123,
+        gen_resources(&mut rng, 10, true),
         gen_network(&mut rng),
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
         },
     );
-    gen_resources(&mut rng, &mut sim, 10, true);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 30.71847152709961);
+    assert_eq!(result, 35.27810382843017578125);
 }
 
 #[test]
@@ -173,19 +174,19 @@ fn test_3() {
 
     let mut sim = DagSimulation::new(
         123,
+        gen_resources(&mut rng, 10, true),
         gen_network(&mut rng),
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
         },
     );
-    gen_resources(&mut rng, &mut sim, 10, true);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 82.22796154022216796875);
+    assert_eq!(result, 102.86716175079345703125);
 }
 
 #[test]
@@ -227,6 +228,7 @@ fn test_4() {
     fn run_scheduler(scheduler: impl Scheduler + 'static, dag: DAG) -> f64 {
         let mut sim = DagSimulation::new(
             123,
+            Vec::new(),
             Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
             Rc::new(RefCell::new(scheduler)),
             Config {
@@ -305,6 +307,7 @@ fn test_chain_1() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -352,6 +355,7 @@ fn test_chain_2() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
@@ -389,6 +393,7 @@ fn test_fork_join() {
 
     let mut sim = DagSimulation::new(
         123,
+        Vec::new(),
         Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
