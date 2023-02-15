@@ -9,6 +9,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
+use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub struct PeftScheduler {
@@ -109,6 +110,8 @@ impl PeftScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
+        let mut memory_usage = (0..resources.len()).map(|_| Treap::new()).collect::<Vec<_>>();
+
         for _ in 0..task_ids.len() {
             // first ready task in task_ids, which is already sorted by ranks
             let task_id = *task_ids
@@ -133,6 +136,7 @@ impl PeftScheduler {
                     resource,
                     &task_finish_times,
                     &scheduled_tasks,
+                    &mut memory_usage,
                     &data_locations,
                     &task_locations,
                     &self.data_transfer_strategy,
@@ -167,6 +171,7 @@ impl PeftScheduler {
                     task_id,
                 ));
             }
+            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory as i64);
             task_finish_times[task_id] = best_finish;
             result.push((
                 best_start,

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::ops::Bound::{Excluded, Included, Unbounded};
 
 use dslab_core::context::SimulationContext;
@@ -9,6 +9,7 @@ use dslab_network::network::Network;
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
+use crate::schedulers::treap::Treap;
 
 #[derive(Clone, Debug)]
 pub struct ScheduledTask {
@@ -57,6 +58,7 @@ pub fn evaluate_assignment(
     resource: usize,
     task_finish_times: &[f64],
     scheduled_tasks: &[Vec<BTreeSet<ScheduledTask>>],
+    memory_usage: &mut [Treap],
     data_location: &HashMap<usize, Id>,
     task_location: &HashMap<usize, Id>,
     data_transfer_strategy: &DataTransferStrategy,
@@ -164,18 +166,14 @@ pub fn evaluate_assignment(
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
-    let memory_usage = build_memory_usage(&scheduled_tasks[resource], dag);
-    let blocked_intervals = memory_usage
-        .into_iter()
-        .filter(|(_start, _finish, usage)| usage + need_memory > resources[resource].compute.borrow().memory_total())
-        .map(|(start, finish, _usage)| (start, finish))
-        .collect::<Vec<_>>();
     let (start_time, cores) = find_earliest_slot(
         &scheduled_tasks[resource],
         start_time,
         task_exec_time,
         need_cores,
-        &blocked_intervals,
+        &mut memory_usage[resource],
+        need_memory,
+        resources[resource].compute.borrow().memory_total(),
     );
 
     assert!(cores.len() >= need_cores as usize);
@@ -185,58 +183,24 @@ pub fn evaluate_assignment(
     Some((start_time, start_time + task_exec_time, cores))
 }
 
-fn build_memory_usage(scheduled_tasks: &[BTreeSet<ScheduledTask>], dag: &DAG) -> Vec<(f64, f64, u64)> {
-    let mut events = Vec::new();
-    let mut added_tasks = HashSet::new();
-    for tasks in scheduled_tasks.iter() {
-        for task in tasks.iter() {
-            if added_tasks.contains(&task.task) {
-                continue;
-            }
-            added_tasks.insert(task.task);
-            events.push((task.start_time, dag.get_task(task.task).memory as i64));
-            events.push((task.finish_time, -(dag.get_task(task.task).memory as i64)));
-        }
-    }
-    events.sort_by(|a, b| a.0.total_cmp(&b.0));
-
-    events = {
-        let mut tmp: Vec<(f64, i64)> = Vec::new();
-        for (time, delta) in events {
-            if tmp.last().map(|x| x.0) == Some(time) {
-                tmp.last_mut().unwrap().1 += delta;
-            } else {
-                tmp.push((time, delta));
-            }
-        }
-        tmp.into_iter().filter(|&(_time, delta)| delta != 0).collect()
-    };
-
-    let mut current_memory = 0i64;
-
-    let mut result = Vec::new();
-
-    for w in events.windows(2) {
-        current_memory += w[0].1;
-        if current_memory != 0 {
-            result.push((w[0].0, w[1].0, current_memory as u64));
-        }
-    }
-
-    result
-}
-
 fn find_earliest_slot(
     scheduled_tasks: &[BTreeSet<ScheduledTask>],
     mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
-    blocked_intervals: &[(f64, f64)],
+    memory_usage: &mut Treap,
+    need_memory: u64,
+    available_memory: u64,
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
-        .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.finish_time))
-        .filter(|&a| a >= start_time)
+        .flat_map(|schedule| {
+            schedule
+                .iter()
+                .rev()
+                .map(|scheduled_task| scheduled_task.finish_time)
+                .take_while(|&x| x >= start_time)
+        })
         .collect::<Vec<_>>();
     possible_starts.push(start_time);
     possible_starts.sort_by(|a, b| a.total_cmp(b));
@@ -244,18 +208,7 @@ fn find_earliest_slot(
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
-        if blocked_intervals
-            .binary_search_by(|&(start, finish)| {
-                if finish <= possible_start {
-                    Ordering::Less
-                } else if start >= possible_start + task_exec_time {
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            })
-            .is_ok()
-        {
+        if memory_usage.max(possible_start, possible_start + task_exec_time) as u64 + need_memory > available_memory {
             continue;
         }
 

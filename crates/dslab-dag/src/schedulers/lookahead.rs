@@ -9,6 +9,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
+use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub struct LookaheadScheduler {
@@ -63,6 +64,8 @@ impl LookaheadScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
+        let mut memory_usage = (0..resources.len()).map(|_| Treap::new()).collect::<Vec<_>>();
+
         for task_id in task_ids.into_iter() {
             let mut best_makespan = -1.;
             let mut best_start = -1.;
@@ -75,6 +78,7 @@ impl LookaheadScheduler {
                     resource,
                     &task_finish_times,
                     &scheduled_tasks,
+                    &mut memory_usage,
                     &data_locations,
                     &task_locations,
                     &self.data_transfer_strategy,
@@ -100,6 +104,7 @@ impl LookaheadScheduler {
                         task_id,
                     ));
                 }
+                memory_usage[resource].add(start_time, finish_time, dag.get_task(task_id).memory as i64);
                 task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
                 let mut output_time: f64 = 0.;
@@ -136,6 +141,7 @@ impl LookaheadScheduler {
                                 resource,
                                 &task_finish_times,
                                 &scheduled_tasks,
+                                &mut memory_usage,
                                 &data_locations,
                                 &task_locations,
                                 &self.data_transfer_strategy,
@@ -165,6 +171,7 @@ impl LookaheadScheduler {
                     for &core in cores.iter() {
                         scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(start, finish, child));
                     }
+                    memory_usage[resource].add(start, finish, dag.get_task(child).memory as i64);
                     task_finish_times[child] = finish;
                     scheduled[child] = true;
                     output_time = 0.;
@@ -187,6 +194,11 @@ impl LookaheadScheduler {
                     for &core in cores.iter() {
                         assert!(scheduled_tasks[resource][core as usize].remove(&scheduled_task));
                     }
+                    memory_usage[resource].add(
+                        scheduled_task.start_time,
+                        scheduled_task.finish_time,
+                        -(dag.get_task(scheduled_task.task).memory as i64),
+                    );
                     scheduled[scheduled_task.task] = false;
                 }
                 data_locations = old_data_location;

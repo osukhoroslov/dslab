@@ -9,6 +9,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
+use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub struct HeftScheduler {
@@ -62,6 +63,8 @@ impl HeftScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
+        let mut memory_usage = (0..resources.len()).map(|_| Treap::new()).collect::<Vec<_>>();
+
         for task_id in task_ids.into_iter() {
             let mut best_finish = -1.;
             let mut best_start = -1.;
@@ -73,6 +76,7 @@ impl HeftScheduler {
                     resource,
                     &task_finish_times,
                     &scheduled_tasks,
+                    &mut memory_usage,
                     &data_locations,
                     &task_locations,
                     &self.data_transfer_strategy,
@@ -104,6 +108,7 @@ impl HeftScheduler {
                     task_id,
                 ));
             }
+            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory as i64);
             task_finish_times[task_id] = best_finish;
             result.push((
                 best_start,

@@ -9,6 +9,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
+use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub struct DlsScheduler {
@@ -65,6 +66,8 @@ impl DlsScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
+        let mut memory_usage = (0..resources.len()).map(|_| Treap::new()).collect::<Vec<_>>();
+
         for _ in 0..task_ids.len() {
             // stores (task_id, resource) pair with the best dynamic level value
             let mut best_pair: Option<(usize, usize)> = None;
@@ -85,6 +88,7 @@ impl DlsScheduler {
                         resource,
                         &task_finish_times,
                         &scheduled_tasks,
+                        &mut memory_usage,
                         &data_locations,
                         &task_locations,
                         &self.data_transfer_strategy,
@@ -117,6 +121,7 @@ impl DlsScheduler {
             for &core in best_cores.iter() {
                 scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(best_start, best_finish, task_id));
             }
+            memory_usage[resource].add(best_start, best_finish, dag.get_task(task_id).memory as i64);
             task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((
