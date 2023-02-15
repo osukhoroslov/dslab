@@ -123,6 +123,19 @@ impl Node {
             result
         }
     }
+
+    fn nodes(&self) -> usize {
+        1 + self.left.as_ref().map(|i| i.nodes()).unwrap_or(0) + self.right.as_ref().map(|i| i.nodes()).unwrap_or(0)
+    }
+
+    fn height(&self) -> usize {
+        1 + self
+            .left
+            .as_ref()
+            .map(|i| i.height())
+            .unwrap_or(0)
+            .max(self.right.as_ref().map(|i| i.height()).unwrap_or(0))
+    }
 }
 
 pub struct Treap {
@@ -155,6 +168,14 @@ impl Treap {
             return 0;
         }
         self.root.as_mut().unwrap().max(l, r)
+    }
+
+    fn nodes(&self) -> usize {
+        self.root.as_ref().unwrap().nodes()
+    }
+
+    fn height(&self) -> usize {
+        self.root.as_ref().unwrap().height()
     }
 }
 
@@ -239,5 +260,30 @@ mod tests {
 
             segs = new_segs;
         }
+    }
+
+    #[test]
+    fn check_height() {
+        let mut rand = rand::rngs::SmallRng::seed_from_u64(42);
+        let mut treap = Treap::new();
+
+        const ITS: usize = 1_000_000;
+        for _ in 0..ITS {
+            let mut l = rand.gen::<f64>();
+            let mut r = rand.gen::<f64>();
+            if l > r {
+                std::mem::swap(&mut l, &mut r);
+            }
+            treap.add(l, r, (rand.gen::<u64>() % 100) as i64);
+        }
+
+        println!("{} {}", treap.nodes(), treap.height());
+        assert!(treap.nodes() <= ITS * 2 + 1); // no more than 2 new nodes per modification query
+        assert!(
+            treap.height() as u32 <= (ITS.ilog2() + 1) * 7,
+            "height = {}, log = {}",
+            treap.height(),
+            ITS.ilog2()
+        ); // height should be O(logn)
     }
 }
