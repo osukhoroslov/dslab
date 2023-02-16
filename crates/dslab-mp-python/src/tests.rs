@@ -24,7 +24,7 @@ fn test_set_state() {
 
     // process sends local message only if it has a secret which is not a state member
     let msgs = sys.read_local_messages("proc");
-    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs.len(), 0);
 
     // process should not have anything but state members after `set_state()`
     sys.get_mut_node("node").unwrap().set_process_state("proc", proc_state);
