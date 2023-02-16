@@ -1,10 +1,11 @@
 use std::env;
+use std::rc::Rc;
 
 use crate::PyProcessFactory;
 use dslab_mp::process::ProcessState;
 use dslab_mp::{message::Message, process::Process, system::System};
 
-fn build_system() -> (System, Box<dyn ProcessState>) {
+fn build_system() -> (System, Rc<dyn ProcessState>) {
     let mut sys = System::new(0);
     sys.add_node("node");
     let proc_f = PyProcessFactory::new("python-tests/process.py", "TestProcess");

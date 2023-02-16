@@ -16,7 +16,7 @@ pub enum DeliveryOptions {
     },
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Eq, Hash, PartialEq)]
 pub enum McEvent {
     MessageReceived {
         msg: Message,
