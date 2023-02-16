@@ -29,7 +29,9 @@ class Message:
     def from_json(message_type: str, json_str: str) -> Message:
         return Message(message_type, json.loads(json_str))
 
-
+    def toJSON(self):
+        return {"_type": self._type, "_data": self._data}
+    
 class Context(object):
     def __init__(self, time: float):
         self._time = time
@@ -97,12 +99,20 @@ class StateMember:
         self.inner = t
 
     def serialize(self):
-        return json.dumps(self.inner)
+        def assertion_serializable(o):
+            assert isinstance(o, Message), 'cannot serialize custom classes' 
+            return o.toJSON()
+        return json.dumps(self.inner, default=assertion_serializable)
+
+    @staticmethod
+    def obj_hook(msg):
+        if '_type' in msg:
+            return Message(msg['_type'], msg['_data'])
+        return msg
 
     @staticmethod
     def deserialize(state):
-        return StateMember(json.loads(state))
-
+        return StateMember(json.loads(state, object_hook=StateMember.obj_hook))
 
 class Process:
     @abc.abstractmethod
