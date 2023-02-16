@@ -1,11 +1,14 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct McState {
     pub node_states: HashMap<String, McNodeState>,
     pub events: Vec<McEvent>,
@@ -21,6 +24,30 @@ impl McState {
         }
     }
 }
+
+impl Hash for McState {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        let mut hash_events = 0;
+        for event in self.events.iter() {
+            let mut h = DefaultHasher::default();
+            event.hash(&mut h);
+            hash_events ^= h.finish();   
+        }
+        hash_events.hash(hasher);
+        let mut hash_states = 0;
+        for (_, node_state) in self.node_states.iter() {
+            for (proc, proc_state) in node_state.iter() {
+                let mut h = DefaultHasher::default();
+                proc.hash(&mut h);
+                proc_state.hash(&mut h);
+                hash_states ^= h.finish();
+            }
+        }
+        hash_states.hash(hasher);
+    }
+
+}
+
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,

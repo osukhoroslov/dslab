@@ -1,5 +1,9 @@
+use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
-use crate::mc::system::McSystem;
+use crate::mc::system::{McState, McSystem};
 
 pub struct Dfs {
     prune: PruneFn,
@@ -8,6 +12,7 @@ pub struct Dfs {
     search_depth: u64,
     log_mode: LogMode,
     summary: McSummary,
+    used: HashSet<McState>,
 }
 
 impl Dfs {
@@ -19,6 +24,7 @@ impl Dfs {
             search_depth: 0,
             log_mode,
             summary: McSummary::default(),
+            used: HashSet::default(),
         }
     }
 }
@@ -27,7 +33,10 @@ impl Dfs {
     fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
-
+        if self.used.contains(&state) {
+            return true;
+        }
+        self.used.insert(state.clone());
         // Checking invariant on every step
         (self.invariant)(&state)?;
 

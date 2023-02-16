@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::rc::Rc;
+use std::hash::{Hash, Hasher};
 
 use crate::context::Context;
 use crate::mc::events::McEvent;
@@ -9,13 +11,32 @@ use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
 
+#[derive(Clone)]
 pub struct ProcessEntryState {
-    pub proc_state: Box<dyn ProcessState>,
+    pub proc_state: Rc<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,
     pub local_outbox: Vec<Message>,
     pub pending_timers: HashMap<String, u64>,
     pub sent_message_count: u64,
     pub received_message_count: u64,
+}
+
+impl Hash for ProcessEntryState {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.proc_state.hash().hash(state);
+        self.local_outbox.hash(state);
+    }
+}
+
+impl PartialEq for ProcessEntryState {
+    fn eq(&self, other: &Self) -> bool {
+        self.proc_state.hash() == other.proc_state.hash() &&
+        self.local_outbox == other.local_outbox && self.pending_timers == other.pending_timers && self.sent_message_count == other.sent_message_count && self.received_message_count == other.received_message_count
+    }
+}
+
+impl Eq for ProcessEntryState {
+    fn assert_receiver_is_total_eq(&self) {}
 }
 
 impl ProcessEntry {
