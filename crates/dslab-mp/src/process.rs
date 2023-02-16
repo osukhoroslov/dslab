@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use downcast_rs::{impl_downcast, Downcast};
 use dyn_clone::{clone_trait_object, DynClone};
@@ -12,7 +13,8 @@ pub trait ProcessState: Downcast + Debug {
 
 impl_downcast!(ProcessState);
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 struct ProcessStateStub {}
 
 impl ProcessState for ProcessStateStub {
@@ -37,12 +39,12 @@ pub trait Process: DynClone {
     }
 
     /// Returns the process state.
-    fn state(&self) -> Box<dyn ProcessState> {
-        Box::new(ProcessStateStub {})
+    fn state(&self) -> Rc<dyn ProcessState> {
+        Rc::new(ProcessStateStub {})
     }
 
     /// Restores the process state.
-    fn set_state(&self, _state: Box<dyn ProcessState>) {}
+    fn set_state(&self, _state: Rc<dyn ProcessState>) {}
 }
 
 clone_trait_object!(Process);
