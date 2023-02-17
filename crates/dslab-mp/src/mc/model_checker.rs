@@ -27,6 +27,9 @@ impl ModelChecker {
                     msg: value.msg.clone(),
                     src: value.src.clone(),
                     dest: value.dest.clone(),
+                    can_be_dropped: false,
+                    can_be_duplicated: false,
+                    can_be_corrupted: false,
                 });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {
@@ -37,12 +40,7 @@ impl ModelChecker {
         }
         let events = Rc::new(RefCell::new(events));
 
-        let mc_net = Rc::new(RefCell::new(McNetwork::new(
-            sim.state().rand_copy(),
-            sys.network(),
-            events.clone(),
-            (*strategy.log_mode()).clone(),
-        )));
+        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network(), strategy.log_mode())));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
