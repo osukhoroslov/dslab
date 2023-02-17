@@ -137,6 +137,10 @@ impl Node {
         self.processes.get(name).map(|entry| &entry.proc_impl)
     }
 
+    pub fn process_names(&self) -> Vec<String> {
+        self.processes.keys().cloned().collect()
+    }
+
     pub fn send_local_message(&mut self, proc: String, msg: Message) {
         self.on_local_message_received(proc, msg);
     }

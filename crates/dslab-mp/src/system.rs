@@ -64,15 +64,19 @@ impl System {
         self.nodes[node].borrow_mut().set_clock_skew(clock_skew);
     }
 
-    pub fn crash_node(&mut self, node: &str) {
-        self.nodes.get(node).unwrap().borrow_mut().crash();
-        self.sim.remove_handler(node);
+    pub fn crash_node(&mut self, node_name: &str) {
+        let node = self.nodes.get(node_name).unwrap();
+        for proc in node.borrow().process_names() {
+            self.proc_nodes.remove(&proc);
+        }
+        self.sim.remove_handler(node_name);
+        node.borrow_mut().crash();
 
         // cancel pending events from the crashed node
-        let node_id = self.sim.lookup_id(node);
+        let node_id = self.sim.lookup_id(node_name);
         self.sim.cancel_events(|e| e.src == node_id);
 
-        t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
+        t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node_name).red());
     }
 
     pub fn recover_node(&mut self, node_name: &str) {
