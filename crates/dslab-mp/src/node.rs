@@ -125,6 +125,10 @@ impl Node {
         self.is_crashed = true;
     }
 
+    pub fn recover(&mut self) {
+        self.is_crashed = false;
+    }
+
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>) {
         self.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }

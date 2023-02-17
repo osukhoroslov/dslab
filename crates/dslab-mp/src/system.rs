@@ -75,6 +75,13 @@ impl System {
         t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node).red());
     }
 
+    pub fn recover_node(&mut self, node_name: &str) {
+        let node = self.nodes.get(node_name).unwrap();
+        node.borrow_mut().recover();
+        self.sim.add_handler(node_name, node.clone());
+        t!(format!("{:>9.3} - node recovered: {}", self.sim.time(), node_name).green());
+    }
+
     pub fn get_node(&self, name: &str) -> Option<Ref<Node>> {
         self.nodes.get(name).map(|res| res.borrow())
     }
