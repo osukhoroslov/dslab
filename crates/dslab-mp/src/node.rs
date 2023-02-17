@@ -121,6 +121,7 @@ impl Node {
     }
 
     pub fn crash(&mut self) {
+        self.processes.clear();
         self.is_crashed = true;
     }
 
