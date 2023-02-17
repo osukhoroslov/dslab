@@ -19,6 +19,20 @@ impl Message {
         }
     }
 
+    pub fn json<T, S>(tip: T, data: &S) -> Self
+    where
+        T: Into<String>,
+        S: Serialize,
+    {
+        Self {
+            tip: tip.into(),
+            data: serde_json::to_string_pretty(data)
+                .unwrap()
+                .replace("\n", "")
+                .replace("  ", ""),
+        }
+    }
+
     pub fn size(&self) -> usize {
         self.data.len()
     }
