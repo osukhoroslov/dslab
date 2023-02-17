@@ -91,7 +91,7 @@ fn test_result(config: &TestConfig) -> TestResult {
 
 fn test_result_unreliable(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_drop_rate(0.5);
+    sys.network().set_drop_rate(0.5);
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("client", Message::new("PING", data));
     sys.step_until_no_events();
@@ -100,7 +100,7 @@ fn test_result_unreliable(config: &TestConfig) -> TestResult {
 
 fn test_10results_unreliable(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_drop_rate(0.5);
+    sys.network().set_drop_rate(0.5);
     let data = r#"{"value": "Hello!"}"#;
     for _ in 0..10 {
         sys.send_local_message("client", Message::new("PING", data));
@@ -112,11 +112,11 @@ fn test_10results_unreliable(config: &TestConfig) -> TestResult {
 
 fn test_drop_ping(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_drop_rate(1.0);
+    sys.network().set_drop_rate(1.0);
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("client", Message::new("PING", data));
     sys.steps(10);
-    sys.network().borrow_mut().set_drop_rate(0.0);
+    sys.network().set_drop_rate(0.0);
     sys.step_until_no_events();
     check(sys.read_local_messages("client"), data)
 }
@@ -125,38 +125,38 @@ fn test_drop_pong(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("client", Message::new("PING", data));
-    sys.network().borrow_mut().set_drop_rate(1.0);
+    sys.network().set_drop_rate(1.0);
     sys.steps(10);
-    sys.network().borrow_mut().set_drop_rate(0.0);
+    sys.network().set_drop_rate(0.0);
     sys.step_until_no_events();
     check(sys.read_local_messages("client"), data)
 }
 
 fn test_drop_ping2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().drop_outgoing("client-node");
+    sys.network().drop_outgoing("client-node");
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("client", Message::new("PING", data));
     sys.steps(10);
-    sys.network().borrow_mut().pass_outgoing("client-node");
+    sys.network().pass_outgoing("client-node");
     sys.step_until_no_events();
     check(sys.read_local_messages("client"), data)
 }
 
 fn test_drop_pong2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().drop_outgoing("server-node");
+    sys.network().drop_outgoing("server-node");
     let data = r#"{"value": "Hello!"}"#;
     sys.send_local_message("client", Message::new("PING", data));
     sys.steps(10);
-    sys.network().borrow_mut().pass_outgoing("server-node");
+    sys.network().pass_outgoing("server-node");
     sys.step_until_no_events();
     check(sys.read_local_messages("client"), data)
 }
 
 fn test_10results_unique(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_delays(1.0, 2.0);
+    sys.network().set_delays(1.0, 2.0);
     for i in 0..10 {
         let data = format!(r#"{{"value": "Hello{}!"}}"#, i);
         sys.send_local_message("client", Message::new("PING", &data));
@@ -168,8 +168,8 @@ fn test_10results_unique(config: &TestConfig) -> TestResult {
 
 fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_delays(1.0, 2.0);
-    sys.network().borrow_mut().set_drop_rate(0.5);
+    sys.network().set_delays(1.0, 2.0);
+    sys.network().set_drop_rate(0.5);
     for i in 0..10 {
         let data = format!(r#"{{"value": "Hello{}!"}}"#, i);
         sys.send_local_message("client", Message::new("PING", &data));

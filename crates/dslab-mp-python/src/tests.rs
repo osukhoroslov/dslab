@@ -26,9 +26,8 @@ fn test_set_state() {
     assert_eq!(msgs.len(), 1);
 
     // process should not have anything but state members after `set_state()`
-    sys.get_node("node")
+    sys.get_mut_node("node")
         .unwrap()
-        .borrow()
         .get_process("proc")
         .unwrap()
         .set_state(&proc_state);
