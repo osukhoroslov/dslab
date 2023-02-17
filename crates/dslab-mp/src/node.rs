@@ -134,7 +134,7 @@ impl Node {
     }
 
     pub fn get_process(&self, name: &str) -> Option<&Box<dyn Process>> {
-        self.processes.get(name).and_then(|entry| Some(&entry.proc_impl))
+        self.processes.get(name).map(|entry| &entry.proc_impl)
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {

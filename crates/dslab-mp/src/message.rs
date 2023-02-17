@@ -28,7 +28,7 @@ impl Message {
             tip: tip.into(),
             data: serde_json::to_string_pretty(data)
                 .unwrap()
-                .replace("\n", "")
+                .replace('\n', "")
                 .replace("  ", ""),
         }
     }
