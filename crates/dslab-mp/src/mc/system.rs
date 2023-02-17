@@ -45,9 +45,7 @@ impl Hash for McState {
         }
         hash_states.hash(hasher);
     }
-
 }
-
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
