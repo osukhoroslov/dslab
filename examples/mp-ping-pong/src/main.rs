@@ -15,9 +15,6 @@ use dslab_mp::process::Process;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
 use dslab_mp_python::PyProcessFactory;
-use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::LogMode;
 
 use crate::basic::client::BasicPingClient;
 use crate::basic::server::BasicPingServer;
