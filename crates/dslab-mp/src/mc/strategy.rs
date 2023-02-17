@@ -17,7 +17,7 @@ pub trait Strategy {
     fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.log_mode() == &LogMode::Debug {
             match event {
-                MessageReceived { msg, src, dest } => {
+                MessageReceived { msg, src, dest, .. } => {
                     t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
                 }
                 TimerFired { proc, timer } => {
