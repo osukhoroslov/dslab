@@ -31,7 +31,10 @@ impl Hash for ProcessEntryState {
 impl PartialEq for ProcessEntryState {
     fn eq(&self, other: &Self) -> bool {
         self.proc_state.hash() == other.proc_state.hash() &&
-        self.local_outbox == other.local_outbox && self.pending_timers == other.pending_timers && self.sent_message_count == other.sent_message_count && self.received_message_count == other.received_message_count
+        self.local_outbox == other.local_outbox &&
+        self.pending_timers == other.pending_timers &&
+        self.sent_message_count == other.sent_message_count &&
+        self.received_message_count == other.received_message_count
     }
 }
 
