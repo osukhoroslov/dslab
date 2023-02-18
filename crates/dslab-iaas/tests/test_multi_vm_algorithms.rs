@@ -20,10 +20,10 @@ fn check_placements<T: MultiVMPlacementAlgorithm + 'static>(algorithm: T, expect
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let host_ids = vec![
-        cloud_sim.add_host_inside_rack("h1", 10, 5, 0),
-        cloud_sim.add_host_inside_rack("h2", 10, 5, 1),
-        cloud_sim.add_host_inside_rack("h3", 13, 4, 2),
-        cloud_sim.add_host_inside_rack("h4", 13, 4, 3),
+        cloud_sim.add_host_in_rack("h1", 10, 5, 0),
+        cloud_sim.add_host_in_rack("h2", 10, 5, 1),
+        cloud_sim.add_host_in_rack("h3", 13, 4, 2),
+        cloud_sim.add_host_in_rack("h4", 13, 4, 3),
     ];
 
     cloud_sim.spawn_vm_on_host(ResourceConsumer::with_full_load(6, 2), 10.0, None, host_ids[0]);
@@ -35,12 +35,11 @@ fn check_placements<T: MultiVMPlacementAlgorithm + 'static>(algorithm: T, expect
 
     let scheduler_id = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::multi(algorithm));
 
-    let vm_params = vec![
-        ResourceConsumer::with_full_load(2, 2),
-        ResourceConsumer::with_full_load(3, 1),
-        ResourceConsumer::with_full_load(1, 1),
-    ];
-    let vm_ids = cloud_sim.spawn_vms_now(vm_params, 10.0, scheduler_id);
+    cloud_sim.begin_batch();
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(2, 2), 10.0, None, scheduler_id);
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(3, 1), 10.0, None, scheduler_id);
+    cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(1, 1), 10.0, None, scheduler_id);
+    let vm_ids = cloud_sim.spawn_batch();
 
     cloud_sim.step_for_duration(1.);
     let cur_time = cloud_sim.current_time();

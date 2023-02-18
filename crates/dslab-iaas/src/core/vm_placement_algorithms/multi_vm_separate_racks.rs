@@ -31,7 +31,7 @@ fn fits_by_rack(host: u32, racks_occupied: &HashSet<u32>, pool: &ResourcePoolSta
 impl MultiVMPlacementAlgorithm for SeparateRacksMultiVMPlacement {
     fn select_hosts(
         &self,
-        allocs: Vec<Allocation>,
+        allocs: &[Allocation],
         pool_state: &ResourcePoolState,
         _monitoring: &Monitoring,
     ) -> Option<Vec<u32>> {

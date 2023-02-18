@@ -40,6 +40,11 @@ pub mod allocation {
         pub host_id: u32,
     }
 
+    #[derive(Serialize)]
+    pub struct VmCreateRequest {
+        pub vm_id: u32,
+    }
+
     #[derive(Serialize, Clone)]
     pub struct AllocationReleaseRequest {
         pub vm_id: u32,

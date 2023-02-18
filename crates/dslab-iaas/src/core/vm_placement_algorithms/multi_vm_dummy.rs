@@ -19,7 +19,7 @@ impl DummyMultiVMPlacement {
 impl MultiVMPlacementAlgorithm for DummyMultiVMPlacement {
     fn select_hosts(
         &self,
-        allocs: Vec<Allocation>,
+        allocs: &[Allocation],
         pool_state: &ResourcePoolState,
         monitoring: &Monitoring,
     ) -> Option<Vec<u32>> {

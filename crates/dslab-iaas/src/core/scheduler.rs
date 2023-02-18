@@ -68,35 +68,31 @@ impl Scheduler {
     }
 
     /// Adds host to local resource pool state.
-    pub fn add_host(&mut self, id: u32, rack_id: Option<u32>, cpu_total: u32, memory_total: u64) {
+    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, rack_id: Option<u32>) {
         self.pool_state
-            .add_host(id, rack_id, cpu_total, memory_total, cpu_total, memory_total);
+            .add_host(id, cpu_total, memory_total, cpu_total, memory_total, rack_id);
     }
 
-    fn mark_vms_failed_to_allocate(&mut self, vm_ids: Vec<u32>) {
-        for vm_id in vm_ids {
-            self.ctx.emit(
-                VmStatusChanged {
-                    vm_id,
-                    status: VmStatus::FailedToAllocate,
-                },
-                self.vm_api.borrow().get_id(),
-                self.sim_config.message_delay,
-            );
-        }
-    }
-
-    /// Processes VM allocation request by selecting a host for running the VM.
+    /// Processes allocation request by selecting host for running each VM.
     ///
     /// Host selection is performed by invoking the configured VM placement algorithm.
     /// If a suitable host is found, the scheduler updates its local state with new allocation and tries to commit its
     /// decision in the placement store.
-    /// If not suitable host is found, the request is rescheduled for retry after the configured period.
+    /// If a suitable host is not found, the request is rescheduled for retry after the configured period.
     fn on_allocation_request(&mut self, vm_ids: Vec<u32>) {
         for vm_id in &vm_ids {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
             if self.ctx.time() > vm.allocation_start_time + self.sim_config.vm_allocation_timeout {
-                self.mark_vms_failed_to_allocate(vm_ids);
+                for vm_id in vm_ids {
+                    self.ctx.emit(
+                        VmStatusChanged {
+                            vm_id,
+                            status: VmStatus::FailedToAllocate,
+                        },
+                        self.vm_api.borrow().get_id(),
+                        self.sim_config.message_delay,
+                    );
+                }
                 return;
             }
         }
@@ -108,9 +104,8 @@ impl Scheduler {
 
         match &self.vm_placement_algorithm {
             VMPlacementAlgorithm::Single(alg) => {
-                let mut failed_to_allocate_vms = Vec::<u32>::new();
-                for vm_id in &vm_ids {
-                    let alloc = &allocs[0];
+                let mut unscheduled_vms = Vec::<u32>::new();
+                for (vm_id, alloc) in vm_ids.iter().zip(allocs.iter()) {
                     if let Some(host) = alg.select_host(alloc, &self.pool_state, &self.monitoring.borrow()) {
                         log_debug!(
                             self.ctx,
@@ -128,24 +123,23 @@ impl Scheduler {
                             self.sim_config.message_delay,
                         );
                     } else {
-                        failed_to_allocate_vms.push(*vm_id);
+                        unscheduled_vms.push(*vm_id);
                     }
                 }
 
-                if !failed_to_allocate_vms.is_empty() {
-                    log_debug!(self.ctx, "failed to place vms");
+                if !unscheduled_vms.is_empty() {
+                    log_debug!(self.ctx, "failed to place {} vms", unscheduled_vms.len());
                     self.ctx.emit_self(
                         AllocationRequest {
-                            vm_ids: failed_to_allocate_vms,
+                            vm_ids: unscheduled_vms,
                         },
                         self.sim_config.allocation_retry_period,
                     );
                 }
             }
             VMPlacementAlgorithm::Multi(alg) => {
-                if let Some(hosts) = alg.select_hosts(allocs.clone(), &self.pool_state, &self.monitoring.borrow()) {
-                    for it in hosts.iter().zip(allocs.iter()) {
-                        let (host, alloc) = it;
+                if let Some(hosts) = alg.select_hosts(&allocs, &self.pool_state, &self.monitoring.borrow()) {
+                    for (host, alloc) in hosts.iter().zip(allocs.iter()) {
                         log_debug!(
                             self.ctx,
                             "decided to place vm {} on host {}",
@@ -163,7 +157,7 @@ impl Scheduler {
                         );
                     }
                 } else {
-                    log_debug!(self.ctx, "failed to place vms");
+                    log_debug!(self.ctx, "failed to place {} vms", vm_ids.len());
                     self.ctx
                         .emit_self(AllocationRequest { vm_ids }, self.sim_config.allocation_retry_period);
                 }

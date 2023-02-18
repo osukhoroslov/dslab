@@ -14,7 +14,7 @@ use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
-    AllocationRequest,
+    AllocationRequest, VmCreateRequest,
 };
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
@@ -66,9 +66,9 @@ impl PlacementStore {
     }
 
     /// Adds new host to resource pool state.
-    pub fn add_host(&mut self, id: u32, rack_id: Option<u32>, cpu_total: u32, memory_total: u64) {
+    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, rack_id: Option<u32>) {
         self.pool_state
-            .add_host(id, rack_id, cpu_total, memory_total, cpu_total, memory_total);
+            .add_host(id, cpu_total, memory_total, cpu_total, memory_total, rack_id);
     }
 
     /// Registers scheduler so that PS can notify it about allocation events.
@@ -89,9 +89,7 @@ impl PlacementStore {
     /// Processes allocation commit requests from schedulers.
     fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: Option<u32>) {
         let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        if self.allow_vm_overcommit
-            || self.pool_state.can_allocate(&alloc.clone(), host_id) == AllocationVerdict::Success
-        {
+        if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
             self.pool_state.allocate(&alloc, host_id);
             log_debug!(
                 self.ctx,
@@ -99,11 +97,8 @@ impl PlacementStore {
                 vm_id,
                 self.ctx.lookup_name(host_id)
             );
-            self.ctx.emit(
-                AllocationRequest { vm_ids: vec![vm_id] },
-                host_id,
-                self.sim_config.message_delay,
-            );
+            self.ctx
+                .emit(VmCreateRequest { vm_id }, host_id, self.sim_config.message_delay);
 
             for scheduler in self.schedulers.iter() {
                 self.ctx.emit(

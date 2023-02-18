@@ -18,7 +18,7 @@ use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
 use crate::core::energy_meter::EnergyMeter;
 use crate::core::events::allocation::{
-    AllocationFailed, AllocationReleaseRequest, AllocationReleased, AllocationRequest, MigrationRequest,
+    AllocationFailed, AllocationReleaseRequest, AllocationReleased, MigrationRequest, VmCreateRequest,
 };
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
@@ -238,30 +238,27 @@ impl HostManager {
     }
 
     /// Processes allocation request, allocates resources to start new VM.
-    fn on_allocation_request(&mut self, vm_ids: Vec<u32>) -> bool {
-        let mut result = true;
-        for vm_id in vm_ids {
-            if self.can_allocate(vm_id) == AllocationVerdict::Success {
-                let vm = self.vm_api.borrow().get_vm(vm_id);
-                let start_duration = vm.borrow().start_duration();
-                self.allocate(self.ctx.time(), vm);
-                self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
-                log_debug!(self.ctx, "vm {} allocated on host {}", vm_id, self.name);
-                self.ctx.emit_self(VMStarted { vm_id }, start_duration);
-            } else {
-                log_debug!(self.ctx, "not enough space for vm {} on host {}", vm_id, self.name);
-                self.ctx.emit(
-                    AllocationFailed {
-                        vm_id,
-                        host_id: self.id,
-                    },
-                    self.placement_store_id,
-                    self.sim_config.message_delay,
-                );
-                result = false;
-            }
+    fn on_allocation_request(&mut self, vm_id: u32) -> bool {
+        if self.can_allocate(vm_id) == AllocationVerdict::Success {
+            let vm = self.vm_api.borrow().get_vm(vm_id);
+            let start_duration = vm.borrow().start_duration();
+            self.allocate(self.ctx.time(), vm);
+            self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
+            log_debug!(self.ctx, "vm {} allocated on host {}", vm_id, self.name);
+            self.ctx.emit_self(VMStarted { vm_id }, start_duration);
+            true
+        } else {
+            log_debug!(self.ctx, "not enough space for vm {} on host {}", vm_id, self.name);
+            self.ctx.emit(
+                AllocationFailed {
+                    vm_id,
+                    host_id: self.id,
+                },
+                self.placement_store_id,
+                self.sim_config.message_delay,
+            );
+            false
         }
-        result
     }
 
     /// Processes migration request (as migration target), allocates resources to start new VM, updates VM status.
@@ -390,8 +387,8 @@ pub struct SendHostState {}
 impl EventHandler for HostManager {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            AllocationRequest { vm_ids } => {
-                self.on_allocation_request(vm_ids);
+            VmCreateRequest { vm_id } => {
+                self.on_allocation_request(vm_id);
             }
             MigrationRequest { source_host, vm_id } => {
                 self.on_migration_request(source_host, vm_id);

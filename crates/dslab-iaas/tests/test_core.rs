@@ -404,7 +404,7 @@ fn test_batch_request() {
     let h = cloud_sim.add_host("h", 50, 50);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()));
 
-    cloud_sim.begin_batch_request();
+    cloud_sim.begin_batch();
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);
@@ -415,7 +415,7 @@ fn test_batch_request() {
     assert_eq!(current_time, 10.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.);
 
-    let vm_ids = cloud_sim.end_batch_request();
+    let vm_ids = cloud_sim.spawn_batch();
     cloud_sim.step_for_duration(1.);
     current_time = cloud_sim.current_time();
 
