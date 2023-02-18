@@ -30,23 +30,6 @@ impl VMPlacementAlgorithm {
     }
 }
 
-pub fn placement_algorithm_resolver(config_str: String) -> VMPlacementAlgorithm {
-    let (algorithm_name, options) = parse_config_value(&config_str);
-    match algorithm_name.as_str() {
-        "FirstFit" => VMPlacementAlgorithm::single(FirstFit::new()),
-        "BestFit" => VMPlacementAlgorithm::single(BestFit::new()),
-        "WorstFit" => VMPlacementAlgorithm::single(WorstFit::new()),
-        "BestFitThreshold" => VMPlacementAlgorithm::single(BestFitThreshold::from_string(&options.unwrap())),
-        "CosineSimilarity" => VMPlacementAlgorithm::single(CosineSimilarity::new()),
-        "DotProduct" => VMPlacementAlgorithm::single(DotProduct::new()),
-        "WeightedDotProduct" => VMPlacementAlgorithm::single(WeightedDotProduct::new()),
-        "L2NormDiff" => VMPlacementAlgorithm::single(L2NormDiff::new()),
-        "DeltaPerpDistance" => VMPlacementAlgorithm::single(DeltaPerpDistance::new()),
-        "Dummy" => VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()),
-        _ => panic!("Can't resolve: {}", config_str),
-    }
-}
-
 /// Trait for implementation of VM placement algorithms.
 ///
 /// The algorithm is defined as a function of VM allocation request and current resource pool state, which returns an
@@ -72,4 +55,21 @@ pub trait MultiVMPlacementAlgorithm {
         pool_state: &ResourcePoolState,
         monitoring: &Monitoring,
     ) -> Option<Vec<u32>>;
+}
+
+pub fn placement_algorithm_resolver(config_str: String) -> VMPlacementAlgorithm {
+    let (algorithm_name, options) = parse_config_value(&config_str);
+    match algorithm_name.as_str() {
+        "FirstFit" => VMPlacementAlgorithm::single(FirstFit::new()),
+        "BestFit" => VMPlacementAlgorithm::single(BestFit::new()),
+        "WorstFit" => VMPlacementAlgorithm::single(WorstFit::new()),
+        "BestFitThreshold" => VMPlacementAlgorithm::single(BestFitThreshold::from_string(&options.unwrap())),
+        "CosineSimilarity" => VMPlacementAlgorithm::single(CosineSimilarity::new()),
+        "DotProduct" => VMPlacementAlgorithm::single(DotProduct::new()),
+        "WeightedDotProduct" => VMPlacementAlgorithm::single(WeightedDotProduct::new()),
+        "L2NormDiff" => VMPlacementAlgorithm::single(L2NormDiff::new()),
+        "DeltaPerpDistance" => VMPlacementAlgorithm::single(DeltaPerpDistance::new()),
+        "Dummy" => VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()),
+        _ => panic!("Can't resolve: {}", config_str),
+    }
 }
