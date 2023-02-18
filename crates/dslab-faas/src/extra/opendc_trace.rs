@@ -47,8 +47,8 @@ impl Trace for OpenDCTrace {
         Box::new(OpenDCRequestIter::new(self.funcs.iter()))
     }
 
-    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
-        Box::new(0..(self.funcs.len() as u64))
+    fn function_iter(&self) -> Box<dyn Iterator<Item = usize> + '_> {
+        Box::new(0..self.funcs.len())
     }
 
     fn is_ordered_by_time(&self) -> bool {
@@ -125,7 +125,7 @@ impl<'a> Iterator for OpenDCRequestIter<'a> {
         }
         self.invocations += 1;
         Some(RequestData {
-            id: (self.fn_id - 1) as u64,
+            id: self.fn_id - 1,
             duration: (self.curr.exec as f64) / 1000.0,
             time: (self.curr.time as f64) / 1000.0,
         })

@@ -81,7 +81,7 @@ impl ServerlessSimulation {
         ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
-    pub fn get_invocation(&self, id: u64) -> Option<Invocation> {
+    pub fn get_invocation(&self, id: usize) -> Option<Invocation> {
         self.invocation_registry.borrow().get_invocation(id).cloned()
     }
 
@@ -118,19 +118,20 @@ impl ServerlessSimulation {
         self.controller.borrow_mut().add_host(host);
     }
 
-    pub fn add_function(&mut self, f: Function) -> u64 {
+    pub fn add_function(&mut self, f: Function) -> usize {
         self.function_registry.borrow_mut().add_function(f)
     }
 
-    pub fn add_app_with_single_function(&mut self, app: Application) -> u64 {
+    pub fn add_app_with_single_function(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app_with_single_function(app)
     }
 
-    pub fn add_app(&mut self, app: Application) -> u64 {
+    pub fn add_app(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    pub fn load_trace(&mut self, trace: &dyn Trace) {
+    /// Returns id of the first invocation if the trace is not empty. Invocations have consecutive ids in increasing order of time.
+    pub fn load_trace(&mut self, trace: &dyn Trace) -> Option<usize> {
         for app in trace.app_iter() {
             let res = ResourceConsumer::new(
                 app.container_resources
@@ -148,23 +149,26 @@ impl ServerlessSimulation {
         for func in trace.function_iter() {
             self.add_function(Function::new(func));
         }
+        if let Some(t) = trace.simulation_end() {
+            self.set_simulation_end(t);
+        }
         if trace.is_ordered_by_time() {
-            self.send_requests_from_ordered_iter(trace.request_iter().as_mut());
+            self.send_requests_from_ordered_iter(trace.request_iter().as_mut())
         } else {
             let mut reqs = trace.request_iter().collect::<Vec<_>>();
             reqs.sort();
-            self.send_requests_from_ordered_iter(&mut reqs.drain(..));
-        }
-        if let Some(t) = trace.simulation_end() {
-            self.set_simulation_end(t);
+            let result = self.send_requests_from_ordered_iter(&mut reqs.drain(..));
+            result
         }
     }
 
     /// This function provides a way to send invocation requests to a special ordered deque inside
     /// the simulation, which works faster than the default heap.
-    pub fn send_requests_from_ordered_iter(&mut self, iter: &mut dyn Iterator<Item = RequestData>) {
+    /// Returns id of the first invocation if the iterator is not empty, invocations have consecutive ids that follow their order inside the iterator.
+    pub fn send_requests_from_ordered_iter(&mut self, iter: &mut dyn Iterator<Item = RequestData>) -> Option<usize> {
         if let Some(item) = iter.next() {
             let mut ir = self.invocation_registry.borrow_mut();
+            let first_id = ir.register_invocation();
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 self.ctx.emit_ordered(
                     InvocationStartEvent {
@@ -172,7 +176,7 @@ impl ServerlessSimulation {
                             func_id: item.id,
                             duration: item.duration,
                             time: item.time,
-                            id: ir.register_invocation(),
+                            id: first_id,
                         },
                     },
                     self.controller_id,
@@ -199,7 +203,7 @@ impl ServerlessSimulation {
                             func_id: item.id,
                             duration: item.duration,
                             time: item.time,
-                            id: ir.register_invocation(),
+                            id: first_id,
                         },
                     },
                     self.controller_id,
@@ -220,10 +224,12 @@ impl ServerlessSimulation {
                     );
                 }
             }
+            return Some(first_id);
         }
+        None
     }
 
-    pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) -> u64 {
+    pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
         let invocation_id = self.invocation_registry.borrow_mut().register_invocation();
         self.ctx.emit(
             InvocationStartEvent {

@@ -9,8 +9,8 @@ use crate::stats::Stats;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum InvocationStatus {
-    Warm(u64),
-    Cold((u64, f64)),
+    Warm(usize),
+    Cold((usize, f64)),
     Queued,
     Rejected,
 }
@@ -18,12 +18,12 @@ pub enum InvocationStatus {
 #[derive(Clone, Copy)]
 pub struct DequeuedInvocation {
     pub request: InvocationRequest,
-    pub container_id: u64,
+    pub container_id: usize,
     pub delay: Option<f64>,
 }
 
 impl DequeuedInvocation {
-    pub fn new(request: InvocationRequest, container_id: u64, delay: Option<f64>) -> Self {
+    pub fn new(request: InvocationRequest, container_id: usize, delay: Option<f64>) -> Self {
         Self {
             request,
             container_id,
@@ -79,7 +79,7 @@ impl BasicInvoker {
     ) -> InvocationStatus {
         let fr = fr.borrow();
         let app = fr.get_app_by_function(request.func_id).unwrap();
-        let mut nearest: Option<u64> = None;
+        let mut nearest: Option<usize> = None;
         let mut wait = 0.0;
         for c in cm.get_possible_containers(app, true) {
             let delay = if c.status == ContainerStatus::Deploying {

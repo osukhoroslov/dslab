@@ -26,7 +26,7 @@ impl ApplicationData {
 
 #[derive(Default, Clone, Copy)]
 pub struct RequestData {
-    pub id: u64,
+    pub id: usize,
     pub duration: f64,
     pub time: f64,
 }
@@ -54,7 +54,7 @@ impl Ord for RequestData {
 pub trait Trace {
     fn app_iter(&self) -> Box<dyn Iterator<Item = ApplicationData> + '_>;
     fn request_iter(&self) -> Box<dyn Iterator<Item = RequestData> + '_>;
-    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_>;
+    fn function_iter(&self) -> Box<dyn Iterator<Item = usize> + '_>;
     /// Indicates whether the requests produced by `request_iter` are ordered in increasing order by time.
     fn is_ordered_by_time(&self) -> bool;
     fn simulation_end(&self) -> Option<f64>;

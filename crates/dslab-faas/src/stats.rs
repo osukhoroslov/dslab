@@ -211,29 +211,23 @@ pub struct Stats {
 impl Stats {
     pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
         self.global_stats.on_cold_start(request, delay);
-        self.func_stats
-            .get_mut(request.func_id as usize)
-            .on_cold_start(request, delay);
+        self.func_stats.get_mut(request.func_id).on_cold_start(request, delay);
     }
 
     pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
         self.global_stats.on_new_invocation(request);
-        self.func_stats
-            .get_mut(request.func_id as usize)
-            .on_new_invocation(request);
+        self.func_stats.get_mut(request.func_id).on_new_invocation(request);
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
-        self.func_stats
-            .get_mut(invocation.request.func_id as usize)
-            .update(invocation);
+        self.func_stats.get_mut(invocation.request.func_id).update(invocation);
     }
 
     pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
         self.global_stats.update_queueing_time(request, curr_time);
         self.func_stats
-            .get_mut(request.func_id as usize)
+            .get_mut(request.func_id)
             .update_queueing_time(request, curr_time);
     }
 

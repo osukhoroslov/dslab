@@ -18,7 +18,7 @@ use crate::simulation::HandlerId;
 use crate::stats::Stats;
 
 pub struct Host {
-    id: u64,
+    id: usize,
     invoker: Box<dyn Invoker>,
     container_manager: ContainerManager,
     cpu: CPU,
@@ -33,7 +33,7 @@ pub struct Host {
 impl Host {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        id: u64,
+        id: usize,
         cores: u32,
         disable_contention: bool,
         resources: ResourceProvider,
@@ -71,15 +71,15 @@ impl Host {
             .is_some()
     }
 
-    pub fn active_invocation_count(&self) -> u64 {
+    pub fn active_invocation_count(&self) -> usize {
         self.container_manager.active_invocation_count()
     }
 
-    pub fn queued_invocation_count(&self) -> u64 {
-        self.invoker.queue_len() as u64
+    pub fn queued_invocation_count(&self) -> usize {
+        self.invoker.queue_len()
     }
 
-    pub fn total_invocation_count(&self) -> u64 {
+    pub fn total_invocation_count(&self) -> usize {
         self.active_invocation_count() + self.queued_invocation_count()
     }
 
@@ -120,7 +120,7 @@ impl Host {
         status
     }
 
-    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
+    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(usize, f64)> {
         self.container_manager.try_deploy(app, time)
     }
 
@@ -135,7 +135,7 @@ impl Host {
         }
     }
 
-    fn start_invocation(&mut self, cont_id: u64, request: InvocationRequest, time: f64) {
+    fn start_invocation(&mut self, cont_id: usize, request: InvocationRequest, time: f64) {
         self.invocation_registry
             .borrow_mut()
             .new_invocation(request, self.id, cont_id, time);
@@ -154,7 +154,7 @@ impl Host {
         self.cpu.on_new_invocation(invocation, container, time);
     }
 
-    fn on_container_start(&mut self, id: u64, time: f64) {
+    fn on_container_start(&mut self, id: usize, time: f64) {
         if let Some(invocations) = self.container_manager.take_reservations(id) {
             for invocation in invocations {
                 self.start_invocation(id, invocation, time);
@@ -168,7 +168,7 @@ impl Host {
         }
     }
 
-    pub fn on_container_end(&mut self, id: u64, expected: u64, time: f64) {
+    pub fn on_container_end(&mut self, id: usize, expected: usize, time: f64) {
         if let Some(cont) = self.container_manager.get_container(id) {
             if cont.status == ContainerStatus::Idle && cont.started_invocations == expected {
                 let delta = time - cont.last_change;
@@ -178,7 +178,7 @@ impl Host {
         }
     }
 
-    pub fn on_invocation_end(&mut self, id: u64, time: f64) {
+    pub fn on_invocation_end(&mut self, id: usize, time: f64) {
         let ir = self.invocation_registry.clone();
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();
@@ -213,7 +213,7 @@ impl Host {
         }
     }
 
-    fn new_container_end_event(&mut self, container_id: u64, expected: u64, delay: f64) {
+    fn new_container_end_event(&mut self, container_id: usize, expected: usize, delay: f64) {
         self.ctx.borrow_mut().emit_self(
             ContainerEndEvent {
                 id: container_id,

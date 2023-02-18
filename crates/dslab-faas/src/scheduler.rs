@@ -120,7 +120,7 @@ impl LocalityBasedScheduler {
 
 impl Scheduler for LocalityBasedScheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
-        let start_idx = (self.hasher.hash(app.id) % (hosts.len() as u64)) as usize;
+        let start_idx = (self.hasher.hash(app.id as u64) % (hosts.len() as u64)) as usize;
         let mut cycle = false;
         let mut idx = start_idx;
         while !cycle {

@@ -6,15 +6,15 @@ use rustc_hash::FxHasher;
 
 #[derive(Default)]
 pub struct Counter {
-    value: u64,
+    value: usize,
 }
 
 impl Counter {
-    pub fn curr(&self) -> u64 {
+    pub fn curr(&self) -> usize {
         self.value
     }
 
-    pub fn increment(&mut self) -> u64 {
+    pub fn increment(&mut self) -> usize {
         let curr = self.value;
         self.value += 1;
         curr
