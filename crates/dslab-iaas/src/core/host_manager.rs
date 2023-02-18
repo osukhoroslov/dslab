@@ -112,11 +112,6 @@ impl HostManager {
         }
     }
 
-    /// Returns rack ID for this host.
-    pub fn rack_id(&self) -> Option<u32> {
-        self.rack_id
-    }
-
     /// Checks if incoming VM can be allocated on this host.
     fn can_allocate(&self, vm_id: u32) -> AllocationVerdict {
         let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
