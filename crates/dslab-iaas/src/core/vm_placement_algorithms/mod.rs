@@ -5,5 +5,6 @@ pub mod delta_perp_distance;
 pub mod dot_product;
 pub mod first_fit;
 pub mod norm_diff;
+pub mod rack_anti_affinity;
 pub mod weighted_dot_product;
 pub mod worst_fit;

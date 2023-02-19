@@ -6,6 +6,7 @@ use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm::ResourceConsumer;
+use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
@@ -28,8 +29,8 @@ fn example_two_schedulers() {
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
-    let s1 = cloud_sim.add_scheduler("s1", Box::new(BestFit::new()));
-    let s2 = cloud_sim.add_scheduler("s2", Box::new(BestFit::new()));
+    let s1 = cloud_sim.add_scheduler("s1", VMPlacementAlgorithm::single(BestFit::new()));
+    let s2 = cloud_sim.add_scheduler("s2", VMPlacementAlgorithm::single(BestFit::new()));
 
     // spawn vm_0 - vm_4 on scheduler #1
     for _ in 0..5 {
@@ -96,7 +97,7 @@ fn example_manual_migration() {
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     let vm = cloud_sim.spawn_vm_now(
         ResourceConsumer::with_const_load(10, 10, 0.5, 0.5),
@@ -153,7 +154,7 @@ fn example_vm_migrator() {
     for i in 0..10 {
         cloud_sim.add_host(&format!("h{}", i), 50, 50);
     }
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     for _ in 0..10 {
         cloud_sim.spawn_vm_now(

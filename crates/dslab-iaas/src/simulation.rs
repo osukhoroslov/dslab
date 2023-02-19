@@ -29,6 +29,13 @@ use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
 use crate::extensions::dataset_reader::DatasetReader;
 
+struct VMSpawnRequest {
+    pub resource_consumer: ResourceConsumer,
+    pub lifetime: f64,
+    pub vm_id: u32,
+    pub scheduler_id: u32,
+}
+
 /// Represents a simulation, provides methods for its configuration and execution.
 ///
 /// It encapsulates all simulation components and provides convenient access to them for the user.
@@ -41,6 +48,8 @@ pub struct CloudSimulation {
     components: HashMap<u32, Rc<RefCell<dyn CustomComponent>>>,
     host_power_model: HostPowerModel,
     slav_metric: Box<dyn HostSLAVMetric>,
+    batch_mode: bool,
+    batch_buffer: Vec<VMSpawnRequest>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -73,6 +82,8 @@ impl CloudSimulation {
             components: HashMap::new(),
             host_power_model: HostPowerModel::new(Box::new(LinearPowerModel::new(1., 0.4))).with_zero_idle_power(),
             slav_metric: Box::new(OverloadTimeFraction::new()),
+            batch_mode: false,
+            batch_buffer: Vec::new(),
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -113,10 +124,10 @@ impl CloudSimulation {
         sim
     }
 
-    /// Creates new host with specified name and resource capacity, and returns the host ID.
-    pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
+    fn add_host_internal(&mut self, name: &str, cpu_total: u32, memory_total: u64, rack_id: Option<u32>) -> u32 {
         // create host
         let host = rc!(refcell!(HostManager::new(
+            rack_id,
             cpu_total,
             memory_total,
             self.monitoring.borrow().get_id(),
@@ -133,18 +144,31 @@ impl CloudSimulation {
         // add host to monitoring
         self.monitoring.borrow_mut().add_host(id, cpu_total, memory_total);
         // add host to placement store
-        self.placement_store.borrow_mut().add_host(id, cpu_total, memory_total);
+        self.placement_store
+            .borrow_mut()
+            .add_host(id, cpu_total, memory_total, rack_id);
         // add host to schedulers
         for scheduler in self.schedulers.values() {
-            scheduler.borrow_mut().add_host(id, cpu_total, memory_total);
+            scheduler.borrow_mut().add_host(id, cpu_total, memory_total, rack_id);
         }
         // start sending host state to monitoring
         self.ctx.emit_now(SendHostState {}, id);
         id
     }
 
+    /// Creates new host with specified name and resource capacity, and returns the host ID.
+    pub fn add_host(&mut self, name: &str, cpu_total: u32, memory_total: u64) -> u32 {
+        self.add_host_internal(name, cpu_total, memory_total, None)
+    }
+
+    /// Creates new host with specified name and resource capacity, and returns the host ID.
+    /// Also associates the host with the specified rack.
+    pub fn add_host_in_rack(&mut self, name: &str, cpu_total: u32, memory_total: u64, rack_id: u32) -> u32 {
+        self.add_host_internal(name, cpu_total, memory_total, Some(rack_id))
+    }
+
     /// Creates new scheduler with specified name and VM placement algorithm, and returns the scheduler ID.
-    pub fn add_scheduler(&mut self, name: &str, vm_placement_algorithm: Box<dyn VMPlacementAlgorithm>) -> u32 {
+    pub fn add_scheduler(&mut self, name: &str, vm_placement_algorithm: VMPlacementAlgorithm) -> u32 {
         // create scheduler using current state from placement store
         let pool_state = self.placement_store.borrow_mut().get_pool_state();
         let scheduler = rc!(refcell!(Scheduler::new(
@@ -173,15 +197,24 @@ impl CloudSimulation {
         scheduler_id: u32,
     ) -> u32 {
         let id = vm_id.unwrap_or_else(|| self.vm_api.borrow_mut().generate_vm_id());
-        let vm = VirtualMachine::new(
-            id,
-            self.ctx.time(),
-            lifetime,
-            resource_consumer,
-            self.sim_config.clone(),
-        );
-        self.vm_api.borrow_mut().register_new_vm(vm);
-        self.ctx.emit_now(AllocationRequest { vm_id: id }, scheduler_id);
+        if self.batch_mode {
+            self.batch_buffer.push(VMSpawnRequest {
+                resource_consumer,
+                lifetime,
+                vm_id: id,
+                scheduler_id,
+            });
+        } else {
+            let vm = VirtualMachine::new(
+                id,
+                self.ctx.time(),
+                lifetime,
+                resource_consumer,
+                self.sim_config.clone(),
+            );
+            self.vm_api.borrow_mut().register_new_vm(vm);
+            self.ctx.emit_now(AllocationRequest { vm_ids: vec![id] }, scheduler_id);
+        }
         id
     }
 
@@ -204,7 +237,8 @@ impl CloudSimulation {
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.ctx.emit(AllocationRequest { vm_id: id }, scheduler_id, delay);
+        self.ctx
+            .emit(AllocationRequest { vm_ids: vec![id] }, scheduler_id, delay);
         id
     }
 
@@ -226,8 +260,46 @@ impl CloudSimulation {
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.placement_store.borrow_mut().direct_allocation_commit(id, host_id);
+        self.placement_store
+            .borrow_mut()
+            .direct_allocation_commit(vec![id], vec![host_id]);
         id
+    }
+
+    /// Switches API to batch mode for building multi-VM requests.
+    /// The subsequent invocations of `spawn_vm_now` will not spawn VM immediately but will add it to the batch.
+    /// After the batch is completed it can be submitted using the `spawn_batch` method.
+    pub fn begin_batch(&mut self) {
+        assert!(!self.batch_mode, "Batch mode is already enabled");
+        self.batch_mode = true;
+    }
+
+    /// Spawns the current batch as a single multi-VM requests and disables the batch mode.
+    /// Returns the IDs of spawned VMs.
+    pub fn spawn_batch(&mut self) -> Vec<u32> {
+        assert!(self.batch_mode, "Batch mode is not enabled");
+        assert!(!self.batch_buffer.is_empty(), "Batch buffer is empty");
+        let mut vm_ids = Vec::new();
+        let scheduler_id = self.batch_buffer[0].scheduler_id;
+        for req in self.batch_buffer.drain(..) {
+            let vm = VirtualMachine::new(
+                req.vm_id,
+                self.ctx.time(),
+                req.lifetime,
+                req.resource_consumer,
+                self.sim_config.clone(),
+            );
+            self.vm_api.borrow_mut().register_new_vm(vm);
+            vm_ids.push(req.vm_id);
+            assert_eq!(
+                req.scheduler_id, scheduler_id,
+                "Requests in batch have different scheduler ids"
+            );
+        }
+        self.ctx
+            .emit_now(AllocationRequest { vm_ids: vm_ids.clone() }, scheduler_id);
+        self.batch_mode = false;
+        vm_ids
     }
 
     /// Sends VM migration request to the specified target host.

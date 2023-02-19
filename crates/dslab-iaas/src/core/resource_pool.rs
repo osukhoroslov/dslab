@@ -1,5 +1,6 @@
 //! Resource pool state.
 
+use std::collections::btree_map::Values;
 use std::collections::BTreeMap;
 
 use crate::core::common::{Allocation, AllocationVerdict};
@@ -7,6 +8,8 @@ use crate::core::common::{Allocation, AllocationVerdict};
 /// Stores host properties (resource capacity) and state (available resources, current allocations).
 #[derive(Clone)]
 pub struct HostInfo {
+    pub id: u32,
+
     pub cpu_total: u32,
     pub memory_total: u64,
 
@@ -17,12 +20,22 @@ pub struct HostInfo {
     pub memory_overcommit: u64,
 
     pub allocations: BTreeMap<u32, Allocation>,
+
+    pub rack_id: Option<u32>,
 }
 
 impl HostInfo {
     /// Creates host info with specified total and available host capacity.
-    pub fn new(cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) -> Self {
+    pub fn new(
+        id: u32,
+        cpu_total: u32,
+        memory_total: u64,
+        cpu_available: u32,
+        memory_available: u64,
+        rack_id: Option<u32>,
+    ) -> Self {
         Self {
+            id,
             cpu_total,
             memory_total,
             cpu_available,
@@ -30,6 +43,7 @@ impl HostInfo {
             cpu_overcommit: 0,
             memory_overcommit: 0,
             allocations: BTreeMap::new(),
+            rack_id,
         }
     }
 }
@@ -46,16 +60,34 @@ impl ResourcePoolState {
     }
 
     /// Adds host to resource pool.
-    pub fn add_host(&mut self, id: u32, cpu_total: u32, memory_total: u64, cpu_available: u32, memory_available: u64) {
+    pub fn add_host(
+        &mut self,
+        id: u32,
+        cpu_total: u32,
+        memory_total: u64,
+        cpu_available: u32,
+        memory_available: u64,
+        rack_id: Option<u32>,
+    ) {
         self.hosts.insert(
             id,
-            HostInfo::new(cpu_total, memory_total, cpu_available, memory_available),
+            HostInfo::new(id, cpu_total, memory_total, cpu_available, memory_available, rack_id),
         );
     }
 
     /// Returns IDs of all hosts.
-    pub fn get_hosts_list(&self) -> Vec<u32> {
+    pub fn get_host_ids(&self) -> Vec<u32> {
         self.hosts.keys().cloned().collect()
+    }
+
+    /// Returns an iterator over all hosts.
+    pub fn get_hosts(&self) -> Values<'_, u32, HostInfo> {
+        self.hosts.values()
+    }
+
+    /// Returns host info by its ID.
+    pub fn get_host(&self, host_id: u32) -> &HostInfo {
+        self.hosts.get(&host_id).unwrap()
     }
 
     /// Returns the number of hosts.

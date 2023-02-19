@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Minimizes the difference between the VM's resource usage and the host's available resources vectors
 /// under the L^2 norm with additional resource weights.
@@ -19,21 +19,21 @@ impl L2NormDiff {
     }
 }
 
-impl VMPlacementAlgorithm for L2NormDiff {
+impl SingleVMPlacementAlgorithm for L2NormDiff {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut min_diff: f64 = f64::MAX;
 
         let mut cpu_weight = 0.;
         let mut memory_weight = 0.;
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             cpu_weight += pool_state.get_cpu_load(host);
             memory_weight += pool_state.get_memory_load(host);
         }
-        cpu_weight /= pool_state.get_hosts_list().len() as f64;
-        memory_weight /= pool_state.get_hosts_list().len() as f64;
+        cpu_weight /= pool_state.get_host_count() as f64;
+        memory_weight /= pool_state.get_host_count() as f64;
 
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host);
                 let total_memory = pool_state.get_total_memory(host);

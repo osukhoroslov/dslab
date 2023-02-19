@@ -7,6 +7,7 @@ use log::warn;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::extensions::azure_dataset_reader::AzureDatasetReader;
 use dslab_iaas::extensions::dataset_reader::DatasetReader;
@@ -56,7 +57,7 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
         );
         hosts.push(host_id);
     }
-    let scheduler_id = cloud_sim.add_scheduler("s", Box::new(BestFit::new()));
+    let scheduler_id = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
 
     log_info!(
         cloud_sim.context(),

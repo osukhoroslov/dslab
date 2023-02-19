@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::config::parse_options;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Uses the most loaded (by actual CPU load) suitable host.
 /// The host load after placement should be less than the specified `threshold`.
@@ -31,7 +31,7 @@ impl Default for BestFitThreshold {
     }
 }
 
-impl VMPlacementAlgorithm for BestFitThreshold {
+impl SingleVMPlacementAlgorithm for BestFitThreshold {
     fn select_host(&self, alloc: &Allocation, _pool_state: &ResourcePoolState, monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut best_cpu_load: f64 = 0.;

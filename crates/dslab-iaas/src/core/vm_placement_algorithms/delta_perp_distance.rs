@@ -4,7 +4,7 @@ use crate::core::common::Allocation;
 use crate::core::common::AllocationVerdict;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
-use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
+use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;
 
 /// Maximizes the improvement (absolute decrease) of the perpendicular distance
 /// between the host's resource usage and resource capacity vectors after the allocation.
@@ -17,11 +17,11 @@ impl DeltaPerpDistance {
     }
 }
 
-impl VMPlacementAlgorithm for DeltaPerpDistance {
+impl SingleVMPlacementAlgorithm for DeltaPerpDistance {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         let mut result: Option<u32> = None;
         let mut max_delta: f64 = f64::MIN;
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host) as f64;
                 let total_memory = pool_state.get_total_memory(host) as f64;
