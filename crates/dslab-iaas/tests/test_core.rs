@@ -139,7 +139,7 @@ fn test_overcommit() {
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    let h = cloud_sim.add_host("h", 200, 20000);
+    let h = cloud_sim.add_host("h", 200, 10000);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
 
     for _ in 1..95 {
@@ -446,7 +446,7 @@ fn test_batch_request() {
 
     assert_eq!(current_time, 11.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.6);
-    assert_eq!(cloud_sim.vm_location(vm_ids[0]), h);
-    assert_eq!(cloud_sim.vm_location(vm_ids[1]), h);
-    assert_eq!(cloud_sim.vm_location(vm_ids[2]), h);
+    assert_eq!(cloud_sim.vm_location(vm_ids[0]), Some(h));
+    assert_eq!(cloud_sim.vm_location(vm_ids[1]), Some(h));
+    assert_eq!(cloud_sim.vm_location(vm_ids[2]), Some(h));
 }
