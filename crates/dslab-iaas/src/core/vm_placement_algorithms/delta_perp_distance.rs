@@ -22,7 +22,7 @@ impl SingleVMPlacementAlgorithm for DeltaPerpDistance {
         let mut result: Option<u32> = None;
         let mut max_delta: f64 = f64::MIN;
         for host in pool_state.get_host_ids() {
-            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host, false) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host) as f64;
                 let total_memory = pool_state.get_total_memory(host) as f64;
                 let mut used_cpu = pool_state.get_allocated_cpu(host) as f64;

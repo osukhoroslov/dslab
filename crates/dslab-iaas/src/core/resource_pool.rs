@@ -96,14 +96,14 @@ impl ResourcePoolState {
     }
 
     /// Checks if the specified allocation is currently possible on the specified host.
-    pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
+    pub fn can_allocate(&self, alloc: &Allocation, host_id: u32, allow_overcommit_cpu: bool) -> AllocationVerdict {
         if !self.hosts.contains_key(&host_id) {
             return AllocationVerdict::HostNotFound;
         }
         if self.hosts[&host_id].memory_available < alloc.memory_usage {
             return AllocationVerdict::NotEnoughMemory;
         }
-        if self.hosts[&host_id].cpu_available < alloc.cpu_usage {
+        if self.hosts[&host_id].cpu_available < alloc.cpu_usage && !allow_overcommit_cpu {
             return AllocationVerdict::NotEnoughCPU;
         }
         AllocationVerdict::Success
