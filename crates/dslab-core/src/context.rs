@@ -202,7 +202,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
     }
 
-    /// This and all other `emit_..._ordered` functions are special variants of normal `emit_...` functions
+    /// This and all other `emit_ordered...` functions are special variants of normal `emit_...` functions
     /// that allow adding events to ordered event deque instead of heap, which may reduce the time
     /// required to get next event. All events inside event deque must be ordered in increasing
     /// order of time, otherwise the simulation will panic.
@@ -533,6 +533,14 @@ impl SimulationContext {
         F: Fn(&Event) -> bool,
     {
         self.sim_state.borrow_mut().cancel_events(pred);
+    }
+
+    /// Same as [`Self::cancel_events`], but ignores events added through `emit_ordered_...` methods.
+    pub fn cancel_heap_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_heap_events(pred);
     }
 
     /// Returns component name by its identifier.

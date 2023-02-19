@@ -165,31 +165,25 @@ impl ServerlessSimulation {
     /// This function provides a way to send invocation requests to a special ordered deque inside
     /// the simulation, which works faster than the default heap.
     /// Returns id of the first invocation if the iterator is not empty, invocations have consecutive ids that follow their order inside the iterator.
-    pub fn send_requests_from_ordered_iter(&mut self, iter: &mut dyn Iterator<Item = RequestData>) -> Option<usize> {
-        if let Some(item) = iter.next() {
+    pub fn send_requests_from_ordered_iter(
+        &mut self,
+        iterator: &mut dyn Iterator<Item = RequestData>,
+    ) -> Option<usize> {
+        let mut iter = iterator.peekable();
+        let mut result = None;
+        if let Some(item) = iter.peek() {
             let mut ir = self.invocation_registry.borrow_mut();
-            let first_id = ir.register_invocation();
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
-                self.ctx.emit_ordered(
-                    InvocationStartEvent {
-                        request: InvocationRequest {
-                            func_id: item.id,
-                            duration: item.duration,
-                            time: item.time,
-                            id: first_id,
-                        },
-                    },
-                    self.controller_id,
-                    item.time - self.sim.time(),
-                );
                 for req in iter {
+                    let id = ir.register_invocation();
+                    result.get_or_insert(id);
                     self.ctx.emit_ordered(
                         InvocationStartEvent {
                             request: InvocationRequest {
                                 func_id: req.id,
                                 duration: req.duration,
                                 time: req.time,
-                                id: ir.register_invocation(),
+                                id,
                             },
                         },
                         self.controller_id,
@@ -197,26 +191,16 @@ impl ServerlessSimulation {
                     );
                 }
             } else {
-                self.ctx.emit(
-                    InvocationStartEvent {
-                        request: InvocationRequest {
-                            func_id: item.id,
-                            duration: item.duration,
-                            time: item.time,
-                            id: first_id,
-                        },
-                    },
-                    self.controller_id,
-                    item.time - self.sim.time(),
-                );
                 for req in iter {
+                    let id = ir.register_invocation();
+                    result.get_or_insert(id);
                     self.ctx.emit(
                         InvocationStartEvent {
                             request: InvocationRequest {
                                 func_id: req.id,
                                 duration: req.duration,
                                 time: req.time,
-                                id: ir.register_invocation(),
+                                id,
                             },
                         },
                         self.controller_id,
@@ -224,9 +208,8 @@ impl ServerlessSimulation {
                     );
                 }
             }
-            return Some(first_id);
         }
-        None
+        result
     }
 
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
