@@ -10,7 +10,7 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
-use crate::core::common::AllocationVerdict;
+use crate::core::common::{Allocation, AllocationVerdict};
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
@@ -82,46 +82,74 @@ impl PlacementStore {
     }
 
     /// Processes direct allocation commit request bypassing the schedulers.
-    pub fn direct_allocation_commit(&mut self, vm_id: u32, host_id: u32) {
-        self.on_allocation_commit_request(vm_id, host_id, None);
+    pub fn direct_allocation_commit(&mut self, vm_ids: Vec<u32>, host_ids: Vec<u32>) {
+        self.on_allocation_commit_request(vm_ids, host_ids, None);
     }
 
     /// Processes allocation commit requests from schedulers.
-    fn on_allocation_commit_request(&mut self, vm_id: u32, host_id: u32, from_scheduler: Option<u32>) {
-        let alloc = self.vm_api.borrow().get_vm_allocation(vm_id);
-        if self.allow_vm_overcommit || self.pool_state.can_allocate(&alloc, host_id) == AllocationVerdict::Success {
-            self.pool_state.allocate(&alloc, host_id);
-            log_debug!(
-                self.ctx,
-                "committed placement of vm {} to host {}",
-                vm_id,
-                self.ctx.lookup_name(host_id)
-            );
-            self.ctx
-                .emit(VmCreateRequest { vm_id }, host_id, self.sim_config.message_delay);
+    fn on_allocation_commit_request(&mut self, vm_ids: Vec<u32>, host_ids: Vec<u32>, from_scheduler: Option<u32>) {
+        let allocations: Vec<Allocation> = vm_ids
+            .iter()
+            .map(|vm_id| self.vm_api.borrow().get_vm_allocation(*vm_id))
+            .collect();
 
+        // check if all placements can be committed
+        let mut can_be_committed = true;
+        let mut pool_state_copy = self.pool_state.clone();
+        for (alloc, &host_id) in allocations.iter().zip(host_ids.iter()) {
+            if self.allow_vm_overcommit || self.pool_state.can_allocate(alloc, host_id) == AllocationVerdict::Success {
+                pool_state_copy.allocate(alloc, host_id);
+            } else {
+                log_debug!(
+                    self.ctx,
+                    "rejected placement of vm {} on host {} due to insufficient resources",
+                    alloc.id,
+                    self.ctx.lookup_name(host_id)
+                );
+                can_be_committed = false;
+                break;
+            }
+        }
+
+        // commit placements or reject request
+        if can_be_committed {
+            for (alloc, &host_id) in allocations.iter().zip(host_ids.iter()) {
+                self.pool_state.allocate(alloc, host_id);
+                log_debug!(
+                    self.ctx,
+                    "committed placement of vm {} to host {}",
+                    alloc.id,
+                    self.ctx.lookup_name(host_id)
+                );
+                self.ctx.emit(
+                    VmCreateRequest { vm_id: alloc.id },
+                    host_id,
+                    self.sim_config.message_delay,
+                );
+            }
             for scheduler in self.schedulers.iter() {
                 self.ctx.emit(
-                    AllocationCommitSucceeded { vm_id, host_id },
+                    AllocationCommitSucceeded {
+                        vm_ids: vm_ids.clone(),
+                        host_ids: host_ids.clone(),
+                    },
                     *scheduler,
                     self.sim_config.message_delay,
                 );
             }
         } else {
-            log_debug!(
-                self.ctx,
-                "rejected placement of vm {} on host {} due to insufficient resources",
-                vm_id,
-                self.ctx.lookup_name(host_id)
-            );
+            log_debug!(self.ctx, "rejected allocation commit request with {} vms", vm_ids.len());
             if let Some(scheduler) = from_scheduler {
                 self.ctx.emit(
-                    AllocationCommitFailed { vm_id, host_id },
+                    AllocationCommitFailed {
+                        vm_ids: vm_ids.clone(),
+                        host_ids,
+                    },
                     scheduler,
                     self.sim_config.message_delay,
                 );
                 self.ctx.emit(
-                    AllocationRequest { vm_ids: vec![vm_id] },
+                    AllocationRequest { vm_ids },
                     scheduler,
                     self.sim_config.message_delay + self.sim_config.allocation_retry_period,
                 );
@@ -164,8 +192,8 @@ impl PlacementStore {
 impl EventHandler for PlacementStore {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            AllocationCommitRequest { vm_id, host_id } => {
-                self.on_allocation_commit_request(vm_id, host_id, Some(event.src))
+            AllocationCommitRequest { vm_ids, host_ids } => {
+                self.on_allocation_commit_request(vm_ids, host_ids, Some(event.src))
             }
             AllocationFailed { vm_id, host_id } => {
                 self.on_allocation_failed(vm_id, host_id)

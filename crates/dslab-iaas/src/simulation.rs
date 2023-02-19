@@ -260,7 +260,9 @@ impl CloudSimulation {
             self.sim_config.clone(),
         );
         self.vm_api.borrow_mut().register_new_vm(vm);
-        self.placement_store.borrow_mut().direct_allocation_commit(id, host_id);
+        self.placement_store
+            .borrow_mut()
+            .direct_allocation_commit(vec![id], vec![host_id]);
         id
     }
 
@@ -278,7 +280,7 @@ impl CloudSimulation {
         assert!(self.batch_mode, "Batch mode is not enabled");
         assert!(!self.batch_buffer.is_empty(), "Batch buffer is empty");
         let mut vm_ids = Vec::new();
-        let mut scheduler_map = HashMap::<u32, Vec<u32>>::new();
+        let scheduler_id = self.batch_buffer[0].scheduler_id;
         for req in self.batch_buffer.drain(..) {
             let vm = VirtualMachine::new(
                 req.vm_id,
@@ -289,12 +291,13 @@ impl CloudSimulation {
             );
             self.vm_api.borrow_mut().register_new_vm(vm);
             vm_ids.push(req.vm_id);
-
-            scheduler_map.entry(req.scheduler_id).or_default().push(req.vm_id);
+            assert_eq!(
+                req.scheduler_id, scheduler_id,
+                "Requests in batch have different scheduler ids"
+            );
         }
-        for (scheduler_id, vm_ids) in scheduler_map.into_iter() {
-            self.ctx.emit_now(AllocationRequest { vm_ids }, scheduler_id);
-        }
+        self.ctx
+            .emit_now(AllocationRequest { vm_ids: vm_ids.clone() }, scheduler_id);
         self.batch_mode = false;
         vm_ids
     }

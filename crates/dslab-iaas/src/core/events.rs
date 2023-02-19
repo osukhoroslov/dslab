@@ -12,20 +12,20 @@ pub mod allocation {
 
     #[derive(Serialize)]
     pub struct AllocationCommitRequest {
-        pub vm_id: u32,
-        pub host_id: u32,
+        pub vm_ids: Vec<u32>,
+        pub host_ids: Vec<u32>,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitSucceeded {
-        pub vm_id: u32,
-        pub host_id: u32,
+        pub vm_ids: Vec<u32>,
+        pub host_ids: Vec<u32>,
     }
 
     #[derive(Serialize)]
     pub struct AllocationCommitFailed {
-        pub vm_id: u32,
-        pub host_id: u32,
+        pub vm_ids: Vec<u32>,
+        pub host_ids: Vec<u32>,
     }
 
     #[derive(Serialize)]

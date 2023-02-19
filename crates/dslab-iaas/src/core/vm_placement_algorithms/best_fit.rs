@@ -21,7 +21,7 @@ impl SingleVMPlacementAlgorithm for BestFit {
         let mut result: Option<u32> = None;
         let mut min_available_cpu: u32 = u32::MAX;
 
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success
                 && pool_state.get_available_cpu(host) < min_available_cpu
             {

@@ -22,7 +22,7 @@ impl SingleVMPlacementAlgorithm for DotProduct {
         let mut result: Option<u32> = None;
         let mut max_product: f64 = f64::MIN;
 
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let cpu_product = pool_state.get_available_cpu(host) * alloc.cpu_usage;
                 let memory_product = pool_state.get_available_memory(host) * alloc.memory_usage;

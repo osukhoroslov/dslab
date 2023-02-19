@@ -25,14 +25,14 @@ impl SingleVMPlacementAlgorithm for WeightedDotProduct {
 
         let mut cpu_weight = 0.;
         let mut memory_weight = 0.;
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             cpu_weight += pool_state.get_cpu_load(host);
             memory_weight += pool_state.get_memory_load(host);
         }
         cpu_weight /= pool_state.get_host_count() as f64;
         memory_weight /= pool_state.get_host_count() as f64;
 
-        for host in pool_state.get_hosts_list() {
+        for host in pool_state.get_host_ids() {
             if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
                 let cpu_product = (pool_state.get_available_cpu(host) * alloc.cpu_usage) as f64;
                 let memory_product = (pool_state.get_available_memory(host) * alloc.memory_usage) as f64;

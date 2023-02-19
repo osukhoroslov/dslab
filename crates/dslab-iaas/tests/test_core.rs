@@ -11,7 +11,6 @@ use dslab_iaas::core::vm_placement_algorithm::{SingleVMPlacementAlgorithm, VMPla
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::core::vm_placement_algorithms::best_fit_threshold::BestFitThreshold;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;
-use dslab_iaas::core::vm_placement_algorithms::multi_vm_dummy::DummyMultiVMPlacement;
 use dslab_iaas::simulation::CloudSimulation;
 
 fn name_wrapper(file_name: &str) -> String {
@@ -402,7 +401,7 @@ fn test_batch_request() {
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 50, 50);
-    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()));
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));
 
     cloud_sim.begin_batch();
     cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 100.0, None, s);

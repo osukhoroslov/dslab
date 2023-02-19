@@ -19,7 +19,7 @@ impl FirstFit {
 impl SingleVMPlacementAlgorithm for FirstFit {
     fn select_host(&self, alloc: &Allocation, pool_state: &ResourcePoolState, _monitoring: &Monitoring) -> Option<u32> {
         pool_state
-            .get_hosts_list()
+            .get_host_ids()
             .into_iter()
             .find(|&host| pool_state.can_allocate(alloc, host) == AllocationVerdict::Success)
     }

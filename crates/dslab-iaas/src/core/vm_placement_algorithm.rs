@@ -10,8 +10,8 @@ use crate::core::vm_placement_algorithms::cosine_similarity::CosineSimilarity;
 use crate::core::vm_placement_algorithms::delta_perp_distance::DeltaPerpDistance;
 use crate::core::vm_placement_algorithms::dot_product::DotProduct;
 use crate::core::vm_placement_algorithms::first_fit::FirstFit;
-use crate::core::vm_placement_algorithms::multi_vm_dummy::DummyMultiVMPlacement;
 use crate::core::vm_placement_algorithms::norm_diff::L2NormDiff;
+use crate::core::vm_placement_algorithms::rack_anti_affinity::RackAntiAffinity;
 use crate::core::vm_placement_algorithms::weighted_dot_product::WeightedDotProduct;
 use crate::core::vm_placement_algorithms::worst_fit::WorstFit;
 
@@ -51,7 +51,7 @@ pub trait SingleVMPlacementAlgorithm {
 pub trait MultiVMPlacementAlgorithm {
     fn select_hosts(
         &self,
-        alloc: &[Allocation],
+        allocations: &[Allocation],
         pool_state: &ResourcePoolState,
         monitoring: &Monitoring,
     ) -> Option<Vec<u32>>;
@@ -69,7 +69,7 @@ pub fn placement_algorithm_resolver(config_str: String) -> VMPlacementAlgorithm 
         "WeightedDotProduct" => VMPlacementAlgorithm::single(WeightedDotProduct::new()),
         "L2NormDiff" => VMPlacementAlgorithm::single(L2NormDiff::new()),
         "DeltaPerpDistance" => VMPlacementAlgorithm::single(DeltaPerpDistance::new()),
-        "Dummy" => VMPlacementAlgorithm::multi(DummyMultiVMPlacement::new()),
+        "RackAntiAffinity" => VMPlacementAlgorithm::multi(RackAntiAffinity::new()),
         _ => panic!("Can't resolve: {}", config_str),
     }
 }
