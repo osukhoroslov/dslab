@@ -305,7 +305,9 @@ impl CloudSimulation {
     /// Sends VM migration request to the specified target host.
     pub fn migrate_vm_to_host(&mut self, vm_id: u32, target_host: u32) {
         let vm_api = self.vm_api.borrow();
-        let source_host = vm_api.find_host_by_vm(vm_id);
+        let source_host = vm_api
+            .find_host_by_vm(vm_id)
+            .unwrap_or_else(|| panic!("Cannot migrate VM {}: source host is not found", vm_id));
         self.ctx.emit(
             MigrationRequest { source_host, vm_id },
             target_host,
@@ -437,7 +439,7 @@ impl CloudSimulation {
     }
 
     /// Returns the ID of host that runs the specified VM.
-    pub fn vm_location(&self, vm_id: u32) -> u32 {
+    pub fn vm_location(&self, vm_id: u32) -> Option<u32> {
         self.vm_api.borrow().find_host_by_vm(vm_id)
     }
 

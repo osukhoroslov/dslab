@@ -97,7 +97,7 @@ impl PlacementStore {
         let mut can_be_committed = true;
         let mut pool_state_copy = self.pool_state.clone();
         for (alloc, &host_id) in allocations.iter().zip(host_ids.iter()) {
-            if self.allow_vm_overcommit || self.pool_state.can_allocate(alloc, host_id) == AllocationVerdict::Success {
+            if self.pool_state.can_allocate(alloc, host_id, self.allow_vm_overcommit) == AllocationVerdict::Success {
                 pool_state_copy.allocate(alloc, host_id);
             } else {
                 log_debug!(

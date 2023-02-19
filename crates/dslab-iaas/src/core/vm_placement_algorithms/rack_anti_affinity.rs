@@ -34,7 +34,7 @@ impl MultiVMPlacementAlgorithm for RackAntiAffinity {
                     &host
                         .rack_id
                         .expect("Rack is not set for host, cannot execute rack-aware placement algorithm"),
-                ) && pool_state.can_allocate(alloc, host.id) == AllocationVerdict::Success
+                ) && pool_state.can_allocate(alloc, host.id, false) == AllocationVerdict::Success
             }) {
                 used_racks.insert(host.rack_id.unwrap());
                 result.push(host.id);

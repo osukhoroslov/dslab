@@ -34,7 +34,7 @@ impl SingleVMPlacementAlgorithm for L2NormDiff {
         memory_weight /= pool_state.get_host_count() as f64;
 
         for host in pool_state.get_host_ids() {
-            if pool_state.can_allocate(alloc, host) == AllocationVerdict::Success {
+            if pool_state.can_allocate(alloc, host, false) == AllocationVerdict::Success {
                 let total_cpu = pool_state.get_total_cpu(host);
                 let total_memory = pool_state.get_total_memory(host);
                 let available_cpu = pool_state.get_available_cpu(host);

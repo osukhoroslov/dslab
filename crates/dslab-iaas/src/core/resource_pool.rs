@@ -96,15 +96,16 @@ impl ResourcePoolState {
     }
 
     /// Checks if the specified allocation is currently possible on the specified host.
-    pub fn can_allocate(&self, alloc: &Allocation, host_id: u32) -> AllocationVerdict {
-        if !self.hosts.contains_key(&host_id) {
+    pub fn can_allocate(&self, alloc: &Allocation, host_id: u32, allow_cpu_overcommit: bool) -> AllocationVerdict {
+        if let Some(host) = self.hosts.get(&host_id) {
+            if host.cpu_available < alloc.cpu_usage && !allow_cpu_overcommit {
+                return AllocationVerdict::NotEnoughCPU;
+            }
+            if host.memory_available < alloc.memory_usage {
+                return AllocationVerdict::NotEnoughMemory;
+            }
+        } else {
             return AllocationVerdict::HostNotFound;
-        }
-        if self.hosts[&host_id].cpu_available < alloc.cpu_usage {
-            return AllocationVerdict::NotEnoughCPU;
-        }
-        if self.hosts[&host_id].memory_available < alloc.memory_usage {
-            return AllocationVerdict::NotEnoughMemory;
         }
         AllocationVerdict::Success
     }

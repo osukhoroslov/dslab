@@ -21,6 +21,6 @@ impl SingleVMPlacementAlgorithm for FirstFit {
         pool_state
             .get_host_ids()
             .into_iter()
-            .find(|&host| pool_state.can_allocate(alloc, host) == AllocationVerdict::Success)
+            .find(|&host| pool_state.can_allocate(alloc, host, false) == AllocationVerdict::Success)
     }
 }
