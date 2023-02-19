@@ -136,7 +136,7 @@ impl PeftScheduler {
                     resource,
                     &task_finish_times,
                     &scheduled_tasks,
-                    &mut memory_usage,
+                    &memory_usage,
                     &data_locations,
                     &task_locations,
                     &self.data_transfer_strategy,

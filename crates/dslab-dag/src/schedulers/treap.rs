@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
@@ -139,7 +141,7 @@ impl Node {
 }
 
 pub struct Treap {
-    root: Option<Box<Node>>,
+    root: Cell<Option<Box<Node>>>,
     rand: ThreadRng,
 }
 
@@ -148,7 +150,7 @@ impl Treap {
         let mut rand = rand::thread_rng();
         let priority = rand.gen();
         Self {
-            root: Some(Box::new(Node::new(0, f64::MIN, f64::MAX, priority))),
+            root: Cell::new(Some(Box::new(Node::new(0, f64::MIN, f64::MAX, priority)))),
             rand,
         }
     }
@@ -157,27 +159,36 @@ impl Treap {
         if l >= r {
             return;
         }
-        let (p1, p23) = Node::split_at(self.root.take(), l, &mut self.rand);
+        let (p1, p23) = Node::split_at(self.root.get_mut().take(), l, &mut self.rand);
         let (mut p2, p3) = Node::split_at(p23, r, &mut self.rand);
         p2.as_mut().unwrap().modify(value);
-        self.root = Node::merge(Node::merge(p1, p2), p3);
+        self.root.set(Node::merge(Node::merge(p1, p2), p3));
     }
 
-    pub fn max(&mut self, l: f64, r: f64) -> i64 {
+    pub fn max(&self, l: f64, r: f64) -> i64 {
         if l >= r {
             return 0;
         }
-        self.root.as_mut().unwrap().max(l, r)
+        let mut root = self.root.take();
+        let result = root.as_mut().unwrap().max(l, r);
+        self.root.set(root);
+        result
     }
 
     #[allow(dead_code)]
     fn nodes(&self) -> usize {
-        self.root.as_ref().unwrap().nodes()
+        let root = self.root.take();
+        let result = root.as_ref().unwrap().nodes();
+        self.root.set(root);
+        result
     }
 
     #[allow(dead_code)]
     fn height(&self) -> usize {
-        self.root.as_ref().unwrap().height()
+        let root = self.root.take();
+        let result = root.as_ref().unwrap().height();
+        self.root.set(root);
+        result
     }
 }
 

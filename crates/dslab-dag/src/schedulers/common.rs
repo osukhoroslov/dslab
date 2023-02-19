@@ -58,7 +58,7 @@ pub fn evaluate_assignment(
     resource: usize,
     task_finish_times: &[f64],
     scheduled_tasks: &[Vec<BTreeSet<ScheduledTask>>],
-    memory_usage: &mut [Treap],
+    memory_usage: &[Treap],
     data_location: &HashMap<usize, Id>,
     task_location: &HashMap<usize, Id>,
     data_transfer_strategy: &DataTransferStrategy,
@@ -173,7 +173,7 @@ pub fn evaluate_assignment(
         need_cores,
         need_memory,
         resources[resource].compute.borrow().memory_total(),
-        &mut memory_usage[resource],
+        &memory_usage[resource],
     );
 
     assert!(cores.len() >= need_cores as usize);
@@ -190,7 +190,7 @@ fn find_earliest_slot(
     need_cores: u32,
     need_memory: u64,
     total_memory: u64,
-    memory_usage: &mut Treap,
+    memory_usage: &Treap,
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
