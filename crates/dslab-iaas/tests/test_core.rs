@@ -143,15 +143,17 @@ fn test_overcommit() {
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
 
     for _ in 1..95 {
-        cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.01), 1000.0, None, s);
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.5), 1000.0, None, s);
         cloud_sim.step_for_duration(1.);
     }
 
     cloud_sim.step_for_duration(5.);
     let current_time = cloud_sim.current_time();
     assert_eq!(current_time, 99.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_allocated(), 200.);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_allocated(), 9400.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.47);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_load(current_time), 0.0047);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_load(current_time), 0.47);
 }
 
 #[test]
@@ -161,18 +163,21 @@ fn test_no_memory_overcommit() {
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
-    let h = cloud_sim.add_host("h", 199, 199);
-    let s = cloud_sim.add_scheduler("s", Box::new(BestFitThreshold::new(1.0)));
+    let h = cloud_sim.add_host("h", 200, 200);
+    let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
 
-    let vm1 = cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.01), 1000.0, None, s);
+    let vm1 = cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(120, 100, 0.01, 0.01), 1000.0, None, s);
     cloud_sim.step_for_duration(1.);
-    let vm2 = cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.01), 1000.0, None, s);
+    let vm2 = cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(120, 100, 0.01, 0.01), 1000.0, None, s);
+    cloud_sim.step_for_duration(1.);
+    let vm3 = cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(120, 100, 0.01, 0.01), 1000.0, None, s);
 
     cloud_sim.step_for_duration(5.);
     let current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 6.);
+    assert_eq!(current_time, 7.);
     assert_eq!(cloud_sim.vm_location(vm1), Some(h));
-    assert_eq!(cloud_sim.vm_location(vm2), None);
+    assert_eq!(cloud_sim.vm_location(vm2), Some(h));
+    assert_eq!(cloud_sim.vm_location(vm3), None);
 }
 
 pub struct BadScheduler {
