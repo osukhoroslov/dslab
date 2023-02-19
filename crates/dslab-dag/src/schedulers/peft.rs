@@ -171,7 +171,7 @@ impl PeftScheduler {
                     task_id,
                 ));
             }
-            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory as i64);
+            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory);
             task_finish_times[task_id] = best_finish;
             result.push((
                 best_start,

@@ -121,7 +121,7 @@ impl DlsScheduler {
             for &core in best_cores.iter() {
                 scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(best_start, best_finish, task_id));
             }
-            memory_usage[resource].add(best_start, best_finish, dag.get_task(task_id).memory as i64);
+            memory_usage[resource].add(best_start, best_finish, dag.get_task(task_id).memory);
             task_finish_times[task_id] = best_finish;
             scheduled[task_id] = true;
             result.push((

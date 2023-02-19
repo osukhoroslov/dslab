@@ -104,7 +104,7 @@ impl LookaheadScheduler {
                         task_id,
                     ));
                 }
-                memory_usage[resource].add(start_time, finish_time, dag.get_task(task_id).memory as i64);
+                memory_usage[resource].add(start_time, finish_time, dag.get_task(task_id).memory);
                 task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
                 let mut output_time: f64 = 0.;
@@ -171,7 +171,7 @@ impl LookaheadScheduler {
                     for &core in cores.iter() {
                         scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(start, finish, child));
                     }
-                    memory_usage[resource].add(start, finish, dag.get_task(child).memory as i64);
+                    memory_usage[resource].add(start, finish, dag.get_task(child).memory);
                     task_finish_times[child] = finish;
                     scheduled[child] = true;
                     output_time = 0.;
@@ -194,10 +194,10 @@ impl LookaheadScheduler {
                     for &core in cores.iter() {
                         assert!(scheduled_tasks[resource][core as usize].remove(&scheduled_task));
                     }
-                    memory_usage[resource].add(
+                    memory_usage[resource].remove(
                         scheduled_task.start_time,
                         scheduled_task.finish_time,
-                        -(dag.get_task(scheduled_task.task).memory as i64),
+                        dag.get_task(scheduled_task.task).memory,
                     );
                     scheduled[scheduled_task.task] = false;
                 }

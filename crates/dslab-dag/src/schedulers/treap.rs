@@ -155,7 +155,7 @@ impl Treap {
         }
     }
 
-    pub fn add(&mut self, l: f64, r: f64, value: i64) {
+    pub fn add_i64(&mut self, l: f64, r: f64, value: i64) {
         if l >= r {
             return;
         }
@@ -165,14 +165,22 @@ impl Treap {
         self.root.set(Node::merge(Node::merge(p1, p2), p3));
     }
 
-    pub fn max(&self, l: f64, r: f64) -> i64 {
+    pub fn add(&mut self, l: f64, r: f64, value: u64) {
+        self.add_i64(l, r, value as i64);
+    }
+
+    pub fn remove(&mut self, l: f64, r: f64, value: u64) {
+        self.add_i64(l, r, -(value as i64));
+    }
+
+    pub fn max(&self, l: f64, r: f64) -> u64 {
         if l >= r {
             return 0;
         }
         let mut root = self.root.take();
         let result = root.as_mut().unwrap().max(l, r);
         self.root.set(root);
-        result
+        result as u64
     }
 
     #[allow(dead_code)]
@@ -206,7 +214,7 @@ mod tests {
         f64_values.sort_by(|a, b| a.total_cmp(b));
 
         let mut treap = Treap::new();
-        let mut segs: Vec<(f64, f64, i64)> = Vec::new();
+        let mut segs: Vec<(f64, f64, u64)> = Vec::new();
         segs.push((f64::MIN, f64::MAX, 0));
 
         for _ in 0..10000 {
@@ -230,7 +238,7 @@ mod tests {
 
             assert_eq!(segs_max, treap_max);
 
-            let md = (rand.gen::<u64>() % 100) as i64;
+            let md = rand.gen::<u64>() % 100;
 
             treap.add(l, r, md);
 
@@ -287,7 +295,7 @@ mod tests {
             if l > r {
                 std::mem::swap(&mut l, &mut r);
             }
-            treap.add(l, r, (rand.gen::<u64>() % 100) as i64);
+            treap.add(l, r, rand.gen::<u64>() % 100);
         }
 
         println!("{} {}", treap.nodes(), treap.height());
