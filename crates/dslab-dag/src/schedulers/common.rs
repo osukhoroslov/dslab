@@ -171,9 +171,9 @@ pub fn evaluate_assignment(
         start_time,
         task_exec_time,
         need_cores,
-        &mut memory_usage[resource],
         need_memory,
         resources[resource].compute.borrow().memory_total(),
+        &mut memory_usage[resource],
     );
 
     assert!(cores.len() >= need_cores as usize);
@@ -188,9 +188,9 @@ fn find_earliest_slot(
     mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
-    memory_usage: &mut Treap,
     need_memory: u64,
-    available_memory: u64,
+    total_memory: u64,
+    memory_usage: &mut Treap,
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
@@ -208,7 +208,7 @@ fn find_earliest_slot(
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
-        if memory_usage.max(possible_start, possible_start + task_exec_time) as u64 + need_memory > available_memory {
+        if memory_usage.max(possible_start, possible_start + task_exec_time) as u64 + need_memory > total_memory {
             continue;
         }
 

@@ -170,10 +170,12 @@ impl Treap {
         self.root.as_mut().unwrap().max(l, r)
     }
 
+    #[allow(dead_code)]
     fn nodes(&self) -> usize {
         self.root.as_ref().unwrap().nodes()
     }
 
+    #[allow(dead_code)]
     fn height(&self) -> usize {
         self.root.as_ref().unwrap().height()
     }
