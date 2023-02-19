@@ -143,7 +143,7 @@ fn test_overcommit() {
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
 
     for _ in 1..95 {
-        cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.5), 1000.0, None, s);
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_const_load(100, 100, 0.01, 0.75), 1000.0, None, s);
         cloud_sim.step_for_duration(1.);
     }
 
@@ -153,7 +153,7 @@ fn test_overcommit() {
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_allocated(), 200.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_allocated(), 9400.);
     assert_eq!(cloud_sim.host(h).borrow_mut().get_cpu_load(current_time), 0.47);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_load(current_time), 0.47);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_memory_load(current_time), 0.705);
 }
 
 #[test]
