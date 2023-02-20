@@ -4,8 +4,8 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 
 struct Node {
-    value: i64,
-    mx: i64,
+    value: u64,
+    mx: u64,
     md: i64,
     l: f64,
     r: f64,
@@ -17,7 +17,7 @@ struct Node {
 }
 
 impl Node {
-    fn new(value: i64, l: f64, r: f64, priority: u64) -> Self {
+    fn new(value: u64, l: f64, r: f64, priority: u64) -> Self {
         Self {
             value,
             mx: value,
@@ -33,8 +33,8 @@ impl Node {
     }
 
     fn modify(&mut self, m: i64) {
-        self.value += m;
-        self.mx += m;
+        self.value = (self.value as i64 + m) as u64;
+        self.mx = (self.mx as i64 + m) as u64;
         self.md += m;
     }
 
@@ -106,7 +106,7 @@ impl Node {
         }
     }
 
-    fn max(&mut self, l: f64, r: f64) -> i64 {
+    fn max(&mut self, l: f64, r: f64) -> u64 {
         if self.sr <= l || self.sl >= r {
             0
         } else if l <= self.sl && self.sr <= r {
@@ -180,7 +180,7 @@ impl Treap {
         let mut root = self.root.take();
         let result = root.as_mut().unwrap().max(l, r);
         self.root.set(root);
-        result as u64
+        result
     }
 
     #[allow(dead_code)]
@@ -236,11 +236,21 @@ mod tests {
                 segs_max = segs_max.max(x);
             }
 
+            let mut segs_min = i64::MAX as u64;
+            for &(sl, sr, x) in segs.iter() {
+                if sr <= l || sl >= r {
+                    continue;
+                }
+                segs_min = segs_min.min(x);
+            }
+
             assert_eq!(segs_max, treap_max);
 
-            let md = rand.gen::<u64>() % 100;
-
-            treap.add(l, r, md);
+            let md = if rand.gen::<bool>() && segs_min > 0 {
+                -((rand.gen::<u64>() % (segs_min + 1)) as i64)
+            } else {
+                (rand.gen::<u64>() % 100) as i64
+            };
 
             let mut new_segs = Vec::new();
             for (sl, sr, x) in segs {
@@ -252,7 +262,7 @@ mod tests {
 
                 if l <= sl && sr <= r {
                     // [sl, sr] inside [l, r]
-                    new_segs.push((sl, sr, x + md));
+                    new_segs.push((sl, sr, ((x as i64) + md) as u64));
                 } else if sl <= l && r <= sr {
                     // [l, r] inside [sl, sr]
                     if sl != l {
@@ -261,22 +271,28 @@ mod tests {
                     if r != sr {
                         new_segs.push((r, sr, x));
                     }
-                    new_segs.push((l, r, x + md));
+                    new_segs.push((l, r, ((x as i64) + md) as u64));
                 } else if sl <= l && sr <= r {
                     // intersect
                     if sl != l {
                         new_segs.push((sl, l, x));
                     }
-                    new_segs.push((l, sr, x + md));
+                    new_segs.push((l, sr, ((x as i64) + md) as u64));
                 } else if l <= sl && r <= sr {
                     // intersect
-                    new_segs.push((sl, r, x + md));
+                    new_segs.push((sl, r, ((x as i64) + md) as u64));
                     if r != sr {
                         new_segs.push((r, sr, x));
                     }
                 } else {
                     unreachable!();
                 }
+            }
+
+            if md < 0 {
+                treap.remove(l, r, (-md) as u64);
+            } else {
+                treap.add(l, r, md as u64);
             }
 
             segs = new_segs;

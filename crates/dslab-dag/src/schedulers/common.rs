@@ -208,7 +208,7 @@ fn find_earliest_slot(
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
-        if memory_usage.max(possible_start, possible_start + task_exec_time) as u64 + need_memory > total_memory {
+        if memory_usage.max(possible_start, possible_start + task_exec_time) + need_memory > total_memory {
             continue;
         }
 
