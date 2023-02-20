@@ -50,23 +50,17 @@ impl DlsScheduler {
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_static_levels[b].total_cmp(&task_static_levels[a]));
 
-        let mut scheduled_tasks = resources
-            .iter()
-            .map(|resource| {
-                (0..resource.cores_available)
-                    .map(|_| BTreeSet::<ScheduledTask>::new())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        let mut task_finish_times = vec![0.; task_count];
         let mut scheduled = vec![false; task_count];
-
+        let mut task_finish_times = vec![0.; task_count];
+        let mut scheduled_tasks: Vec<Vec<BTreeSet<ScheduledTask>>> = resources
+            .iter()
+            .map(|resource| (0..resource.cores_available).map(|_| BTreeSet::new()).collect())
+            .collect();
+        let mut memory_usage: Vec<Treap> = (0..resources.len()).map(|_| Treap::new()).collect();
         let mut data_locations: HashMap<usize, Id> = HashMap::new();
         let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
         let mut result: Vec<(f64, Action)> = Vec::new();
-
-        let mut memory_usage = (0..resources.len()).map(|_| Treap::new()).collect::<Vec<_>>();
 
         for _ in 0..task_ids.len() {
             // stores (task_id, resource) pair with the best dynamic level value
@@ -118,12 +112,17 @@ impl DlsScheduler {
 
             let (task_id, resource) = best_pair.unwrap();
 
+            scheduled[task_id] = true;
+            task_finish_times[task_id] = best_finish;
             for &core in best_cores.iter() {
                 scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(best_start, best_finish, task_id));
             }
             memory_usage[resource].add(best_start, best_finish, dag.get_task(task_id).memory);
-            task_finish_times[task_id] = best_finish;
-            scheduled[task_id] = true;
+            for &output in dag.get_task(task_id).outputs.iter() {
+                data_locations.insert(output, resources[resource].id);
+            }
+            task_locations.insert(task_id, resources[resource].id);
+
             result.push((
                 best_start,
                 Action::ScheduleTaskOnCores {
@@ -133,10 +132,6 @@ impl DlsScheduler {
                     expected_span: Some(TimeSpan::new(best_start, best_finish)),
                 },
             ));
-            for &output in dag.get_task(task_id).outputs.iter() {
-                data_locations.insert(output, resources[resource].id);
-            }
-            task_locations.insert(task_id, resources[resource].id);
         }
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
