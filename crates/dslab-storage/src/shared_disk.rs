@@ -16,9 +16,9 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 
-use crate::bandwidth::{ConstantThroughputFactor, ThroughputFactorFunction};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
+use crate::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
 
 #[derive(Clone)]
@@ -59,8 +59,8 @@ impl SharedDisk {
             used: 0,
             read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth),
             write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth),
-            read_throughput_factor_function: boxed!(ConstantThroughputFactor::new(1.)),
-            write_throughput_factor_function: boxed!(ConstantThroughputFactor::new(1.)),
+            read_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
+            write_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -189,6 +189,7 @@ impl Storage for SharedDisk {
 
             let throughput_factor = self.write_throughput_factor_function.get_factor(size, &mut self.ctx);
             let corrected_size = size as f64 / throughput_factor;
+            log_debug!(self.ctx, "Corrected size is {}", corrected_size,);
 
             self.write_throughput_model.insert(
                 self.ctx.time(),
