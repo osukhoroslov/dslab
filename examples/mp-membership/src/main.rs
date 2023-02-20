@@ -50,7 +50,7 @@ fn init_logger(level: LevelFilter) {
 
 fn build_system(config: &TestConfig) -> System {
     let mut sys = System::new(config.seed);
-    sys.network().borrow_mut().set_delays(0.01, 0.1);
+    sys.network().set_delays(0.01, 0.1);
 
     for n in 0..config.process_count {
         let node_id = format!("{}", &n);
@@ -65,8 +65,8 @@ fn build_system(config: &TestConfig) -> System {
 }
 
 fn recover_node(node_id: &str, sys: &mut System, config: &TestConfig) {
+    sys.recover_node(node_id);
     let process_id = format!("{}", node_id);
-    sys.add_node(node_id);
     let process = config.process_factory.build((node_id,), config.seed);
     sys.add_process(&process_id, boxed!(process), node_id);
 }
@@ -123,7 +123,7 @@ fn test_simple(config: &TestConfig) -> TestResult {
     for process in sys.process_names() {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     let group = sys.process_names().into_iter().collect();
@@ -141,7 +141,7 @@ fn test_random_seed(config: &TestConfig) -> TestResult {
         };
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
         group.push(process);
     }
@@ -160,7 +160,7 @@ fn test_node_join(config: &TestConfig) -> TestResult {
         if *process != new_process {
             sys.send_local_message(
                 &process,
-                Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+                Message::json("JOIN", &JoinMessage { seed }),
             );
         }
     }
@@ -169,7 +169,7 @@ fn test_node_join(config: &TestConfig) -> TestResult {
     // node joins the system
     sys.send_local_message(
         &new_process,
-        Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+        Message::json("JOIN", &JoinMessage { seed }),
     );
     group.push(new_process);
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -185,7 +185,7 @@ fn test_node_leave(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -194,7 +194,7 @@ fn test_node_leave(config: &TestConfig) -> TestResult {
     let left_process = group.remove(rand.gen_range(0..group.len()));
     sys.send_local_message(
         &left_process,
-        Message::new("LEAVE", &serde_json::to_string(&LeaveMessage {}).unwrap()),
+        Message::json("LEAVE", &LeaveMessage {}),
     );
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
@@ -209,7 +209,7 @@ fn test_node_crash(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -230,7 +230,7 @@ fn test_seed_node_crash(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -251,7 +251,7 @@ fn test_node_crash_recover(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -265,7 +265,7 @@ fn test_node_crash_recover(config: &TestConfig) -> TestResult {
     recover_node(&crashed_node, &mut sys, &config);
     sys.send_local_message(
         &crashed_node,
-        Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+        Message::json("JOIN", &JoinMessage { seed }),
     );
 
     group.push(crashed_node);
@@ -282,14 +282,14 @@ fn test_node_offline(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node goes offline
     let offline_node = group.remove(rand.gen_range(0..group.len()));
-    sys.network().borrow_mut().disconnect_node(&offline_node);
+    sys.network().disconnect_node(&offline_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -303,14 +303,14 @@ fn test_seed_node_offline(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // seed node goes offline
     group.remove(0);
-    sys.network().borrow_mut().disconnect_node(&seed);
+    sys.network().disconnect_node(&seed);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -324,18 +324,18 @@ fn test_node_offline_recover(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node goes offline
     let offline_node = group.remove(rand.gen_range(0..group.len()));
-    sys.network().borrow_mut().disconnect_node(&offline_node);
+    sys.network().disconnect_node(&offline_node);
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node goes back online
-    sys.network().borrow_mut().connect_node(&offline_node);
+    sys.network().connect_node(&offline_node);
     group.push(offline_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
@@ -350,14 +350,14 @@ fn test_network_partition(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // network is partitioned
     let (group1, group2): (Vec<_>, Vec<_>) = group.iter().map(|s| &**s).partition(|_| rand.gen_range(0.0..1.0) > 0.6);
-    sys.network().borrow_mut().make_partition(&group1, &group2);
+    sys.network().make_partition(&group1, &group2);
     step_until_stabilized(&mut sys, group1.into_iter().map(String::from).collect())?;
     step_until_stabilized(&mut sys, group2.into_iter().map(String::from).collect())
 }
@@ -372,19 +372,19 @@ fn test_network_partition_recover(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // network is partitioned
     let (group1, group2): (Vec<_>, Vec<_>) = group.iter().map(|s| &**s).partition(|_| rand.gen_range(0.0..1.0) > 0.6);
-    sys.network().borrow_mut().make_partition(&group1, &group2);
+    sys.network().make_partition(&group1, &group2);
     step_until_stabilized(&mut sys, group1.into_iter().map(String::from).collect())?;
     step_until_stabilized(&mut sys, group2.into_iter().map(String::from).collect())?;
 
     // network is recovered
-    sys.network().borrow_mut().reset_network();
+    sys.network().reset_network();
     step_until_stabilized(&mut sys, group.into_iter().map(String::from).collect())
 }
 
@@ -398,7 +398,7 @@ fn test_node_cannot_receive(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
 
@@ -406,7 +406,7 @@ fn test_node_cannot_receive(config: &TestConfig) -> TestResult {
 
     // node goes partially offline (cannot receive incoming messages)
     let blocked_node = group.remove(rand.gen_range(0..group.len()));
-    sys.network().borrow_mut().drop_incoming(&blocked_node);
+    sys.network().drop_incoming(&blocked_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -420,14 +420,14 @@ fn test_node_cannot_send(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node goes partially offline (cannot send outgoing messages)
     let blocked_node = group.remove(rand.gen_range(0..group.len()));
-    sys.network().borrow_mut().drop_outgoing(&blocked_node);
+    sys.network().drop_outgoing(&blocked_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -441,7 +441,7 @@ fn test_two_nodes_cannot_communicate(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -449,8 +449,8 @@ fn test_two_nodes_cannot_communicate(config: &TestConfig) -> TestResult {
     // two nodes cannot communicate with each other
     let node1 = *seed;
     let node2 = group.get(rand.gen_range(1..group.len())).unwrap();
-    sys.network().borrow_mut().disable_link(&node1, &node2);
-    sys.network().borrow_mut().disable_link(&node2, &node1);
+    sys.network().disable_link(&node1, &node2);
+    sys.network().disable_link(&node2, &node1);
     // run for a while
     sys.steps(1000);
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -466,16 +466,16 @@ fn test_slow_network(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
 
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // slow down network for a while
-    sys.network().borrow_mut().set_delays(0.1, 1.0);
+    sys.network().set_delays(0.1, 1.0);
     sys.steps(200);
-    sys.network().borrow_mut().set_delays(0.01, 0.1);
+    sys.network().set_delays(0.01, 0.1);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -489,15 +489,15 @@ fn test_flaky_network(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // make network unreliable for a while
-    sys.network().borrow_mut().set_drop_rate(0.5);
+    sys.network().set_drop_rate(0.5);
     sys.steps(1000);
-    sys.network().borrow_mut().set_drop_rate(0.0);
+    sys.network().set_drop_rate(0.0);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -509,15 +509,15 @@ fn test_flaky_network_on_start(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     // make network unreliable from the start
-    sys.network().borrow_mut().set_drop_rate(0.2);
+    sys.network().set_drop_rate(0.2);
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     sys.steps(1000);
-    sys.network().borrow_mut().set_drop_rate(0.0);
+    sys.network().set_drop_rate(0.0);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -531,17 +531,17 @@ fn test_flaky_network_and_crash(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // make network unreliable for a while + crash node
-    sys.network().borrow_mut().set_drop_rate(0.5);
+    sys.network().set_drop_rate(0.5);
     let crashed_node = group.remove(rand.gen_range(0..group.len()));
     sys.crash_node(&crashed_node);
     sys.steps(1000);
-    sys.network().borrow_mut().set_drop_rate(0.0);
+    sys.network().set_drop_rate(0.0);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -555,7 +555,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
     for process in &group {
         sys.send_local_message(
             &process,
-            Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+            Message::json("JOIN", &JoinMessage { seed }),
         );
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -572,12 +572,12 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
             p if p < 0.5 => {
                 // disconnect node
                 let offline_node = group.remove(rand.gen_range(0..group.len()));
-                sys.network().borrow_mut().disconnect_node(&offline_node);
+                sys.network().disconnect_node(&offline_node);
             }
             p if p < 0.75 => {
                 // partially disconnect node (cannot receive)
                 let blocked_node = group.remove(rand.gen_range(0..group.len()));
-                sys.network().borrow_mut().drop_incoming(&blocked_node);
+                sys.network().drop_incoming(&blocked_node);
             }
             _ => {
                 // two nodes cannot communicate with each other
@@ -586,8 +586,8 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
                 while node1 == node2 {
                     node2 = group.get(rand.gen_range(0..group.len())).unwrap();
                 }
-                sys.network().borrow_mut().disable_link(&node1, &node2);
-                sys.network().borrow_mut().disable_link(&node2, &node1);
+                sys.network().disable_link(&node1, &node2);
+                sys.network().disable_link(&node2, &node1);
             }
         }
         step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -614,14 +614,14 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
         for process in &group {
             sys.send_local_message(
                 &process,
-                Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+                Message::json("JOIN", &JoinMessage { seed }),
             );
         }
 
         step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
         let init_time = sys.time();
-        let init_net_traffic = sys.network().borrow().traffic();
-        let init_msg_count = sys.network().borrow().message_count();
+        let init_net_traffic = sys.network().traffic();
+        let init_msg_count = sys.network().message_count();
         let mut init_loads = HashMap::new();
         for node in sys.process_names() {
             init_loads.insert(
@@ -642,8 +642,8 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
         let duration = sys.time() - init_time;
         measurements.push((
             duration,
-            (sys.network().borrow().traffic() - init_net_traffic) as f64 / duration,
-            (sys.network().borrow().message_count() - init_msg_count) as f64 / duration,
+            (sys.network().traffic() - init_net_traffic) as f64 / duration,
+            (sys.network().message_count() - init_msg_count) as f64 / duration,
             max_load as f64 / duration,
             max_load as f64 / min_load as f64,
         ));
@@ -690,14 +690,14 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
         for process in &group {
             sys.send_local_message(
                 &process,
-                Message::new("JOIN", &serde_json::to_string(&JoinMessage { seed }).unwrap()),
+                Message::json("JOIN", &JoinMessage { seed }),
             );
         }
 
         step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
         let init_time = sys.time();
-        let init_net_traffic = sys.network().borrow().traffic();
-        let init_msg_count = sys.network().borrow().message_count();
+        let init_net_traffic = sys.network().traffic();
+        let init_msg_count = sys.network().message_count();
         let mut init_loads = HashMap::new();
         for node in sys.process_names() {
             init_loads.insert(
@@ -722,8 +722,8 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
         let duration = sys.time() - init_time;
         measurements.push((
             duration,
-            (sys.network().borrow().traffic() - init_net_traffic) as f64 / duration,
-            (sys.network().borrow().message_count() - init_msg_count) as f64 / duration,
+            (sys.network().traffic() - init_net_traffic) as f64 / duration,
+            (sys.network().message_count() - init_msg_count) as f64 / duration,
             max_load as f64 / duration,
             max_load as f64 / min_load as f64,
         ));
