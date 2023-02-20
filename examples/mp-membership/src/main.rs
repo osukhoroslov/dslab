@@ -121,10 +121,7 @@ fn test_simple(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let seed = "0";
     for process in sys.process_names() {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     let group = sys.process_names().into_iter().collect();
     step_until_stabilized(&mut sys, group)
@@ -139,10 +136,7 @@ fn test_random_seed(config: &TestConfig) -> TestResult {
             0 => &process,
             _ => group.choose(&mut rand).unwrap(),
         };
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
         group.push(process);
     }
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -158,19 +152,13 @@ fn test_node_join(config: &TestConfig) -> TestResult {
 
     for process in &group {
         if *process != new_process {
-            sys.send_local_message(
-                &process,
-                Message::json("JOIN", &JoinMessage { seed }),
-            );
+            sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
         }
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node joins the system
-    sys.send_local_message(
-        &new_process,
-        Message::json("JOIN", &JoinMessage { seed }),
-    );
+    sys.send_local_message(&new_process, Message::json("JOIN", &JoinMessage { seed }));
     group.push(new_process);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
@@ -183,19 +171,13 @@ fn test_node_leave(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
     // node leaves the system
     let left_process = group.remove(rand.gen_range(0..group.len()));
-    sys.send_local_message(
-        &left_process,
-        Message::json("LEAVE", &LeaveMessage {}),
-    );
+    sys.send_local_message(&left_process, Message::json("LEAVE", &LeaveMessage {}));
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
@@ -207,10 +189,7 @@ fn test_node_crash(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -228,10 +207,7 @@ fn test_seed_node_crash(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).cloned().unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -249,10 +225,7 @@ fn test_node_crash_recover(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).cloned().unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -263,10 +236,7 @@ fn test_node_crash_recover(config: &TestConfig) -> TestResult {
 
     // node recovers
     recover_node(&crashed_node, &mut sys, &config);
-    sys.send_local_message(
-        &crashed_node,
-        Message::json("JOIN", &JoinMessage { seed }),
-    );
+    sys.send_local_message(&crashed_node, Message::json("JOIN", &JoinMessage { seed }));
 
     group.push(crashed_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -280,10 +250,7 @@ fn test_node_offline(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -301,10 +268,7 @@ fn test_seed_node_offline(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).cloned().unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -322,10 +286,7 @@ fn test_node_offline_recover(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -348,10 +309,7 @@ fn test_network_partition(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -370,10 +328,7 @@ fn test_network_partition_recover(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -396,10 +351,7 @@ fn test_node_cannot_receive(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
 
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -418,10 +370,7 @@ fn test_node_cannot_send(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -439,10 +388,7 @@ fn test_two_nodes_cannot_communicate(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -464,10 +410,7 @@ fn test_slow_network(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
 
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -487,10 +430,7 @@ fn test_flaky_network(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -511,10 +451,7 @@ fn test_flaky_network_on_start(config: &TestConfig) -> TestResult {
     // make network unreliable from the start
     sys.network().set_drop_rate(0.2);
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     sys.steps(1000);
     sys.network().set_drop_rate(0.0);
@@ -529,10 +466,7 @@ fn test_flaky_network_and_crash(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -553,10 +487,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
     let seed = &group.get(0).unwrap();
 
     for process in &group {
-        sys.send_local_message(
-            &process,
-            Message::json("JOIN", &JoinMessage { seed }),
-        );
+        sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
@@ -612,10 +543,7 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
         group.shuffle(&mut rand);
         let seed = &group.get(0).unwrap();
         for process in &group {
-            sys.send_local_message(
-                &process,
-                Message::json("JOIN", &JoinMessage { seed }),
-            );
+            sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
         }
 
         step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
@@ -688,10 +616,7 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
         group.shuffle(&mut rand);
         let seed = &group.get(0).unwrap();
         for process in &group {
-            sys.send_local_message(
-                &process,
-                Message::json("JOIN", &JoinMessage { seed }),
-            );
+            sys.send_local_message(&process, Message::json("JOIN", &JoinMessage { seed }));
         }
 
         step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
