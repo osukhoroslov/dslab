@@ -8,6 +8,7 @@
 //! Benchmark can be found in `/examples/storage-shared-disk-benchmark` and `/examples-other/simgrid/storage`
 
 use serde::Serialize;
+use sugars::boxed;
 
 use dslab_core::cast;
 use dslab_core::component::Id;
@@ -16,7 +17,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
-
+use crate::bandwidth::{ConstantThroughputFactor, ThroughputFactorFunction};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
 
@@ -42,6 +43,8 @@ pub struct SharedDisk {
     used: u64,
     read_throughput_model: FairThroughputSharingModel<DiskActivity>,
     write_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    read_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
+    write_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -56,6 +59,8 @@ impl SharedDisk {
             used: 0,
             read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth),
             write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth),
+            read_throughput_factor_function: boxed!(ConstantThroughputFactor::new(1.)),
+            write_throughput_factor_function: boxed!(ConstantThroughputFactor::new(1.)),
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -66,15 +71,19 @@ impl SharedDisk {
     /// Creates new shared disk with given read and write throughput functions.
     pub fn new(
         capacity: u64,
-        read_tf: ThroughputFunction,
-        write_tf: ThroughputFunction,
+        read_throughput_function: ThroughputFunction,
+        write_throughput_function: ThroughputFunction,
+        read_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
+        write_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
         ctx: SimulationContext,
     ) -> Self {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(read_tf),
-            write_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(write_tf),
+            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(read_throughput_function),
+            write_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(write_throughput_function),
+            read_throughput_factor_function,
+            write_throughput_factor_function,
             next_request_id: 0,
             next_read_event: 0,
             next_write_event: 0,
@@ -144,9 +153,12 @@ impl Storage for SharedDisk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
+            let throughput_factor = self.read_throughput_factor_function.get_factor(size, &mut self.ctx);
+            let corrected_size = size as f64 / throughput_factor;
+
             self.read_throughput_model.insert(
                 self.ctx.time(),
-                size as f64,
+                corrected_size,
                 DiskActivity {
                     request_id,
                     requester,
@@ -174,9 +186,13 @@ impl Storage for SharedDisk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
+
+            let throughput_factor = self.write_throughput_factor_function.get_factor(size, &mut self.ctx);
+            let corrected_size = size as f64 / throughput_factor;
+
             self.write_throughput_model.insert(
                 self.ctx.time(),
-                size as f64,
+                corrected_size,
                 DiskActivity {
                     request_id,
                     requester,
