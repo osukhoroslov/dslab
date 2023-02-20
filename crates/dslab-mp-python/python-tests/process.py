@@ -3,8 +3,9 @@ from dslabmp import Context, Message, Process, StateMember
 
 class TestProcess(Process):
     def __init__(self, node_id: str):
-        self.data = StateMember(["elem1", (2, 3)])
+        self.data = StateMember(["elem1", (2, 3), {'key': 'value'}])
         self._id = StateMember(node_id)
+        self.messages = StateMember([Message('GET', '')])
 
         # examples of set/get state member
         self._id = 'new_node_id'
@@ -27,12 +28,16 @@ class TestProcess(Process):
         else:
             ctx.send_local(msg)
 
+        assert self.messages is not None
+        assert type(self.messages) == list
+        assert type(self.messages[0]) == Message
+
         try:
             a = self.notexists
         except AttributeError:
             return
         except:
-            raise 'Not a correct exception raised when addressing not-existing member'
+            raise 'Incorrect exception raised when addressing not-existing member'
         raise 'No exception raised when addressing not-existing member'
 
     def on_message(self, msg: Message, sender: str, ctx: Context):

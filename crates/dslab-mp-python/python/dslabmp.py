@@ -29,9 +29,11 @@ class Message:
     def from_json(message_type: str, json_str: str) -> Message:
         return Message(message_type, json.loads(json_str))
 
-    def toJSON(self):
-        return {"_type": self._type, "_data": self._data}
-    
+    @staticmethod
+    def toJSON(o):
+        return {"_type": o._type, "_data": o._data}
+
+
 class Context(object):
     def __init__(self, time: float):
         self._time = time
@@ -44,7 +46,8 @@ class Context(object):
         Sends a message to the specified process.
         """
         if not isinstance(to, str):
-            raise TypeError('to argument has to be string, not {}'.format(type(to)))
+            raise TypeError(
+                'to argument has to be string, not {}'.format(type(to)))
         self._sent_messages.append((msg.type, json.dumps(msg._data), to))
 
     def send_local(self, msg: Message):
@@ -59,9 +62,11 @@ class Context(object):
         If there is an active timer with this name, its delay is overridden.
         """
         if not isinstance(timer_name, str):
-            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError(
+                'timer_name argument has to be str, not {}'.format(type(timer_name)))
         if not isinstance(delay, (int, float)):
-            raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
+            raise TypeError(
+                'delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
         self._timer_actions.append((timer_name, delay, False))
@@ -72,9 +77,11 @@ class Context(object):
         If there is an active timer with this name, this call is ignored.
         """
         if not isinstance(timer_name, str):
-            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError(
+                'timer_name argument has to be str, not {}'.format(type(timer_name)))
         if not isinstance(delay, (int, float)):
-            raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
+            raise TypeError(
+                'delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
         self._timer_actions.append((timer_name, delay, True))
@@ -84,13 +91,14 @@ class Context(object):
         Cancels timer with the specified name.
         """
         if not isinstance(timer_name, str):
-            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError(
+                'timer_name argument has to be str, not {}'.format(type(timer_name)))
         self._timer_actions.append((timer_name, -1, False))
 
     def time(self) -> float:
         """
         Returns the current system time.
-        """ 
+        """
         return self._time
 
 
@@ -99,20 +107,22 @@ class StateMember:
         self.inner = t
 
     def serialize(self):
-        def assertion_serializable(o):
-            assert isinstance(o, Message), 'cannot serialize custom classes' 
-            return o.toJSON()
-        return json.dumps(self.inner, default=assertion_serializable)
+        return json.dumps(self.inner, default=StateMember._serialize_message)
 
     @staticmethod
-    def obj_hook(msg):
-        if '_type' in msg:
-            return Message(msg['_type'], msg['_data'])
-        return msg
+    def _serialize_message(o):
+        return type(o).toJSON(o)
+
+    @staticmethod
+    def _deserialize_message(dct):
+        if '_type' in dct:
+            return Message(dct['_type'], dct['_data'])
+        return dct
 
     @staticmethod
     def deserialize(state):
-        return StateMember(json.loads(state, object_hook=StateMember.obj_hook))
+        return StateMember(json.loads(state, object_hook=StateMember._deserialize_message))
+
 
 class Process:
     @abc.abstractmethod
