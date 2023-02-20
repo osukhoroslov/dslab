@@ -9,6 +9,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::scheduler::{Action, Scheduler, SchedulerParams, TimeSpan};
 use crate::schedulers::common::*;
+use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub struct HeftScheduler {
@@ -47,16 +48,12 @@ impl HeftScheduler {
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
 
-        let mut scheduled_tasks = resources
-            .iter()
-            .map(|resource| {
-                (0..resource.cores_available)
-                    .map(|_| BTreeSet::<ScheduledTask>::new())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
         let mut task_finish_times = vec![0.; task_count];
-
+        let mut scheduled_tasks: Vec<Vec<BTreeSet<ScheduledTask>>> = resources
+            .iter()
+            .map(|resource| (0..resource.cores_available).map(|_| BTreeSet::new()).collect())
+            .collect();
+        let mut memory_usage: Vec<Treap> = (0..resources.len()).map(|_| Treap::new()).collect();
         let mut data_locations: HashMap<usize, Id> = HashMap::new();
         let mut task_locations: HashMap<usize, Id> = HashMap::new();
 
@@ -73,6 +70,7 @@ impl HeftScheduler {
                     resource,
                     &task_finish_times,
                     &scheduled_tasks,
+                    &memory_usage,
                     &data_locations,
                     &task_locations,
                     &self.data_transfer_strategy,
@@ -97,6 +95,7 @@ impl HeftScheduler {
 
             assert_ne!(best_finish, -1.);
 
+            task_finish_times[task_id] = best_finish;
             for &core in best_cores.iter() {
                 scheduled_tasks[best_resource][core as usize].insert(ScheduledTask::new(
                     best_start,
@@ -104,7 +103,12 @@ impl HeftScheduler {
                     task_id,
                 ));
             }
-            task_finish_times[task_id] = best_finish;
+            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory);
+            for &output in dag.get_task(task_id).outputs.iter() {
+                data_locations.insert(output, resources[best_resource].id);
+            }
+            task_locations.insert(task_id, resources[best_resource].id);
+
             result.push((
                 best_start,
                 Action::ScheduleTaskOnCores {
@@ -114,10 +118,6 @@ impl HeftScheduler {
                     expected_span: Some(TimeSpan::new(best_start, best_finish)),
                 },
             ));
-            for &output in dag.get_task(task_id).outputs.iter() {
-                data_locations.insert(output, resources[best_resource].id);
-            }
-            task_locations.insert(task_id, resources[best_resource].id);
         }
 
         result.sort_by(|a, b| a.0.total_cmp(&b.0));

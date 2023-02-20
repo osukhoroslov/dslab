@@ -9,6 +9,7 @@ use dslab_network::network::Network;
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
+use crate::schedulers::treap::Treap;
 
 #[derive(Clone, Debug)]
 pub struct ScheduledTask {
@@ -57,6 +58,7 @@ pub fn evaluate_assignment(
     resource: usize,
     task_finish_times: &[f64],
     scheduled_tasks: &[Vec<BTreeSet<ScheduledTask>>],
+    memory_usage: &[Treap],
     data_location: &HashMap<usize, Id>,
     task_location: &HashMap<usize, Id>,
     data_transfer_strategy: &DataTransferStrategy,
@@ -68,6 +70,10 @@ pub fn evaluate_assignment(
 ) -> Option<(f64, f64, Vec<u32>)> {
     let need_cores = dag.get_task(task_id).min_cores;
     if resources[resource].compute.borrow().cores_total() < need_cores {
+        return None;
+    }
+    let need_memory = dag.get_task(task_id).memory;
+    if resources[resource].compute.borrow().memory_total() < need_memory {
         return None;
     }
 
@@ -160,7 +166,15 @@ pub fn evaluate_assignment(
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
-    let (start_time, cores) = find_earliest_slot(&scheduled_tasks[resource], start_time, task_exec_time, need_cores);
+    let (start_time, cores) = find_earliest_slot(
+        &scheduled_tasks[resource],
+        start_time,
+        task_exec_time,
+        need_cores,
+        need_memory,
+        resources[resource].compute.borrow().memory_total(),
+        &memory_usage[resource],
+    );
 
     assert!(cores.len() >= need_cores as usize);
 
@@ -174,11 +188,19 @@ fn find_earliest_slot(
     mut start_time: f64,
     task_exec_time: f64,
     need_cores: u32,
+    need_memory: u64,
+    total_memory: u64,
+    memory_usage: &Treap,
 ) -> (f64, Vec<u32>) {
     let mut possible_starts = scheduled_tasks
         .iter()
-        .flat_map(|schedule| schedule.iter().map(|scheduled_task| scheduled_task.finish_time))
-        .filter(|&a| a >= start_time)
+        .flat_map(|schedule| {
+            schedule
+                .iter()
+                .rev()
+                .map(|scheduled_task| scheduled_task.finish_time)
+                .take_while(|&x| x >= start_time)
+        })
         .collect::<Vec<_>>();
     possible_starts.push(start_time);
     possible_starts.sort_by(|a, b| a.total_cmp(b));
@@ -186,6 +208,10 @@ fn find_earliest_slot(
 
     let mut cores: Vec<u32> = Vec::new();
     for &possible_start in possible_starts.iter() {
+        if memory_usage.max(possible_start, possible_start + task_exec_time) + need_memory > total_memory {
+            continue;
+        }
+
         for (core, tasks) in scheduled_tasks.iter().enumerate() {
             let next = tasks
                 .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))

@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::rc::Rc;
+use std::time::Instant;
 
 use serde::Serialize;
 use serde_json::json;
@@ -164,6 +165,7 @@ impl DAGRunner {
             self.dag.get_data_items().len()
         );
         self.trace_config();
+        let time = Instant::now();
         let actions = self.scheduler.borrow_mut().start(
             &self.dag,
             System {
@@ -173,6 +175,7 @@ impl DAGRunner {
             self.config.clone(),
             &self.ctx,
         );
+        log_info!(self.ctx, "initial schedule built in {:.2?}", time.elapsed());
         if let Some(makespan) = actions
             .iter()
             .filter_map(|action| match action {
