@@ -16,10 +16,10 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 
-use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
 use crate::bandwidth::{ConstantThroughputFactor, ThroughputFactorFunction};
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
+use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
 
 #[derive(Clone)]
 struct DiskActivity {
