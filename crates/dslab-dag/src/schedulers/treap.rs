@@ -204,12 +204,13 @@ impl Treap {
 mod tests {
     use rand::Rng;
     use rand::SeedableRng;
+    use rand_pcg::Pcg64;
 
     use crate::schedulers::treap::Treap;
 
     #[test]
     fn random() {
-        let mut rand = rand::rngs::SmallRng::seed_from_u64(42);
+        let mut rand = Pcg64::seed_from_u64(42);
         let mut f64_values = (0..100).map(|_| rand.gen::<f64>() * 1000.).collect::<Vec<_>>();
         f64_values.sort_by(|a, b| a.total_cmp(b));
 
@@ -301,7 +302,7 @@ mod tests {
 
     #[test]
     fn check_height() {
-        let mut rand = rand::rngs::SmallRng::seed_from_u64(42);
+        let mut rand = Pcg64::seed_from_u64(42);
         let mut treap = Treap::new();
 
         const ITS: usize = 1_000_000;
