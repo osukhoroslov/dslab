@@ -9,7 +9,7 @@ pub enum McEvent {
         src: String,
         dest: String,
         can_be_dropped: bool,
-        can_be_duplicated: bool,
+        max_dupl_count: u32,
         can_be_corrupted: bool,
     },
     TimerFired {
