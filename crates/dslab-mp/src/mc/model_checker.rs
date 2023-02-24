@@ -28,7 +28,7 @@ impl ModelChecker {
                     src: value.src.clone(),
                     dest: value.dest.clone(),
                     can_be_dropped: false,
-                    can_be_duplicated: false,
+                    max_dupl_count: 1,
                     can_be_corrupted: false,
                 });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
