@@ -56,23 +56,31 @@ impl Dfs {
         }
 
         for i in 0..events_num {
-            let state = system.get_state(self.search_depth);
-            let event = system.events.borrow_mut().remove(i);
-
-            self.debug_log(&event, self.search_depth);
-
-            system.apply_event(event);
-
-            self.search_depth += 1;
-            let run_success = self.dfs(system);
-            self.search_depth -= 1;
-
-            if let Err(err) = run_success {
+            if let Err(err) = self.process_event(system, i) {
                 return Err(err);
             }
-
-            system.set_state(state);
         }
+        Ok(())
+    }
+
+    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+        let state = system.get_state(self.search_depth);
+        let event = system.events.borrow_mut().remove(event_num);
+
+        self.debug_log(&event, self.search_depth);
+
+        system.apply_event(event);
+
+        self.search_depth += 1;
+        let run_success = self.dfs(system);
+        self.search_depth -= 1;
+
+        if let Err(err) = run_success {
+            return Err(err);
+        }
+
+        system.set_state(state);
+
         Ok(())
     }
 
