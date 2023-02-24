@@ -40,19 +40,13 @@ impl Dfs {
 
         // Check final state of the system
         if let Some(status) = (self.goal)(&state) {
-            if let LogMode::Debug = self.log_mode {
-                let counter = self.summary.states.entry(status).or_insert(0);
-                *counter = *counter + 1;
-            }
+            self.update_summary(status);
             return Ok(());
         }
 
         // Check if execution branch is pruned
         if let Some(status) = (self.prune)(&state) {
-            if let LogMode::Debug = self.log_mode {
-                let counter = self.summary.states.entry(status).or_insert(0);
-                *counter = *counter + 1;
-            }
+            self.update_summary(status);
             return Ok(());
         }
 
@@ -80,6 +74,13 @@ impl Dfs {
             system.set_state(state);
         }
         Ok(())
+    }
+
+    fn update_summary(&mut self, status: String) {
+        if let LogMode::Debug = self.log_mode {
+            let counter = self.summary.states.entry(status).or_insert(0);
+            *counter = *counter + 1;
+        }
     }
 }
 
