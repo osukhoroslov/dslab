@@ -1,4 +1,4 @@
-use crate::mc::strategy::{LogMode, McSummary, Strategy};
+use crate::mc::strategy::{LogContext, LogMode, McSummary, Strategy};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Dfs {
@@ -84,7 +84,7 @@ impl Strategy for Dfs {
         let state = system.get_state(self.search_depth);
         let event = system.events.borrow_mut().remove(event_num);
 
-        self.debug_log(&event, self.search_depth);
+        self.debug_log(&event, self.search_depth, LogContext::Default);
 
         system.apply_event(event);
 
