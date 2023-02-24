@@ -63,6 +63,23 @@ impl Dfs {
         Ok(())
     }
 
+    fn update_summary(&mut self, status: String) {
+        if let LogMode::Debug = self.log_mode {
+            let counter = self.summary.states.entry(status).or_insert(0);
+            *counter = *counter + 1;
+        }
+    }
+}
+
+impl Strategy for Dfs {
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+        let res = self.dfs(system);
+        match res {
+            Ok(()) => Ok(self.summary.clone()),
+            Err(err) => Err(err),
+        }
+    }
+
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth);
         let event = system.events.borrow_mut().remove(event_num);
@@ -82,23 +99,6 @@ impl Dfs {
         system.set_state(state);
 
         Ok(())
-    }
-
-    fn update_summary(&mut self, status: String) {
-        if let LogMode::Debug = self.log_mode {
-            let counter = self.summary.states.entry(status).or_insert(0);
-            *counter = *counter + 1;
-        }
-    }
-}
-
-impl Strategy for Dfs {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
-        let res = self.dfs(system);
-        match res {
-            Ok(()) => Ok(self.summary.clone()),
-            Err(err) => Err(err),
-        }
     }
 
     fn log_mode(&self) -> &LogMode {
