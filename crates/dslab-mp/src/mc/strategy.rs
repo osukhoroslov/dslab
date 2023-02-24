@@ -33,5 +33,7 @@ pub trait Strategy {
         }
     }
 
+    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
+
     fn log_mode(&self) -> &LogMode;
 }
