@@ -14,13 +14,13 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
+use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use dslab_storage::shared_disk::SharedDisk;
 use dslab_storage::storage::Storage;
 
 const SEED: u64 = 16;
 
-const DISK_NAME: &str = "SharedDisk";
+const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
 const DISK_CAPACITY: u64 = 1000;
@@ -28,7 +28,7 @@ const DISK_READ_BW: f64 = 100.;
 const DISK_WRITE_BW: f64 = 100.;
 
 struct User {
-    disk: Rc<RefCell<SharedDisk>>,
+    disk: Rc<RefCell<Disk>>,
     requests: HashMap<u64, u64>, // request_id -> test case
     ctx: SimulationContext,
 }
@@ -40,7 +40,7 @@ struct Start {}
 struct Ticker {}
 
 impl User {
-    fn new(disk: Rc<RefCell<SharedDisk>>, ctx: SimulationContext) -> Self {
+    fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
         Self {
             disk,
             requests: HashMap::new(),
@@ -119,7 +119,7 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(SharedDisk::new_simple(
+    let disk = rc!(refcell!(Disk::new_simple(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,

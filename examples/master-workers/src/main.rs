@@ -58,8 +58,8 @@ fn main() {
     let network_latency = 0.5;
     let network_bandwidth = 1000;
     let disk_capacity = 1000;
-    let disk_read_bandwidth = 2000;
-    let disk_write_bandwidth = 2000;
+    let disk_read_bandwidth = 2000.;
+    let disk_write_bandwidth = 2000.;
     let task_count = args.task_count;
     let use_shared_network = args.use_shared_network;
     let seed = 123;

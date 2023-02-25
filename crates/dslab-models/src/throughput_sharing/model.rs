@@ -1,5 +1,7 @@
 //! Definition of the throughput sharing model trait.
 
+use sugars::boxed;
+
 /// Trait for throughput sharing model.
 pub trait ThroughputSharingModel<T> {
     /// Adds new activity into the model.
@@ -19,3 +21,8 @@ pub trait ThroughputSharingModel<T> {
 /// Type alias for function used to describe the dependence of resource throughput on the number of concurrent
 /// activities.
 pub type ThroughputFunction = Box<dyn Fn(usize) -> f64>;
+
+/// Helper for creating throughput function which always returns given value.
+pub fn make_constant_throughput_function(throughput: f64) -> ThroughputFunction {
+    boxed!(move |_| throughput)
+}
