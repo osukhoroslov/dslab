@@ -30,7 +30,7 @@ pub trait Strategy {
 
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
 
-    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
+    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
         if self.log_mode() == &LogMode::Debug {

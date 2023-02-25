@@ -72,13 +72,13 @@ impl Dfs {
                         }
                     }
 
-                    if let Err(err) = self.process_event(system, i) {
+                    if let Err(err) = self.apply_event(system, i) {
                         return Err(err);
                     }
                 }
 
                 McEvent::TimerFired { .. } => {
-                    if let Err(err) = self.process_event(system, i) {
+                    if let Err(err) = self.apply_event(system, i) {
                         return Err(err);
                     }
                 }
@@ -119,7 +119,7 @@ impl Strategy for Dfs {
         Ok(())
     }
 
-    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth);
         let event = system.events.borrow_mut().remove(event_num);
 
