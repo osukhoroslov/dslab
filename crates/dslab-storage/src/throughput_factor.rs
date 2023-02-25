@@ -1,6 +1,6 @@
 //! Throughput factors function.
 //!
-//! These models allow to dynamically compute per-request throughput factor based on the request size, current simulation time,
+//! These functions allow to dynamically compute per-request throughput factor based on the request size, current simulation time,
 //! etc. All implementations must have [`get_factor`](ThroughputFactorFunction::get_factor) method, which returns factor value
 //! from `size` and simulation context `ctx`. This factor will be multiplied by nominal bandwidth to compute effective bandwidth.
 //! Using `ctx`, simulation time and random engine can be accessed. This method will be called each time when new disk read/write
@@ -100,7 +100,7 @@ pub struct EmpiricalThroughputFactorFunction {
 }
 
 impl EmpiricalThroughputFactorFunction {
-    /// Creates new empirical function with given weighted points.
+    /// Creates new throughput factor function with given weighted points.
     pub fn new(points: &[WeightedThroughputFactor]) -> Result<Self, WeightedError> {
         let dist = WeightedIndex::new(points.iter().map(|item| item.weight))?;
         Ok(Self {
