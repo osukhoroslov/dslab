@@ -57,31 +57,8 @@ impl Dfs {
         }
 
         for i in 0..events_num {
-            let event = system.events.borrow()[i].clone();
-            match event {
-                McEvent::MessageReceived {
-                    msg: _msg,
-                    src: _src,
-                    dest: _dest,
-                    can_be_dropped,
-                    ..
-                } => {
-                    if can_be_dropped {
-                        if let Err(err) = self.process_drop_event(system, i) {
-                            return Err(err);
-                        }
-                    }
-
-                    if let Err(err) = self.apply_event(system, i) {
-                        return Err(err);
-                    }
-                }
-
-                McEvent::TimerFired { .. } => {
-                    if let Err(err) = self.apply_event(system, i) {
-                        return Err(err);
-                    }
-                }
+            if let Err(err) = self.process_event(system, i) {
+                return Err(err);
             }
         }
         Ok(())
