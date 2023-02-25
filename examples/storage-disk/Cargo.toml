@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-storage = { path = "../../crates/dslab-storage" }
+dslab-models = { path = "../../crates/dslab-models" }
 sugars = "3.0.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4.14"

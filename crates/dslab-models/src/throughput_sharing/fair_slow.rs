@@ -4,9 +4,7 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use sugars::boxed;
-
-use super::model::{ThroughputFunction, ThroughputSharingModel};
+use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -60,7 +58,7 @@ pub struct SlowFairThroughputSharingModel<T> {
 impl<T> SlowFairThroughputSharingModel<T> {
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |_| throughput))
+        Self::with_dynamic_throughput(make_constant_throughput_function(throughput))
     }
 
     /// Creates model with dynamic throughput, represented by given closure.

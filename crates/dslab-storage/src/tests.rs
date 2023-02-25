@@ -6,9 +6,9 @@ use sugars::{rc, refcell};
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, Event, EventHandler};
 
+use crate::disk::Disk;
 use crate::events::*;
 use crate::fs::FileSystem;
-use crate::shared_disk::SharedDisk;
 use crate::storage::{Storage, StorageInfo};
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,13 +26,15 @@ fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> 
     fs
 }
 
-fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<SharedDisk>> {
-    rc!(refcell!(SharedDisk::new_simple(
+fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
+    let disk = rc!(refcell!(Disk::new_simple(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,
         sim.create_context(name),
-    )))
+    )));
+    sim.add_handler(name, disk.clone());
+    disk
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -116,7 +118,7 @@ fn fs_files_metadata_consistence() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().create_file("/mnt/file1").is_err());
     assert!(fs.borrow().file_size("/mnt/file1").is_err());
@@ -217,10 +219,10 @@ fn fs_multiple_disks_on_single_filesystem() {
     let checker_ok_id = sim.add_handler("User1", checker_ok);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk1 = make_simple_disk(&mut sim, "SharedDisk-1");
-    let disk2 = make_simple_disk(&mut sim, "SharedDisk-2");
+    let disk1 = make_simple_disk(&mut sim, "Disk-1");
+    let disk2 = make_simple_disk(&mut sim, "Disk-2");
 
-    // SharedDisk is not mounted yet
+    // Disk is not mounted yet
     assert!(fs.borrow_mut().unmount_disk("/mnt/vda").is_err());
 
     assert!(fs.borrow_mut().mount_disk("/mnt/vda", disk1.clone()).is_ok());
@@ -258,7 +260,7 @@ fn fs_single_disk_on_multiple_filesystems() {
 
     let fs1 = make_filesystem(&mut sim, "FS-1");
     let fs2 = make_filesystem(&mut sim, "FS-2");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs1.borrow_mut().unmount_disk("/mnt").is_err());
     assert!(fs2.borrow_mut().unmount_disk("/mnt").is_err());
@@ -298,7 +300,7 @@ fn fs_good_read_write() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -323,7 +325,7 @@ fn fs_failed_read_non_existent_file() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
@@ -342,7 +344,7 @@ fn fs_failed_read_unmounted_disk() {
     let checker_fail_id = sim.add_handler("User2", checker_fail);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -364,7 +366,7 @@ fn fs_failed_read_file_bad_size() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -401,7 +403,7 @@ fn fs_failed_write_non_existent_file() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
 
@@ -418,7 +420,7 @@ fn fs_failed_write_low_disk_capacity() {
     let checker_id = sim.add_handler("User", checker);
 
     let fs = make_filesystem(&mut sim, "FS-1");
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     assert!(fs.borrow_mut().mount_disk("/mnt", disk).is_ok());
     assert!(fs.borrow_mut().create_file("/mnt/file").is_ok());
@@ -427,7 +429,7 @@ fn fs_failed_write_low_disk_capacity() {
     sim.step_until_no_events();
 }
 
-// SharedDisk tests
+// Disk tests
 
 #[test]
 fn disk_good_read_write_with_time_check() {
@@ -439,25 +441,22 @@ fn disk_good_read_write_with_time_check() {
     let checker_write = rc!(refcell!(Checker::new(ExpectedEventType::DataWriteCompleted)));
     let checker_write_id = sim.add_handler("User-2", checker_write);
 
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     disk.borrow_mut().write(2, checker_write_id);
     sim.step_until_no_events();
 
-    assert_eq!(sim.time(), 2. / DISK_WRITE_BW as f64);
+    assert_eq!(sim.time(), 2. / DISK_WRITE_BW);
 
     disk.borrow_mut().read(2, checker_read_id);
     sim.step_until_no_events();
 
-    assert_eq!(sim.time(), 2. / DISK_READ_BW as f64 + 2. / DISK_WRITE_BW as f64);
+    assert_eq!(sim.time(), 2. / DISK_READ_BW + 2. / DISK_WRITE_BW);
 
     disk.borrow_mut().read(1, checker_read_id);
     sim.step_until_no_events();
 
-    assert_eq!(
-        sim.time(),
-        2. / DISK_READ_BW as f64 + 2. / DISK_WRITE_BW as f64 + 1. / DISK_WRITE_BW as f64
-    );
+    assert_eq!(sim.time(), 2. / DISK_READ_BW + 2. / DISK_WRITE_BW + 1. / DISK_WRITE_BW);
 }
 
 // Read fails because of too big requested size
@@ -468,7 +467,7 @@ fn disk_failed_read_bad_size() {
     let checker = rc!(refcell!(Checker::new(ExpectedEventType::DataReadFailed)));
     let checker_id = sim.add_handler("User", checker);
 
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     disk.borrow_mut().read(101, checker_id);
     sim.step_until_no_events();
@@ -482,13 +481,13 @@ fn disk_failed_write_low_disk_capacity() {
     let checker = rc!(refcell!(Checker::new(ExpectedEventType::DataWriteFailed)));
     let checker_id = sim.add_handler("User", checker);
 
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     disk.borrow_mut().write(101, checker_id);
     sim.step_until_no_events();
 }
 
-// SharedDisk space is marked free correctly
+// Disk space is marked free correctly
 #[test]
 fn disk_write_after_spaced_marked_free() {
     let mut sim = Simulation::new(SEED);
@@ -496,7 +495,7 @@ fn disk_write_after_spaced_marked_free() {
     let checker = rc!(refcell!(Checker::new(ExpectedEventType::DataWriteCompleted)));
     let checker_id = sim.add_handler("User", checker);
 
-    let disk = make_simple_disk(&mut sim, "SharedDisk-1");
+    let disk = make_simple_disk(&mut sim, "Disk-1");
 
     disk.borrow_mut().write(99, checker_id);
     sim.step_until_no_events();

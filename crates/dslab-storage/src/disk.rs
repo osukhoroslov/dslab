@@ -38,7 +38,7 @@ struct DiskWriteActivityCompleted {}
 ///
 /// Shared disk is characterized by its capacity and read/write throughput models.
 /// Shared disk state includes the amount of used disk space and state of throughput models.
-pub struct SharedDisk {
+pub struct Disk {
     capacity: u64,
     used: u64,
     read_throughput_model: FairThroughputSharingModel<DiskActivity>,
@@ -51,7 +51,7 @@ pub struct SharedDisk {
     ctx: SimulationContext,
 }
 
-impl SharedDisk {
+impl Disk {
     /// Creates new shared disk with fixed read and write throughput.
     pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
@@ -62,8 +62,8 @@ impl SharedDisk {
             read_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
             write_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
             next_request_id: 0,
-            next_read_event: 0,
-            next_write_event: 0,
+            next_read_event: u64::MAX,
+            next_write_event: u64::MAX,
             ctx,
         }
     }
@@ -85,8 +85,8 @@ impl SharedDisk {
             read_throughput_factor_function,
             write_throughput_factor_function,
             next_request_id: 0,
-            next_read_event: 0,
-            next_write_event: 0,
+            next_read_event: u64::MAX,
+            next_write_event: u64::MAX,
             ctx,
         }
     }
@@ -104,7 +104,7 @@ impl SharedDisk {
     }
 
     fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.peek() {
+        if let Some((time, _)) = self.write_throughput_model.peek() {
             self.next_write_event = self
                 .ctx
                 .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
@@ -136,7 +136,7 @@ impl SharedDisk {
     }
 }
 
-impl Storage for SharedDisk {
+impl Storage for Disk {
     fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(
             self.ctx,
@@ -239,7 +239,7 @@ impl Storage for SharedDisk {
     }
 }
 
-impl EventHandler for SharedDisk {
+impl EventHandler for Disk {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             DiskReadActivityCompleted {} => {

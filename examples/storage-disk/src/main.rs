@@ -14,10 +14,14 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
-use dslab_storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel, WeightedBandwidth};
+use dslab_models::throughput_sharing::make_constant_throughput_function;
+
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
+use dslab_storage::throughput_factor::{
+    make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction, WeightedThroughputFactor,
+};
 
 const SEED: u64 = 16;
 
@@ -25,8 +29,8 @@ const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
 const DISK_CAPACITY: u64 = 5;
-const DISK_READ_BW: u64 = 100;
-const DISK_WRITE_BW: u64 = 100;
+const DISK_READ_BW: f64 = 100.;
+const DISK_WRITE_BW: f64 = 100.;
 
 struct User {
     disk: Rc<RefCell<Disk>>,
@@ -116,22 +120,24 @@ fn main() {
 
     // Creating empirical bandwidth model with weighted points distribution
     let points = [
-        WeightedBandwidth::new(DISK_READ_BW - 20, 3),
-        WeightedBandwidth::new(DISK_READ_BW - 10, 10),
-        WeightedBandwidth::new(DISK_READ_BW, 31),
-        WeightedBandwidth::new(DISK_READ_BW + 10, 15),
-        WeightedBandwidth::new(DISK_READ_BW + 20, 5),
-        WeightedBandwidth::new(DISK_READ_BW + 30, 6),
+        WeightedThroughputFactor::new(0.8, 3),
+        WeightedThroughputFactor::new(0.9, 10),
+        WeightedThroughputFactor::new(1., 31),
+        WeightedThroughputFactor::new(1.1, 15),
+        WeightedThroughputFactor::new(1.2, 5),
+        WeightedThroughputFactor::new(1.3, 6),
     ];
-    let model = EmpiricalBWModel::new(&points);
+    let model = EmpiricalThroughputFactorFunction::new(&points);
     assert!(model.is_ok());
 
     let disk = rc!(refcell!(Disk::new(
         DISK_CAPACITY,
+        make_constant_throughput_function(DISK_READ_BW),
+        make_constant_throughput_function(DISK_WRITE_BW),
         // Using created model as read bandwidth model for disk
         boxed!(model.unwrap()),
         // Creating randomized bandwidth model with uniform distribution in [DISK_WRITE_BW - 10; DISK_WRITE_BW + 10)
-        boxed!(make_uniform_bw_model(DISK_WRITE_BW - 10, DISK_WRITE_BW + 10)),
+        boxed!(make_uniform_throughput_factor_function(0.9, 1.1)),
         sim.create_context(DISK_NAME),
     )));
 

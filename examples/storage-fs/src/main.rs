@@ -35,11 +35,11 @@ const DISK_2_CAPACITY: u64 = 10000000;
 const DISK_1_MOUNT_POINT: &str = "/disk1/";
 const DISK_2_MOUNT_POINT: &str = "/disk2/";
 
-const DISK_1_READ_BW: u64 = 100;
-const DISK_2_READ_BW: u64 = 100000;
+const DISK_1_READ_BW: f64 = 100.;
+const DISK_2_READ_BW: f64 = 100000.;
 
-const DISK_1_WRITE_BW: u64 = 100;
-const DISK_2_WRITE_BW: u64 = 1000;
+const DISK_1_WRITE_BW: f64 = 100.;
+const DISK_2_WRITE_BW: f64 = 1000.;
 
 struct User {
     fs: Rc<RefCell<FileSystem>>,
