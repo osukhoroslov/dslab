@@ -1,10 +1,18 @@
-//! Shared disk model.
+//! Disk model.
 //!
-//! This is an alternative disk model that supports concurrent execution of requests with bandwidth sharing.
+//! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
+//! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
+//! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
+//!
+//! This model supports concurrent execution of requests with bandwidth sharing.
 //! It uses the generic fair throughput sharing model from `dslab-models` to compute the request completion times.
 //! Methods set is the same as for simple disk model.
 //!
-//! Usage example can be found in `/examples/storage-shared-disk`
+//! There is also support for [throughput factor functions](crate::throughput_factor)
+//! that dynamically compute per-request bandwidth based on the request size, current simulation time, etc.
+//! Several implementations of these models are included in this crate, and other user-defined models can also be used.
+//!
+//! Usage examples can be found in `/examples/storage-disk` and `/examples/storage-shared-disk`.
 //! Benchmark can be found in `/examples/storage-shared-disk-benchmark` and `/examples-other/simgrid/storage`
 
 use serde::Serialize;
@@ -34,10 +42,12 @@ struct DiskReadActivityCompleted {}
 #[derive(Clone, Serialize)]
 struct DiskWriteActivityCompleted {}
 
-/// Representation of shared disk.
+/// Representation of disk.
 ///
-/// Shared disk is characterized by its capacity and read/write throughput models.
-/// Shared disk state includes the amount of used disk space and state of throughput models.
+/// Disk is characterized by its capacity, read/write throughput models
+/// and read/write throughput factor functions.
+///
+/// Disk state includes the amount of used disk space and state of throughput models.
 pub struct Disk {
     capacity: u64,
     used: u64,
@@ -52,7 +62,7 @@ pub struct Disk {
 }
 
 impl Disk {
-    /// Creates new shared disk with fixed read and write throughput.
+    /// Creates new disk with fixed read and write throughput and default throughput factor functions.
     pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
@@ -68,7 +78,7 @@ impl Disk {
         }
     }
 
-    /// Creates new shared disk with given read and write throughput functions.
+    /// Creates new disk with given read and write throughput functions and default throughput factor functions.
     pub fn new(
         capacity: u64,
         read_throughput_function: ThroughputFunction,
