@@ -28,6 +28,8 @@ pub struct McSummary {
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
+    fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
+
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
