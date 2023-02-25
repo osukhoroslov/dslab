@@ -28,6 +28,34 @@ pub struct McSummary {
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
+    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+        let event = system.events.borrow()[event_num].clone();
+        match event {
+            MessageReceived {
+                msg: _msg,
+                src: _src,
+                dest: _dest,
+                can_be_dropped,
+                ..
+            } => {
+                if can_be_dropped {
+                    if let Err(err) = self.process_drop_event(system, event_num) {
+                        return Err(err);
+                    }
+                }
+
+                if let Err(err) = self.apply_event(system, event_num) {
+                    return Err(err);
+                }
+            }
+
+            TimerFired { .. } => {
+                return self.apply_event(system, event_num);
+            }
+        }
+        Ok(())
+    }
+
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
 
     fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
