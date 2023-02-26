@@ -28,6 +28,8 @@ pub struct McSummary {
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
+    fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
+
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let event = system.events.borrow()[event_num].clone();
         match event {
