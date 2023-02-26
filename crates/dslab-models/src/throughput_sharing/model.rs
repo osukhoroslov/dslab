@@ -2,12 +2,14 @@
 
 use sugars::boxed;
 
+use dslab_core::context::SimulationContext;
+
 /// Trait for throughput sharing model.
 pub trait ThroughputSharingModel<T> {
     /// Adds new activity into the model.
     ///
     /// Activity starts at `current_time`, has amount of work `value` and is represented by `item`.
-    fn insert(&mut self, current_time: f64, volume: f64, item: T);
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext);
     /// Returns the next activity completion time (if any) along with corresponding activity item.
     ///
     /// The returned activity is removed from the model.

@@ -6,4 +6,6 @@ edition = "2021"
 
 [dependencies]
 dyn-clone = "1.0"
+dslab-core = { path = "../dslab-core" }
+rand = "0.8.4"
 sugars = "3.0.0"

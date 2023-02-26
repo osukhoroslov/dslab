@@ -16,13 +16,13 @@ use rand::distributions::{Distribution, Uniform, WeightedError, WeightedIndex};
 use dslab_core::context::SimulationContext;
 
 /// Trait for throughput factor function.
-pub trait ThroughputFactorFunction {
+pub trait ThroughputFactorFunction<T> {
     /// Returns the throughput factor per request.
     ///
     /// It is called each time new read/write request is made.
     /// The function is provided with request size and simulation context.
     /// The latter can be used to obtain the current simulation time and the random engine.
-    fn get_factor(&mut self, size: u64, ctx: &mut SimulationContext) -> f64;
+    fn get_factor(&mut self, item: &T, ctx: &mut SimulationContext) -> f64;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,8 +39,8 @@ impl ConstantThroughputFactorFunction {
     }
 }
 
-impl ThroughputFactorFunction for ConstantThroughputFactorFunction {
-    fn get_factor(&mut self, _: u64, _: &mut SimulationContext) -> f64 {
+impl<T> ThroughputFactorFunction<T> for ConstantThroughputFactorFunction {
+    fn get_factor(&mut self, _: &T, _: &mut SimulationContext) -> f64 {
         self.value
     }
 }
@@ -59,8 +59,8 @@ impl<Dist: Distribution<f64>> RandomizedThroughputFactorFunction<Dist> {
     }
 }
 
-impl<Dist: Distribution<f64>> ThroughputFactorFunction for RandomizedThroughputFactorFunction<Dist> {
-    fn get_factor(&mut self, _: u64, ctx: &mut SimulationContext) -> f64 {
+impl<T, Dist: Distribution<f64>> ThroughputFactorFunction<T> for RandomizedThroughputFactorFunction<Dist> {
+    fn get_factor(&mut self, _: &T, ctx: &mut SimulationContext) -> f64 {
         ctx.sample_from_distribution(&self.dist)
     }
 }
@@ -110,8 +110,8 @@ impl EmpiricalThroughputFactorFunction {
     }
 }
 
-impl ThroughputFactorFunction for EmpiricalThroughputFactorFunction {
-    fn get_factor(&mut self, _: u64, ctx: &mut SimulationContext) -> f64 {
+impl<T> ThroughputFactorFunction<T> for EmpiricalThroughputFactorFunction {
+    fn get_factor(&mut self, _: &T, ctx: &mut SimulationContext) -> f64 {
         self.points[ctx.sample_from_distribution(&self.dist)].value
     }
 }

@@ -1,3 +1,4 @@
+use dslab_core::{Simulation, SimulationContext};
 use sugars::boxed;
 
 use super::fair_fast::FairThroughputSharingModel;
@@ -16,26 +17,40 @@ fn assert_float_eq(x: f64, y: f64, eps: f64) {
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
     slow_model: SlowFairThroughputSharingModel<u32>,
+    sim: Simulation,
+    ctx: SimulationContext,
 }
 
 impl ModelsTester {
     fn with_fixed_throughput(bandwidth: f64) -> Self {
+        let mut sim = Simulation::new(123);
+        let mut ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
             slow_model: SlowFairThroughputSharingModel::with_fixed_throughput(bandwidth),
+            sim,
+            ctx,
         }
     }
 
     pub fn with_dynamic_throughput(throughput_function: fn(usize) -> f64) -> Self {
+        let mut sim = Simulation::new(123);
+        let mut ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
             slow_model: SlowFairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
+            sim,
+            ctx,
         }
     }
 
-    fn insert_and_compare(&mut self, current_time: f64, volume: f64, item: u32) {
-        self.fast_model.insert(current_time, volume, item);
-        self.slow_model.insert(current_time, volume, item);
+    fn advance_time(&mut self, duration: f64) {
+        self.sim.step_for_duration(duration);
+    }
+
+    fn insert_and_compare(&mut self, item: u32, volume: f64) {
+        self.fast_model.insert(item, volume, &mut self.ctx);
+        self.slow_model.insert(item, volume, &mut self.ctx);
         let fast_item = self.fast_model.peek().unwrap();
         let slow_item = self.slow_model.peek().unwrap();
         assert_float_eq(fast_item.0, slow_item.0, 1e-12);
@@ -64,51 +79,57 @@ impl ModelsTester {
 #[test]
 fn single_activity() {
     let mut te = ModelsTester::with_fixed_throughput(100.);
-    te.insert_and_compare(0., 350., 0);
+    te.insert_and_compare(0, 350.);
     assert_eq!(te.pop_all_and_compare(), vec![(3.5, 0)]);
 }
 
 #[test]
 fn two_activities_with_simultaneous_start() {
     let mut tester = ModelsTester::with_fixed_throughput(100.);
-    tester.insert_and_compare(0., 150., 0);
-    tester.insert_and_compare(0., 300., 1);
+    tester.insert_and_compare(0, 150.);
+    tester.insert_and_compare(1, 300.);
     assert_eq!(tester.pop_all_and_compare(), vec![(3., 0), (4.5, 1)]);
 }
 
 #[test]
 fn two_overlapping_activities() {
     let mut tester = ModelsTester::with_fixed_throughput(100.);
-    tester.insert_and_compare(0., 200., 0);
-    tester.insert_and_compare(1., 200., 1);
+    tester.insert_and_compare(0, 200.);
+    tester.advance_time(1.);
+    tester.insert_and_compare(1, 200.);
     assert_eq!(tester.pop_all_and_compare(), vec![(3., 0), (4., 1)]);
 }
 
 #[test]
 fn complete_overlap() {
     let mut tester = ModelsTester::with_fixed_throughput(100.);
-    tester.insert_and_compare(0., 500., 0);
-    tester.insert_and_compare(1., 100., 1);
+    tester.insert_and_compare(0, 500.);
+    tester.advance_time(1.);
+    tester.insert_and_compare(1, 100.);
     assert_eq!(tester.pop_all_and_compare(), vec![(3., 1), (6., 0)]);
 }
 
 #[test]
 fn correct_state_after_no_activities() {
     let mut tester = ModelsTester::with_fixed_throughput(100.);
-    tester.insert_and_compare(0., 500., 0);
-    tester.insert_and_compare(1., 100., 1);
+    tester.insert_and_compare(0, 500.);
+    tester.advance_time(1.);
+    tester.insert_and_compare(1, 100.);
     assert_eq!(tester.pop_all_and_compare(), vec![(3., 1), (6., 0)]);
 
-    tester.insert_and_compare(10., 500., 0);
-    tester.insert_and_compare(11., 100., 1);
+    tester.advance_time(9.);
+    tester.insert_and_compare(0, 500.);
+    tester.advance_time(1.);
+    tester.insert_and_compare(1, 100.);
     assert_eq!(tester.pop_all_and_compare(), vec![(13., 1), (16., 0)]);
 }
 
 #[test]
 fn fractional_times() {
     let mut tester = ModelsTester::with_fixed_throughput(100.);
-    tester.insert_and_compare(0., 10., 0);
-    tester.insert_and_compare(0.1, 90., 1);
+    tester.insert_and_compare(0, 10.);
+    tester.advance_time(0.1);
+    tester.insert_and_compare(1, 90.);
     assert_eq!(tester.pop_all_and_compare(), vec![(0.1, 0), (1., 1)]);
 }
 
@@ -117,8 +138,8 @@ fn fairness() {
     let activities_count: usize = 100;
     let mut tester = ModelsTester::with_fixed_throughput(1.);
     for i in 0..activities_count {
-        let start_time = i as f64;
-        tester.insert_and_compare(start_time, 1000., i as u32);
+        tester.insert_and_compare(i as u32, 1000.);
+        tester.advance_time(1.)
     }
     let result = tester.pop_all_and_compare();
     assert_eq!(result.len(), activities_count);
@@ -133,7 +154,7 @@ fn equal_activities_ordering() {
     let mut tester = ModelsTester::with_fixed_throughput(activities_count as f64);
     let mut expected_result = vec![];
     for i in 0..activities_count {
-        tester.insert_and_compare(0., activities_count as f64, i);
+        tester.insert_and_compare(i, activities_count as f64);
         expected_result.push((activities_count as f64, i));
     }
     assert_eq!(tester.pop_all_and_compare(), expected_result);
@@ -152,7 +173,7 @@ fn dynamic_throughput() {
     let mut tester = ModelsTester::with_dynamic_throughput(throughput_function);
     let mut expected_result = vec![];
     for i in 0..3 {
-        tester.insert_and_compare(0., 100., i);
+        tester.insert_and_compare(i, 100.);
         expected_result.push((3., i));
     }
     assert_eq!(tester.pop_all_and_compare(), expected_result);
@@ -160,7 +181,7 @@ fn dynamic_throughput() {
     tester = ModelsTester::with_dynamic_throughput(throughput_function);
     expected_result.clear();
     for i in 0..4 {
-        tester.insert_and_compare(0., 100., i);
+        tester.insert_and_compare(i, 100.);
         expected_result.push((4. * 2., i));
     }
     assert_eq!(tester.pop_all_and_compare(), expected_result);

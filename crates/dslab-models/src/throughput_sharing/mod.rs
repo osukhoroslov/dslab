@@ -3,6 +3,7 @@
 mod fair_fast;
 mod fair_slow;
 mod model;
+pub mod throughput_factor;
 
 #[cfg(test)]
 mod tests;

@@ -5,7 +5,6 @@ pub mod disk;
 pub mod events;
 pub mod fs;
 pub mod storage;
-pub mod throughput_factor;
 
 #[cfg(test)]
 mod tests;
