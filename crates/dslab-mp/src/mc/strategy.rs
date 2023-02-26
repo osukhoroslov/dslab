@@ -43,16 +43,15 @@ pub trait Strategy {
                         return Err(err);
                     }
                 }
-
-                if let Err(err) = self.apply_event(system, event_num) {
-                    return Err(err);
-                }
             }
 
-            TimerFired { .. } => {
-                return self.apply_event(system, event_num);
-            }
+            TimerFired { .. } => {}
         }
+
+        if let Err(err) = self.apply_event(system, event_num) {
+            return Err(err);
+        }
+
         Ok(())
     }
 
