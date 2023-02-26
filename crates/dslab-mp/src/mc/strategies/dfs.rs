@@ -102,25 +102,6 @@ impl Strategy for Dfs {
         Ok(())
     }
 
-    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
-        let state = system.get_state(self.search_depth());
-        let event = system.events.borrow_mut().remove(event_num);
-
-        self.debug_log(&event, self.search_depth(), LogContext::Default);
-
-        system.apply_event(event);
-
-        let run_success = self.search_step_impl(system);
-
-        if let Err(err) = run_success {
-            return Err(err);
-        }
-
-        system.set_state(state);
-
-        Ok(())
-    }
-
     fn log_mode(&self) -> &LogMode {
         &self.log_mode
     }
