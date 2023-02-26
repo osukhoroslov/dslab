@@ -324,14 +324,14 @@ fn test_migration_simple() {
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_cpu_load(current_time), 0.5);
     assert_eq!(cloud_sim.host(h2).borrow_mut().get_memory_load(current_time), 0.5);
 
-    cloud_sim.step_for_duration(4.69);
+    cloud_sim.step_until_time(21.69);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 21.5); // due to there are no events between 21.5 and 21.7
+    assert_eq!(current_time, 21.69);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
 
-    cloud_sim.step_for_duration(0.2);
+    cloud_sim.step_until_time(21.71);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 21.7);
+    assert_eq!(current_time, 21.71);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
 
@@ -363,14 +363,14 @@ fn test_double_migration() {
     assert_eq!(current_time, 100.);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
 
-    cloud_sim.step_for_duration(1.69);
+    cloud_sim.step_until_time(101.69);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 101.5);
+    assert_eq!(current_time, 101.69);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Running);
 
-    cloud_sim.step_for_duration(0.2);
+    cloud_sim.step_until_time(101.71);
     current_time = cloud_sim.current_time();
-    assert_eq!(current_time, 101.7);
+    assert_eq!(current_time, 101.71);
     assert_eq!(cloud_sim.vm_status(vm), VmStatus::Finished);
 }
 

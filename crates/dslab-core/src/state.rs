@@ -32,6 +32,10 @@ impl SimulationState {
         self.clock
     }
 
+    pub fn set_time(&mut self, time: f64) {
+        self.clock = time;
+    }
+
     pub fn rand(&mut self) -> f64 {
         self.rand.gen_range(0.0..1.0)
     }
