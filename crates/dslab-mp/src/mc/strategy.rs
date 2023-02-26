@@ -33,7 +33,7 @@ pub trait Strategy {
     fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
 
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
-        let event = system.events.borrow()[event_num].clone();
+        let event = self.clone_event(system, event_num);
         match event {
             MessageReceived {
                 msg: _msg,
@@ -61,7 +61,7 @@ pub trait Strategy {
 
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
-        let event = system.events.borrow_mut().remove(event_num);
+        let event = self.take_event(system, event_num);
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
@@ -76,7 +76,7 @@ pub trait Strategy {
 
     fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
-        let event = system.events.borrow_mut().remove(event_num);
+        let event = self.take_event(system, event_num);
 
         self.debug_log(&event, self.search_depth(), LogContext::Default);
 
@@ -91,6 +91,51 @@ pub trait Strategy {
         system.set_state(state);
 
         Ok(())
+    }
+
+    fn take_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
+        system.events.borrow_mut().remove(event_num)
+    }
+
+    fn clone_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
+        system.events.borrow()[event_num].clone()
+    }
+
+    fn add_event(&self, system: &mut McSystem, event: McEvent, event_num: usize) {
+        system.events.borrow_mut().insert(event_num, event);
+    }
+
+    fn decrease_max_dupl_count(&self, system: &mut McSystem, event_num: usize) {
+        let event = self.take_event(system, event_num);
+
+        match event {
+            MessageReceived {
+                msg,
+                src,
+                dest,
+                can_be_dropped,
+                max_dupl_count,
+                can_be_corrupted,
+            } => {
+                if max_dupl_count == 1 {
+                    return;
+                }
+
+                self.add_event(
+                    system,
+                    MessageReceived {
+                        msg,
+                        src,
+                        dest,
+                        can_be_dropped,
+                        max_dupl_count: max_dupl_count - 1,
+                        can_be_corrupted,
+                    },
+                    event_num,
+                );
+            }
+            TimerFired { .. } => {}
+        }
     }
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
