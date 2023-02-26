@@ -1,6 +1,7 @@
 //! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 //! and completion.
 
+use dslab_core::SimulationContext;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -86,9 +87,9 @@ impl<T> SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         let new_count = self.entries.len() + 1;
-        self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);
+        self.recalculate(ctx.time(), (self.throughput_function)(new_count) / new_count as f64);
         self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }

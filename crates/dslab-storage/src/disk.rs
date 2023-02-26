@@ -26,11 +26,13 @@ use dslab_core::{context::SimulationContext, log_debug, log_error};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
-use crate::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
-use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel};
+use dslab_models::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
+use dslab_models::throughput_sharing::{
+    make_constant_throughput_function, FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel,
+};
 
 #[derive(Clone)]
-struct DiskActivity {
+pub struct DiskActivity {
     request_id: u64,
     requester: Id,
     size: u64,
@@ -53,8 +55,6 @@ pub struct Disk {
     used: u64,
     read_throughput_model: FairThroughputSharingModel<DiskActivity>,
     write_throughput_model: FairThroughputSharingModel<DiskActivity>,
-    read_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
-    write_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -67,10 +67,14 @@ impl Disk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_fixed_throughput(read_bandwidth),
-            write_throughput_model: FairThroughputSharingModel::with_fixed_throughput(write_bandwidth),
-            read_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
-            write_throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
+            read_throughput_model: FairThroughputSharingModel::new(
+                make_constant_throughput_function(read_bandwidth),
+                boxed!(ConstantThroughputFactorFunction::new(1.)),
+            ),
+            write_throughput_model: FairThroughputSharingModel::new(
+                make_constant_throughput_function(write_bandwidth),
+                boxed!(ConstantThroughputFactorFunction::new(1.)),
+            ),
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
@@ -83,17 +87,21 @@ impl Disk {
         capacity: u64,
         read_throughput_function: ThroughputFunction,
         write_throughput_function: ThroughputFunction,
-        read_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
-        write_throughput_factor_function: Box<dyn ThroughputFactorFunction>,
+        read_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
+        write_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
         ctx: SimulationContext,
     ) -> Self {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(read_throughput_function),
-            write_throughput_model: FairThroughputSharingModel::with_dynamic_throughput(write_throughput_function),
-            read_throughput_factor_function,
-            write_throughput_factor_function,
+            read_throughput_model: FairThroughputSharingModel::new(
+                read_throughput_function,
+                read_throughput_factor_function,
+            ),
+            write_throughput_model: FairThroughputSharingModel::new(
+                write_throughput_function,
+                write_throughput_factor_function,
+            ),
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
@@ -163,17 +171,14 @@ impl Storage for Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            let throughput_factor = self.read_throughput_factor_function.get_factor(size, &mut self.ctx);
-            let corrected_size = size as f64 / throughput_factor;
-
             self.read_throughput_model.insert(
-                self.ctx.time(),
-                corrected_size,
                 DiskActivity {
                     request_id,
                     requester,
                     size,
                 },
+                size as f64,
+                &mut self.ctx,
             );
             self.ctx.cancel_event(self.next_read_event);
             self.schedule_next_read_event();
@@ -196,19 +201,14 @@ impl Storage for Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-
-            let throughput_factor = self.write_throughput_factor_function.get_factor(size, &mut self.ctx);
-            let corrected_size = size as f64 / throughput_factor;
-            log_debug!(self.ctx, "Corrected size is {}", corrected_size,);
-
             self.write_throughput_model.insert(
-                self.ctx.time(),
-                corrected_size,
                 DiskActivity {
                     request_id,
                     requester,
                     size,
                 },
+                size as f64,
+                &mut self.ctx,
             );
             self.ctx.cancel_event(self.next_write_event);
             self.schedule_next_write_event();

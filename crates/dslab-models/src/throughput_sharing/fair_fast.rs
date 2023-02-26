@@ -1,7 +1,10 @@
 //! Fast implementation of fair throughput sharing model.
 
+use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
+use dslab_core::SimulationContext;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use sugars::boxed;
 
 use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
 
@@ -46,6 +49,7 @@ impl<T> Eq for Activity<T> {}
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ThroughputFunction,
+    throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
     throughput_per_activity: f64,
     next_id: u64,
     total_work: f64,
@@ -53,6 +57,21 @@ pub struct FairThroughputSharingModel<T> {
 }
 
 impl<T> FairThroughputSharingModel<T> {
+    pub fn new(
+        throughput_function: ThroughputFunction,
+        throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+    ) -> Self {
+        Self {
+            activities: BinaryHeap::new(),
+            throughput_function,
+            throughput_factor_function,
+            throughput_per_activity: 0.,
+            next_id: 0,
+            total_work: 0.,
+            last_update: 0.,
+        }
+    }
+
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(make_constant_throughput_function(throughput))
@@ -63,6 +82,7 @@ impl<T> FairThroughputSharingModel<T> {
         Self {
             activities: BinaryHeap::new(),
             throughput_function,
+            throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
             throughput_per_activity: 0.,
             next_id: 0,
             total_work: 0.,
@@ -86,17 +106,18 @@ impl<T> FairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         if !self.activities.is_empty() {
-            self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);
+            self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
         }
+        let volume = volume / self.throughput_factor_function.get_factor(&item, ctx);
         let finish_work = self.total_work + volume;
         self.activities
             .push(Activity::<T>::new(self.next_id, item, finish_work));
         self.next_id += 1;
         let count = self.activities.len();
         self.throughput_per_activity = (self.throughput_function)(count) / count as f64;
-        self.last_update = current_time;
+        self.last_update = ctx.time();
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {
