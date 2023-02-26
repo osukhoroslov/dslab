@@ -30,6 +30,8 @@ pub trait Strategy {
 
     fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
 
+    fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
+
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let event = system.events.borrow()[event_num].clone();
         match event {
