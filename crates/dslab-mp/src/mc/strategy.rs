@@ -100,4 +100,6 @@ pub trait Strategy {
     }
 
     fn log_mode(&self) -> &LogMode;
+
+    fn search_depth(&self) -> u64;
 }
