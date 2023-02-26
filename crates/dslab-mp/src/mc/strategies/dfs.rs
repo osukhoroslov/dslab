@@ -1,4 +1,4 @@
-use crate::mc::strategy::{LogContext, LogMode, McSummary, Strategy};
+use crate::mc::strategy::{LogMode, McSummary, Strategy};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Dfs {
@@ -89,21 +89,6 @@ impl Strategy for Dfs {
 
     fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
         self.dfs(system)
-    }
-
-    fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
-        let state = system.get_state(self.search_depth);
-        let event = system.events.borrow_mut().remove(event_num);
-
-        self.debug_log(&event, self.search_depth, LogContext::Dropped);
-
-        if let Err(err) = self.drop_impl(system) {
-            return Err(err);
-        }
-
-        system.set_state(state);
-
-        Ok(())
     }
 
     fn log_mode(&self) -> &LogMode {
