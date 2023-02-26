@@ -1,11 +1,13 @@
 use colored::*;
+use lazy_static::lazy_static;
+use regex::Regex;
+use std::collections::HashMap;
 
 use crate::mc::events::McEvent;
 use crate::mc::events::McEvent::{MessageReceived, TimerFired};
 use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
-use std::collections::HashMap;
 
 #[derive(Clone, PartialEq)]
 pub enum LogMode {
@@ -38,27 +40,41 @@ pub trait Strategy {
             MessageReceived {
                 can_be_dropped,
                 max_dupl_count,
+                can_be_corrupted,
                 ..
             } => {
+                // Drop
                 if can_be_dropped {
                     if let Err(err) = self.process_drop_event(system, event_num) {
                         return Err(err);
                     }
                 }
 
-                if let Err(err) = self.apply_event(system, event_num, false) {
+                // Default (normal / corrupt)
+                if let Err(err) = self.apply_event(system, event_num, false, false) {
                     return Err(err);
                 }
-
-                if max_dupl_count > 1 {
-                    if let Err(err) = self.apply_event(system, event_num, true) {
+                if can_be_corrupted {
+                    if let Err(err) = self.apply_event(system, event_num, false, true) {
                         return Err(err);
+                    }
+                }
+
+                // Duplicate (normal / corrupt one)
+                if max_dupl_count > 1 {
+                    if let Err(err) = self.apply_event(system, event_num, true, false) {
+                        return Err(err);
+                    }
+                    if can_be_corrupted {
+                        if let Err(err) = self.apply_event(system, event_num, true, true) {
+                            return Err(err);
+                        }
                     }
                 }
             }
 
             TimerFired { .. } => {
-                if let Err(err) = self.apply_event(system, event_num, false) {
+                if let Err(err) = self.apply_event(system, event_num, false, false) {
                     return Err(err);
                 }
             }
@@ -82,13 +98,23 @@ pub trait Strategy {
         Ok(())
     }
 
-    fn apply_event(&mut self, system: &mut McSystem, event_num: usize, duplicate: bool) -> Result<(), String> {
+    fn apply_event(
+        &mut self,
+        system: &mut McSystem,
+        event_num: usize,
+        duplicate: bool,
+        corrupt: bool,
+    ) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
-        let event = if duplicate {
+
+        let mut event = if duplicate {
             self.duplicate_event(system, event_num)
         } else {
             self.take_event(system, event_num)
         };
+        if corrupt {
+            event = self.corrupt_msg_data(event);
+        }
 
         self.debug_log(&event, self.search_depth(), LogContext::Default);
 
@@ -147,6 +173,33 @@ pub trait Strategy {
                 );
             }
             TimerFired { .. } => {}
+        }
+    }
+
+    fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
+        match event {
+            MessageReceived {
+                msg,
+                src,
+                dest,
+                can_be_dropped,
+                max_dupl_count,
+                can_be_corrupted,
+            } => {
+                lazy_static! {
+                    static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                }
+                let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+                MessageReceived {
+                    msg: Message::new(msg.tip, corrupted_data),
+                    src,
+                    dest,
+                    can_be_dropped,
+                    max_dupl_count,
+                    can_be_corrupted,
+                }
+            }
+            TimerFired { .. } => event,
         }
     }
 
