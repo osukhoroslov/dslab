@@ -396,6 +396,11 @@ impl CloudSimulation {
         self.sim.step_for_duration(time);
     }
 
+    /// Steps through the simulation until the specified time (see dslab-core docs).
+    pub fn step_until_time(&mut self, time: f64) {
+        self.sim.step_until_time(time);
+    }
+
     /// Returns the total number of created events.
     pub fn event_count(&self) -> u64 {
         self.sim.event_count()

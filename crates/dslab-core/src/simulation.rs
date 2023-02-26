@@ -438,7 +438,11 @@ impl Simulation {
     /// Steps through the simulation with duration limit.
     ///
     /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
-    /// time is above the specified threshold (`current_time + duration`) or there are no pending events left.
+    /// time is above the specified threshold (`initial_time + duration`) or there are no pending events left.
+    ///
+    /// This method also advances the simulation time to `initial_time + duration`. Note that the resulted time may
+    /// slightly differ from the expected value due to the floating point errors. This issue can be avoided by using
+    /// the [`step_until_time()`](Self::step_until_time()) method.
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
     ///
@@ -458,28 +462,65 @@ impl Simulation {
     /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
-    /// let mut status = sim.step_for_duration(1.5);
-    /// assert_eq!(sim.time(), 1.0); // time equals to the first event
+    /// let mut status = sim.step_for_duration(1.8);
+    /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
-    /// status = sim.step_for_duration(0.1);
-    /// assert_eq!(sim.time(), 1.0); // no progress is made
-    /// assert!(status); // there are more events
-    /// status = sim.step_for_duration(3.0);
-    /// assert_eq!(sim.time(), 3.5); // time equals to the last event
+    /// status = sim.step_for_duration(1.8);
+    /// assert_eq!(sim.time(), 3.6);
     /// assert!(!status); // there are no more events
     /// ```
     pub fn step_for_duration(&mut self, duration: f64) -> bool {
         let end_time = self.sim_state.borrow().time() + duration;
+        self.step_until_time(end_time)
+    }
+
+    /// Steps through the simulation until the specified time.
+    ///
+    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
+    /// time is above the specified time or there are no pending events left.
+    ///
+    /// This method also advances the simulation time to the specified time.
+    ///
+    /// Returns `true` if there could be more pending events and `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::Simulation;
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp_ctx = sim.create_context("comp");
+    /// assert_eq!(sim.time(), 0.0);
+    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
+    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
+    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// let mut status = sim.step_until_time(1.8);
+    /// assert_eq!(sim.time(), 1.8);
+    /// assert!(status); // there are more events
+    /// status = sim.step_until_time(3.6);
+    /// assert_eq!(sim.time(), 3.6);
+    /// assert!(!status); // there are no more events
+    /// ```
+    pub fn step_until_time(&mut self, time: f64) -> bool {
+        let mut result = true;
         loop {
             if let Some(event) = self.sim_state.borrow().peek_event() {
-                if event.time > end_time {
-                    return true;
+                if event.time > time {
+                    break;
                 }
             } else {
-                return false;
+                result = false;
+                break;
             }
             self.step();
         }
+        self.sim_state.borrow_mut().set_time(time);
+        result
     }
 
     /// Returns a random float in the range _[0, 1)_
