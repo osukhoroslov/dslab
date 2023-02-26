@@ -87,13 +87,17 @@ impl Strategy for Dfs {
         result
     }
 
+    fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
+        self.dfs(system)
+    }
+
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth);
         let event = system.events.borrow_mut().remove(event_num);
 
         self.debug_log(&event, self.search_depth, LogContext::Dropped);
 
-        if let Err(err) = self.dfs(system) {
+        if let Err(err) = self.drop_impl(system) {
             return Err(err);
         }
 
