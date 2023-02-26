@@ -113,9 +113,13 @@ pub trait Strategy {
             self.take_event(system, event_num)
         };
         if corrupt {
+            self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
             event = self.corrupt_msg_data(event);
         }
 
+        if duplicate {
+            self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
+        }
         self.debug_log(&event, self.search_depth(), LogContext::Default);
 
         system.apply_event(event);
