@@ -36,10 +36,8 @@ pub trait Strategy {
         let event = self.clone_event(system, event_num);
         match event {
             MessageReceived {
-                msg: _msg,
-                src: _src,
-                dest: _dest,
                 can_be_dropped,
+                max_dupl_count,
                 ..
             } => {
                 if can_be_dropped {
@@ -47,13 +45,23 @@ pub trait Strategy {
                         return Err(err);
                     }
                 }
+
+                if let Err(err) = self.apply_event(system, event_num, false) {
+                    return Err(err);
+                }
+
+                if max_dupl_count > 1 {
+                    if let Err(err) = self.apply_event(system, event_num, true) {
+                        return Err(err);
+                    }
+                }
             }
 
-            TimerFired { .. } => {}
-        }
-
-        if let Err(err) = self.apply_event(system, event_num) {
-            return Err(err);
+            TimerFired { .. } => {
+                if let Err(err) = self.apply_event(system, event_num, false) {
+                    return Err(err);
+                }
+            }
         }
 
         Ok(())
@@ -74,9 +82,13 @@ pub trait Strategy {
         Ok(())
     }
 
-    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+    fn apply_event(&mut self, system: &mut McSystem, event_num: usize, duplicate: bool) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
-        let event = self.take_event(system, event_num);
+        let event = if duplicate {
+            self.duplicate_event(system, event_num)
+        } else {
+            self.take_event(system, event_num)
+        };
 
         self.debug_log(&event, self.search_depth(), LogContext::Default);
 
@@ -136,6 +148,12 @@ pub trait Strategy {
             }
             TimerFired { .. } => {}
         }
+    }
+
+    fn duplicate_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
+        let event = self.clone_event(system, event_num);
+        self.decrease_max_dupl_count(system, event_num);
+        event
     }
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
