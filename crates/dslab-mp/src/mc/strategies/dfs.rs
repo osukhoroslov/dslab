@@ -80,6 +80,10 @@ impl Strategy for Dfs {
         }
     }
 
+    fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
+        self.dfs(system)
+    }
+
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let state = system.get_state(self.search_depth);
         let event = system.events.borrow_mut().remove(event_num);
@@ -104,7 +108,7 @@ impl Strategy for Dfs {
         system.apply_event(event);
 
         self.search_depth += 1;
-        let run_success = self.dfs(system);
+        let run_success = self.search_step_impl(system);
         self.search_depth -= 1;
 
         if let Err(err) = run_success {
