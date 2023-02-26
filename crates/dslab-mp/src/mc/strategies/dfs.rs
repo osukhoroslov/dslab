@@ -1,4 +1,3 @@
-use crate::mc::events::McEvent;
 use crate::mc::strategy::{LogContext, LogMode, McSummary, Strategy};
 use crate::mc::system::{McState, McSystem};
 
