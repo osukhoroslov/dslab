@@ -59,7 +59,24 @@ pub trait Strategy {
 
     fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
 
-    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String>;
+    fn apply_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+        let state = system.get_state(self.search_depth());
+        let event = system.events.borrow_mut().remove(event_num);
+
+        self.debug_log(&event, self.search_depth(), LogContext::Default);
+
+        system.apply_event(event);
+
+        let run_success = self.search_step_impl(system);
+
+        if let Err(err) = run_success {
+            return Err(err);
+        }
+
+        system.set_state(state);
+
+        Ok(())
+    }
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
         if self.log_mode() == &LogMode::Debug {
