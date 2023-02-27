@@ -45,9 +45,7 @@ pub trait Strategy {
             } => {
                 // Drop
                 if can_be_dropped {
-                    if let Err(err) = self.process_drop_event(system, event_num) {
-                        return Err(err);
-                    }
+                    self.process_drop_event(system, event_num)?;
                 }
 
                 // Default (normal / corrupt)
@@ -124,11 +122,7 @@ pub trait Strategy {
 
         system.apply_event(event);
 
-        let run_success = self.search_step_impl(system);
-
-        if let Err(err) = run_success {
-            return Err(err);
-        }
+        self.search_step_impl(system)?;
 
         system.set_state(state);
 
