@@ -1,3 +1,5 @@
+use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
+use crate::throughput_sharing::{make_constant_throughput_function, ThroughputFunction};
 use dslab_core::{Simulation, SimulationContext};
 use sugars::boxed;
 
@@ -185,4 +187,57 @@ fn dynamic_throughput() {
         expected_result.push((4. * 2., i));
     }
     assert_eq!(tester.pop_all_and_compare(), expected_result);
+}
+
+struct TestThrougphutFactorFn {}
+
+impl ThroughputFactorFunction<u32> for TestThrougphutFactorFn {
+    fn get_factor(&mut self, item: &u32, _ctx: &mut SimulationContext) -> f64 {
+        if *item == 0 {
+            0.8
+        } else {
+            0.5
+        }
+    }
+}
+
+#[test]
+fn throughput_factor() {
+    let mut sim = Simulation::new(123);
+    let mut ctx = sim.create_context("test");
+    let tf = make_constant_throughput_function(100.);
+    let mut model: FairThroughputSharingModel<u32> =
+        FairThroughputSharingModel::new(tf, boxed!(TestThrougphutFactorFn {}));
+    model.insert(0, 160., &mut ctx);
+    sim.step_until_time(1.);
+    model.insert(1, 100., &mut ctx);
+    sim.step_until_time(2.);
+    model.insert(2, 25., &mut ctx);
+    assert_eq!(model.pop(), Some((3.5, 0)));
+    assert_eq!(model.pop(), Some((3.5, 2)));
+    assert_eq!(model.pop(), Some((4.5, 1)));
+}
+
+#[test]
+fn throughput_factor_and_degradation() {
+    fn throughput_function(n: usize) -> f64 {
+        if n > 1 {
+            80.
+        } else {
+            100.
+        }
+    }
+
+    let mut sim = Simulation::new(123);
+    let mut ctx = sim.create_context("test");
+    let mut model: FairThroughputSharingModel<u32> =
+        FairThroughputSharingModel::new(boxed!(throughput_function), boxed!(TestThrougphutFactorFn {}));
+    model.insert(0, 160., &mut ctx);
+    sim.step_until_time(1.);
+    model.insert(1, 100., &mut ctx);
+    sim.step_until_time(2.);
+    model.insert(2, 25., &mut ctx);
+    assert_eq!(model.pop(), Some((3.875, 2)));
+    assert_eq!(model.pop(), Some((4.125, 0)));
+    assert_eq!(model.pop(), Some((5.125, 1)));
 }
