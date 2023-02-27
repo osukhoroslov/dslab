@@ -34,9 +34,7 @@ impl Dfs {
         let state = system.get_state(self.search_depth);
 
         // Checking invariant on every step
-        if let Err(inv_broken) = (self.invariant)(&state) {
-            return Err(inv_broken);
-        }
+        (self.invariant)(&state)?;
 
         // Check final state of the system
         if let Some(status) = (self.goal)(&state) {
@@ -56,9 +54,7 @@ impl Dfs {
         }
 
         for i in 0..events_num {
-            if let Err(err) = self.process_event(system, i) {
-                return Err(err);
-            }
+            self.process_event(system, i)?;
         }
         Ok(())
     }
