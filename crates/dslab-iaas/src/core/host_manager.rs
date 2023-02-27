@@ -13,6 +13,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_trace};
+use dslab_power_models::power_model::HostPowerModel;
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
@@ -23,7 +24,6 @@ use crate::core::events::allocation::{
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
-use crate::core::power_model::HostPowerModel;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
