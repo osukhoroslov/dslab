@@ -12,6 +12,7 @@ use crate::task::*;
 
 struct Resource {
     cores_available: u32,
+    memory_available: u64,
     speed: u64,
 }
 
@@ -86,6 +87,7 @@ impl PortfolioScheduler {
             .iter()
             .map(|resource| Resource {
                 cores_available: resource.cores_available,
+                memory_available: resource.memory_available,
                 speed: resource.speed,
             })
             .collect();
@@ -123,7 +125,10 @@ impl PortfolioScheduler {
             }
 
             let best_resource = (0..resources.len())
-                .filter(|&r| resources[r].cores_available > 0)
+                .filter(|&r| {
+                    resources[r].cores_available >= dag.get_task(task).min_cores
+                        && resources[r].memory_available >= dag.get_task(task).memory
+                })
                 .min_by(|&a, &b| match self.cluster_criterion {
                     ClusterCriterion::TaskData => total_task_data
                         .get(&b)
@@ -153,9 +158,10 @@ impl PortfolioScheduler {
                 CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
                 CoresCriterion::MaxCores => resources[best_resource].cores_available,
             };
-            let cores = cores.clamp(dag.get_task(task).min_cores, dag.get_task(task).max_cores)..min(resources[best_resource].cores_available);
+            let cores = cores.clamp(dag.get_task(task).min_cores, dag.get_task(task).max_cores);
 
             resources[best_resource].cores_available -= cores;
+            resources[best_resource].memory_available -= dag.get_task(task).memory;
             result.push(Action::ScheduleTask {
                 task,
                 resource: best_resource,
