@@ -2,6 +2,7 @@ mod examples;
 
 use std::fs;
 use std::io::Write;
+use std::str::FromStr;
 
 use clap::Parser;
 use env_logger::Builder;
@@ -9,6 +10,7 @@ use env_logger::Builder;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::load_network;
+use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
 
@@ -85,11 +87,11 @@ fn simulate(example: Example, scheduler: &str, data_transfer_mode: &str, trace_p
 
     let mut sim = DagSimulation::new(
         123,
+        read_resources(example.resources),
         load_network(example.network),
         scheduler,
         Config { data_transfer_mode },
     );
-    sim.load_resources(example.resources);
 
     let runner = sim.init(example.dag);
     if trace_path.is_some() {
