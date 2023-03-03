@@ -23,15 +23,15 @@ use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 // load resources configuration
-let resources = read_resources("../../examples/dag/resources/cluster1.yaml");
+let resources = read_resources("../../examples/dag-examples/resources/cluster1.yaml");
 // load network model configuration
-let network_model = load_network("../../examples/dag/networks/network1.yaml");
+let network_model = load_network("../../examples/dag-examples/networks/network1.yaml");
 // use simple scheduler implementation
 let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
 let mut sim = DagSimulation::new(123, resources, network_model, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
 // read DAG from YAML file
-let dag = DAG::from_yaml("../../examples/dag/dags/diamond.yaml");
+let dag = DAG::from_yaml("../../examples/dag-examples/dags/diamond.yaml");
 
 // init simulation
 let runner = sim.init(dag);
