@@ -568,10 +568,11 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
         let min_load = *loads.iter().min().unwrap();
         let max_load = *loads.iter().max().unwrap();
         let duration = sys.time() - init_time;
+        let network_ref = sys.network();
         measurements.push((
             duration,
-            (sys.network().traffic() - init_net_traffic) as f64 / duration,
-            (sys.network().message_count() - init_msg_count) as f64 / duration,
+            (network_ref.traffic() - init_net_traffic) as f64 / duration,
+            (network_ref.message_count() - init_msg_count) as f64 / duration,
             max_load as f64 / duration,
             max_load as f64 / min_load as f64,
         ));
@@ -645,10 +646,11 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
         let min_load = *loads.iter().min().unwrap();
         let max_load = *loads.iter().max().unwrap();
         let duration = sys.time() - init_time;
+        let network_ref = sys.network();
         measurements.push((
             duration,
-            (sys.network().traffic() - init_net_traffic) as f64 / duration,
-            (sys.network().message_count() - init_msg_count) as f64 / duration,
+            (network_ref.traffic() - init_net_traffic) as f64 / duration,
+            (network_ref.message_count() - init_msg_count) as f64 / duration,
             max_load as f64 / duration,
             max_load as f64 / min_load as f64,
         ));
