@@ -44,7 +44,7 @@ struct Resources {
 
 /// Loads resources from YAML file.
 ///
-/// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/resources/cluster1.yaml.
+/// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag-examples/resources/cluster1.yaml.
 pub fn load_resources<P: AsRef<Path>>(file: P, sim: &mut Simulation) -> Vec<Resource> {
     let resources = read_resources(&file);
     let mut result: Vec<Resource> = Vec::new();
