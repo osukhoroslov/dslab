@@ -11,8 +11,8 @@ use crate::container::{ContainerManager, ContainerStatus};
 use crate::cpu::CPU;
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
-use crate::invocation::{InvocationRegistry, InvocationRequest};
-use crate::invoker::{InvocationStatus, Invoker};
+use crate::invocation::{InvocationRegistry, InvocationStatus};
+use crate::invoker::{InvokerDecision, Invoker};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
@@ -95,27 +95,34 @@ impl Host {
         self.cpu.get_load()
     }
 
-    pub fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+    pub fn invoke(&mut self, id: usize, time: f64) -> InvokerDecision {
+        let mut ir = self.invocation_registry.borrow_mut();
+        ir[id].host_id = Some(self.id);
         self.container_manager.inc_active_invocations();
         let status = self.invoker.invoke(
-            request,
+            &ir[id],
             self.function_registry.clone(),
             &mut self.container_manager,
             time,
         );
         let mut stats = self.stats.borrow_mut();
-        stats.on_new_invocation(&request);
+        stats.on_new_invocation(ir[id].func_id);
         match status {
-            InvocationStatus::Warm(id) => {
+            InvokerDecision::Warm(container_id) => {
                 drop(stats);
-                self.start_invocation(id, request, time);
+                drop(ir);
+                self.start_invocation(container_id, id, time);
             }
-            InvocationStatus::Cold((id, delay)) => {
-                stats.on_cold_start(&request, delay);
+            InvokerDecision::Cold((container_id, delay)) => {
+                ir[id].status = InvocationStatus::WaitingForContainer;
+                ir[id].container_id = Some(container_id);
+                stats.on_cold_start(ir[id].func_id, delay);
                 drop(stats);
-                self.container_manager.reserve_container(id, request);
+                self.container_manager.reserve_container(container_id, id);
             }
-            _ => {}
+            _ => {
+                ir[id].status = InvocationStatus::Queued;
+            }
         }
         status
     }
@@ -135,10 +142,7 @@ impl Host {
         }
     }
 
-    fn start_invocation(&mut self, cont_id: usize, request: InvocationRequest, time: f64) {
-        self.invocation_registry
-            .borrow_mut()
-            .new_invocation(request, self.id, cont_id, time);
+    fn start_invocation(&mut self, cont_id: usize, id: usize, time: f64) {
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let delta = time - container.last_change;
@@ -148,9 +152,12 @@ impl Host {
         }
         container.last_change = time;
         container.status = ContainerStatus::Running;
-        container.start_invocation(request.id);
+        container.start_invocation(id);
         let mut ir = self.invocation_registry.borrow_mut();
-        let invocation = ir.get_invocation_mut(request.id).unwrap();
+        let mut invocation = &mut ir[id];
+        invocation.started = Some(time);
+        invocation.status = InvocationStatus::Running;
+        invocation.container_id = Some(cont_id);
         self.cpu.on_new_invocation(invocation, container, time);
     }
 
@@ -183,10 +190,11 @@ impl Host {
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();
         let function_registry = fr.borrow();
-        let invocation = invocation_registry.get_invocation_mut(id).unwrap();
+        let mut invocation = &mut invocation_registry[id];
         invocation.finished = Some(time);
-        let func_id = invocation.request.func_id;
-        let cont_id = invocation.container_id;
+        invocation.status = InvocationStatus::Finished;
+        let func_id = invocation.func_id;
+        let cont_id = invocation.container_id.unwrap();
         let app_id = function_registry.get_function(func_id).unwrap().app_id;
         self.coldstart
             .borrow_mut()
@@ -234,12 +242,16 @@ impl Host {
             return;
         }
         for req in reqs.drain(..) {
+            let mut ir = self.invocation_registry.borrow_mut();
+            let mut invocation = &mut ir[req.id];
+            invocation.container_id = Some(req.container_id);
             if req.delay.is_none() {
-                let mut ir = self.invocation_registry.borrow_mut();
-                ir.new_invocation(req.request, self.id, req.container_id, time);
-                let invocation = ir.get_invocation_mut(req.request.id).unwrap();
+                invocation.status = InvocationStatus::Running;
+                invocation.started = Some(time);
                 let container = self.container_manager.get_container_mut(req.container_id).unwrap();
                 self.cpu.on_new_invocation(invocation, container, time);
+            } else {
+                invocation.status = InvocationStatus::WaitingForContainer;
             }
         }
     }

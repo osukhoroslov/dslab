@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::Range;
 use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
@@ -10,7 +11,7 @@ use crate::controller::Controller;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
-use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
+use crate::invocation::{Invocation, InvocationRegistry};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::{GlobalStats, InvocationStats, Stats};
@@ -81,8 +82,12 @@ impl ServerlessSimulation {
         ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
-    pub fn get_invocation(&self, id: usize) -> Option<Invocation> {
-        self.invocation_registry.borrow().get_invocation(id).cloned()
+    pub fn get_invocation(&self, id: usize) -> Invocation {
+        self.invocation_registry.borrow()[id]
+    }
+
+    pub fn get_invocations(&self, id: Range<usize>) -> Vec<Invocation> {
+        self.invocation_registry.borrow()[id].to_vec()
     }
 
     pub fn stats(&self) -> Stats {
@@ -130,8 +135,9 @@ impl ServerlessSimulation {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    /// Returns id of the first invocation if the trace is not empty. Invocations have consecutive ids in increasing order of time.
-    pub fn load_trace(&mut self, trace: &dyn Trace) -> Option<usize> {
+    /// Returns id of the first invocation if the trace is not empty.
+    /// Invocations have consecutive ids in increasing order of time.
+    pub fn load_trace(&mut self, trace: &dyn Trace) -> Range<usize> {
         for app in trace.app_iter() {
             let res = ResourceConsumer::new(
                 app.container_resources
@@ -162,67 +168,45 @@ impl ServerlessSimulation {
         }
     }
 
-    /// This function provides a way to send invocation requests to a special ordered deque inside
-    /// the simulation, which works faster than the default heap.
-    /// Returns id of the first invocation if the iterator is not empty, invocations have consecutive ids that follow their order inside the iterator.
+    /// This function provides a way to send invocation requests to a special ordered deque
+    /// inside the simulation, which works faster than the default heap.
+    /// Returns id of the first invocation if the iterator is not empty,
+    /// invocations have consecutive ids that follow their order inside the iterator.
     pub fn send_requests_from_ordered_iter(
         &mut self,
         iterator: &mut dyn Iterator<Item = RequestData>,
-    ) -> Option<usize> {
+    ) -> Range<usize> {
+        let mut ir = self.invocation_registry.borrow_mut();
         let mut iter = iterator.peekable();
-        let mut result = None;
+        let first_idx = ir.len();
         if let Some(item) = iter.peek() {
-            let mut ir = self.invocation_registry.borrow_mut();
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 for req in iter {
-                    let id = ir.register_invocation();
-                    result.get_or_insert(id);
+                    let id = ir.new_invocation(req.id, req.duration, req.time);
                     self.ctx.emit_ordered(
-                        InvocationStartEvent {
-                            request: InvocationRequest {
-                                func_id: req.id,
-                                duration: req.duration,
-                                time: req.time,
-                                id,
-                            },
-                        },
+                        InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
                         req.time - self.sim.time(),
                     );
                 }
             } else {
                 for req in iter {
-                    let id = ir.register_invocation();
-                    result.get_or_insert(id);
+                    let id = ir.new_invocation(req.id, req.duration, req.time);
                     self.ctx.emit(
-                        InvocationStartEvent {
-                            request: InvocationRequest {
-                                func_id: req.id,
-                                duration: req.duration,
-                                time: req.time,
-                                id,
-                            },
-                        },
+                        InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
                         req.time - self.sim.time(),
                     );
                 }
             }
         }
-        result
+        first_idx..ir.len()
     }
 
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
-        let invocation_id = self.invocation_registry.borrow_mut().register_invocation();
+        let invocation_id = self.invocation_registry.borrow_mut().new_invocation(id, duration, time);
         self.ctx.emit(
-            InvocationStartEvent {
-                request: InvocationRequest {
-                    func_id: id,
-                    duration,
-                    time,
-                    id: invocation_id,
-                },
-            },
+            InvocationStartEvent { id: invocation_id, func_id: id },
             self.controller_id,
             time - self.sim.time(),
         );

@@ -81,7 +81,7 @@ impl SimulationState {
         T: EventData,
     {
         if !self.can_add_ordered_event(delay) {
-            panic!("Event order is broken! Pass events to emit_*_ordered functions in non-decreasing order of time.");
+            panic!("Event order is broken! Ordered events should be added in non-decreasing order of their time.");
         }
         let last_time = self.ordered_events.back().map_or(f64::MIN, |x| x.time);
         let event_id = self.event_count;
@@ -163,7 +163,7 @@ impl SimulationState {
         }
     }
 
-    /// This function does not check events added with emit_ordered methods.
+    /// This function does not check events from `ordered_events`.
     pub fn cancel_heap_events<F>(&mut self, pred: F)
     where
         F: Fn(&Event) -> bool,

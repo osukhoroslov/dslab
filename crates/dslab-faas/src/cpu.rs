@@ -115,7 +115,7 @@ impl ProgressComputer {
         if self.disable_contention {
             self.ctx
                 .borrow_mut()
-                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.request.duration);
+                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
             return;
         }
         self.shift_time(time);
@@ -132,7 +132,7 @@ impl ProgressComputer {
         }
         self.insert_invocation(
             invocation.id,
-            invocation.request.duration / self.cores * (container.invocations.len() as f64),
+            invocation.duration / self.cores * (container.invocations.len() as f64),
         );
         self.last_update = time;
         self.reschedule_end();

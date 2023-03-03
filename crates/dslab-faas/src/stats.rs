@@ -1,6 +1,6 @@
 use order_stat::kth_by;
 
-use crate::invocation::{Invocation, InvocationRequest};
+use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
 use crate::util::DefaultVecMap;
 
@@ -124,28 +124,28 @@ pub struct InvocationStats {
 }
 
 impl InvocationStats {
-    pub fn on_cold_start(&mut self, _request: &InvocationRequest, delay: f64) {
+    pub fn on_cold_start(&mut self, delay: f64) {
         self.cold_start_latency.add(delay);
         self.cold_starts += 1;
     }
 
-    pub fn on_new_invocation(&mut self, _request: &InvocationRequest) {
+    pub fn on_new_invocation(&mut self) {
         self.invocations += 1;
     }
 
     pub fn update(&mut self, invocation: &Invocation) {
-        let len = invocation.finished.unwrap() - invocation.started;
-        let total_len = invocation.finished.unwrap() - invocation.request.time;
-        self.abs_exec_slowdown.add(len - invocation.request.duration);
+        let len = invocation.finished.unwrap() - invocation.started.unwrap();
+        let total_len = invocation.finished.unwrap() - invocation.arrival_time;
+        self.abs_exec_slowdown.add(len - invocation.duration);
         self.rel_exec_slowdown
-            .add((len - invocation.request.duration) / invocation.request.duration);
-        self.abs_total_slowdown.add(total_len - invocation.request.duration);
+            .add((len - invocation.duration) / invocation.duration);
+        self.abs_total_slowdown.add(total_len - invocation.duration);
         self.rel_total_slowdown
-            .add((total_len - invocation.request.duration) / invocation.request.duration);
+            .add((total_len - invocation.duration) / invocation.duration);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.queueing_time.add(curr_time - request.time);
+    pub fn update_queueing_time(&mut self, queueing_time: f64) {
+        self.queueing_time.add(queueing_time);
     }
 }
 
@@ -156,20 +156,20 @@ pub struct GlobalStats {
 }
 
 impl GlobalStats {
-    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
-        self.invocation_stats.on_cold_start(request, delay);
+    pub fn on_cold_start(&mut self, delay: f64) {
+        self.invocation_stats.on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
-        self.invocation_stats.on_new_invocation(request);
+    pub fn on_new_invocation(&mut self) {
+        self.invocation_stats.on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.invocation_stats.update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.invocation_stats.update_queueing_time(request, curr_time);
+    pub fn update_queueing_time(&mut self, queueing_time: f64) {
+        self.invocation_stats.update_queueing_time(queueing_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
@@ -209,26 +209,26 @@ pub struct Stats {
 }
 
 impl Stats {
-    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
-        self.global_stats.on_cold_start(request, delay);
-        self.func_stats.get_mut(request.func_id).on_cold_start(request, delay);
+    pub fn on_cold_start(&mut self, func_id: usize, delay: f64) {
+        self.global_stats.on_cold_start(delay);
+        self.func_stats.get_mut(func_id).on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
-        self.global_stats.on_new_invocation(request);
-        self.func_stats.get_mut(request.func_id).on_new_invocation(request);
+    pub fn on_new_invocation(&mut self, func_id: usize) {
+        self.global_stats.on_new_invocation();
+        self.func_stats.get_mut(func_id).on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
-        self.func_stats.get_mut(invocation.request.func_id).update(invocation);
+        self.func_stats.get_mut(invocation.func_id).update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.global_stats.update_queueing_time(request, curr_time);
+    pub fn update_queueing_time(&mut self, func_id: usize, queueing_time: f64) {
+        self.global_stats.update_queueing_time(queueing_time);
         self.func_stats
-            .get_mut(request.func_id)
-            .update_queueing_time(request, curr_time);
+            .get_mut(func_id)
+            .update_queueing_time(queueing_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {

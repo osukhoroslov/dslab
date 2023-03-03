@@ -5,7 +5,6 @@ use dslab_core::context::SimulationContext;
 
 use crate::event::ContainerStartEvent;
 use crate::function::Application;
-use crate::invocation::InvocationRequest;
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::util::{Counter, DefaultVecMap, FxIndexMap, FxIndexSet};
 
@@ -49,7 +48,7 @@ pub struct ContainerManager {
     containers: FxIndexMap<usize, Container>,
     containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
     container_counter: Counter,
-    reservations: FxIndexMap<usize, Vec<InvocationRequest>>,
+    reservations: FxIndexMap<usize, Vec<usize>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -120,11 +119,11 @@ impl ContainerManager {
         None
     }
 
-    pub fn reserve_container(&mut self, id: usize, request: InvocationRequest) {
+    pub fn reserve_container(&mut self, id: usize, request: usize) {
         self.reservations.entry(id).or_default().push(request);
     }
 
-    pub fn take_reservations(&mut self, id: usize) -> Option<Vec<InvocationRequest>> {
+    pub fn take_reservations(&mut self, id: usize) -> Option<Vec<usize>> {
         self.reservations.remove(&id)
     }
 
@@ -160,7 +159,7 @@ impl ContainerManager {
 pub struct PossibleContainerIterator<'a> {
     inner: Option<indexmap::set::Iter<'a, usize>>,
     containers: &'a FxIndexMap<usize, Container>,
-    reserve: &'a FxIndexMap<usize, Vec<InvocationRequest>>,
+    reserve: &'a FxIndexMap<usize, Vec<usize>>,
     limit: usize,
     allow_deploying: bool,
 }
@@ -169,7 +168,7 @@ impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
         inner: Option<indexmap::set::Iter<'a, usize>>,
         containers: &'a FxIndexMap<usize, Container>,
-        reserve: &'a FxIndexMap<usize, Vec<InvocationRequest>>,
+        reserve: &'a FxIndexMap<usize, Vec<usize>>,
         limit: usize,
         allow_deploying: bool,
     ) -> Self {

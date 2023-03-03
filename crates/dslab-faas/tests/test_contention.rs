@@ -25,11 +25,11 @@ fn test_concurrency() {
     }
     sim.step_until_no_events();
     for id in func1_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 3., 1e-9);
     }
     for id in func2_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 4., 1e-9);
     }
     let stats = sim.invocation_stats();
@@ -56,11 +56,11 @@ fn test_different_shares() {
     }
     sim.step_until_no_events();
     for id in short_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 3.5714285714285716, 1e-9);
     }
     for id in long_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 5.714285714285714, 1e-9);
     }
     let stats = sim.invocation_stats();
@@ -87,11 +87,11 @@ fn test_different_start_times() {
     }
     sim.step_until_no_events();
     for id in delayed_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 7.142857142857142, 1e-9);
     }
     for id in initial_invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 6.809523809523809, 1e-9);
     }
     let stats = sim.invocation_stats();
@@ -114,7 +114,7 @@ fn test_equal_shares() {
     }
     sim.step_until_no_events();
     for id in invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 2.5, 1e-9);
     }
     let stats = sim.invocation_stats();
@@ -137,7 +137,7 @@ fn test_no_contention() {
     }
     sim.step_until_no_events();
     for id in invocations.drain(..) {
-        let invocation = sim.get_invocation(id).unwrap();
+        let invocation = sim.get_invocation(id);
         assert_float_eq(invocation.finished.unwrap(), 1., 1e-9);
     }
     let stats = sim.invocation_stats();

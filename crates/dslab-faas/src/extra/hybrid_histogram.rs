@@ -215,9 +215,9 @@ impl ColdStartPolicy for HybridHistogramPolicy {
     }
 
     fn update(&mut self, invocation: &Invocation, app: &Application) {
-        let fn_id = invocation.request.func_id;
+        let fn_id = invocation.func_id;
         if let Some(old) = self.last.get(&fn_id) {
-            let it = f64::max(0.0, invocation.request.time - old);
+            let it = f64::max(0.0, invocation.arrival_time - old);
             self.get_app_mut(app.id).update(it);
         }
         self.last.insert(fn_id, invocation.finished.unwrap());

@@ -1,7 +1,5 @@
 use serde::Serialize;
 
-use crate::invocation::InvocationRequest;
-
 #[derive(Serialize)]
 pub struct ContainerEndEvent {
     pub id: usize,
@@ -25,7 +23,8 @@ pub struct InvocationEndEvent {
 
 #[derive(Serialize)]
 pub struct InvocationStartEvent {
-    pub request: InvocationRequest,
+    pub id: usize,
+    pub func_id: usize,
 }
 
 #[derive(Serialize)]
