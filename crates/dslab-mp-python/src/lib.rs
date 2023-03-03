@@ -93,12 +93,10 @@ impl PyProcess {
         for t in timer_actions {
             if t.1 < 0.0 {
                 ctx.cancel_timer(&t.0);
+            } else if t.2 {
+                ctx.set_timer_once(&t.0, t.1);
             } else {
-                if t.2 {
-                    ctx.set_timer_once(&t.0, t.1);
-                } else {
-                    ctx.set_timer(&t.0, t.1);
-                }
+                ctx.set_timer(&t.0, t.1);
             }
         }
     }
