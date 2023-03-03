@@ -62,7 +62,7 @@ pub trait Invoker {
 
 #[derive(Default)]
 pub struct BasicInvoker {
-    queue: Vec<(usize, usize, f64)>,   
+    queue: Vec<(usize, usize, f64)>,
 }
 
 impl BasicInvoker {
@@ -161,7 +161,8 @@ impl Invoker for BasicInvoker {
     ) -> InvokerDecision {
         let status = self.try_invoke(invocation.func_id, fr, cm, time);
         if status == InvokerDecision::Rejected {
-            self.queue.push((invocation.id, invocation.func_id, invocation.arrival_time));
+            self.queue
+                .push((invocation.id, invocation.func_id, invocation.arrival_time));
             return InvokerDecision::Queued;
         }
         status

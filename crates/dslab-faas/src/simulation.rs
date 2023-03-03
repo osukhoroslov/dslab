@@ -172,10 +172,7 @@ impl ServerlessSimulation {
     /// inside the simulation, which works faster than the default heap.
     /// Returns id of the first invocation if the iterator is not empty,
     /// invocations have consecutive ids that follow their order inside the iterator.
-    pub fn send_requests_from_ordered_iter(
-        &mut self,
-        iterator: &mut dyn Iterator<Item = RequestData>,
-    ) -> Range<usize> {
+    pub fn send_requests_from_ordered_iter(&mut self, iterator: &mut dyn Iterator<Item = RequestData>) -> Range<usize> {
         let mut ir = self.invocation_registry.borrow_mut();
         let mut iter = iterator.peekable();
         let first_idx = ir.len();
@@ -206,7 +203,10 @@ impl ServerlessSimulation {
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
         let invocation_id = self.invocation_registry.borrow_mut().new_invocation(id, duration, time);
         self.ctx.emit(
-            InvocationStartEvent { id: invocation_id, func_id: id },
+            InvocationStartEvent {
+                id: invocation_id,
+                func_id: id,
+            },
             self.controller_id,
             time - self.sim.time(),
         );

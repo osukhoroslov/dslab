@@ -11,7 +11,7 @@ pub enum InvocationStatus {
     /// Invocation is running.
     Running,
     /// Invocation is finished.
-    Finished
+    Finished,
 }
 
 #[derive(Copy, Clone)]

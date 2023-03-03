@@ -12,7 +12,7 @@ use crate::cpu::CPU;
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationStatus};
-use crate::invoker::{InvokerDecision, Invoker};
+use crate::invoker::{Invoker, InvokerDecision};
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;

@@ -226,9 +226,7 @@ impl Stats {
 
     pub fn update_queueing_time(&mut self, func_id: usize, queueing_time: f64) {
         self.global_stats.update_queueing_time(queueing_time);
-        self.func_stats
-            .get_mut(func_id)
-            .update_queueing_time(queueing_time);
+        self.func_stats.get_mut(func_id).update_queueing_time(queueing_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
