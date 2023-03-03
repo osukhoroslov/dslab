@@ -64,7 +64,7 @@ fn build_system(config: &TestConfig) -> System {
     return sys;
 }
 
-fn recover_node(node_id: &str, sys: &mut System, config: &TestConfig) {
+fn recover_process_on_node(node_id: &str, sys: &mut System, config: &TestConfig) {
     sys.recover_node(node_id);
     let process_id = format!("{}", node_id);
     let process = config.process_factory.build((node_id,), config.seed);
@@ -142,7 +142,7 @@ fn test_random_seed(config: &TestConfig) -> TestResult {
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_join(config: &TestConfig) -> TestResult {
+fn test_process_join(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -157,13 +157,13 @@ fn test_node_join(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node joins the system
+    // process joins the system
     sys.send_local_message(&new_process, Message::json("JOIN", &JoinMessage { seed }));
     group.push(new_process);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_leave(config: &TestConfig) -> TestResult {
+fn test_process_leave(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -175,13 +175,13 @@ fn test_node_leave(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node leaves the system
+    // process leaves the system
     let left_process = group.remove(rand.gen_range(0..group.len()));
     sys.send_local_message(&left_process, Message::json("LEAVE", &LeaveMessage {}));
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_crash(config: &TestConfig) -> TestResult {
+fn test_process_crash(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -193,13 +193,13 @@ fn test_node_crash(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node crashes
+    // process crashes
     let crashed_node = group.remove(rand.gen_range(0..group.len()));
     sys.crash_node(&crashed_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_seed_node_crash(config: &TestConfig) -> TestResult {
+fn test_seed_process_crash(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -211,13 +211,13 @@ fn test_seed_node_crash(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // seed node crashes
+    // seed process crashes
     group.remove(0);
     sys.crash_node(&seed);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_crash_recover(config: &TestConfig) -> TestResult {
+fn test_process_crash_recover(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -229,20 +229,20 @@ fn test_node_crash_recover(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node crashes
+    // process crashes
     let crashed_node = group.remove(rand.gen_range(0..group.len()));
     sys.crash_node(&crashed_node);
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node recovers
-    recover_node(&crashed_node, &mut sys, &config);
+    // process recovers
+    recover_process_on_node(&crashed_node, &mut sys, &config);
     sys.send_local_message(&crashed_node, Message::json("JOIN", &JoinMessage { seed }));
 
     group.push(crashed_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_offline(config: &TestConfig) -> TestResult {
+fn test_process_offline(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -254,13 +254,13 @@ fn test_node_offline(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node goes offline
+    // process goes offline
     let offline_node = group.remove(rand.gen_range(0..group.len()));
     sys.network().disconnect_node(&offline_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_seed_node_offline(config: &TestConfig) -> TestResult {
+fn test_seed_process_offline(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -272,13 +272,13 @@ fn test_seed_node_offline(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // seed node goes offline
+    // seed process goes offline
     group.remove(0);
     sys.network().disconnect_node(&seed);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_offline_recover(config: &TestConfig) -> TestResult {
+fn test_process_offline_recover(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -290,12 +290,12 @@ fn test_node_offline_recover(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node goes offline
+    // process goes offline
     let offline_node = group.remove(rand.gen_range(0..group.len()));
     sys.network().disconnect_node(&offline_node);
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node goes back online
+    // process goes back online
     sys.network().connect_node(&offline_node);
     group.push(offline_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -343,7 +343,7 @@ fn test_network_partition_recover(config: &TestConfig) -> TestResult {
     step_until_stabilized(&mut sys, group.into_iter().map(String::from).collect())
 }
 
-fn test_node_cannot_receive(config: &TestConfig) -> TestResult {
+fn test_process_cannot_receive(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -356,13 +356,13 @@ fn test_node_cannot_receive(config: &TestConfig) -> TestResult {
 
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node goes partially offline (cannot receive incoming messages)
+    // process goes partially offline (cannot receive incoming messages)
     let blocked_node = group.remove(rand.gen_range(0..group.len()));
     sys.network().drop_incoming(&blocked_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
 }
 
-fn test_node_cannot_send(config: &TestConfig) -> TestResult {
+fn test_process_cannot_send(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
     let mut group = sys.process_names();
@@ -374,7 +374,7 @@ fn test_node_cannot_send(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // node goes partially offline (cannot send outgoing messages)
+    // process goes partially offline (cannot send outgoing messages)
     let blocked_node = group.remove(rand.gen_range(0..group.len()));
     sys.network().drop_outgoing(&blocked_node);
     step_until_stabilized(&mut sys, group.into_iter().collect())
@@ -392,7 +392,7 @@ fn test_two_nodes_cannot_communicate(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // two nodes cannot communicate with each other
+    // two processes cannot communicate with each other
     let node1 = *seed;
     let node2 = group.get(rand.gen_range(1..group.len())).unwrap();
     sys.network().disable_link(&node1, &node2);
@@ -470,7 +470,7 @@ fn test_flaky_network_and_crash(config: &TestConfig) -> TestResult {
     }
     step_until_stabilized(&mut sys, group.clone().into_iter().collect())?;
 
-    // make network unreliable for a while + crash node
+    // make network unreliable for a while + crash process
     sys.network().set_drop_rate(0.5);
     let crashed_node = group.remove(rand.gen_range(0..group.len()));
     sys.crash_node(&crashed_node);
@@ -496,22 +496,22 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         // do some nasty things
         match p {
             p if p < 0.25 => {
-                // crash node
+                // crash process
                 let crashed_node = group.remove(rand.gen_range(0..group.len()));
                 sys.crash_node(&crashed_node);
             }
             p if p < 0.5 => {
-                // disconnect node
+                // disconnect process
                 let offline_node = group.remove(rand.gen_range(0..group.len()));
                 sys.network().disconnect_node(&offline_node);
             }
             p if p < 0.75 => {
-                // partially disconnect node (cannot receive)
+                // partially disconnect process (cannot receive)
                 let blocked_node = group.remove(rand.gen_range(0..group.len()));
                 sys.network().drop_incoming(&blocked_node);
             }
             _ => {
-                // two nodes cannot communicate with each other
+                // two processes cannot communicate with each other
                 let node1 = group.get(rand.gen_range(0..group.len())).unwrap();
                 let mut node2 = group.get(rand.gen_range(0..group.len())).unwrap();
                 while node1 == node2 {
@@ -730,16 +730,16 @@ fn main() {
 
     tests.add("SIMPLE", test_simple, config.clone());
     tests.add("RANDOM SEED", test_random_seed, config.clone());
-    tests.add("NODE JOIN", test_node_join, config.clone());
-    tests.add("NODE LEAVE", test_node_leave, config.clone());
-    tests.add("NODE CRASH", test_node_crash, config.clone());
-    tests.add("SEED NODE CRASH", test_seed_node_crash, config.clone());
-    tests.add("NODE CRASH RECOVER", test_node_crash_recover, config.clone());
-    tests.add("NODE OFFLINE", test_node_offline, config.clone());
-    tests.add("SEED NODE OFFLINE", test_seed_node_offline, config.clone());
-    tests.add("NODE OFFLINE RECOVER", test_node_offline_recover, config.clone());
-    tests.add("NODE CANNOT RECEIVE", test_node_cannot_receive, config.clone());
-    tests.add("NODE CANNOT SEND", test_node_cannot_send, config.clone());
+    tests.add("PROCESS JOIN", test_process_join, config.clone());
+    tests.add("PROCESS LEAVE", test_process_leave, config.clone());
+    tests.add("PROCESS CRASH", test_process_crash, config.clone());
+    tests.add("SEED PROCESS CRASH", test_seed_process_crash, config.clone());
+    tests.add("PROCESS CRASH RECOVER", test_process_crash_recover, config.clone());
+    tests.add("PROCESS OFFLINE", test_process_offline, config.clone());
+    tests.add("SEED PROCESS OFFLINE", test_seed_process_offline, config.clone());
+    tests.add("PROCESS OFFLINE RECOVER", test_process_offline_recover, config.clone());
+    tests.add("PROCESS CANNOT RECEIVE", test_process_cannot_receive, config.clone());
+    tests.add("PROCESS CANNOT SEND", test_process_cannot_send, config.clone());
     tests.add("NETWORK PARTITION", test_network_partition, config.clone());
     tests.add(
         "NETWORK PARTITION RECOVER",
@@ -747,7 +747,7 @@ fn main() {
         config.clone(),
     );
     tests.add(
-        "TWO NODES CANNOT COMMUNICATE",
+        "TWO PROCESSES CANNOT COMMUNICATE",
         test_two_nodes_cannot_communicate,
         config.clone(),
     );
