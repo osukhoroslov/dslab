@@ -49,32 +49,22 @@ pub trait Strategy {
                 }
 
                 // Default (normal / corrupt)
-                if let Err(err) = self.apply_event(system, event_num, false, false) {
-                    return Err(err);
-                }
+                self.apply_event(system, event_num, false, false)?;
                 if can_be_corrupted {
-                    if let Err(err) = self.apply_event(system, event_num, false, true) {
-                        return Err(err);
-                    }
+                    self.apply_event(system, event_num, false, true)?;
                 }
 
                 // Duplicate (normal / corrupt one)
                 if max_dupl_count > 1 {
-                    if let Err(err) = self.apply_event(system, event_num, true, false) {
-                        return Err(err);
-                    }
+                    self.apply_event(system, event_num, true, false)?;
                     if can_be_corrupted {
-                        if let Err(err) = self.apply_event(system, event_num, true, true) {
-                            return Err(err);
-                        }
+                        self.apply_event(system, event_num, true, true)?;
                     }
                 }
             }
 
             TimerFired { .. } => {
-                if let Err(err) = self.apply_event(system, event_num, false, false) {
-                    return Err(err);
-                }
+                self.apply_event(system, event_num, false, false)?;
             }
         }
 
@@ -87,9 +77,7 @@ pub trait Strategy {
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
-        if let Err(err) = self.drop_impl(system) {
-            return Err(err);
-        }
+        self.drop_impl(system)?;
 
         system.set_state(state);
 
