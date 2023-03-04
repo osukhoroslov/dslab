@@ -32,8 +32,6 @@ pub trait Strategy {
 
     fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
 
-    fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
-
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let event = self.clone_event(system, event_num);
         match event {
@@ -77,7 +75,7 @@ pub trait Strategy {
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
-        self.drop_impl(system)?;
+        self.search_step_impl(system)?;
 
         system.set_state(state);
 
