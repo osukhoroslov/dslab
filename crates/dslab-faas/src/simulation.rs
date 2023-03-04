@@ -135,7 +135,7 @@ impl ServerlessSimulation {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    /// Returns id of the first invocation if the trace is not empty.
+    /// Returns a consecutive range of indices of new invocations.
     /// Invocations have consecutive ids in increasing order of time.
     pub fn load_trace(&mut self, trace: &dyn Trace) -> Range<usize> {
         for app in trace.app_iter() {
@@ -170,7 +170,7 @@ impl ServerlessSimulation {
 
     /// This function provides a way to send invocation requests to a special ordered deque
     /// inside the simulation, which works faster than the default heap.
-    /// Returns id of the first invocation if the iterator is not empty,
+    /// Returns a consecutive range of indices of new invocations,
     /// invocations have consecutive ids that follow their order inside the iterator.
     pub fn send_requests_from_ordered_iter(&mut self, iterator: &mut dyn Iterator<Item = RequestData>) -> Range<usize> {
         let mut ir = self.invocation_registry.borrow_mut();
