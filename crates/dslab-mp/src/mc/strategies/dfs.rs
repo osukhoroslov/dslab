@@ -83,10 +83,6 @@ impl Strategy for Dfs {
         result
     }
 
-    fn drop_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
-        self.dfs(system)
-    }
-
     fn log_mode(&self) -> &LogMode {
         &self.log_mode
     }
