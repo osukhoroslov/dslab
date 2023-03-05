@@ -92,19 +92,19 @@ pub trait Strategy {
     ) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
 
-        let mut event = if duplicate {
-            self.duplicate_event(system, event_num)
+        let mut event;
+        if duplicate {
+            event = self.duplicate_event(system, event_num);
+            self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         } else {
-            self.take_event(system, event_num)
-        };
+            event = self.take_event(system, event_num);
+        }
+
         if corrupt {
             self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
             event = self.corrupt_msg_data(event);
         }
 
-        if duplicate {
-            self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
-        }
         self.debug_log(&event, self.search_depth(), LogContext::Default);
 
         system.apply_event(event);
