@@ -95,13 +95,11 @@ pub trait Strategy {
         let mut event;
         if duplicate {
             event = self.duplicate_event(system, event_num);
-            self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         } else {
             event = self.take_event(system, event_num);
         }
 
         if corrupt {
-            self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
             event = self.corrupt_msg_data(event);
         }
 
@@ -162,6 +160,7 @@ pub trait Strategy {
     }
 
     fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
+        self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
         match event {
             MessageReceived {
                 msg,
@@ -191,6 +190,7 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
         let event = self.clone_event(system, event_num);
         self.decrease_max_dupl_count(system, event_num);
+        self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         event
     }
 
