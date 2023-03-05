@@ -34,22 +34,22 @@ impl McNetwork {
         &self.proc_locations[proc]
     }
 
-    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> Option<McEvent> {
+    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> McEvent {
         let src_node = self.get_proc_node(&src).clone();
         let dest_node = self.get_proc_node(&dest).clone();
 
-        return if src_node == dest_node {
-            Some(McEvent::MessageReceived {
+        if src_node == dest_node {
+            McEvent::MessageReceived {
                 msg,
                 src,
                 dest,
                 options: DeliveryOptions::NoFailures,
-            })
+            }
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)
             && !self.disabled_links.contains(&(src_node, dest_node))
         {
-            Some(McEvent::MessageReceived {
+            McEvent::MessageReceived {
                 msg,
                 src,
                 dest,
@@ -58,14 +58,14 @@ impl McNetwork {
                     max_dupl_count: if self.dupl_rate == 0. { 0 } else { DUPL_COUNT },
                     can_be_corrupted: self.corrupt_rate > 0.,
                 },
-            })
+            }
         } else {
-            Some(McEvent::MessageReceived {
+            McEvent::MessageReceived {
                 msg,
                 src,
                 dest,
                 options: DeliveryOptions::Dropped,
-            })
-        };
+            }
+        }
     }
 }
