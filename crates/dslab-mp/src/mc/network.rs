@@ -9,7 +9,7 @@ use crate::message::Message;
 use crate::network::Network;
 use crate::util::t;
 
-const DUPL_COUNT: u32 = 3;
+const DUPL_COUNT: u32 = 2;
 
 pub struct McNetwork {
     corrupt_rate: f64,
@@ -50,7 +50,7 @@ impl McNetwork {
                 src,
                 dest,
                 can_be_dropped: false,
-                max_dupl_count: 1,
+                max_dupl_count: 0,
                 can_be_corrupted: false,
             })
         } else if !self.drop_outgoing.contains(&src_node)
@@ -62,7 +62,7 @@ impl McNetwork {
                 src,
                 dest,
                 can_be_dropped: self.drop_rate > 0.,
-                max_dupl_count: if self.dupl_rate == 0. { 1 } else { DUPL_COUNT },
+                max_dupl_count: if self.dupl_rate == 0. { 0 } else { DUPL_COUNT },
                 can_be_corrupted: self.corrupt_rate > 0.,
             })
         } else {
