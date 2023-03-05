@@ -54,7 +54,7 @@ pub trait Strategy {
                 }
 
                 // Duplicate (normal / corrupt one)
-                if max_dupl_count > 1 {
+                if max_dupl_count > 0 {
                     self.apply_event(system, event_num, true, false)?;
                     if can_be_corrupted {
                         self.apply_event(system, event_num, true, true)?;
@@ -138,7 +138,7 @@ pub trait Strategy {
                 max_dupl_count,
                 can_be_corrupted,
             } => {
-                if max_dupl_count == 1 {
+                if max_dupl_count == 0 {
                     return;
                 }
 
