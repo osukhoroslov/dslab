@@ -43,8 +43,23 @@ impl McSystem {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
                 self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer)
             }
+            _ => vec![],
         };
-        self.events.borrow_mut().extend(new_events);
+
+        for new_event in new_events {
+            match new_event {
+                McEvent::TimerCancelled { timer, proc } => {
+                    self.events.borrow_mut().retain(|event| match event {
+                        McEvent::TimerFired {
+                            proc: timer_proc,
+                            timer: timer_name,
+                        } => *timer_proc != proc || *timer_name != timer,
+                        _ => true,
+                    });
+                }
+                _ => self.events.borrow_mut().push(new_event),
+            }
+        }
     }
 
     pub fn get_state(&self, search_depth: u64) -> McState {
