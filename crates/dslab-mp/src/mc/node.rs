@@ -103,9 +103,8 @@ impl McNode {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src, dest } => {
-                    if let Some(e) = self.net.borrow_mut().send_message(msg, src, dest) {
-                        new_events.push(e)
-                    }
+                    let event = self.net.borrow_mut().send_message(msg, src, dest);
+                    new_events.push(event);
                     proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
