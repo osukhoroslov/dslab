@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::HashMap;
 
 use crate::mc::events::McEvent;
 use crate::mc::events::McEvent::{MessageReceived, TimerFired};
