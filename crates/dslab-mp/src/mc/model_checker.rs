@@ -43,10 +43,7 @@ impl ModelChecker {
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
             let node = sys.get_node(&node).unwrap();
-            nodes.insert(
-                node.name.clone(),
-                McNode::new(node.processes(), mc_net.clone(), events.clone()),
-            );
+            nodes.insert(node.name.clone(), McNode::new(node.processes(), mc_net.clone()));
         }
 
         Self {

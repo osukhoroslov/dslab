@@ -45,16 +45,11 @@ pub type McNodeState = HashMap<String, ProcessEntryState>;
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<McNetwork>>,
-    events: Rc<RefCell<Vec<McEvent>>>,
 }
 
 impl McNode {
-    pub(crate) fn new(
-        processes: HashMap<String, ProcessEntry>,
-        net: Rc<RefCell<McNetwork>>,
-        events: Rc<RefCell<Vec<McEvent>>>,
-    ) -> Self {
-        Self { processes, net, events }
+    pub(crate) fn new(processes: HashMap<String, ProcessEntry>, net: Rc<RefCell<McNetwork>>) -> Self {
+        Self { processes, net }
     }
 
     pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) -> Vec<McEvent> {
@@ -127,13 +122,11 @@ impl McNode {
                 }
                 ProcessEvent::TimerCancelled { name } => {
                     proc_entry.pending_timers.remove(&name);
-                    self.events.borrow_mut().retain(|event| match event {
-                        McEvent::TimerFired {
-                            proc: timer_proc,
-                            timer: timer_name,
-                        } => *timer_proc != proc || *timer_name != name,
-                        _ => true,
-                    });
+                    let event = McEvent::TimerCancelled {
+                        timer: name,
+                        proc: proc.clone(),
+                    };
+                    new_events.push(event);
                 }
                 _ => {}
             }

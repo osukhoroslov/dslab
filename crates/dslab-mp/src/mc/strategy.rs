@@ -66,10 +66,10 @@ pub trait Strategy {
                     }
                 }
             }
-
             TimerFired { .. } => {
                 self.apply_event(system, event_num, false, false)?;
             }
+            _ => {}
         }
 
         Ok(())
@@ -168,7 +168,7 @@ pub trait Strategy {
                     );
                 }
             },
-            TimerFired { .. } => {}
+            _ => {}
         }
     }
 
@@ -192,7 +192,7 @@ pub trait Strategy {
                     options,
                 }
             }
-            TimerFired { .. } => event,
+            _ => event,
         }
     }
 
@@ -211,6 +211,9 @@ pub trait Strategy {
                 }
                 TimerFired { proc, timer } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10}", depth, proc, timer).yellow());
+                }
+                _ => {
+                    t!(format!("Internal error: unknown event in model checking Strategy").red());
                 }
             }
         }

@@ -14,6 +14,10 @@ pub enum McEvent {
         proc: String,
         timer: String,
     },
+    TimerCancelled {
+        proc: String,
+        timer: String,
+    },
 }
 
 #[derive(Serialize, Clone)]
