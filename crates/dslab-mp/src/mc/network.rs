@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use colored::*;
 
-use crate::mc::events::McEvent;
+use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::mc::strategy::LogMode;
 use crate::message::Message;
 use crate::network::Network;
@@ -49,9 +49,7 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                can_be_dropped: false,
-                max_dupl_count: 0,
-                can_be_corrupted: false,
+                options: DeliveryOptions::NoFailures,
             })
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)
@@ -61,9 +59,11 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                can_be_dropped: self.drop_rate > 0.,
-                max_dupl_count: if self.dupl_rate == 0. { 0 } else { DUPL_COUNT },
-                can_be_corrupted: self.corrupt_rate > 0.,
+                options: DeliveryOptions::PossibleFailures {
+                    can_be_dropped: self.drop_rate > 0.,
+                    max_dupl_count: if self.dupl_rate == 0. { 0 } else { DUPL_COUNT },
+                    can_be_corrupted: self.corrupt_rate > 0.,
+                },
             })
         } else {
             if self.log_mode == LogMode::Debug {
