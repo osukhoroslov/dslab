@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::events::{MessageReceived, TimerFired};
-use crate::mc::events::McEvent;
+use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::strategy::McSummary;
@@ -27,9 +27,7 @@ impl ModelChecker {
                     msg: value.msg.clone(),
                     src: value.src.clone(),
                     dest: value.dest.clone(),
-                    can_be_dropped: false,
-                    max_dupl_count: 0,
-                    can_be_corrupted: false,
+                    options: DeliveryOptions::NoFailures,
                 });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {

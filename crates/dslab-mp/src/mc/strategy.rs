@@ -4,8 +4,8 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent;
 use crate::mc::events::McEvent::{MessageReceived, TimerFired};
+use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
@@ -36,28 +36,33 @@ pub trait Strategy {
     fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
         let event = self.clone_event(system, event_num);
         match event {
-            MessageReceived {
-                can_be_dropped,
-                max_dupl_count,
-                can_be_corrupted,
-                ..
-            } => {
-                // Drop
-                if can_be_dropped {
-                    self.process_drop_event(system, event_num)?;
-                }
+            MessageReceived { options, .. } => {
+                match options {
+                    DeliveryOptions::NoFailures => self.apply_event(system, event_num, false, false)?,
+                    DeliveryOptions::Dropped => self.process_drop_event(system, event_num)?,
+                    DeliveryOptions::PossibleFailures {
+                        can_be_dropped,
+                        max_dupl_count,
+                        can_be_corrupted,
+                    } => {
+                        // Drop
+                        if can_be_dropped {
+                            self.process_drop_event(system, event_num)?;
+                        }
 
-                // Default (normal / corrupt)
-                self.apply_event(system, event_num, false, false)?;
-                if can_be_corrupted {
-                    self.apply_event(system, event_num, false, true)?;
-                }
+                        // Default (normal / corrupt)
+                        self.apply_event(system, event_num, false, false)?;
+                        if can_be_corrupted {
+                            self.apply_event(system, event_num, false, true)?;
+                        }
 
-                // Duplicate (normal / corrupt one)
-                if max_dupl_count > 0 {
-                    self.apply_event(system, event_num, true, false)?;
-                    if can_be_corrupted {
-                        self.apply_event(system, event_num, true, true)?;
+                        // Duplicate (normal / corrupt one)
+                        if max_dupl_count > 0 {
+                            self.apply_event(system, event_num, true, false)?;
+                            if can_be_corrupted {
+                                self.apply_event(system, event_num, true, true)?;
+                            }
+                        }
                     }
                 }
             }
@@ -134,27 +139,35 @@ pub trait Strategy {
                 msg,
                 src,
                 dest,
-                can_be_dropped,
-                max_dupl_count,
-                can_be_corrupted,
-            } => {
-                if max_dupl_count == 0 {
-                    return;
-                }
+                options,
+            } => match options {
+                DeliveryOptions::NoFailures => {}
+                DeliveryOptions::Dropped => {}
+                DeliveryOptions::PossibleFailures {
+                    can_be_dropped,
+                    max_dupl_count,
+                    can_be_corrupted,
+                } => {
+                    if max_dupl_count == 0 {
+                        return;
+                    }
 
-                self.add_event(
-                    system,
-                    MessageReceived {
-                        msg,
-                        src,
-                        dest,
-                        can_be_dropped,
-                        max_dupl_count: max_dupl_count - 1,
-                        can_be_corrupted,
-                    },
-                    event_num,
-                );
-            }
+                    self.add_event(
+                        system,
+                        MessageReceived {
+                            msg,
+                            src,
+                            dest,
+                            options: DeliveryOptions::PossibleFailures {
+                                can_be_dropped,
+                                max_dupl_count: max_dupl_count - 1,
+                                can_be_corrupted,
+                            },
+                        },
+                        event_num,
+                    );
+                }
+            },
             TimerFired { .. } => {}
         }
     }
@@ -166,9 +179,7 @@ pub trait Strategy {
                 msg,
                 src,
                 dest,
-                can_be_dropped,
-                max_dupl_count,
-                can_be_corrupted,
+                options,
             } => {
                 lazy_static! {
                     static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
@@ -178,9 +189,7 @@ pub trait Strategy {
                     msg: Message::new(msg.tip, corrupted_data),
                     src,
                     dest,
-                    can_be_dropped,
-                    max_dupl_count,
-                    can_be_corrupted,
+                    options,
                 }
             }
             TimerFired { .. } => event,
