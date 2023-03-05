@@ -1,13 +1,9 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
-use colored::*;
-
 use crate::mc::events::{DeliveryOptions, McEvent};
-use crate::mc::strategy::LogMode;
 use crate::message::Message;
 use crate::network::Network;
-use crate::util::t;
 
 const DUPL_COUNT: u32 = 2;
 
@@ -19,11 +15,10 @@ pub struct McNetwork {
     drop_outgoing: HashSet<String>,
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
-    log_mode: LogMode,
 }
 
 impl McNetwork {
-    pub(crate) fn new(net: RefMut<Network>, log_mode: &LogMode) -> Self {
+    pub(crate) fn new(net: RefMut<Network>) -> Self {
         Self {
             corrupt_rate: net.corrupt_rate(),
             dupl_rate: net.dupl_rate(),
@@ -32,7 +27,6 @@ impl McNetwork {
             drop_outgoing: net.get_drop_outgoing().clone(),
             disabled_links: net.disabled_links().clone(),
             proc_locations: net.proc_locations().clone(),
-            log_mode: log_mode.clone(),
         }
     }
 
@@ -66,14 +60,12 @@ impl McNetwork {
                 },
             })
         } else {
-            if self.log_mode == LogMode::Debug {
-                t!(format!(
-                    "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                    "!!!", src, dest, msg
-                )
-                .red());
-            }
-            None
+            Some(McEvent::MessageReceived {
+                msg,
+                src,
+                dest,
+                options: DeliveryOptions::Dropped,
+            })
         };
     }
 }

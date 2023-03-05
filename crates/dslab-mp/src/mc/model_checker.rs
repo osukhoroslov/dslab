@@ -38,7 +38,7 @@ impl ModelChecker {
         }
         let events = Rc::new(RefCell::new(events));
 
-        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network(), strategy.log_mode())));
+        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
