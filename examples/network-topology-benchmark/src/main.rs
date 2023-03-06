@@ -93,103 +93,79 @@ impl EventHandler for DataReceiver {
 pub struct NetworkActors {
     pub receivers: Vec<u32>,
     pub senders: Vec<u32>,
-    pub compute_nodes: Vec<String>,
-    pub commutator_nodes: Vec<String>,
 }
 
-fn init_star_topology(sim: &mut Simulation, network: &Rc<RefCell<Network>>, size: usize) -> NetworkActors {
-    let mut result = NetworkActors::default();
+fn make_star_topology(size: usize) -> Topology {
+    let mut topology = Topology::new();
 
-    let commutator_node_name = "commutator".to_string();
-    result.commutator_nodes.push(commutator_node_name.clone());
-
-    network.borrow_mut().add_node(&commutator_node_name, 1000.0, 0.0);
+    let switch_name = "switch".to_string();
+    topology.add_node(&switch_name, 1000.0, 0.0);
 
     for i in 0..size {
-        let receiver_name = format!("receiver_{}", i);
-        let sender_name = format!("sender_{}", i);
-        let compute_node_name = format!("compute_node_{}", i);
-
-        result.compute_nodes.push(compute_node_name.clone());
-        network.borrow_mut().add_node(&compute_node_name, 1000.0, 0.0);
-
-        network
-            .borrow_mut()
-            .add_link(&compute_node_name, &commutator_node_name, 0.2, 200.0);
-
-        let sender = DataTransferRequester::new(network.clone(), sim.create_context(&sender_name));
-        let sender_id = sim.add_handler(sender_name, rc!(refcell!(sender)));
-        network.borrow_mut().set_location(sender_id, &compute_node_name);
-        result.senders.push(sender_id);
-
-        let receiver = DataReceiver::new(network.clone(), sim.create_context(&receiver_name));
-        let receiver_id = sim.add_handler(receiver_name, rc!(refcell!(receiver)));
-        network.borrow_mut().set_location(receiver_id, &compute_node_name);
-        result.receivers.push(receiver_id);
+        let host_name = format!("host_{}", i);
+        topology.add_node(&host_name, 1000.0, 0.0);
+        topology.add_link(&host_name, &switch_name, 0.2, 200.0);
     }
 
-    let now = Instant::now();
-    network.borrow_mut().init_topology();
-    println!("Topology init time: {} ms", now.elapsed().as_millis());
-
-    result
+    topology
 }
 
-fn init_multi_star_topology(
-    sim: &mut Simulation,
-    network: &Rc<RefCell<Network>>,
-    stars_count: usize,
-    star_size: usize,
-) -> NetworkActors {
-    let mut result = NetworkActors::default();
+fn make_tree_topology(stars_count: usize, star_size: usize) -> Topology {
+    let mut topology = Topology::new();
 
-    let center_commutator_node_name = "center_commutator".to_string();
-    result.commutator_nodes.push(center_commutator_node_name.clone());
-
-    network.borrow_mut().add_node(&center_commutator_node_name, 1000.0, 0.0);
+    let root_switch_name = "root_switch".to_string();
+    topology.add_node(&root_switch_name, 1000.0, 0.0);
 
     for j in 0..stars_count {
-        let commutator_node_name = format!("commurator_{}", j);
-        result.commutator_nodes.push(commutator_node_name.clone());
-
-        network.borrow_mut().add_node(&commutator_node_name, 1000.0, 0.0);
-
-        network
-            .borrow_mut()
-            .add_link(&center_commutator_node_name, &commutator_node_name, 0.2, 1000.0);
+        let switch_name = format!("switch_{}", j);
+        topology.add_node(&switch_name, 1000.0, 0.0);
+        topology.add_link(&root_switch_name, &switch_name, 0.2, 1000.0);
 
         for i in 0..star_size {
-            let receiver_name = format!("receiver_{}", i);
-            let sender_name = format!("sender_{}", i);
-            let compute_node_name = format!("compute_node_{}", i);
-
-            result.compute_nodes.push(compute_node_name.clone());
-            network.borrow_mut().add_node(&compute_node_name, 1000.0, 0.0);
-
-            network
-                .borrow_mut()
-                .add_link(&compute_node_name, &commutator_node_name, 0.2, 200.0);
-
-            let sender = DataTransferRequester::new(network.clone(), sim.create_context(&sender_name));
-            let sender_id = sim.add_handler(sender_name, rc!(refcell!(sender)));
-            network.borrow_mut().set_location(sender_id, &compute_node_name);
-            result.senders.push(sender_id);
-
-            let receiver = DataReceiver::new(network.clone(), sim.create_context(&receiver_name));
-            let receiver_id = sim.add_handler(receiver_name, rc!(refcell!(receiver)));
-            network.borrow_mut().set_location(receiver_id, &compute_node_name);
-            result.receivers.push(receiver_id);
+            let host_name = format!("host_{}_{}", j, i);
+            topology.add_node(&host_name, 1000.0, 0.0);
+            topology.add_link(&host_name, &switch_name, 0.2, 200.0);
         }
     }
 
-    let now = Instant::now();
-    network.borrow_mut().init_topology();
-    println!("Topology init time: {} ms", now.elapsed().as_millis());
-
-    result
+    topology
 }
 
-fn start_benchmark(sim: &mut Simulation, actors: &NetworkActors) {
+fn init_topology(sim: &mut Simulation, topology: Topology) -> NetworkActors {
+    let nodes = topology.get_nodes();
+
+    let topology_rc = rc!(refcell!(topology));
+    let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
+    let network = Network::new_with_topology(network_model, topology_rc.clone(), sim.create_context("net"));
+    let network_rc = rc!(refcell!(network));
+    sim.add_handler("net", network_rc.clone());
+
+    let mut actors = NetworkActors::default();
+    for host_name in nodes.into_iter() {
+        if !host_name.starts_with("host_") {
+            continue;
+        }
+        let sender_name = format!("sender_{}", &host_name[5..]);
+        let receiver_name = format!("receiver_{}", &host_name[5..]);
+
+        let sender = DataTransferRequester::new(network_rc.clone(), sim.create_context(&sender_name));
+        let sender_id = sim.add_handler(sender_name, rc!(refcell!(sender)));
+        actors.senders.push(sender_id);
+        topology_rc.borrow_mut().set_location(sender_id, &host_name);
+
+        let receiver = DataReceiver::new(network_rc.clone(), sim.create_context(&receiver_name));
+        let receiver_id = sim.add_handler(receiver_name, rc!(refcell!(receiver)));
+        actors.receivers.push(receiver_id);
+        topology_rc.borrow_mut().set_location(receiver_id, &host_name);
+    }
+    topology_rc.borrow_mut().init();
+    actors
+}
+
+fn run_benchmark(topology: Topology) {
+    let mut sim = Simulation::new(SIMULATION_SEED);
+    let actors = init_topology(&mut sim, topology);
+
     let mut client = sim.create_context("client");
 
     for &sender in actors.senders.iter() {
@@ -219,41 +195,16 @@ fn start_benchmark(sim: &mut Simulation, actors: &NetworkActors) {
 fn multistar_topology_benchmark(args: &Args) {
     println!("=== Multistar Benchmark ===");
 
-    let mut sim = Simulation::new(SIMULATION_SEED);
-
-    let topology_rc = rc!(refcell!(Topology::new()));
-    let topology_network = rc!(refcell!(Network::new_with_topology(
-        rc!(refcell!(TopologyNetwork::new(topology_rc.clone()))),
-        topology_rc,
-        sim.create_context("net")
-    )));
-    sim.add_handler("net", topology_network.clone());
-
-    let network_actors = init_multi_star_topology(
-        &mut sim,
-        &topology_network,
+    run_benchmark(make_tree_topology(
         args.nodes_count / args.stars_count,
         args.stars_count,
-    );
-
-    start_benchmark(&mut sim, &network_actors);
+    ));
 }
 
 fn star_topology_benchmark(args: &Args) {
     println!("=== Star Benchmark ===");
-    let mut sim = Simulation::new(SIMULATION_SEED);
 
-    let topology_rc = rc!(refcell!(Topology::new()));
-    let topology_network = rc!(refcell!(Network::new_with_topology(
-        rc!(refcell!(TopologyNetwork::new(topology_rc.clone()))),
-        topology_rc,
-        sim.create_context("net")
-    )));
-    sim.add_handler("net", topology_network.clone());
-
-    let network_actors = init_star_topology(&mut sim, &topology_network, args.nodes_count);
-
-    start_benchmark(&mut sim, &network_actors);
+    run_benchmark(make_star_topology(args.nodes_count));
 }
 
 fn main() {
