@@ -1,5 +1,5 @@
-use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
-use crate::throughput_sharing::{make_constant_throughput_function, ThroughputFunction};
+use crate::throughput_sharing::make_constant_throughput_function;
+use crate::throughput_sharing::throughput_factor::ThroughputFactorFunction;
 use dslab_core::{Simulation, SimulationContext};
 use sugars::boxed;
 
