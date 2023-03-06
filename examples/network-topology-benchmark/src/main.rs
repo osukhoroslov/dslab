@@ -131,6 +131,23 @@ fn make_tree_topology(stars_count: usize, star_size: usize) -> Topology {
     topology
 }
 
+fn make_cluster_topology(size: usize) -> Topology {
+    let mut topology = Topology::new();
+
+    for i in 0..size {
+        let host_name = format!("host_{}", i);
+        topology.add_node(&host_name, 1000.0, 0.0);
+    }
+
+    for i in 0..size {
+        for j in 0..i {
+            topology.add_link(&format!("host_{}", i), &format!("host_{}", j), 0.2, 200.0);
+        }
+    }
+
+    topology
+}
+
 fn init_topology(sim: &mut Simulation, topology: Topology) -> NetworkActors {
     let nodes = topology.get_nodes();
 
@@ -207,6 +224,12 @@ fn star_topology_benchmark(args: &Args) {
     run_benchmark(make_star_topology(args.nodes_count));
 }
 
+fn cluster_topology_benchmark(args: &Args) {
+    println!("=== Cluster Benchmark ===");
+
+    run_benchmark(make_cluster_topology(args.nodes_count));
+}
+
 fn main() {
     Builder::from_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
@@ -216,4 +239,5 @@ fn main() {
 
     star_topology_benchmark(&args);
     multistar_topology_benchmark(&args);
+    cluster_topology_benchmark(&args);
 }
