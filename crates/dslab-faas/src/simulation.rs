@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::Range;
 use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
@@ -10,11 +11,11 @@ use crate::controller::Controller;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
-use crate::invocation::{Invocation, InvocationRegistry, InvocationRequest};
+use crate::invocation::{Invocation, InvocationRegistry};
 use crate::invoker::{BasicInvoker, Invoker};
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::{GlobalStats, InvocationStats, Stats};
-use crate::trace::Trace;
+use crate::trace::{RequestData, Trace};
 use crate::util::Counter;
 
 pub type HandlerId = dslab_core::component::Id;
@@ -81,8 +82,12 @@ impl ServerlessSimulation {
         ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
-    pub fn get_invocation(&self, id: u64) -> Option<Invocation> {
-        self.invocation_registry.borrow().get_invocation(id).cloned()
+    pub fn get_invocation(&self, id: usize) -> Invocation {
+        self.invocation_registry.borrow()[id]
+    }
+
+    pub fn get_invocations(&self, id: Range<usize>) -> Vec<Invocation> {
+        self.invocation_registry.borrow()[id].to_vec()
     }
 
     pub fn stats(&self) -> Stats {
@@ -118,19 +123,21 @@ impl ServerlessSimulation {
         self.controller.borrow_mut().add_host(host);
     }
 
-    pub fn add_function(&mut self, f: Function) -> u64 {
+    pub fn add_function(&mut self, f: Function) -> usize {
         self.function_registry.borrow_mut().add_function(f)
     }
 
-    pub fn add_app_with_single_function(&mut self, app: Application) -> u64 {
+    pub fn add_app_with_single_function(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app_with_single_function(app)
     }
 
-    pub fn add_app(&mut self, app: Application) -> u64 {
+    pub fn add_app(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app(app)
     }
 
-    pub fn load_trace(&mut self, trace: &dyn Trace) {
+    /// Returns a consecutive range of indices of new invocations.
+    /// Invocations have consecutive ids in increasing order of time.
+    pub fn load_trace(&mut self, trace: &dyn Trace) -> Range<usize> {
         for app in trace.app_iter() {
             let res = ResourceConsumer::new(
                 app.container_resources
@@ -148,24 +155,57 @@ impl ServerlessSimulation {
         for func in trace.function_iter() {
             self.add_function(Function::new(func));
         }
-        for request in trace.request_iter() {
-            self.send_invocation_request(request.id, request.duration, request.time);
-        }
         if let Some(t) = trace.simulation_end() {
             self.set_simulation_end(t);
         }
+        if trace.is_ordered_by_time() {
+            self.send_requests_from_ordered_iter(trace.request_iter().as_mut())
+        } else {
+            let mut reqs = trace.request_iter().collect::<Vec<_>>();
+            reqs.sort();
+            let result = self.send_requests_from_ordered_iter(&mut reqs.drain(..));
+            result
+        }
     }
 
-    pub fn send_invocation_request(&mut self, id: u64, duration: f64, time: f64) -> u64 {
-        let invocation_id = self.invocation_registry.borrow_mut().register_invocation();
+    /// This function provides a way to send invocation requests to a special ordered deque
+    /// inside the simulation, which works faster than the default heap.
+    /// Returns a consecutive range of indices of new invocations,
+    /// invocations have consecutive ids that follow their order inside the iterator.
+    pub fn send_requests_from_ordered_iter(&mut self, iterator: &mut dyn Iterator<Item = RequestData>) -> Range<usize> {
+        let mut ir = self.invocation_registry.borrow_mut();
+        let mut iter = iterator.peekable();
+        let first_idx = ir.len();
+        if let Some(item) = iter.peek() {
+            if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
+                for req in iter {
+                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    self.ctx.emit_ordered(
+                        InvocationStartEvent { id, func_id: req.id },
+                        self.controller_id,
+                        req.time - self.sim.time(),
+                    );
+                }
+            } else {
+                for req in iter {
+                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    self.ctx.emit(
+                        InvocationStartEvent { id, func_id: req.id },
+                        self.controller_id,
+                        req.time - self.sim.time(),
+                    );
+                }
+            }
+        }
+        first_idx..ir.len()
+    }
+
+    pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
+        let invocation_id = self.invocation_registry.borrow_mut().add_invocation(id, duration, time);
         self.ctx.emit(
             InvocationStartEvent {
-                request: InvocationRequest {
-                    func_id: id,
-                    duration,
-                    time,
-                    id: invocation_id,
-                },
+                id: invocation_id,
+                func_id: id,
             },
             self.controller_id,
             time - self.sim.time(),

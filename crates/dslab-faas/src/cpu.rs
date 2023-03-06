@@ -18,7 +18,7 @@ use crate::invocation::Invocation;
 #[derive(Clone)]
 pub struct WorkItem {
     finish: f64,
-    id: u64,
+    id: usize,
 }
 
 impl PartialEq for WorkItem {
@@ -45,7 +45,7 @@ impl Ord for WorkItem {
 pub struct ProgressComputer {
     disable_contention: bool,
     work_tree: BTreeSet<WorkItem>,
-    work_map: HashMap<u64, WorkItem>,
+    work_map: HashMap<usize, WorkItem>,
     work_total: f64,
     cores: f64,
     load: f64,
@@ -91,13 +91,13 @@ impl ProgressComputer {
         }
     }
 
-    fn remove_invocation(&mut self, id: u64) -> f64 {
+    fn remove_invocation(&mut self, id: usize) -> f64 {
         let it = self.work_map.remove(&id).unwrap();
         self.work_tree.remove(&it);
         it.finish - self.work_total
     }
 
-    fn insert_invocation(&mut self, id: u64, remain: f64) {
+    fn insert_invocation(&mut self, id: usize, remain: f64) {
         let it = WorkItem {
             finish: self.work_total + remain,
             id,
@@ -115,7 +115,7 @@ impl ProgressComputer {
         if self.disable_contention {
             self.ctx
                 .borrow_mut()
-                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.request.duration);
+                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
             return;
         }
         self.shift_time(time);
@@ -132,7 +132,7 @@ impl ProgressComputer {
         }
         self.insert_invocation(
             invocation.id,
-            invocation.request.duration / self.cores * (container.invocations.len() as f64),
+            invocation.duration / self.cores * (container.invocations.len() as f64),
         );
         self.last_update = time;
         self.reschedule_end();

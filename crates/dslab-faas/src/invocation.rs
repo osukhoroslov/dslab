@@ -1,56 +1,96 @@
-use std::collections::HashMap;
+use std::ops::{Index, IndexMut, Range};
 
-use serde::Serialize;
-
-use crate::util::Counter;
-
-#[derive(Copy, Clone, Debug, Serialize)]
-pub struct InvocationRequest {
-    pub func_id: u64,
-    pub duration: f64,
-    pub time: f64,
-    pub id: u64,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum InvocationStatus {
+    /// Invocation is registered, but simulation time has not reached its arrival time yet.
+    NotArrived,
+    /// Invocation is queued at one of the invokers.
+    Queued,
+    /// Invocation is waiting for the assigned container to start.
+    WaitingForContainer,
+    /// Invocation is running.
+    Running,
+    /// Invocation is finished.
+    Finished,
 }
 
 #[derive(Copy, Clone)]
 pub struct Invocation {
-    pub id: u64,
-    pub request: InvocationRequest,
-    pub host_id: u64,
-    pub container_id: u64,
-    pub started: f64,
-    pub finished: Option<f64>,
+    pub id: usize,
+    pub func_id: usize,
+    pub duration: f64,
+    pub arrival_time: f64,
+    pub status: InvocationStatus,
+    pub host_id: Option<usize>,
+    pub container_id: Option<usize>,
+    pub start_time: Option<f64>,
+    pub finish_time: Option<f64>,
+}
+
+impl Invocation {
+    pub fn execution_time(&self) -> f64 {
+        self.finish_time.unwrap() - self.start_time.unwrap()
+    }
+
+    pub fn response_time(&self) -> f64 {
+        self.finish_time.unwrap() - self.arrival_time
+    }
+
+    pub fn wait_time(&self) -> f64 {
+        self.start_time.unwrap() - self.arrival_time
+    }
 }
 
 #[derive(Default)]
 pub struct InvocationRegistry {
-    invocation_ctr: Counter,
-    invocations: HashMap<u64, Invocation>,
+    invocations: Vec<Invocation>,
 }
 
 impl InvocationRegistry {
-    pub fn new_invocation(&mut self, request: InvocationRequest, host_id: u64, container_id: u64, time: f64) {
-        let id = request.id;
+    pub fn add_invocation(&mut self, func_id: usize, duration: f64, arrival_time: f64) -> usize {
+        let id = self.invocations.len();
         let invocation = Invocation {
             id,
-            request,
-            host_id,
-            container_id,
-            started: time,
-            finished: None,
+            func_id,
+            duration,
+            arrival_time,
+            status: InvocationStatus::NotArrived,
+            host_id: None,
+            container_id: None,
+            start_time: None,
+            finish_time: None,
         };
-        self.invocations.insert(id, invocation);
+        self.invocations.push(invocation);
+        id
     }
 
-    pub fn register_invocation(&mut self) -> u64 {
-        self.invocation_ctr.increment()
+    pub fn len(&self) -> usize {
+        self.invocations.len()
     }
 
-    pub fn get_invocation(&self, id: u64) -> Option<&Invocation> {
-        self.invocations.get(&id)
+    pub fn is_empty(&self) -> bool {
+        self.invocations.is_empty()
     }
+}
 
-    pub fn get_invocation_mut(&mut self, id: u64) -> Option<&mut Invocation> {
-        self.invocations.get_mut(&id)
+impl Index<usize> for InvocationRegistry {
+    type Output = Invocation;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.invocations[index]
+    }
+}
+
+impl Index<Range<usize>> for InvocationRegistry {
+    type Output = [Invocation];
+
+    fn index(&self, index: Range<usize>) -> &Self::Output {
+        &self.invocations[index]
+    }
+}
+
+impl IndexMut<usize> for InvocationRegistry {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.invocations[index]
     }
 }

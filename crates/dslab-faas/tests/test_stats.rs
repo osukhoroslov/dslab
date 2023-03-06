@@ -1,53 +1,44 @@
 mod common;
 use common::assert_float_eq;
 
-use dslab_faas::invocation::{Invocation, InvocationRequest};
+use dslab_faas::invocation::{Invocation, InvocationStatus};
 use dslab_faas::stats::InvocationStats;
 
 #[test]
 fn test_invocation_stats() {
     let mut stats: InvocationStats = Default::default();
-    let req1 = InvocationRequest {
-        func_id: 0,
-        duration: 1.0,
-        time: 0.0,
-        id: 0,
-    };
     let inv1 = Invocation {
         id: 0,
-        request: req1,
-        host_id: 0,
-        container_id: 0,
-        started: 0.5,
-        finished: Some(2.0),
-    };
-    let req2 = InvocationRequest {
         func_id: 0,
-        duration: 1.2,
-        time: 0.0,
-        id: 1,
+        duration: 1.0,
+        arrival_time: 0.0,
+        status: InvocationStatus::Finished,
+        host_id: Some(0),
+        container_id: Some(0),
+        start_time: Some(0.5),
+        finish_time: Some(2.0),
     };
     let inv2 = Invocation {
         id: 1,
-        request: req2,
-        host_id: 0,
-        container_id: 1,
-        started: 0.5,
-        finished: Some(2.0),
-    };
-    let req3 = InvocationRequest {
         func_id: 0,
-        duration: 1.0,
-        time: 2.0,
-        id: 2,
+        duration: 1.2,
+        arrival_time: 0.0,
+        status: InvocationStatus::Finished,
+        host_id: Some(0),
+        container_id: Some(1),
+        start_time: Some(0.5),
+        finish_time: Some(2.0),
     };
     let inv3 = Invocation {
         id: 2,
-        request: req3,
-        host_id: 0,
-        container_id: 0,
-        started: 2.0,
-        finished: Some(3.0),
+        func_id: 0,
+        duration: 1.0,
+        arrival_time: 2.0,
+        status: InvocationStatus::Finished,
+        host_id: Some(0),
+        container_id: Some(0),
+        start_time: Some(2.0),
+        finish_time: Some(3.0),
     };
     stats.update(&inv1);
     stats.update(&inv2);

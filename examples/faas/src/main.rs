@@ -31,10 +31,7 @@ fn main() {
         stats.invocation_stats.cold_starts,
         stats.invocation_stats.cold_start_latency.mean()
     );
-    println!(
-        "wasted memory time = {}",
-        stats.wasted_resource_time.get(&0).unwrap().sum()
-    );
+    println!("wasted memory time = {}", stats.wasted_resource_time[0].sum());
     println!(
         "mean abs exec slowdown = {}",
         stats.invocation_stats.abs_exec_slowdown.mean()

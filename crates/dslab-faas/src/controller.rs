@@ -10,8 +10,7 @@ use crate::deployer::IdleDeployer;
 use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};
 use crate::function::FunctionRegistry;
 use crate::host::Host;
-use crate::invocation::InvocationRequest;
-use crate::invoker::InvocationStatus;
+use crate::invoker::InvokerDecision;
 use crate::scheduler::Scheduler;
 
 pub struct Controller {
@@ -35,7 +34,7 @@ impl Controller {
         }
     }
 
-    fn idle_deploy(&mut self, app_id: u64, time: f64) {
+    fn idle_deploy(&mut self, app_id: usize, time: f64) {
         let reg = self.function_registry.borrow();
         let app = reg.get_app(app_id).unwrap();
         if let Some(host) = self.idle_deployer.deploy(app, &self.hosts) {
@@ -43,12 +42,11 @@ impl Controller {
         }
     }
 
-    fn invoke(&mut self, request: InvocationRequest, time: f64) -> InvocationStatus {
+    fn invoke(&mut self, id: usize, func_id: usize, time: f64) -> InvokerDecision {
         let reg = self.function_registry.borrow();
-        let app_id = reg.get_function(request.func_id).unwrap().app_id;
-        let app = reg.get_app(app_id).unwrap();
+        let app = reg.get_app_by_function(func_id).unwrap();
         let host = self.scheduler.select_host(app, &self.hosts);
-        self.hosts[host].borrow_mut().invoke(request, time)
+        self.hosts[host].borrow_mut().invoke(id, time)
     }
 
     pub fn add_host(&mut self, host: Rc<RefCell<Host>>) {
@@ -68,8 +66,8 @@ impl EventHandler for Controller {
             IdleDeployEvent { id } => {
                 self.idle_deploy(id, event.time);
             }
-            InvocationStartEvent { request } => {
-                self.invoke(request, event.time);
+            InvocationStartEvent { id, func_id } => {
+                self.invoke(id, func_id, event.time);
             }
             SimulationEndEvent {} => {
                 self.update_end_metrics(event.time);

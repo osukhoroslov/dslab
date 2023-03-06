@@ -1,15 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use indexmap::{IndexMap, IndexSet};
-
 use dslab_core::context::SimulationContext;
 
 use crate::event::ContainerStartEvent;
 use crate::function::Application;
-use crate::invocation::InvocationRequest;
 use crate::resource::{ResourceConsumer, ResourceProvider};
-use crate::util::Counter;
+use crate::util::{Counter, DefaultVecMap, FxIndexMap, FxIndexSet};
 
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {
@@ -20,23 +17,23 @@ pub enum ContainerStatus {
 
 pub struct Container {
     pub status: ContainerStatus,
-    pub id: u64,
+    pub id: usize,
     pub deployment_time: f64,
-    pub app_id: u64,
-    pub invocations: IndexSet<u64>,
+    pub app_id: usize,
+    pub invocations: FxIndexSet<usize>,
     pub resources: ResourceConsumer,
-    pub started_invocations: u64,
+    pub started_invocations: usize,
     pub last_change: f64,
     pub cpu_share: f64,
 }
 
 impl Container {
-    pub fn start_invocation(&mut self, id: u64) {
+    pub fn start_invocation(&mut self, id: usize) {
         self.invocations.insert(id);
         self.started_invocations += 1;
     }
 
-    pub fn end_invocation(&mut self, id: u64, curr_time: f64) {
+    pub fn end_invocation(&mut self, id: usize, curr_time: f64) {
         self.last_change = curr_time;
         self.invocations.remove(&id);
         if self.invocations.is_empty() {
@@ -46,12 +43,12 @@ impl Container {
 }
 
 pub struct ContainerManager {
-    active_invocations: u64,
+    active_invocations: usize,
     resources: ResourceProvider,
-    containers: IndexMap<u64, Container>,
-    containers_by_app: IndexMap<u64, IndexSet<u64>>,
+    containers: FxIndexMap<usize, Container>,
+    containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
     container_counter: Counter,
-    reservations: IndexMap<u64, Vec<InvocationRequest>>,
+    reservations: FxIndexMap<usize, Vec<usize>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
@@ -60,10 +57,10 @@ impl ContainerManager {
         Self {
             active_invocations: 0,
             resources,
-            containers: IndexMap::new(),
-            containers_by_app: IndexMap::new(),
+            containers: FxIndexMap::default(),
+            containers_by_app: Default::default(),
             container_counter: Counter::default(),
-            reservations: IndexMap::new(),
+            reservations: FxIndexMap::default(),
             ctx,
         }
     }
@@ -84,26 +81,25 @@ impl ContainerManager {
         self.active_invocations += 1;
     }
 
-    pub fn active_invocation_count(&self) -> u64 {
+    pub fn active_invocation_count(&self) -> usize {
         self.active_invocations
     }
 
-    pub fn get_container(&self, id: u64) -> Option<&Container> {
+    pub fn get_container(&self, id: usize) -> Option<&Container> {
         self.containers.get(&id)
     }
 
-    pub fn get_container_mut(&mut self, id: u64) -> Option<&mut Container> {
+    pub fn get_container_mut(&mut self, id: usize) -> Option<&mut Container> {
         self.containers.get_mut(&id)
     }
 
-    pub fn get_containers(&mut self) -> &mut IndexMap<u64, Container> {
+    pub fn get_containers(&mut self) -> &mut FxIndexMap<usize, Container> {
         &mut self.containers
     }
 
     pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
-        let id = app.id;
         let limit = app.get_concurrent_invocations();
-        if let Some(set) = self.containers_by_app.get(&id) {
+        if let Some(set) = self.containers_by_app.get(app.id) {
             return PossibleContainerIterator::new(
                 Some(set.iter()),
                 &self.containers,
@@ -115,7 +111,7 @@ impl ContainerManager {
         PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit, allow_deploying)
     }
 
-    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(u64, f64)> {
+    pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(usize, f64)> {
         if self.resources.can_allocate(app.get_resources()) {
             let id = self.deploy_container(app, time);
             return Some((id, app.get_deployment_time()));
@@ -123,21 +119,21 @@ impl ContainerManager {
         None
     }
 
-    pub fn reserve_container(&mut self, id: u64, request: InvocationRequest) {
+    pub fn reserve_container(&mut self, id: usize, request: usize) {
         self.reservations.entry(id).or_default().push(request);
     }
 
-    pub fn take_reservations(&mut self, id: u64) -> Option<Vec<InvocationRequest>> {
+    pub fn take_reservations(&mut self, id: usize) -> Option<Vec<usize>> {
         self.reservations.remove(&id)
     }
 
-    pub fn delete_container(&mut self, id: u64) {
+    pub fn delete_container(&mut self, id: usize) {
         let container = self.containers.remove(&id).unwrap();
-        self.containers_by_app.get_mut(&container.app_id).unwrap().remove(&id);
+        self.containers_by_app.get_mut(container.app_id).remove(&id);
         self.resources.release(&container.resources);
     }
 
-    fn deploy_container(&mut self, app: &Application, time: f64) -> u64 {
+    fn deploy_container(&mut self, app: &Application, time: f64) -> usize {
         let cont_id = self.container_counter.increment();
         let container = Container {
             status: ContainerStatus::Deploying,
@@ -146,16 +142,13 @@ impl ContainerManager {
             app_id: app.id,
             invocations: Default::default(),
             resources: app.get_resources().clone(),
-            started_invocations: 0u64,
+            started_invocations: 0,
             last_change: time,
             cpu_share: app.get_cpu_share(),
         };
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);
-        if !self.containers_by_app.contains_key(&app.id) {
-            self.containers_by_app.insert(app.id, IndexSet::new());
-        }
-        self.containers_by_app.get_mut(&app.id).unwrap().insert(cont_id);
+        self.containers_by_app.get_mut(app.id).insert(cont_id);
         self.ctx
             .borrow_mut()
             .emit_self(ContainerStartEvent { id: cont_id }, app.get_deployment_time());
@@ -164,18 +157,18 @@ impl ContainerManager {
 }
 
 pub struct PossibleContainerIterator<'a> {
-    inner: Option<indexmap::set::Iter<'a, u64>>,
-    containers: &'a IndexMap<u64, Container>,
-    reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
+    inner: Option<indexmap::set::Iter<'a, usize>>,
+    containers: &'a FxIndexMap<usize, Container>,
+    reserve: &'a FxIndexMap<usize, Vec<usize>>,
     limit: usize,
     allow_deploying: bool,
 }
 
 impl<'a> PossibleContainerIterator<'a> {
     pub fn new(
-        inner: Option<indexmap::set::Iter<'a, u64>>,
-        containers: &'a IndexMap<u64, Container>,
-        reserve: &'a IndexMap<u64, Vec<InvocationRequest>>,
+        inner: Option<indexmap::set::Iter<'a, usize>>,
+        containers: &'a FxIndexMap<usize, Container>,
+        reserve: &'a FxIndexMap<usize, Vec<usize>>,
         limit: usize,
         allow_deploying: bool,
     ) -> Self {

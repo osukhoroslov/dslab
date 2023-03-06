@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use order_stat::kth_by;
 
-use crate::invocation::{Invocation, InvocationRequest};
+use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
+use crate::util::DefaultVecMap;
 
 /// This struct allows calculating statistical functions on some data sample.
 /// Almost all metrics computed by the simulator are stored using this struct.
@@ -125,58 +124,58 @@ pub struct InvocationStats {
 }
 
 impl InvocationStats {
-    pub fn on_cold_start(&mut self, _request: &InvocationRequest, delay: f64) {
+    pub fn on_cold_start(&mut self, delay: f64) {
         self.cold_start_latency.add(delay);
         self.cold_starts += 1;
     }
 
-    pub fn on_new_invocation(&mut self, _request: &InvocationRequest) {
+    pub fn on_new_invocation(&mut self) {
         self.invocations += 1;
     }
 
     pub fn update(&mut self, invocation: &Invocation) {
-        let len = invocation.finished.unwrap() - invocation.started;
-        let total_len = invocation.finished.unwrap() - invocation.request.time;
-        self.abs_exec_slowdown.add(len - invocation.request.duration);
+        let len = invocation.execution_time();
+        let total_len = invocation.response_time();
+        self.abs_exec_slowdown.add(len - invocation.duration);
         self.rel_exec_slowdown
-            .add((len - invocation.request.duration) / invocation.request.duration);
-        self.abs_total_slowdown.add(total_len - invocation.request.duration);
+            .add((len - invocation.duration) / invocation.duration);
+        self.abs_total_slowdown.add(total_len - invocation.duration);
         self.rel_total_slowdown
-            .add((total_len - invocation.request.duration) / invocation.request.duration);
+            .add((total_len - invocation.duration) / invocation.duration);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.queueing_time.add(curr_time - request.time);
+    pub fn update_queueing_time(&mut self, queueing_time: f64) {
+        self.queueing_time.add(queueing_time);
     }
 }
 
 #[derive(Clone, Default)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
-    pub wasted_resource_time: HashMap<usize, SampleMetric>,
+    pub wasted_resource_time: DefaultVecMap<SampleMetric>,
 }
 
 impl GlobalStats {
-    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
-        self.invocation_stats.on_cold_start(request, delay);
+    pub fn on_cold_start(&mut self, delay: f64) {
+        self.invocation_stats.on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
-        self.invocation_stats.on_new_invocation(request);
+    pub fn on_new_invocation(&mut self) {
+        self.invocation_stats.on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.invocation_stats.update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.invocation_stats.update_queueing_time(request, curr_time);
+    pub fn update_queueing_time(&mut self, queueing_time: f64) {
+        self.invocation_stats.update_queueing_time(queueing_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
-            self.wasted_resource_time.entry(req.id).or_default().add(delta);
+            self.wasted_resource_time.get_mut(req.id).add(delta);
         }
     }
 
@@ -191,7 +190,7 @@ impl GlobalStats {
                 .mean()
         );
         // assuming that resource 0 is memory
-        println!("- wasted memory time = {}", self.wasted_resource_time[&0].sum());
+        println!("- wasted memory time = {}", self.wasted_resource_time[0].sum());
         println!(
             "- mean absolute total slowdown = {}",
             self.invocation_stats.abs_total_slowdown.mean()
@@ -205,41 +204,29 @@ impl GlobalStats {
 
 #[derive(Clone, Default)]
 pub struct Stats {
-    pub func_stats: HashMap<u64, InvocationStats>,
+    pub func_stats: DefaultVecMap<InvocationStats>,
     pub global_stats: GlobalStats,
 }
 
 impl Stats {
-    pub fn on_cold_start(&mut self, request: &InvocationRequest, delay: f64) {
-        self.global_stats.on_cold_start(request, delay);
-        self.func_stats
-            .entry(request.func_id)
-            .or_default()
-            .on_cold_start(request, delay);
+    pub fn on_cold_start(&mut self, func_id: usize, delay: f64) {
+        self.global_stats.on_cold_start(delay);
+        self.func_stats.get_mut(func_id).on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, request: &InvocationRequest) {
-        self.global_stats.on_new_invocation(request);
-        self.func_stats
-            .entry(request.func_id)
-            .or_default()
-            .on_new_invocation(request);
+    pub fn on_new_invocation(&mut self, func_id: usize) {
+        self.global_stats.on_new_invocation();
+        self.func_stats.get_mut(func_id).on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
-        self.func_stats
-            .entry(invocation.request.func_id)
-            .or_default()
-            .update(invocation);
+        self.func_stats.get_mut(invocation.func_id).update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, request: &InvocationRequest, curr_time: f64) {
-        self.global_stats.update_queueing_time(request, curr_time);
-        self.func_stats
-            .entry(request.func_id)
-            .or_default()
-            .update_queueing_time(request, curr_time);
+    pub fn update_queueing_time(&mut self, func_id: usize, queueing_time: f64) {
+        self.global_stats.update_queueing_time(queueing_time);
+        self.func_stats.get_mut(func_id).update_queueing_time(queueing_time);
     }
 
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {

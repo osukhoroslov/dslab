@@ -202,6 +202,92 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
     }
 
+    /// This and all other `emit_ordered...` functions are special variants of normal `emit_...` functions
+    /// that allow adding events to ordered event deque instead of heap, which may improve simulation performance.
+    ///
+    /// Ordered events should be emitted in non-decreasing order of their time, otherwise the simulation will panic.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 2.0);
+    /// ```
+    ///
+    /// ```should_panic
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0); // will panic because of broken time order
+    /// ```
+    pub fn emit_ordered<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, dest, delay)
+    }
+
+    /// Checks whether it is safe to emit an ordered event with the specified delay.
+    ///
+    /// The time of new event must be not less than the time of the previously emitted ordered event.   
+    ///
+    /// Returns true if this condition holds and false otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// assert!(comp1_ctx.can_emit_ordered(1.0)); // 1.0 == 1.0
+    /// assert!(comp1_ctx.can_emit_ordered(1.1)); // 1.1 > 1.0
+    /// assert!(!comp1_ctx.can_emit_ordered(0.9)); // 0.9 < 1.0
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.5);
+    /// assert!(!comp1_ctx.can_emit_ordered(1.0)); // 1.0 < 1.5
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// assert!(comp1_ctx.can_emit_ordered(1.0)); // 2.0 > 1.5
+    /// assert!(!comp1_ctx.can_emit_ordered(0.3)); // 1.3 < 1.5
+    /// ```
+    pub fn can_emit_ordered(&self, delay: f64) -> bool {
+        self.sim_state.borrow().can_add_ordered_event(delay)
+    }
+
     /// Creates new immediate (zero-delay) event with specified payload and destination, returns event id.
     ///
     /// This is a shorthand for [`emit()`](Self::emit()) with zero delay.
@@ -251,6 +337,14 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, dest, 0.)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_now<T>(&mut self, data: T, dest: Id) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dest, 0.)
     }
 
     /// Creates new event for itself with specified payload and delay, returns event id.
@@ -307,6 +401,16 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, delay)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_self<T>(&mut self, data: T, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, self.id, delay)
     }
 
     /// Creates new immediate event for itself with specified payload, returns event id.
@@ -366,6 +470,16 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
     }
 
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_self_now<T>(&mut self, data: T) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state
+            .borrow_mut()
+            .add_ordered_event(data, self.id, self.id, 0.)
+    }
+
     /// Creates new event with specified payload, source, destination and delay, returns event id.
     ///
     /// This is an extended version of [`emit()`](Self::emit()) for special cases when the event should be emitted
@@ -417,6 +531,14 @@ impl SimulationContext {
         T: EventData,
     {
         self.sim_state.borrow_mut().add_event(data, src, dest, delay)
+    }
+
+    /// See [`Self::emit_ordered`].
+    pub fn emit_ordered_as<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    where
+        T: EventData,
+    {
+        self.sim_state.borrow_mut().add_ordered_event(data, src, dest, delay)
     }
 
     /// Cancels the specified event.
@@ -477,6 +599,14 @@ impl SimulationContext {
         F: Fn(&Event) -> bool,
     {
         self.sim_state.borrow_mut().cancel_events(pred);
+    }
+
+    /// Same as [`Self::cancel_events`], but ignores events added through `emit_ordered_...` methods.
+    pub fn cancel_heap_events<F>(&mut self, pred: F)
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_heap_events(pred);
     }
 
     /// Returns component name by its identifier.

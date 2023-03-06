@@ -13,7 +13,7 @@ use crate::trace::{ApplicationData, RequestData, Trace};
 
 #[derive(Default, Clone, Copy)]
 pub struct FunctionRecord {
-    pub app_id: u64,
+    pub app_id: usize,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -48,8 +48,12 @@ impl Trace for AzureTrace {
         Box::new(self.trace_records.iter().cloned())
     }
 
-    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+    fn function_iter(&self) -> Box<dyn Iterator<Item = usize> + '_> {
         Box::new(self.function_records.iter().map(|x| x.app_id))
+    }
+
+    fn is_ordered_by_time(&self) -> bool {
+        true
     }
 
     fn simulation_end(&self) -> Option<f64> {
@@ -257,7 +261,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                     for _ in 0..inv {
                         let second = gen.gen_range(0.0..1.0) * 60.0 + ((i * 60 + day * 1440 * 64) as f64);
                         let mut record = RequestData {
-                            id: curr_id as u64,
+                            id: curr_id,
                             duration: f64::max(0.001, gen_sample(&mut gen, &dur_percent, dur_vec) * 0.001),
                             time: second,
                         };
@@ -287,7 +291,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     for (name, id) in fn_id.iter() {
         let app = app_id(name);
         funcs[*id] = FunctionRecord {
-            app_id: app_data.get(&app).unwrap().0 as u64,
+            app_id: app_data.get(&app).unwrap().0,
         };
     }
     trace.sort_by(|x: &RequestData, y: &RequestData| x.time.partial_cmp(&y.time).unwrap());

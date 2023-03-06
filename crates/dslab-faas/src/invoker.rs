@@ -4,28 +4,28 @@ use std::rc::Rc;
 
 use crate::container::{ContainerManager, ContainerStatus};
 use crate::function::FunctionRegistry;
-use crate::invocation::InvocationRequest;
+use crate::invocation::Invocation;
 use crate::stats::Stats;
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum InvocationStatus {
-    Warm(u64),
-    Cold((u64, f64)),
+pub enum InvokerDecision {
+    Warm(usize),
+    Cold((usize, f64)),
     Queued,
     Rejected,
 }
 
 #[derive(Clone, Copy)]
 pub struct DequeuedInvocation {
-    pub request: InvocationRequest,
-    pub container_id: u64,
+    pub id: usize,
+    pub container_id: usize,
     pub delay: Option<f64>,
 }
 
 impl DequeuedInvocation {
-    pub fn new(request: InvocationRequest, container_id: u64, delay: Option<f64>) -> Self {
+    pub fn new(id: usize, container_id: usize, delay: Option<f64>) -> Self {
         Self {
-            request,
+            id,
             container_id,
             delay,
         }
@@ -44,14 +44,14 @@ pub trait Invoker {
         time: f64,
     ) -> Vec<DequeuedInvocation>;
 
-    /// Invoke or queue new invocation request.
+    /// Invoke or queue new invocation.
     fn invoke(
         &mut self,
-        request: InvocationRequest,
+        invocation: &Invocation,
         fr: Rc<RefCell<FunctionRegistry>>,
         cm: &mut ContainerManager,
         time: f64,
-    ) -> InvocationStatus;
+    ) -> InvokerDecision;
 
     fn queue_len(&self) -> usize;
 
@@ -60,9 +60,26 @@ pub trait Invoker {
     }
 }
 
+#[derive(Clone, Copy)]
+struct InvokerQueueItem {
+    pub invocation_id: usize,
+    pub func_id: usize,
+    pub time: f64,
+}
+
+impl InvokerQueueItem {
+    pub fn new(invocation_id: usize, func_id: usize, time: f64) -> Self {
+        Self {
+            invocation_id,
+            func_id,
+            time,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct BasicInvoker {
-    queue: Vec<InvocationRequest>,
+    queue: Vec<InvokerQueueItem>,
 }
 
 impl BasicInvoker {
@@ -72,14 +89,14 @@ impl BasicInvoker {
 
     fn try_invoke(
         &mut self,
-        request: InvocationRequest,
+        func_id: usize,
         fr: Rc<RefCell<FunctionRegistry>>,
         cm: &mut ContainerManager,
         time: f64,
-    ) -> InvocationStatus {
+    ) -> InvokerDecision {
         let fr = fr.borrow();
-        let app = fr.get_app_by_function(request.func_id).unwrap();
-        let mut nearest: Option<u64> = None;
+        let app = fr.get_app_by_function(func_id).unwrap();
+        let mut nearest: Option<usize> = None;
         let mut wait = 0.0;
         for c in cm.get_possible_containers(app, true) {
             let delay = if c.status == ContainerStatus::Deploying {
@@ -94,15 +111,15 @@ impl BasicInvoker {
         }
         if let Some(id) = nearest {
             if cm.get_container(id).unwrap().status == ContainerStatus::Idle {
-                return InvocationStatus::Warm(id);
+                return InvokerDecision::Warm(id);
             } else {
-                return InvocationStatus::Cold((id, wait));
+                return InvokerDecision::Cold((id, wait));
             }
         }
         if let Some((id, delay)) = cm.try_deploy(app, time) {
-            return InvocationStatus::Cold((id, delay));
+            return InvokerDecision::Cold((id, delay));
         }
-        InvocationStatus::Rejected
+        InvokerDecision::Rejected
     }
 }
 
@@ -120,10 +137,10 @@ impl Invoker for BasicInvoker {
         let mut new_queue = Vec::new();
         let mut dequeued = Vec::new();
         for item in self.queue.clone().drain(..) {
-            let status = self.try_invoke(item, fr.clone(), cm, time);
-            match status {
-                InvocationStatus::Warm(id) => {
-                    stats.update_queueing_time(&item, time);
+            let decision = self.try_invoke(item.func_id, fr.clone(), cm, time);
+            match decision {
+                InvokerDecision::Warm(id) => {
+                    stats.update_queueing_time(item.func_id, time - item.time);
                     let container = cm.get_container_mut(id).unwrap();
                     if container.status == ContainerStatus::Idle {
                         let delta = time - container.last_change;
@@ -131,16 +148,16 @@ impl Invoker for BasicInvoker {
                     }
                     container.last_change = time;
                     container.status = ContainerStatus::Running;
-                    container.start_invocation(item.id);
-                    dequeued.push(DequeuedInvocation::new(item, id, None));
+                    container.start_invocation(item.invocation_id);
+                    dequeued.push(DequeuedInvocation::new(item.invocation_id, id, None));
                 }
-                InvocationStatus::Cold((id, delay)) => {
-                    stats.update_queueing_time(&item, time);
-                    cm.reserve_container(id, item);
-                    stats.on_cold_start(&item, delay);
-                    dequeued.push(DequeuedInvocation::new(item, id, Some(delay)));
+                InvokerDecision::Cold((id, delay)) => {
+                    stats.update_queueing_time(item.func_id, time - item.time);
+                    cm.reserve_container(id, item.invocation_id);
+                    stats.on_cold_start(item.func_id, delay);
+                    dequeued.push(DequeuedInvocation::new(item.invocation_id, id, Some(delay)));
                 }
-                InvocationStatus::Rejected => {
+                InvokerDecision::Rejected => {
                     new_queue.push(item);
                 }
                 _ => {
@@ -154,17 +171,21 @@ impl Invoker for BasicInvoker {
 
     fn invoke(
         &mut self,
-        request: InvocationRequest,
+        invocation: &Invocation,
         fr: Rc<RefCell<FunctionRegistry>>,
         cm: &mut ContainerManager,
         time: f64,
-    ) -> InvocationStatus {
-        let status = self.try_invoke(request, fr, cm, time);
-        if status == InvocationStatus::Rejected {
-            self.queue.push(request);
-            return InvocationStatus::Queued;
+    ) -> InvokerDecision {
+        let decision = self.try_invoke(invocation.func_id, fr, cm, time);
+        if decision == InvokerDecision::Rejected {
+            self.queue.push(InvokerQueueItem::new(
+                invocation.id,
+                invocation.func_id,
+                invocation.arrival_time,
+            ));
+            return InvokerDecision::Queued;
         }
-        status
+        decision
     }
 
     fn queue_len(&self) -> usize {

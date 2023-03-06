@@ -118,8 +118,8 @@ pub struct HybridHistogramPolicy {
     cv_thr: f64,
     oob_thr: f64,
     n_bins: usize,
-    data: HashMap<u64, ApplicationData>,
-    last: HashMap<u64, f64>,
+    data: HashMap<usize, ApplicationData>,
+    last: HashMap<usize, f64>,
 }
 
 enum Pattern {
@@ -163,7 +163,7 @@ impl HybridHistogramPolicy {
         Self::new(range, bin_len, cv_thr, oob_thr, arima_margin, hist_margin)
     }
 
-    fn describe_pattern(&mut self, app_id: u64) -> Pattern {
+    fn describe_pattern(&mut self, app_id: usize) -> Pattern {
         let cv_thr = self.cv_thr;
         let oob_thr = self.oob_thr;
         let data = self.get_app(app_id);
@@ -176,14 +176,14 @@ impl HybridHistogramPolicy {
         }
     }
 
-    fn get_app(&mut self, id: u64) -> &ApplicationData {
+    fn get_app(&mut self, id: usize) -> &ApplicationData {
         if let Entry::Vacant(e) = self.data.entry(id) {
             e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
         self.data.get(&id).unwrap()
     }
 
-    fn get_app_mut(&mut self, id: u64) -> &mut ApplicationData {
+    fn get_app_mut(&mut self, id: usize) -> &mut ApplicationData {
         if let Entry::Vacant(e) = self.data.entry(id) {
             e.insert(ApplicationData::new(self.n_bins, self.bin_len));
         }
@@ -215,12 +215,12 @@ impl ColdStartPolicy for HybridHistogramPolicy {
     }
 
     fn update(&mut self, invocation: &Invocation, app: &Application) {
-        let fn_id = invocation.request.func_id;
+        let fn_id = invocation.func_id;
         if let Some(old) = self.last.get(&fn_id) {
-            let it = f64::max(0.0, invocation.request.time - old);
+            let it = f64::max(0.0, invocation.arrival_time - old);
             self.get_app_mut(app.id).update(it);
         }
-        self.last.insert(fn_id, invocation.finished.unwrap());
+        self.last.insert(fn_id, invocation.finish_time.unwrap());
     }
 
     fn to_string(&self) -> String {
