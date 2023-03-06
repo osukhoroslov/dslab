@@ -189,9 +189,9 @@ fn dynamic_throughput() {
     assert_eq!(tester.pop_all_and_compare(), expected_result);
 }
 
-struct TestThrougphutFactorFn {}
+struct TestThroughputFactorFunction {}
 
-impl ThroughputFactorFunction<u32> for TestThrougphutFactorFn {
+impl ThroughputFactorFunction<u32> for TestThroughputFactorFunction {
     fn get_factor(&mut self, item: &u32, _ctx: &mut SimulationContext) -> f64 {
         if *item == 0 {
             0.8
@@ -207,7 +207,7 @@ fn throughput_factor() {
     let mut ctx = sim.create_context("test");
     let tf = make_constant_throughput_function(100.);
     let mut model: FairThroughputSharingModel<u32> =
-        FairThroughputSharingModel::new(tf, boxed!(TestThrougphutFactorFn {}));
+        FairThroughputSharingModel::new(tf, boxed!(TestThroughputFactorFunction {}));
     model.insert(0, 160., &mut ctx);
     sim.step_until_time(1.);
     model.insert(1, 100., &mut ctx);
@@ -231,7 +231,7 @@ fn throughput_factor_and_degradation() {
     let mut sim = Simulation::new(123);
     let mut ctx = sim.create_context("test");
     let mut model: FairThroughputSharingModel<u32> =
-        FairThroughputSharingModel::new(boxed!(throughput_function), boxed!(TestThrougphutFactorFn {}));
+        FairThroughputSharingModel::new(boxed!(throughput_function), boxed!(TestThroughputFactorFunction {}));
     model.insert(0, 160., &mut ctx);
     sim.step_until_time(1.);
     model.insert(1, 100., &mut ctx);
