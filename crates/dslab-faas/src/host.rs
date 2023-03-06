@@ -192,7 +192,7 @@ impl Host {
         let mut invocation_registry = ir.borrow_mut();
         let function_registry = fr.borrow();
         let mut invocation = &mut invocation_registry[id];
-        invocation.end_time = Some(time);
+        invocation.finish_time = Some(time);
         invocation.status = InvocationStatus::Finished;
         let func_id = invocation.func_id;
         let cont_id = invocation.container_id.unwrap();

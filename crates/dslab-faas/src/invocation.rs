@@ -24,16 +24,16 @@ pub struct Invocation {
     pub host_id: Option<usize>,
     pub container_id: Option<usize>,
     pub start_time: Option<f64>,
-    pub end_time: Option<f64>,
+    pub finish_time: Option<f64>,
 }
 
 impl Invocation {
     pub fn execution_time(&self) -> f64 {
-        self.end_time.unwrap() - self.start_time.unwrap()
+        self.finish_time.unwrap() - self.start_time.unwrap()
     }
 
     pub fn response_time(&self) -> f64 {
-        self.end_time.unwrap() - self.arrival_time
+        self.finish_time.unwrap() - self.arrival_time
     }
 
     pub fn wait_time(&self) -> f64 {
@@ -58,7 +58,7 @@ impl InvocationRegistry {
             host_id: None,
             container_id: None,
             start_time: None,
-            end_time: None,
+            finish_time: None,
         };
         self.invocations.push(invocation);
         id
