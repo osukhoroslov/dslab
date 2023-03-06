@@ -24,13 +24,21 @@ const SIMULATION_SEED: u64 = 123;
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
 struct Args {
-    // Total number of nodes
+    // Total number of nodes in each test
     #[clap(short, long = "nodes-count", default_value_t = 50)]
     nodes_count: usize,
 
     // Total number of stars for multistar test
     #[clap(short, long = "stars-count", default_value_t = 10)]
     stars_count: usize,
+
+    // Total number of switches for fat-tree test
+    #[clap(short, long = "switch-count", default_value_t = 3)]
+    switch_count: usize,
+
+    // Total number of routers for fat-tree test
+    #[clap(short, long = "router-count", default_value_t = 10)]
+    router_count: usize,
 }
 
 #[derive(Serialize)]
@@ -148,6 +156,32 @@ fn make_cluster_topology(size: usize) -> Topology {
     topology
 }
 
+fn make_fat_tree_topology(nodes_per_router: usize, switch_count: usize, router_count: usize) -> Topology {
+    let mut topology = Topology::new();
+
+    for i in 0..switch_count {
+        let switch_name = format!("switch_{}", i);
+        topology.add_node(&switch_name, 1000.0, 0.0);
+    }
+
+    for i in 0..router_count {
+        let router_name = format!("router_{}", i);
+        topology.add_node(&router_name, 1000.0, 0.0);
+
+        for j in 0..nodes_per_router {
+            let host_name = format!("host_{}_{}", i, j);
+            topology.add_node(&host_name, 1000.0, 0.0);
+            topology.add_link(&router_name, &host_name, 0.2, 200.0);
+        }
+
+        for j in 0..switch_count {
+            topology.add_link(&router_name, &format!("switch_{}", j), 0.2, 1000.0);
+        }
+    }
+
+    topology
+}
+
 fn init_topology(sim: &mut Simulation, topology: Topology) -> NetworkActors {
     let nodes = topology.get_nodes();
 
@@ -230,6 +264,16 @@ fn cluster_topology_benchmark(args: &Args) {
     run_benchmark(make_cluster_topology(args.nodes_count));
 }
 
+fn fat_tree_topology_benchmark(args: &Args) {
+    println!("=== Fat-Tree Benchmark ===");
+
+    run_benchmark(make_fat_tree_topology(
+        args.nodes_count / args.router_count,
+        args.switch_count,
+        args.router_count,
+    ));
+}
+
 fn main() {
     Builder::from_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
@@ -240,4 +284,5 @@ fn main() {
     star_topology_benchmark(&args);
     multistar_topology_benchmark(&args);
     cluster_topology_benchmark(&args);
+    fat_tree_topology_benchmark(&args);
 }
