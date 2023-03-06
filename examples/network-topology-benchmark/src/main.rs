@@ -222,10 +222,8 @@ fn multistar_topology_benchmark(args: &Args) {
     let mut sim = Simulation::new(SIMULATION_SEED);
 
     let topology_rc = rc!(refcell!(Topology::new()));
-
-    let topology_network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
     let topology_network = rc!(refcell!(Network::new_with_topology(
-        topology_network_model,
+        rc!(refcell!(TopologyNetwork::new(topology_rc.clone()))),
         topology_rc,
         sim.create_context("net")
     )));
