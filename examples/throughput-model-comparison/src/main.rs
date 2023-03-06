@@ -99,7 +99,7 @@ fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
             let (time, id) = model.pop().unwrap();
             result[id] = time;
         }
-        model.insert(transfer.start_time as f64, transfer.weight as f64, id);
+        model.insert(transfer.start_time as f64, transfer.weight as f64);
     }
 
     loop {

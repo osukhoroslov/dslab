@@ -1,9 +1,11 @@
 //! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 //! and completion.
 
+use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
 use dslab_core::SimulationContext;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use sugars::boxed;
 
 use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
 
@@ -50,6 +52,7 @@ impl<T> Eq for Activity<T> {}
 /// and completion.
 pub struct SlowFairThroughputSharingModel<T> {
     throughput_function: ThroughputFunction,
+    throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
     last_throughput_per_item: f64,
@@ -57,6 +60,20 @@ pub struct SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> SlowFairThroughputSharingModel<T> {
+    pub fn new(
+        throughput_function: ThroughputFunction,
+        throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+    ) -> Self {
+        Self {
+            throughput_function,
+            throughput_factor_function,
+            entries: BinaryHeap::new(),
+            next_id: 0,
+            last_throughput_per_item: 0.,
+            last_recalculation_time: 0.,
+        }
+    }
+
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
         Self::with_dynamic_throughput(make_constant_throughput_function(throughput))
@@ -66,6 +83,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
     pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
         Self {
             throughput_function,
+            throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
             entries: BinaryHeap::new(),
             next_id: 0,
             last_throughput_per_item: 0.,
@@ -90,6 +108,7 @@ impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
     fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         let new_count = self.entries.len() + 1;
         self.recalculate(ctx.time(), (self.throughput_function)(new_count) / new_count as f64);
+        let volume = volume / self.throughput_factor_function.get_factor(&item, ctx);
         self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }

@@ -16,12 +16,12 @@ use dslab_core::simulation::Simulation;
 
 use dslab_models::throughput_sharing::make_constant_throughput_function;
 
+use dslab_models::throughput_factor::{
+    make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction, WeightedThroughputFactor,
+};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
-use dslab_storage::throughput_factor::{
-    make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction, WeightedThroughputFactor,
-};
 
 const SEED: u64 = 16;
 
