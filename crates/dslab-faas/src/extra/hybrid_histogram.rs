@@ -220,7 +220,7 @@ impl ColdStartPolicy for HybridHistogramPolicy {
             let it = f64::max(0.0, invocation.arrival_time - old);
             self.get_app_mut(app.id).update(it);
         }
-        self.last.insert(fn_id, invocation.finished.unwrap());
+        self.last.insert(fn_id, invocation.end_time.unwrap());
     }
 
     fn to_string(&self) -> String {

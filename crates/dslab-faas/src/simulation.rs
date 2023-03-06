@@ -179,7 +179,7 @@ impl ServerlessSimulation {
         if let Some(item) = iter.peek() {
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 for req in iter {
-                    let id = ir.new_invocation(req.id, req.duration, req.time);
+                    let id = ir.add_invocation(req.id, req.duration, req.time);
                     self.ctx.emit_ordered(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -188,7 +188,7 @@ impl ServerlessSimulation {
                 }
             } else {
                 for req in iter {
-                    let id = ir.new_invocation(req.id, req.duration, req.time);
+                    let id = ir.add_invocation(req.id, req.duration, req.time);
                     self.ctx.emit(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -201,7 +201,7 @@ impl ServerlessSimulation {
     }
 
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
-        let invocation_id = self.invocation_registry.borrow_mut().new_invocation(id, duration, time);
+        let invocation_id = self.invocation_registry.borrow_mut().add_invocation(id, duration, time);
         self.ctx.emit(
             InvocationStartEvent {
                 id: invocation_id,

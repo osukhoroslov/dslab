@@ -203,9 +203,48 @@ impl SimulationContext {
     }
 
     /// This and all other `emit_ordered...` functions are special variants of normal `emit_...` functions
-    /// that allow adding events to ordered event deque instead of heap, which may reduce the time
-    /// required to get next event. All events inside event deque must be ordered in increasing
-    /// order of time, otherwise the simulation will panic.
+    /// that allow adding events to ordered event deque instead of heap, which may improve simulation performance.
+    ///
+    /// Ordered events should be emitted in non-decreasing order of their time, otherwise the simulation will panic.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 2.0);
+    /// ```
+    ///
+    /// ```should_panic
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0); // will panic because of broken time order
+    /// ```
     pub fn emit_ordered<T>(&mut self, data: T, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
@@ -215,9 +254,36 @@ impl SimulationContext {
             .add_ordered_event(data, self.id, dest, delay)
     }
 
-    /// Checks whether emitting event with specified delay will break the ordering contract.
+    /// Checks whether it is safe to emit an ordered event with the specified delay.
     ///
-    /// Returns true if and only if new event will **not** break the contract.
+    /// The time of new event must be not less than the time of the previously emitted ordered event.   
+    ///
+    /// Returns true if this condition holds and false otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Simulation, SimulationContext};
+    ///
+    /// #[derive(Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// assert!(comp1_ctx.can_emit_ordered(1.0)); // 1.0 == 1.0
+    /// assert!(comp1_ctx.can_emit_ordered(1.1)); // 1.1 > 1.0
+    /// assert!(!comp1_ctx.can_emit_ordered(0.9)); // 0.9 < 1.0
+    /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.5);
+    /// assert!(!comp1_ctx.can_emit_ordered(1.0)); // 1.0 < 1.5
+    /// sim.step();
+    /// assert_eq!(sim.time(), 1.0);
+    /// assert!(comp1_ctx.can_emit_ordered(1.0)); // 2.0 > 1.5
+    /// assert!(!comp1_ctx.can_emit_ordered(0.3)); // 1.3 < 1.5
+    /// ```
     pub fn can_emit_ordered(&self, delay: f64) -> bool {
         self.sim_state.borrow().can_add_ordered_event(delay)
     }

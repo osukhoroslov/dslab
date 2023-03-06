@@ -16,10 +16,8 @@ fn test_invocation_lifecycle() {
         ..Default::default()
     };
     let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
-    {
-        let mem = sim.create_resource("mem", 1);
-        sim.add_host(None, ResourceProvider::new(vec![mem]), 1);
-    }
+    let host_mem = sim.create_resource("mem", 1);
+    sim.add_host(None, ResourceProvider::new(vec![host_mem]), 1);
     let fn_mem = sim.create_resource_requirement("mem", 1);
     let f = sim.add_app_with_single_function(Application::new(1, 1., 1., ResourceConsumer::new(vec![fn_mem])));
     sim.send_invocation_request(f, 1.0, 0.0);

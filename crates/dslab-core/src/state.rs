@@ -87,6 +87,7 @@ impl SimulationState {
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
+            // max is used to enforce time order despite of floating-point errors
             time: last_time.max(self.clock + delay),
             src,
             dest,
@@ -104,6 +105,7 @@ impl SimulationState {
 
     pub fn can_add_ordered_event(&self, delay: f64) -> bool {
         if let Some(evt) = self.ordered_events.back() {
+            // small epsilon is used to account for floating-point errors
             if delay + self.clock < evt.time - 1e-12 {
                 return false;
             }

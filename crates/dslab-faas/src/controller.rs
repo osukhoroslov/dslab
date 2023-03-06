@@ -44,8 +44,7 @@ impl Controller {
 
     fn invoke(&mut self, id: usize, func_id: usize, time: f64) -> InvokerDecision {
         let reg = self.function_registry.borrow();
-        let app_id = reg.get_function(func_id).unwrap().app_id;
-        let app = reg.get_app(app_id).unwrap();
+        let app = reg.get_app_by_function(func_id).unwrap();
         let host = self.scheduler.select_host(app, &self.hosts);
         self.hosts[host].borrow_mut().invoke(id, time)
     }

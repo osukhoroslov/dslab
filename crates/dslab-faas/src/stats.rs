@@ -134,8 +134,8 @@ impl InvocationStats {
     }
 
     pub fn update(&mut self, invocation: &Invocation) {
-        let len = invocation.finished.unwrap() - invocation.started.unwrap();
-        let total_len = invocation.finished.unwrap() - invocation.arrival_time;
+        let len = invocation.execution_time();
+        let total_len = invocation.response_time();
         self.abs_exec_slowdown.add(len - invocation.duration);
         self.rel_exec_slowdown
             .add((len - invocation.duration) / invocation.duration);

@@ -23,8 +23,22 @@ pub struct Invocation {
     pub status: InvocationStatus,
     pub host_id: Option<usize>,
     pub container_id: Option<usize>,
-    pub started: Option<f64>,
-    pub finished: Option<f64>,
+    pub start_time: Option<f64>,
+    pub end_time: Option<f64>,
+}
+
+impl Invocation {
+    pub fn execution_time(&self) -> f64 {
+        self.end_time.unwrap() - self.start_time.unwrap()
+    }
+
+    pub fn response_time(&self) -> f64 {
+        self.end_time.unwrap() - self.arrival_time
+    }
+
+    pub fn wait_time(&self) -> f64 {
+        self.start_time.unwrap() - self.arrival_time
+    }
 }
 
 #[derive(Default)]
@@ -33,7 +47,7 @@ pub struct InvocationRegistry {
 }
 
 impl InvocationRegistry {
-    pub fn new_invocation(&mut self, func_id: usize, duration: f64, arrival_time: f64) -> usize {
+    pub fn add_invocation(&mut self, func_id: usize, duration: f64, arrival_time: f64) -> usize {
         let id = self.invocations.len();
         let invocation = Invocation {
             id,
@@ -43,8 +57,8 @@ impl InvocationRegistry {
             status: InvocationStatus::NotArrived,
             host_id: None,
             container_id: None,
-            started: None,
-            finished: None,
+            start_time: None,
+            end_time: None,
         };
         self.invocations.push(invocation);
         id

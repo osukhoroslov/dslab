@@ -15,8 +15,8 @@ fn test_invocation_stats() {
         status: InvocationStatus::Finished,
         host_id: Some(0),
         container_id: Some(0),
-        started: Some(0.5),
-        finished: Some(2.0),
+        start_time: Some(0.5),
+        end_time: Some(2.0),
     };
     let inv2 = Invocation {
         id: 1,
@@ -26,8 +26,8 @@ fn test_invocation_stats() {
         status: InvocationStatus::Finished,
         host_id: Some(0),
         container_id: Some(1),
-        started: Some(0.5),
-        finished: Some(2.0),
+        start_time: Some(0.5),
+        end_time: Some(2.0),
     };
     let inv3 = Invocation {
         id: 2,
@@ -37,8 +37,8 @@ fn test_invocation_stats() {
         status: InvocationStatus::Finished,
         host_id: Some(0),
         container_id: Some(0),
-        started: Some(2.0),
-        finished: Some(3.0),
+        start_time: Some(2.0),
+        end_time: Some(3.0),
     };
     stats.update(&inv1);
     stats.update(&inv2);
