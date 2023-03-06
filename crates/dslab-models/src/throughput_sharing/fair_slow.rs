@@ -60,6 +60,7 @@ pub struct SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> SlowFairThroughputSharingModel<T> {
+    /// Creates model with given throughput function and throughput factor function.
     pub fn new(
         throughput_function: ThroughputFunction,
         throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,

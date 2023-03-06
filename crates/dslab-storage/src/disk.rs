@@ -31,6 +31,7 @@ use dslab_models::throughput_sharing::{
     make_constant_throughput_function, FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel,
 };
 
+/// Struct for a disk activity.
 #[derive(Clone)]
 pub struct DiskActivity {
     request_id: u64,
