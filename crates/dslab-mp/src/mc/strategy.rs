@@ -120,15 +120,15 @@ pub trait Strategy {
     }
 
     fn take_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
-        system.events.borrow_mut().remove(event_num)
+        system.events.remove(event_num)
     }
 
     fn clone_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
-        system.events.borrow()[event_num].clone()
+        system.events[event_num].clone()
     }
 
     fn add_event(&self, system: &mut McSystem, event: McEvent, event_num: usize) {
-        system.events.borrow_mut().insert(event_num, event);
+        system.events.insert(event_num, event);
     }
 
     fn decrease_max_dupl_count(&self, system: &mut McSystem, event_num: usize) {

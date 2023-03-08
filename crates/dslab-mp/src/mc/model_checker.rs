@@ -36,7 +36,6 @@ impl ModelChecker {
                 });
             }
         }
-        let events = Rc::new(RefCell::new(events));
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
