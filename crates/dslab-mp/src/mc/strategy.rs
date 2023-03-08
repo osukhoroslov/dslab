@@ -131,47 +131,6 @@ pub trait Strategy {
         system.events.insert(event_num, event);
     }
 
-    fn decrease_max_dupl_count(&self, system: &mut McSystem, event_num: usize) {
-        let event = self.take_event(system, event_num);
-
-        match event {
-            MessageReceived {
-                msg,
-                src,
-                dest,
-                options,
-            } => match options {
-                DeliveryOptions::NoFailures => {}
-                DeliveryOptions::Dropped => {}
-                DeliveryOptions::PossibleFailures {
-                    can_be_dropped,
-                    max_dupl_count,
-                    can_be_corrupted,
-                } => {
-                    if max_dupl_count == 0 {
-                        return;
-                    }
-
-                    self.add_event(
-                        system,
-                        MessageReceived {
-                            msg,
-                            src,
-                            dest,
-                            options: DeliveryOptions::PossibleFailures {
-                                can_be_dropped,
-                                max_dupl_count: max_dupl_count - 1,
-                                can_be_corrupted,
-                            },
-                        },
-                        event_num,
-                    );
-                }
-            },
-            _ => {}
-        }
-    }
-
     fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
         self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
         match event {
@@ -197,8 +156,8 @@ pub trait Strategy {
     }
 
     fn duplicate_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
-        let event = self.clone_event(system, event_num);
-        self.decrease_max_dupl_count(system, event_num);
+        let event = self.take_event(system, event_num);
+        self.add_event(system, event.duplicate().unwrap(), event_num);
         self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         event
     }
