@@ -30,7 +30,7 @@ impl Dfs {
 
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
-        let events_num = system.events.borrow().len();
+        let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
 
         // Checking invariant on every step

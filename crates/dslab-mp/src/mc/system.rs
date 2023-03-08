@@ -25,11 +25,11 @@ impl McState {
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: Rc<RefCell<McNetwork>>,
-    pub(crate) events: Rc<RefCell<Vec<McEvent>>>,
+    pub(crate) events: Vec<McEvent>,
 }
 
 impl McSystem {
-    pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: Rc<RefCell<Vec<McEvent>>>) -> Self {
+    pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: Vec<McEvent>) -> Self {
         Self { nodes, net, events }
     }
 
@@ -49,7 +49,7 @@ impl McSystem {
         for new_event in new_events {
             match new_event {
                 McEvent::TimerCancelled { timer, proc } => {
-                    self.events.borrow_mut().retain(|event| match event {
+                    self.events.retain(|event| match event {
                         McEvent::TimerFired {
                             proc: timer_proc,
                             timer: timer_name,
@@ -57,13 +57,13 @@ impl McSystem {
                         _ => true,
                     });
                 }
-                _ => self.events.borrow_mut().push(new_event),
+                _ => self.events.push(new_event),
             }
         }
     }
 
     pub fn get_state(&self, search_depth: u64) -> McState {
-        let mut state = McState::new(self.events.borrow().clone(), search_depth);
+        let mut state = McState::new(self.events.clone(), search_depth);
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
@@ -74,6 +74,6 @@ impl McSystem {
         for (name, node_state) in state.node_states {
             self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
-        *self.events.borrow_mut() = state.events;
+        self.events = state.events;
     }
 }
