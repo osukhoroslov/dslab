@@ -51,7 +51,7 @@ impl Topology {
         self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 
-    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, latency: f64, bandwidth: f64) {
+    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, bandwidth: f64, latency: f64) {
         assert!(bandwidth > 0.0, "Link bandwidth must be > 0");
         let node1 = self.get_node_id(node1_name);
         let node2 = self.get_node_id(node2_name);
