@@ -57,6 +57,33 @@ impl<T> VecMap<T> {
             None
         }
     }
+
+    pub fn iter(&self) -> VecMapIterator<'_, T> {
+        VecMapIterator::new(self.data.iter().enumerate())
+    }
+}
+
+pub struct VecMapIterator<'a, T> {
+    inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>,
+}
+
+impl<'a, T> VecMapIterator<'a, T> {
+    pub fn new(inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>) -> Self {
+        Self { inner }
+    }
+}
+
+impl<'a, T> Iterator for VecMapIterator<'a, T> {
+    type Item = (usize, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((id, x)) = self.inner.next() {
+            if let Some(y) = x.as_ref() {
+                return Some((id, y));
+            }
+        }
+        None
+    }
 }
 
 impl<T> Index<usize> for VecMap<T> {
@@ -106,6 +133,10 @@ where
     pub fn get_mut(&mut self, id: usize) -> &mut T {
         self.extend(id);
         &mut self.data[id]
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.data.iter()
     }
 }
 

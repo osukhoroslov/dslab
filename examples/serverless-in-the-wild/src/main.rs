@@ -90,12 +90,12 @@ fn main() {
         s.global_stats.print_summary(&policies[i]);
         if args.plot.is_some() {
             let mut apps: SampleMetric = Default::default();
-            for (_, app_stats) in s.app_stats.iter() {
+            for app_stats in s.app_stats.iter() {
                 apps.add((app_stats.cold_starts as f64) / (app_stats.invocations as f64) * 100.);
             }
             results.push((
                 apps.quantile(0.75),
-                s.global_stats.wasted_resource_time.get(&0).unwrap().sum(),
+                s.global_stats.wasted_resource_time.get(0).unwrap().sum(),
             ));
         }
     }
