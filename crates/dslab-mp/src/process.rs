@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::hash::Hash;
 
 use downcast_rs::{impl_downcast, Downcast};
 use dyn_clone::{clone_trait_object, DynClone};
@@ -7,18 +7,27 @@ use dyn_clone::{clone_trait_object, DynClone};
 use crate::context::Context;
 use crate::message::Message;
 
-pub trait ProcessState: Downcast + Debug {
-    fn hash(&self) -> u64;
-}
+pub trait ProcessState: Downcast + Debug {}
 
 impl_downcast!(ProcessState);
 
-#[derive(Debug, Clone)]
-struct ProcessStateStub {}
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct ProcessStateStub {}
+impl ProcessState for ProcessStateStub {}
 
-impl ProcessState for ProcessStateStub {
-    fn hash(&self) -> u64 {
-        0
+#[derive(Debug, Hash, Eq, PartialEq)]
+pub struct StringProcessState {
+    str: String,
+}
+impl ProcessState for StringProcessState {}
+
+impl StringProcessState {
+    pub fn new(str: String) -> Self {
+        Self { str }
+    }
+
+    pub fn str(&self) -> &String {
+        return &self.str;
     }
 }
 
@@ -38,12 +47,12 @@ pub trait Process: DynClone {
     }
 
     /// Returns the process state.
-    fn state(&self) -> Rc<dyn ProcessState> {
-        Rc::new(ProcessStateStub {})
+    fn state(&self) -> Box<dyn ProcessState> {
+        Box::new(ProcessStateStub {})
     }
 
     /// Restores the process state.
-    fn set_state(&self, _state: Rc<dyn ProcessState>) {}
+    fn set_state(&self, _state: Box<dyn ProcessState>) {}
 }
 
 clone_trait_object!(Process);
