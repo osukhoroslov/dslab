@@ -13,7 +13,7 @@ pub struct Dfs {
     search_depth: u64,
     log_mode: LogMode,
     summary: McSummary,
-    used: HashSet<McState>,
+    visited: HashSet<McState>,
 }
 
 impl Dfs {
@@ -30,7 +30,7 @@ impl Dfs {
             search_depth: 0,
             log_mode,
             summary: McSummary::default(),
-            used: HashSet::default(),
+            visited: HashSet::default(),
         }
     }
 }
@@ -39,28 +39,31 @@ impl Dfs {
     fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
-        if self.used.contains(&state) {
-            return true;
-        }
-        self.used.insert(state.clone());
-        // Checking invariant on every step
-        (self.invariant)(&state)?;
-
-        // Check final state of the system
-        if let Some(status) = (self.goal)(&state) {
+        
+        let result = if self.visited.contains(&state) {
+            // Was already visited before
+            Some(Ok(()))
+        } else if let Err(err) = (self.invariant)(&state) {
+            // Invariant is broken
+            Some(Err(err))
+        } else if let Some(status) == (self.goal)(&state) {
+            // Reached final state of the system
             self.update_summary(status);
-            return Ok(());
-        }
-
-        // Check if execution branch is pruned
-        if let Some(status) = (self.prune)(&state) {
+            Some(Ok(()))
+        } else if let Some(status) == (self.prune)(&state) {
+            // Execution branch is pruned
             self.update_summary(status);
-            return Ok(());
-        }
+            Some(Ok(()))
+        } else if events_num == 0 {
+            // exhausted without goal completed
+            Some(Err("nothing left to do to reach the goal".to_owned()))
+        } else {
+            None
+        };
 
-        // exhausted without goal completed
-        if events_num == 0 {
-            return Err("nothing left to do to reach the goal".to_owned());
+        self.visited.insert(state);
+        if let Some(result) = result {
+            return result;
         }
 
         for i in 0..events_num {
