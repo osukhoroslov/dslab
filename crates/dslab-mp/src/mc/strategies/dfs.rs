@@ -31,7 +31,7 @@ impl Dfs {
     fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
-        
+
         let result = if self.visited.contains(&state) {
             // Was already visited before
             Some(Ok(()))
