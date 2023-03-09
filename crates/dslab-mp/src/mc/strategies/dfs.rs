@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
 use crate::mc::system::{McState, McSystem};
@@ -40,11 +38,11 @@ impl Dfs {
         } else if let Err(err) = (self.invariant)(&state) {
             // Invariant is broken
             Some(Err(err))
-        } else if let Some(status) == (self.goal)(&state) {
+        } else if let Some(status) = (self.goal)(&state) {
             // Reached final state of the system
             self.update_summary(status);
             Some(Ok(()))
-        } else if let Some(status) == (self.prune)(&state) {
+        } else if let Some(status) = (self.prune)(&state) {
             // Execution branch is pruned
             self.update_summary(status);
             Some(Ok(()))
