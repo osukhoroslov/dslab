@@ -1,5 +1,4 @@
 use std::env;
-use std::rc::Rc;
 
 use crate::PyProcessFactory;
 use dslab_mp::process::ProcessState;
