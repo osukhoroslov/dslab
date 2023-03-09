@@ -8,7 +8,7 @@ use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
-use crate::process::{ProcessState, ProcessStateStub, StringProcessState};
+use crate::process::ProcessState;
 
 pub struct ProcessEntryState {
     pub proc_state: Box<dyn ProcessState>,
@@ -21,30 +21,20 @@ pub struct ProcessEntryState {
 
 impl Hash for ProcessEntryState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        if let Some(stub) = self.proc_state.downcast_ref::<ProcessStateStub>() {
-            stub.hash(hasher);
-        } else if let Some(state) = self.proc_state.downcast_ref::<StringProcessState>() {
-            state.hash(hasher);
-        }
+        self.proc_state.derived_hash(&mut Box::new(hasher));
+        // or this way?
+        // if let Some(stub) = self.proc_state.downcast_ref::<ProcessStateStub>() {
+        //     stub.hash(hasher);
+        // } else if let Some(state) = self.proc_state.downcast_ref::<StringProcessState>() {
+        //     state.hash(hasher);
+        // }
         self.local_outbox.hash(hasher);
     }
 }
 
 impl PartialEq for ProcessEntryState {
     fn eq(&self, other: &Self) -> bool {
-        let equal_process_states = if let (Some(stub), Some(other)) = (
-            self.proc_state.downcast_ref::<ProcessStateStub>(),
-            other.proc_state.downcast_ref::<ProcessStateStub>(),
-        ) {
-            stub.eq(other)
-        } else if let (Some(stub), Some(other)) = (
-            self.proc_state.downcast_ref::<StringProcessState>(),
-            other.proc_state.downcast_ref::<StringProcessState>(),
-        ) {
-            stub.eq(other)
-        } else {
-            false
-        };
+        let equal_process_states = self.proc_state.derived_eq(&other.proc_state);
         equal_process_states && self.local_outbox == other.local_outbox
     }
 }
