@@ -8,7 +8,7 @@ use pyo3::types::{PyModule, PyString, PyTuple};
 
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
-use dslab_mp::process::{Process, ProcessState};
+use dslab_mp::process::{Process, ProcessState, StringProcessState};
 
 #[cfg(test)]
 mod tests;
@@ -61,19 +61,6 @@ impl PyProcessFactory {
             max_size_freq: 0,
             max_size_counter: 0,
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct PyProcessState {
-    str: String,
-}
-
-impl ProcessState for PyProcessState {
-    fn hash(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        self.str.hash(&mut hasher);
-        hasher.finish()
     }
 }
 
@@ -179,24 +166,24 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn state(&self) -> Rc<dyn ProcessState> {
+    fn state(&self) -> Box<dyn ProcessState> {
         Python::with_gil(|py| {
             let res = self
                 .proc
                 .call_method0(py, "get_state")
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
-            Rc::new(PyProcessState {
-                str: res.as_ref(py).downcast::<PyString>().unwrap().to_string(),
-            })
+            Box::new(StringProcessState::new(
+                res.as_ref(py).downcast::<PyString>().unwrap().to_string(),
+            ))
         })
     }
 
-    fn set_state(&self, state: Rc<dyn ProcessState>) {
-        let data = state.downcast_rc::<PyProcessState>().unwrap();
+    fn set_state(&self, state: Box<dyn ProcessState>) {
+        let data = state.downcast::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "set_state", (data.str.clone(),))
+                .call_method1(py, "set_state", (data.str().clone(),))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });
