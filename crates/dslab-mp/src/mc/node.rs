@@ -1,8 +1,7 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::rc::Rc;
+use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
 use crate::context::Context;
 use crate::mc::events::McEvent;
@@ -21,19 +20,32 @@ pub struct ProcessEntryState {
 }
 
 impl Hash for ProcessEntryState {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.proc_state.hash().hash(state);
-        self.local_outbox.hash(state);
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        if let Some(stub) = self.proc_state.downcast_ref::<ProcessStateStub>() {
+            stub.hash(hasher);
+        } else if let Some(state) = self.proc_state.downcast_ref::<StringProcessState>() {
+            state.hash(hasher);
+        }
+        self.local_outbox.hash(hasher);
     }
 }
 
 impl PartialEq for ProcessEntryState {
     fn eq(&self, other: &Self) -> bool {
-        self.proc_state.hash() == other.proc_state.hash() &&
-        self.local_outbox == other.local_outbox &&
-        self.pending_timers == other.pending_timers &&
-        self.sent_message_count == other.sent_message_count &&
-        self.received_message_count == other.received_message_count
+        let equal_process_states = if let (Some(stub), Some(other)) = (
+            self.proc_state.downcast_ref::<ProcessStateStub>(),
+            other.proc_state.downcast_ref::<ProcessStateStub>(),
+        ) {
+            stub.eq(other)
+        } else if let (Some(stub), Some(other)) = (
+            self.proc_state.downcast_ref::<StringProcessState>(),
+            other.proc_state.downcast_ref::<StringProcessState>(),
+        ) {
+            stub.eq(other)
+        } else {
+            false
+        };
+        equal_process_states && self.local_outbox == other.local_outbox
     }
 }
 
@@ -63,7 +75,7 @@ impl ProcessEntry {
     }
 }
 
-pub type McNodeState = HashMap<String, ProcessEntryState>;
+pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
