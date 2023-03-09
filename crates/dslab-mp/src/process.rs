@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 
 use downcast_rs::{impl_downcast, Downcast};
 use dyn_clone::{clone_trait_object, DynClone};
@@ -7,19 +7,20 @@ use dyn_clone::{clone_trait_object, DynClone};
 use crate::context::Context;
 use crate::message::Message;
 
-pub trait ProcessState: Downcast + Debug {}
+pub trait ProcessState: Downcast + Debug {
+    fn derived_hash(&self, hasher: &mut Box<&mut dyn Hasher>);
+    fn derived_eq(&self, other: &Box<dyn ProcessState>) -> bool;
+}
 
 impl_downcast!(ProcessState);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ProcessStateStub {}
-impl ProcessState for ProcessStateStub {}
 
 #[derive(Debug, Hash, Eq, PartialEq)]
 pub struct StringProcessState {
     str: String,
 }
-impl ProcessState for StringProcessState {}
 
 impl StringProcessState {
     pub fn new(str: String) -> Self {
@@ -30,6 +31,20 @@ impl StringProcessState {
         return &self.str;
     }
 }
+
+impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
+    fn derived_hash(&self, hasher: &mut Box<&mut dyn Hasher>) {
+        self.hash(&mut (*hasher));
+    }
+    fn derived_eq(&self, other: &Box<dyn ProcessState>) -> bool {
+        if let Some(other) = other.downcast_ref::<T>() {
+            self.eq(&(*other))
+        } else {
+            false
+        }
+    }
+}
+
 
 pub trait Process: DynClone {
     /// Called when a message is received.
