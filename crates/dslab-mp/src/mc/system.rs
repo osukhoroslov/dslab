@@ -1,6 +1,7 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -8,9 +9,9 @@ use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq)]
 pub struct McState {
-    pub node_states: HashMap<String, McNodeState>,
+    pub node_states: BTreeMap<String, McNodeState>,
     pub events: Vec<McEvent>,
     pub search_depth: u64,
 }
@@ -18,7 +19,7 @@ pub struct McState {
 impl McState {
     pub fn new(events: Vec<McEvent>, search_depth: u64) -> Self {
         Self {
-            node_states: HashMap::new(),
+            node_states: BTreeMap::new(),
             events,
             search_depth,
         }
@@ -31,19 +32,10 @@ impl Hash for McState {
         for event in self.events.iter() {
             let mut h = DefaultHasher::default();
             event.hash(&mut h);
-            hash_events ^= h.finish();   
+            hash_events ^= h.finish();
         }
         hash_events.hash(hasher);
-        let mut hash_states = 0;
-        for (_, node_state) in self.node_states.iter() {
-            for (proc, proc_state) in node_state.iter() {
-                let mut h = DefaultHasher::default();
-                proc.hash(&mut h);
-                proc_state.hash(&mut h);
-                hash_states ^= h.finish();
-            }
-        }
-        hash_states.hash(hasher);
+        self.node_states.hash(hasher);
     }
 }
 
