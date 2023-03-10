@@ -181,7 +181,7 @@ impl Process for PyProcess {
         let data = state.downcast::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "set_state", (data.str().clone(),))
+                .call_method1(py, "set_state", (data.str(),))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });
