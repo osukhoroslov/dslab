@@ -22,12 +22,6 @@ pub struct ProcessEntryState {
 impl Hash for ProcessEntryState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.proc_state.derived_hash(&mut Box::new(hasher));
-        // or this way?
-        // if let Some(stub) = self.proc_state.downcast_ref::<ProcessStateStub>() {
-        //     stub.hash(hasher);
-        // } else if let Some(state) = self.proc_state.downcast_ref::<StringProcessState>() {
-        //     state.hash(hasher);
-        // }
         self.local_outbox.hash(hasher);
     }
 }
