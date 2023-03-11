@@ -217,10 +217,12 @@ impl Node {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src: _, dest } => {
+                    t!("{:>9.3} {:>10} --> {:<10} {:?}", time, proc, dest, msg);
                     self.net.borrow_mut().send_message(msg, &proc, &dest);
                     proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
+                    t!(format!("{:>9.3} {:>10} >>> {:<10} {:?}", time, proc, "local", msg).green());
                     proc_entry.local_outbox.push(msg);
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } => {

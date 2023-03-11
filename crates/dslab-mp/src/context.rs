@@ -1,13 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use colored::*;
-
 use dslab_core::SimulationContext;
 
 use crate::message::Message;
 use crate::node::{ProcessEvent, TimerBehavior};
-use crate::util::t;
 
 pub struct Context {
     proc_name: String,
@@ -36,7 +33,6 @@ impl Context {
     }
 
     pub fn send(&mut self, msg: Message, dest: String) {
-        t!("{:>9.3} {:>10} --> {:<10} {:?}", self.time, self.proc_name, dest, msg);
         self.actions.push(ProcessEvent::MessageSent {
             msg,
             src: self.proc_name.clone(),
@@ -45,11 +41,6 @@ impl Context {
     }
 
     pub fn send_local(&mut self, msg: Message) {
-        t!(format!(
-            "{:>9.3} {:>10} >>> {:<10} {:?}",
-            self.time, self.proc_name, "local", msg
-        )
-        .green());
         self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
