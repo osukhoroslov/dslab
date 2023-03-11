@@ -8,16 +8,18 @@ use std::rc::Rc;
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
+use crate::mc::pending_events::PendingEvents;
 
-#[derive(Eq)]
+use super::events::McEventId;
+
 pub struct McState {
-    pub node_states: BTreeMap<String, McNodeState>,
-    pub events: Vec<McEvent>,
+    pub node_states: HashMap<String, McNodeState>,
+    pub events: PendingEvents,
     pub search_depth: u64,
 }
 
 impl McState {
-    pub fn new(events: Vec<McEvent>, search_depth: u64) -> Self {
+    pub fn new(events: PendingEvents, search_depth: u64) -> Self {
         Self {
             node_states: BTreeMap::new(),
             events,
@@ -48,11 +50,11 @@ impl Hash for McState {
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: Rc<RefCell<McNetwork>>,
-    pub(crate) events: Vec<McEvent>,
+    pub(crate) events: PendingEvents,
 }
 
 impl McSystem {
-    pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: Vec<McEvent>) -> Self {
+    pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: PendingEvents) -> Self {
         Self { nodes, net, events }
     }
 
@@ -62,7 +64,7 @@ impl McSystem {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
                 self.nodes.get_mut(&name).unwrap().on_message_received(dest, msg, src)
             }
-            McEvent::TimerFired { proc, timer } => {
+            McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
                 self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer)
             }
@@ -70,18 +72,7 @@ impl McSystem {
         };
 
         for new_event in new_events {
-            match new_event {
-                McEvent::TimerCancelled { timer, proc } => {
-                    self.events.retain(|event| match event {
-                        McEvent::TimerFired {
-                            proc: timer_proc,
-                            timer: timer_name,
-                        } => *timer_proc != proc || *timer_name != timer,
-                        _ => true,
-                    });
-                }
-                _ => self.events.push(new_event),
-            }
+            self.events.push(new_event);
         }
     }
 
@@ -98,5 +89,13 @@ impl McSystem {
             self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
         self.events = state.events;
+    }
+
+    pub fn events_num(&self) -> usize {
+        self.events.available_events().len()
+    }
+
+    pub fn events(&self) -> HashSet<McEventId> {
+        self.events.available_events().clone()
     }
 }

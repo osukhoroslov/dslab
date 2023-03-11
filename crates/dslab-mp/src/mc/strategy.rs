@@ -49,7 +49,7 @@ pub trait Strategy {
         match event {
             MessageReceived { options, .. } => {
                 match options {
-                    DeliveryOptions::NoFailures => self.apply_event(system, event_num, false, false)?,
+                    DeliveryOptions::NoFailures(..) => self.apply_event(system, event_num, false, false)?,
                     DeliveryOptions::Dropped => self.process_drop_event(system, event_num)?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
@@ -132,16 +132,16 @@ pub trait Strategy {
         Ok(())
     }
 
-    fn take_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
-        system.events.remove(event_num)
+    fn take_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
+        system.events.pop(event_num)
     }
 
-    fn clone_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
-        system.events[event_num].clone()
+    fn clone_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
+        system.events.get(event_num).unwrap().clone()
     }
 
-    fn add_event(&self, system: &mut McSystem, event: McEvent, event_num: usize) {
-        system.events.insert(event_num, event);
+    fn add_event(&self, system: &mut McSystem, event: McEvent) -> McEventId {
+        system.events.push(event)
     }
 
     fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
@@ -168,9 +168,9 @@ pub trait Strategy {
         }
     }
 
-    fn duplicate_event(&self, system: &mut McSystem, event_num: usize) -> McEvent {
+    fn duplicate_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
         let event = self.take_event(system, event_num);
-        self.add_event(system, event.duplicate().unwrap(), event_num);
+        self.add_event(system, event.duplicate().unwrap());
         self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         event
     }
@@ -181,7 +181,7 @@ pub trait Strategy {
                 MessageReceived { msg, src, dest, .. } => {
                     self.log_message(depth, msg, src, dest, log_context);
                 }
-                TimerFired { proc, timer } => {
+                TimerFired { proc, timer, .. } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10}", depth, proc, timer).yellow());
                 }
                 _ => {}

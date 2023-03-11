@@ -1,5 +1,4 @@
 pub mod context;
-pub mod dependency;
 pub mod events;
 pub mod mc;
 pub mod message;

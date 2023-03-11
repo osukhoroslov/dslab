@@ -4,8 +4,8 @@ use crate::message::Message;
 
 #[derive(Serialize, Clone, Eq, PartialEq, Hash)]
 pub enum DeliveryOptions {
-    /// Message will be received exactly once without corruption
-    NoFailures,
+    /// Message will be received exactly once without corruption with specified max delay
+    NoFailures(f64),
     /// Message will not be received
     Dropped,
     /// Message delivery may be subject to some failures
@@ -16,7 +16,9 @@ pub enum DeliveryOptions {
     },
 }
 
-#[derive(Serialize, Clone, Eq, Hash, PartialEq)]
+pub type McEventId = usize;
+
+#[derive(Serialize, Clone)]
 pub enum McEvent {
     MessageReceived {
         msg: Message,
@@ -27,6 +29,7 @@ pub enum McEvent {
     TimerFired {
         proc: String,
         timer: String,
+        duration: f64,
     },
     TimerCancelled {
         proc: String,

@@ -28,7 +28,7 @@ impl Dfs {
 
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
-        let events_num = system.events.len();
+        let events_num = system.events_num();
         let state = system.get_state(self.search_depth);
 
         let result = self.check_state(&state, events_num);
@@ -38,8 +38,8 @@ impl Dfs {
             return result;
         }
 
-        for i in 0..events_num {
-            self.process_event(system, i)?;
+        for event in system.events() {
+            self.process_event(system, event)?;
         }
         Ok(())
     }

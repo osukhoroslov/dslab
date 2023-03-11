@@ -124,15 +124,12 @@ impl McNode {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet {
-                    name,
-                    delay: _delay,
-                    behavior,
-                } => {
+                ProcessEvent::TimerSet { name, delay, behavior } => {
                     if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
                         let event = McEvent::TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
+                            duration: delay,
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking

@@ -15,6 +15,7 @@ pub struct McNetwork {
     drop_outgoing: HashSet<String>,
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
+    roundtrip_time: Option<f64>,
 }
 
 impl McNetwork {
@@ -27,6 +28,7 @@ impl McNetwork {
             drop_outgoing: net.get_drop_outgoing().clone(),
             disabled_links: net.disabled_links().clone(),
             proc_locations: net.proc_locations().clone(),
+            roundtrip_time: Some(net.get_max_delay()),
         }
     }
 
@@ -43,7 +45,7 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                options: DeliveryOptions::NoFailures,
+                options: DeliveryOptions::NoFailures(self.roundtrip_time.unwrap()),
             }
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)

@@ -68,6 +68,10 @@ impl Network {
         self.max_delay = max_delay;
     }
 
+    pub fn get_max_delay(&self) -> f64 {
+        self.max_delay
+    }
+
     pub fn drop_rate(&self) -> f64 {
         self.drop_rate
     }

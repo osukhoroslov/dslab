@@ -11,6 +11,8 @@ use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
 
+use super::pending_events::PendingEvents;
+
 pub struct ModelChecker {
     system: McSystem,
     strategy: Box<dyn Strategy>,
@@ -20,19 +22,20 @@ impl ModelChecker {
     pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
         let sim = sys.sim();
 
-        let mut events: Vec<McEvent> = Vec::new();
+        let mut events = PendingEvents::new();
         for event in sim.state().events() {
             if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
                 events.push(McEvent::MessageReceived {
                     msg: value.msg.clone(),
                     src: value.src.clone(),
                     dest: value.dest.clone(),
-                    options: DeliveryOptions::NoFailures,
+                    options: DeliveryOptions::NoFailures(sys.network().get_max_delay()),
                 });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {
                     proc: value.proc.clone(),
                     timer: value.timer.clone(),
+                    duration: 0.0,
                 });
             }
         }
