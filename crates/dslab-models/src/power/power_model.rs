@@ -8,20 +8,10 @@ pub trait CPUPowerModel: DynClone {
     ///
     /// * `time` - current simulation time.
     /// * `utilization` - current component utilization (0-1).
-    fn get_power(&self, time: f64, utilization: f64) -> f64;
-}
-
-/// Model for computing power consumption of RAM component.
-pub trait MemoryPowerModel: DynClone {
-    /// Computes the current power consumption.
-    ///
-    /// * `time` - current simulation time.
-    /// * `utilization` - current component utilization (0-1).
-    fn get_power(&self, time: f64, utilization: f64) -> f64;
+    fn get_power(&self, utilization: f64) -> f64;
 }
 
 clone_trait_object!(CPUPowerModel);
-clone_trait_object!(MemoryPowerModel);
 
 /// A power model with constant power consumption value.
 #[derive(Clone)]
@@ -39,7 +29,7 @@ impl ConstantPowerModel {
 }
 
 impl CPUPowerModel for ConstantPowerModel {
-    fn get_power(&self, _time: f64, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64) -> f64 {
         if utilization == 0. {
             return 0.;
         }
@@ -47,11 +37,11 @@ impl CPUPowerModel for ConstantPowerModel {
     }
 }
 
-/// Computes the host power consumption using the provided power model.
+/// Computes the host power consumption using the provided power modelы.
 #[derive(Clone)]
 pub struct HostPowerModel {
     cpu_power_model: Option<Box<dyn CPUPowerModel>>,
-    memory_power_model: Option<Box<dyn MemoryPowerModel>>,
+    other_power: f64,
 }
 
 impl HostPowerModel {
@@ -59,27 +49,27 @@ impl HostPowerModel {
     pub fn cpu_only(cpu_power_model: Box<dyn CPUPowerModel>) -> Self {
         Self {
             cpu_power_model: Some(cpu_power_model),
-            memory_power_model: None,
+            other_power: 0.,
         }
     }
 
-    /// Creates host power model. Only memory power consumption is taken into account.
-    pub fn memory_only(memory_power_model: Box<dyn MemoryPowerModel>) -> Self {
+    /// Creates host power model. CPU power consumption is taken into account.
+    /// Moreover, other host components consume power too, so, they are represented by
+    /// other_power parameter.
+    pub fn cpu_and_other(cpu_power_model: Box<dyn CPUPowerModel>, other_power: f64) -> Self {
         Self {
-            cpu_power_model: None,
-            memory_power_model: Some(memory_power_model),
+            cpu_power_model: Some(cpu_power_model),
+            other_power,
         }
     }
 
     /// Returns the current power consumption of a physical host.
-    pub fn get_power(&self, time: f64, cpu_util: f64, memory_util: f64) -> f64 {
+    pub fn get_power(&self, cpu_util: f64) -> f64 {
         let mut result = 0.;
-        if self.cpu_power_model.is_some() {
-            result += self.cpu_power_model.as_ref().unwrap().get_power(time, cpu_util)
+        if let Some(model) = &self.cpu_power_model {
+            result += model.get_power(cpu_util);
         }
-        if self.memory_power_model.is_some() {
-            result += self.memory_power_model.as_ref().unwrap().get_power(time, memory_util)
-        }
+        result += self.other_power;
         result
     }
 }

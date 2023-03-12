@@ -31,7 +31,7 @@ impl MSEPowerModel {
 }
 
 impl CPUPowerModel for MSEPowerModel {
-    fn get_power(&self, _time: f64, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64) -> f64 {
         if utilization == 0. {
             return 0.;
         }
