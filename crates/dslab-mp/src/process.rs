@@ -30,6 +30,8 @@ impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
     }
 }
 
+pub type StringProcessState = String;
+
 pub trait Process: DynClone {
     /// Called when a message is received.
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
