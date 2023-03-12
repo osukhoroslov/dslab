@@ -149,7 +149,7 @@ impl HostManager {
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
@@ -175,7 +175,7 @@ impl HostManager {
         self.vms.remove(&vm.id);
         self.recently_removed_vms.push(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
@@ -211,16 +211,16 @@ impl HostManager {
     }
 
     /// Returns the current power consumption.
-    pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
+    pub fn get_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        self.power_model.get_power(time, cpu_util, 0.)
+        self.power_model.get_power(cpu_util)
     }
 
     /// Returns the total energy consumption.
     pub fn get_energy_consumed(&mut self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.energy_meter.energy_consumed()
     }
@@ -350,7 +350,7 @@ impl HostManager {
         log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         let time = self.ctx.time();
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
 
