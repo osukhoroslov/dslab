@@ -21,14 +21,14 @@ pub struct ProcessEntryState {
 
 impl Hash for ProcessEntryState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.proc_state.derived_hash(&mut Box::new(hasher));
+        self.proc_state.hash_with_dyn(hasher);
         self.local_outbox.hash(hasher);
     }
 }
 
 impl PartialEq for ProcessEntryState {
     fn eq(&self, other: &Self) -> bool {
-        let equal_process_states = self.proc_state.derived_eq(&other.proc_state);
+        let equal_process_states = self.proc_state.eq_with_dyn(&*other.proc_state);
         equal_process_states && self.local_outbox == other.local_outbox
     }
 }

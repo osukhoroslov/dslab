@@ -6,7 +6,7 @@ use pyo3::types::{PyModule, PyString, PyTuple};
 
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
-use dslab_mp::process::{Process, ProcessState, StringProcessState};
+use dslab_mp::process::{Process, ProcessState};
 
 #[cfg(test)]
 mod tests;
@@ -171,17 +171,17 @@ impl Process for PyProcess {
                 .call_method0(py, "get_state")
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
-            Box::new(StringProcessState::new(
+            Box::new(
                 res.as_ref(py).downcast::<PyString>().unwrap().to_string(),
-            ))
+            )
         })
     }
 
     fn set_state(&self, state: Box<dyn ProcessState>) {
-        let data = state.downcast::<StringProcessState>().unwrap();
+        let data = state.downcast::<String>().unwrap();
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "set_state", (data.str(),))
+                .call_method1(py, "set_state", (*data,))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });

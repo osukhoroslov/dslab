@@ -8,35 +8,20 @@ use crate::context::Context;
 use crate::message::Message;
 
 pub trait ProcessState: Downcast + Debug {
-    fn derived_hash(&self, hasher: &mut Box<&mut dyn Hasher>);
-    fn derived_eq(&self, other: &Box<dyn ProcessState>) -> bool;
+    fn hash_with_dyn(&self, hasher: &mut dyn Hasher);
+    fn eq_with_dyn(&self, other: &dyn ProcessState) -> bool;
 }
 
 impl_downcast!(ProcessState);
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Hash, Eq, PartialEq)]
 pub struct ProcessStateStub {}
 
-#[derive(Debug, Hash, Eq, PartialEq)]
-pub struct StringProcessState {
-    str: String,
-}
-
-impl StringProcessState {
-    pub fn new(str: String) -> Self {
-        Self { str }
-    }
-
-    pub fn str(&self) -> &String {
-        return &self.str;
-    }
-}
-
 impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
-    fn derived_hash(&self, hasher: &mut Box<&mut dyn Hasher>) {
-        self.hash(&mut (*hasher));
+    fn hash_with_dyn(&self, mut hasher: &mut dyn Hasher) {
+        self.hash(&mut hasher);
     }
-    fn derived_eq(&self, other: &Box<dyn ProcessState>) -> bool {
+    fn eq_with_dyn(&self, other: &dyn ProcessState) -> bool {
         if let Some(other) = other.downcast_ref::<T>() {
             self.eq(&(*other))
         } else {
@@ -44,7 +29,6 @@ impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
         }
     }
 }
-
 
 pub trait Process: DynClone {
     /// Called when a message is received.
