@@ -83,7 +83,7 @@ impl Disk {
         }
     }
 
-    /// Creates new disk with given read and write throughput functions and default throughput factor functions.
+    /// Creates new disk with given read and write throughput and factor functions.
     pub fn new(
         capacity: u64,
         read_throughput_function: ThroughputFunction,

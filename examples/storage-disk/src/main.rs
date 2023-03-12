@@ -16,7 +16,7 @@ use dslab_core::simulation::Simulation;
 
 use dslab_models::throughput_sharing::make_constant_throughput_function;
 
-use dslab_models::throughput_factor::{
+use dslab_models::throughput_sharing::throughput_factor::{
     make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction, WeightedThroughputFactor,
 };
 use dslab_storage::disk::Disk;

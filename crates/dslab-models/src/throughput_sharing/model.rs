@@ -8,7 +8,7 @@ use dslab_core::context::SimulationContext;
 pub trait ThroughputSharingModel<T> {
     /// Adds new activity into the model.
     ///
-    /// Activity starts at `current_time`, has amount of work `value` and is represented by `item`.
+    /// Activity is represented by `item`, has amount of work `value` and starts at `ctx.time()`.
     fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext);
     /// Returns the next activity completion time (if any) along with corresponding activity item.
     ///
