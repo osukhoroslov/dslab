@@ -1,12 +1,14 @@
 //! Fast implementation of fair throughput sharing model.
 
-use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
-use dslab_core::SimulationContext;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+
 use sugars::boxed;
 
+use dslab_core::SimulationContext;
+
 use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
+use super::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 

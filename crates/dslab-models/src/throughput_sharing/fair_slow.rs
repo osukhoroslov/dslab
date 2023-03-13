@@ -1,13 +1,15 @@
 //! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 //! and completion.
 
-use crate::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
-use dslab_core::SimulationContext;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+
 use sugars::boxed;
 
+use dslab_core::SimulationContext;
+
 use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
+use super::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
 
 struct Activity<T> {
     remaining_volume: f64,

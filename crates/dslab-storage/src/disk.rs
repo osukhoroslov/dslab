@@ -23,13 +23,13 @@ use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
+use dslab_models::throughput_sharing::{
+    make_constant_throughput_function, ConstantThroughputFactorFunction, FairThroughputSharingModel,
+    ThroughputFactorFunction, ThroughputFunction, ThroughputSharingModel,
+};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
-use dslab_models::throughput_sharing::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
-use dslab_models::throughput_sharing::{
-    make_constant_throughput_function, FairThroughputSharingModel, ThroughputFunction, ThroughputSharingModel,
-};
 
 /// Struct for a disk activity.
 #[derive(Clone)]

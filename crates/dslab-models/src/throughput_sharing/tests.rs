@@ -1,11 +1,11 @@
-use crate::throughput_sharing::make_constant_throughput_function;
-use crate::throughput_sharing::throughput_factor::ThroughputFactorFunction;
-use dslab_core::{Simulation, SimulationContext};
 use sugars::boxed;
+
+use dslab_core::{Simulation, SimulationContext};
 
 use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;
-use super::model::ThroughputSharingModel;
+use super::model::{make_constant_throughput_function, ThroughputSharingModel};
+use super::throughput_factor::ThroughputFactorFunction;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(
