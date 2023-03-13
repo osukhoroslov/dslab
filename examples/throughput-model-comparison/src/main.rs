@@ -1,7 +1,6 @@
 use std::iter::zip;
 use std::time::Instant;
 
-use dslab_core::Simulation;
 use num::bigint::Sign;
 use num::rational::BigRational;
 use num::BigInt;
@@ -9,6 +8,7 @@ use num::BigInt;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
+use dslab_core::Simulation;
 use dslab_models::throughput_sharing::{
     FairThroughputSharingModel, SlowFairThroughputSharingModel, ThroughputSharingModel,
 };
