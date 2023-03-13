@@ -13,5 +13,5 @@ pub use fair_slow::SlowFairThroughputSharingModel;
 pub use model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
 pub use throughput_factor::{
     make_uniform_throughput_factor_function, ConstantThroughputFactorFunction, EmpiricalThroughputFactorFunction,
-    RandomizedThroughputFactorFunction, ThroughputFactorFunction, WeightedThroughputFactor,
+    RandomizedThroughputFactorFunction, ThroughputFactorFunction,
 };

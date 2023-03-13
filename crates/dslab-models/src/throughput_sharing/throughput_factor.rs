@@ -75,34 +75,18 @@ pub fn make_uniform_throughput_factor_function(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Struct for a factor value associated to weight. Used by [`EmpiricalThroughputFactorFunction`].
-#[derive(Clone)]
-pub struct WeightedThroughputFactor {
-    /// Factor value.
-    pub value: f64,
-    /// Weight of `value` in empirical distribution.
-    pub weight: u64,
-}
-
-impl WeightedThroughputFactor {
-    /// Creates new WeightedThroughputFactor.
-    pub fn new(value: f64, weight: u64) -> Self {
-        Self { value, weight }
-    }
-}
-
 /// Function which generates random factor from specified weighted points distribution.
 pub struct EmpiricalThroughputFactorFunction {
     /// Pairs of (value, weight).
-    points: Vec<WeightedThroughputFactor>,
+    points: Vec<(f64, u64)>,
     /// Distribution used to pick a random index from `points`.
     dist: WeightedIndex<u64>,
 }
 
 impl EmpiricalThroughputFactorFunction {
     /// Creates new throughput factor function with given weighted points.
-    pub fn new(points: &[WeightedThroughputFactor]) -> Result<Self, WeightedError> {
-        let dist = WeightedIndex::new(points.iter().map(|item| item.weight))?;
+    pub fn new(points: &[(f64, u64)]) -> Result<Self, WeightedError> {
+        let dist = WeightedIndex::new(points.iter().map(|item| item.1))?;
         Ok(Self {
             points: points.to_vec(),
             dist,
@@ -112,6 +96,6 @@ impl EmpiricalThroughputFactorFunction {
 
 impl<T> ThroughputFactorFunction<T> for EmpiricalThroughputFactorFunction {
     fn get_factor(&mut self, _: &T, ctx: &mut SimulationContext) -> f64 {
-        self.points[ctx.sample_from_distribution(&self.dist)].value
+        self.points[ctx.sample_from_distribution(&self.dist)].0
     }
 }
