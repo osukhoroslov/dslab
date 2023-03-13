@@ -115,8 +115,6 @@ fn make_star_topology(host_count: usize) -> Topology {
         topology.add_node(&host_name, 1000.0, 0.0);
         topology.add_link(&host_name, &switch_name, 200.0, 0.2);
     }
-
-    topology.init();
     topology
 }
 
@@ -137,8 +135,6 @@ fn make_tree_topology(star_count: usize, hosts_per_star: usize) -> Topology {
             topology.add_link(&host_name, &switch_name, 200.0, 0.2);
         }
     }
-
-    topology.init();
     topology
 }
 
@@ -167,8 +163,6 @@ fn make_fat_tree_topology(l2_switch_count: usize, l1_switch_count: usize, hosts_
             topology.add_link(&switch_name, &format!("l2_switch_{}", j), uplink_bw, 0.2);
         }
     }
-
-    topology.init();
     topology
 }
 
@@ -185,12 +179,11 @@ fn make_full_mesh_topology(host_count: usize) -> Topology {
             topology.add_link(&format!("host_{}", i), &format!("host_{}", j), 200.0, 0.2);
         }
     }
-
-    topology.init();
     topology
 }
 
-fn init_network(sim: &mut Simulation, topology: Topology) -> NetworkActors {
+fn init_network(sim: &mut Simulation, mut topology: Topology) -> NetworkActors {
+    topology.init();
     let topology_rc = rc!(refcell!(topology));
     let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
     let network = Network::new_with_topology(network_model, topology_rc, sim.create_context("net"));
