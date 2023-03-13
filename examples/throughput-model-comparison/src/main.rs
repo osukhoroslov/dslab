@@ -1,6 +1,7 @@
 use std::iter::zip;
 use std::time::Instant;
 
+use dslab_core::Simulation;
 use num::bigint::Sign;
 use num::rational::BigRational;
 use num::BigInt;
@@ -16,6 +17,8 @@ mod rational_model;
 use rational_model::FairThroughputSharingModelRational;
 mod old_model;
 
+const SEED: u64 = 16;
+
 struct Transfer {
     start_time: u32,
     weight: u32,
@@ -28,6 +31,9 @@ fn run_new_model(transfers: &[Transfer]) -> Vec<f64> {
 
     let mut result = vec![0.; transfers.len()];
 
+    let mut sim = Simulation::new(SEED);
+    let mut ctx = sim.create_context("dummy");
+
     for (id, transfer) in transfers.into_iter() {
         loop {
             let first = model.peek();
@@ -37,7 +43,8 @@ fn run_new_model(transfers: &[Transfer]) -> Vec<f64> {
             let (time, id) = model.pop().unwrap();
             result[id] = time;
         }
-        model.insert(transfer.start_time as f64, transfer.weight as f64, id);
+        sim.step_until_time(transfer.start_time as f64);
+        model.insert(id, transfer.weight as f64, &mut ctx);
     }
 
     loop {
@@ -59,6 +66,9 @@ fn run_old_model(transfers: &[Transfer]) -> Vec<f64> {
 
     let mut result = vec![0.; transfers.len()];
 
+    let mut sim = Simulation::new(SEED);
+    let mut ctx = sim.create_context("dummy");
+
     for (id, transfer) in transfers.into_iter() {
         loop {
             let first = model.peek();
@@ -68,7 +78,8 @@ fn run_old_model(transfers: &[Transfer]) -> Vec<f64> {
             let (time, id) = model.pop().unwrap();
             result[id] = time;
         }
-        model.insert(transfer.start_time as f64, transfer.weight as f64, id);
+        sim.step_until_time(transfer.start_time as f64);
+        model.insert(id, transfer.weight as f64, &mut ctx);
     }
 
     loop {
@@ -90,6 +101,9 @@ fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
 
     let mut result = vec![0.; transfers.len()];
 
+    let mut sim = Simulation::new(SEED);
+    let mut ctx = sim.create_context("dummy");
+
     for (id, transfer) in transfers.into_iter() {
         loop {
             let first = model.peek();
@@ -99,7 +113,8 @@ fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
             let (time, id) = model.pop().unwrap();
             result[id] = time;
         }
-        model.insert(transfer.start_time as f64, transfer.weight as f64);
+        sim.step_until_time(transfer.start_time as f64);
+        model.insert(id, transfer.weight as f64, &mut ctx);
     }
 
     loop {
@@ -149,7 +164,7 @@ fn run_rational_model(transfers: &[Transfer]) -> Vec<f64> {
             let (time, id) = model.pop().unwrap();
             result[id] = time;
         }
-        model.insert(make_rat(transfer.start_time), make_rat(transfer.weight), id);
+        model.insert(id, make_rat(transfer.weight), make_rat(transfer.start_time));
     }
 
     loop {

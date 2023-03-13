@@ -97,7 +97,7 @@ impl<T> FairThroughputSharingModelRational<T> {
 }
 
 impl<T> FairThroughputSharingModelRational<T> {
-    pub fn insert(&mut self, current_time: BigRational, volume: BigRational, item: T) {
+    pub fn insert(&mut self, item: T, volume: BigRational, current_time: BigRational) {
         if self.entries.is_empty() {
             self.last_throughput_per_item = self.throughput.clone();
             let finish_time = current_time + volume / self.last_throughput_per_item.clone();
