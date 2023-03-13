@@ -16,7 +16,6 @@ use dslab_core::simulation::Simulation;
 
 use dslab_models::throughput_sharing::{
     make_constant_throughput_function, make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction,
-    WeightedThroughputFactor,
 };
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
@@ -118,15 +117,7 @@ fn main() {
     let mut sim = Simulation::new(SEED);
 
     // Creating empirical bandwidth model with weighted points distribution
-    let points = [
-        WeightedThroughputFactor::new(0.8, 3),
-        WeightedThroughputFactor::new(0.9, 10),
-        WeightedThroughputFactor::new(1., 31),
-        WeightedThroughputFactor::new(1.1, 15),
-        WeightedThroughputFactor::new(1.2, 5),
-        WeightedThroughputFactor::new(1.3, 6),
-    ];
-    let model = EmpiricalThroughputFactorFunction::new(&points);
+    let model = EmpiricalThroughputFactorFunction::new(&[(0.8, 3), (0.9, 10), (1., 31), (1.1, 15), (1.2, 5), (1.3, 6)]);
     assert!(model.is_ok());
 
     let disk = rc!(refcell!(Disk::new(
