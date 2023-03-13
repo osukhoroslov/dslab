@@ -5,7 +5,7 @@ use dslab_compute::multicore::CoresDependency;
 #[derive(Serialize, Debug, Clone)]
 pub struct TaskRequest {
     pub id: u64,
-    pub flops: u64,
+    pub flops: f64,
     pub memory: u64,
     pub min_cores: u32,
     pub max_cores: u32,

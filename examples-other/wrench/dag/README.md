@@ -1,8 +1,8 @@
-# Simple workflow example on Wrench
+# Simple workflow example on WRENCH
 
 ## Build
 
-Install SimGrid and Wrench.
+Install SimGrid and WRENCH.
 
 ```
 cmake . && make

@@ -113,7 +113,7 @@ impl DAG {
                     from: token1.iter().collect(),
                     to: token2.iter().collect(),
                     label: params.remove("label"),
-                    size: params.get("size").unwrap().parse::<f64>().unwrap(),
+                    size: params.get("size").unwrap().parse::<f64>().unwrap() / 1e6, // convert to MB
                 });
             } else {
                 // node
@@ -135,7 +135,7 @@ impl DAG {
                 nodes.push(Node {
                     name: token1.iter().collect(),
                     label: params.remove("label"),
-                    size: params.get("size").unwrap().parse::<f64>().unwrap(),
+                    size: params.get("size").unwrap().parse::<f64>().unwrap() / 1e9, // convert to Gflops
                 });
             }
         }
@@ -148,7 +148,7 @@ impl DAG {
                 node.name.clone(),
                 dag.add_task(
                     &node.label.unwrap_or_else(|| node.name.clone()),
-                    node.size.round() as u64,
+                    node.size,
                     0,
                     1,
                     1,
@@ -166,7 +166,7 @@ impl DAG {
 
             let data_item_id = *data_items
                 .entry(label.clone())
-                .or_insert_with(|| dag.add_task_output(from, &label, edge.size.round() as u64));
+                .or_insert_with(|| dag.add_task_output(from, &label, edge.size));
             dag.add_data_dependency(data_item_id, to);
         }
 

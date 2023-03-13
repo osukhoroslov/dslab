@@ -1,10 +1,11 @@
+# Simple diamond-shaped DAG with four tasks.
 inputs:
   - name: A-input
     size: 500
 tasks:
   - name: A
-    flops: 10
-    memory: 128
+    flops: 100
+    memory: 1000
     inputs:
       - A-input
     outputs:
@@ -13,26 +14,26 @@ tasks:
       - name: A-output-1
         size: 200
   - name: B
-    flops: 20
-    memory: 256
+    flops: 200
+    memory: 500
     max_cores: 2
     inputs:
       - A-output-0
     outputs:
       - name: B-output-0
-        size: 250
+        size: 100
   - name: C
-    flops: 25
-    memory: 256
+    flops: 250
+    memory: 500
     max_cores: 2
     inputs:
       - A-output-1
     outputs:
       - name: C-output-0
-        size: 250
+        size: 200
   - name: D
-    flops: 40
-    memory: 256
+    flops: 400
+    memory: 1000
     max_cores: 10
     cores_dependency: 0.1
     inputs:
@@ -40,4 +41,4 @@ tasks:
       - C-output-0
     outputs:
       - name: result
-        size: 500
+        size: 300

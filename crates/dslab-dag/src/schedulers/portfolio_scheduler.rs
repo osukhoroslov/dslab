@@ -13,7 +13,7 @@ use crate::task::*;
 struct Resource {
     cores_available: u32,
     memory_available: u64,
-    speed: u64,
+    speed: f64,
 }
 
 enum TaskCriterion {
@@ -95,7 +95,7 @@ impl PortfolioScheduler {
 
         let rank = calc_ranks(1., 0., dag);
 
-        let get_data_size = |task_id: usize| -> u64 {
+        let get_data_size = |task_id: usize| -> f64 {
             let task = dag.get_task(task_id);
 
             let mut data_items = task.inputs.clone();
@@ -103,19 +103,19 @@ impl PortfolioScheduler {
             data_items
                 .into_iter()
                 .map(|data_item| dag.get_data_item(data_item).size)
-                .sum::<u64>()
+                .sum::<f64>()
         };
 
         let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<Vec<usize>>();
         ready_tasks.sort_by(|&a, &b| match self.task_criterion {
             TaskCriterion::BottomLevel => rank[b].total_cmp(&rank[a]),
             TaskCriterion::ChildrenCount => dag.get_task(b).outputs.len().cmp(&dag.get_task(a).outputs.len()),
-            TaskCriterion::DataSize => get_data_size(b).cmp(&get_data_size(a)),
-            TaskCriterion::ComputationSize => dag.get_task(b).flops.cmp(&dag.get_task(a).flops),
+            TaskCriterion::DataSize => get_data_size(b).total_cmp(&get_data_size(a)),
+            TaskCriterion::ComputationSize => dag.get_task(b).flops.total_cmp(&dag.get_task(a).flops),
         });
 
         for task in ready_tasks.into_iter() {
-            let mut total_task_data: HashMap<usize, u64> = HashMap::new();
+            let mut total_task_data: HashMap<usize, f64> = HashMap::new();
             if self.cluster_criterion == ClusterCriterion::TaskData {
                 for input in dag.get_task(task).inputs.iter() {
                     if let Some(location) = self.data_location.get(input) {
@@ -132,10 +132,10 @@ impl PortfolioScheduler {
                 .min_by(|&a, &b| match self.cluster_criterion {
                     ClusterCriterion::TaskData => total_task_data
                         .get(&b)
-                        .unwrap_or(&0)
-                        .cmp(total_task_data.get(&a).unwrap_or(&0)),
+                        .unwrap_or(&0.)
+                        .total_cmp(total_task_data.get(&a).unwrap_or(&0.)),
                     ClusterCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
-                    ClusterCriterion::Speed => resources[b].speed.cmp(&resources[a].speed),
+                    ClusterCriterion::Speed => resources[b].speed.total_cmp(&resources[a].speed),
                 });
 
             if best_resource.is_none() {

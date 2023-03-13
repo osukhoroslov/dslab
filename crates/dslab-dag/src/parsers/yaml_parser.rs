@@ -18,14 +18,17 @@ fn zero() -> u64 {
 #[derive(Debug, Serialize, Deserialize)]
 struct DataItem {
     name: String,
-    size: u64,
+    // expected unit: MB
+    size: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Task {
     name: String,
-    flops: u64,
+    // expected unit: Gflops
+    flops: f64,
     #[serde(default = "zero")]
+    // expected unit: MB
     memory: u64,
     #[serde(default = "one")]
     min_cores: u32,
@@ -46,7 +49,7 @@ struct Yaml {
 
 impl DAG {
     /// Reads DAG from a file in
-    /// [YAML format](https://github.com/osukhoroslov/dslab/blob/main/examples/dag/dags/diamond.yaml).
+    /// [YAML format](https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/dags/diamond.yaml).
     pub fn from_yaml<P: AsRef<Path>>(file: P) -> Self {
         let yaml: Yaml = serde_yaml::from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),

@@ -22,7 +22,8 @@ pub enum DataItemState {
 #[derive(Clone)]
 pub struct DataItem {
     pub name: String,
-    pub size: u64,
+    /// The size of data item in MB.
+    pub size: f64,
     pub producer: Option<usize>,
     pub(crate) consumers: Vec<usize>,
     pub(crate) state: DataItemState,
@@ -30,7 +31,7 @@ pub struct DataItem {
 
 impl DataItem {
     /// Creates new data item.
-    pub fn new(name: &str, size: u64, state: DataItemState, producer: Option<usize>) -> Self {
+    pub fn new(name: &str, size: f64, state: DataItemState, producer: Option<usize>) -> Self {
         Self {
             name: name.to_string(),
             size,

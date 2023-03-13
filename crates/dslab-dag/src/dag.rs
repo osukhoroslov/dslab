@@ -39,8 +39,8 @@ impl DAG {
     pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
         match file.as_ref().extension().unwrap().to_str().unwrap() {
             "yaml" => DAG::from_yaml(file),
-            "json" => DAG::from_wfcommons(file, 1.0e9),
-            "xml" => DAG::from_dax(file, 1000.),
+            "json" => DAG::from_wfcommons(file, 10.), // default reference speed is 10 GFLOPS
+            "xml" => DAG::from_dax(file, 10.),        // default reference speed is 10 GFLOPS
             "dot" => DAG::from_dot(file),
             _ => {
                 panic!("Unknown extension for dag: {}", file.as_ref().display());
@@ -52,7 +52,7 @@ impl DAG {
     pub fn add_task(
         &mut self,
         name: &str,
-        flops: u64,
+        flops: f64,
         memory: u64,
         min_cores: u32,
         max_cores: u32,
@@ -104,7 +104,7 @@ impl DAG {
     }
 
     /// Adds [data item](crate::data_item::DataItem) with provided parameters and returns its id.
-    pub fn add_data_item(&mut self, name: &str, size: u64) -> usize {
+    pub fn add_data_item(&mut self, name: &str, size: f64) -> usize {
         let data_item = DataItem::new(name, size, DataItemState::Ready, None);
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);
@@ -114,7 +114,7 @@ impl DAG {
     }
 
     /// Adds [data item](crate::data_item::DataItem) as a [task](crate::task::Task) output and returns its id.
-    pub fn add_task_output(&mut self, producer: usize, name: &str, size: u64) -> usize {
+    pub fn add_task_output(&mut self, producer: usize, name: &str, size: f64) -> usize {
         let data_item = DataItem::new(name, size, DataItemState::Pending, Some(producer));
         let data_item_id = self.data_items.len();
         self.data_items.push(data_item);

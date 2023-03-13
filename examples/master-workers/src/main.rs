@@ -105,7 +105,7 @@ fn main() {
         // compute
         let compute_name = format!("{}::compute", host);
         let compute = rc!(refcell!(Compute::new(
-            rand.gen_range(1..=10),
+            rand.gen_range(1..=10) as f64,
             rand.gen_range(1..=8),
             rand.gen_range(1..=4) * 1024,
             sim.create_context(&compute_name),
@@ -136,7 +136,7 @@ fn main() {
     for i in 0..task_count {
         let task = TaskRequest {
             id: i,
-            flops: rand.gen_range(100..=1000),
+            flops: rand.gen_range(100..=1000) as f64,
             memory: rand.gen_range(1..=8) * 128,
             min_cores: 1,
             max_cores: 1,

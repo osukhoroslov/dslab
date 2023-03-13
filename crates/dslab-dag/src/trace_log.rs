@@ -14,7 +14,7 @@ use crate::dag::DAG;
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Task {
     pub name: String,
-    pub flops: u64,
+    pub flops: f64,
     pub memory: u64,
     pub min_cores: u32,
     pub max_cores: u32,
@@ -25,7 +25,7 @@ pub struct Task {
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct DataItem {
     pub name: String,
-    pub size: u64,
+    pub size: f64,
     pub consumers: Vec<usize>,
 }
 

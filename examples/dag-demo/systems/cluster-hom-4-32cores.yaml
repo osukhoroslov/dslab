@@ -1,0 +1,21 @@
+resources:
+  - name: node1
+    speed: 10
+    cores: 8
+    memory: 16000
+  - name: node2
+    speed: 10
+    cores: 8
+    memory: 16000
+  - name: node3
+    speed: 10
+    cores: 8
+    memory: 16000
+  - name: node4
+    speed: 10
+    cores: 8
+    memory: 16000
+network:
+  model: ConstantBandwidthNetwork
+  bandwidth: 1000
+  latency: 100

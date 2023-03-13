@@ -1,0 +1,9 @@
+resources:
+  - name: node1
+    speed: 10
+    cores: 32
+    memory: 64000
+network:
+  model: ConstantBandwidthNetwork
+  bandwidth: 1000
+  latency: 100

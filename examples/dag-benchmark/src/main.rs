@@ -19,7 +19,7 @@ fn main() {
         .init();
 
     let matches = command!()
-        .arg(arg!([SYSTEM]).help("Yaml file with resources and network"))
+        .arg(arg!([SYSTEM]).help("YAML file with resources and network"))
         .arg(arg!([WORKFLOW]).help("File with workflow in WfCommons-3 format"))
         .arg(
             Arg::new("trace-log")
@@ -44,7 +44,7 @@ fn main() {
         },
     );
 
-    let dag = DAG::from_wfcommons(dag_file, 1.0e11);
+    let dag = DAG::from_wfcommons(dag_file, 100.);
     let total_tasks = dag.get_tasks().len();
     let runner = sim.init(dag);
     runner.borrow_mut().enable_trace_log(enable_trace_log);

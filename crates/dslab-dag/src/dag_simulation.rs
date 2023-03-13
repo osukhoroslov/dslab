@@ -41,7 +41,7 @@ impl DagSimulation {
     }
 
     /// Adds a resource with provided parameters.
-    pub fn add_resource(&mut self, name: &str, speed: u64, cores: u32, memory: u64) {
+    pub fn add_resource(&mut self, name: &str, speed: f64, cores: u32, memory: u64) {
         self.resources.push(ResourceConfig {
             name: name.to_string(),
             speed,

@@ -33,7 +33,7 @@ pub enum FailReason {
 
 #[derive(Serialize)]
 pub struct CompRequest {
-    pub flops: u64,
+    pub flops: f64,
     pub memory: u64,
     pub requester: Id,
 }
@@ -63,7 +63,7 @@ pub struct CompFailed {
 
 pub struct Compute {
     #[allow(dead_code)]
-    speed: u64,
+    speed: f64,
     #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
@@ -73,18 +73,18 @@ pub struct Compute {
 }
 
 impl Compute {
-    pub fn new(speed: u64, memory: u64, ctx: SimulationContext) -> Self {
+    pub fn new(speed: f64, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             speed,
             memory_total: memory,
             memory_available: memory,
-            throughput_model: FairThroughputSharingModel::with_fixed_throughput(speed as f64),
+            throughput_model: FairThroughputSharingModel::with_fixed_throughput(speed),
             next_event: 0,
             ctx,
         }
     }
 
-    pub fn run(&mut self, flops: u64, memory: u64, requester: Id) -> u64 {
+    pub fn run(&mut self, flops: f64, memory: u64, requester: Id) -> u64 {
         let request = CompRequest {
             flops,
             memory,
@@ -117,7 +117,7 @@ impl EventHandler for Compute {
                     self.ctx.cancel_event(self.next_event);
                     self.throughput_model.insert(
                         self.ctx.time(),
-                        flops as f64,
+                        flops,
                         RunningComputation::new(event.id, memory, requester),
                     );
                     if let Some((time, computation)) = self.throughput_model.peek() {

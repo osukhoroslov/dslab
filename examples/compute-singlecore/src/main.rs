@@ -20,13 +20,13 @@ pub struct Start {}
 pub struct Task {
     id: Id,
     compute: Rc<RefCell<Compute>>,
-    flops: u64,
+    flops: f64,
     memory: u64,
     ctx: SimulationContext,
 }
 
 impl Task {
-    pub fn new(compute: Rc<RefCell<Compute>>, flops: u64, memory: u64, ctx: SimulationContext) -> Self {
+    pub fn new(compute: Rc<RefCell<Compute>>, flops: f64, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             id: ctx.id(),
             compute,
@@ -80,12 +80,12 @@ fn main() {
 
     let mut sim = Simulation::new(123);
 
-    let compute = rc!(refcell!(Compute::new(10, 1024, sim.create_context("compute"))));
+    let compute = rc!(refcell!(Compute::new(10., 1024, sim.create_context("compute"))));
     sim.add_handler("compute", compute.clone());
 
-    let task1 = Task::new(compute.clone(), 100, 512, sim.create_context("task1"));
+    let task1 = Task::new(compute.clone(), 100., 512, sim.create_context("task1"));
     let task1_id = sim.add_handler("task1", rc!(refcell!(task1)));
-    let task2 = Task::new(compute, 200, 512, sim.create_context("task2"));
+    let task2 = Task::new(compute, 200., 512, sim.create_context("task2"));
     let task2_id = sim.add_handler("task2", rc!(refcell!(task2)));
 
     let mut ctx = sim.create_context("root");

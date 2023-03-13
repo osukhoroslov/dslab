@@ -14,7 +14,9 @@ use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NetworkConfig {
     model: String,
+    /// Network bandwidth in MB/s.
     bandwidth: f64,
+    /// Network latency in μs.
     latency: f64,
 }
 
@@ -23,13 +25,13 @@ impl NetworkConfig {
     pub fn make_network(&self) -> Option<Rc<RefCell<dyn NetworkModel>>> {
         if self.model == "ConstantBandwidthNetwork" {
             Some(Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
-                self.bandwidth,
-                self.latency,
+                self.bandwidth,      // keep MB/s since data item sizes are in MB
+                self.latency * 1e-6, // convert to seconds
             ))))
         } else if self.model == "SharedBandwidthNetwork" {
             Some(Rc::new(RefCell::new(SharedBandwidthNetwork::new(
-                self.bandwidth,
-                self.latency,
+                self.bandwidth,      // keep MB/s since data item sizes are in MB
+                self.latency * 1e-6, // convert to seconds
             ))))
         } else {
             None
@@ -44,7 +46,8 @@ struct Yaml {
 
 /// Reads network model configuration from YAML file and creates the corresponding network model.
 ///
-/// Configuration file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/networks/network1.yaml
+/// Configuration file example:
+/// https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml
 pub fn load_network<P: AsRef<Path>>(file: P) -> Rc<RefCell<dyn NetworkModel>> {
     let network = read_network_config(&file);
 
