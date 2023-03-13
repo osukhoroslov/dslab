@@ -1,0 +1,191 @@
+# MapReduce computation with eight map tasks and four reduce tasks.
+inputs:
+  - name: chunk1
+    size: 128
+  - name: chunk2
+    size: 128
+  - name: chunk3
+    size: 128
+  - name: chunk4
+    size: 128
+  - name: chunk5
+    size: 128
+  - name: chunk6
+    size: 128
+  - name: chunk7
+    size: 128
+  - name: chunk8
+    size: 100
+tasks:
+  - name: map1
+    flops: 1000
+    memory: 2000
+    inputs:
+      - chunk1
+    outputs:
+      - name: map1_r1
+        size: 10
+      - name: map1_r2
+        size: 10
+      - name: map1_r3
+        size: 20
+      - name: map1_r4
+        size: 20
+  - name: map2
+    flops: 1200
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map2_r1
+        size: 10
+      - name: map2_r2
+        size: 10
+      - name: map2_r3
+        size: 20
+      - name: map2_r4
+        size: 20
+  - name: map3
+    flops: 900
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map3_r1
+        size: 10
+      - name: map3_r2
+        size: 10
+      - name: map3_r3
+        size: 20
+      - name: map3_r4
+        size: 20
+  - name: map4
+    flops: 1100
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map4_r1
+        size: 10
+      - name: map4_r2
+        size: 10
+      - name: map4_r3
+        size: 20
+      - name: map4_r4
+        size: 20
+  - name: map5
+    flops: 1300
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map5_r1
+        size: 10
+      - name: map5_r2
+        size: 10
+      - name: map5_r3
+        size: 20
+      - name: map5_r4
+        size: 20
+  - name: map6
+    flops: 1500
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map6_r1
+        size: 10
+      - name: map6_r2
+        size: 10
+      - name: map6_r3
+        size: 20
+      - name: map6_r4
+        size: 20
+  - name: map7
+    flops: 800
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map7_r1
+        size: 10
+      - name: map7_r2
+        size: 10
+      - name: map7_r3
+        size: 20
+      - name: map7_r4
+        size: 20
+  - name: map8
+    flops: 1050
+    memory: 2000
+    inputs:
+      - chunk2
+    outputs:
+      - name: map8_r1
+        size: 10
+      - name: map8_r2
+        size: 10
+      - name: map8_r3
+        size: 20
+      - name: map8_r4
+        size: 20
+  - name: reduce1
+    flops: 600
+    memory: 4000
+    inputs:
+      - map1_r1
+      - map2_r1
+      - map3_r1
+      - map4_r1
+      - map5_r1
+      - map6_r1
+      - map7_r1
+      - map8_r1
+    outputs:
+      - name: result_part1
+        size: 32
+  - name: reduce2
+    flops: 500
+    memory: 4000
+    inputs:
+      - map1_r2
+      - map2_r2
+      - map3_r2
+      - map4_r2
+      - map5_r2
+      - map6_r2
+      - map7_r2
+      - map8_r2
+    outputs:
+      - name: result_part2
+        size: 32
+  - name: reduce3
+    flops: 1000
+    memory: 4000
+    inputs:
+      - map1_r3
+      - map2_r3
+      - map3_r3
+      - map4_r3
+      - map5_r3
+      - map6_r3
+      - map7_r3
+      - map8_r3
+    outputs:
+      - name: result_part3
+        size: 32
+  - name: reduce4
+    flops: 1100
+    memory: 4000
+    inputs:
+      - map1_r4
+      - map2_r4
+      - map3_r4
+      - map4_r4
+      - map5_r4
+      - map6_r4
+      - map7_r4
+      - map8_r4
+    outputs:
+      - name: result_part4
+        size: 32

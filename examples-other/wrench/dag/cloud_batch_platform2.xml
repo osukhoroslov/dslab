@@ -18,13 +18,13 @@
         <host id="CloudHeadNode" speed="10Gf" core="1"/>
         
         <host id="WMSHost" speed="10Gf" core="1">
-            <disk id="large_disk" read_bw="50000000MBps" write_bw="50000000MBps">
-                <prop id="size" value="500000GiB"/>
+            <disk id="large_disk" read_bw="50MBps" write_bw="50MBps">
+                <prop id="size" value="5000GiB"/>
                 <prop id="mount" value="/"/>
             </disk>
         </host>
 
-        <!-- A since network links that connects all hosts together, which 
+        <!-- A single network links that connects all hosts together, which
              of course a crazy over-simplification -->
         <link id="wide_area_backbone" bandwidth="30MBps" latency="1ms"/>
 

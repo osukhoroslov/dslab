@@ -31,7 +31,7 @@ pub struct Transfer {
 #[derive(Debug)]
 pub struct Compute {
     pub name: String,
-    pub speed: u64,
+    pub speed: f64,
     pub cores: u32,
     pub memory: u64,
     pub files: Vec<File>,

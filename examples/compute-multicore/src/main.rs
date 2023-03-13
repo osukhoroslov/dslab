@@ -23,7 +23,7 @@ pub struct Deallocate {}
 pub struct Task {
     id: Id,
     compute: Rc<RefCell<Compute>>,
-    flops: u64,
+    flops: f64,
     memory: u64,
     min_cores: u32,
     max_cores: u32,
@@ -34,7 +34,7 @@ pub struct Task {
 impl Task {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
-        flops: u64,
+        flops: f64,
         memory: u64,
         min_cores: u32,
         max_cores: u32,
@@ -181,12 +181,12 @@ fn main() {
 
     let mut sim = Simulation::new(123);
 
-    let compute = rc!(refcell!(Compute::new(1, 10, 1024, sim.create_context("compute"))));
+    let compute = rc!(refcell!(Compute::new(1., 10, 1024, sim.create_context("compute"))));
     sim.add_handler("compute", compute.clone());
 
     let task1 = Task::new(
         compute.clone(),
-        100,
+        100.,
         512,
         2,
         6,
@@ -195,7 +195,7 @@ fn main() {
     );
     let task2 = Task::new(
         compute.clone(),
-        100,
+        100.,
         512,
         4,
         10,
@@ -204,7 +204,7 @@ fn main() {
     );
     let task3 = Task::new(
         compute.clone(),
-        100,
+        100.,
         512,
         5,
         7,
@@ -221,7 +221,7 @@ fn main() {
     );
     let task4 = Task::new(
         compute.clone(),
-        100,
+        100.,
         512,
         15,
         20,

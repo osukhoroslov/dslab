@@ -241,7 +241,7 @@ fn find_earliest_slot(
     (start_time, cores)
 }
 
-pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, u64)> {
+pub fn task_successors(v: usize, dag: &DAG) -> Vec<(usize, f64)> {
     let mut result = Vec::new();
     for &data_item_id in dag.get_task(v).outputs.iter() {
         let data_item = dag.get_data_item(data_item_id);

@@ -72,12 +72,12 @@ fn run_experiments(args: &Args) {
 
         let prefix = "https://raw.githubusercontent.com/wrench-project/jsspp2022_submission_data/main/workflows/";
         let workflows = vec![
-            ("Montage", "montage-chameleon-2mass-10d-001.json"),
-            ("Epigenomics", "epigenomics-chameleon-ilmn-4seq-50k-001.json"),
-            ("Bwa", "bwa-chameleon-large-003.json"),
-            ("Cycles", "cycles-chameleon-2l-2c-12p-001.json"),
             ("1000Genome", "1000genome-chameleon-8ch-250k-001.json"),
             ("Blast", "blast-chameleon-medium-002.json"),
+            ("Bwa", "bwa-chameleon-large-003.json"),
+            ("Cycles", "cycles-chameleon-2l-2c-12p-001.json"),
+            ("Epigenomics", "epigenomics-chameleon-ilmn-4seq-50k-001.json"),
+            ("Montage", "montage-chameleon-2mass-10d-001.json"),
             ("Soykb", "soykb-chameleon-10fastq-20ch-001.json"),
             ("Srasearch", "srasearch-chameleon-10a-003.json"),
         ];
@@ -105,7 +105,7 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 1.0e11);
+        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 100.);
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);
@@ -117,7 +117,7 @@ fn run_experiments(args: &Args) {
         dags.push(dag);
     }
 
-    // up to 3 clusters for each platform, each triple means (nodes, speed, bandwidth)
+    // up to 3 clusters for each platform, each triple means (nodes, speed in GFLOPS, bandwidth in MB/s)
     // currently different bandwidth for different clusters is not supported
     let platform_configs = vec![
         vec![(96, 100, 100)],
@@ -170,7 +170,7 @@ fn run_experiments(args: &Args) {
                 let finished_runs = finished_runs.clone();
                 let results = results.clone();
                 pool.execute(move || {
-                    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0e+8, 0.)));
+                    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(100., 0.)));
 
                     let scheduler = PortfolioScheduler::new(algo);
 
@@ -185,10 +185,9 @@ fn run_experiments(args: &Args) {
                     );
                     let mut create_resource = |speed: i32, cluster: usize, node: usize| {
                         let name = format!("compute-{}-{}", cluster, node);
-                        let speed = speed as u64 * 1_000_000_000;
                         let cores = 8;
                         let memory = 0;
-                        sim.add_resource(&name, speed, cores, memory);
+                        sim.add_resource(&name, speed as f64, cores, memory);
                     };
 
                     for (cluster, &(nodes, speed, _bandwidth)) in platform_config.iter().enumerate() {
