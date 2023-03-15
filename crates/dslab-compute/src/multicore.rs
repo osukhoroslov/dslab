@@ -50,6 +50,8 @@ pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
         available_memory: u64,
+        requested_cores: u32,
+        requested_memory: u64,
     },
     Other {
         reason: String,
@@ -238,6 +240,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
+                                requested_cores: min_cores,
+                                requested_memory: memory,
                             },
                         },
                         requester,
@@ -273,6 +277,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
+                                requested_cores: allocation.cores,
+                                requested_memory: allocation.memory,
                             },
                         },
                         requester,
@@ -307,6 +313,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: current_allocation.cores,
                                 available_memory: current_allocation.memory,
+                                requested_cores: allocation.cores,
+                                requested_memory: allocation.memory,
                             },
                         },
                         requester,
