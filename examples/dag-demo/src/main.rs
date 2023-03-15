@@ -91,7 +91,7 @@ fn main() {
     println!("\nDAG: {} ({} tasks)", args.dag, dag.get_tasks().len());
     println!("System: {}\n", args.system);
     for scheduler_name in SCHEDULERS.iter() {
-        let scheduler_params = SchedulerParams::from_str(scheduler_name).expect("Can't parse scheduler params");
+        let scheduler_params = SchedulerParams::from_str(scheduler_name).expect("Cannot parse scheduler params");
         let scheduler = default_scheduler_resolver(&scheduler_params).expect("Cannot create scheduler");
         let mut sim = DagSimulation::new(
             123,

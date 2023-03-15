@@ -109,7 +109,7 @@ impl DAG {
             let task_id = dag.add_task(
                 &task.name,
                 flops,
-                task.memory.unwrap_or(0) / 1000, // convert KB to MB
+                (task.memory.unwrap_or(0) as f64 / 1000.).ceil() as u64, // convert KB to MB (round up to nearest)
                 1,
                 task.cores.unwrap_or(1.) as u32,
                 CoresDependency::Linear,
