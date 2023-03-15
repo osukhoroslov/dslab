@@ -29,7 +29,7 @@ fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
     for i in 0..num_tasks {
         dag.add_task(
             &i.to_string(),
-            rng.gen_range(1..1_000_000_000) as f64,
+            rng.gen_range::<u64, _>(1..1_000_000_000) as f64,
             rng.gen_range(0..128),
             1,
             rng.gen_range(1..6),
@@ -60,7 +60,7 @@ fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
             *task_id = tasks_topsort[*task_id];
         }
 
-        let size = rng.gen_range(1..1_000_000) as f64;
+        let size = rng.gen_range::<u64, _>(1..1_000_000) as f64;
 
         // rarely generate inputs
         if rng.gen_range(0..100) == 0 {
@@ -83,7 +83,7 @@ fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -
     (0..num_resources)
         .map(|i| ResourceConfig {
             name: i.to_string(),
-            speed: rng.gen_range(1..1_000_000_000) as f64,
+            speed: rng.gen_range::<u64, _>(1..1_000_000_000) as f64,
             cores: rng.gen_range(1..10),
             memory: if infinite_memory {
                 1_u64 << 60
