@@ -6,5 +6,5 @@ edition = "2021"
 
 [dependencies]
 dslab-dag = { path = "../../crates/dslab-dag" }
-clap = { version = "3.0.14", features = ["cargo", "derive"] }
-env_logger = "0.9.0"
+clap = { version = "4.1.9", features = ["derive"] }
+env_logger = "0.10.0"

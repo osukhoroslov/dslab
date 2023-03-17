@@ -14,8 +14,8 @@ Use this command to simulate the execution of a given DAG on a given system:
 cargo run --release -- -d DAG_PATH -s SYSTEM_PATH
 ```
 
-The program will simulate the DAG execution using all supported scheduling algorithms and will output the achieved 
-execution times.
+The program will simulate the DAG execution using all supported scheduling algorithms and will output the obtained 
+DAG execution times (makespans).
 
 Use this command to see additional options:
 

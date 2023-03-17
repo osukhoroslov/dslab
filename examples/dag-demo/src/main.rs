@@ -14,7 +14,7 @@ use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
 
-const SCHEDULERS: &[&str] = &[
+const ALGORITHMS: &[&str] = &[
     "Simple",
     "DLS",
     "HEFT",
@@ -49,23 +49,23 @@ const SCHEDULERS: &[&str] = &[
 ];
 
 #[derive(Parser, Debug)]
-#[clap(about, long_about = None)]
-/// Runs examples for DSLab DAG
+#[command(about, long_about = None)]
+/// Simulates the DAG execution using different scheduling algorithms and outputs the obtained makespans.
 struct Args {
     /// Path to DAG file
-    #[clap(short, long)]
+    #[arg(short, long)]
     dag: String,
 
     /// Path to system file
-    #[clap(short, long)]
+    #[arg(short, long)]
     system: String,
 
     /// Data transfer mode (direct, via-master-node or manual)
-    #[clap(short = 'm', long = "mode", default_value = "direct")]
+    #[arg(short = 'm', long = "mode", default_value = "direct")]
     data_transfer_mode: String,
 
     /// Save trace logs in 'traces' dir
-    #[clap(short = 't', long = "traces")]
+    #[arg(short = 't', long = "traces")]
     save_traces: bool,
 }
 
@@ -90,8 +90,8 @@ fn main() {
 
     println!("\nDAG: {} ({} tasks)", args.dag, dag.get_tasks().len());
     println!("System: {}\n", args.system);
-    for scheduler_name in SCHEDULERS.iter() {
-        let scheduler_params = SchedulerParams::from_str(scheduler_name).expect("Cannot parse scheduler params");
+    for algorithm in ALGORITHMS.iter() {
+        let scheduler_params = SchedulerParams::from_str(algorithm).expect("Cannot parse scheduler params");
         let scheduler = default_scheduler_resolver(&scheduler_params).expect("Cannot create scheduler");
         let mut sim = DagSimulation::new(
             123,
@@ -106,7 +106,7 @@ fn main() {
                 "traces/{}_{}_{}_{}.json",
                 Path::new(&args.dag).file_stem().unwrap().to_str().unwrap(),
                 Path::new(&args.system).file_stem().unwrap().to_str().unwrap(),
-                scheduler_name,
+                algorithm,
                 args.data_transfer_mode
             )
         });
@@ -118,6 +118,6 @@ fn main() {
         if let Some(trace_path) = trace_path {
             runner.borrow().trace_log().save_to_file(&trace_path).unwrap();
         }
-        println!("{:<20}{:.2}", scheduler_name, sim.time());
+        println!("{:<20}{:.2}", algorithm, sim.time());
     }
 }
