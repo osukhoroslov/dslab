@@ -1,5 +1,7 @@
 # Simple workflow example on WRENCH
 
+Based on [official WRENCH example](https://github.com/wrench-project/wrench/tree/master/examples/workflow_api/real-workflow-example).
+
 ## Build
 
 Install SimGrid and WRENCH.
@@ -11,15 +13,15 @@ cmake . && make
 ## Run Examples
 
 ```
-./wrench-example-real-workflow cloud_batch_platform.xml ../../../examples/dag-benchmark/dags/montage.json
+./wrench-example-real-workflow PLATFORM_PATH WORKFLOW_PATH
 ```
 
 To measure memory and time usage:
 
 ```
-command time -f '%Mkb\n%es' ./wrench-example-real-workflow cloud_batch_platform.xml ../../../examples/dag-benchmark/dags/montage.json
+command time -f '%Mkb\n%es' ./wrench-example-real-workflow PLATFORM_PATH WORKFLOW_PATH
 ```
 
-More workflows can be generated using https://docs.wfcommons.org/en/latest/generating_workflows.html.
+Workflows for tests can be generated using [this script](../../../examples/dag-benchmark/dags/generator.py).
 
-Use `--wrench-mailbox-pool-size=1000000` to increase maximum allowed number of mailboxes to prevent Wrench from failing on large graphs.
+Use `--wrench-mailbox-pool-size=1000000` to increase the maximum allowed number of mailboxes to prevent WRENCH from failing on large workflows.
