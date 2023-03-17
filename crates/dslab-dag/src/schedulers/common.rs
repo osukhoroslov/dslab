@@ -86,7 +86,7 @@ pub fn evaluate_assignment(
             .iter()
             .map(|&id| dag.get_data_item(id))
             .filter(|&data_item| data_item.producer.is_some())
-            .map(|data_item| (data_item.producer.unwrap(), data_item.size as f64))
+            .map(|data_item| (data_item.producer.unwrap(), data_item.size))
             .map(|(task, weight)| {
                 if task_location[&task] == resources[resource].id && data_transfer_mode == &DataTransferMode::Direct {
                     task_finish_times[task]
@@ -109,7 +109,7 @@ pub fn evaluate_assignment(
             .iter()
             .map(|&id| dag.get_data_item(id))
             .filter(|&data_item| data_item.producer.is_some())
-            .map(|data_item| (data_item.producer.unwrap(), data_item.size as f64))
+            .map(|data_item| (data_item.producer.unwrap(), data_item.size))
             .map(|(task, weight)| {
                 let data_upload_time = match data_transfer_mode {
                     DataTransferMode::ViaMasterNode => weight / network.bandwidth(task_location[&task], ctx.id()),
@@ -129,7 +129,7 @@ pub fn evaluate_assignment(
             .inputs
             .iter()
             .filter(|f| dag.get_inputs().contains(f))
-            .map(|&f| dag.get_data_item(f).size as f64 * cur_net_time)
+            .map(|&f| dag.get_data_item(f).size * cur_net_time)
             .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
         DataTransferStrategy::Lazy => 0.,
@@ -143,17 +143,16 @@ pub fn evaluate_assignment(
             .inputs
             .iter()
             .map(|&f| match data_transfer_mode {
-                DataTransferMode::ViaMasterNode => dag.get_data_item(f).size as f64 * cur_net_time,
+                DataTransferMode::ViaMasterNode => dag.get_data_item(f).size * cur_net_time,
                 DataTransferMode::Direct => {
                     if !dag.get_inputs().contains(&f) {
                         if data_location[&f] == resources[resource].id {
                             0.
                         } else {
-                            dag.get_data_item(f).size as f64
-                                / network.bandwidth(data_location[&f], resources[resource].id)
+                            dag.get_data_item(f).size / network.bandwidth(data_location[&f], resources[resource].id)
                         }
                     } else {
-                        dag.get_data_item(f).size as f64 * cur_net_time
+                        dag.get_data_item(f).size * cur_net_time
                     }
                 }
                 DataTransferMode::Manual => 0.,
@@ -161,8 +160,8 @@ pub fn evaluate_assignment(
             .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),
     };
-    let task_exec_time = dag.get_task(task_id).flops as f64
-        / resources[resource].speed as f64
+    let task_exec_time = dag.get_task(task_id).flops
+        / resources[resource].speed
         / dag.get_task(task_id).cores_dependency.speedup(need_cores)
         + download_time;
 
@@ -259,9 +258,9 @@ fn calc_rank(v: usize, avg_flop_time: f64, avg_net_time: f64, dag: &DAG, ranks: 
     ranks[v] = 0.;
     for &(succ, edge_weight) in task_successors(v, dag).iter() {
         calc_rank(succ, avg_flop_time, avg_net_time, dag, ranks, used);
-        ranks[v] = ranks[v].max(ranks[succ] + edge_weight as f64 * avg_net_time);
+        ranks[v] = ranks[v].max(ranks[succ] + edge_weight * avg_net_time);
     }
-    ranks[v] += dag.get_task(v).flops as f64 * avg_flop_time;
+    ranks[v] += dag.get_task(v).flops * avg_flop_time;
 }
 
 pub fn calc_ranks(avg_flop_time: f64, avg_net_time: f64, dag: &DAG) -> Vec<f64> {

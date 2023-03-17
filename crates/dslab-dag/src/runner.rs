@@ -136,7 +136,7 @@ impl DAGRunner {
         }
     }
 
-    /// Enables or disables [trace log](crate::trace_log::TraceLog).
+    /// Enables or disables [trace log](TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
     }
@@ -199,7 +199,7 @@ impl DAGRunner {
                             .iter()
                             .filter(|f| self.dag.get_outputs().contains(f))
                             .map(|&f| {
-                                self.dag.get_data_item(f).size as f64
+                                self.dag.get_data_item(f).size
                                     / self
                                         .network
                                         .borrow()
@@ -457,7 +457,7 @@ impl DAGRunner {
         let data_id = self
             .network
             .borrow_mut()
-            .transfer_data(from, to, data_item.size as f64, self.id);
+            .transfer_data(from, to, data_item.size, self.id);
         self.data_transfers.insert(
             data_id,
             DataTransfer {
