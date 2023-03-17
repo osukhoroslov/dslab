@@ -133,7 +133,10 @@ impl DAG {
                     if let Some(data_item_id) = data_items.get(&file.name) {
                         dag.add_data_dependency(*data_item_id, task_id);
                     } else {
-                        let data_item_id = dag.add_data_item(&file.name, file.size as f64 / 1e6);
+                        let data_item_id = dag.add_data_item(
+                            &file.name,
+                            file.size as f64 / 1000., // convert KB to MB
+                        );
                         data_items.insert(file.name.clone(), data_item_id);
                         dag.add_data_dependency(data_item_id, task_id);
                     }
