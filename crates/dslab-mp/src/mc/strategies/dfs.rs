@@ -1,7 +1,14 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 use crate::mc::strategy::{LogMode, McSummary, Strategy};
 use crate::mc::system::{McState, McSystem};
+
+enum VisitedStates {
+    Full(HashSet<McState>),
+    Partial(HashSet<u64>),
+}
 
 pub struct Dfs {
     prune: Box<dyn Fn(&McState) -> Option<String>>,
@@ -10,7 +17,7 @@ pub struct Dfs {
     search_depth: u64,
     log_mode: LogMode,
     summary: McSummary,
-    visited: HashSet<McState>,
+    visited: VisitedStates,
 }
 
 impl Dfs {
@@ -20,6 +27,10 @@ impl Dfs {
         invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
         log_mode: LogMode,
     ) -> Self {
+        let visited = match log_mode {
+            LogMode::Debug => VisitedStates::Full(HashSet::default()),
+            LogMode::Default => VisitedStates::Partial(HashSet::default()),
+        };
         Self {
             prune,
             goal,
@@ -27,7 +38,7 @@ impl Dfs {
             search_depth: 0,
             log_mode,
             summary: McSummary::default(),
-            visited: HashSet::default(),
+            visited,
         }
     }
 }
@@ -37,7 +48,7 @@ impl Dfs {
         let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
 
-        let result = if self.visited.contains(&state) {
+        let result = if self.have_visited(&state) {
             // Was already visited before
             Some(Ok(()))
         } else if let Err(err) = (self.invariant)(&state) {
@@ -58,7 +69,7 @@ impl Dfs {
             None
         };
 
-        self.visited.insert(state);
+        self.mark_visited(state);
         if let Some(result) = result {
             return result;
         }
@@ -73,6 +84,30 @@ impl Dfs {
         if let LogMode::Debug = self.log_mode {
             let counter = self.summary.states.entry(status).or_insert(0);
             *counter = *counter + 1;
+        }
+    }
+
+    fn have_visited(&self, state: &McState) -> bool {
+        match self.visited {
+            VisitedStates::Full(ref states) => states.contains(&state),
+            VisitedStates::Partial(ref hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.contains(&h.finish())
+            }
+        }
+    }
+
+    fn mark_visited(&mut self, state: McState) {
+        match self.visited {
+            VisitedStates::Full(ref mut states) => {
+                states.insert(state);
+            }
+            VisitedStates::Partial(ref mut hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.insert(h.finish());
+            }
         }
     }
 }
