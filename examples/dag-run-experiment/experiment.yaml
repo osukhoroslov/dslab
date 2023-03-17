@@ -2,6 +2,7 @@ dags:
   - ../dag-demo/dags
 systems:
   - ../dag-demo/systems
+data_transfer_mode: Direct
 schedulers:
   - Simple
   - DLS
@@ -45,4 +46,3 @@ schedulers:
   - Portfolio[algo=33]
   - Portfolio[algo=34]
   - Portfolio[algo=35]
-data_transfer_mode: Direct

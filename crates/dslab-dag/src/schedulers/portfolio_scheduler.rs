@@ -16,30 +16,32 @@ struct Resource {
     speed: f64,
 }
 
-enum TaskCriterion {
+#[derive(Debug)]
+pub enum TaskCriterion {
     BottomLevel,
     ChildrenCount,
     DataSize,
     ComputationSize,
 }
 
-#[derive(PartialEq)]
-enum ClusterCriterion {
+#[derive(Debug, PartialEq)]
+pub enum ResourceCriterion {
     TaskData,
     IdleCores,
     Speed,
 }
 
-enum CoresCriterion {
+#[derive(Debug)]
+pub enum CoresCriterion {
     Efficiency90,
     Efficiency50,
     MaxCores,
 }
 
 pub struct PortfolioScheduler {
-    task_criterion: TaskCriterion,
-    cluster_criterion: ClusterCriterion,
-    cores_criterion: CoresCriterion,
+    pub task_criterion: TaskCriterion,
+    pub resource_criterion: ResourceCriterion,
+    pub cores_criterion: CoresCriterion,
     data_location: HashMap<usize, usize>,
 }
 
@@ -56,10 +58,10 @@ impl PortfolioScheduler {
                     std::process::exit(1);
                 }
             },
-            cluster_criterion: match algo % 9 / 3 {
-                0 => ClusterCriterion::TaskData,
-                1 => ClusterCriterion::IdleCores,
-                2 => ClusterCriterion::Speed,
+            resource_criterion: match algo % 9 / 3 {
+                0 => ResourceCriterion::TaskData,
+                1 => ResourceCriterion::IdleCores,
+                2 => ResourceCriterion::Speed,
                 _ => {
                     eprintln!("Wrong algo {}", algo);
                     std::process::exit(1);
@@ -116,7 +118,7 @@ impl PortfolioScheduler {
 
         for task in ready_tasks.into_iter() {
             let mut total_task_data: HashMap<usize, f64> = HashMap::new();
-            if self.cluster_criterion == ClusterCriterion::TaskData {
+            if self.resource_criterion == ResourceCriterion::TaskData {
                 for input in dag.get_task(task).inputs.iter() {
                     if let Some(location) = self.data_location.get(input) {
                         *total_task_data.entry(*location).or_default() += dag.get_data_item(*input).size;
@@ -129,13 +131,13 @@ impl PortfolioScheduler {
                     resources[r].cores_available >= dag.get_task(task).min_cores
                         && resources[r].memory_available >= dag.get_task(task).memory
                 })
-                .min_by(|&a, &b| match self.cluster_criterion {
-                    ClusterCriterion::TaskData => total_task_data
+                .min_by(|&a, &b| match self.resource_criterion {
+                    ResourceCriterion::TaskData => total_task_data
                         .get(&b)
                         .unwrap_or(&0.)
                         .total_cmp(total_task_data.get(&a).unwrap_or(&0.)),
-                    ClusterCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
-                    ClusterCriterion::Speed => resources[b].speed.total_cmp(&resources[a].speed),
+                    ResourceCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
+                    ResourceCriterion::Speed => resources[b].speed.total_cmp(&resources[a].speed),
                 });
 
             if best_resource.is_none() {
