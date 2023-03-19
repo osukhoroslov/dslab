@@ -21,6 +21,7 @@ impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
     fn hash_with_dyn(&self, mut hasher: &mut dyn Hasher) {
         self.hash(&mut hasher);
     }
+
     fn eq_with_dyn(&self, other: &dyn ProcessState) -> bool {
         if let Some(other) = other.downcast_ref::<T>() {
             self.eq(&(*other))
