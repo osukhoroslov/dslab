@@ -49,8 +49,8 @@ impl Network {
             .add_node(node_id, local_bandwidth, local_latency)
     }
 
-    pub fn add_link(&mut self, node1: &str, node2: &str, latency: f64, bandwidth: f64) {
-        self.topology.borrow_mut().add_link(node1, node2, latency, bandwidth);
+    pub fn add_link(&mut self, node1: &str, node2: &str, bandwidth: f64, latency: f64) {
+        self.topology.borrow_mut().add_link(node1, node2, bandwidth, latency);
         self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
     }
 
