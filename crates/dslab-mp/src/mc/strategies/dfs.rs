@@ -2,13 +2,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
-use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
+use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
-
-enum VisitedStates {
-    Full(HashSet<McState>),
-    Partial(HashSet<u64>),
-}
 
 pub struct Dfs {
     prune: PruneFn,

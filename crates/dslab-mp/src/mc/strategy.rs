@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use colored::*;
 use lazy_static::lazy_static;
@@ -21,6 +21,11 @@ pub enum LogContext {
     Dropped,
     Duplicated,
     Corrupted,
+}
+
+pub enum VisitedStates {
+    Full(HashSet<McState>),
+    Partial(HashSet<u64>),
 }
 
 #[derive(Debug, Default, Clone)]
