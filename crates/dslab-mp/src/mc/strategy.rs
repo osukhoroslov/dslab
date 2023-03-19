@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use colored::*;
 use lazy_static::lazy_static;
@@ -212,7 +214,43 @@ pub trait Strategy {
         }
     }
 
+    fn initialize_visited(log_mode: &LogMode) -> VisitedStates
+    where
+        Self: Sized,
+    {
+        match log_mode {
+            LogMode::Debug => VisitedStates::Full(HashSet::default()),
+            LogMode::Default => VisitedStates::Partial(HashSet::default()),
+        }
+    }
+
+    fn have_visited(&mut self, state: &McState) -> bool {
+        match self.visited() {
+            VisitedStates::Full(ref states) => states.contains(state),
+            VisitedStates::Partial(ref hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.contains(&h.finish())
+            }
+        }
+    }
+
+    fn mark_visited(&mut self, state: McState) {
+        match self.visited() {
+            VisitedStates::Full(ref mut states) => {
+                states.insert(state);
+            }
+            VisitedStates::Partial(ref mut hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.insert(h.finish());
+            }
+        }
+    }
+
     fn log_mode(&self) -> &LogMode;
 
     fn search_depth(&self) -> u64;
+
+    fn visited(&mut self) -> &mut VisitedStates;
 }

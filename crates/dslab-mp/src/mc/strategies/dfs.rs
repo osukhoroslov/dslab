@@ -1,9 +1,5 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
-use std::hash::{Hash, Hasher};
-
 use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::system::McSystem;
 
 pub struct Dfs {
     prune: PruneFn,
@@ -17,10 +13,7 @@ pub struct Dfs {
 
 impl Dfs {
     pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, log_mode: LogMode) -> Self {
-        let visited = match log_mode {
-            LogMode::Debug => VisitedStates::Full(HashSet::default()),
-            LogMode::Default => VisitedStates::Partial(HashSet::default()),
-        };
+        let visited = Self::initialize_visited(&log_mode);
         Self {
             prune,
             goal,
@@ -76,30 +69,6 @@ impl Dfs {
             *counter = *counter + 1;
         }
     }
-
-    fn have_visited(&self, state: &McState) -> bool {
-        match self.visited {
-            VisitedStates::Full(ref states) => states.contains(state),
-            VisitedStates::Partial(ref hashes) => {
-                let mut h = DefaultHasher::default();
-                state.hash(&mut h);
-                hashes.contains(&h.finish())
-            }
-        }
-    }
-
-    fn mark_visited(&mut self, state: McState) {
-        match self.visited {
-            VisitedStates::Full(ref mut states) => {
-                states.insert(state);
-            }
-            VisitedStates::Partial(ref mut hashes) => {
-                let mut h = DefaultHasher::default();
-                state.hash(&mut h);
-                hashes.insert(h.finish());
-            }
-        }
-    }
 }
 
 impl Strategy for Dfs {
@@ -124,5 +93,9 @@ impl Strategy for Dfs {
 
     fn search_depth(&self) -> u64 {
         self.search_depth
+    }
+
+    fn visited(&mut self) -> &mut VisitedStates {
+        &mut self.visited
     }
 }
