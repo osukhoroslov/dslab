@@ -6,7 +6,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent::{MessageReceived, TimerFired};
+use crate::mc::events::McEvent::{MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
@@ -80,7 +80,9 @@ pub trait Strategy {
             TimerFired { .. } => {
                 self.apply_event(system, event_num, false, false)?;
             }
-            _ => {}
+            TimerCancelled { .. } => {
+                panic!("Strategy should not receive TimerCancelled events")
+            }
         }
 
         Ok(())
@@ -182,9 +184,7 @@ pub trait Strategy {
                 TimerFired { proc, timer } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10}", depth, proc, timer).yellow());
                 }
-                _ => {
-                    t!(format!("Internal error: unknown event in model checking Strategy").red());
-                }
+                _ => {}
             }
         }
     }
@@ -251,7 +251,7 @@ pub trait Strategy {
     fn update_summary(&mut self, status: String) {
         if let LogMode::Debug = self.log_mode() {
             let counter = self.summary().states.entry(status).or_insert(0);
-            *counter = *counter + 1;
+            *counter += 1;
         }
     }
 
