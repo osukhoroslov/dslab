@@ -1,10 +1,10 @@
-use crate::mc::strategy::{LogMode, McSummary, Strategy};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
+use crate::mc::system::McSystem;
 
 pub struct Dfs {
-    prune: Box<dyn Fn(&McState) -> Option<String>>,
-    goal: Box<dyn Fn(&McState) -> Option<String>>,
-    invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
+    prune: PruneFn,
+    goal: GoalFn,
+    invariant: InvariantFn,
     search_depth: u64,
     log_mode: LogMode,
     summary: McSummary,
@@ -12,9 +12,9 @@ pub struct Dfs {
 
 impl Dfs {
     pub fn new(
-        prune: Box<dyn Fn(&McState) -> Option<String>>,
-        goal: Box<dyn Fn(&McState) -> Option<String>>,
-        invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
+        prune: PruneFn,
+        goal: GoalFn,
+        invariant: InvariantFn,
         log_mode: LogMode,
     ) -> Self {
         Self {
