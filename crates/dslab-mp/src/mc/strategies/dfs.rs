@@ -84,7 +84,7 @@ impl Dfs {
 
     fn have_visited(&self, state: &McState) -> bool {
         match self.visited {
-            VisitedStates::Full(ref states) => states.contains(&state),
+            VisitedStates::Full(ref states) => states.contains(state),
             VisitedStates::Partial(ref hashes) => {
                 let mut h = DefaultHasher::default();
                 state.hash(&mut h);
