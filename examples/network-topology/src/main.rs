@@ -91,11 +91,11 @@ fn main() {
     topology.add_node("receiver_2", 100.0, 0.0);
     topology.add_node("sender_3", 100.0, 0.0);
     // network links
-    topology.add_link("sender_1", "switch_1", 1.0, 100.0);
-    topology.add_link("sender_2", "switch_1", 1.0, 90.0);
-    topology.add_link("switch_1", "switch_2", 1.0, 50.0);
-    topology.add_link("switch_2", "receiver_1", 1.0, 90.0);
-    topology.add_link("switch_2", "receiver_2", 1.0, 10.0);
+    topology.add_link("sender_1", "switch_1", 100.0, 1.0);
+    topology.add_link("sender_2", "switch_1", 90.0, 1.0);
+    topology.add_link("switch_1", "switch_2", 50.0, 1.0);
+    topology.add_link("switch_2", "receiver_1", 90.0, 1.0);
+    topology.add_link("switch_2", "receiver_2", 10.0, 1.0);
     // init topology
     topology.init();
 

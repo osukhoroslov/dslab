@@ -21,24 +21,25 @@ use dslab_network::topology_model::TopologyNetwork;
 
 const SIMULATION_SEED: u64 = 123;
 
+/// Network topology benchmarks
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
 struct Args {
-    // Total number of nodes in each test
-    #[clap(short, long = "nodes-count", default_value_t = 50)]
-    nodes_count: usize,
+    /// Total number of hosts in topology
+    #[clap(long = "hosts", default_value_t = 64)]
+    host_count: usize,
 
-    // Total number of stars for multistar test
-    #[clap(short, long = "stars-count", default_value_t = 10)]
-    stars_count: usize,
+    /// Number of stars in tree topology
+    #[clap(long = "stars", default_value_t = 8)]
+    star_count: usize,
 
-    // Total number of switches for fat-tree test
-    #[clap(short, long = "switch-count", default_value_t = 3)]
-    switch_count: usize,
+    /// Number of level-1 (bottom) switches in fat-tree topology
+    #[clap(long = "l1-switches", default_value_t = 8)]
+    l1_switch_count: usize,
 
-    // Total number of routers for fat-tree test
-    #[clap(short, long = "router-count", default_value_t = 10)]
-    router_count: usize,
+    /// Number of level-2 (top) switches in fat-tree topology
+    #[clap(long = "l2-switches", default_value_t = 4)]
+    l2_switch_count: usize,
 }
 
 #[derive(Serialize)]
@@ -47,18 +48,18 @@ pub struct Start {
     receiver_id: Id,
 }
 
-pub struct DataTransferRequester {
+pub struct DataSender {
     net: Rc<RefCell<Network>>,
     ctx: SimulationContext,
 }
 
-impl DataTransferRequester {
+impl DataSender {
     pub fn new(net: Rc<RefCell<Network>>, ctx: SimulationContext) -> Self {
         Self { net, ctx }
     }
 }
 
-impl EventHandler for DataTransferRequester {
+impl EventHandler for DataSender {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start { size, receiver_id } => {
@@ -103,124 +104,122 @@ pub struct NetworkActors {
     pub senders: Vec<u32>,
 }
 
-fn make_star_topology(size: usize) -> Topology {
+fn make_star_topology(host_count: usize) -> Topology {
     let mut topology = Topology::new();
 
     let switch_name = "switch".to_string();
     topology.add_node(&switch_name, 1000.0, 0.0);
 
-    for i in 0..size {
+    for i in 0..host_count {
         let host_name = format!("host_{}", i);
         topology.add_node(&host_name, 1000.0, 0.0);
-        topology.add_link(&host_name, &switch_name, 0.2, 200.0);
+        topology.add_link(&host_name, &switch_name, 200.0, 0.2);
     }
-
     topology
 }
 
-fn make_tree_topology(stars_count: usize, star_size: usize) -> Topology {
+fn make_tree_topology(star_count: usize, hosts_per_star: usize) -> Topology {
     let mut topology = Topology::new();
 
     let root_switch_name = "root_switch".to_string();
     topology.add_node(&root_switch_name, 1000.0, 0.0);
 
-    for j in 0..stars_count {
-        let switch_name = format!("switch_{}", j);
+    for i in 0..star_count {
+        let switch_name = format!("switch_{}", i);
         topology.add_node(&switch_name, 1000.0, 0.0);
-        topology.add_link(&root_switch_name, &switch_name, 0.2, 1000.0);
+        topology.add_link(&root_switch_name, &switch_name, 1000.0, 0.2);
 
-        for i in 0..star_size {
-            let host_name = format!("host_{}_{}", j, i);
+        for j in 0..hosts_per_star {
+            let host_name = format!("host_{}_{}", i, j);
             topology.add_node(&host_name, 1000.0, 0.0);
-            topology.add_link(&host_name, &switch_name, 0.2, 200.0);
+            topology.add_link(&host_name, &switch_name, 200.0, 0.2);
         }
     }
-
     topology
 }
 
-fn make_cluster_topology(size: usize) -> Topology {
+fn make_fat_tree_topology(l2_switch_count: usize, l1_switch_count: usize, hosts_per_switch: usize) -> Topology {
     let mut topology = Topology::new();
 
-    for i in 0..size {
+    for i in 0..l2_switch_count {
+        let switch_name = format!("l2_switch_{}", i);
+        topology.add_node(&switch_name, 1000.0, 0.0);
+    }
+
+    let downlink_bw = 200.;
+    let uplink_bw = downlink_bw * hosts_per_switch as f64 / l2_switch_count as f64;
+
+    for i in 0..l1_switch_count {
+        let switch_name = format!("l1_switch_{}", i);
+        topology.add_node(&switch_name, 1000.0, 0.0);
+
+        for j in 0..hosts_per_switch {
+            let host_name = format!("host_{}_{}", i, j);
+            topology.add_node(&host_name, 1000.0, 0.0);
+            topology.add_link(&switch_name, &host_name, downlink_bw, 0.2);
+        }
+
+        for j in 0..l2_switch_count {
+            topology.add_link(&switch_name, &format!("l2_switch_{}", j), uplink_bw, 0.2);
+        }
+    }
+    topology
+}
+
+fn make_full_mesh_topology(host_count: usize) -> Topology {
+    let mut topology = Topology::new();
+
+    for i in 0..host_count {
         let host_name = format!("host_{}", i);
         topology.add_node(&host_name, 1000.0, 0.0);
     }
 
-    for i in 0..size {
+    for i in 0..host_count {
         for j in 0..i {
-            topology.add_link(&format!("host_{}", i), &format!("host_{}", j), 0.2, 200.0);
+            topology.add_link(&format!("host_{}", i), &format!("host_{}", j), 200.0, 0.2);
         }
     }
-
     topology
 }
 
-fn make_fat_tree_topology(nodes_per_router: usize, switch_count: usize, router_count: usize) -> Topology {
-    let mut topology = Topology::new();
-
-    for i in 0..switch_count {
-        let switch_name = format!("switch_{}", i);
-        topology.add_node(&switch_name, 1000.0, 0.0);
-    }
-
-    for i in 0..router_count {
-        let router_name = format!("router_{}", i);
-        topology.add_node(&router_name, 1000.0, 0.0);
-
-        for j in 0..nodes_per_router {
-            let host_name = format!("host_{}_{}", i, j);
-            topology.add_node(&host_name, 1000.0, 0.0);
-            topology.add_link(&router_name, &host_name, 0.2, 200.0);
-        }
-
-        for j in 0..switch_count {
-            topology.add_link(&router_name, &format!("switch_{}", j), 0.2, 1000.0);
-        }
-    }
-
-    topology
-}
-
-fn init_topology(sim: &mut Simulation, topology: Topology) -> NetworkActors {
-    let nodes = topology.get_nodes();
-
+fn init_network(sim: &mut Simulation, mut topology: Topology) -> NetworkActors {
+    topology.init();
     let topology_rc = rc!(refcell!(topology));
     let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
-    let network = Network::new_with_topology(network_model, topology_rc.clone(), sim.create_context("net"));
+    let network = Network::new_with_topology(network_model, topology_rc, sim.create_context("net"));
     let network_rc = rc!(refcell!(network));
     sim.add_handler("net", network_rc.clone());
 
     let mut actors = NetworkActors::default();
-    for host_name in nodes.into_iter() {
-        if !host_name.starts_with("host_") {
+    let nodes = network_rc.borrow().get_nodes();
+    for node_name in nodes {
+        if !node_name.starts_with("host_") {
             continue;
         }
-        let sender_name = format!("sender_{}", &host_name[5..]);
-        let receiver_name = format!("receiver_{}", &host_name[5..]);
+        let sender_name = format!("sender_{}", &node_name[5..]);
+        let receiver_name = format!("receiver_{}", &node_name[5..]);
 
-        let sender = DataTransferRequester::new(network_rc.clone(), sim.create_context(&sender_name));
+        let sender = DataSender::new(network_rc.clone(), sim.create_context(&sender_name));
         let sender_id = sim.add_handler(sender_name, rc!(refcell!(sender)));
         actors.senders.push(sender_id);
-        topology_rc.borrow_mut().set_location(sender_id, &host_name);
+        network_rc.borrow_mut().set_location(sender_id, &node_name);
 
         let receiver = DataReceiver::new(network_rc.clone(), sim.create_context(&receiver_name));
         let receiver_id = sim.add_handler(receiver_name, rc!(refcell!(receiver)));
         actors.receivers.push(receiver_id);
-        topology_rc.borrow_mut().set_location(receiver_id, &host_name);
+        network_rc.borrow_mut().set_location(receiver_id, &node_name);
     }
-    topology_rc.borrow_mut().init();
     actors
 }
 
 fn run_benchmark(topology: Topology) {
     let mut sim = Simulation::new(SIMULATION_SEED);
-    let actors = init_topology(&mut sim, topology);
+    let actors = init_network(&mut sim, topology);
 
     let mut client = sim.create_context("client");
 
-    for &sender in actors.senders.iter() {
-        for &receiver in actors.receivers.iter() {
+    for sender in actors.senders {
+        for &receiver in &actors.receivers {
             client.emit(
                 Start {
                     size: sim.gen_range(500.0..2000.0),
@@ -236,42 +235,35 @@ fn run_benchmark(topology: Topology) {
     sim.step_until_no_events();
     println!("Simulation time: {:.2}", sim.time());
     println!(
-        "Processed {} events in {:.2?} ({:.0} events/sec)",
+        "Processed {} events in {:.2?} ({:.0} events/sec)\n",
         sim.event_count(),
         now.elapsed(),
         sim.event_count() as f64 / now.elapsed().as_secs_f64()
     );
 }
 
-fn multistar_topology_benchmark(args: &Args) {
-    println!("=== Multistar Benchmark ===");
-
-    run_benchmark(make_tree_topology(
-        args.nodes_count / args.stars_count,
-        args.stars_count,
-    ));
-}
-
 fn star_topology_benchmark(args: &Args) {
-    println!("=== Star Benchmark ===");
-
-    run_benchmark(make_star_topology(args.nodes_count));
+    println!("=== Star Topology ===");
+    run_benchmark(make_star_topology(args.host_count));
 }
 
-fn cluster_topology_benchmark(args: &Args) {
-    println!("=== Cluster Benchmark ===");
-
-    run_benchmark(make_cluster_topology(args.nodes_count));
+fn tree_topology_benchmark(args: &Args) {
+    println!("=== Tree Topology ===");
+    run_benchmark(make_tree_topology(args.star_count, args.host_count / args.star_count));
 }
 
 fn fat_tree_topology_benchmark(args: &Args) {
-    println!("=== Fat-Tree Benchmark ===");
-
+    println!("=== Fat-Tree Topology ===");
     run_benchmark(make_fat_tree_topology(
-        args.nodes_count / args.router_count,
-        args.switch_count,
-        args.router_count,
+        args.l2_switch_count,
+        args.l1_switch_count,
+        args.host_count / args.l1_switch_count,
     ));
+}
+
+fn full_mesh_topology_benchmark(args: &Args) {
+    println!("=== Full Mesh Topology ===");
+    run_benchmark(make_full_mesh_topology(args.host_count));
 }
 
 fn main() {
@@ -282,7 +274,7 @@ fn main() {
     let args = Args::parse();
 
     star_topology_benchmark(&args);
-    multistar_topology_benchmark(&args);
-    cluster_topology_benchmark(&args);
+    tree_topology_benchmark(&args);
     fat_tree_topology_benchmark(&args);
+    full_mesh_topology_benchmark(&args);
 }
