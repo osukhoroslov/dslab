@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
 use colored::*;
 use lazy_static::lazy_static;
@@ -21,6 +23,11 @@ pub enum LogContext {
     Dropped,
     Duplicated,
     Corrupted,
+}
+
+pub enum VisitedStates {
+    Full(HashSet<McState>),
+    Partial(HashSet<u64>),
 }
 
 #[derive(Debug, Default, Clone)]
@@ -207,7 +214,81 @@ pub trait Strategy {
         }
     }
 
+    fn initialize_visited(log_mode: &LogMode) -> VisitedStates
+    where
+        Self: Sized,
+    {
+        match log_mode {
+            LogMode::Debug => VisitedStates::Full(HashSet::default()),
+            LogMode::Default => VisitedStates::Partial(HashSet::default()),
+        }
+    }
+
+    fn have_visited(&mut self, state: &McState) -> bool {
+        match self.visited() {
+            VisitedStates::Full(ref states) => states.contains(state),
+            VisitedStates::Partial(ref hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.contains(&h.finish())
+            }
+        }
+    }
+
+    fn mark_visited(&mut self, state: McState) {
+        match self.visited() {
+            VisitedStates::Full(ref mut states) => {
+                states.insert(state);
+            }
+            VisitedStates::Partial(ref mut hashes) => {
+                let mut h = DefaultHasher::default();
+                state.hash(&mut h);
+                hashes.insert(h.finish());
+            }
+        }
+    }
+
+    fn update_summary(&mut self, status: String) {
+        if let LogMode::Debug = self.log_mode() {
+            let counter = self.summary().states.entry(status).or_insert(0);
+            *counter = *counter + 1;
+        }
+    }
+
+    fn check_state(&mut self, state: &McState, events_num: usize) -> Option<Result<(), String>> {
+        if self.have_visited(state) {
+            // Was already visited before
+            Some(Ok(()))
+        } else if let Err(err) = (self.invariant())(state) {
+            // Invariant is broken
+            Some(Err(err))
+        } else if let Some(status) = (self.goal())(state) {
+            // Reached final state of the system
+            self.update_summary(status);
+            Some(Ok(()))
+        } else if let Some(status) = (self.prune())(state) {
+            // Execution branch is pruned
+            self.update_summary(status);
+            Some(Ok(()))
+        } else if events_num == 0 {
+            // exhausted without goal completed
+            Some(Err("nothing left to do to reach the goal".to_owned()))
+        } else {
+            None
+        }
+    }
+
     fn log_mode(&self) -> &LogMode;
 
     fn search_depth(&self) -> u64;
+
+    fn visited(&mut self) -> &mut VisitedStates;
+
+    fn prune(&self) -> &PruneFn;
+
+    fn goal(&self) -> &GoalFn;
+
+    fn invariant(&self) -> &InvariantFn;
+
+    fn summary(&mut self) -> &mut McSummary;
 }

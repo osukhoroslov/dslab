@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
+use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Bfs {
@@ -11,10 +11,12 @@ pub struct Bfs {
     states_queue: VecDeque<McState>,
     log_mode: LogMode,
     summary: McSummary,
+    visited: VisitedStates,
 }
 
 impl Bfs {
     pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, log_mode: LogMode) -> Self {
+        let visited = Self::initialize_visited(&log_mode);
         Self {
             prune,
             goal,
@@ -23,6 +25,7 @@ impl Bfs {
             states_queue: VecDeque::new(),
             log_mode,
             summary: McSummary::default(),
+            visited,
         }
     }
 }
@@ -33,31 +36,19 @@ impl Bfs {
         self.states_queue.push_back(system.get_state(self.search_depth));
 
         while !self.states_queue.is_empty() {
+            let events_num = system.events.len();
             let state = self.states_queue.pop_front().expect("BFS error");
             self.search_depth = state.search_depth;
 
-            // Checking invariant on every step
-            (self.invariant)(&state)?;
+            let result = self.check_state(&state, events_num);
 
-            // Check final state of the system
-            if let Some(status) = (self.goal)(&state) {
-                self.update_summary(status);
-                continue;
-            }
-
-            // Check if execution branch is pruned
-            if let Some(status) = (self.prune)(&state) {
-                self.update_summary(status);
-                continue;
+            if let Some(result) = result {
+                self.mark_visited(state);
+                return result;
             }
 
             system.set_state(state);
-            let events_num = system.events.len();
-
-            // exhausted without goal completed
-            if events_num == 0 {
-                return Err("nothing left to do to reach the goal".to_owned());
-            }
+            self.mark_visited(system.get_state(self.search_depth));
 
             for i in 0..events_num {
                 self.process_event(system, i)?;
@@ -65,13 +56,6 @@ impl Bfs {
         }
 
         Ok(())
-    }
-
-    fn update_summary(&mut self, status: String) {
-        if let LogMode::Debug = self.log_mode {
-            let counter = self.summary.states.entry(status).or_insert(0);
-            *counter = *counter + 1;
-        }
     }
 }
 
@@ -95,5 +79,25 @@ impl Strategy for Bfs {
 
     fn search_depth(&self) -> u64 {
         self.search_depth
+    }
+
+    fn visited(&mut self) -> &mut VisitedStates {
+        &mut self.visited
+    }
+
+    fn prune(&self) -> &PruneFn {
+        &self.prune
+    }
+
+    fn goal(&self) -> &GoalFn {
+        &self.goal
+    }
+
+    fn invariant(&self) -> &InvariantFn {
+        &self.invariant
+    }
+
+    fn summary(&mut self) -> &mut McSummary {
+        &mut self.summary
     }
 }

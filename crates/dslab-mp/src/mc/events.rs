@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::message::Message;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Eq, PartialEq, Hash)]
 pub enum DeliveryOptions {
     /// Message will be received exactly once without corruption
     NoFailures,
@@ -16,7 +16,7 @@ pub enum DeliveryOptions {
     },
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Eq, Hash, PartialEq)]
 pub enum McEvent {
     MessageReceived {
         msg: Message,

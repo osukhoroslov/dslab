@@ -1,4 +1,4 @@
-use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
+use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
 
 pub struct Dfs {
@@ -8,10 +8,12 @@ pub struct Dfs {
     search_depth: u64,
     log_mode: LogMode,
     summary: McSummary,
+    visited: VisitedStates,
 }
 
 impl Dfs {
     pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, log_mode: LogMode) -> Self {
+        let visited = Self::initialize_visited(&log_mode);
         Self {
             prune,
             goal,
@@ -19,6 +21,7 @@ impl Dfs {
             search_depth: 0,
             log_mode,
             summary: McSummary::default(),
+            visited,
         }
     }
 }
@@ -28,37 +31,17 @@ impl Dfs {
         let events_num = system.events.len();
         let state = system.get_state(self.search_depth);
 
-        // Checking invariant on every step
-        (self.invariant)(&state)?;
+        let result = self.check_state(&state, events_num);
 
-        // Check final state of the system
-        if let Some(status) = (self.goal)(&state) {
-            self.update_summary(status);
-            return Ok(());
-        }
-
-        // Check if execution branch is pruned
-        if let Some(status) = (self.prune)(&state) {
-            self.update_summary(status);
-            return Ok(());
-        }
-
-        // exhausted without goal completed
-        if events_num == 0 {
-            return Err("nothing left to do to reach the goal".to_owned());
+        self.mark_visited(state);
+        if let Some(result) = result {
+            return result;
         }
 
         for i in 0..events_num {
             self.process_event(system, i)?;
         }
         Ok(())
-    }
-
-    fn update_summary(&mut self, status: String) {
-        if let LogMode::Debug = self.log_mode {
-            let counter = self.summary.states.entry(status).or_insert(0);
-            *counter = *counter + 1;
-        }
     }
 }
 
@@ -84,5 +67,25 @@ impl Strategy for Dfs {
 
     fn search_depth(&self) -> u64 {
         self.search_depth
+    }
+
+    fn visited(&mut self) -> &mut VisitedStates {
+        &mut self.visited
+    }
+
+    fn prune(&self) -> &PruneFn {
+        &self.prune
+    }
+
+    fn goal(&self) -> &GoalFn {
+        &self.goal
+    }
+
+    fn invariant(&self) -> &InvariantFn {
+        &self.invariant
+    }
+
+    fn summary(&mut self) -> &mut McSummary {
+        &mut self.summary
     }
 }

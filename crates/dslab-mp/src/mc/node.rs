@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::context::Context;
@@ -16,6 +17,24 @@ pub struct ProcessEntryState {
     pub pending_timers: HashMap<String, u64>,
     pub sent_message_count: u64,
     pub received_message_count: u64,
+}
+
+impl Hash for ProcessEntryState {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.proc_state.hash_with_dyn(hasher);
+        self.local_outbox.hash(hasher);
+    }
+}
+
+impl PartialEq for ProcessEntryState {
+    fn eq(&self, other: &Self) -> bool {
+        let equal_process_states = self.proc_state.eq_with_dyn(&*other.proc_state);
+        equal_process_states && self.local_outbox == other.local_outbox
+    }
+}
+
+impl Eq for ProcessEntryState {
+    fn assert_receiver_is_total_eq(&self) {}
 }
 
 impl ProcessEntry {
@@ -40,7 +59,7 @@ impl ProcessEntry {
     }
 }
 
-pub type McNodeState = HashMap<String, ProcessEntryState>;
+pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
