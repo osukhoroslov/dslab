@@ -9,7 +9,7 @@ use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq)]
 pub struct McState {
     pub node_states: BTreeMap<String, McNodeState>,
     pub events: Vec<McEvent>,
@@ -23,6 +23,12 @@ impl McState {
             events,
             search_depth,
         }
+    }
+}
+
+impl PartialEq for McState {
+    fn eq(&self, other: &Self) -> bool {
+        self.events == other.events && self.node_states == other.node_states
     }
 }
 
