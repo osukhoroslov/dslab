@@ -40,26 +40,7 @@ impl Bfs {
             let state = self.states_queue.pop_front().expect("BFS error");
             self.search_depth = state.search_depth;
 
-            let result = if self.have_visited(&state) {
-                // Was already visited before
-                Some(Ok(()))
-            } else if let Err(err) = (self.invariant)(&state) {
-                // Invariant is broken
-                Some(Err(err))
-            } else if let Some(status) = (self.goal)(&state) {
-                // Reached final state of the system
-                self.update_summary(status);
-                Some(Ok(()))
-            } else if let Some(status) = (self.prune)(&state) {
-                // Execution branch is pruned
-                self.update_summary(status);
-                Some(Ok(()))
-            } else if events_num == 0 {
-                // exhausted without goal completed
-                Some(Err("nothing left to do to reach the goal".to_owned()))
-            } else {
-                None
-            };
+            let result = self.check_state(&state, events_num);
 
             if let Some(result) = result {
                 self.mark_visited(state);
@@ -75,13 +56,6 @@ impl Bfs {
         }
 
         Ok(())
-    }
-
-    fn update_summary(&mut self, status: String) {
-        if let LogMode::Debug = self.log_mode {
-            let counter = self.summary.states.entry(status).or_insert(0);
-            *counter = *counter + 1;
-        }
     }
 }
 
@@ -109,5 +83,21 @@ impl Strategy for Bfs {
 
     fn visited(&mut self) -> &mut VisitedStates {
         &mut self.visited
+    }
+
+    fn prune(&self) -> &PruneFn {
+        &self.prune
+    }
+
+    fn goal(&self) -> &GoalFn {
+        &self.goal
+    }
+
+    fn invariant(&self) -> &InvariantFn {
+        &self.invariant
+    }
+
+    fn summary(&mut self) -> &mut McSummary {
+        &mut self.summary
     }
 }
