@@ -248,9 +248,47 @@ pub trait Strategy {
         }
     }
 
+    fn update_summary(&mut self, status: String) {
+        if let LogMode::Debug = self.log_mode() {
+            let counter = self.summary().states.entry(status).or_insert(0);
+            *counter = *counter + 1;
+        }
+    }
+
+    fn check_state(&mut self, state: &McState, events_num: usize) -> Option<Result<(), String>> {
+        if self.have_visited(state) {
+            // Was already visited before
+            Some(Ok(()))
+        } else if let Err(err) = (self.invariant())(state) {
+            // Invariant is broken
+            Some(Err(err))
+        } else if let Some(status) = (self.goal())(state) {
+            // Reached final state of the system
+            self.update_summary(status);
+            Some(Ok(()))
+        } else if let Some(status) = (self.prune())(state) {
+            // Execution branch is pruned
+            self.update_summary(status);
+            Some(Ok(()))
+        } else if events_num == 0 {
+            // exhausted without goal completed
+            Some(Err("nothing left to do to reach the goal".to_owned()))
+        } else {
+            None
+        }
+    }
+
     fn log_mode(&self) -> &LogMode;
 
     fn search_depth(&self) -> u64;
 
     fn visited(&mut self) -> &mut VisitedStates;
+
+    fn prune(&self) -> &PruneFn;
+
+    fn goal(&self) -> &GoalFn;
+
+    fn invariant(&self) -> &InvariantFn;
+
+    fn summary(&mut self) -> &mut McSummary;
 }
