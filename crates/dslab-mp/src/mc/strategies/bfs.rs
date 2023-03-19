@@ -14,12 +14,7 @@ pub struct Bfs {
 }
 
 impl Bfs {
-    pub fn new(
-        prune: PruneFn,
-        goal: GoalFn,
-        invariant: InvariantFn,
-        log_mode: LogMode,
-    ) -> Self {
+    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, log_mode: LogMode) -> Self {
         Self {
             prune,
             goal,
