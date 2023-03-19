@@ -24,7 +24,7 @@ impl<T: Hash + Eq + Debug + 'static> ProcessState for T {
 
     fn eq_with_dyn(&self, other: &dyn ProcessState) -> bool {
         if let Some(other) = other.downcast_ref::<T>() {
-            self.eq(&(*other))
+            self.eq(other)
         } else {
             false
         }
