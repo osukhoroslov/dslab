@@ -36,7 +36,7 @@ impl Bfs {
         self.states_queue.push_back(system.get_state(self.search_depth));
 
         while !self.states_queue.is_empty() {
-            let events_num = system.events.len();
+            let events_num = system.events_num();
             let state = self.states_queue.pop_front().expect("BFS error");
             self.search_depth = state.search_depth;
 
@@ -50,8 +50,8 @@ impl Bfs {
             system.set_state(state);
             self.mark_visited(system.get_state(self.search_depth));
 
-            for i in 0..events_num {
-                self.process_event(system, i)?;
+            for event_id in system.events() {
+                self.process_event(system, event_id)?;
             }
         }
 

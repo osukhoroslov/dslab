@@ -1,11 +1,14 @@
+use std::ops::Add;
+
+use ordered_float::OrderedFloat;
 use serde::Serialize;
 
 use crate::message::Message;
 
-#[derive(Serialize, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Clone, PartialEq, Eq, Hash)]
 pub enum DeliveryOptions {
     /// Message will be received exactly once without corruption with specified max delay
-    NoFailures(f64),
+    NoFailures(SystemTime),
     /// Message will not be received
     Dropped,
     /// Message delivery may be subject to some failures
@@ -16,9 +19,34 @@ pub enum DeliveryOptions {
     },
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Ord, Copy, PartialOrd, Default)]
+pub struct SystemTime(pub OrderedFloat<f64>);
+
+impl Serialize for SystemTime {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_f64(self.0.0)
+    }
+}
+
+impl From<f64> for SystemTime {
+    fn from(value: f64) -> Self {
+        Self(OrderedFloat(value))
+    }
+}
+
+impl Add for SystemTime {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
 pub type McEventId = usize;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Eq, Hash, PartialEq)]
 pub enum McEvent {
     MessageReceived {
         msg: Message,
@@ -29,7 +57,7 @@ pub enum McEvent {
     TimerFired {
         proc: String,
         timer: String,
-        duration: f64,
+        duration: SystemTime,
     },
     TimerCancelled {
         proc: String,

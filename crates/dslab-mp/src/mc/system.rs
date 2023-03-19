@@ -1,4 +1,6 @@
 use std::cell::RefCell;
+use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -13,7 +15,7 @@ use crate::mc::pending_events::PendingEvents;
 use super::events::McEventId;
 
 pub struct McState {
-    pub node_states: HashMap<String, McNodeState>,
+    pub node_states: BTreeMap<String, McNodeState>,
     pub events: PendingEvents,
     pub search_depth: u64,
 }
@@ -34,15 +36,12 @@ impl PartialEq for McState {
     }
 }
 
+impl Eq for McState {
+}
+
 impl Hash for McState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        let mut hash_events = 0;
-        for event in self.events.iter() {
-            let mut h = DefaultHasher::default();
-            event.hash(&mut h);
-            hash_events ^= h.finish();
-        }
-        hash_events.hash(hasher);
+        self.events.hash(hasher);
         self.node_states.hash(hasher);
     }
 }
@@ -95,7 +94,7 @@ impl McSystem {
         self.events.available_events().len()
     }
 
-    pub fn events(&self) -> HashSet<McEventId> {
+    pub fn events(&self) -> BTreeSet<McEventId> {
         self.events.available_events().clone()
     }
 }

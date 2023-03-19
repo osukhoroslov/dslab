@@ -11,6 +11,7 @@ use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
 
+use super::events::SystemTime;
 use super::pending_events::PendingEvents;
 
 pub struct ModelChecker {
@@ -29,13 +30,13 @@ impl ModelChecker {
                     msg: value.msg.clone(),
                     src: value.src.clone(),
                     dest: value.dest.clone(),
-                    options: DeliveryOptions::NoFailures(sys.network().get_max_delay()),
+                    options: DeliveryOptions::NoFailures(SystemTime::from(sys.network().get_max_delay())),
                 });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {
                     proc: value.proc.clone(),
                     timer: value.timer.clone(),
-                    duration: 0.0,
+                    duration: SystemTime::from(0.0),
                 });
             }
         }

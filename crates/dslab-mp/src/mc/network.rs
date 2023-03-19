@@ -1,6 +1,7 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
+use crate::mc::events::SystemTime;
 use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::message::Message;
 use crate::network::Network;
@@ -45,7 +46,7 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                options: DeliveryOptions::NoFailures(self.roundtrip_time.unwrap()),
+                options: DeliveryOptions::NoFailures(SystemTime::from(self.roundtrip_time.unwrap())),
             }
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)

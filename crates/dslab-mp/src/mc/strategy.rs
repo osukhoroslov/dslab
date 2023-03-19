@@ -12,6 +12,8 @@ use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
 use crate::util::t;
 
+use super::events::McEventId;
+
 #[derive(Clone, PartialEq)]
 pub enum LogMode {
     Default,

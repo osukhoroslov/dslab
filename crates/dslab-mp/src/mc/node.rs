@@ -9,7 +9,7 @@ use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
-
+use crate::mc::events::SystemTime;
 pub struct ProcessEntryState {
     pub proc_state: Box<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,
@@ -129,7 +129,7 @@ impl McNode {
                         let event = McEvent::TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
-                            duration: delay,
+                            duration: SystemTime::from(delay),
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking
