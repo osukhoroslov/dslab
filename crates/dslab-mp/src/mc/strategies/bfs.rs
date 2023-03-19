@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
-use crate::mc::strategy::{LogMode, McSummary, Strategy};
+use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy};
 use crate::mc::system::{McState, McSystem};
 
 pub struct Bfs {
-    prune: Box<dyn Fn(&McState) -> Option<String>>,
-    goal: Box<dyn Fn(&McState) -> Option<String>>,
-    invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
+    prune: PruneFn,
+    goal: GoalFn,
+    invariant: InvariantFn,
     search_depth: u64,
     states_queue: VecDeque<McState>,
     log_mode: LogMode,
@@ -15,9 +15,9 @@ pub struct Bfs {
 
 impl Bfs {
     pub fn new(
-        prune: Box<dyn Fn(&McState) -> Option<String>>,
-        goal: Box<dyn Fn(&McState) -> Option<String>>,
-        invariant: Box<dyn Fn(&McState) -> Result<(), String>>,
+        prune: PruneFn,
+        goal: GoalFn,
+        invariant: InvariantFn,
         log_mode: LogMode,
     ) -> Self {
         Self {

@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::mc::events::McEvent::{MessageReceived, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent};
-use crate::mc::system::McSystem;
+use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
 use crate::util::t;
 
@@ -27,6 +27,10 @@ pub enum LogContext {
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
+
+pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
 
 pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
