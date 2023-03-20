@@ -170,7 +170,7 @@ pub trait Strategy {
 
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
-        self.add_event(system, event.duplicate().unwrap());
+        system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
         self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         event
     }

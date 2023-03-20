@@ -18,7 +18,7 @@ pub struct PendingEvents {
     timer_mapping: BTreeMap<(String, String), usize>,
     available_events: BTreeSet<McEventId>,
     resolver: DependencyResolver,
-    id_counter: usize,
+    id_counter: McEventId,
     global_time: BTreeMap<String, SystemTime>,
 }
 
@@ -33,10 +33,15 @@ impl PendingEvents {
             global_time: BTreeMap::new(),
         }
     }
-
-    pub fn push(&mut self, event: McEvent) -> usize {
+    
+    pub fn push(&mut self, event: McEvent) -> McEventId {
         let id = self.id_counter;
         self.id_counter += 1;
+        self.push_with_fixed_id(event, id)
+    }
+
+    pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
+        assert!(self.get(id).is_none(), "use unique id's");
         let proc = match &event {
             McEvent::MessageReceived {
                 dest,
