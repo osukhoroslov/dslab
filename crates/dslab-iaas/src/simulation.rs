@@ -10,8 +10,8 @@ use sugars::{rc, refcell};
 use dslab_core::context::SimulationContext;
 use dslab_core::simulation::Simulation;
 use dslab_core::Id;
-use dslab_models::power::cpu::linear::LinearPowerModel;
-use dslab_models::power::power_model::HostPowerModel;
+use dslab_models::power::cpu_models::linear::LinearPowerModel;
+use dslab_models::power::host::HostPowerModel;
 
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};

@@ -1,0 +1,43 @@
+//! Asymptotic CPU power model.
+
+use std::f64::consts::E;
+
+use crate::power::cpu::CpuPowerModel;
+
+/// A non-linear power consumption model from
+/// [Kliazovich et al. e-STAB: Energy-Efficient Scheduling for Cloud Computing Applications with Traffic Load Balancing
+/// (GreenCom 2013)](https://ieeexplore.ieee.org/abstract/document/6682042).
+///
+/// The power consumption is computed as `P(u) = P_min + 1/2 (P_max - P_min) * (1 + u - e^(-u / tau))`,
+/// where `tau` is the utilization level at which the server attains asymptotic (close to linear) power consumption,
+/// which is typically in the 0.5-0.8 range.
+#[derive(Clone)]
+pub struct AsymptoticPowerModel {
+    #[allow(dead_code)]
+    max_power: f64,
+    min_power: f64,
+    tau: f64,
+    factor: f64,
+}
+
+impl AsymptoticPowerModel {
+    /// Creates an asymptotic power model.
+    ///
+    /// * `max_power` - The maximum power consumption in W (at 100% utilization).
+    /// * `min_power` - The minimum power consumption in W (at 0% utilization).
+    /// * `tau` - The utilization level at which the server attains asymptotic power consumption.
+    pub fn new(max_power: f64, min_power: f64, tau: f64) -> Self {
+        Self {
+            min_power,
+            max_power,
+            tau,
+            factor: max_power - min_power,
+        }
+    }
+}
+
+impl CpuPowerModel for AsymptoticPowerModel {
+    fn get_power(&self, utilization: f64) -> f64 {
+        self.min_power + self.factor * (1. + utilization - E.powf(-utilization / self.tau)) / 2.
+    }
+}

@@ -1,17 +1,17 @@
 //! Tests CPU power models.
 
-use crate::power::cpu::asymptotic::AsymptoticPowerModel;
-use crate::power::cpu::cubic::CubicPowerModel;
-use crate::power::cpu::empirical::EmpiricalPowerModel;
-use crate::power::cpu::mse::MSEPowerModel;
-use crate::power::cpu::square::SquarePowerModel;
-use crate::power::power_model::HostPowerModel;
+use crate::power::cpu_models::asymptotic::AsymptoticPowerModel;
+use crate::power::cpu_models::cubic::CubicPowerModel;
+use crate::power::cpu_models::empirical::EmpiricalPowerModel;
+use crate::power::cpu_models::mse::MsePowerModel;
+use crate::power::cpu_models::square::SquarePowerModel;
+use crate::power::host::HostPowerModel;
 
 #[test]
 fn test_mse_model() {
-    let model = HostPowerModel::cpu_only(Box::new(MSEPowerModel::new(1., 0.4)));
+    let model = HostPowerModel::cpu_only(Box::new(MsePowerModel::new(1., 0.4, 1.4)));
 
-    assert_eq!(model.get_power(0.), 0.);
+    assert_eq!(model.get_power(0.), 0.4);
 
     assert!(model.get_power(1e-5) < 0.4 + 1e-3);
     assert!(model.get_power(1e-5) > 0.4);
@@ -26,7 +26,7 @@ fn test_mse_model() {
 fn test_square_model() {
     let model = HostPowerModel::cpu_only(Box::new(SquarePowerModel::new(1., 0.4)));
 
-    assert_eq!(model.get_power(0.), 0.);
+    assert_eq!(model.get_power(0.), 0.4);
 
     assert!(model.get_power(1e-5) < 0.4 + 1e-3);
     assert!(model.get_power(1e-5) > 0.4);
@@ -43,7 +43,7 @@ fn test_square_model() {
 fn test_cubic_model() {
     let model = HostPowerModel::cpu_only(Box::new(CubicPowerModel::new(1., 0.4)));
 
-    assert_eq!(model.get_power(0.), 0.);
+    assert_eq!(model.get_power(0.), 0.4);
 
     assert!(model.get_power(1e-5) < 0.4 + 1e-3);
     assert!(model.get_power(1e-5) > 0.4);
@@ -59,9 +59,9 @@ fn test_cubic_model() {
 
 #[test]
 fn test_asymptotic_model() {
-    let model = HostPowerModel::cpu_only(Box::new(AsymptoticPowerModel::new(1., 0.4)));
+    let model = HostPowerModel::cpu_only(Box::new(AsymptoticPowerModel::new(1., 0.4, 0.1)));
 
-    assert_eq!(model.get_power(0.), 0.);
+    assert_eq!(model.get_power(0.), 0.4);
 
     assert!(model.get_power(1e-5) > 0.4);
     assert!(model.get_power(1e-5) < 0.41);
@@ -79,32 +79,32 @@ fn test_asymptotic_model() {
 #[test]
 fn test_empirical_model() {
     let utils = vec![0., 0.45, 0.51, 0.59, 0.64, 0.75, 0.79, 0.82, 0.91, 0.98, 1.];
-    let model = HostPowerModel::cpu_only(Box::new(EmpiricalPowerModel::new(1., utils)));
+    let model = HostPowerModel::cpu_only(Box::new(EmpiricalPowerModel::new(utils)));
 
     assert_eq!(model.get_power(0.), 0.);
-    assert_eq!(model.get_power(0.05), 0.);
+    assert!((model.get_power(0.05) - 0.225).abs() < 1e-12);
     assert_eq!(model.get_power(0.1), 0.45);
-    assert_eq!(model.get_power(0.89), 0.91);
+    assert_eq!(model.get_power(0.89), 0.973);
     assert_eq!(model.get_power(0.9), 0.98);
-    assert_eq!(model.get_power(0.99), 0.98);
+    assert_eq!(model.get_power(0.99), 0.998);
     assert_eq!(model.get_power(1.), 1.);
 }
 
 #[test]
-fn test_xeon_x5675() {
-    let model = HostPowerModel::cpu_only(Box::new(EmpiricalPowerModel::xeon_x5675()));
+fn test_x3550_m3_xeon_x5675() {
+    let model = HostPowerModel::cpu_only(Box::new(EmpiricalPowerModel::system_x3550_m3_xeon_x5675()));
 
-    assert_eq!(model.get_power(0.), 0.);
-    assert_eq!(model.get_power(0.1), 97.68);
-    assert_eq!(model.get_power(0.85), 188.7);
+    assert_eq!(model.get_power(0.), 58.4);
+    assert_eq!(model.get_power(0.1), 98.);
+    assert_eq!(model.get_power(0.85), 197.);
     assert_eq!(model.get_power(1.), 222.);
 }
 
 #[test]
 fn test_other_power() {
-    let model = HostPowerModel::cpu_and_other(Box::new(MSEPowerModel::new(1., 0.4)), 0.2);
+    let model = HostPowerModel::new(Box::new(MsePowerModel::new(1., 0.4, 1.4)), 0.2);
 
-    assert_eq!(model.get_power(0.), 0.2);
+    assert!((model.get_power(0.) - 0.6).abs() < 1e-12);
 
     assert!(model.get_power(1e-5) < 0.6 + 1e-3);
     assert!(model.get_power(1e-5) > 0.6);

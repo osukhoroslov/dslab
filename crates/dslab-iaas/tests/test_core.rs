@@ -1,5 +1,5 @@
 use dslab_core::simulation::Simulation;
-use dslab_models::power::power_model::{ConstantPowerModel, HostPowerModel};
+use dslab_models::power::model::{ConstantPowerModel, HostPowerModel};
 
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;

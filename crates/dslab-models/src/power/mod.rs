@@ -1,5 +1,6 @@
-//! Physical host power consumption models. Currently only CPU consumption is implemented.
+//! Power consumption models.
 
 pub mod cpu;
-pub mod power_model;
-pub mod tests;
+pub mod cpu_models;
+pub mod host;
+mod tests;

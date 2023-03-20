@@ -13,7 +13,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_trace};
-use dslab_models::power::power_model::HostPowerModel;
+use dslab_models::power::host::HostPowerModel;
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
