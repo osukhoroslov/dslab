@@ -2,3 +2,7 @@ build
 .idea
 .cache
 compile_commands.json
+*/Makefile
+*/CMakeFiles/
+*/CMakeCache.txt
+*/cmake_install.cmake
