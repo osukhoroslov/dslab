@@ -1,4 +1,4 @@
-use crate::mc::strategy::{GoalFn, InvariantFn, ExecutionMode, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
 
 pub struct Dfs {
