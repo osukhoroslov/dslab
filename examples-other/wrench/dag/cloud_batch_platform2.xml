@@ -16,6 +16,8 @@
         <host id="BatchNode9" speed="50Gf" core="10"/>
 
         <host id="CloudHeadNode" speed="10Gf" core="1"/>
+        <host id="CloudNode1" speed="60Gf" core="4"/>
+        <host id="CloudNode2" speed="60Gf" core="4"/>
         
         <host id="WMSHost" speed="10Gf" core="1">
             <disk id="large_disk" read_bw="50MBps" write_bw="50MBps">
@@ -29,8 +31,13 @@
         <link id="wide_area_backbone" bandwidth="30MBps" latency="1ms"/>
 
         <!-- The network link connects all hosts together -->
+        <route src="CloudHeadNode" dst="CloudNode1"> <link_ctn id="wide_area_backbone"/></route>
+        <route src="CloudHeadNode" dst="CloudNode2"> <link_ctn id="wide_area_backbone"/></route>
+
         <route src="WMSHost" dst="BatchHeadNode"> <link_ctn id="wide_area_backbone"/></route>
         <route src="WMSHost" dst="CloudHeadNode"> <link_ctn id="wide_area_backbone"/></route>
+        <route src="WMSHost" dst="CloudNode1"> <link_ctn id="wide_area_backbone"/></route>
+        <route src="WMSHost" dst="CloudNode2"> <link_ctn id="wide_area_backbone"/></route>
         <route src="WMSHost" dst="BatchNode0"> <link_ctn id="wide_area_backbone"/></route>
         <route src="WMSHost" dst="BatchNode1"> <link_ctn id="wide_area_backbone"/></route>
         <route src="WMSHost" dst="BatchNode2"> <link_ctn id="wide_area_backbone"/></route>
