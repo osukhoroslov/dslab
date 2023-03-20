@@ -1,4 +1,4 @@
-use crate::mc::strategy::{GoalFn, InvariantFn, LogMode, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{GoalFn, InvariantFn, ExecutionMode, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
 
 pub struct Dfs {
@@ -6,20 +6,20 @@ pub struct Dfs {
     goal: GoalFn,
     invariant: InvariantFn,
     search_depth: u64,
-    log_mode: LogMode,
+    execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
 }
 
 impl Dfs {
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, log_mode: LogMode) -> Self {
-        let visited = Self::initialize_visited(&log_mode);
+    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
+        let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
             goal,
             invariant,
             search_depth: 0,
-            log_mode,
+            execution_mode,
             summary: McSummary::default(),
             visited,
         }
@@ -61,8 +61,8 @@ impl Strategy for Dfs {
         result
     }
 
-    fn log_mode(&self) -> &LogMode {
-        &self.log_mode
+    fn execution_mode(&self) -> &ExecutionMode {
+        &self.execution_mode
     }
 
     fn search_depth(&self) -> u64 {
