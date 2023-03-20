@@ -128,6 +128,8 @@ fn main() {
         boxed!(model.unwrap()),
         // Creating randomized bandwidth model with uniform distribution in [DISK_WRITE_BW - 10; DISK_WRITE_BW + 10)
         boxed!(make_uniform_throughput_factor_function(0.9, 1.1)),
+        None,
+        None,
         sim.create_context(DISK_NAME),
     )));
 

@@ -25,10 +25,11 @@ use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
     make_constant_throughput_function, ConstantThroughputFactorFunction, FairThroughputSharingModel,
-    ThroughputFactorFunction, ThroughputFunction, ThroughputSharingModel,
+    ThroughputFactorFunction, ThroughputFunction,
 };
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use crate::scheduler::{FairScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
 /// Struct for a disk activity.
@@ -54,8 +55,8 @@ struct DiskWriteActivityCompleted {}
 pub struct Disk {
     capacity: u64,
     used: u64,
-    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
-    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    read_scheduler: FairScheduler<DiskActivity>,
+    write_scheduler: FairScheduler<DiskActivity>,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -68,14 +69,14 @@ impl Disk {
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
+            read_scheduler: FairScheduler::new(FairThroughputSharingModel::new(
                 make_constant_throughput_function(read_bandwidth),
                 boxed!(ConstantThroughputFactorFunction::new(1.)),
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
+            )),
+            write_scheduler: FairScheduler::new(FairThroughputSharingModel::new(
                 make_constant_throughput_function(write_bandwidth),
                 boxed!(ConstantThroughputFactorFunction::new(1.)),
-            ),
+            )),
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
@@ -90,19 +91,39 @@ impl Disk {
         write_throughput_function: ThroughputFunction,
         read_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
         write_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
+        read_concurrent_operations_limit: Option<u64>,
+        write_concurrent_operations_limit: Option<u64>,
         ctx: SimulationContext,
     ) -> Self {
+        let read_scheduler = if let Some(limit) = read_concurrent_operations_limit {
+            FairScheduler::new_with_concurrent_operations_limit(
+                FairThroughputSharingModel::new(read_throughput_function, read_throughput_factor_function),
+                limit,
+            )
+        } else {
+            FairScheduler::new(FairThroughputSharingModel::new(
+                read_throughput_function,
+                read_throughput_factor_function,
+            ))
+        };
+
+        let write_scheduler = if let Some(limit) = write_concurrent_operations_limit {
+            FairScheduler::new_with_concurrent_operations_limit(
+                FairThroughputSharingModel::new(write_throughput_function, write_throughput_factor_function),
+                limit,
+            )
+        } else {
+            FairScheduler::new(FairThroughputSharingModel::new(
+                write_throughput_function,
+                write_throughput_factor_function,
+            ))
+        };
+
         Self {
             capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
-                read_throughput_function,
-                read_throughput_factor_function,
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
-                write_throughput_function,
-                write_throughput_factor_function,
-            ),
+            read_scheduler,
+            write_scheduler,
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
@@ -117,13 +138,13 @@ impl Disk {
     }
 
     fn schedule_next_read_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.peek() {
+        if let Some((time, _)) = self.read_scheduler.peek() {
             self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
         }
     }
 
     fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.write_throughput_model.peek() {
+        if let Some((time, _)) = self.write_scheduler.peek() {
             self.next_write_event = self
                 .ctx
                 .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
@@ -131,7 +152,7 @@ impl Disk {
     }
 
     fn on_read_completed(&mut self) {
-        let (_, activity) = self.read_throughput_model.pop().unwrap();
+        let (_, activity) = self.read_scheduler.pop(&mut self.ctx).unwrap();
         self.ctx.emit_now(
             DataReadCompleted {
                 request_id: activity.request_id,
@@ -143,7 +164,7 @@ impl Disk {
     }
 
     fn on_write_completed(&mut self) {
-        let (_, activity) = self.write_throughput_model.pop().unwrap();
+        let (_, activity) = self.write_scheduler.pop(&mut self.ctx).unwrap();
         self.ctx.emit_now(
             DataWriteCompleted {
                 request_id: activity.request_id,
@@ -172,7 +193,7 @@ impl Storage for Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            self.read_throughput_model.insert(
+            self.read_scheduler.insert(
                 DiskActivity {
                     request_id,
                     requester,
@@ -202,7 +223,7 @@ impl Storage for Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-            self.write_throughput_model.insert(
+            self.write_scheduler.insert(
                 DiskActivity {
                     request_id,
                     requester,
