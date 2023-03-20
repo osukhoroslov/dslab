@@ -25,8 +25,9 @@ pub struct SystemTime(pub OrderedFloat<f64>);
 impl Serialize for SystemTime {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-        serializer.serialize_f64(self.0.0)
+        S: serde::Serializer,
+    {
+        serializer.serialize_f64(self.0 .0)
     }
 }
 
@@ -57,7 +58,7 @@ pub enum McEvent {
     TimerFired {
         proc: String,
         timer: String,
-        duration: SystemTime,
+        timer_delay: SystemTime,
     },
     TimerCancelled {
         proc: String,

@@ -1,8 +1,6 @@
 use std::cell::RefCell;
-use std::collections::BTreeSet;
-use std::collections::HashSet;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
@@ -36,8 +34,7 @@ impl PartialEq for McState {
     }
 }
 
-impl Eq for McState {
-}
+impl Eq for McState {}
 
 impl Hash for McState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
@@ -94,7 +91,7 @@ impl McSystem {
         self.events.available_events().len()
     }
 
-    pub fn events(&self) -> BTreeSet<McEventId> {
+    pub fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events().clone()
     }
 }

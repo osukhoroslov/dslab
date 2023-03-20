@@ -38,8 +38,8 @@ impl Dfs {
             return result;
         }
 
-        for event in system.events() {
-            self.process_event(system, event)?;
+        for event_id in system.available_events() {
+            self.process_event(system, event_id)?;
         }
         Ok(())
     }

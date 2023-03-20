@@ -50,7 +50,7 @@ impl Bfs {
             system.set_state(state);
             self.mark_visited(system.get_state(self.search_depth));
 
-            for event_id in system.events() {
+            for event_id in system.available_events() {
                 self.process_event(system, event_id)?;
             }
         }

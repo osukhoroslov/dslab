@@ -1,8 +1,9 @@
-mod events;
+mod dependency_resolver;
+pub mod events;
 pub mod model_checker;
 mod network;
 mod node;
-mod pending_events;
+pub mod pending_events;
 pub mod strategies;
 pub mod strategy;
 mod system;

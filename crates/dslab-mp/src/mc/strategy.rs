@@ -7,12 +7,10 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::mc::events::McEvent::{MessageReceived, TimerCancelled, TimerFired};
-use crate::mc::events::{DeliveryOptions, McEvent};
+use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
 use crate::util::t;
-
-use super::events::McEventId;
 
 #[derive(Clone, PartialEq)]
 pub enum LogMode {
@@ -46,13 +44,13 @@ pub trait Strategy {
 
     fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
 
-    fn process_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
-        let event = self.clone_event(system, event_num);
+    fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
+        let event = self.clone_event(system, event_id);
         match event {
             MessageReceived { options, .. } => {
                 match options {
-                    DeliveryOptions::NoFailures(..) => self.apply_event(system, event_num, false, false)?,
-                    DeliveryOptions::Dropped => self.process_drop_event(system, event_num)?,
+                    DeliveryOptions::NoFailures(..) => self.apply_event(system, event_id, false, false)?,
+                    DeliveryOptions::Dropped => self.process_drop_event(system, event_id)?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
                         max_dupl_count,
@@ -60,27 +58,27 @@ pub trait Strategy {
                     } => {
                         // Drop
                         if can_be_dropped {
-                            self.process_drop_event(system, event_num)?;
+                            self.process_drop_event(system, event_id)?;
                         }
 
                         // Default (normal / corrupt)
-                        self.apply_event(system, event_num, false, false)?;
+                        self.apply_event(system, event_id, false, false)?;
                         if can_be_corrupted {
-                            self.apply_event(system, event_num, false, true)?;
+                            self.apply_event(system, event_id, false, true)?;
                         }
 
                         // Duplicate (normal / corrupt one)
                         if max_dupl_count > 0 {
-                            self.apply_event(system, event_num, true, false)?;
+                            self.apply_event(system, event_id, true, false)?;
                             if can_be_corrupted {
-                                self.apply_event(system, event_num, true, true)?;
+                                self.apply_event(system, event_id, true, true)?;
                             }
                         }
                     }
                 }
             }
             TimerFired { .. } => {
-                self.apply_event(system, event_num, false, false)?;
+                self.apply_event(system, event_id, false, false)?;
             }
             TimerCancelled { .. } => {
                 panic!("Strategy should not receive TimerCancelled events")
@@ -90,9 +88,9 @@ pub trait Strategy {
         Ok(())
     }
 
-    fn process_drop_event(&mut self, system: &mut McSystem, event_num: usize) -> Result<(), String> {
+    fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
-        let event = self.take_event(system, event_num);
+        let event = self.take_event(system, event_id);
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
@@ -106,7 +104,7 @@ pub trait Strategy {
     fn apply_event(
         &mut self,
         system: &mut McSystem,
-        event_num: usize,
+        event_id: McEventId,
         duplicate: bool,
         corrupt: bool,
     ) -> Result<(), String> {
@@ -114,9 +112,9 @@ pub trait Strategy {
 
         let mut event;
         if duplicate {
-            event = self.duplicate_event(system, event_num);
+            event = self.duplicate_event(system, event_id);
         } else {
-            event = self.take_event(system, event_num);
+            event = self.take_event(system, event_id);
         }
 
         if corrupt {
@@ -134,12 +132,12 @@ pub trait Strategy {
         Ok(())
     }
 
-    fn take_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
-        system.events.pop(event_num)
+    fn take_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
+        system.events.pop(event_id)
     }
 
-    fn clone_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
-        system.events.get(event_num).unwrap().clone()
+    fn clone_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
+        system.events.get(event_id).unwrap().clone()
     }
 
     fn add_event(&self, system: &mut McSystem, event: McEvent) -> McEventId {
@@ -170,8 +168,8 @@ pub trait Strategy {
         }
     }
 
-    fn duplicate_event(&self, system: &mut McSystem, event_num: McEventId) -> McEvent {
-        let event = self.take_event(system, event_num);
+    fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
+        let event = self.take_event(system, event_id);
         self.add_event(system, event.duplicate().unwrap());
         self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
         event

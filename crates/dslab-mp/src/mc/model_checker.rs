@@ -36,7 +36,7 @@ impl ModelChecker {
                 events.push(McEvent::TimerFired {
                     proc: value.proc.clone(),
                     timer: value.timer.clone(),
-                    duration: SystemTime::from(0.0),
+                    timer_delay: SystemTime::from(0.0),
                 });
             }
         }
