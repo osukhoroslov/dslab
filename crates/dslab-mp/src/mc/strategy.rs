@@ -13,7 +13,7 @@ use crate::message::Message;
 use crate::util::t;
 
 #[derive(Clone, PartialEq)]
-pub enum LogMode {
+pub enum ExecutionMode {
     Default,
     Debug,
 }
@@ -176,7 +176,7 @@ pub trait Strategy {
     }
 
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
-        if self.log_mode() == &LogMode::Debug {
+        if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
                     self.log_message(depth, msg, src, dest, log_context);
@@ -214,13 +214,13 @@ pub trait Strategy {
         }
     }
 
-    fn initialize_visited(log_mode: &LogMode) -> VisitedStates
+    fn initialize_visited(log_mode: &ExecutionMode) -> VisitedStates
     where
         Self: Sized,
     {
         match log_mode {
-            LogMode::Debug => VisitedStates::Full(HashSet::default()),
-            LogMode::Default => VisitedStates::Partial(HashSet::default()),
+            ExecutionMode::Debug => VisitedStates::Full(HashSet::default()),
+            ExecutionMode::Default => VisitedStates::Partial(HashSet::default()),
         }
     }
 
@@ -249,7 +249,7 @@ pub trait Strategy {
     }
 
     fn update_summary(&mut self, status: String) {
-        if let LogMode::Debug = self.log_mode() {
+        if let ExecutionMode::Debug = self.execution_mode() {
             let counter = self.summary().states.entry(status).or_insert(0);
             *counter += 1;
         }
@@ -278,7 +278,7 @@ pub trait Strategy {
         }
     }
 
-    fn log_mode(&self) -> &LogMode;
+    fn execution_mode(&self) -> &ExecutionMode;
 
     fn search_depth(&self) -> u64;
 
