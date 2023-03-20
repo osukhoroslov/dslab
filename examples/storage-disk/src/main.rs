@@ -14,9 +14,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
-use dslab_models::throughput_sharing::{
-    make_constant_throughput_function, make_uniform_throughput_factor_function, EmpiricalThroughputFactorFunction,
-};
+use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, EmpiricalFactorFn};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
@@ -116,18 +114,19 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    // Creating empirical bandwidth model with weighted points distribution
-    let model = EmpiricalThroughputFactorFunction::new(&[(0.8, 3), (0.9, 10), (1., 31), (1.1, 15), (1.2, 5), (1.3, 6)]);
+    // Creating empirical factor function with weighted points distribution
+    let model = EmpiricalFactorFn::new(&[(0.8, 3), (0.9, 10), (1., 31), (1.1, 15), (1.2, 5), (1.3, 6)]);
     assert!(model.is_ok());
 
     let disk = rc!(refcell!(Disk::new(
         DISK_CAPACITY,
-        make_constant_throughput_function(DISK_READ_BW),
-        make_constant_throughput_function(DISK_WRITE_BW),
-        // Using created model as read bandwidth model for disk
+        // Using the constant throughput function for read operations
+        make_constant_throughput_fn(DISK_READ_BW),
+        make_constant_throughput_fn(DISK_WRITE_BW),
+        // Using the created factor function for read operations
         boxed!(model.unwrap()),
-        // Creating randomized bandwidth model with uniform distribution in [DISK_WRITE_BW - 10; DISK_WRITE_BW + 10)
-        boxed!(make_uniform_throughput_factor_function(0.9, 1.1)),
+        // Using the randomized uniform factor function for write operations
+        boxed!(make_uniform_factor_fn(0.9, 1.1)),
         sim.create_context(DISK_NAME),
     )));
 

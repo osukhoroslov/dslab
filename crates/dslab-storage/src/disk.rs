@@ -1,19 +1,11 @@
-//! Disk model.
+//! Basic implementation of storage model for disk.
 //!
-//! It has two main methods - [`read`](Disk::read) and [`write`](Disk::write),
-//! and some utility functions as [`mark_free`](Disk::mark_free) or [`get_used_space`](Disk::get_used_space).
-//! It can be created by [`new_simple`](Disk::new_simple) function if bandwidths are fixed.
+//! It supports modeling of concurrent execution of disk operations by means of generic fair throughput sharing model
+//! from the `dslab-models` crate. The underlying model also supports modeling of throughput degradation, variability
+//! and dependence on operation properties by means of user-defined throughput and factor functions. For detailed
+//! information about these functions, please refer to documentation in `dslab-models` crate.
 //!
-//! This model supports concurrent execution of requests with bandwidth sharing.
-//! It uses the generic fair throughput sharing model from `dslab-models` to compute the request completion times.
-//! Methods set is the same as for simple disk model.
-//!
-//! There is also support for [throughput factor functions](crate::throughput_factor)
-//! that dynamically compute per-request bandwidth based on the request size, current simulation time, etc.
-//! Several implementations of these models are included in this crate, and other user-defined models can also be used.
-//!
-//! Usage examples can be found in `/examples/storage-disk` and `/examples/storage-shared-disk`.
-//! Benchmark can be found in `/examples/storage-shared-disk-benchmark` and `/examples-other/simgrid/storage`
+//! Note that this model is quite generic and can be used to model other types of storage as well.
 
 use serde::Serialize;
 use sugars::boxed;
@@ -24,14 +16,14 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
-    make_constant_throughput_function, ConstantThroughputFactorFunction, FairThroughputSharingModel,
-    ThroughputFactorFunction, ThroughputFunction, ThroughputSharingModel,
+    make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
+    ThroughputSharingModel,
 };
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::storage::{Storage, StorageInfo};
 
-/// Struct for a disk activity.
+/// Describes a disk operation.
 #[derive(Clone)]
 pub struct DiskActivity {
     request_id: u64,
@@ -45,10 +37,9 @@ struct DiskReadActivityCompleted {}
 #[derive(Clone, Serialize)]
 struct DiskWriteActivityCompleted {}
 
-/// Representation of disk.
+/// Represents a disk.
 ///
-/// Disk is characterized by its capacity, read/write throughput models
-/// and read/write throughput factor functions.
+/// Disk is characterized by its capacity and read/write throughput models.
 ///
 /// Disk state includes the amount of used disk space and state of throughput models.
 pub struct Disk {
@@ -63,18 +54,18 @@ pub struct Disk {
 }
 
 impl Disk {
-    /// Creates new disk with fixed read and write throughput and default throughput factor functions.
+    /// Creates new disk with constant throughput and factor functions.
     pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
         Self {
             capacity,
             used: 0,
             read_throughput_model: FairThroughputSharingModel::new(
-                make_constant_throughput_function(read_bandwidth),
-                boxed!(ConstantThroughputFactorFunction::new(1.)),
+                make_constant_throughput_fn(read_bandwidth),
+                boxed!(ConstantFactorFn::new(1.)),
             ),
             write_throughput_model: FairThroughputSharingModel::new(
-                make_constant_throughput_function(write_bandwidth),
-                boxed!(ConstantThroughputFactorFunction::new(1.)),
+                make_constant_throughput_fn(write_bandwidth),
+                boxed!(ConstantFactorFn::new(1.)),
             ),
             next_request_id: 0,
             next_read_event: u64::MAX,
@@ -83,13 +74,13 @@ impl Disk {
         }
     }
 
-    /// Creates new disk with given read and write throughput and factor functions.
+    /// Creates new disk with arbitrary throughput and factor functions.
     pub fn new(
         capacity: u64,
-        read_throughput_function: ThroughputFunction,
-        write_throughput_function: ThroughputFunction,
-        read_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
-        write_throughput_factor_function: Box<dyn ThroughputFactorFunction<DiskActivity>>,
+        read_throughput_function: ResourceThroughputFn,
+        write_throughput_function: ResourceThroughputFn,
+        read_throughput_factor_function: Box<dyn ActivityFactorFn<DiskActivity>>,
+        write_throughput_factor_function: Box<dyn ActivityFactorFn<DiskActivity>>,
         ctx: SimulationContext,
     ) -> Self {
         Self {
@@ -155,6 +146,7 @@ impl Disk {
     }
 }
 
+/// Storage model implementation for disk.
 impl Storage for Disk {
     fn read(&mut self, size: u64, requester: Id) -> u64 {
         log_debug!(

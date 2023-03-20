@@ -4,8 +4,8 @@ use dslab_core::{Simulation, SimulationContext};
 
 use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;
-use super::model::{make_constant_throughput_function, ThroughputSharingModel};
-use super::throughput_factor::ThroughputFactorFunction;
+use super::functions::ActivityFactorFn;
+use super::model::{make_constant_resource_throughput_fn, ThroughputSharingModel};
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(
@@ -191,7 +191,7 @@ fn dynamic_throughput() {
 
 struct TestThroughputFactorFunction {}
 
-impl ThroughputFactorFunction<u32> for TestThroughputFactorFunction {
+impl ActivityFactorFn<u32> for TestThroughputFactorFunction {
     fn get_factor(&mut self, item: &u32, _ctx: &mut SimulationContext) -> f64 {
         if *item == 0 {
             0.8
@@ -205,7 +205,7 @@ impl ThroughputFactorFunction<u32> for TestThroughputFactorFunction {
 fn throughput_factor() {
     let mut sim = Simulation::new(123);
     let mut ctx = sim.create_context("test");
-    let tf = make_constant_throughput_function(100.);
+    let tf = make_constant_resource_throughput_fn(100.);
     let mut model: FairThroughputSharingModel<u32> =
         FairThroughputSharingModel::new(tf, boxed!(TestThroughputFactorFunction {}));
     model.insert(0, 160., &mut ctx);

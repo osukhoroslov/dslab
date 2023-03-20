@@ -2,16 +2,15 @@
 
 mod fair_fast;
 mod fair_slow;
+mod functions;
 mod model;
-mod throughput_factor;
 
 #[cfg(test)]
 mod tests;
 
 pub use fair_fast::FairThroughputSharingModel;
 pub use fair_slow::SlowFairThroughputSharingModel;
-pub use model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
-pub use throughput_factor::{
-    make_uniform_throughput_factor_function, ConstantThroughputFactorFunction, EmpiricalThroughputFactorFunction,
-    RandomizedThroughputFactorFunction, ThroughputFactorFunction,
+pub use functions::{
+    make_constant_throughput_fn, make_uniform_factor_fn, ConstantFactorFn, EmpiricalFactorFn, RandomizedFactorFn,
 };
+pub use model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};

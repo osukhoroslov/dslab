@@ -7,8 +7,8 @@ use sugars::boxed;
 
 use dslab_core::SimulationContext;
 
-use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
-use super::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
+use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
+use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
@@ -50,8 +50,8 @@ impl<T> Eq for Activity<T> {}
 /// Fast implementation of fair throughput sharing model.
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
-    throughput_function: ThroughputFunction,
-    throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+    throughput_function: ResourceThroughputFn,
+    throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
     throughput_per_activity: f64,
     next_id: u64,
     total_work: f64,
@@ -61,8 +61,8 @@ pub struct FairThroughputSharingModel<T> {
 impl<T> FairThroughputSharingModel<T> {
     /// Creates model with given throughput function and throughput factor function.
     pub fn new(
-        throughput_function: ThroughputFunction,
-        throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+        throughput_function: ResourceThroughputFn,
+        throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
     ) -> Self {
         Self {
             activities: BinaryHeap::new(),
@@ -77,15 +77,15 @@ impl<T> FairThroughputSharingModel<T> {
 
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(make_constant_throughput_function(throughput))
+        Self::with_dynamic_throughput(make_constant_throughput_fn(throughput))
     }
 
     /// Creates model with dynamic throughput, represented by given closure.
-    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
         Self {
             activities: BinaryHeap::new(),
             throughput_function,
-            throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
+            throughput_factor_function: boxed!(ConstantFactorFn::new(1.)),
             throughput_per_activity: 0.,
             next_id: 0,
             total_work: 0.,

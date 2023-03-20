@@ -1,5 +1,5 @@
-//! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
-//! and completion.
+//! Slow implementation of fair throughput sharing model, which recalculates all event times
+//! at each activity creation and completion.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -8,8 +8,8 @@ use sugars::boxed;
 
 use dslab_core::SimulationContext;
 
-use super::model::{make_constant_throughput_function, ThroughputFunction, ThroughputSharingModel};
-use super::throughput_factor::{ConstantThroughputFactorFunction, ThroughputFactorFunction};
+use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
+use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -53,8 +53,8 @@ impl<T> Eq for Activity<T> {}
 /// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 /// and completion.
 pub struct SlowFairThroughputSharingModel<T> {
-    throughput_function: ThroughputFunction,
-    throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+    throughput_function: ResourceThroughputFn,
+    throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
     last_throughput_per_item: f64,
@@ -64,8 +64,8 @@ pub struct SlowFairThroughputSharingModel<T> {
 impl<T> SlowFairThroughputSharingModel<T> {
     /// Creates model with given throughput function and throughput factor function.
     pub fn new(
-        throughput_function: ThroughputFunction,
-        throughput_factor_function: Box<dyn ThroughputFactorFunction<T>>,
+        throughput_function: ResourceThroughputFn,
+        throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
     ) -> Self {
         Self {
             throughput_function,
@@ -79,14 +79,14 @@ impl<T> SlowFairThroughputSharingModel<T> {
 
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(make_constant_throughput_function(throughput))
+        Self::with_dynamic_throughput(make_constant_throughput_fn(throughput))
     }
 
     /// Creates model with dynamic throughput, represented by given closure.
-    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
         Self {
             throughput_function,
-            throughput_factor_function: boxed!(ConstantThroughputFactorFunction::new(1.)),
+            throughput_factor_function: boxed!(ConstantFactorFn::new(1.)),
             entries: BinaryHeap::new(),
             next_id: 0,
             last_throughput_per_item: 0.,
