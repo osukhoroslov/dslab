@@ -2,14 +2,14 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency_resolver::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId, SystemTime};
+use crate::mc::events::{McEvent, McEventId, McDuration};
 
 use super::events::DeliveryOptions;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct McEventTimed {
     event: McEvent,
-    start_time: SystemTime,
+    start_time: McDuration,
 }
 
 #[derive(Default, Clone, Hash, Eq, PartialEq)]
@@ -19,7 +19,7 @@ pub struct PendingEvents {
     available_events: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
-    global_time: BTreeMap<String, SystemTime>,
+    global_time: BTreeMap<String, McDuration>,
 }
 
 impl PendingEvents {
@@ -94,8 +94,8 @@ impl PendingEvents {
         id
     }
 
-    fn get_global_time(&self, proc: &String) -> SystemTime {
-        self.global_time.get(proc).map(|x| *x).unwrap_or_default()
+    fn get_global_time(&self, proc: &String) -> McDuration {
+        self.global_time.get(proc).copied().unwrap_or_default()
     }
 
     pub fn get(&self, id: McEventId) -> Option<&McEvent> {
@@ -115,14 +115,11 @@ impl PendingEvents {
         let unblocked_events = self.resolver.pop(event_id);
         self.available_events.extend(unblocked_events);
         let event_timed = self.events.remove(&event_id).unwrap();
-        match &event_timed.event {
-            McEvent::TimerFired { timer_delay, proc, .. } => {
-                assert!(self.get_global_time(proc) <= event_timed.start_time + *timer_delay);
-                self.global_time.insert(proc.to_string(), event_timed.start_time + *timer_delay);
-            }
-            _ => {}
+        if let McEvent::TimerFired { timer_delay, proc, .. } = &event_timed.event {
+            assert!(self.get_global_time(proc) <= event_timed.start_time + *timer_delay);
+            self.global_time
+                .insert(proc.clone(), event_timed.start_time + *timer_delay);
         }
-        println!("new times: {:?}", self.global_time);
         event_timed.event
     }
 }

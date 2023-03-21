@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::mc::events::McEvent;
-use crate::mc::events::SystemTime;
+use crate::mc::events::McDuration;
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
@@ -129,7 +129,7 @@ impl McNode {
                         let event = McEvent::TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
-                            timer_delay: SystemTime::from(delay),
+                            timer_delay: McDuration::from(delay),
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking

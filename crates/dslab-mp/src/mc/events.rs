@@ -8,7 +8,7 @@ use crate::message::Message;
 #[derive(Serialize, Clone, PartialEq, Eq, Hash)]
 pub enum DeliveryOptions {
     /// Message will be received exactly once without corruption with specified max delay
-    NoFailures(SystemTime),
+    NoFailures(McDuration),
     /// Message will not be received
     Dropped,
     /// Message delivery may be subject to some failures
@@ -19,32 +19,7 @@ pub enum DeliveryOptions {
     },
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, Ord, Copy, PartialOrd, Default)]
-pub struct SystemTime(pub OrderedFloat<f64>);
-
-impl Serialize for SystemTime {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_f64(self.0 .0)
-    }
-}
-
-impl From<f64> for SystemTime {
-    fn from(value: f64) -> Self {
-        Self(OrderedFloat(value))
-    }
-}
-
-impl Add for SystemTime {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0)
-    }
-}
-
+pub type McDuration = OrderedFloat<f64>;
 pub type McEventId = usize;
 
 #[derive(Serialize, Clone, Eq, Hash, PartialEq)]
@@ -58,7 +33,7 @@ pub enum McEvent {
     TimerFired {
         proc: String,
         timer: String,
-        timer_delay: SystemTime,
+        timer_delay: McDuration,
     },
     TimerCancelled {
         proc: String,

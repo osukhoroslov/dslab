@@ -2,11 +2,11 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::ops::Bound::{Excluded, Unbounded};
 
-use crate::mc::events::{McEventId, SystemTime};
+use crate::mc::events::{McEventId, McDuration};
 
 type BidirectionalMapping = (
-    BTreeMap<SystemTime, BTreeSet<McEventId>>,
-    BTreeMap<McEventId, SystemTime>,
+    BTreeMap<McDuration, BTreeSet<McEventId>>,
+    BTreeMap<McEventId, McDuration>,
 );
 
 /// Tracks and enforces dependencies between the TimerFired events on the same node.
@@ -33,7 +33,7 @@ impl DependencyResolver {
     pub fn add_timer(
         &mut self,
         proc: String,
-        time: SystemTime,
+        time: McDuration,
         event: McEventId,
     ) -> (bool, Option<BTreeSet<McEventId>>) {
         self.add_event_to_node_mapping(proc.clone(), event);
@@ -56,13 +56,13 @@ impl DependencyResolver {
         (is_available, blocked_events)
     }
 
-    pub fn add_message(&mut self, proc: String, time: SystemTime, event: McEventId) -> Option<BTreeSet<McEventId>> {
+    pub fn add_message(&mut self, proc: String, time: McDuration, event: McEventId) -> Option<BTreeSet<McEventId>> {
         self.add_event_to_node_mapping(proc.clone(), event);
         Self::create_event_mappings(&mut self.pending_messages, &proc, event, time);
 
         let timers = self.proc_timers.entry(proc).or_default();
         if let Some((timer, first_group)) = timers.0.iter().next() {
-            if *timer > SystemTime::from(time) {
+            if *timer > McDuration::from(time) {
                 return Some(first_group.clone());
             }
         }
@@ -88,14 +88,14 @@ impl DependencyResolver {
         proc_mapping: &mut BTreeMap<String, BidirectionalMapping>,
         proc: &String,
         id: McEventId,
-        time: SystemTime,
+        time: McDuration,
     ) {
         let mapping = proc_mapping.entry(proc.clone()).or_default();
-        mapping.0.entry(SystemTime::from(time)).or_default().insert(id);
+        mapping.0.entry(McDuration::from(time)).or_default().insert(id);
         mapping.1.insert(id, time);
     }
 
-    fn get_min_time_message(&self, proc: &String) -> Option<&SystemTime> {
+    fn get_min_time_message(&self, proc: &String) -> Option<&McDuration> {
         if let Some(messages) = self.pending_messages.get(proc) {
             messages.0.iter().next().map(|x| x.0)
         } else {
@@ -103,7 +103,7 @@ impl DependencyResolver {
         }
     }
 
-    fn get_min_time_timers(&self, proc: &String) -> Option<(&SystemTime, &BTreeSet<McEventId>)> {
+    fn get_min_time_timers(&self, proc: &String) -> Option<(&McDuration, &BTreeSet<McEventId>)> {
         if let Some(timers) = self.proc_timers.get(proc) {
             if let Some(timer_group) = timers.0.iter().next() {
                 Some(timer_group)

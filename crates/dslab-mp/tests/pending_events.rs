@@ -1,16 +1,15 @@
 use std::collections::BTreeSet;
-
-use dslab_mp::mc::events::{DeliveryOptions, McEvent, McEventId, SystemTime};
-use dslab_mp::mc::pending_events::PendingEvents;
-use dslab_mp::message::Message;
-
 use rand::prelude::IteratorRandom;
 use rand::prelude::SliceRandom;
 
+use dslab_mp::mc::events::{DeliveryOptions, McEvent, McEventId, McDuration};
+use dslab_mp::mc::pending_events::PendingEvents;
+use dslab_mp::message::Message;
+
 #[test]
 fn test_system_time() {
-    let a = SystemTime::from(0.0);
-    let b = SystemTime::from(0.0);
+    let a = McDuration::from(0.0);
+    let b = McDuration::from(0.0);
     assert!(b <= a);
     assert!(a <= b);
     assert!(a == b);
@@ -28,7 +27,7 @@ fn test_dependency_resolver_simple() {
             let event = McEvent::TimerFired {
                 proc: node_id.to_string(),
                 timer: format!("{}", event_time),
-                timer_delay: SystemTime::from(event_time as f64),
+                timer_delay: McDuration::from(event_time as f64),
             };
             rev_id[resolver.push(event)] = event_time * 3 + node_id;
         }
@@ -63,7 +62,7 @@ fn test_dependency_resolver_pop() {
             let event = McEvent::TimerFired {
                 proc: node_id.to_string(),
                 timer: format!("{}", event_time),
-                timer_delay: SystemTime::from(1.0 + event_time as f64),
+                timer_delay: McDuration::from(1.0 + event_time as f64),
             };
             rev_id[resolver.push(event)] = event_time * 3 + node_id;
         }
@@ -88,7 +87,7 @@ fn test_dependency_resolver_pop() {
         let event = McEvent::TimerFired {
             proc: node_id.to_string(),
             timer: format!("{}", node_id),
-            timer_delay: SystemTime::from(2.1),
+            timer_delay: McDuration::from(2.1),
         };
         rev_id[resolver.push(event)] = 9 + node_id;
     }
@@ -121,7 +120,7 @@ fn test_timer_dependency_resolver_same_time() {
             let event = McEvent::TimerFired {
                 proc: node_id.to_string(),
                 timer: format!("{}", event_time),
-                timer_delay: SystemTime::from((event_time / 5) as f64),
+                timer_delay: McDuration::from((event_time / 5) as f64),
             };
             rev_id[resolver.push(event)] = event_time;
         }
@@ -154,7 +153,7 @@ fn test_timer_dependency_resolver_stable_network() {
         let event = McEvent::TimerFired {
             proc: "0".to_owned(),
             timer: format!("{}", event_time),
-            timer_delay: SystemTime::from(time as f64),
+            timer_delay: McDuration::from(time as f64),
         };
         rev_id[resolver.push(event)] = event_time;
     }
@@ -167,7 +166,7 @@ fn test_timer_dependency_resolver_stable_network() {
             },
             src: "0".to_owned(),
             dest: "0".to_owned(),
-            options: DeliveryOptions::NoFailures(SystemTime::from(message_time as f64)),
+            options: DeliveryOptions::NoFailures(McDuration::from(message_time as f64)),
         };
         rev_id[resolver.push(event)] = 20 + message_time / 2;
     }
@@ -205,7 +204,7 @@ fn test_timer_dependency_resolver_message_blocks_timer() {
         let event = McEvent::TimerFired {
             proc: "0".to_owned(),
             timer: format!("{}", timer),
-            timer_delay: SystemTime::from(10.0 * (1.0 + (timer / 10) as f64)),
+            timer_delay: McDuration::from(10.0 * (1.0 + (timer / 10) as f64)),
         };
         rev_id[resolver.push(event)] = timer;
     }
@@ -216,7 +215,7 @@ fn test_timer_dependency_resolver_message_blocks_timer() {
         },
         src: "0".to_owned(),
         dest: "0".to_owned(),
-        options: DeliveryOptions::NoFailures(SystemTime::from(1.0)),
+        options: DeliveryOptions::NoFailures(McDuration::from(1.0)),
     };
     let message_id = resolver.push(message);
     rev_id[message_id] = 100;

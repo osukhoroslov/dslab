@@ -63,13 +63,13 @@ impl Network {
         self.max_delay = delay;
     }
 
+    pub fn max_delay(&self) -> f64 {
+        self.max_delay
+    }
+
     pub fn set_delays(&mut self, min_delay: f64, max_delay: f64) {
         self.min_delay = min_delay;
         self.max_delay = max_delay;
-    }
-
-    pub fn get_max_delay(&self) -> f64 {
-        self.max_delay
     }
 
     pub fn drop_rate(&self) -> f64 {
