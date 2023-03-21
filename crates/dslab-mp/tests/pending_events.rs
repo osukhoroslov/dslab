@@ -1,8 +1,8 @@
-use std::collections::BTreeSet;
 use rand::prelude::IteratorRandom;
 use rand::prelude::SliceRandom;
+use std::collections::BTreeSet;
 
-use dslab_mp::mc::events::{DeliveryOptions, McEvent, McEventId, McDuration};
+use dslab_mp::mc::events::{DeliveryOptions, McDuration, McEvent, McEventId};
 use dslab_mp::mc::pending_events::PendingEvents;
 use dslab_mp::message::Message;
 

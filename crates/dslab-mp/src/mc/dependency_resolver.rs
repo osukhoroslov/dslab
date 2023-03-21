@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::ops::Bound::{Excluded, Unbounded};
 
-use crate::mc::events::{McEventId, McDuration};
+use crate::mc::events::{McDuration, McEventId};
 
 type BidirectionalMapping = (
     BTreeMap<McDuration, BTreeSet<McEventId>>,

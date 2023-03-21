@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency_resolver::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId, McDuration};
+use crate::mc::events::{McDuration, McEvent, McEventId};
 
 use super::events::DeliveryOptions;
 
@@ -33,7 +33,7 @@ impl PendingEvents {
             global_time: BTreeMap::new(),
         }
     }
-    
+
     pub fn push(&mut self, event: McEvent) -> McEventId {
         let id = self.id_counter;
         self.id_counter += 1;
