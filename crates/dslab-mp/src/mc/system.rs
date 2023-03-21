@@ -87,10 +87,6 @@ impl McSystem {
         self.events = state.events;
     }
 
-    pub fn events_num(&self) -> usize {
-        self.events.available_events().len()
-    }
-
     pub fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events().clone()
     }
