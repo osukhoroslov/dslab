@@ -4,28 +4,26 @@ use dslab_faas::config::Config;
 use dslab_faas::trace::Trace;
 
 use crate::estimator::{Estimation, Estimator};
-use crate::ls::common::{Instance, OptimizationGoal};
-use crate::ls::local_search::LocalSearch;
+use crate::ant::colony::AntColony;
+use crate::ant::common::Instance;
 
-pub struct LocalSearchEstimator {
-    goal: OptimizationGoal,
-    search: LocalSearch,
+pub struct AntColonyEstimator {
+    inner: AntColony,
     keepalive: f64,
     round_mul: f64,
 }
 
-impl LocalSearchEstimator {
-    pub fn new(goal: OptimizationGoal, search: LocalSearch, keepalive: f64, round_mul: f64) -> Self {
+impl AntColonyEstimator {
+    pub fn new(colony: AntColony, keepalive: f64, round_mul: f64) -> Self {
         Self {
-            goal,
-            search,
+            inner: colony,
             keepalive,
             round_mul,
         }
     }
 }
 
-impl Estimator for LocalSearchEstimator {
+impl Estimator for AntColonyEstimator {
     type EstimationType = f64;
 
     fn estimate(&mut self, config: Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
@@ -76,11 +74,7 @@ impl Estimator for LocalSearchEstimator {
             instance.req_dur.push(item.1);
             instance.req_start.push(item.0);
         }
-        let obj = self.search.run(&instance, None).objective;
-        if self.goal == OptimizationGoal::Maximization {
-            Estimation::LowerBound((obj as f64) / self.round_mul)
-        } else {
-            Estimation::UpperBound((obj as f64) / self.round_mul)
-        }
+        let obj = self.inner.run(&instance);
+        Estimation::UpperBound((obj as f64) / self.round_mul)
     }
 }

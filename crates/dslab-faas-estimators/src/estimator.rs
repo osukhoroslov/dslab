@@ -1,5 +1,3 @@
-use std::boxed::Box;
-
 use num::{Bounded, Num};
 
 use dslab_faas::config::Config;
@@ -14,5 +12,5 @@ pub enum Estimation<T: Num + Bounded> {
 
 pub trait Estimator {
     type EstimationType: Num + Bounded;
-    fn estimate(&mut self, config: Config, trace: Box<dyn Trace>) -> Estimation<Self::EstimationType>;
+    fn estimate(&mut self, config: Config, trace: &dyn Trace) -> Estimation<Self::EstimationType>;
 }

@@ -1,4 +1,5 @@
-use std::collections::{BTreeSet, HashSet};
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, BTreeSet, HashMap, HashSet};
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -19,38 +20,6 @@ pub struct DestroyRepairNeighborhood {
 impl DestroyRepairNeighborhood {
     pub fn new(destroy_part: f64) -> Self {
         Self { destroy_part }
-    }
-
-    fn check_after_change(
-        containers: &[Container],
-        host_id: usize,
-        host: &[u64],
-        change: Option<(usize, f64, f64)>,
-    ) -> bool {
-        let ch = change.unwrap_or((usize::MAX, 0.0, 0.0));
-        for r in 0..host.len() {
-            let mut events = Vec::new();
-            for (i, c) in containers.iter().enumerate() {
-                if c.host == host_id {
-                    if ch.0 == i {
-                        events.push((ch.1, 1, c.resources[r]));
-                        events.push((ch.2, -1, c.resources[r]));
-                    } else {
-                        events.push((c.start, 1, c.resources[r]));
-                        events.push((c.end, -1, c.resources[r]));
-                    }
-                }
-            }
-            events.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-            let mut sum = 0i64;
-            for (_, sgn, cnt) in events.drain(..) {
-                sum += (cnt as i64) * (sgn as i64);
-                if sum > (host[r] as i64) {
-                    return false;
-                }
-            }
-        }
-        true
     }
 }
 
@@ -75,154 +44,336 @@ impl Neighborhood for DestroyRepairNeighborhood {
         // possibly breaking some containers into several more containers
         // it can be proven that after breaking no constraints are violated
         let w = instance.keepalive;
-        let mut init = s.containers.clone();
         let cnt = ((instance.req_app.len() as f64) * self.destroy_part).ceil() as usize;
-        let mut del_vec = sample(instance.req_app.len(), cnt, rng);
-        let del = HashSet::<usize>::from_iter(del_vec.iter().cloned());
-        let mut conts = Vec::new();
-        for c in init.drain(..) {
-            let mut start = c.start;
-            let mut end = start;
-            let mut invs = Vec::new();
-            for id in c.invocations.iter().copied() {
-                if del.contains(&id) {
-                    continue;
-                } else {
-                    if !invs.is_empty() && end + w + EPS < instance.req_start[id] {
-                        let new = Container {
-                            host: c.host,
-                            app: c.app,
-                            invocations: invs,
-                            resources: c.resources.clone(),
-                            start: start,
-                            end: end + w,
-                        };
-                        conts.push(new);
-                        invs = Vec::new();
-                    }
-                    if invs.is_empty() {
-                        start = instance.req_start[id];
-                        end = start + instance.req_dur[id] + instance.app_coldstart[instance.req_app[id]];
-                    } else {
-                        end = end.max(instance.req_start[id]) + instance.req_dur[id];
-                    }
-                    invs.push(id);
+        //let del_vec = sample(instance.req_app.len(), cnt, rng);
+        //let del = HashSet::<usize>::from_iter(del_vec.into_iter());
+        /*let mut l = rng.gen_range(0..instance.req_app.len());
+        let mut r = rng.gen_range(0..instance.req_app.len()+1);
+        if l > r {
+            let tmp = r;
+            r = l;
+            l = tmp;
+        }
+        let del = HashSet::<usize>::from_iter(l..r);
+        let mut assignment = HashMap::new();
+        for container in s.containers.iter() {
+            for id in container.invocations.iter().copied() {
+                if !del.contains(&id) {
+                    assignment.insert(id, container.host);
                 }
             }
-            if !invs.is_empty() {
-                let new = Container {
-                    host: c.host,
-                    app: c.app,
-                    invocations: invs,
-                    resources: c.resources.clone(),
-                    start: start,
-                    end: end + w,
-                };
-                conts.push(new);
+        }*/
+        let del_hosts = HashSet::<usize>::from_iter(sample(instance.hosts.len(), 1, rng).into_iter());
+        let mut assignment = HashMap::new();
+        for container in s.containers.iter() {
+            for id in container.invocations.iter().copied() {
+                if !del_hosts.contains(&container.host) {
+                    assignment.insert(id, container.host);
+                }
             }
         }
-        // repair step: we greedily insert the removed invocations back into solution
-        del_vec.shuffle(rng);
-        for id in del_vec.drain(..) {
-            let init_host = ((1000000007u64 * (id as u64) + 1) % (instance.hosts.len() as u64)) as usize;
-            // TODO: loop over all hosts. It requires more careful implementation of objective
-            // functions
-            let mut host = init_host;
+        let mut conts = Vec::<Container>::new();
+        let mut used = vec![vec![0u64; instance.hosts[0].len()]; instance.hosts.len()];
+        let mut containers_by_host = vec![HashSet::<usize>::new(); instance.hosts.len()];
+        let mut expire = BTreeSet::<(u64, usize)>::new();
+        let mut queue = BinaryHeap::with_capacity(instance.req_start.len());
+        for (id, t) in instance.req_start.iter().enumerate() {
+            queue.push((Reverse(*t), id));
+        }
+        while let Some((Reverse(time), i)) = queue.pop() {
+            while let Some(x) = expire.first() {
+                if x.0 > time {
+                    break;
+                }
+                let evt = expire.pop_first().unwrap();
+                let c = evt.1;
+                for r in 0..used[conts[c].host].len() {
+                    used[conts[c].host][r] -= conts[c].resources[r];
+                }
+                containers_by_host[conts[c].host].remove(&c);
+            }
+            let mut host = usize::MAX;
+            if let Some(h) = assignment.get(&i) {
+                host = *h;
+            } else {
+                let mut status = i64::MIN;
+                let mut possible = 0..used.len();//sample(used.len(), used.len()/2, rng);
+                for h in possible {
+                    /*if !del_hosts.contains(&h) {
+                        continue;
+                    }*/
+                    for c in containers_by_host[h].iter().copied() {
+                        if conts[c].app == instance.req_app[i] && time >= conts[c].end - w {
+                            host = h;
+                            status = 3;
+                            break;
+                        }
+                    }
+                    if status == 3 {
+                        break;
+                    }
+                    let mut exceed = false;
+                    for r in 0..used[h].len() {
+                        if used[h][r] + instance.apps[instance.req_app[i]][r] > instance.hosts[h][r] {
+                            exceed = true;
+                            break;
+                        }
+                    }
+                    if !exceed {
+                        status = 2;
+                        host = h;
+                        continue;
+                    }
+                    let curr = -(containers_by_host[h].len() as i64);
+                    if curr > status {
+                        status = curr;
+                        host = h;
+                    }
+                }
+            }
             let mut placed = false;
-            loop {
-                //TODO: faster implementation
-                //TODO: implement "connection" moves when the invocation can merge two containers
-                //into one
-                let mut target = 0;
-                let mut can_insert = false;
-                // search for container that allows appending this invocation
-                for (i, c) in conts.iter().enumerate() {
-                    if c.app == instance.req_app[id]
-                        && c.host == host
-                        && c.end - w <= instance.req_start[id] + EPS
-                        && c.end + EPS >= instance.req_start[id]
-                    {
-                        if Self::check_after_change(
-                            &conts,
-                            host,
-                            &instance.hosts[host],
-                            Some((i, c.start, instance.req_start[id] + instance.req_dur[id] + w)),
-                        ) {
-                            target = i;
-                            can_insert = true;
-                            break;
-                        }
-                    }
-                }
-                if can_insert {
-                    conts[target].invocations.push(id);
-                    conts[target].end = instance.req_start[id] + instance.req_dur[id] + w;
+            for c in containers_by_host[host].iter().copied() {
+                if conts[c].app == instance.req_app[i] && time >= conts[c].end - w {
+                    expire.remove(&(conts[c].end, c));
+                    conts[c].end = time.min(conts[c].end - w).max(instance.req_start[i]) + instance.req_dur[i] + w;
+                    expire.insert((conts[c].end, c));
+                    conts[c].invocations.push(i);
                     placed = true;
-                    break;
-                }
-                let atleast =
-                    instance.req_start[id] + instance.req_dur[id] + instance.app_coldstart[instance.req_app[id]];
-                let mut end_delta = 0.0;
-                // search for container that allows prepending this invocation
-                for (i, c) in conts.iter().enumerate() {
-                    if c.app == instance.req_app[id]
-                        && c.host == host
-                        && instance.req_start[c.invocations[0]] > atleast - EPS
-                        && instance.req_start[c.invocations[0]] < atleast + w + EPS
-                    {
-                        let mut end = instance.req_start[c.invocations[0]];
-                        for id in c.invocations.iter().copied() {
-                            end = end.max(instance.req_start[id]) + instance.req_dur[id];
-                        }
-                        end += w;
-                        if Self::check_after_change(
-                            &conts,
-                            host,
-                            &instance.hosts[host],
-                            Some((i, instance.req_start[id], end)),
-                        ) {
-                            target = i;
-                            can_insert = true;
-                            end_delta = c.end - end;
-                            break;
-                        }
-                    }
-                }
-                if can_insert {
-                    conts[target].invocations.insert(0, id);
-                    conts[target].start = instance.req_start[id];
-                    conts[target].end -= end_delta;
-                    placed = true;
-                    break;
-                }
-                let mut tmp = conts.clone();
-                let c = Container {
-                    host,
-                    app: instance.req_app[id],
-                    invocations: vec![id],
-                    resources: instance.apps[instance.req_app[id]].clone(),
-                    start: instance.req_start[id],
-                    end: instance.req_start[id]
-                        + instance.app_coldstart[instance.req_app[id]]
-                        + instance.req_dur[id]
-                        + w,
-                };
-                tmp.push(c);
-                if Self::check_after_change(&tmp, host, &instance.hosts[host], None) {
-                    conts = tmp;
-                    placed = true;
-                    break;
-                }
-                host = (host + 1) % instance.hosts.len();
-                if host == init_host {
                     break;
                 }
             }
-            assert!(placed);
+            if placed {
+                continue;
+            }
+            placed = true;
+            for r in 0..used[host].len() {
+                if used[host][r] + instance.apps[instance.req_app[i]][r] > instance.hosts[host][r] {
+                    placed = false;
+                    break;
+                }
+            }
+            if placed {
+                let new = Container {
+                    host,
+                    app: instance.req_app[i],
+                    invocations: vec![i],
+                    resources: instance.apps[instance.req_app[i]].clone(),
+                    start: time,
+                    end: time + instance.req_dur[i] + w + instance.app_coldstart[instance.req_app[i]],
+                };
+                expire.insert((new.end, conts.len()));
+                containers_by_host[host].insert(conts.len());
+                for r in 0..used[host].len() {
+                    used[host][r] += instance.apps[instance.req_app[i]][r];
+                }
+                conts.push(new);
+                continue;
+            }
+            let mut best_time = u64::MAX;
+            let mut curr = used[host].clone();
+            for (t, c) in expire.iter().copied() {
+                if conts[c].host == host {
+                    let mut ok = true;
+                    for r in 0..curr.len() {
+                        curr[r] -= conts[c].resources[r];
+                        if curr[r] + instance.apps[instance.req_app[i]][r] > instance.hosts[host][r] {
+                            ok = false;
+                        }
+                    }
+                    if ok {
+                        best_time = t;
+                        break;
+                    }
+                }
+            }
+            queue.push((Reverse(best_time), i));
+            assignment.insert(i, host);
         }
         let mut nxt = State {
             containers: conts,
-            objective: 0.0,
+            objective: 0,
+        };
+        nxt.recompute_objective(instance);
+        println!("nxt obj = {}", nxt.objective);
+        match nxt.validate(instance) {
+            Ok(_) => {}
+            Err(e) => {
+                panic!("{}", e);
+            }
+        }
+        nxt
+    }
+
+    fn reset(&mut self) {}
+}
+
+
+
+pub struct TestNeighborhood {
+    destroy_part: f64,
+}
+
+impl TestNeighborhood {
+    pub fn new(destroy_part: f64) -> Self {
+        Self { destroy_part }
+    }
+}
+
+
+impl Neighborhood for TestNeighborhood {
+    fn step(&mut self, s: &State, instance: &Instance, rng: &mut Pcg64) -> State {
+        // destroy step: we remove |invocations| * destroy_part invocations from current state
+        // possibly breaking some containers into several more containers
+        // it can be proven that after breaking no constraints are violated
+        let w = instance.keepalive;
+        let cnt = ((instance.req_app.len() as f64) * self.destroy_part).ceil() as usize;
+        //let del_vec = sample(instance.req_app.len(), cnt, rng);
+        //let del = HashSet::<usize>::from_iter(del_vec.into_iter());
+        /*let mut l = rng.gen_range(0..instance.req_app.len());
+        let mut r = rng.gen_range(0..instance.req_app.len()+1);
+        if l > r {
+            let tmp = r;
+            r = l;
+            l = tmp;
+        }
+        let del = HashSet::<usize>::from_iter(l..r);
+        let mut assignment = HashMap::new();
+        for container in s.containers.iter() {
+            for id in container.invocations.iter().copied() {
+                if !del.contains(&id) {
+                    assignment.insert(id, container.host);
+                }
+            }
+        }*/
+        let del_hosts = HashSet::<usize>::from_iter(sample(instance.hosts.len(), 1, rng).into_iter());
+        let mut assignment = HashMap::new();
+        for container in s.containers.iter() {
+            for id in container.invocations.iter().copied() {
+                if !del_hosts.contains(&container.host) {
+                    assignment.insert(id, container.host);
+                }
+            }
+        }
+        let mut conts = Vec::<Container>::new();
+        let mut used = vec![vec![0u64; instance.hosts[0].len()]; instance.hosts.len()];
+        let mut containers_by_host = vec![HashSet::<usize>::new(); instance.hosts.len()];
+        let mut expire = BTreeSet::<(u64, usize)>::new();
+        let mut queue = BinaryHeap::with_capacity(instance.req_start.len());
+        for (id, t) in instance.req_start.iter().enumerate() {
+            queue.push((Reverse(*t), id));
+        }
+        while let Some((Reverse(time), i)) = queue.pop() {
+            while let Some(x) = expire.first() {
+                if x.0 > time {
+                    break;
+                }
+                let evt = expire.pop_first().unwrap();
+                let c = evt.1;
+                for r in 0..used[conts[c].host].len() {
+                    used[conts[c].host][r] -= conts[c].resources[r];
+                }
+                containers_by_host[conts[c].host].remove(&c);
+            }
+            let mut host = usize::MAX;
+            if let Some(h) = assignment.get(&i) {
+                host = *h;
+            } else {
+                let mut status = i64::MIN;
+                let mut possible = 0..used.len();//sample(used.len(), used.len()/2, rng);
+                for h in possible {
+                    /*if !del_hosts.contains(&h) {
+                        continue;
+                    }*/
+                    for c in containers_by_host[h].iter().copied() {
+                        if conts[c].app == instance.req_app[i] && time >= conts[c].end - w {
+                            host = h;
+                            status = 3;
+                            break;
+                        }
+                    }
+                    if status == 3 {
+                        break;
+                    }
+                    let mut exceed = false;
+                    for r in 0..used[h].len() {
+                        if used[h][r] + instance.apps[instance.req_app[i]][r] > instance.hosts[h][r] {
+                            exceed = true;
+                            break;
+                        }
+                    }
+                    if !exceed {
+                        status = 2;
+                        host = h;
+                        continue;
+                    }
+                    let curr = -(containers_by_host[h].len() as i64);
+                    if curr > status {
+                        status = curr;
+                        host = h;
+                    }
+                }
+            }
+            let mut placed = false;
+            for c in containers_by_host[host].iter().copied() {
+                if conts[c].app == instance.req_app[i] && time >= conts[c].end - w {
+                    expire.remove(&(conts[c].end, c));
+                    conts[c].end = time.min(conts[c].end - w).max(instance.req_start[i]) + instance.req_dur[i] + w;
+                    expire.insert((conts[c].end, c));
+                    conts[c].invocations.push(i);
+                    placed = true;
+                    break;
+                }
+            }
+            if placed {
+                continue;
+            }
+            placed = true;
+            for r in 0..used[host].len() {
+                if used[host][r] + instance.apps[instance.req_app[i]][r] > instance.hosts[host][r] {
+                    placed = false;
+                    break;
+                }
+            }
+            if placed {
+                let new = Container {
+                    host,
+                    app: instance.req_app[i],
+                    invocations: vec![i],
+                    resources: instance.apps[instance.req_app[i]].clone(),
+                    start: time,
+                    end: time + instance.req_dur[i] + w + instance.app_coldstart[instance.req_app[i]],
+                };
+                expire.insert((new.end, conts.len()));
+                containers_by_host[host].insert(conts.len());
+                for r in 0..used[host].len() {
+                    used[host][r] += instance.apps[instance.req_app[i]][r];
+                }
+                conts.push(new);
+                continue;
+            }
+            let mut best_time = u64::MAX;
+            let mut curr = used[host].clone();
+            for (t, c) in expire.iter().copied() {
+                if conts[c].host == host {
+                    let mut ok = true;
+                    for r in 0..curr.len() {
+                        curr[r] -= conts[c].resources[r];
+                        if curr[r] + instance.apps[instance.req_app[i]][r] > instance.hosts[host][r] {
+                            ok = false;
+                        }
+                    }
+                    if ok {
+                        best_time = t;
+                        break;
+                    }
+                }
+            }
+            queue.push((Reverse(best_time), i));
+            assignment.insert(i, host);
+        }
+        let mut nxt = State {
+            containers: conts,
+            objective: 0,
         };
         nxt.recompute_objective(instance);
         println!("nxt obj = {}", nxt.objective);

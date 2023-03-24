@@ -37,7 +37,7 @@ impl AcceptanceCriterion for SimulatedAnnealingAcceptanceCriterion {
         if goal.is_better(new.objective, old.objective) {
             true
         } else {
-            rng.gen_bool((-f64::abs(new.objective - old.objective) / self.annealing.get_temperature()).exp())
+            rng.gen_bool((-f64::abs((new.objective - old.objective) as f64) / self.annealing.get_temperature()).exp())
         }
     }
 

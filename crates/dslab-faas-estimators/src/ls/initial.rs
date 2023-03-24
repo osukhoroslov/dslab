@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
 use indexmap::{IndexMap, IndexSet};
@@ -26,36 +25,10 @@ pub struct GreedyInitialSolutionGenerator {}
 
 impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
     fn generate(&mut self, instance: &Instance, _rng: &mut Pcg64) -> State {
-        #[derive(Clone, Copy)]
-        struct EndEvent {
-            t: f64,
-            id: usize,
-        }
-
-        impl PartialOrd for EndEvent {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                Some(self.cmp(other))
-            }
-        }
-
-        impl Ord for EndEvent {
-            fn cmp(&self, other: &Self) -> Ordering {
-                self.t.total_cmp(&other.t).then(self.id.cmp(&other.id))
-            }
-        }
-
-        impl PartialEq for EndEvent {
-            fn eq(&self, other: &Self) -> bool {
-                self.t == other.t && self.id == other.id
-            }
-        }
-
-        impl Eq for EndEvent {}
-
         let w = instance.keepalive;
         let mut s: State = Default::default();
         let n = instance.req_app.len();
-        let mut cont = BTreeSet::<EndEvent>::new();
+        let mut cont = BTreeSet::new();
         let mut alive = IndexMap::<usize, IndexSet<usize>>::new();
         let mut alive_by_host = IndexMap::<usize, IndexSet<usize>>::new();
         for i in 0..n {
@@ -63,14 +36,14 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
             let t = instance.req_start[i];
             let dur = instance.req_dur[i];
             while !cont.is_empty() {
-                let it = *cont.iter().next().unwrap();
-                if it.t < t {
-                    let f = s.containers[it.id].app;
-                    alive.get_mut(&f).unwrap().remove(&it.id);
+                let it: (u64, usize) = *cont.iter().next().unwrap();
+                if it.0 < t {
+                    let f = s.containers[it.1].app;
+                    alive.get_mut(&f).unwrap().remove(&it.1);
                     alive_by_host
-                        .get_mut(&s.containers[it.id].host)
+                        .get_mut(&s.containers[it.1].host)
                         .unwrap()
-                        .remove(&it.id);
+                        .remove(&it.1);
                     cont.remove(&it);
                 } else {
                     break;
@@ -79,18 +52,11 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
             let mut placed = false;
             let set = alive.entry(app).or_insert(IndexSet::<usize>::new());
             for id in set.iter().copied() {
-                if s.containers[id].end - w < t - EPS && s.containers[id].end > t - EPS {
-                    let item = EndEvent {
-                        t: s.containers[id].end,
-                        id,
-                    };
-                    cont.remove(&item);
+                if s.containers[id].end - w < t && s.containers[id].end >= t {
+                    cont.remove(&(s.containers[id].end, id));
                     s.containers[id].end = t + dur + w;
                     s.containers[id].invocations.push(i);
-                    cont.insert(EndEvent {
-                        t: s.containers[id].end,
-                        id,
-                    });
+                    cont.insert((s.containers[id].end, id));
                     placed = true;
                     break;
                 }
@@ -99,7 +65,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
                 continue;
             }
             let mut chosen = 0;
-            let mut best_t = f64::MAX;
+            let mut best_t = u64::MAX;
             for i in 0..instance.hosts.len() {
                 let mut can_start = vec![t; instance.hosts[i].len()];
                 let mut curr = alive_by_host
@@ -108,7 +74,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
                     .iter()
                     .map(|x| (s.containers[*x].end, *x))
                     .collect::<Vec<_>>();
-                curr.sort_by(|a, b| a.0.total_cmp(&b.0));
+                curr.sort();
                 for r in 0..can_start.len() {
                     let mut sum: u64 = curr.iter().map(|x| s.containers[x.1].resources[r]).sum();
                     for (end, x) in curr.iter().copied() {
@@ -122,7 +88,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
                 let start = can_start
                     .iter()
                     .copied()
-                    .fold(f64::MIN, |acc, x| if x > acc { x } else { acc });
+                    .fold(u64::MIN, |acc, x| if x > acc { x } else { acc });
                 if start < best_t {
                     best_t = start;
                     chosen = i;
@@ -139,7 +105,7 @@ impl InitialSolutionGenerator for GreedyInitialSolutionGenerator {
             let id = s.containers.len();
             alive_by_host.entry(chosen).or_default().insert(id);
             alive.entry(app).or_default().insert(id);
-            cont.insert(EndEvent { t: c.end, id });
+            cont.insert((c.end, id));
             s.containers.push(c);
         }
         s.recompute_objective(instance);
