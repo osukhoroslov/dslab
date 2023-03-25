@@ -107,6 +107,8 @@ impl InvokerQueueItem {
     }
 }
 
+/// `NaiveInvoker` iterates over all queued invocations and tries to invoke each of them.
+/// In case of large queues it may be very slow, use [`FIFOInvoker`] instead.
 #[derive(Default)]
 pub struct NaiveInvoker {
     queue: Vec<InvokerQueueItem>,
@@ -132,10 +134,10 @@ impl Invoker for NaiveInvoker {
         let mut new_queue = Vec::new();
         let mut dequeued = Vec::new();
         for item in self.queue.drain(..) {
-            let fr_borrowed = fr.borrow();
-            let app = fr_borrowed.get_app(item.app_id).unwrap();
+            let fr_ref = fr.borrow();
+            let app = fr_ref.get_app(item.app_id).unwrap();
             let decision = try_invoke(app, cm, time);
-            drop(fr_borrowed);
+            drop(fr_ref);
             match decision {
                 InvokerDecision::Warm(id) => {
                     stats.update_queueing_time(item.app_id, item.func_id, time - item.time);
@@ -175,8 +177,8 @@ impl Invoker for NaiveInvoker {
         cm: &mut ContainerManager,
         time: f64,
     ) -> InvokerDecision {
-        let fr_borrowed = fr.borrow();
-        let app = fr_borrowed.get_app(invocation.app_id).unwrap();
+        let fr_ref = fr.borrow();
+        let app = fr_ref.get_app(invocation.app_id).unwrap();
         let decision = try_invoke(app, cm, time);
         if decision == InvokerDecision::Rejected {
             self.queue.push(InvokerQueueItem::new(
@@ -199,6 +201,7 @@ impl Invoker for NaiveInvoker {
     }
 }
 
+/// `FIFOInvoker` repeatedly tries to invoke the oldest queued invocation.
 #[derive(Default)]
 pub struct FIFOInvoker {
     queue: VecDeque<InvokerQueueItem>,
@@ -220,8 +223,8 @@ impl Invoker for FIFOInvoker {
     ) -> Vec<DequeuedInvocation> {
         let mut dequeued = Vec::new();
         while let Some(item) = self.queue.front().copied() {
-            let fr_borrowed = fr.borrow();
-            let app = fr_borrowed.get_app(item.app_id).unwrap();
+            let fr_ref = fr.borrow();
+            let app = fr_ref.get_app(item.app_id).unwrap();
             let status = try_invoke(app, cm, time);
             match status {
                 InvokerDecision::Warm(id) => {
@@ -263,8 +266,8 @@ impl Invoker for FIFOInvoker {
         cm: &mut ContainerManager,
         time: f64,
     ) -> InvokerDecision {
-        let fr_borrowed = fr.borrow();
-        let app = fr_borrowed.get_app(invocation.app_id).unwrap();
+        let fr_ref = fr.borrow();
+        let app = fr_ref.get_app(invocation.app_id).unwrap();
         let status = try_invoke(app, cm, time);
         if status == InvokerDecision::Rejected {
             self.queue.push_back(InvokerQueueItem::new(

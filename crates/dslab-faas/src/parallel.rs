@@ -11,7 +11,7 @@ use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::config::{Config, ConfigParamResolvers, RawConfig};
-use crate::cpu::{CPUPolicy, ContendedCPUPolicy};
+use crate::cpu::{CpuPolicy, ContendedCpuPolicy};
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::invoker::{FIFOInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
@@ -37,7 +37,7 @@ impl Default for ParallelHostConfig {
 
 pub struct ParallelConfig {
     pub coldstart_policy: Box<dyn ColdStartPolicy + Send>,
-    pub cpu_policy: Box<dyn CPUPolicy + Send>,
+    pub cpu_policy: Box<dyn CpuPolicy + Send>,
     pub idle_deployer: Box<dyn IdleDeployer + Send>,
     pub scheduler: Box<dyn Scheduler + Send>,
     pub hosts: Vec<ParallelHostConfig>,
@@ -47,7 +47,7 @@ impl Default for ParallelConfig {
     fn default() -> Self {
         Self {
             coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
-            cpu_policy: Box::<ContendedCPUPolicy>::default(),
+            cpu_policy: Box::<ContendedCpuPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),
@@ -144,7 +144,7 @@ pub fn parallel_simulation_raw_n_workers(
     }
     let coldstart_policy_resolver1: Arc<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync> =
         Arc::from(resolvers.coldstart_policy_resolver);
-    let cpu_policy_resolver1: Arc<dyn Fn(&str) -> Box<dyn CPUPolicy> + Send + Sync> =
+    let cpu_policy_resolver1: Arc<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync> =
         Arc::from(resolvers.cpu_policy_resolver);
     let idle_deployer_resolver1: Arc<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync> =
         Arc::from(resolvers.idle_deployer_resolver);

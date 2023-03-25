@@ -103,7 +103,7 @@ fn app_id(id: &str) -> String {
     id0
 }
 
-/// Experiment generator will choose `count` random apps with popularity in range [floor(`left` * n_apps), floor(`right` * n_apps)] (less = more popular).
+/// Experiment generator will choose `count` random apps with popularity in range [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
 pub struct AppPreference {
     pub count: usize,
     pub left: f64,
@@ -243,7 +243,10 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     if parts.len() < parts_needed {
         panic!("Trace is too short for specified time range.");
     }
-    let tail_part = (config.time_period % 1440) as usize;
+    let mut tail_part = (config.time_period % 1440) as usize;
+    if tail_part == 0 {
+        tail_part = 1440;
+    }
     let mut app_mem = HashMap::<String, usize>::new();
     for part in parts.iter().take(parts_needed) {
         let mut mem_file = ReaderBuilder::new()

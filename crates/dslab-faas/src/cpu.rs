@@ -41,19 +41,21 @@ impl Ord for WorkItem {
     }
 }
 
-/// CPUPolicy governs CPU sharing, computes invocation progress and manages invocation end events.
-pub trait CPUPolicy {
-    fn clean_copy(&self) -> Box<dyn CPUPolicy>;
+/// CpuPolicy governs CPU sharing, computes invocation progress and manages invocation end events.
+pub trait CpuPolicy {
+    fn clean_copy(&self) -> Box<dyn CpuPolicy>;
     fn get_load(&self) -> f64;
     fn set_cores(&mut self, cores: f64);
-    fn on_invocation_end(
+    /// This method is called whenever there is a new invocation to run on this CPU.
+    fn on_new_invocation(
         &mut self,
         invocation: &mut Invocation,
         container: &mut Container,
         time: f64,
         ctx: &mut SimulationContext,
     );
-    fn on_new_invocation(
+    /// This method is called whenever an invocation on this CPU stops executing.
+    fn on_invocation_end(
         &mut self,
         invocation: &mut Invocation,
         container: &mut Container,
@@ -65,12 +67,12 @@ pub trait CPUPolicy {
 /// This policy does not emulate CPU at all. All invocations work as if executed on some abstract
 /// infinite-core CPU with no load issues.
 #[derive(Default)]
-pub struct IgnoredCPUPolicy {
+pub struct IgnoredCpuPolicy {
     load: f64,
 }
 
-impl CPUPolicy for IgnoredCPUPolicy {
-    fn clean_copy(&self) -> Box<dyn CPUPolicy> {
+impl CpuPolicy for IgnoredCpuPolicy {
+    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
         Box::<Self>::default()
     }
 
@@ -79,18 +81,6 @@ impl CPUPolicy for IgnoredCPUPolicy {
     }
 
     fn set_cores(&mut self, _cores: f64) {}
-
-    fn on_invocation_end(
-        &mut self,
-        _invocation: &mut Invocation,
-        container: &mut Container,
-        _time: f64,
-        _ctx: &mut SimulationContext,
-    ) {
-        if container.invocations.is_empty() {
-            self.load -= container.cpu_share;
-        }
-    }
 
     fn on_new_invocation(
         &mut self,
@@ -104,6 +94,18 @@ impl CPUPolicy for IgnoredCPUPolicy {
         }
         ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
     }
+
+    fn on_invocation_end(
+        &mut self,
+        _invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        _ctx: &mut SimulationContext,
+    ) {
+        if container.invocations.is_empty() {
+            self.load -= container.cpu_share;
+        }
+    }
 }
 
 /// CPU shares of active containers should not exceed the number of cores. If this limit is
@@ -111,15 +113,15 @@ impl CPUPolicy for IgnoredCPUPolicy {
 /// This model currently ignores possible effects related to multiple concurrent invocations on the same
 /// container.
 #[derive(Default)]
-pub struct IsolatedCPUPolicy {
+pub struct IsolatedCpuPolicy {
     cores: f64,
     load: f64,
     invocation_map: HashMap<usize, Vec<(usize, f64)>>,
     queue: VecDeque<(usize, f64)>,
 }
 
-impl CPUPolicy for IsolatedCPUPolicy {
-    fn clean_copy(&self) -> Box<dyn CPUPolicy> {
+impl CpuPolicy for IsolatedCpuPolicy {
+    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
         Box::<Self>::default()
     }
 
@@ -129,6 +131,27 @@ impl CPUPolicy for IsolatedCPUPolicy {
 
     fn set_cores(&mut self, cores: f64) {
         self.cores = cores;
+    }
+
+    fn on_new_invocation(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        ctx: &mut SimulationContext,
+    ) {
+        if let Some(invs) = self.invocation_map.get_mut(&container.id) {
+            invs.push((invocation.id, invocation.duration));
+        } else if container.invocations.len() == 1 && self.load + container.cpu_share > self.cores + 1e-9 {
+            self.invocation_map
+                .insert(container.id, vec![(invocation.id, invocation.duration)]);
+            self.queue.push_back((container.id, container.cpu_share));
+        } else {
+            if container.invocations.len() == 1 {
+                self.load += container.cpu_share;
+            }
+            ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
+        }
     }
 
     fn on_invocation_end(
@@ -153,34 +176,13 @@ impl CPUPolicy for IsolatedCPUPolicy {
             }
         }
     }
-
-    fn on_new_invocation(
-        &mut self,
-        invocation: &mut Invocation,
-        container: &mut Container,
-        _time: f64,
-        ctx: &mut SimulationContext,
-    ) {
-        if let Some(invs) = self.invocation_map.get_mut(&container.id) {
-            invs.push((invocation.id, invocation.duration));
-        } else if container.invocations.len() == 1 && self.load + container.cpu_share > self.cores + 1e-9 {
-            self.invocation_map
-                .insert(container.id, vec![(invocation.id, invocation.duration)]);
-            self.queue.push_back((container.id, container.cpu_share));
-        } else {
-            if container.invocations.len() == 1 {
-                self.load += container.cpu_share;
-            }
-            ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
-        }
-    }
 }
 
 /// CPU shares of active containers may exceed the number of cores, in this case the
 /// invocations are slowed down.
 /// We assume that CPU sharing is fair: each invocation makes progress according to its share.
 #[derive(Default)]
-pub struct ContendedCPUPolicy {
+pub struct ContendedCpuPolicy {
     work_tree: BTreeSet<WorkItem>,
     work_map: HashMap<usize, WorkItem>,
     work_total: f64,
@@ -190,7 +192,7 @@ pub struct ContendedCPUPolicy {
     end_event: Option<EventId>,
 }
 
-impl ContendedCPUPolicy {
+impl ContendedCpuPolicy {
     fn try_rebuild(&mut self) {
         if self.work_total > 1e12 {
             let mut items: Vec<_> = self.work_tree.iter().cloned().collect();
@@ -244,8 +246,8 @@ impl ContendedCPUPolicy {
     }
 }
 
-impl CPUPolicy for ContendedCPUPolicy {
-    fn clean_copy(&self) -> Box<dyn CPUPolicy> {
+impl CpuPolicy for ContendedCpuPolicy {
+    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
         Box::<Self>::default()
     }
 
@@ -308,27 +310,27 @@ impl CPUPolicy for ContendedCPUPolicy {
     }
 }
 
-pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CPUPolicy> {
+pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CpuPolicy> {
     let lower = s.to_lowercase();
     if lower == "ignored" {
-        Box::<IgnoredCPUPolicy>::default()
+        Box::<IgnoredCpuPolicy>::default()
     } else if lower == "isolated" {
-        Box::<IsolatedCPUPolicy>::default()
+        Box::<IsolatedCpuPolicy>::default()
     } else if lower == "contended" {
-        Box::<ContendedCPUPolicy>::default()
+        Box::<ContendedCpuPolicy>::default()
     } else {
         panic!("Can't resolve: {}", s);
     }
 }
 
-pub struct CPU {
+pub struct Cpu {
     pub cores: u32,
-    policy: Box<dyn CPUPolicy>,
+    policy: Box<dyn CpuPolicy>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
-impl CPU {
-    pub fn new(cores: u32, mut policy: Box<dyn CPUPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
+impl Cpu {
+    pub fn new(cores: u32, mut policy: Box<dyn CpuPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         policy.set_cores(cores as f64);
         Self { cores, policy, ctx }
     }

@@ -77,7 +77,7 @@ impl<'a, T> Iterator for VecMapIterator<'a, T> {
     type Item = (usize, &'a T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((id, x)) = self.inner.next() {
+        for (id, x) in self.inner.by_ref() {
             if let Some(y) = x.as_ref() {
                 return Some((id, y));
             }

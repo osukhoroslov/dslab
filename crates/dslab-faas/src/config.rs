@@ -6,7 +6,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy, FixedTimeColdStartPolicy};
-use crate::cpu::{default_cpu_policy_resolver, CPUPolicy, ContendedCPUPolicy};
+use crate::cpu::{default_cpu_policy_resolver, CpuPolicy, ContendedCpuPolicy};
 use crate::deployer::{default_idle_deployer_resolver, BasicDeployer, IdleDeployer};
 use crate::invoker::{default_invoker_resolver, FIFOInvoker, Invoker};
 use crate::parallel::{ParallelConfig, ParallelHostConfig};
@@ -99,7 +99,7 @@ pub fn parse_options(s: &str) -> HashMap<String, String> {
 
 pub struct ConfigParamResolvers {
     pub coldstart_policy_resolver: Box<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync>,
-    pub cpu_policy_resolver: Box<dyn Fn(&str) -> Box<dyn CPUPolicy> + Send + Sync>,
+    pub cpu_policy_resolver: Box<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync>,
     pub idle_deployer_resolver: Box<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync>,
     pub scheduler_resolver: Box<dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync>,
     pub invoker_resolver: Box<dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync>,
@@ -121,7 +121,7 @@ impl Default for ConfigParamResolvers {
 /// default config and change only the fields you need.
 pub struct Config {
     pub coldstart_policy: Box<dyn ColdStartPolicy>,
-    pub cpu_policy: Box<dyn CPUPolicy>,
+    pub cpu_policy: Box<dyn CpuPolicy>,
     pub idle_deployer: Box<dyn IdleDeployer>,
     pub scheduler: Box<dyn Scheduler>,
     pub hosts: Vec<HostConfig>,
@@ -131,7 +131,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
-            cpu_policy: Box::<ContendedCPUPolicy>::default(),
+            cpu_policy: Box::<ContendedCpuPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),
@@ -154,7 +154,7 @@ impl Config {
     pub fn from_raw_split_resolvers(
         raw: RawConfig,
         coldstart_policy_resolver: &(dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync),
-        cpu_policy_resolver: &(dyn Fn(&str) -> Box<dyn CPUPolicy> + Send + Sync),
+        cpu_policy_resolver: &(dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync),
         idle_deployer_resolver: &(dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync),
         scheduler_resolver: &(dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync),
         invoker_resolver: &(dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync),

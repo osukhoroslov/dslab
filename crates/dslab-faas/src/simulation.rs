@@ -9,7 +9,7 @@ use dslab_core::simulation::Simulation;
 use crate::coldstart::ColdStartPolicy;
 use crate::config::Config;
 use crate::controller::Controller;
-use crate::cpu::CPUPolicy;
+use crate::cpu::CpuPolicy;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
@@ -26,7 +26,7 @@ pub struct ServerlessSimulation {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
     controller_id: HandlerId,
-    cpu_policy: Box<dyn CPUPolicy>,
+    cpu_policy: Box<dyn CpuPolicy>,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     host_ctr: Counter,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
