@@ -5,11 +5,11 @@ use std::rc::Rc;
 
 use crate::context::Context;
 use crate::mc::events::McEvent;
+use crate::mc::events::McTime;
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
-
 pub struct ProcessEntryState {
     pub proc_state: Box<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,
@@ -124,15 +124,12 @@ impl McNode {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg);
                 }
-                ProcessEvent::TimerSet {
-                    name,
-                    delay: _delay,
-                    behavior,
-                } => {
+                ProcessEvent::TimerSet { name, delay, behavior } => {
                     if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
                         let event = McEvent::TimerFired {
                             timer: name.clone(),
                             proc: proc.clone(),
+                            timer_delay: McTime::from(delay),
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking
