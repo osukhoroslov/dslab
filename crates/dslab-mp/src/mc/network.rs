@@ -1,6 +1,7 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
+use crate::mc::events::McTime;
 use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::message::Message;
 use crate::network::Network;
@@ -15,6 +16,7 @@ pub struct McNetwork {
     drop_outgoing: HashSet<String>,
     disabled_links: HashSet<(String, String)>,
     proc_locations: HashMap<String, String>,
+    max_delay: f64,
 }
 
 impl McNetwork {
@@ -27,6 +29,7 @@ impl McNetwork {
             drop_outgoing: net.get_drop_outgoing().clone(),
             disabled_links: net.disabled_links().clone(),
             proc_locations: net.proc_locations().clone(),
+            max_delay: net.max_delay(),
         }
     }
 
@@ -43,7 +46,7 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                options: DeliveryOptions::NoFailures,
+                options: DeliveryOptions::NoFailures(McTime::from(self.max_delay)),
             }
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)
