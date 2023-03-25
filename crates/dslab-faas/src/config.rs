@@ -6,7 +6,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy, FixedTimeColdStartPolicy};
-use crate::cpu::{default_cpu_policy_resolver, CpuPolicy, ContendedCpuPolicy};
+use crate::cpu::{default_cpu_policy_resolver, ContendedCpuPolicy, CpuPolicy};
 use crate::deployer::{default_idle_deployer_resolver, BasicDeployer, IdleDeployer};
 use crate::invoker::{default_invoker_resolver, FIFOInvoker, Invoker};
 use crate::parallel::{ParallelConfig, ParallelHostConfig};

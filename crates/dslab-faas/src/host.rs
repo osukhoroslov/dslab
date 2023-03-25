@@ -8,7 +8,7 @@ use dslab_core::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{ContainerManager, ContainerStatus};
-use crate::cpu::{CpuPolicy, Cpu};
+use crate::cpu::{Cpu, CpuPolicy};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationStatus};

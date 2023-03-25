@@ -11,7 +11,7 @@ use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::config::{Config, ConfigParamResolvers, RawConfig};
-use crate::cpu::{CpuPolicy, ContendedCpuPolicy};
+use crate::cpu::{ContendedCpuPolicy, CpuPolicy};
 use crate::deployer::{BasicDeployer, IdleDeployer};
 use crate::invoker::{FIFOInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
