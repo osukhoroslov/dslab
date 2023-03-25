@@ -64,13 +64,13 @@ impl<'a> Trace for TraceWindow<'a> {
 
 fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<f64> {
     let trace_config = AzureTraceConfig {
-        time_period: 1200,
+        time_period: 240,
         app_preferences: apps,
         .. Default::default()
     };
     let trace = Box::new(process_azure_trace(Path::new(arg), trace_config));
     let mut result = Vec::new();
-    for i in 0..(1200/240) {
+    for i in 0..(240/240) {
         let window = TraceWindow { len: 240, id: i, azure_trace: &trace };
         let mut config1: Config = Default::default();
         let mut config2: Config = Default::default();

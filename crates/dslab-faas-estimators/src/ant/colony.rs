@@ -22,7 +22,7 @@ pub struct AntColony {
 impl AntColony {
     pub fn new(seed: u64) -> Self {
         Self {
-            n_ants: 100,
+            n_ants: 50,
             evaporation: 0.05,
             alpha: 1.,
             init_beta: 4.,
