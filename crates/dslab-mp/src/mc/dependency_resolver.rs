@@ -50,11 +50,11 @@ impl DependencyResolver {
     fn add_event_mappings(&mut self, proc: String, event: McEventId, time: McTime) {
         assert!(
             self.event_to_proc.insert(event, proc).is_none(),
-            "duplicate McEventId not allowed"
+            "event with such id already exists"
         );
         assert!(
             self.event_to_time.insert(event, time).is_none(),
-            "duplicate McEventId not allowed"
+            "event with such id already exists"
         );
     }
 
