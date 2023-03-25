@@ -1,4 +1,4 @@
-mod dependency_resolver;
+mod dependency;
 pub mod events;
 pub mod model_checker;
 mod network;

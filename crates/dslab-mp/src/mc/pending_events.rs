@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use crate::mc::dependency_resolver::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId, McTime};
+use crate::mc::dependency::DependencyResolver;
+use crate::mc::events::{McEvent, McEventId};
 
+/// Stores pending events and provides a convenient interface for working with them.  
 #[derive(Default, Clone, Hash, Eq, PartialEq)]
 pub struct PendingEvents {
     events: BTreeMap<McEventId, McEvent>,
@@ -11,10 +12,10 @@ pub struct PendingEvents {
     available_events: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
-    global_time: BTreeMap<String, McTime>,
 }
 
 impl PendingEvents {
+    /// Creates a new empty PendingEvents instance.
     pub fn new() -> Self {
         PendingEvents {
             events: BTreeMap::default(),
@@ -22,16 +23,17 @@ impl PendingEvents {
             available_events: BTreeSet::default(),
             resolver: DependencyResolver::default(),
             id_counter: 0,
-            global_time: BTreeMap::new(),
         }
     }
 
+    /// Stores the passed event and returns id assigned to it.
     pub fn push(&mut self, event: McEvent) -> McEventId {
         let id = self.id_counter;
         self.id_counter += 1;
         self.push_with_fixed_id(event, id)
     }
 
+    /// Stores the passed event under the specified id (should not already exist).
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
         match &event {
@@ -44,17 +46,14 @@ impl PendingEvents {
                 timer,
             } => {
                 self.timer_mapping.insert((proc.clone(), timer.clone()), id);
-                if self
-                    .resolver
-                    .add_timer(proc.clone(), self.get_global_time(proc) + *timer_delay, id)
-                {
+                if self.resolver.add_timer(proc.clone(), *timer_delay, id) {
                     self.available_events.insert(id);
                 }
             }
             McEvent::TimerCancelled { proc, timer } => {
                 let unblocked_events = self
                     .resolver
-                    .cancel_timer(proc.clone(), self.timer_mapping[&(proc.clone(), timer.clone())]);
+                    .cancel_timer(self.timer_mapping[&(proc.clone(), timer.clone())]);
                 self.available_events.extend(unblocked_events);
                 return id;
             }
@@ -63,29 +62,22 @@ impl PendingEvents {
         id
     }
 
-    fn get_global_time(&self, proc: &String) -> McTime {
-        self.global_time.get(proc).copied().unwrap_or_default()
-    }
-
+    /// Returns event by its id.
     pub fn get(&self, id: McEventId) -> Option<&McEvent> {
         self.events.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: McEventId) -> Option<&mut McEvent> {
-        self.events.get_mut(&id)
-    }
-
+    /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     pub fn available_events(&self) -> &BTreeSet<McEventId> {
         &self.available_events
     }
 
+    /// Removes available event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
-        println!("{}", event_id);
-        assert!(self.available_events.remove(&event_id));
-        let result = self.events.remove(&event_id);
-        let result = result.unwrap();
+        assert!(self.available_events.remove(&event_id), "event is not available");
+        let result = self.events.remove(&event_id).unwrap();
         if let McEvent::TimerFired { .. } = result {
-            let unblocked_events = self.resolver.pop(event_id);
+            let unblocked_events = self.resolver.remove_timer(event_id);
             self.available_events.extend(unblocked_events);
         }
         result
