@@ -208,6 +208,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     let mut mem = HashMap::<String, PathBuf>::new();
     let mut inv = HashMap::<String, PathBuf>::new();
     let mut dur = HashMap::<String, PathBuf>::new();
+    // parse trace directory
     match read_dir(path) {
         Ok(paths) => {
             for entry_ in paths {
@@ -235,6 +236,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         }
     }
     let mut bad_parts = Vec::new();
+    // here we filter trace because some days have incomplete information
     for part in parts.iter() {
         if !mem.contains_key(part) || !inv.contains_key(part) || !dur.contains_key(part) {
             bad_parts.push(part.clone());
@@ -243,6 +245,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     for part in bad_parts.iter() {
         parts.remove(part);
     }
+    // now we need to find which trace parts cover the required time period
     let parts_needed = ((config.time_skip + config.time_period + 1439) / 1440) as usize;
     if parts.len() < parts_needed {
         panic!("Trace is too short for specified time range.");
@@ -252,6 +255,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         tail_part = 1440;
     }
     let mut app_mem = HashMap::<String, usize>::new();
+    // here we compute container memory for each app as the maximum historical memory usage
     for part in parts.iter().take(parts_needed) {
         let mut mem_file = ReaderBuilder::new()
             .from_path(mem.get(part).unwrap().as_path())
@@ -267,6 +271,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         }
     }
     let mut app_popularity = HashMap::<String, u64>::new();
+    // here we compute app popularity (by invocation count)
     for (part_id, part) in parts.iter().take(parts_needed).enumerate() {
         let begin = config.time_skip - config.time_skip.min((part_id as u64) * 1440);
         if begin >= 1440 {
@@ -301,6 +306,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     app_pop_vec.reverse();
     let all_apps = app_pop_vec.drain(..).map(|x| x.0).collect::<Vec<String>>();
     let mut apps = IndexSet::new();
+    // now we have to filter the apps by app preferences
     for pref in config.app_preferences.iter() {
         let l = (pref.left * (all_apps.len() as f64)).floor() as usize;
         let r = (pref.right * (all_apps.len() as f64)).floor() as usize;
@@ -316,6 +322,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     let dur_percent = vec![0., 0.01, 0.25, 0.50, 0.75, 0.99, 1.];
     let mut invocations = Vec::<(usize, f64, f64)>::new();
     let mut poisson_scale_factor = 1.;
+    // here we compute the scaling factor required for open-loop Poisson generation with RPS constraint
     if let Some(rps) = config.rps {
         if config.start_generator == StartGenerator::PoissonFit {
             let mut total = 0;
@@ -344,6 +351,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             poisson_scale_factor = need / (total as f64);
         }
     }
+    // here we generate invocations, their starting times and durations
     for (part_id, part) in parts.iter().take(parts_needed).enumerate() {
         let bound = if part_id + 1 == parts_needed { tail_part } else { 1440 };
         let mut inv_file = ReaderBuilder::new()
@@ -496,6 +504,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         };
     }
 
+    // if the trace has RPS constraint, we either remove random invocations or copy random invocations to achieve given RPS rate
     if let Some(rps) = config.rps {
         let need = (rps * (config.time_period as f64) * 60.).round() as usize;
         match need.cmp(&invocations.len()) {
