@@ -1,11 +1,12 @@
+use ordered_float::OrderedFloat;
 use serde::Serialize;
 
 use crate::message::Message;
 
-#[derive(Serialize, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Clone, PartialEq, Eq, Hash)]
 pub enum DeliveryOptions {
-    /// Message will be received exactly once without corruption
-    NoFailures,
+    /// Message will be received exactly once without corruption with specified max delay
+    NoFailures(McTime),
     /// Message will not be received
     Dropped,
     /// Message delivery may be subject to some failures
@@ -15,6 +16,9 @@ pub enum DeliveryOptions {
         can_be_corrupted: bool,
     },
 }
+
+pub type McTime = OrderedFloat<f64>;
+pub type McEventId = usize;
 
 #[derive(Serialize, Clone, Eq, Hash, PartialEq)]
 pub enum McEvent {
@@ -27,6 +31,7 @@ pub enum McEvent {
     TimerFired {
         proc: String,
         timer: String,
+        timer_delay: McTime,
     },
     TimerCancelled {
         proc: String,
