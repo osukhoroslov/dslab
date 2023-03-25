@@ -153,6 +153,9 @@ pub enum StartGenerator {
 pub struct AzureTraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,
+    /// This option allows skipping an integer number of minutes from the start of the trace.
+    /// It may be useful if you want to split trace into small 1-hour experiments for example.
+    pub time_skip: u64,
     /// This option controls the method used to generate execution durations.
     pub duration_generator: DurationGenerator,
     /// This option controls the method used to generate start times.
@@ -179,6 +182,7 @@ impl Default for AzureTraceConfig {
     fn default() -> Self {
         Self {
             time_period: 60,
+            time_skip: 0,
             duration_generator: DurationGenerator::Piecewise,
             start_generator: StartGenerator::BucketUniform,
             app_preferences: Default::default(),
@@ -239,11 +243,11 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     for part in bad_parts.iter() {
         parts.remove(part);
     }
-    let parts_needed = ((config.time_period + 1439) / 1440) as usize;
+    let parts_needed = ((config.time_skip + config.time_period + 1439) / 1440) as usize;
     if parts.len() < parts_needed {
         panic!("Trace is too short for specified time range.");
     }
-    let mut tail_part = (config.time_period % 1440) as usize;
+    let mut tail_part = ((config.time_period + config.time_skip) % 1440) as usize;
     if tail_part == 0 {
         tail_part = 1440;
     }
@@ -264,6 +268,10 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
     }
     let mut app_popularity = HashMap::<String, u64>::new();
     for (part_id, part) in parts.iter().take(parts_needed).enumerate() {
+        let begin = config.time_skip - config.time_skip.min((part_id as u64) * 1440);
+        if begin >= 1440 {
+            continue;
+        }
         let bound = if part_id + 1 == parts_needed { tail_part } else { 1440 };
         let mut inv_file = ReaderBuilder::new()
             .from_path(inv.get(part).unwrap().as_path())
@@ -280,7 +288,7 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
                 continue;
             }
             let mut cnt = 0;
-            for i in 0..bound {
+            for i in (begin as usize)..bound {
                 cnt += usize::from_str(&record[4 + i]).unwrap();
             }
             if cnt > 0 {
