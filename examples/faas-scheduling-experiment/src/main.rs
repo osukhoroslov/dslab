@@ -2,6 +2,7 @@ mod plot;
 
 use std::boxed::Box;
 use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 use clap::Parser;
@@ -34,6 +35,9 @@ struct Args {
     /// Plot output path.
     #[arg(long)]
     plot: String,
+    /// Dump final metrics to given file.
+    #[arg(long)]
+    dump: Option<String>,
 }
 
 fn main() {
@@ -80,6 +84,15 @@ fn main() {
                 inv.rel_total_slowdown.quantile(0.99) + 1.,
                 (inv.cold_starts as f64) / (inv.invocations as f64) * 100.,
             ]);
+        }
+    }
+    if let Some(s) = args.dump {
+        let mut out = File::create(s).unwrap();
+        writeln!(&mut out, "scheduler,rps,99% slowdown,cold start %").unwrap();
+        for (sched, pts) in std::iter::zip(schedulers.iter(), points.iter()) {
+            for (rps, pt) in std::iter::zip(rps_vec.iter(), pts.iter()) {
+                writeln!(&mut out, "{},{},{:.4},{:.4}", sched, rps, pt[0], pt[1]).unwrap();
+            }
         }
     }
     plot_results(&args.plot, &schedulers, &rps_vec, &points);

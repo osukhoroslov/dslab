@@ -2,6 +2,7 @@ mod plot;
 
 use std::boxed::Box;
 use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 use clap::Parser;
@@ -53,6 +54,9 @@ struct Args {
     /// Plot output path (if needed).
     #[arg(long)]
     plot: Option<String>,
+    /// Dump final metrics to given file.
+    #[arg(long)]
+    dump: Option<String>,
 }
 
 fn main() {
@@ -97,6 +101,13 @@ fn main() {
                 apps.quantile(0.75),
                 s.global_stats.wasted_resource_time.get(0).unwrap().sum(),
             ));
+        }
+    }
+    if let Some(s) = args.dump {
+        let mut out = File::create(s).unwrap();
+        writeln!(&mut out, "policy,75% app coldstart frequency,wasted memory time").unwrap();
+        for (policy, result) in std::iter::zip(policies.iter(), results.iter()) {
+            writeln!(&mut out, "{},{:.4},{:.4}", policy, result.0, result.1).unwrap();
         }
     }
     if let Some(plot) = args.plot {
