@@ -4,6 +4,7 @@ use std::path::Path;
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::{Config, HostConfig};
+use dslab_faas::cpu::IgnoredCpuPolicy;
 use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig, AzureTrace};
 use dslab_faas::scheduler::LeastLoadedScheduler;
 use dslab_faas::simulation::ServerlessSimulation;
@@ -53,12 +54,16 @@ impl<'a> Trace for TraceWindow<'a> {
         Box::new(TraceWindowIter { inner: self.azure_trace.request_iter(), l: (self.len * self.id * 60) as f64, r: (self.len * (self.id + 1) * 60) as f64})
     }
 
-    fn function_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+    fn function_iter(&self) -> Box<dyn Iterator<Item = usize> + '_> {
         self.azure_trace.function_iter()
     }
 
     fn simulation_end(&self) -> Option<f64> {
         None
+    }
+
+    fn is_ordered_by_time(&self) -> bool {
+        true
     }
 }
 
@@ -74,8 +79,8 @@ fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<f64> {
         let window = TraceWindow { len: 240, id: i, azure_trace: &trace };
         let mut config1: Config = Default::default();
         let mut config2: Config = Default::default();
-        config1.disable_contention = true;
-        config1.scheduler = Box::new(LeastLoadedScheduler::new(true));
+        config1.cpu_policy = Box::<IgnoredCpuPolicy>::default();
+        config1.scheduler = Box::new(LeastLoadedScheduler::new(true, true, true));
         config1.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
         config2.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(20.0 * 60.0, 0.0));
         for _ in 0..18 {
@@ -91,7 +96,7 @@ fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<f64> {
         let mut sim = ServerlessSimulation::new(Simulation::new(1), config1);
         sim.load_trace(&window);
         sim.step_until_no_events();
-        let coldstart1 = sim.get_stats().cold_start_latency.sum();
+        let coldstart1 = sim.stats().global_stats.invocation_stats.cold_start_latency.sum();
         println!("Simulation coldstart latency = {}", coldstart1);
         let mut est = AntColonyEstimator::new(AntColony::new(1), 20.0 * 60.0, 1000.);
         if let Estimation::UpperBound(x) = est.estimate(config2, &window) {
