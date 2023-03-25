@@ -133,8 +133,8 @@ impl Node {
         self.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }
 
-    pub fn get_process(&self, name: &str) -> Option<&Box<dyn Process>> {
-        self.processes.get(name).map(|entry| &entry.proc_impl)
+    pub fn get_process(&self, name: &str) -> Option<&dyn Process> {
+        self.processes.get(name).map(|entry| &*entry.proc_impl)
     }
 
     pub fn process_names(&self) -> Vec<String> {

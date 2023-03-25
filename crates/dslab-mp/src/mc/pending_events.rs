@@ -2,24 +2,16 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency_resolver::DependencyResolver;
-use crate::mc::events::{McDuration, McEvent, McEventId};
-
-use super::events::DeliveryOptions;
-
-#[derive(Clone, Hash, Eq, PartialEq)]
-pub struct McEventTimed {
-    event: McEvent,
-    start_time: McDuration,
-}
+use crate::mc::events::{McEvent, McEventId, McTime};
 
 #[derive(Default, Clone, Hash, Eq, PartialEq)]
 pub struct PendingEvents {
-    events: BTreeMap<usize, McEventTimed>,
+    events: BTreeMap<McEventId, McEvent>,
     timer_mapping: BTreeMap<(String, String), usize>,
     available_events: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
-    global_time: BTreeMap<String, McDuration>,
+    global_time: BTreeMap<String, McTime>,
 }
 
 impl PendingEvents {
@@ -41,25 +33,10 @@ impl PendingEvents {
     }
 
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
-        assert!(self.get(id).is_none(), "use unique id's");
-        let proc = match &event {
-            McEvent::MessageReceived {
-                dest,
-                options: DeliveryOptions::NoFailures(max_delay),
-                ..
-            } => {
-                let blocked_events =
-                    self.resolver
-                        .add_message(dest.clone(), self.get_global_time(dest) + *max_delay, id);
+        assert!(!self.events.contains_key(&id), "event with such id already exists");
+        match &event {
+            McEvent::MessageReceived { .. } => {
                 self.available_events.insert(id);
-                if let Some(blocked_events) = blocked_events {
-                    self.available_events.retain(|e| !blocked_events.contains(e));
-                }
-                dest
-            }
-            McEvent::MessageReceived { dest, .. } => {
-                self.available_events.insert(id);
-                dest
             }
             McEvent::TimerFired {
                 proc,
@@ -67,43 +44,35 @@ impl PendingEvents {
                 timer,
             } => {
                 self.timer_mapping.insert((proc.clone(), timer.clone()), id);
-                let (is_available, blocked_events) =
-                    self.resolver
-                        .add_timer(proc.clone(), self.get_global_time(proc) + *timer_delay, id);
-                if is_available {
+                if self
+                    .resolver
+                    .add_timer(proc.clone(), self.get_global_time(proc) + *timer_delay, id)
+                {
                     self.available_events.insert(id);
                 }
-                if let Some(blocked) = blocked_events {
-                    self.available_events.retain(|e| !blocked.contains(e));
-                }
-                proc
             }
             McEvent::TimerCancelled { proc, timer } => {
-                self.resolver
+                let unblocked_events = self
+                    .resolver
                     .cancel_timer(proc.clone(), self.timer_mapping[&(proc.clone(), timer.clone())]);
-                proc
+                self.available_events.extend(unblocked_events);
+                return id;
             }
         };
-        self.events.insert(
-            id,
-            McEventTimed {
-                start_time: self.get_global_time(proc),
-                event,
-            },
-        );
+        self.events.insert(id, event);
         id
     }
 
-    fn get_global_time(&self, proc: &String) -> McDuration {
+    fn get_global_time(&self, proc: &String) -> McTime {
         self.global_time.get(proc).copied().unwrap_or_default()
     }
 
     pub fn get(&self, id: McEventId) -> Option<&McEvent> {
-        self.events.get(&id).map(|e| &e.event)
+        self.events.get(&id)
     }
 
     pub fn get_mut(&mut self, id: McEventId) -> Option<&mut McEvent> {
-        self.events.get_mut(&id).map(|e| &mut e.event)
+        self.events.get_mut(&id)
     }
 
     pub fn available_events(&self) -> &BTreeSet<McEventId> {
@@ -111,15 +80,14 @@ impl PendingEvents {
     }
 
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
+        println!("{}", event_id);
         assert!(self.available_events.remove(&event_id));
-        let unblocked_events = self.resolver.pop(event_id);
-        self.available_events.extend(unblocked_events);
-        let event_timed = self.events.remove(&event_id).unwrap();
-        if let McEvent::TimerFired { timer_delay, proc, .. } = &event_timed.event {
-            assert!(self.get_global_time(proc) <= event_timed.start_time + *timer_delay);
-            self.global_time
-                .insert(proc.clone(), event_timed.start_time + *timer_delay);
+        let result = self.events.remove(&event_id);
+        let result = result.unwrap();
+        if let McEvent::TimerFired { .. } = result {
+            let unblocked_events = self.resolver.pop(event_id);
+            self.available_events.extend(unblocked_events);
         }
-        event_timed.event
+        result
     }
 }

@@ -1,7 +1,7 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
-use crate::mc::events::McDuration;
+use crate::mc::events::McTime;
 use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::message::Message;
 use crate::network::Network;
@@ -46,7 +46,7 @@ impl McNetwork {
                 msg,
                 src,
                 dest,
-                options: DeliveryOptions::NoFailures(McDuration::from(self.max_delay)),
+                options: DeliveryOptions::NoFailures(McTime::from(self.max_delay)),
             }
         } else if !self.drop_outgoing.contains(&src_node)
             && !self.drop_incoming.contains(&dest_node)
