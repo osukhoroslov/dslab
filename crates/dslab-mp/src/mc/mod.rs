@@ -3,11 +3,11 @@
 //! Module for testing student code with model checking technique.
 
 mod dependency;
-mod events;
+pub(crate) mod events;
 pub mod model_checker;
 mod network;
 mod node;
-mod pending_events;
+pub(crate) mod pending_events;
 pub mod strategies;
 pub mod strategy;
 mod system;
