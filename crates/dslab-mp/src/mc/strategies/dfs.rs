@@ -1,6 +1,9 @@
+//! Implementation of model checking DFS search strategy.
+
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
 
+/// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
 pub struct Dfs {
     prune: PruneFn,
     goal: GoalFn,
@@ -12,6 +15,7 @@ pub struct Dfs {
 }
 
 impl Dfs {
+    /// Creates a new Dfs instance with specified user-defined functions and execution mode.
     pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {

@@ -1,3 +1,5 @@
+//! Model checker configuration and launching.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -14,12 +16,14 @@ use crate::system::System;
 use super::events::McTime;
 use super::pending_events::PendingEvents;
 
+/// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
     system: McSystem,
     strategy: Box<dyn Strategy>,
 }
 
 impl ModelChecker {
+    /// Creates a new model checker with the specified strategy with an initial state equal to the current state of the system.
     pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
         let sim = sys.sim();
 
@@ -55,6 +59,7 @@ impl ModelChecker {
         }
     }
 
+    /// Starts model checking and returns the result on completion.
     pub fn start(&mut self) -> Result<McSummary, String> {
         self.strategy.run(&mut self.system)
     }
