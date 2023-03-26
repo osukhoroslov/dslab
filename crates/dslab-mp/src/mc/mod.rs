@@ -1,9 +1,13 @@
+#![warn(missing_docs)]
+
+//! Module for testing student code with model checking technique.
+
 mod dependency;
-pub mod events;
+mod events;
 pub mod model_checker;
 mod network;
 mod node;
-pub mod pending_events;
+mod pending_events;
 pub mod strategies;
 pub mod strategy;
 mod system;
