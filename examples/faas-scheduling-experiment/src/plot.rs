@@ -26,8 +26,9 @@ pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &
             .fold(0., f64::max)
             * 1.1;
         let mut ctx = ChartBuilder::on(&areas[idx])
+            .margin(20)
             .set_label_area_size(LabelAreaPosition::Left, 60)
-            .set_label_area_size(LabelAreaPosition::Bottom, 60)
+            .set_label_area_size(LabelAreaPosition::Bottom, 30)
             .build_cartesian_2d(rps[0]..rps.last().copied().unwrap(), 0.0..f64::min(max, 100.))
             .unwrap();
         ctx.configure_mesh()

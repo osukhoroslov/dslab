@@ -111,7 +111,7 @@ impl ServerlessSimulation {
         let host = Rc::new(RefCell::new(Host::new(
             id,
             cores,
-            self.cpu_policy.clean_copy(),
+            self.cpu_policy.init(cores),
             resources,
             real_invoker,
             self.function_registry.clone(),

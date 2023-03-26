@@ -1,4 +1,4 @@
-/// This file contains functions responsible for parsing Azure functions trace.
+/// This file contains functions responsible for parsing Azure functions trace and generating experiments using it.
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::read_dir;
@@ -103,7 +103,8 @@ fn app_id(id: &str) -> String {
     id0
 }
 
-/// Experiment generator will choose `count` random apps with popularity in range [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+/// Experiment generator will choose `count` random apps with popularity in range
+/// [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
 pub struct AppPreference {
     pub count: usize,
     pub left: f64,
@@ -173,8 +174,7 @@ pub struct AzureTraceConfig {
     /// Cold start latency, currently it's the same for all apps.
     pub cold_start_latency: f64,
     /// If `rps` is not None, trace generator attempts to scale trace to the given number of requests
-    /// per second by either removing random requests or duplicating random requests (yes, that
-    /// doesn't sound very solid).
+    /// per second by either removing random requests or duplicating random requests (yes, that doesn't sound very solid).
     pub rps: Option<f64>,
 }
 
@@ -477,7 +477,8 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
             }
         }
         // it's possible that some functions don't have a record in duration file
-        // in this case we use Lognormal(-0.38, 2.36) distribution
+        // in this case we use Lognormal(-0.38, 2.36) distribution (log-normal MLE fit
+        // from Serverless in the Wild paper)
         let dist = LogNormal::new(-0.38, 2.36).unwrap();
         for inv in invocations.iter_mut() {
             if inv.2 == 0. {
@@ -504,7 +505,8 @@ pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace 
         };
     }
 
-    // if the trace has RPS constraint, we either remove random invocations or copy random invocations to achieve given RPS rate
+    // if the trace has RPS constraint, we either remove random invocations
+    // or copy random invocations to achieve given RPS rate
     if let Some(rps) = config.rps {
         let need = (rps * (config.time_period as f64) * 60.).round() as usize;
         match need.cmp(&invocations.len()) {

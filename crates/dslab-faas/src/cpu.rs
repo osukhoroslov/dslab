@@ -1,8 +1,8 @@
-/// This file contains the CPU sharing model used in the simulator.
-/// We use something similar to CPUShares in cgroups, but instead of shares we operate with (shares/core_shares),
-/// i. e. if the container has 512 shares and each core amounts to 1024 shares, we say that the share of the container equals 0.5.
+/// CPU sharing models used in the simulator.
+/// We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
+/// i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
 /// If the container allows concurrent invocations, each invocation gets an equal part of the container share.
-/// The exact CPU model depends on the CPUPolicy chosen.
+/// The exact CPU sharing model depends on the used CpuPolicy.
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -43,9 +43,10 @@ impl Ord for WorkItem {
 
 /// CpuPolicy governs CPU sharing, computes invocation progress and manages invocation end events.
 pub trait CpuPolicy {
-    fn clean_copy(&self) -> Box<dyn CpuPolicy>;
+    /// Returns a clean initialized instance of the policy.
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy>;
+    /// Returns the current CPU load.
     fn get_load(&self) -> f64;
-    fn set_cores(&mut self, cores: f64);
     /// This method is called whenever there is a new invocation to run on this CPU.
     fn on_new_invocation(
         &mut self,
@@ -64,23 +65,21 @@ pub trait CpuPolicy {
     );
 }
 
-/// This policy does not emulate CPU at all. All invocations work as if executed on some abstract
-/// infinite-core CPU with no load issues.
+/// This policy ignores contention for CPU resources.
+/// All invocations work as if executed on some abstract infinite-core CPU without any contention.
 #[derive(Default)]
 pub struct IgnoredCpuPolicy {
     load: f64,
 }
 
 impl CpuPolicy for IgnoredCpuPolicy {
-    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
+    fn init(&self, _cores: u32) -> Box<dyn CpuPolicy> {
         Box::<Self>::default()
     }
 
     fn get_load(&self) -> f64 {
         self.load
     }
-
-    fn set_cores(&mut self, _cores: f64) {}
 
     fn on_new_invocation(
         &mut self,
@@ -108,10 +107,9 @@ impl CpuPolicy for IgnoredCpuPolicy {
     }
 }
 
-/// CPU shares of active containers should not exceed the number of cores. If this limit is
-/// exceeded, extra invocations are stalled until some cores are freed.
-/// This model currently ignores possible effects related to multiple concurrent invocations on the same
-/// container.
+/// CPU shares of active containers should not exceed the number of cores.
+/// If this limit is exceeded, extra invocations are queued until some cores are freed.
+/// This model currently ignores possible effects related to multiple concurrent invocations on the same container.
 #[derive(Default)]
 pub struct IsolatedCpuPolicy {
     cores: f64,
@@ -120,17 +118,22 @@ pub struct IsolatedCpuPolicy {
     queue: VecDeque<(usize, f64)>,
 }
 
+impl IsolatedCpuPolicy {
+    pub fn new(cores: u32) -> Self {
+        Self {
+            cores: cores as f64,
+            ..Default::default()
+        }
+    }
+}
+
 impl CpuPolicy for IsolatedCpuPolicy {
-    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
-        Box::<Self>::default()
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy> {
+        Box::<Self>::new(Self::new(cores))
     }
 
     fn get_load(&self) -> f64 {
         self.load
-    }
-
-    fn set_cores(&mut self, cores: f64) {
-        self.cores = cores;
     }
 
     fn on_new_invocation(
@@ -178,8 +181,7 @@ impl CpuPolicy for IsolatedCpuPolicy {
     }
 }
 
-/// CPU shares of active containers may exceed the number of cores, in this case the
-/// invocations are slowed down.
+/// CPU shares of active containers may exceed the number of cores, in this case the invocations are slowed down.
 /// We assume that CPU sharing is fair: each invocation makes progress according to its share.
 #[derive(Default)]
 pub struct ContendedCpuPolicy {
@@ -193,6 +195,13 @@ pub struct ContendedCpuPolicy {
 }
 
 impl ContendedCpuPolicy {
+    pub fn new(cores: u32) -> Self {
+        Self {
+            cores: cores as f64,
+            ..Default::default()
+        }
+    }
+
     fn try_rebuild(&mut self) {
         if self.work_total > 1e12 {
             let mut items: Vec<_> = self.work_tree.iter().cloned().collect();
@@ -247,16 +256,12 @@ impl ContendedCpuPolicy {
 }
 
 impl CpuPolicy for ContendedCpuPolicy {
-    fn clean_copy(&self) -> Box<dyn CpuPolicy> {
-        Box::<Self>::default()
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy> {
+        Box::<Self>::new(Self::new(cores))
     }
 
     fn get_load(&self) -> f64 {
         self.load
-    }
-
-    fn set_cores(&mut self, cores: f64) {
-        self.cores = cores;
     }
 
     fn on_new_invocation(
@@ -330,8 +335,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(cores: u32, mut policy: Box<dyn CpuPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
-        policy.set_cores(cores as f64);
+    pub fn new(cores: u32, policy: Box<dyn CpuPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self { cores, policy, ctx }
     }
 
