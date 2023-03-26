@@ -1,3 +1,5 @@
+//! Main logic and configuration of model checking strategy.
+
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -12,38 +14,67 @@ use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
 use crate::util::t;
 
+/// Defines the situation in which the model checking algorithm is executing.
 #[derive(Clone, PartialEq)]
 pub enum ExecutionMode {
+    /// Fast and efficient production execution with truncated execution info.
     Default,
+
+    /// More slow execution with informative additional execution info.
     Debug,
 }
 
+/// Status of the message which is passed to logging.
 pub enum LogContext {
+    /// Nothing happened to the message.
     Default,
+
+    /// Message was dropped.
     Dropped,
+
+    /// Message was duplicated.
     Duplicated,
+
+    /// Message data was corrupted.
     Corrupted,
 }
 
+/// Mode of checking if the state of the system was previously visited.
 pub enum VisitedStates {
+    /// Checking for equality of states (slow).
     Full(HashSet<McState>),
+
+    /// Checking for equality of hashes of states (fast, but with rare collisions).
     Partial(HashSet<u64>),
 }
 
+/// Trait with common functionality for different model checking search strategies.
 #[derive(Debug, Default, Clone)]
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
 
+/// Checks if execution branch in system states graph should be pruned.
+/// Called for particular state. If returns true, no child states of the considered state would be checked.
 pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
+
+/// Checks if the system state is the final state (that is, all significant events in the system have already occurred).
 pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
+
+/// Invariant which is checking correctness of execution.
+/// If returns false, model checking found error in user algorithm.
 pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
 
+/// Trait with common functions for different model checking strategies.
 pub trait Strategy {
+    /// Launches the strategy execution.
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
+    /// Chooses the next system state to consider (the part in which the strategies differ).
     fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
 
+    /// Entrypoint to processing system event.
+    /// Explores possible outcomes according to event type and options.
     fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let event = self.clone_event(system, event_id);
         match event {
@@ -88,6 +119,7 @@ pub trait Strategy {
         Ok(())
     }
 
+    /// Processes event dropping.
     fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let state = system.get_state(self.search_depth());
         let event = self.take_event(system, event_id);
@@ -101,6 +133,7 @@ pub trait Strategy {
         Ok(())
     }
 
+    /// Initiates applying event to the system and restores the system state afterwards.
     fn apply_event(
         &mut self,
         system: &mut McSystem,
@@ -132,18 +165,22 @@ pub trait Strategy {
         Ok(())
     }
 
+    /// Takes the event from pending events by id.
     fn take_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         system.events.pop(event_id)
     }
 
+    /// Clones the event from pending events by id.
     fn clone_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         system.events.get(event_id).unwrap().clone()
     }
 
+    /// Adds the event to pending events list.
     fn add_event(&self, system: &mut McSystem, event: McEvent) -> McEventId {
         system.events.push(event)
     }
 
+    /// Applies corruption to the event data.
     fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
         self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
         match event {
@@ -168,6 +205,8 @@ pub trait Strategy {
         }
     }
 
+    /// Duplicates event from pending events list by id.
+    /// The new event is left in pending events list and the old one is returned.
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
@@ -175,6 +214,7 @@ pub trait Strategy {
         event
     }
 
+    /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
     fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
@@ -189,6 +229,7 @@ pub trait Strategy {
         }
     }
 
+    /// Logs the message according to its log context.
     fn log_message(&self, depth: u64, msg: &Message, src: &String, dest: &String, log_context: LogContext) {
         match log_context {
             LogContext::Default => {
@@ -214,6 +255,7 @@ pub trait Strategy {
         }
     }
 
+    /// Determines the way of checking if the state was visited before.
     fn initialize_visited(log_mode: &ExecutionMode) -> VisitedStates
     where
         Self: Sized,
@@ -224,6 +266,7 @@ pub trait Strategy {
         }
     }
 
+    /// Checks if the system state was visited before.
     fn have_visited(&mut self, state: &McState) -> bool {
         match self.visited() {
             VisitedStates::Full(ref states) => states.contains(state),
@@ -235,6 +278,7 @@ pub trait Strategy {
         }
     }
 
+    /// Marks the system state as already visited.
     fn mark_visited(&mut self, state: McState) {
         match self.visited() {
             VisitedStates::Full(ref mut states) => {
@@ -248,6 +292,7 @@ pub trait Strategy {
         }
     }
 
+    /// Adds new information to model checking execution summary.
     fn update_summary(&mut self, status: String) {
         if let ExecutionMode::Debug = self.execution_mode() {
             let counter = self.summary().states.entry(status).or_insert(0);
@@ -255,6 +300,7 @@ pub trait Strategy {
         }
     }
 
+    /// Applies user-defined checking functions to the system state and gives the result of the check.
     fn check_state(&mut self, state: &McState, events_num: usize) -> Option<Result<(), String>> {
         if self.have_visited(state) {
             // Was already visited before
@@ -278,17 +324,24 @@ pub trait Strategy {
         }
     }
 
+    /// Returns the execution mode of the model checking.
     fn execution_mode(&self) -> &ExecutionMode;
 
+    /// Returns current search depth in system states graph.
     fn search_depth(&self) -> u64;
 
+    /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;
 
+    /// Returns the prune function.
     fn prune(&self) -> &PruneFn;
 
+    /// Returns the goal function.
     fn goal(&self) -> &GoalFn;
 
+    /// Returns th invariant function.
     fn invariant(&self) -> &InvariantFn;
 
+    /// Returns the model checking execution summary.
     fn summary(&mut self) -> &mut McSummary;
 }

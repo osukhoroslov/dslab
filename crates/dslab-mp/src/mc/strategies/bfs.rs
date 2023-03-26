@@ -1,8 +1,11 @@
+//! Implementation of model checking BFS search strategy.
+
 use std::collections::VecDeque;
 
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
 
+/// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
 pub struct Bfs {
     prune: PruneFn,
     goal: GoalFn,
@@ -15,6 +18,7 @@ pub struct Bfs {
 }
 
 impl Bfs {
+    /// Creates a new Bfs instance with specified user-defined functions and execution mode.
     pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
