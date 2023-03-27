@@ -63,11 +63,19 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
     int done = 0;
     int acks_left = peers.size();
 
-    std::shuffle(peers.begin(), peers.end(), rng);
+    std::vector<std::pair<int, sg4::Mailbox*>> peers_delay;
+    for (auto peer : peers) {
+        peers_delay.emplace_back(random.uniform_real(0, 10), peer);
+    }
 
-    for (const auto& peer : peers) {
+    std::sort(peers_delay.begin(), peers_delay.end(), [](const auto& a, const auto& b) {
+        return a.first < b.first;
+    });
+
+    for (const auto& [send_time, peer] : peers_delay) {
+        sg4::this_actor::sleep_until(send_time);
         auto* data = new Message(MessageType::DATA, in);
-        peer->put_init(data, random.uniform_int(1, 1000) * 1'000'000)
+        peer->put_init(data, random.uniform_real(1, 1000) * 1'000'000)
             ->detach(Message::Destroy);  // out->put_async is very slow
         XBT_INFO("Sent DATA");
     }
