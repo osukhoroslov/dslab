@@ -106,19 +106,16 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
 
 void make_full_mesh_topology(sg4::NetZone* zone, int host_count) {
     for (int i = 0; i < host_count; ++i) {
-        for (int j = 0; j <= i; ++j) {
-            if (i == j && i != 0) continue;
+        for (int j = 0; j < i; ++j) {
             sg4::LinkInRoute link{zone->create_link("link-" + std::to_string(i) + "-" + std::to_string(j), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED)};
             zone->add_route(
                 sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                 sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
                 nullptr, nullptr, {link}, false);
-            if (i != j) {
-                zone->add_route(
-                    sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                    sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
-                    nullptr, nullptr, {link}, false);
-            }
+            zone->add_route(
+                sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
+                sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
+                nullptr, nullptr, {link}, false);
         }
     }
 }
@@ -132,7 +129,7 @@ void make_star_topology(sg4::NetZone* zone, int host_count) {
 
     for (int i = 0; i < host_count; ++i) {
         for (int j = 0; j < host_count; ++j) {
-            if (i == j && i != 0) continue;
+            if (i == j) continue;
             sg4::LinkInRoute a{links[i]};
             sg4::LinkInRoute b{links[j]};
             zone->add_route(
@@ -159,7 +156,7 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
 
     for (int i = 0; i < host_count; ++i) {
         for (int j = 0; j < host_count; ++j) {
-            if (i == j && i != 0) continue;
+            if (i == j) continue;
             if (i / hosts_per_star == j / hosts_per_star) {
                 sg4::LinkInRoute a{host_links[i]};
                 sg4::LinkInRoute b{host_links[j]};
@@ -210,6 +207,14 @@ int main(int argc, char* argv[]) {
     for (uint32_t i = 0; i < host_count; i++) {
         std::string hostname = "host-" + std::to_string(i);
         auto host = zone->create_host(hostname, 1);
+        if (i == 0) {
+            const sg4::Link* loopback = zone->create_link("host-0-loopback", "100GBps")
+                                            ->set_sharing_policy(sg4::Link::SharingPolicy::FATPIPE)
+                                            ->set_latency(0)
+                                            ->seal();
+            zone->add_route(host->get_netpoint(), host->get_netpoint(), nullptr, nullptr,
+                            {sg4::LinkInRoute(loopback)});
+        }
 
         std::vector<sg4::Mailbox*> peers = process_mailboxes;
         peers.erase(peers.begin() + i);
