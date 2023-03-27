@@ -61,18 +61,18 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
     XBT_INFO("Started");
 
     int done = 0;
-    int aks_left = peers.size();
+    int acks_left = peers.size();
 
     std::shuffle(peers.begin(), peers.end(), rng);
 
     for (const auto& peer : peers) {
         auto* data = new Message(MessageType::DATA, in);
-        peer->put_init(data, random.uniform_int(500, 2000))
+        peer->put_init(data, random.uniform_int(1, 1000) * 1'000'000)
             ->detach(Message::Destroy);  // out->put_async is very slow
         XBT_INFO("Sent DATA");
     }
 
-    while (aks_left) {
+    while (acks_left) {
         auto msg = in->get<Message>();
         if (msg->type == MessageType::DATA) {
             XBT_INFO("Received DATA");
@@ -82,8 +82,8 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
             XBT_INFO("Sent DATA_RECEIVED");
         } else if (msg->type == MessageType::DATA_RECEIVED) {
             XBT_INFO("Received DATA_RECEIVED");
-            --aks_left;
-            if (aks_left == 0) {
+            --acks_left;
+            if (acks_left == 0) {
                 XBT_INFO("Completed");
                 auto* completed = new Message(MessageType::COMPLETED, in);
                 root->put(completed, 1);
@@ -92,14 +92,15 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
         }
         delete msg;
     }
-    xbt_assert(aks_left == 0);
+    xbt_assert(acks_left == 0);
     XBT_INFO("Stopped");
 }
 
 void make_full_mesh_topology(sg4::NetZone* zone, int host_count) {
     for (int i = 0; i < host_count; ++i) {
         for (int j = 0; j <= i; ++j) {
-            sg4::LinkInRoute link{zone->create_link("link-" + std::to_string(i) + "-" + std::to_string(j), 100)->set_latency(0.1)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED)};
+            if (i == j && i != 0) continue;
+            sg4::LinkInRoute link{zone->create_link("link-" + std::to_string(i) + "-" + std::to_string(j), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED)};
             zone->add_route(
                 sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                 sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
@@ -117,12 +118,13 @@ void make_full_mesh_topology(sg4::NetZone* zone, int host_count) {
 void make_star_topology(sg4::NetZone* zone, int host_count) {
     std::vector<sg4::Link*> links;
     for (uint32_t i = 0; i < host_count; i++) {
-        auto link = zone->create_link("link-" + std::to_string(i), 100)->set_latency(0.1)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
+        auto link = zone->create_link("link-" + std::to_string(i), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         links.push_back(link);
     }
 
     for (int i = 0; i < host_count; ++i) {
         for (int j = 0; j < host_count; ++j) {
+            if (i == j && i != 0) continue;
             sg4::LinkInRoute a{links[i]};
             sg4::LinkInRoute b{links[j]};
             zone->add_route(
@@ -138,17 +140,18 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
 
     std::vector<sg4::Link*> star_links;
     for (uint32_t i = 0; i < star_count; i++) {
-        auto link = zone->create_link("link-" + std::to_string(i), 100)->set_latency(0.1)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
+        auto link = zone->create_link("link-" + std::to_string(i), std::to_string(1000 * hosts_per_star) + "MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         star_links.push_back(link);
     }
     std::vector<sg4::Link*> host_links;
     for (uint32_t i = 0; i < hosts_per_star * star_count; i++) {
-        auto link = zone->create_link("link-host-" + std::to_string(i), 100)->set_latency(0.1)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
+        auto link = zone->create_link("link-host-" + std::to_string(i), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         host_links.push_back(link);
     }
 
     for (int i = 0; i < host_count; ++i) {
         for (int j = 0; j < host_count; ++j) {
+            if (i == j && i != 0) continue;
             if (i / hosts_per_star == j / hosts_per_star) {
                 sg4::LinkInRoute a{host_links[i]};
                 sg4::LinkInRoute b{host_links[j]};
@@ -159,7 +162,7 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
             } else {
                 sg4::LinkInRoute a{host_links[i]};
                 sg4::LinkInRoute b{star_links[i / hosts_per_star]};
-                sg4::LinkInRoute c{host_links[j / hosts_per_star]};
+                sg4::LinkInRoute c{star_links[j / hosts_per_star]};
                 sg4::LinkInRoute d{host_links[j]};
                 zone->add_route(
                     sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
