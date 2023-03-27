@@ -111,11 +111,7 @@ void make_full_mesh_topology(sg4::NetZone* zone, int host_count) {
             zone->add_route(
                 sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                 sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                nullptr, nullptr, {link}, false);
-            zone->add_route(
-                sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
-                nullptr, nullptr, {link}, false);
+                nullptr, nullptr, {link}, true);
         }
     }
 }
@@ -128,14 +124,13 @@ void make_star_topology(sg4::NetZone* zone, int host_count) {
     }
 
     for (int i = 0; i < host_count; ++i) {
-        for (int j = 0; j < host_count; ++j) {
-            if (i == j) continue;
+        for (int j = 0; j < i; ++j) {
             sg4::LinkInRoute a{links[i]};
             sg4::LinkInRoute b{links[j]};
             zone->add_route(
                 sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                 sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                nullptr, nullptr, {a, b}, false);
+                nullptr, nullptr, {a, b}, true);
         }
     }
 }
@@ -155,15 +150,14 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
     }
 
     for (int i = 0; i < host_count; ++i) {
-        for (int j = 0; j < host_count; ++j) {
-            if (i == j) continue;
+        for (int j = 0; j < i; ++j) {
             if (i / hosts_per_star == j / hosts_per_star) {
                 sg4::LinkInRoute a{host_links[i]};
                 sg4::LinkInRoute b{host_links[j]};
                 zone->add_route(
                     sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                     sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                    nullptr, nullptr, {a, b}, false);
+                    nullptr, nullptr, {a, b}, true);
             } else {
                 sg4::LinkInRoute a{host_links[i]};
                 sg4::LinkInRoute b{star_links[i / hosts_per_star]};
@@ -172,7 +166,7 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
                 zone->add_route(
                     sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
                     sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
-                    nullptr, nullptr, {a, b, c, d}, false);
+                    nullptr, nullptr, {a, b, c, d}, true);
             }
         }
     }
