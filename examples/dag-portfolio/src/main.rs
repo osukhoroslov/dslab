@@ -10,17 +10,12 @@ use std::time::Instant;
 extern crate reqwest;
 
 use clap::Parser;
-
-use sugars::{rc, refcell};
-
-use rand::prelude::*;
-use rand_pcg::Pcg64;
-
+use env_logger::Builder;
 use log::log_enabled;
 use log::Level::Info;
-
-use env_logger::Builder;
-
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+use sugars::{rc, refcell};
 use threadpool::ThreadPool;
 
 use dslab_compute::multicore::*;
@@ -32,22 +27,22 @@ use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 
 #[derive(Parser, Debug)]
-#[clap(about, long_about = None)]
+#[command(about, long_about = None)]
 struct Args {
     /// Run only one experiment (algo-dag-platform)
-    #[clap(long = "run-one")]
+    #[arg(long)]
     run_one: Option<String>,
 
-    /// Save trace_log to a file
-    #[clap(long = "trace-log")]
-    trace_log: bool,
+    /// Save trace logs to data/traces/
+    #[arg(long)]
+    save_traces: bool,
 
-    /// Load result from data/results.txt without running simulation
-    #[clap(long = "load-results")]
+    /// Load results from data/results.txt without running simulation
+    #[arg(long)]
     load_results: bool,
 
-    /// Number of threads
-    #[clap(long, default_value = "8")]
+    ///  Number of threads to use (default - use all available cores)
+    #[arg(long, default_value_t = std::thread::available_parallelism().unwrap().get())]
     threads: usize,
 }
 
@@ -72,12 +67,12 @@ fn run_experiments(args: &Args) {
 
         let prefix = "https://raw.githubusercontent.com/wrench-project/jsspp2022_submission_data/main/workflows/";
         let workflows = vec![
-            ("Montage", "montage-chameleon-2mass-10d-001.json"),
-            ("Epigenomics", "epigenomics-chameleon-ilmn-4seq-50k-001.json"),
-            ("Bwa", "bwa-chameleon-large-003.json"),
-            ("Cycles", "cycles-chameleon-2l-2c-12p-001.json"),
             ("1000Genome", "1000genome-chameleon-8ch-250k-001.json"),
             ("Blast", "blast-chameleon-medium-002.json"),
+            ("Bwa", "bwa-chameleon-large-003.json"),
+            ("Cycles", "cycles-chameleon-2l-2c-12p-001.json"),
+            ("Epigenomics", "epigenomics-chameleon-ilmn-4seq-50k-001.json"),
+            ("Montage", "montage-chameleon-2mass-10d-001.json"),
             ("Soykb", "soykb-chameleon-10fastq-20ch-001.json"),
             ("Srasearch", "srasearch-chameleon-10a-003.json"),
         ];
@@ -105,7 +100,7 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 1.0e11);
+        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 100.);
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);
@@ -117,20 +112,20 @@ fn run_experiments(args: &Args) {
         dags.push(dag);
     }
 
-    // up to 3 clusters for each platform, each triple means (nodes, speed, bandwidth)
+    // up to 3 clusters for each platform, each triple means (nodes, speed in Gflop/s, bandwidth in MB/s)
     // currently different bandwidth for different clusters is not supported
     let platform_configs = vec![
-        vec![(96, 100, 100)],
-        vec![(48, 50, 100), (48, 150, 100)],
-        vec![(48, 50, 100), (48, 400, 10)],
-        vec![(32, 100, 100), (32, 200, 200), (32, 300, 300)],
-        // vec![(32, 100, 100), (32, 200, 300), (32, 300, 200)],
-        // vec![(32, 100, 200), (32, 200, 100), (32, 300, 300)],
-        // vec![(32, 100, 200), (32, 200, 300), (32, 300, 100)],
-        // vec![(32, 100, 300), (32, 200, 200), (32, 300, 100)],
-        // vec![(32, 100, 300), (32, 200, 100), (32, 300, 200)],
+        vec![(96, 100., 100.)],
+        vec![(48, 50., 100.), (48, 150., 100.)],
+        vec![(48, 50., 100.), (48, 400., 10.)],
+        vec![(32, 100., 100.), (32, 200., 200.), (32, 300., 300.)],
+        // vec![(32, 100., 100.), (32, 200., 300.), (32, 300., 200.)],
+        // vec![(32, 100., 200.), (32, 200., 100.), (32, 300., 300.)],
+        // vec![(32, 100., 200.), (32, 200., 300.), (32, 300., 100.)],
+        // vec![(32, 100., 300.), (32, 200., 200.), (32, 300., 100.)],
+        // vec![(32, 100., 300.), (32, 200., 100.), (32, 300., 200.)],
     ];
-    let enable_trace_log = args.trace_log;
+    let enable_trace_log = args.save_traces;
     let traces_folder = "data/traces/";
 
     if enable_trace_log {
@@ -170,7 +165,7 @@ fn run_experiments(args: &Args) {
                 let finished_runs = finished_runs.clone();
                 let results = results.clone();
                 pool.execute(move || {
-                    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0e+8, 0.)));
+                    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1000., 0.)));
 
                     let scheduler = PortfolioScheduler::new(algo);
 
@@ -183,11 +178,10 @@ fn run_experiments(args: &Args) {
                             data_transfer_mode: DataTransferMode::Direct,
                         },
                     );
-                    let mut create_resource = |speed: i32, cluster: usize, node: usize| {
+                    let mut create_resource = |speed, cluster: usize, node: usize| {
                         let name = format!("compute-{}-{}", cluster, node);
-                        let speed = speed as u64 * 1_000_000_000;
                         let cores = 8;
-                        let memory = 0;
+                        let memory = 1_000_000; // use lots of memory to ignore memory capacity constraint
                         sim.add_resource(&name, speed, cores, memory);
                     };
 
@@ -249,7 +243,7 @@ fn run_experiments(args: &Args) {
                 results
                     .iter()
                     .map(|(algo, dag_id, platform_id, time)| {
-                        format!("{}\t{}\t{}\t{:.10}\n", algo, dag_id, platform_id, time)
+                        format!("{}\t{}\t{}\t{:.3}\n", algo, dag_id, platform_id, time)
                     })
                     .collect::<Vec<_>>()
                     .join("")
@@ -314,14 +308,21 @@ fn process_results() {
         avg_ratio_to_best[i] /= total_runs as f64;
     }
 
-    println!("| algo | average place | average ratio to best | number of first places |");
-    println!("|------|---------------|-----------------------|------------------------|");
+    println!("| algo | task cr          | resource cr | cores cr      | avg place | avg ratio | # best |");
+    println!("|------|------------------|-------------|---------------|-----------|-----------|--------|");
     algos.sort_by(|&a, &b| avg_ratio_to_best[a].total_cmp(&avg_ratio_to_best[b]));
     for algo in algos {
+        let scheduler = PortfolioScheduler::new(algo);
         let algo_ind = *algo_ind.get(&algo).unwrap();
         println!(
-            "| {: >4} | {: >13.3} | {: >21.3} | {: >22.3} |",
-            algo, avg_place[algo_ind], avg_ratio_to_best[algo_ind], first_places_cnt[algo_ind],
+            "| {: >4} | {: >16} | {: >11} | {: >13} | {: >9.3} | {: >9.3} | {: >6.3} |",
+            algo,
+            format!("{:?}", scheduler.task_criterion),
+            format!("{:?}", scheduler.resource_criterion),
+            format!("{:?}", scheduler.cores_criterion),
+            avg_place[algo_ind],
+            avg_ratio_to_best[algo_ind],
+            first_places_cnt[algo_ind],
         );
     }
 }

@@ -50,6 +50,8 @@ pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
         available_memory: u64,
+        requested_cores: u32,
+        requested_memory: u64,
     },
     Other {
         reason: String,
@@ -77,7 +79,7 @@ impl RunningComputation {
 
 #[derive(Serialize)]
 pub struct CompRequest {
-    pub flops: u64,
+    pub flops: f64,
     pub memory: u64,
     pub min_cores: u32,
     pub max_cores: u32,
@@ -139,7 +141,7 @@ pub struct DeallocationFailed {
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct Compute {
-    speed: u64,
+    speed: f64,
     cores_total: u32,
     cores_available: u32,
     memory_total: u64,
@@ -150,7 +152,7 @@ pub struct Compute {
 }
 
 impl Compute {
-    pub fn new(speed: u64, cores: u32, memory: u64, ctx: SimulationContext) -> Self {
+    pub fn new(speed: f64, cores: u32, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             speed,
             cores_total: cores,
@@ -163,7 +165,7 @@ impl Compute {
         }
     }
 
-    pub fn speed(&self) -> u64 {
+    pub fn speed(&self) -> f64 {
         self.speed
     }
 
@@ -185,7 +187,7 @@ impl Compute {
 
     pub fn run(
         &mut self,
-        flops: u64,
+        flops: f64,
         memory: u64,
         min_cores: u32,
         max_cores: u32,
@@ -238,6 +240,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
+                                requested_cores: min_cores,
+                                requested_memory: memory,
                             },
                         },
                         requester,
@@ -250,7 +254,7 @@ impl EventHandler for Compute {
 
                     let speedup = cores_dependency.speedup(cores);
 
-                    let compute_time = flops as f64 / self.speed as f64 / speedup;
+                    let compute_time = flops / self.speed / speedup;
                     self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
                     self.computations
                         .insert(event.id, RunningComputation::new(cores, memory, requester));
@@ -273,6 +277,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: self.cores_available,
                                 available_memory: self.memory_available,
+                                requested_cores: allocation.cores,
+                                requested_memory: allocation.memory,
                             },
                         },
                         requester,
@@ -307,6 +313,8 @@ impl EventHandler for Compute {
                             reason: FailReason::NotEnoughResources {
                                 available_cores: current_allocation.cores,
                                 available_memory: current_allocation.memory,
+                                requested_cores: allocation.cores,
+                                requested_memory: allocation.memory,
                             },
                         },
                         requester,

@@ -136,7 +136,7 @@ impl DAGRunner {
         }
     }
 
-    /// Enables or disables [trace log](crate::trace_log::TraceLog).
+    /// Enables or disables [trace log](TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
     }
@@ -199,7 +199,7 @@ impl DAGRunner {
                             .iter()
                             .filter(|f| self.dag.get_outputs().contains(f))
                             .map(|&f| {
-                                self.dag.get_data_item(f).size as f64
+                                self.dag.get_data_item(f).size
                                     / self
                                         .network
                                         .borrow()
@@ -407,15 +407,18 @@ impl DAGRunner {
                 if ready_cores.len() < need_cores as usize {
                     continue;
                 }
+                let task_id = task_ids.remove(&action_id).unwrap();
+                let task = self.dag.get_task(task_id);
+                let mut resource = &mut self.resources[resource_idx];
+                if task.memory > resource.memory_available {
+                    continue;
+                }
 
                 for &core in ready_cores.iter() {
                     self.resource_queue[resource_idx][core as usize].pop_front();
                     self.available_cores[resource_idx].remove(&core);
                 }
 
-                let task_id = task_ids.remove(&action_id).unwrap();
-                let task = self.dag.get_task(task_id);
-                let mut resource = &mut self.resources[resource_idx];
                 resource.cores_available -= need_cores;
                 resource.memory_available -= task.memory;
                 let resource = &self.resources[resource_idx];
@@ -454,7 +457,7 @@ impl DAGRunner {
         let data_id = self
             .network
             .borrow_mut()
-            .transfer_data(from, to, data_item.size as f64, self.id);
+            .transfer_data(from, to, data_item.size, self.id);
         self.data_transfers.insert(
             data_id,
             DataTransfer {

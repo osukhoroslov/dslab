@@ -29,7 +29,7 @@ fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
     for i in 0..num_tasks {
         dag.add_task(
             &i.to_string(),
-            rng.gen_range(1..1_000_000_000),
+            rng.gen_range::<u64, _>(1..1_000_000_000) as f64,
             rng.gen_range(0..128),
             1,
             rng.gen_range(1..6),
@@ -60,7 +60,7 @@ fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
             *task_id = tasks_topsort[*task_id];
         }
 
-        let size = rng.gen_range(1..1_000_000);
+        let size = rng.gen_range::<u64, _>(1..1_000_000) as f64;
 
         // rarely generate inputs
         if rng.gen_range(0..100) == 0 {
@@ -83,7 +83,7 @@ fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -
     (0..num_resources)
         .map(|i| ResourceConfig {
             name: i.to_string(),
-            speed: rng.gen_range(1..1_000_000_000),
+            speed: rng.gen_range::<u64, _>(1..1_000_000_000) as f64,
             cores: rng.gen_range(1..10),
             memory: if infinite_memory {
                 1_u64 << 60
@@ -193,37 +193,37 @@ fn test_3() {
 fn test_4() {
     let mut dag = DAG::new();
 
-    dag.add_task("A", 64, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("B", 76, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("C", 52, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("D", 32, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("E", 56, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("F", 64, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("G", 60, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("H", 44, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("I", 48, 0, 1, 1, CoresDependency::Linear);
-    dag.add_task("J", 28, 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("A", 64., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("B", 76., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("C", 52., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("D", 32., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("E", 56., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("F", 64., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("G", 60., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("H", 44., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("I", 48., 0, 1, 1, CoresDependency::Linear);
+    dag.add_task("J", 28., 0, 1, 1, CoresDependency::Linear);
 
-    let mut add_edge = |from: usize, to: usize, size: u64, name: &str| {
+    let mut add_edge = |from: usize, to: usize, size: f64, name: &str| {
         let id = dag.add_task_output(from, name, size);
         dag.add_data_dependency(id, to);
     };
 
-    add_edge(0, 1, 18, "a");
-    add_edge(0, 2, 12, "b");
-    add_edge(0, 3, 9, "c");
-    add_edge(0, 4, 11, "d");
-    add_edge(0, 5, 14, "e");
-    add_edge(1, 7, 19, "f");
-    add_edge(1, 8, 16, "g");
-    add_edge(2, 6, 23, "h");
-    add_edge(3, 7, 27, "i");
-    add_edge(3, 8, 23, "j");
-    add_edge(4, 8, 13, "k");
-    add_edge(5, 7, 15, "l");
-    add_edge(6, 9, 17, "m");
-    add_edge(7, 9, 11, "n");
-    add_edge(8, 9, 13, "o");
+    add_edge(0, 1, 18., "a");
+    add_edge(0, 2, 12., "b");
+    add_edge(0, 3, 9., "c");
+    add_edge(0, 4, 11., "d");
+    add_edge(0, 5, 14., "e");
+    add_edge(1, 7, 19., "f");
+    add_edge(1, 8, 16., "g");
+    add_edge(2, 6, 23., "h");
+    add_edge(3, 7, 27., "i");
+    add_edge(3, 8, 23., "j");
+    add_edge(4, 8, 13., "k");
+    add_edge(5, 7, 15., "l");
+    add_edge(6, 9, 17., "m");
+    add_edge(7, 9, 11., "n");
+    add_edge(8, 9, 13., "o");
 
     fn run_scheduler(scheduler: impl Scheduler + 'static, dag: DAG) -> f64 {
         let mut sim = DagSimulation::new(
@@ -235,10 +235,10 @@ fn test_4() {
                 data_transfer_mode: DataTransferMode::Direct,
             },
         );
-        sim.add_resource("0", 1, 1, 0);
-        sim.add_resource("1", 2, 1, 0);
-        sim.add_resource("2", 4, 1, 0);
-        sim.add_resource("3", 4, 1, 0);
+        sim.add_resource("0", 1., 1, 0);
+        sim.add_resource("1", 2., 1, 0);
+        sim.add_resource("2", 4., 1, 0);
+        sim.add_resource("3", 4., 1, 0);
 
         let runner = sim.init(dag);
         runner.borrow_mut().enable_trace_log(true);
@@ -285,15 +285,15 @@ fn test_4() {
 fn test_chain_1() {
     let mut dag = DAG::new();
     for i in 0..10 {
-        dag.add_task(&i.to_string(), i * 10 + 20, 32, 1, 2, CoresDependency::Linear);
+        dag.add_task(&i.to_string(), (i * 10 + 20) as f64, 32, 1, 2, CoresDependency::Linear);
     }
     for i in 0..9 {
-        let id = dag.add_task_output(i, &i.to_string(), i as u64 * 100 + 200);
+        let id = dag.add_task_output(i, &i.to_string(), (i * 100 + 200) as f64);
         dag.add_data_dependency(id, i + 1);
     }
-    let input = dag.add_data_item("input", 600);
+    let input = dag.add_data_item("input", 600.);
     dag.add_data_dependency(input, 0);
-    dag.add_task_output(9, "output", 700);
+    dag.add_task_output(9, "output", 700.);
 
     let bandwidth = 10.0;
     let latency = 0.1;
@@ -314,7 +314,7 @@ fn test_chain_1() {
             data_transfer_mode: DataTransferMode::Direct,
         },
     );
-    sim.add_resource("0", 5, 10, 1024);
+    sim.add_resource("0", 5., 10, 1024);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
@@ -327,15 +327,15 @@ fn test_chain_1() {
 fn test_chain_2() {
     let mut dag = DAG::new();
     for i in 0..10 {
-        dag.add_task(&i.to_string(), i * 10 + 20, 32, 1, 2, CoresDependency::Linear);
+        dag.add_task(&i.to_string(), (i * 10 + 20) as f64, 32, 1, 2, CoresDependency::Linear);
     }
     for i in 0..9 {
-        let id = dag.add_task_output(i, &i.to_string(), i as u64 * 100 + 200);
+        let id = dag.add_task_output(i, &i.to_string(), (i * 100 + 200) as f64);
         dag.add_data_dependency(id, i + 1);
     }
-    let input = dag.add_data_item("input", 600);
+    let input = dag.add_data_item("input", 600.);
     dag.add_data_dependency(input, 0);
-    dag.add_task_output(9, "output", 700);
+    dag.add_task_output(9, "output", 700.);
 
     let bandwidth = 10.0;
     let latency = 0.1;
@@ -362,7 +362,7 @@ fn test_chain_2() {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
         },
     );
-    sim.add_resource("0", 5, 10, 1024);
+    sim.add_resource("0", 5., 10, 1024);
     let runner = sim.init(dag);
     sim.step_until_no_events();
     assert!(runner.borrow().is_completed());
@@ -374,13 +374,13 @@ fn test_chain_2() {
 #[test]
 fn test_fork_join() {
     let mut dag = DAG::new();
-    let root = dag.add_task("root", 10, 32, 1, 1, CoresDependency::Linear);
-    let end = dag.add_task("end", 10, 32, 1, 1, CoresDependency::Linear);
+    let root = dag.add_task("root", 10., 32, 1, 1, CoresDependency::Linear);
+    let end = dag.add_task("end", 10., 32, 1, 1, CoresDependency::Linear);
     for i in 0..5 {
-        let data_id = dag.add_task_output(root, &i.to_string(), 100);
-        let task_id = dag.add_task(&i.to_string(), 50, 32, 1, 1, CoresDependency::Linear);
+        let data_id = dag.add_task_output(root, &i.to_string(), 100.);
+        let task_id = dag.add_task(&i.to_string(), 50., 32, 1, 1, CoresDependency::Linear);
         dag.add_data_dependency(data_id, task_id);
-        let data_id = dag.add_task_output(task_id, &(i.to_string() + "_"), 200);
+        let data_id = dag.add_task_output(task_id, &(i.to_string() + "_"), 200.);
         dag.add_data_dependency(data_id, end);
     }
 
@@ -401,7 +401,7 @@ fn test_fork_join() {
         },
     );
     for i in 0..5 {
-        sim.add_resource(&i.to_string(), 5, 1, 1024);
+        sim.add_resource(&i.to_string(), 5., 1, 1024);
     }
     let runner = sim.init(dag);
     sim.step_until_no_events();

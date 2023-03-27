@@ -62,8 +62,8 @@ impl PeftScheduler {
                         (0..resources.len())
                             .map(|succ_resource| {
                                 oct[succ][succ_resource]
-                                    + dag.get_task(succ).flops as f64 / resources[succ_resource].speed as f64
-                                    + weight as f64
+                                    + dag.get_task(succ).flops / resources[succ_resource].speed
+                                    + weight
                                         * if self.original_network_estimation {
                                             if resource_id == succ_resource {
                                                 0.0

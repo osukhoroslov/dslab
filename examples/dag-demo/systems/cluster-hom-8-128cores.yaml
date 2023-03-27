@@ -1,0 +1,37 @@
+resources:
+  - name: node1
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node2
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node3
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node4
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node5
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node6
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node7
+    speed: 10
+    cores: 16
+    memory: 32000
+  - name: node8
+    speed: 10
+    cores: 16
+    memory: 32000
+network:
+  model: ConstantBandwidthNetwork
+  bandwidth: 1000
+  latency: 100

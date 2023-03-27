@@ -1,14 +1,48 @@
 dags:
-  - ../dag/dags
+  - ../dag-demo/dags
 systems:
-  - systems
+  - ../dag-demo/systems
+data_transfer_mode: Direct
 schedulers:
-  - HEFT
   - Simple
+  - DLS
+  - HEFT
   - Lookahead
   - PEFT
   - PEFT[original_network_estimation=true]
-  - DLS
+  - Portfolio[algo=0]
+  - Portfolio[algo=1]
+  - Portfolio[algo=2]
+  - Portfolio[algo=3]
+  - Portfolio[algo=4]
   - Portfolio[algo=5]
+  - Portfolio[algo=6]
+  - Portfolio[algo=7]
   - Portfolio[algo=8]
-data_transfer_mode: ViaMasterNode
+  - Portfolio[algo=9]
+  - Portfolio[algo=10]
+  - Portfolio[algo=11]
+  - Portfolio[algo=12]
+  - Portfolio[algo=13]
+  - Portfolio[algo=14]
+  - Portfolio[algo=15]
+  - Portfolio[algo=16]
+  - Portfolio[algo=17]
+  - Portfolio[algo=18]
+  - Portfolio[algo=19]
+  - Portfolio[algo=20]
+  - Portfolio[algo=21]
+  - Portfolio[algo=22]
+  - Portfolio[algo=23]
+  - Portfolio[algo=24]
+  - Portfolio[algo=25]
+  - Portfolio[algo=26]
+  - Portfolio[algo=27]
+  - Portfolio[algo=28]
+  - Portfolio[algo=29]
+  - Portfolio[algo=30]
+  - Portfolio[algo=31]
+  - Portfolio[algo=32]
+  - Portfolio[algo=33]
+  - Portfolio[algo=34]
+  - Portfolio[algo=35]

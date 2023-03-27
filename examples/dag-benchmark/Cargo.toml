@@ -9,6 +9,6 @@ dslab-core = { path = "../../crates/dslab-core" }
 dslab-compute = { path = "../../crates/dslab-compute" }
 dslab-network = { path = "../../crates/dslab-network" }
 dslab-dag = { path = "../../crates/dslab-dag" }
+clap = { version = "4.1.9", features = ["derive"] }
+env_logger = "0.10.0"
 sugars = "3.0.0"
-env_logger = "0.9.0"
-clap = { version = "3.0.14", features = ["cargo", "derive"] }

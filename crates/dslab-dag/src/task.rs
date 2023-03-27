@@ -30,7 +30,9 @@ pub enum TaskState {
 #[derive(Clone, Debug)]
 pub struct Task {
     pub name: String,
-    pub flops: u64,
+    /// The amount of computations performed by this task in Gflops.
+    pub flops: f64,
+    /// Memory demand of this task in MB.
     pub memory: u64,
     pub min_cores: u32,
     pub max_cores: u32,
@@ -45,7 +47,7 @@ impl Task {
     /// Creates new task.
     pub fn new(
         name: &str,
-        flops: u64,
+        flops: f64,
         memory: u64,
         min_cores: u32,
         max_cores: u32,

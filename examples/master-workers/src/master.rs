@@ -37,7 +37,7 @@ pub struct WorkerInfo {
     id: Id,
     #[allow(dead_code)]
     state: WorkerState,
-    speed: u64,
+    speed: f64,
     #[allow(dead_code)]
     cpus_total: u32,
     cpus_available: u32,
@@ -50,7 +50,7 @@ type WorkerScore = (u64, u32, u64);
 
 impl WorkerInfo {
     pub fn score(&self) -> WorkerScore {
-        (self.memory_available, self.cpus_available, self.speed)
+        (self.memory_available, self.cpus_available, (self.speed * 1000.) as u64)
     }
 }
 
@@ -97,7 +97,7 @@ impl Master {
         }
     }
 
-    fn on_worker_register(&mut self, worker_id: Id, cpus_total: u32, memory_total: u64, speed: u64) {
+    fn on_worker_register(&mut self, worker_id: Id, cpus_total: u32, memory_total: u64, speed: f64) {
         let worker = WorkerInfo {
             id: worker_id,
             state: WorkerState::Online,

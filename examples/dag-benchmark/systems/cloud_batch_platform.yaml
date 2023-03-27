@@ -1,0 +1,23 @@
+# Based on example from WRENCH:
+# https://github.com/wrench-project/wrench/blob/master/examples/workflow_api/real-workflow-example/cloud_batch_platform.xml
+resources:
+  - name: BatchNode1
+    speed: 50
+    cores: 10
+    memory: 0
+  - name: BatchNode2
+    speed: 50
+    cores: 10
+    memory: 0
+  - name: CloudNode1
+    speed: 60
+    cores: 4
+    memory: 0
+  - name: CloudNode2
+    speed: 60
+    cores: 4
+    memory: 0
+network:
+  model: SharedBandwidthNetwork
+  bandwidth: 30
+  latency: 1000

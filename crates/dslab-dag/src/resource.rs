@@ -23,8 +23,10 @@ pub struct Resource {
     pub id: Id,
     pub name: String,
     pub compute: Rc<RefCell<Compute>>,
-    pub speed: u64,
+    /// CPU speed in Gflop/s.
+    pub speed: f64,
     pub cores_available: u32,
+    /// Memory size in MB.
     pub memory_available: u64,
 }
 
@@ -32,8 +34,10 @@ pub struct Resource {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceConfig {
     pub name: String,
-    pub speed: u64,
+    /// CPU speed in Gflop/s.
+    pub speed: f64,
     pub cores: u32,
+    /// Memory size in MB.
     pub memory: u64,
 }
 
@@ -44,7 +48,8 @@ struct Resources {
 
 /// Loads resources from YAML file.
 ///
-/// Resources file example: https://github.com/osukhoroslov/dslab/blob/main/examples/dag/resources/cluster1.yaml.
+/// Configuration file example:
+/// https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml
 pub fn load_resources<P: AsRef<Path>>(file: P, sim: &mut Simulation) -> Vec<Resource> {
     let resources = read_resources(&file);
     let mut result: Vec<Resource> = Vec::new();

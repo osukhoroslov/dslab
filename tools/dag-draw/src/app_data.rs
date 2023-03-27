@@ -66,7 +66,7 @@ impl AppData {
             compute_index.insert(name.clone(), compute.borrow().len());
             compute.borrow_mut().push(Compute {
                 name,
-                speed: resource["speed"].as_u64().unwrap(),
+                speed: resource["speed"].as_f64().unwrap(),
                 cores: resource["cores"].as_u64().unwrap() as u32,
                 memory: resource["memory"].as_u64().unwrap(),
                 files: Vec::new(),

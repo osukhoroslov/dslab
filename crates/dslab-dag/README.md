@@ -22,16 +22,15 @@ use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
-// load resources configuration
-let resources = read_resources("../../examples/dag/resources/cluster1.yaml");
-// load network model configuration
-let network_model = load_network("../../examples/dag/networks/network1.yaml");
+// load resources and network configuration
+let resources = read_resources("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
+let network_model = load_network("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
 // use simple scheduler implementation
 let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
 let mut sim = DagSimulation::new(123, resources, network_model, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
 // read DAG from YAML file
-let dag = DAG::from_yaml("../../examples/dag/dags/diamond.yaml");
+let dag = DAG::from_yaml("../../examples/dag-demo/dags/diamond.yaml");
 
 // init simulation
 let runner = sim.init(dag);

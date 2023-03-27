@@ -44,7 +44,7 @@ impl DlsScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let median_flop_time = median(system.resources.iter().map(|r| 1. / r.speed as f64));
+        let median_flop_time = median(system.resources.iter().map(|r| 1. / r.speed));
 
         let task_static_levels = calc_ranks(median_flop_time, avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
@@ -97,8 +97,8 @@ impl DlsScheduler {
                     }
                     let (start_time, finish_time, cores) = res.unwrap();
 
-                    let delta = dag.get_task(task_id).flops as f64
-                        * (median_flop_time - 1. / system.resources[resource].speed as f64);
+                    let delta =
+                        dag.get_task(task_id).flops * (median_flop_time - 1. / system.resources[resource].speed);
                     let current_score = task_static_levels[task_id] - start_time + delta;
                     if current_score > best_dl {
                         best_dl = current_score;
