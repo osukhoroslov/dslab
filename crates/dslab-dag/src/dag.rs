@@ -39,8 +39,8 @@ impl DAG {
     pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
         match file.as_ref().extension().unwrap().to_str().unwrap() {
             "yaml" => DAG::from_yaml(file),
-            "json" => DAG::from_wfcommons(file, 10.), // default reference speed is 10 GFLOPS
-            "xml" => DAG::from_dax(file, 10.),        // default reference speed is 10 GFLOPS
+            "json" => DAG::from_wfcommons(file, 10.), // default reference speed is 10 Gflop/s
+            "xml" => DAG::from_dax(file, 10.),        // default reference speed is 10 Gflop/s
             "dot" => DAG::from_dot(file),
             _ => {
                 panic!("Unknown extension for dag: {}", file.as_ref().display());

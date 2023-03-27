@@ -112,7 +112,7 @@ fn run_experiments(args: &Args) {
         dags.push(dag);
     }
 
-    // up to 3 clusters for each platform, each triple means (nodes, speed in GFLOPS, bandwidth in MB/s)
+    // up to 3 clusters for each platform, each triple means (nodes, speed in Gflop/s, bandwidth in MB/s)
     // currently different bandwidth for different clusters is not supported
     let platform_configs = vec![
         vec![(96, 100., 100.)],

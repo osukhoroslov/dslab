@@ -44,7 +44,7 @@ If you enable saving of trace logs you can later visualize them using the [dag-d
 
 The experimental YAML format uses the following unit conventions:
 
-- task size (flops) is specified in Gflops
+- task size (flops) is specified in Gflops (floating point operations)
 - task memory demand is specified in MB 
 - input/output data sizes are specified in MB 
 
@@ -52,7 +52,7 @@ The experimental YAML format uses the following unit conventions:
 
 System configurations are described in YAML format using the following unit conventions:
 
-- resource speed is specified in GFLOPS
+- resource speed is specified in Gflop/s (floating point operations per second)
 - resource memory is specified in MB
 - network bandwidth is specified in MB/s
 - network latency in specified in μs

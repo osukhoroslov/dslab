@@ -74,7 +74,7 @@ struct Json {
 impl DAG {
     /// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
     ///
-    /// Reference machine speed should be in GFLOPS.
+    /// Reference machine speed should be in Gflop/s.
     pub fn from_wfcommons<P: AsRef<Path>>(file: P, reference_speed: f64) -> Self {
         let json: Json = from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
@@ -92,8 +92,8 @@ impl DAG {
             .iter()
             .filter(|m| m.cpu.speed.is_some())
             // machine.cpu.speed in WfCommons format actually refers to CPU speed in MHz,
-            // but it seems everyone use it as MFLOPS too...
-            // here we convert it to GFLOPS
+            // but it seems everyone use it as Mflop/s too...
+            // here we convert it to Gflop/s
             .map(|machine| (machine.name.clone(), machine.cpu.speed.unwrap() as f64 / 1000.))
             .collect();
         let mut dag = DAG::new();
