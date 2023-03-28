@@ -28,12 +28,13 @@ pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &
         let mut ctx = ChartBuilder::on(&areas[idx])
             .margin(20)
             .set_label_area_size(LabelAreaPosition::Left, 60)
-            .set_label_area_size(LabelAreaPosition::Bottom, 30)
+            .set_label_area_size(LabelAreaPosition::Bottom, 40)
             .build_cartesian_2d(rps[0]..rps.last().copied().unwrap(), 0.0..f64::min(max, 100.))
             .unwrap();
         ctx.configure_mesh()
             .y_desc(METRICS[idx])
             .x_desc("requests per second")
+            .label_style(("sans-serif", 20))
             .draw()
             .unwrap();
         for (i, pts) in points.iter().enumerate() {
@@ -49,6 +50,7 @@ pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &
             .position(SeriesLabelPosition::UpperLeft)
             .border_style(BLACK)
             .background_style(WHITE.mix(0.8))
+            .label_font(("sans-serif", 20))
             .draw()
             .unwrap();
     }

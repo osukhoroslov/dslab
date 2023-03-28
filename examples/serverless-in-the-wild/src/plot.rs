@@ -12,13 +12,14 @@ pub(crate) fn plot_results(plot: &str, mut labels: Vec<String>, mut points: Vec<
     let root_area = BitMapBackend::new(plot, (1600, 900)).into_drawing_area();
     root_area.fill(&WHITE).unwrap();
     let mut ctx = ChartBuilder::on(&root_area)
-        .set_label_area_size(LabelAreaPosition::Left, 60)
-        .set_label_area_size(LabelAreaPosition::Bottom, 60)
+        .set_label_area_size(LabelAreaPosition::Left, 70)
+        .set_label_area_size(LabelAreaPosition::Bottom, 50)
         .build_cartesian_2d(0. ..max_cold_start, min_wasted_mem..max_wasted_mem)
         .unwrap();
     ctx.configure_mesh()
         .y_desc("normalized wasted memory time (%)")
         .x_desc("3rd quartile app cold start percentage (%)")
+        .label_style(("sans-serif", 20))
         .draw()
         .unwrap();
     let side = (labels.len() as f64).cbrt().ceil() as usize;
@@ -47,6 +48,7 @@ pub(crate) fn plot_results(plot: &str, mut labels: Vec<String>, mut points: Vec<
         }
     }
     ctx.configure_series_labels()
+        .label_font(("sans-serif", 20))
         .border_style(BLACK)
         .background_style(WHITE.mix(0.8))
         .draw()

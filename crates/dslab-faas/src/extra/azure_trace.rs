@@ -173,8 +173,8 @@ pub struct AzureTraceConfig {
     pub force_fixed_memory: Option<u64>,
     /// Cold start latency, currently it's the same for all apps.
     pub cold_start_latency: f64,
-    /// If `rps` is not None, trace generator attempts to scale trace to the given number of requests
-    /// per second by either removing random requests or duplicating random requests (yes, that doesn't sound very solid).
+    /// If `rps` is not None, trace generator attempts to scale trace to the given number of requests per second
+    /// by either removing random requests or duplicating random requests (yes, that doesn't sound very solid).
     pub rps: Option<f64>,
 }
 
