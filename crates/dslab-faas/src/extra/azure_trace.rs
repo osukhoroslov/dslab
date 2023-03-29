@@ -104,6 +104,7 @@ fn app_id(id: &str) -> String {
 }
 
 /// Experiment generator will choose `count` random apps with popularity in range [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+#[derive(Clone, Copy)]
 pub struct AppPreference {
     pub count: usize,
     pub left: f64,

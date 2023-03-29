@@ -5,7 +5,7 @@ use dslab_faas::trace::Trace;
 
 use crate::estimator::{Estimation, Estimator};
 use crate::ant::colony::AntColony;
-use crate::ant::common::Instance;
+use crate::common::Instance;
 
 pub struct AntColonyEstimator {
     inner: AntColony,
@@ -26,7 +26,7 @@ impl AntColonyEstimator {
 impl Estimator for AntColonyEstimator {
     type EstimationType = f64;
 
-    fn estimate(&mut self, config: Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
+    fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
         let mut instance: Instance = Default::default();
         instance.keepalive = (self.keepalive * self.round_mul).round() as u64;
         let mut resource_map = HashMap::<String, usize>::new();

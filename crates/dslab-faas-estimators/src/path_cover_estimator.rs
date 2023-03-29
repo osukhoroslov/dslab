@@ -3,29 +3,80 @@ use std::collections::HashMap;
 use dslab_faas::config::Config;
 use dslab_faas::trace::Trace;
 
+use crate::common::Instance;
 use crate::estimator::{Estimation, Estimator};
-use crate::ls::common::{Instance, OptimizationGoal};
-use crate::ls::local_search::LocalSearch;
 
-pub struct LocalSearchEstimator {
-    goal: OptimizationGoal,
-    search: LocalSearch,
+fn path_cover_single(n: usize, edges: Vec<(usize, usize)>) -> usize {
+    // TODO: improve the bound with tolerances
+    let mut min = vec![n; n];
+    let mut max = vec![0; n];
+    let mut cnt = vec![0; n];
+    let mut right = vec![Vec::<usize>::new(); n];
+    for (u, v) in edges.iter().copied() {
+        min[u] = min[u].min(v);
+        max[u] = max[u].max(v);
+        cnt[u] += 1;
+        right[v].push(u);
+    }
+    // convexity check
+    for i in 0..n {
+        assert!(cnt[i] == 0 || max[i] + 1 - min[i] == cnt[i]);
+    }
+    let mut mat = vec![usize::MAX; n];
+    for i in 0..n {
+        let mut chosen = usize::MAX;
+        for j in right[i].drain(..) {
+            if mat[j] == usize::MAX && (chosen == usize::MAX || max[j] < max[chosen]) {
+                chosen = j;
+            }
+        }
+        if chosen != usize::MAX {
+            mat[chosen] = i;
+        }
+    }
+    mat.drain(..).filter(|&x| x == usize::MAX).count()
+}
+
+fn path_cover(instance: &Instance) -> u64 {
+    let mut result = 0u64;
+    let mut app_invs = vec![Vec::<usize>::new(); instance.apps.len()];
+    for (i, app) in instance.req_app.iter().enumerate() {
+        app_invs[*app].push(i);
+    }
+    for (app, invs) in app_invs.drain(..).enumerate() {
+        let mut edges = Vec::new();
+        for ii in 0..invs.len() {
+            let i = invs[ii];
+            let t = instance.req_start[i];
+            for jj in 0..ii {
+                let j = invs[jj];
+                let mut ok1 = instance.req_start[j] + instance.req_dur[j] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.keepalive >= t;
+                let mut ok2 = instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] + instance.keepalive >= t;
+                if ok1 || ok2 {
+                    edges.push((jj, ii));
+                }
+            }
+        }
+        result += instance.app_coldstart[app] * (path_cover_single(invs.len(), edges) as u64);
+    }
+    result
+}
+
+pub struct PathCoverEstimator {
     keepalive: f64,
     round_mul: f64,
 }
 
-impl LocalSearchEstimator {
-    pub fn new(goal: OptimizationGoal, search: LocalSearch, keepalive: f64, round_mul: f64) -> Self {
+impl PathCoverEstimator {
+    pub fn new(keepalive: f64, round_mul: f64) -> Self {
         Self {
-            goal,
-            search,
             keepalive,
             round_mul,
         }
     }
 }
 
-impl Estimator for LocalSearchEstimator {
+impl Estimator for PathCoverEstimator {
     type EstimationType = f64;
 
     fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
@@ -76,11 +127,7 @@ impl Estimator for LocalSearchEstimator {
             instance.req_dur.push(item.1);
             instance.req_start.push(item.0);
         }
-        let obj = self.search.run(&instance, None).objective;
-        if self.goal == OptimizationGoal::Maximization {
-            Estimation::LowerBound((obj as f64) / self.round_mul)
-        } else {
-            Estimation::UpperBound((obj as f64) / self.round_mul)
-        }
+        let obj = path_cover(&instance);
+        Estimation::LowerBound((obj as f64) / self.round_mul)
     }
 }

@@ -1,4 +1,3 @@
-
 #[derive(Clone, Default)]
 pub struct Instance {
     pub hosts: Vec<Vec<u64>>,

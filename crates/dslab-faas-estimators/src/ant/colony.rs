@@ -4,7 +4,7 @@ use rand::prelude::*;
 use rand::distributions::WeightedIndex;
 use rand_pcg::Pcg64;
 
-use crate::ant::common::Instance;
+use crate::common::Instance;
 use crate::ant::initial::generate_initial;
 
 #[derive(Clone, Default)]
@@ -27,7 +27,7 @@ impl AntColony {
             alpha: 1.,
             init_beta: 4.,
             beta_decay: 0.,//0.025,
-            n_iters: 200,
+            n_iters: 100,
             max_iters_elitist: 10,
             seed,
         }
@@ -36,22 +36,61 @@ impl AntColony {
     pub fn run(&mut self, instance: &Instance) -> u64 {
         let mut rng = Pcg64::seed_from_u64(self.seed);
         let mut possible_prev = vec![vec![usize::MAX]; instance.req_app.len()];
+        let mut prev_kind = vec![vec![0u8]; instance.req_app.len()];
         let mut pheromone = vec![vec![1000.0f64]; instance.req_app.len()];
+        let mut changed = vec![false; instance.req_app.len()];
         for i in 0..instance.req_app.len() {
             let app = instance.req_app[i];
             let t = instance.req_start[i];
             for j in 0..i {
-                if instance.req_app[j] == app && instance.req_start[j] + instance.req_dur[j] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.keepalive >= t {
-                    possible_prev[i].push(j);
-                    pheromone[i].push(1000.);
+                if instance.req_app[j] == app {
+                    let mut ok1 = instance.req_start[j] + instance.req_dur[j] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.keepalive >= t;
+                    let mut ok2 = instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] + instance.keepalive >= t;
+                    if ok1 != ok2 {
+                        changed[j] = true;
+                        possible_prev[i].push(j);
+                        pheromone[i].push(1000.);
+                        if ok1 {
+                            prev_kind[i].push(1);
+                        } else {
+                            prev_kind[i].push(2);
+                        }
+                    } else if ok1 && ok2 {
+                        possible_prev[i].push(j);
+                        pheromone[i].push(1000.);
+                        prev_kind[i].push(3);
+                    }
                 }
             }
         }
-        let (mut best_seq, mut best_obj) = generate_initial(instance);
+    
+        for i in 0..changed.len() {
+            if possible_prev[i].len() == 1 {
+                changed[i] = false;
+            }
+        }
+
+        let mut bad_cnt = HashMap::<usize, usize>::new();
+        let mut total_cnt = HashMap::<usize, usize>::new();
+        for (i, c) in changed.iter().copied().enumerate() {
+            if c {
+                *bad_cnt.entry(instance.req_app[i]).or_default() += 1;
+            }
+        }
+        for app in instance.req_app.iter().copied() {
+            *total_cnt.entry(app).or_default() += 1;
+        }
+        for (app, cnt) in bad_cnt.iter() {
+            println!("bad = {} out of {}", *cnt, *total_cnt.get(app).unwrap());
+        }
+        let mut best_seq = vec![0; pheromone.len()];
+        let mut best_obj = u64::MAX;
+        let mut global_best_obj = best_obj;
+        /*let (mut best_seq, mut best_obj) = generate_initial(instance);
         let mut global_best_obj = best_obj;
         for i in 0..best_seq.len() {
             best_seq[i] = possible_prev[i].iter().position(|&x| x == best_seq[i]).unwrap();
-        }
+        }*/
         let mut beta = self.init_beta;
         let mut unchanged = 0;
         for iter_id in 0..self.n_iters {
@@ -62,8 +101,16 @@ impl AntColony {
                 let mut deleted = vec![false; pheromone.len()];
                 for i in 0..pheromone.len() {
                     let mut probs = Vec::with_capacity(pheromone[i].len());
+                    let mut possible = Vec::with_capacity(pheromone[i].len());
                     for j in 0..pheromone[i].len() {
-                        //let h: f64 = if possible_prev[i][j] == usize::MAX { 1. } else { 1. + ((instance.req_start[i] - instance.req_start[possible_prev[i][j]]) as f64) };
+                        if j > 0 && prev_kind[i][j] != 3 {
+                            if prev_kind[i][j] == 1 && seq[possible_prev[i][j]] == 0{ 
+                                continue;
+                            }
+                            if prev_kind[i][j] == 2 && seq[possible_prev[i][j]] != 0 {
+                                continue;
+                            }
+                        }
                         let h: f64 = if possible_prev[i][j] == usize::MAX { 1. } else { 
                             if deleted[possible_prev[i][j]] {
                                 0.
@@ -75,8 +122,9 @@ impl AntColony {
                         };
                         let p = pheromone[i][j].powf(self.alpha) * h.powf(beta);
                         probs.push(p);
+                        possible.push(j);
                     }
-                    let choice = WeightedIndex::new(&probs).unwrap().sample(&mut rng);
+                    let choice = possible[WeightedIndex::new(&probs).unwrap().sample(&mut rng)];
                     seq.push(choice);
                     if choice != 0 {
                         deleted[possible_prev[i][choice]] = true;

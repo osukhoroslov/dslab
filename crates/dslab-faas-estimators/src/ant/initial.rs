@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use indexmap::{IndexMap, IndexSet};
 
-use crate::ant::common::Instance;
+use crate::common::Instance;
 
 #[derive(Clone, Default)]
 pub struct Container {

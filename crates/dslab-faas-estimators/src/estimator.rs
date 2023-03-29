@@ -12,5 +12,5 @@ pub enum Estimation<T: Num + Bounded> {
 
 pub trait Estimator {
     type EstimationType: Num + Bounded;
-    fn estimate(&mut self, config: Config, trace: &dyn Trace) -> Estimation<Self::EstimationType>;
+    fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType>;
 }
