@@ -17,7 +17,7 @@ use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {
     size: f64,
     receiver_id: Id,

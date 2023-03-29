@@ -1,6 +1,6 @@
 //! Simulation configuration and execution.
 
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -630,11 +630,10 @@ impl Simulation {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
-    /// Returns a read-only reference to internal simulation state.
+    /// Returns a copy of pending events sorted by time.
     ///
-    /// Can be used to examine pending events and get a copy of RNG state.
     /// Currently used for model checking in dslab-mp.
-    pub fn state(&self) -> Ref<SimulationState> {
-        self.sim_state.borrow()
+    pub fn dump_events(&self) -> Vec<Event> {
+        self.sim_state.borrow().dump_events()
     }
 }

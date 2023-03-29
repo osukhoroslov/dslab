@@ -10,7 +10,7 @@ use dslab_core::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Allocation {
     pub cores: u32,
     pub memory: u64,
@@ -23,7 +23,7 @@ impl Allocation {
 }
 
 // [1 .. max_cores] -> [1, +inf]
-#[derive(Serialize, Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Serialize)]
 pub enum CoresDependency {
     Linear,
     LinearWithFixed {
@@ -45,7 +45,7 @@ impl CoresDependency {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub enum FailReason {
     NotEnoughResources {
         available_cores: u32,
@@ -77,7 +77,7 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct CompRequest {
     pub flops: f64,
     pub memory: u64,
@@ -87,52 +87,52 @@ pub struct CompRequest {
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct CompStarted {
     pub id: u64,
     pub cores: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct CompFinished {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct CompFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct AllocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct AllocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct AllocationFailed {
     pub id: u64,
     pub reason: FailReason,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DeallocationRequest {
     pub allocation: Allocation,
     pub requester: Id,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DeallocationSuccess {
     pub id: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DeallocationFailed {
     pub id: u64,
     pub reason: FailReason,

@@ -59,7 +59,7 @@ struct Runner {
                                                             * (disk_request_start_time, runner_request_id) */
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct TimerFired {
     request_idx: usize,
 }

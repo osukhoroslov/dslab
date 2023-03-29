@@ -9,15 +9,15 @@ use dslab_core::event::{Event, EventData};
 use dslab_core::handler::EventHandler;
 use dslab_network::network::Network;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {}
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Ping {
     payload: f64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Pong {
     payload: f64,
 }

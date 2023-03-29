@@ -17,7 +17,7 @@ use dslab_network::network::Network;
 use dslab_network::topology::Topology;
 use dslab_network::topology_model::TopologyNetwork;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {
     size: f64,
     receiver_id: Id,
