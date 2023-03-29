@@ -28,7 +28,7 @@ impl ModelChecker {
         let sim = sys.sim();
 
         let mut events = PendingEvents::new();
-        for event in sim.state().events() {
+        for event in sim.dump_events() {
             if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
                 events.push(McEvent::MessageReceived {
                     msg: value.msg.clone(),

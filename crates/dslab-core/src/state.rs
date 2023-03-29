@@ -1,4 +1,3 @@
-use std::collections::binary_heap::Iter;
 use std::collections::{BinaryHeap, HashSet, VecDeque};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
@@ -13,6 +12,7 @@ use crate::log::log_incorrect_event;
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
+#[derive(Clone)]
 pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
@@ -34,17 +34,7 @@ impl SimulationState {
         }
     }
 
-    /// Returns an iterator visiting all currently stored pending events, in arbitrary order.
-    pub fn events(&self) -> Iter<'_, Event> {
-        self.events.iter()
-    }
-
-    /// Returns a copy of internal RNG state.
-    pub fn rand_copy(&self) -> Pcg64 {
-        self.rand.clone()
-    }
-
-    pub(crate) fn time(&self) -> f64 {
+    pub fn time(&self) -> f64 {
         self.clock
     }
 
@@ -52,11 +42,11 @@ impl SimulationState {
         self.clock = time;
     }
 
-    pub(crate) fn rand(&mut self) -> f64 {
+    pub fn rand(&mut self) -> f64 {
         self.rand.gen_range(0.0..1.0)
     }
 
-    pub(crate) fn gen_range<T, R>(&mut self, range: R) -> T
+    pub fn gen_range<T, R>(&mut self, range: R) -> T
     where
         T: SampleUniform,
         R: SampleRange<T>,
@@ -68,11 +58,11 @@ impl SimulationState {
         dist.sample(&mut self.rand)
     }
 
-    pub(crate) fn random_string(&mut self, len: usize) -> String {
+    pub fn random_string(&mut self, len: usize) -> String {
         Alphanumeric.sample_string(&mut self.rand, len)
     }
 
-    pub(crate) fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
@@ -131,7 +121,7 @@ impl SimulationState {
         true
     }
 
-    pub(crate) fn next_event(&mut self) -> Option<Event> {
+    pub fn next_event(&mut self) -> Option<Event> {
         loop {
             let maybe_heap = self.events.peek();
             let maybe_deque = self.ordered_events.front();
@@ -153,7 +143,7 @@ impl SimulationState {
         }
     }
 
-    pub(crate) fn peek_event(&self) -> Option<&Event> {
+    pub fn peek_event(&self) -> Option<&Event> {
         let maybe_heap = self.events.peek();
         let maybe_deque = self.ordered_events.front();
         if maybe_heap.is_some() && (maybe_deque.is_none() || maybe_heap.unwrap() > maybe_deque.unwrap()) {
@@ -163,11 +153,11 @@ impl SimulationState {
         }
     }
 
-    pub(crate) fn cancel_event(&mut self, id: EventId) {
+    pub fn cancel_event(&mut self, id: EventId) {
         self.canceled_events.insert(id);
     }
 
-    pub(crate) fn cancel_events<F>(&mut self, pred: F)
+    pub fn cancel_events<F>(&mut self, pred: F)
     where
         F: Fn(&Event) -> bool,
     {
@@ -195,7 +185,23 @@ impl SimulationState {
         }
     }
 
-    pub(crate) fn event_count(&self) -> u64 {
+    pub fn event_count(&self) -> u64 {
         self.event_count
+    }
+
+    pub fn dump_events(&self) -> Vec<Event> {
+        let mut output = Vec::new();
+        for event in self.events.iter() {
+            if !self.canceled_events.contains(&event.id) {
+                output.push((*event).clone())
+            }
+        }
+        for event in self.ordered_events.iter() {
+            if !self.canceled_events.contains(&event.id) {
+                output.push((*event).clone())
+            }
+        }
+        output.sort();
+        output
     }
 }

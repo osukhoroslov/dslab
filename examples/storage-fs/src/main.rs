@@ -46,12 +46,12 @@ struct User {
     ctx: SimulationContext,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Run {
     case: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Init {}
 
 impl User {

@@ -33,10 +33,10 @@ struct User {
     ctx: SimulationContext,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Start {}
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Ticker {}
 
 impl User {

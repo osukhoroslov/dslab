@@ -690,7 +690,7 @@ impl DAGRunner {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {}
 
 impl EventHandler for DAGRunner {
