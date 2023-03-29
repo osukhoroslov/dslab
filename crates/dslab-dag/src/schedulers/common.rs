@@ -11,7 +11,7 @@ use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::runner::Config;
 use crate::schedulers::treap::Treap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ScheduledTask {
     pub start_time: f64,
     pub finish_time: f64,
@@ -33,7 +33,8 @@ impl PartialOrd for ScheduledTask {
         Some(
             self.start_time
                 .total_cmp(&other.start_time)
-                .then(self.finish_time.total_cmp(&other.finish_time)),
+                .then(self.finish_time.total_cmp(&other.finish_time))
+                .then(self.task.cmp(&other.task)),
         )
     }
 }
@@ -41,12 +42,6 @@ impl PartialOrd for ScheduledTask {
 impl Ord for ScheduledTask {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
-    }
-}
-
-impl PartialEq for ScheduledTask {
-    fn eq(&self, other: &Self) -> bool {
-        self.start_time == other.start_time
     }
 }
 
