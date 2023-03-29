@@ -14,7 +14,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {}
 
 pub struct Task {

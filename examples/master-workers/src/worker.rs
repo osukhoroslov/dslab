@@ -19,14 +19,14 @@ use dslab_storage::storage::Storage;
 use crate::common::Start;
 use crate::task::*;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct WorkerRegister {
     pub(crate) speed: u64,
     pub(crate) cpus_total: u32,
     pub(crate) memory_total: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct TaskCompleted {
     pub(crate) id: u64,
 }
