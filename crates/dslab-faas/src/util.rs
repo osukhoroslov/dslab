@@ -3,6 +3,8 @@ use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxHasher;
+use serde::ser::{SerializeSeq, Serializer};
+use serde::Serialize;
 
 #[derive(Default)]
 pub struct Counter {
@@ -157,6 +159,22 @@ where
 {
     fn index_mut(&mut self, id: usize) -> &mut Self::Output {
         &mut self.data[id]
+    }
+}
+
+impl<T> Serialize for DefaultVecMap<T>
+where
+    T: Default + Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.data.len()))?;
+        for x in self.data.iter() {
+            seq.serialize_element(x)?;
+        }
+        seq.end()
     }
 }
 

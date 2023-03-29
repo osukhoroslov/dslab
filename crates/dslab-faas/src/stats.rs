@@ -1,4 +1,6 @@
 use order_stat::kth_by;
+use serde::ser::{SerializeSeq, Serializer};
+use serde::Serialize;
 
 use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
@@ -109,7 +111,20 @@ impl SampleMetric {
     }
 }
 
-#[derive(Clone, Default)]
+impl Serialize for SampleMetric {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.data.len()))?;
+        for x in self.data.iter() {
+            seq.serialize_element(x)?;
+        }
+        seq.end()
+    }
+}
+
+#[derive(Clone, Default, Serialize)]
 pub struct InvocationStats {
     pub invocations: u64,
     pub cold_starts: u64,
@@ -149,7 +164,7 @@ impl InvocationStats {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
     pub wasted_resource_time: DefaultVecMap<SampleMetric>,
@@ -202,7 +217,7 @@ impl GlobalStats {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 pub struct Stats {
     pub app_stats: DefaultVecMap<InvocationStats>,
     pub func_stats: DefaultVecMap<InvocationStats>,
