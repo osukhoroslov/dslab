@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 
-//! Module for testing student code with model checking technique.
+//! Module for testing message passing code with model checking technique.
 
 mod dependency;
 pub(crate) mod events;

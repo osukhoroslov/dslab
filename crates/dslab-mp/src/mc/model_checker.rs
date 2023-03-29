@@ -23,7 +23,8 @@ pub struct ModelChecker {
 }
 
 impl ModelChecker {
-    /// Creates a new model checker with the specified strategy with an initial state equal to the current state of the system.
+    /// Creates a new model checker with the specified strategy
+    /// and initial state equal to the current state of the system.
     pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
         let sim = sys.sim();
 
@@ -59,8 +60,8 @@ impl ModelChecker {
         }
     }
 
-    /// Starts model checking and returns the result on completion.
-    pub fn start(&mut self) -> Result<McSummary, String> {
+    /// Runs model checking and returns the result on completion.
+    pub fn run(&mut self) -> Result<McSummary, String> {
         self.strategy.run(&mut self.system)
     }
 }
