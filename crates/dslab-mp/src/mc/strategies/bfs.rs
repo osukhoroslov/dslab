@@ -72,8 +72,8 @@ impl Strategy for Bfs {
         }
     }
 
-    fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
-        self.states_queue.push_back(system.get_state(self.search_depth + 1));
+    fn search_step_impl(&mut self, _system: &mut McSystem, state: McState) -> Result<(), String> {
+        self.states_queue.push_back(state);
         Ok(())
     }
 

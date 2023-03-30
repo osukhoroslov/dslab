@@ -1,7 +1,7 @@
 //! Implementation of model checking DFS search strategy.
 
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::McSystem;
+use crate::mc::system::{McState, McSystem};
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
 pub struct Dfs {
@@ -31,9 +31,8 @@ impl Dfs {
 }
 
 impl Dfs {
-    fn dfs(&mut self, system: &mut McSystem) -> Result<(), String> {
+    fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
-        let state = system.get_state(self.search_depth);
 
         let result = self.check_state(&state, available_events.len());
 
@@ -51,16 +50,18 @@ impl Dfs {
 
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
-        let res = self.dfs(system);
+        let state = system.get_state(self.search_depth());
+
+        let res = self.dfs(system, state);
         match res {
             Ok(()) => Ok(self.summary.clone()),
             Err(err) => Err(err),
         }
     }
 
-    fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String> {
+    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         self.search_depth += 1;
-        let result = self.dfs(system);
+        let result = self.dfs(system, state);
         self.search_depth -= 1;
         result
     }
