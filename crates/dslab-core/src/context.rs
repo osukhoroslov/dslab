@@ -149,7 +149,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -186,7 +186,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -213,7 +213,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -235,7 +235,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -266,7 +266,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -300,7 +300,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -359,7 +359,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -426,7 +426,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -491,7 +491,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -552,7 +552,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -580,7 +580,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -619,7 +619,7 @@ impl SimulationContext {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///

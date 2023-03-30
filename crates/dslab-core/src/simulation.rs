@@ -142,7 +142,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -177,7 +177,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -246,7 +246,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -295,7 +295,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -325,7 +325,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -382,7 +382,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -418,7 +418,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -452,7 +452,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -489,7 +489,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -583,7 +583,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::Simulation;
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///
@@ -609,7 +609,7 @@ impl Simulation {
     /// use serde::Serialize;
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     /// }
     ///

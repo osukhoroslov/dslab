@@ -8,7 +8,7 @@ The simulation is configured and managed via [`Simulation`], which includes meth
 
 It is possible to use any user-defined Rust types as simulation components. The components access simulation state and produce events via [`SimulationContext`]. Each component typically uses a unique simulation context, which allows to differentiate events produced by different components. To be able to consume events, the component should implement the [`EventHandler`] trait, which is invoked to pass events to the component. Each simulation component is registered with unique name and identifier, which can be used for specifying the event source or destination, logging purposes, etc.
 
-The simulation represents a sequence of events. Each event has a unique identifier, timestamp, source, destination and user-defined payload. The library supports using arbitrary serializable types as event payloads, the structure of payload is opaque to the library. The events are processed by retrieving the next event from the queue ordered by event timestamps, advancing the simulation clock to the event time and invoking the EventHandler implementation of component specified as the event destination. When processing the event, the component can create and emit new events with arbitrary future timestamps via its SimulationContext. The new events are placed in the event queue for further processing. It is also possible to cancel the previously emitted events before they are processed.
+The simulation represents a sequence of events. Each event has a unique identifier, timestamp, source, destination and user-defined payload. The library supports using arbitrary data types (implementing Clone and Serialize traits) as event payloads, the structure of payload is opaque to the library. The events are processed by retrieving the next event from the queue ordered by event timestamps, advancing the simulation clock to the event time and invoking the EventHandler implementation of component specified as the event destination. When processing the event, the component can create and emit new events with arbitrary future timestamps via its SimulationContext. The new events are placed in the event queue for further processing. It is also possible to cancel the previously emitted events before they are processed.
 
 The library also provides convenient facilities for logging of events or arbitrary messages during the simulation with inclusion of component names, logging levels, etc.
 
@@ -21,12 +21,12 @@ use serde::Serialize;
 use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
 
 // Event data types (should implement Serialize)
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Ping {
     info: f64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Pong {
     info: f64,
 }

@@ -16,7 +16,7 @@ pub trait EventHandler {
     /// use serde::Serialize;
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Serialize)]
+    /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
     ///     some_field: u32,
     /// }
@@ -65,12 +65,12 @@ pub trait EventHandler {
 /// use serde::Serialize;
 /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
 ///
-/// #[derive(Serialize)]
+/// #[derive(Clone, Serialize)]
 /// pub struct SomeEvent {
 ///     some_field: u32,
 /// }
 ///
-/// #[derive(Serialize)]
+/// #[derive(Clone, Serialize)]
 /// pub struct AnotherEvent {
 ///     another_field: f64,
 /// }
