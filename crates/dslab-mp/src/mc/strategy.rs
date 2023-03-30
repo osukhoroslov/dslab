@@ -130,7 +130,9 @@ pub trait Strategy {
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
-        self.search_step_impl(system)?;
+        if !self.have_visited(&system.get_state(self.search_depth())) {
+            self.search_step_impl(system)?;
+        }
 
         system.set_state(state);
 
@@ -163,7 +165,9 @@ pub trait Strategy {
 
         system.apply_event(event);
 
-        self.search_step_impl(system)?;
+        if !self.have_visited(&system.get_state(self.search_depth())) {
+            self.search_step_impl(system)?;
+        }
 
         system.set_state(state);
 
@@ -307,10 +311,7 @@ pub trait Strategy {
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
     fn check_state(&mut self, state: &McState, events_num: usize) -> Option<Result<(), String>> {
-        if self.have_visited(state) {
-            // Was already visited before
-            Some(Ok(()))
-        } else if let Err(err) = (self.invariant())(state) {
+        if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
