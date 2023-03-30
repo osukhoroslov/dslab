@@ -75,7 +75,7 @@ pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
 
     /// Callback which in called whenever a new system state is discovered.
-    fn search_step_impl(&mut self, system: &mut McSystem) -> Result<(), String>;
+    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;
 
     /// Explores the possible system states reachable from the current state after processing the given event.
     /// Calls `search_step_impl` for each new discovered state.    
@@ -130,8 +130,9 @@ pub trait Strategy {
 
         self.debug_log(&event, self.search_depth(), LogContext::Dropped);
 
-        if !self.have_visited(&system.get_state(self.search_depth())) {
-            self.search_step_impl(system)?;
+        let new_state = system.get_state(self.search_depth() + 1);
+        if !self.have_visited(&new_state) {
+            self.search_step_impl(system, new_state)?;
         }
 
         system.set_state(state);
@@ -165,8 +166,9 @@ pub trait Strategy {
 
         system.apply_event(event);
 
-        if !self.have_visited(&system.get_state(self.search_depth())) {
-            self.search_step_impl(system)?;
+        let new_state = system.get_state(self.search_depth() + 1);
+        if !self.have_visited(&new_state) {
+            self.search_step_impl(system, new_state)?;
         }
 
         system.set_state(state);
