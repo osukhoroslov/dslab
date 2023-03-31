@@ -37,6 +37,9 @@ pub enum McEvent {
         proc: String,
         timer: String,
     },
+    MessageDropped {
+        id: McEventId,
+    }
 }
 
 impl McEvent {
