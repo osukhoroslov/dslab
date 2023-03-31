@@ -54,7 +54,7 @@ impl PendingEvents {
             }
             McEvent::TimerCancelled { .. } => {
                 self.directives.insert(id);
-            },
+            }
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
@@ -84,9 +84,7 @@ impl PendingEvents {
 
     /// Cancels given timer and recalculates available events.
     pub fn cancel_timer(&mut self, proc: String, timer: String) {
-        let unblocked_events = self
-            .resolver
-            .cancel_timer(self.timer_mapping[&(proc, timer)]);
+        let unblocked_events = self.resolver.cancel_timer(self.timer_mapping[&(proc, timer)]);
         self.available_events.extend(unblocked_events);
     }
 
