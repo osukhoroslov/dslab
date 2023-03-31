@@ -8,7 +8,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent::{MessageReceived, TimerCancelled, TimerFired, MessageDropped};
+use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
@@ -123,7 +123,6 @@ pub trait Strategy {
                 self.take_event(system, message_id);
                 self.apply_event(system, event_id, false, false)?;
             }
-
         }
 
         Ok(())
