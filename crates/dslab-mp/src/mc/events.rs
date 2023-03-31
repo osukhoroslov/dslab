@@ -39,7 +39,7 @@ pub enum McEvent {
     },
     MessageDropped {
         id: McEventId,
-    }
+    },
 }
 
 impl McEvent {
