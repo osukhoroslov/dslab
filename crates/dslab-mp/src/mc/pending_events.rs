@@ -10,6 +10,7 @@ pub struct PendingEvents {
     events: BTreeMap<McEventId, McEvent>,
     timer_mapping: BTreeMap<(String, String), usize>,
     available_events: BTreeSet<McEventId>,
+    directives: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
 }
@@ -21,6 +22,7 @@ impl PendingEvents {
             events: BTreeMap::default(),
             timer_mapping: BTreeMap::default(),
             available_events: BTreeSet::default(),
+            directives: BTreeSet::default(),
             resolver: DependencyResolver::default(),
             id_counter: 0,
         }
@@ -50,12 +52,11 @@ impl PendingEvents {
                     self.available_events.insert(id);
                 }
             }
-            McEvent::TimerCancelled { proc, timer } => {
-                let unblocked_events = self
-                    .resolver
-                    .cancel_timer(self.timer_mapping[&(proc.clone(), timer.clone())]);
-                self.available_events.extend(unblocked_events);
-                return id;
+            McEvent::TimerCancelled { .. } => {
+                self.directives.insert(id);
+            },
+            McEvent::MessageDropped { .. } => {
+                self.directives.insert(id);
             }
         };
         self.events.insert(id, event);
@@ -69,16 +70,31 @@ impl PendingEvents {
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     pub fn available_events(&self) -> &BTreeSet<McEventId> {
-        &self.available_events
+        if self.directives.is_empty() {
+            &self.available_events
+        } else {
+            &self.directives
+        }
     }
 
-    /// Removes available event by its id.
+    /// Cancels given timer and recalculates available events.
+    pub fn cancel_timer(&mut self, proc: String, timer: String) {
+        let unblocked_events = self
+            .resolver
+            .cancel_timer(self.timer_mapping[&(proc, timer)]);
+        self.available_events.extend(unblocked_events);
+    }
+
+    /// Removes event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
-        assert!(self.available_events.remove(&event_id), "event is not available");
         let result = self.events.remove(&event_id).unwrap();
+        self.directives.remove(&event_id);
+        let was_available = self.available_events.remove(&event_id);
         if let McEvent::TimerFired { .. } = result {
-            let unblocked_events = self.resolver.remove_timer(event_id);
-            self.available_events.extend(unblocked_events);
+            if was_available {
+                let unblocked_events = self.resolver.remove_timer(event_id);
+                self.available_events.extend(unblocked_events);
+            }
         }
         result
     }

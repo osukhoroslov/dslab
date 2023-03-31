@@ -8,7 +8,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent::{MessageReceived, TimerCancelled, TimerFired};
+use crate::mc::events::McEvent::{MessageReceived, TimerCancelled, TimerFired, MessageDropped};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
@@ -115,9 +115,15 @@ pub trait Strategy {
             TimerFired { .. } => {
                 self.apply_event(system, event_id, false, false)?;
             }
-            TimerCancelled { .. } => {
-                panic!("Strategy should not receive TimerCancelled events")
+            TimerCancelled { proc, timer } => {
+                system.events.cancel_timer(proc, timer);
+                self.apply_event(system, event_id, false, false)?;
             }
+            MessageDropped { id: message_id } => {
+                self.take_event(system, message_id);
+                self.apply_event(system, event_id, false, false)?;
+            }
+
         }
 
         Ok(())
