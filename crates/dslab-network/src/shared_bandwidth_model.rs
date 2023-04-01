@@ -46,6 +46,8 @@ impl DataOperation for SharedBandwidthNetwork {
         self.throughput_model.pop().unwrap();
         if let Some((time, data)) = self.throughput_model.peek() {
             self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
+        } else {
+            self.next_event = 0;
         }
     }
 
