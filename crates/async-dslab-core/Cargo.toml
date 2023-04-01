@@ -1,0 +1,24 @@
+[package]
+name = "async-dslab-core"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.68"
+
+[dependencies]
+dslab-core = { path = "../dslab-core" }
+downcast-rs = "1.2.0"
+log = "0.4"
+rand = "0.8.4"
+rand_pcg = "0.3.1"
+serde = "1.0"
+erased-serde = "0.3"
+serde_json = {version = "1.0", features = ["preserve_order"]}
+serde_type_name = "0.2.0"
+colored = "2"
+atty = "0.2"
+futures = "0.3"
+
+[dev-dependencies]
+serde = { version = "1.0", features = ["derive"] }
+env_logger = "0.9.0"
