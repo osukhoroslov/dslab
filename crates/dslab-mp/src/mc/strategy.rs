@@ -30,9 +30,6 @@ pub enum LogContext {
     /// Nothing happened to the message.
     Default,
 
-    /// Message was dropped.
-    Dropped,
-
     /// Message was duplicated.
     Duplicated,
 
@@ -131,9 +128,8 @@ pub trait Strategy {
     /// Processes event dropping.
     fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let state = system.get_state();
-        let event = self.take_event(system, event_id);
 
-        self.debug_log(&event, LogContext::Dropped);
+        self.add_event(system, MessageDropped { id: event_id });
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
@@ -238,9 +234,26 @@ pub trait Strategy {
                     self.log_message(self.search_depth(), msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
-                    t!(format!("{:>10} | {:>10} !-- {:<10}", self.search_depth(), proc, timer).yellow());
+                    t!(format!(
+                        "{:>10} | {:>10} !-- {:<10} <-- timer fired",
+                        self.search_depth(),
+                        proc,
+                        timer
+                    )
+                    .yellow());
                 }
-                _ => {}
+                TimerCancelled { proc, timer } => {
+                    t!(format!(
+                        "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
+                        self.search_depth(),
+                        proc,
+                        timer
+                    )
+                    .yellow());
+                }
+                MessageDropped { .. } => {
+                    t!(format!("{:>10} | message dropped", self.search_depth()).red());
+                }
             }
         }
     }
@@ -250,13 +263,6 @@ pub trait Strategy {
         match log_context {
             LogContext::Default => {
                 t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
-            }
-            LogContext::Dropped => {
-                t!(format!(
-                    "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                    "!!!", src, dest, msg
-                )
-                .red());
             }
             LogContext::Duplicated => {
                 t!(format!(
