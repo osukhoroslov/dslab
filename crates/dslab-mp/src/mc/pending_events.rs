@@ -69,11 +69,11 @@ impl PendingEvents {
     }
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
-    pub fn available_events(&self) -> &BTreeSet<McEventId> {
-        if self.directives.is_empty() {
-            &self.available_events
+    pub fn available_events(&self) -> BTreeSet<McEventId> {
+        if let Some(directive) = self.directives.iter().next() {
+            BTreeSet::from_iter(vec![directive.clone()])
         } else {
-            &self.directives
+            self.available_events.clone()
         }
     }
 
