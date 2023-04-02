@@ -130,12 +130,12 @@ pub trait Strategy {
 
     /// Processes event dropping.
     fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
-        let state = system.get_state(self.search_depth());
+        let state = system.get_state();
         let event = self.take_event(system, event_id);
 
-        self.debug_log(&event, self.search_depth(), LogContext::Dropped);
+        self.debug_log(&event, LogContext::Dropped);
 
-        let new_state = system.get_state(self.search_depth() + 1);
+        let new_state = system.get_state();
         if !self.have_visited(&new_state) {
             self.search_step_impl(system, new_state)?;
         }
@@ -154,7 +154,7 @@ pub trait Strategy {
         duplicate: bool,
         corrupt: bool,
     ) -> Result<(), String> {
-        let state = system.get_state(self.search_depth());
+        let state = system.get_state();
 
         let mut event;
         if duplicate {
@@ -167,11 +167,11 @@ pub trait Strategy {
             event = self.corrupt_msg_data(event);
         }
 
-        self.debug_log(&event, self.search_depth(), LogContext::Default);
+        self.debug_log(&event, LogContext::Default);
 
         system.apply_event(event);
 
-        let new_state = system.get_state(self.search_depth() + 1);
+        let new_state = system.get_state();
         if !self.have_visited(&new_state) {
             self.search_step_impl(system, new_state)?;
         }
@@ -198,7 +198,7 @@ pub trait Strategy {
 
     /// Applies corruption to the MessageReceived event data.
     fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
-        self.debug_log(&event, self.search_depth(), LogContext::Corrupted);
+        self.debug_log(&event, LogContext::Corrupted);
         match event {
             MessageReceived {
                 msg,
@@ -226,19 +226,19 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, self.search_depth(), LogContext::Duplicated);
+        self.debug_log(&event, LogContext::Duplicated);
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, depth: u64, log_context: LogContext) {
+    fn debug_log(&self, event: &McEvent, log_context: LogContext) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(depth, msg, src, dest, log_context);
+                    self.log_message(self.search_depth(), msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
-                    t!(format!("{:>10} | {:>10} !-- {:<10}", depth, proc, timer).yellow());
+                    t!(format!("{:>10} | {:>10} !-- {:<10}", self.search_depth(), proc, timer).yellow());
                 }
                 _ => {}
             }
