@@ -5,15 +5,9 @@ use plotters::prelude::*;
 const METRICS: &[&str] = &["99% relative slowdown", "cold start fraction (%)"];
 
 pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &[Vec<[f64; 2]>]) {
-    let side = (labels.len() as f64).cbrt().ceil() as usize;
-    let step = 200 / side;
     let mut styles = Vec::with_capacity(labels.len());
     for i in 0..labels.len() {
-        let r = ((i % side) * step + 20) as u8;
-        let tmp = i / side;
-        let g = ((tmp % side) * step + 20) as u8;
-        let b = ((tmp / side) * step + 20) as u8;
-        styles.push(Into::<ShapeStyle>::into(RGBColor(r, g, b)).filled());
+        styles.push(Into::<ShapeStyle>::into(Palette99::pick(i)).filled());
     }
     let root_area = BitMapBackend::new(plot, (1600, 900)).into_drawing_area();
     root_area.fill(&WHITE).unwrap();

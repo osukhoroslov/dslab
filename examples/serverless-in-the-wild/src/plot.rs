@@ -22,29 +22,23 @@ pub(crate) fn plot_results(plot: &str, mut labels: Vec<String>, mut points: Vec<
         .label_style(("sans-serif", 20))
         .draw()
         .unwrap();
-    let side = (labels.len() as f64).cbrt().ceil() as usize;
-    let step = 200 / side;
     for i in 0..labels.len() {
-        let r = ((i % side) * step + 20) as u8;
-        let tmp = i / side;
-        let g = ((tmp % side) * step + 20) as u8;
-        let b = ((tmp / side) * step + 20) as u8;
         if labels[i].contains("unloading") {
             continue;
         } else if labels[i].contains("keepalive") {
-            ctx.draw_series([TriangleMarker::new(points[i], 5, RGBColor(r, g, b))])
+            ctx.draw_series([TriangleMarker::new(points[i], 8, Palette99::pick(i))])
                 .unwrap()
                 .label(labels[i].clone())
-                .legend(move |pos| TriangleMarker::new(pos, 5, RGBColor(r, g, b)));
+                .legend(move |pos| TriangleMarker::new(pos, 8, Palette99::pick(i)));
         } else {
             ctx.draw_series([Circle::new(
                 points[i],
-                5,
-                Into::<ShapeStyle>::into(RGBColor(r, g, b)).filled(),
+                8,
+                Into::<ShapeStyle>::into(Palette99::pick(i)).filled(),
             )])
             .unwrap()
             .label(labels[i].clone())
-            .legend(move |pos| Circle::new(pos, 5, Into::<ShapeStyle>::into(RGBColor(r, g, b)).filled()));
+            .legend(move |pos| Circle::new(pos, 8, Into::<ShapeStyle>::into(Palette99::pick(i)).filled()));
         }
     }
     ctx.configure_series_labels()
