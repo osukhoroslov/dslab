@@ -37,7 +37,7 @@ impl Bfs {
 impl Bfs {
     fn bfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         // Start search from initial state
-        self.states_queue.push_back(system.get_state(self.search_depth));
+        self.states_queue.push_back(system.get_state());
 
         while !self.states_queue.is_empty() {
             let available_events = system.available_events();
@@ -53,7 +53,7 @@ impl Bfs {
             }
 
             system.set_state(state);
-            self.mark_visited(system.get_state(self.search_depth));
+            self.mark_visited(system.get_state());
 
             for event_id in available_events {
                 self.process_event(system, event_id)?;

@@ -33,6 +33,7 @@ impl Dfs {
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
+        self.search_depth = state.search_depth;
 
         let result = self.check_state(&state);
 
@@ -50,7 +51,7 @@ impl Dfs {
 
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
-        let state = system.get_state(self.search_depth());
+        let state = system.get_state();
 
         let res = self.dfs(system, state);
         match res {
@@ -60,10 +61,7 @@ impl Strategy for Dfs {
     }
 
     fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
-        self.search_depth += 1;
-        let result = self.dfs(system, state);
-        self.search_depth -= 1;
-        result
+        self.dfs(system, state)
     }
 
     fn execution_mode(&self) -> &ExecutionMode {
