@@ -8,7 +8,7 @@ use dslab_core::handler::EventHandler;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::container::{ContainerManager, ContainerStatus};
-use crate::cpu::CPU;
+use crate::cpu::{Cpu, CpuPolicy};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
 use crate::function::{Application, FunctionRegistry};
 use crate::invocation::{InvocationRegistry, InvocationStatus};
@@ -21,7 +21,7 @@ pub struct Host {
     id: usize,
     invoker: Box<dyn Invoker>,
     container_manager: ContainerManager,
-    cpu: CPU,
+    cpu: Cpu,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
@@ -35,7 +35,7 @@ impl Host {
     pub fn new(
         id: usize,
         cores: u32,
-        disable_contention: bool,
+        cpu_policy: Box<dyn CpuPolicy>,
         resources: ResourceProvider,
         invoker: Box<dyn Invoker>,
         function_registry: Rc<RefCell<FunctionRegistry>>,
@@ -50,7 +50,7 @@ impl Host {
             id,
             invoker,
             container_manager: ContainerManager::new(resources, ctx.clone()),
-            cpu: CPU::new(cores, disable_contention, ctx.clone()),
+            cpu: Cpu::new(cores, cpu_policy, ctx.clone()),
             function_registry,
             invocation_registry,
             coldstart,
@@ -107,7 +107,7 @@ impl Host {
             time,
         );
         let mut stats = self.stats.borrow_mut();
-        stats.on_new_invocation(invocation.func_id);
+        stats.on_new_invocation(invocation.app_id, invocation.func_id);
         match status {
             InvokerDecision::Warm(container_id) => {
                 drop(stats);
@@ -117,7 +117,7 @@ impl Host {
             InvokerDecision::Cold((container_id, delay)) => {
                 invocation.status = InvocationStatus::WaitingForContainer;
                 invocation.container_id = Some(container_id);
-                stats.on_cold_start(invocation.func_id, delay);
+                stats.on_cold_start(invocation.app_id, invocation.func_id, delay);
                 drop(stats);
                 self.container_manager.reserve_container(container_id, id);
             }
@@ -138,7 +138,7 @@ impl Host {
             if container.status == ContainerStatus::Idle {
                 let delta = time - container.last_change;
                 stats.update_wasted_resources(delta, &container.resources);
-                container.status = ContainerStatus::Deploying;
+                container.last_change = time;
             }
         }
     }

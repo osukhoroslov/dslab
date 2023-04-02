@@ -11,8 +11,9 @@ use dslab_core::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::config::{Config, ConfigParamResolvers, RawConfig};
+use crate::cpu::{ContendedCpuPolicy, CpuPolicy};
 use crate::deployer::{BasicDeployer, IdleDeployer};
-use crate::invoker::{BasicInvoker, Invoker};
+use crate::invoker::{FIFOInvoker, Invoker};
 use crate::scheduler::{BasicScheduler, Scheduler};
 use crate::simulation::ServerlessSimulation;
 use crate::stats::Stats;
@@ -27,7 +28,7 @@ pub struct ParallelHostConfig {
 impl Default for ParallelHostConfig {
     fn default() -> Self {
         Self {
-            invoker: Box::new(BasicInvoker::new()),
+            invoker: Box::new(FIFOInvoker::new()),
             resources: Vec::new(),
             cores: 1,
         }
@@ -36,7 +37,7 @@ impl Default for ParallelHostConfig {
 
 pub struct ParallelConfig {
     pub coldstart_policy: Box<dyn ColdStartPolicy + Send>,
-    pub disable_contention: bool,
+    pub cpu_policy: Box<dyn CpuPolicy + Send>,
     pub idle_deployer: Box<dyn IdleDeployer + Send>,
     pub scheduler: Box<dyn Scheduler + Send>,
     pub hosts: Vec<ParallelHostConfig>,
@@ -46,7 +47,7 @@ impl Default for ParallelConfig {
     fn default() -> Self {
         Self {
             coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
-            disable_contention: false,
+            cpu_policy: Box::<ContendedCpuPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),
@@ -143,6 +144,8 @@ pub fn parallel_simulation_raw_n_workers(
     }
     let coldstart_policy_resolver1: Arc<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync> =
         Arc::from(resolvers.coldstart_policy_resolver);
+    let cpu_policy_resolver1: Arc<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync> =
+        Arc::from(resolvers.cpu_policy_resolver);
     let idle_deployer_resolver1: Arc<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync> =
         Arc::from(resolvers.idle_deployer_resolver);
     let scheduler_resolver1: Arc<dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync> =
@@ -154,6 +157,7 @@ pub fn parallel_simulation_raw_n_workers(
     for (id, raw_config, trace, seed) in izip!(0..len, configs.drain(..), traces_arc.drain(..), seeds.drain(..)) {
         let tx = tx.clone();
         let coldstart_policy_resolver = coldstart_policy_resolver1.clone();
+        let cpu_policy_resolver = cpu_policy_resolver1.clone();
         let idle_deployer_resolver = idle_deployer_resolver1.clone();
         let scheduler_resolver = scheduler_resolver1.clone();
         let invoker_resolver = invoker_resolver1.clone();
@@ -161,6 +165,7 @@ pub fn parallel_simulation_raw_n_workers(
             let config = Config::from_raw_split_resolvers(
                 raw_config,
                 coldstart_policy_resolver.as_ref(),
+                cpu_policy_resolver.as_ref(),
                 idle_deployer_resolver.as_ref(),
                 scheduler_resolver.as_ref(),
                 invoker_resolver.as_ref(),

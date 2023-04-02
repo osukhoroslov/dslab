@@ -1,11 +1,11 @@
-/// This file contains the CPU sharing model used in the simulator.
-/// We use something similar to CPUShares in cgroups, but instead of shares we operate with (shares/core_shares),
-/// i. e. if the container has 512 shares and each core amounts to 1024 shares, we say that the share of the container equals 0.5.
+/// CPU sharing models used in the simulator.
+/// We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
+/// i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
 /// If the container allows concurrent invocations, each invocation gets an equal part of the container share.
-/// We assume that CPU sharing is fair: each invocation makes progress according to its share.
+/// The exact CPU sharing model depends on the used CpuPolicy.
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
@@ -41,9 +41,150 @@ impl Ord for WorkItem {
     }
 }
 
-/// ProgressComputer computes invocation progress and manages invocation end events.
-pub struct ProgressComputer {
-    disable_contention: bool,
+/// CpuPolicy governs CPU sharing, computes invocation progress and manages invocation end events.
+pub trait CpuPolicy {
+    /// Returns a clean initialized instance of the policy.
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy>;
+    /// Returns the current CPU load.
+    fn get_load(&self) -> f64;
+    /// This method is called whenever there is a new invocation to run on this CPU.
+    fn on_new_invocation(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        time: f64,
+        ctx: &mut SimulationContext,
+    );
+    /// This method is called whenever an invocation on this CPU stops executing.
+    fn on_invocation_end(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        time: f64,
+        ctx: &mut SimulationContext,
+    );
+}
+
+/// This policy ignores contention for CPU resources.
+/// All invocations work as if executed on some abstract infinite-core CPU without any contention.
+#[derive(Default)]
+pub struct IgnoredCpuPolicy {
+    load: f64,
+}
+
+impl CpuPolicy for IgnoredCpuPolicy {
+    fn init(&self, _cores: u32) -> Box<dyn CpuPolicy> {
+        Box::<Self>::default()
+    }
+
+    fn get_load(&self) -> f64 {
+        self.load
+    }
+
+    fn on_new_invocation(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        ctx: &mut SimulationContext,
+    ) {
+        if container.invocations.len() == 1 {
+            self.load += container.cpu_share;
+        }
+        ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
+    }
+
+    fn on_invocation_end(
+        &mut self,
+        _invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        _ctx: &mut SimulationContext,
+    ) {
+        if container.invocations.is_empty() {
+            self.load -= container.cpu_share;
+        }
+    }
+}
+
+/// CPU shares of active containers should not exceed the number of cores.
+/// If this limit is exceeded, extra invocations are queued until some cores are freed.
+/// This model currently ignores possible effects related to multiple concurrent invocations on the same container.
+#[derive(Default)]
+pub struct IsolatedCpuPolicy {
+    cores: f64,
+    load: f64,
+    invocation_map: HashMap<usize, Vec<(usize, f64)>>,
+    queue: VecDeque<(usize, f64)>,
+}
+
+impl IsolatedCpuPolicy {
+    pub fn new(cores: u32) -> Self {
+        Self {
+            cores: cores as f64,
+            ..Default::default()
+        }
+    }
+}
+
+impl CpuPolicy for IsolatedCpuPolicy {
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy> {
+        Box::<Self>::new(Self::new(cores))
+    }
+
+    fn get_load(&self) -> f64 {
+        self.load
+    }
+
+    fn on_new_invocation(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        ctx: &mut SimulationContext,
+    ) {
+        if let Some(invs) = self.invocation_map.get_mut(&container.id) {
+            invs.push((invocation.id, invocation.duration));
+        } else if container.invocations.len() == 1 && self.load + container.cpu_share > self.cores + 1e-9 {
+            self.invocation_map
+                .insert(container.id, vec![(invocation.id, invocation.duration)]);
+            self.queue.push_back((container.id, container.cpu_share));
+        } else {
+            if container.invocations.len() == 1 {
+                self.load += container.cpu_share;
+            }
+            ctx.emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
+        }
+    }
+
+    fn on_invocation_end(
+        &mut self,
+        _invocation: &mut Invocation,
+        container: &mut Container,
+        _time: f64,
+        ctx: &mut SimulationContext,
+    ) {
+        if container.invocations.is_empty() {
+            self.load -= container.cpu_share;
+            while let Some(item) = self.queue.pop_front() {
+                if self.load + item.1 > self.cores + 1e-9 {
+                    self.queue.push_front(item);
+                    break;
+                }
+                self.load += item.1;
+                let mut invs = self.invocation_map.remove(&item.0).unwrap();
+                for inv in invs.drain(..) {
+                    ctx.emit_self(InvocationEndEvent { id: inv.0 }, inv.1);
+                }
+            }
+        }
+    }
+}
+
+/// CPU shares of active containers may exceed the number of cores, in this case the invocations are slowed down.
+/// We assume that CPU sharing is fair: each invocation makes progress according to its share.
+#[derive(Default)]
+pub struct ContendedCpuPolicy {
     work_tree: BTreeSet<WorkItem>,
     work_map: HashMap<usize, WorkItem>,
     work_total: f64,
@@ -51,12 +192,14 @@ pub struct ProgressComputer {
     load: f64,
     last_update: f64,
     end_event: Option<EventId>,
-    ctx: Rc<RefCell<SimulationContext>>,
 }
 
-impl ProgressComputer {
-    pub fn get_load(&self) -> f64 {
-        self.load
+impl ContendedCpuPolicy {
+    pub fn new(cores: u32) -> Self {
+        Self {
+            cores: cores as f64,
+            ..Default::default()
+        }
     }
 
     fn try_rebuild(&mut self) {
@@ -75,14 +218,14 @@ impl ProgressComputer {
         }
     }
 
-    fn reschedule_end(&mut self) {
+    fn reschedule_end(&mut self, ctx: &mut SimulationContext) {
         if let Some(evt) = self.end_event {
-            self.ctx.borrow_mut().cancel_event(evt);
+            ctx.cancel_event(evt);
         }
         if !self.work_tree.is_empty() {
             let it = self.work_tree.iter().next().unwrap().clone();
             let delta = (it.finish - self.work_total).max(0.);
-            self.end_event = Some(self.ctx.borrow_mut().emit_self(
+            self.end_event = Some(ctx.emit_self(
                 InvocationEndEvent { id: it.id },
                 delta * f64::max(self.cores, self.load),
             ));
@@ -110,14 +253,24 @@ impl ProgressComputer {
         self.work_total += (time - self.last_update) / f64::max(self.cores, self.load);
         self.try_rebuild();
     }
+}
 
-    fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
-        if self.disable_contention {
-            self.ctx
-                .borrow_mut()
-                .emit_self(InvocationEndEvent { id: invocation.id }, invocation.duration);
-            return;
-        }
+impl CpuPolicy for ContendedCpuPolicy {
+    fn init(&self, cores: u32) -> Box<dyn CpuPolicy> {
+        Box::<Self>::new(Self::new(cores))
+    }
+
+    fn get_load(&self) -> f64 {
+        self.load
+    }
+
+    fn on_new_invocation(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        time: f64,
+        ctx: &mut SimulationContext,
+    ) {
         self.shift_time(time);
         if container.invocations.len() > 1 {
             let cnt = container.invocations.len() as f64;
@@ -135,13 +288,16 @@ impl ProgressComputer {
             invocation.duration / self.cores * (container.invocations.len() as f64),
         );
         self.last_update = time;
-        self.reschedule_end();
+        self.reschedule_end(ctx);
     }
 
-    fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
-        if self.disable_contention {
-            return;
-        }
+    fn on_invocation_end(
+        &mut self,
+        invocation: &mut Invocation,
+        container: &mut Container,
+        time: f64,
+        ctx: &mut SimulationContext,
+    ) {
         self.end_event = None;
         self.shift_time(time);
         self.remove_invocation(invocation.id);
@@ -155,43 +311,45 @@ impl ProgressComputer {
             self.load -= container.cpu_share;
         }
         self.last_update = time;
-        self.reschedule_end();
+        self.reschedule_end(ctx);
     }
 }
 
-pub struct CPU {
-    pub cores: u32,
-    progress_computer: ProgressComputer,
+pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CpuPolicy> {
+    let lower = s.to_lowercase();
+    if lower == "ignored" {
+        Box::<IgnoredCpuPolicy>::default()
+    } else if lower == "isolated" {
+        Box::<IsolatedCpuPolicy>::default()
+    } else if lower == "contended" {
+        Box::<ContendedCpuPolicy>::default()
+    } else {
+        panic!("Can't resolve: {}", s);
+    }
 }
 
-impl CPU {
-    pub fn new(cores: u32, disable_contention: bool, ctx: Rc<RefCell<SimulationContext>>) -> Self {
-        let progress_computer = ProgressComputer {
-            disable_contention,
-            work_tree: Default::default(),
-            work_map: Default::default(),
-            work_total: Default::default(),
-            cores: cores as f64,
-            load: Default::default(),
-            last_update: 0.,
-            end_event: None,
-            ctx,
-        };
-        Self {
-            cores,
-            progress_computer,
-        }
+pub struct Cpu {
+    pub cores: u32,
+    policy: Box<dyn CpuPolicy>,
+    ctx: Rc<RefCell<SimulationContext>>,
+}
+
+impl Cpu {
+    pub fn new(cores: u32, policy: Box<dyn CpuPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
+        Self { cores, policy, ctx }
     }
 
     pub fn get_load(&self) -> f64 {
-        self.progress_computer.get_load()
+        self.policy.get_load()
     }
 
     pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
-        self.progress_computer.on_new_invocation(invocation, container, time)
+        self.policy
+            .on_new_invocation(invocation, container, time, &mut self.ctx.borrow_mut())
     }
 
     pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
-        self.progress_computer.on_invocation_end(invocation, container, time)
+        self.policy
+            .on_invocation_end(invocation, container, time, &mut self.ctx.borrow_mut())
     }
 }

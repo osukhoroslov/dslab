@@ -1,4 +1,6 @@
 use order_stat::kth_by;
+use serde::ser::{SerializeSeq, Serializer};
+use serde::Serialize;
 
 use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
@@ -109,7 +111,20 @@ impl SampleMetric {
     }
 }
 
-#[derive(Clone, Default)]
+impl Serialize for SampleMetric {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.data.len()))?;
+        for x in self.data.iter() {
+            seq.serialize_element(x)?;
+        }
+        seq.end()
+    }
+}
+
+#[derive(Clone, Default, Serialize)]
 pub struct InvocationStats {
     pub invocations: u64,
     pub cold_starts: u64,
@@ -149,7 +164,7 @@ impl InvocationStats {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
     pub wasted_resource_time: DefaultVecMap<SampleMetric>,
@@ -202,30 +217,35 @@ impl GlobalStats {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 pub struct Stats {
+    pub app_stats: DefaultVecMap<InvocationStats>,
     pub func_stats: DefaultVecMap<InvocationStats>,
     pub global_stats: GlobalStats,
 }
 
 impl Stats {
-    pub fn on_cold_start(&mut self, func_id: usize, delay: f64) {
+    pub fn on_cold_start(&mut self, app_id: usize, func_id: usize, delay: f64) {
         self.global_stats.on_cold_start(delay);
+        self.app_stats.get_mut(app_id).on_cold_start(delay);
         self.func_stats.get_mut(func_id).on_cold_start(delay);
     }
 
-    pub fn on_new_invocation(&mut self, func_id: usize) {
+    pub fn on_new_invocation(&mut self, app_id: usize, func_id: usize) {
         self.global_stats.on_new_invocation();
+        self.app_stats.get_mut(app_id).on_new_invocation();
         self.func_stats.get_mut(func_id).on_new_invocation();
     }
 
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
+        self.app_stats.get_mut(invocation.app_id).update(invocation);
         self.func_stats.get_mut(invocation.func_id).update(invocation);
     }
 
-    pub fn update_queueing_time(&mut self, func_id: usize, queueing_time: f64) {
+    pub fn update_queueing_time(&mut self, app_id: usize, func_id: usize, queueing_time: f64) {
         self.global_stats.update_queueing_time(queueing_time);
+        self.app_stats.get_mut(app_id).update_queueing_time(queueing_time);
         self.func_stats.get_mut(func_id).update_queueing_time(queueing_time);
     }
 

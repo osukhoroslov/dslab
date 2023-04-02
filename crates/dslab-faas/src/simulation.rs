@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
@@ -8,11 +9,12 @@ use dslab_core::simulation::Simulation;
 use crate::coldstart::ColdStartPolicy;
 use crate::config::Config;
 use crate::controller::Controller;
+use crate::cpu::CpuPolicy;
 use crate::event::{InvocationStartEvent, SimulationEndEvent};
 use crate::function::{Application, Function, FunctionRegistry};
 use crate::host::Host;
 use crate::invocation::{Invocation, InvocationRegistry};
-use crate::invoker::{BasicInvoker, Invoker};
+use crate::invoker::{FIFOInvoker, Invoker};
 use crate::resource::{Resource, ResourceConsumer, ResourceNameResolver, ResourceProvider, ResourceRequirement};
 use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::{RequestData, Trace};
@@ -24,7 +26,7 @@ pub struct ServerlessSimulation {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
     controller_id: HandlerId,
-    disable_contention: bool,
+    cpu_policy: Box<dyn CpuPolicy>,
     function_registry: Rc<RefCell<FunctionRegistry>>,
     host_ctr: Counter,
     invocation_registry: Rc<RefCell<InvocationRegistry>>,
@@ -50,7 +52,7 @@ impl ServerlessSimulation {
             coldstart: config.coldstart_policy.box_to_rc(),
             controller,
             controller_id,
-            disable_contention: config.disable_contention,
+            cpu_policy: config.cpu_policy,
             function_registry,
             host_ctr: Default::default(),
             invocation_registry,
@@ -104,12 +106,12 @@ impl ServerlessSimulation {
 
     pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {
         let id = self.host_ctr.increment();
-        let real_invoker = invoker.unwrap_or_else(|| Box::new(BasicInvoker::new()));
+        let real_invoker = invoker.unwrap_or_else(|| Box::new(FIFOInvoker::new()));
         let ctx = self.sim.create_context(format!("host_{}", id));
         let host = Rc::new(RefCell::new(Host::new(
             id,
             cores,
-            self.disable_contention,
+            self.cpu_policy.init(cores),
             resources,
             real_invoker,
             self.function_registry.clone(),
@@ -174,12 +176,21 @@ impl ServerlessSimulation {
     /// invocations have consecutive ids that follow their order inside the iterator.
     pub fn send_requests_from_ordered_iter(&mut self, iterator: &mut dyn Iterator<Item = RequestData>) -> Range<usize> {
         let mut ir = self.invocation_registry.borrow_mut();
+        let fr = self.function_registry.borrow();
         let mut iter = iterator.peekable();
         let first_idx = ir.len();
         if let Some(item) = iter.peek() {
             if self.ctx.can_emit_ordered(item.time - self.sim.time()) {
                 for req in iter {
-                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    let app_id = fr
+                        .get_function(req.id)
+                        .ok_or(format!(
+                            "Non-existing function id {} passed to send_requests_from_ordered_iter.",
+                            req.id
+                        ))
+                        .unwrap()
+                        .app_id;
+                    let id = ir.add_invocation(app_id, req.id, req.duration, req.time);
                     self.ctx.emit_ordered(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -188,7 +199,15 @@ impl ServerlessSimulation {
                 }
             } else {
                 for req in iter {
-                    let id = ir.add_invocation(req.id, req.duration, req.time);
+                    let app_id = fr
+                        .get_function(req.id)
+                        .ok_or(format!(
+                            "Non-existing function id {} passed to send_requests_from_ordered_iter.",
+                            req.id
+                        ))
+                        .unwrap()
+                        .app_id;
+                    let id = ir.add_invocation(app_id, req.id, req.duration, req.time);
                     self.ctx.emit(
                         InvocationStartEvent { id, func_id: req.id },
                         self.controller_id,
@@ -201,7 +220,20 @@ impl ServerlessSimulation {
     }
 
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
-        let invocation_id = self.invocation_registry.borrow_mut().add_invocation(id, duration, time);
+        let app_id = self
+            .function_registry
+            .borrow()
+            .get_function(id)
+            .ok_or(format!(
+                "Non-existing function id {} passed to send_invocation_request.",
+                id
+            ))
+            .unwrap()
+            .app_id;
+        let invocation_id = self
+            .invocation_registry
+            .borrow_mut()
+            .add_invocation(app_id, id, duration, time);
         self.ctx.emit(
             InvocationStartEvent {
                 id: invocation_id,

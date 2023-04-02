@@ -225,13 +225,18 @@ impl Scheduler for LeastLoadedScheduler {
                     host.borrow().get_cpu_load()
                 },
             );
-            if load < best_load {
+            if load.0 > best_load.0 || (load.1 + 1e-9 < best_load.1) {
                 best_load = load;
                 best = i;
                 if self.prefer_warm {
                     warm = host.borrow().can_invoke(app, false);
                 }
-            } else if load == best_load && self.prefer_warm && !warm && host.borrow().can_invoke(app, false) {
+            } else if load.0 == best_load.0
+                && (load.1 - best_load.1).abs() < 1e-9
+                && self.prefer_warm
+                && !warm
+                && host.borrow().can_invoke(app, false)
+            {
                 best = i;
                 warm = true;
             }

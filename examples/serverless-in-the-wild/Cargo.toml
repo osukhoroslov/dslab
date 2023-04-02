@@ -8,5 +8,6 @@ edition = "2021"
 clap = { version = "4.1.1", features = ["derive"] }
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-faas = { path = "../../crates/dslab-faas" }
+plotters = "0.3.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"

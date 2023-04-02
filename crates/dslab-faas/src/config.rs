@@ -6,8 +6,9 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy, FixedTimeColdStartPolicy};
+use crate::cpu::{default_cpu_policy_resolver, ContendedCpuPolicy, CpuPolicy};
 use crate::deployer::{default_idle_deployer_resolver, BasicDeployer, IdleDeployer};
-use crate::invoker::{default_invoker_resolver, BasicInvoker, Invoker};
+use crate::invoker::{default_invoker_resolver, FIFOInvoker, Invoker};
 use crate::parallel::{ParallelConfig, ParallelHostConfig};
 use crate::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
@@ -30,7 +31,7 @@ impl From<ParallelHostConfig> for HostConfig {
 impl Default for HostConfig {
     fn default() -> Self {
         Self {
-            invoker: Box::new(BasicInvoker::new()),
+            invoker: Box::new(FIFOInvoker::new()),
             resources: Vec::new(),
             cores: 1,
         }
@@ -42,7 +43,7 @@ impl From<ParallelConfig> for Config {
         let mut hosts = value.hosts;
         Self {
             coldstart_policy: value.coldstart_policy,
-            disable_contention: value.disable_contention,
+            cpu_policy: value.cpu_policy,
             idle_deployer: value.idle_deployer,
             scheduler: value.scheduler,
             hosts: hosts.drain(..).map(HostConfig::from).collect(),
@@ -76,7 +77,7 @@ pub struct RawConfig {
     #[serde(default)]
     pub coldstart_policy: String,
     #[serde(default)]
-    pub disable_contention: bool,
+    pub cpu_policy: String,
     #[serde(default)]
     pub idle_deployer: String,
     #[serde(default)]
@@ -98,6 +99,7 @@ pub fn parse_options(s: &str) -> HashMap<String, String> {
 
 pub struct ConfigParamResolvers {
     pub coldstart_policy_resolver: Box<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync>,
+    pub cpu_policy_resolver: Box<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync>,
     pub idle_deployer_resolver: Box<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync>,
     pub scheduler_resolver: Box<dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync>,
     pub invoker_resolver: Box<dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync>,
@@ -107,6 +109,7 @@ impl Default for ConfigParamResolvers {
     fn default() -> Self {
         Self {
             coldstart_policy_resolver: Box::new(default_coldstart_policy_resolver),
+            cpu_policy_resolver: Box::new(default_cpu_policy_resolver),
             idle_deployer_resolver: Box::new(default_idle_deployer_resolver),
             scheduler_resolver: Box::new(default_scheduler_resolver),
             invoker_resolver: Box::new(default_invoker_resolver),
@@ -118,9 +121,7 @@ impl Default for ConfigParamResolvers {
 /// default config and change only the fields you need.
 pub struct Config {
     pub coldstart_policy: Box<dyn ColdStartPolicy>,
-    /// This field allows you to disable CPU contention (see cpu.rs).
-    /// It may improve runtime at the cost of accuracy.
-    pub disable_contention: bool,
+    pub cpu_policy: Box<dyn CpuPolicy>,
     pub idle_deployer: Box<dyn IdleDeployer>,
     pub scheduler: Box<dyn Scheduler>,
     pub hosts: Vec<HostConfig>,
@@ -130,7 +131,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
-            disable_contention: false,
+            cpu_policy: Box::<ContendedCpuPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
             hosts: Vec::new(),
@@ -143,6 +144,7 @@ impl Config {
         Self::from_raw_split_resolvers(
             raw,
             resolvers.coldstart_policy_resolver.as_ref(),
+            resolvers.cpu_policy_resolver.as_ref(),
             resolvers.idle_deployer_resolver.as_ref(),
             resolvers.scheduler_resolver.as_ref(),
             resolvers.invoker_resolver.as_ref(),
@@ -152,6 +154,7 @@ impl Config {
     pub fn from_raw_split_resolvers(
         raw: RawConfig,
         coldstart_policy_resolver: &(dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync),
+        cpu_policy_resolver: &(dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync),
         idle_deployer_resolver: &(dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync),
         scheduler_resolver: &(dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync),
         invoker_resolver: &(dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync),
@@ -159,6 +162,9 @@ impl Config {
         let mut me: Self = Default::default();
         if !raw.coldstart_policy.is_empty() {
             me.coldstart_policy = coldstart_policy_resolver(&raw.coldstart_policy);
+        }
+        if !raw.cpu_policy.is_empty() {
+            me.cpu_policy = cpu_policy_resolver(&raw.cpu_policy);
         }
         if !raw.idle_deployer.is_empty() {
             me.idle_deployer = idle_deployer_resolver(&raw.idle_deployer);
@@ -175,7 +181,7 @@ impl Config {
                 let invoker = if !host.invoker.is_empty() {
                     invoker_resolver(&host.invoker)
                 } else {
-                    Box::new(BasicInvoker::new())
+                    Box::new(FIFOInvoker::new())
                 };
                 let curr = HostConfig {
                     invoker,

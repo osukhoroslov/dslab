@@ -3,6 +3,8 @@ use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxHasher;
+use serde::ser::{SerializeSeq, Serializer};
+use serde::Serialize;
 
 #[derive(Default)]
 pub struct Counter {
@@ -57,6 +59,33 @@ impl<T> VecMap<T> {
             None
         }
     }
+
+    pub fn iter(&self) -> VecMapIterator<'_, T> {
+        VecMapIterator::new(self.data.iter().enumerate())
+    }
+}
+
+pub struct VecMapIterator<'a, T> {
+    inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>,
+}
+
+impl<'a, T> VecMapIterator<'a, T> {
+    pub fn new(inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>) -> Self {
+        Self { inner }
+    }
+}
+
+impl<'a, T> Iterator for VecMapIterator<'a, T> {
+    type Item = (usize, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for (id, x) in self.inner.by_ref() {
+            if let Some(y) = x.as_ref() {
+                return Some((id, y));
+            }
+        }
+        None
+    }
 }
 
 impl<T> Index<usize> for VecMap<T> {
@@ -107,6 +136,10 @@ where
         self.extend(id);
         &mut self.data[id]
     }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.data.iter()
+    }
 }
 
 impl<T> Index<usize> for DefaultVecMap<T>
@@ -126,6 +159,22 @@ where
 {
     fn index_mut(&mut self, id: usize) -> &mut Self::Output {
         &mut self.data[id]
+    }
+}
+
+impl<T> Serialize for DefaultVecMap<T>
+where
+    T: Default + Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.data.len()))?;
+        for x in self.data.iter() {
+            seq.serialize_element(x)?;
+        }
+        seq.end()
     }
 }
 
