@@ -13,7 +13,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_trace};
-use dslab_models::power::host::HostPowerModel;
+use dslab_models::power::host::{HostPowerModel, HostState};
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
@@ -214,7 +214,7 @@ impl HostManager {
     pub fn get_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        self.power_model.get_power(cpu_util)
+        self.power_model.get_power(HostState::cpu(cpu_util))
     }
 
     /// Returns the total energy consumption.
