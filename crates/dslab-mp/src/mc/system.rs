@@ -96,6 +96,6 @@ impl McSystem {
     }
 
     pub fn available_events(&self) -> BTreeSet<McEventId> {
-        self.events.available_events().clone()
+        self.events.available_events()
     }
 }
