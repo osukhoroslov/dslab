@@ -189,6 +189,10 @@ impl AsyncSimulationState {
         TimerFuture { state }
     }
 
+    pub fn add_timer_on_state(&mut self, timeout: f64, state: Rc<RefCell<SharedState>>) {
+        self.timers.push(Timer::new(self.time() + timeout, state.clone()));
+    }
+
     pub fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<SharedState>>) {
         self.awaiters.insert(key, state);
     }

@@ -1,7 +1,7 @@
 mod async_state;
 mod executor;
 mod log;
-mod shared_state;
+pub mod shared_state;
 mod task;
 mod timer;
 mod waker;
