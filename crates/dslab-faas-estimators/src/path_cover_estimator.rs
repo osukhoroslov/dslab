@@ -4,37 +4,53 @@ use dslab_faas::config::Config;
 use dslab_faas::trace::Trace;
 
 use crate::common::Instance;
+use crate::matching::*;
 use crate::estimator::{Estimation, Estimator};
 
-fn path_cover_single(n: usize, edges: Vec<(usize, usize)>) -> usize {
-    // TODO: improve the bound with tolerances
-    let mut min = vec![n; n];
-    let mut max = vec![0; n];
-    let mut cnt = vec![0; n];
-    let mut right = vec![Vec::<usize>::new(); n];
-    for (u, v) in edges.iter().copied() {
-        min[u] = min[u].min(v);
-        max[u] = max[u].max(v);
-        cnt[u] += 1;
-        right[v].push(u);
-    }
-    // convexity check
+fn path_cover_single(n: usize, edges: Vec<(usize, usize)>, kind: Vec<u8>) -> usize {
+    let mat = convex_matching(n, edges.clone());
+    let result = mat.iter().filter(|&x| *x == usize::MAX).count();
+    let class = classify_edges(n, edges.clone(), mat.clone());
+    let mut inc = 0;
+    let mut in_edges = vec![Vec::new(); n];
+    let mut first = vec![usize::MAX; n];
     for i in 0..n {
-        assert!(cnt[i] == 0 || max[i] + 1 - min[i] == cnt[i]);
+        if mat[i] != usize::MAX {
+            first[mat[i]] = i;
+        }
     }
-    let mut mat = vec![usize::MAX; n];
-    for i in 0..n {
-        let mut chosen = usize::MAX;
-        for j in right[i].drain(..) {
-            if mat[j] == usize::MAX && (chosen == usize::MAX || max[j] < max[chosen]) {
-                chosen = j;
+    for (i, (u, v)) in edges.iter().copied().enumerate() {
+        in_edges[v].push(i);
+    }
+    for (i, (u, v)) in edges.iter().copied().enumerate() {
+        if mat[u] == v && kind[i] == 1 && first[u] == usize::MAX {
+            let mut ok = class[i] == MatchingEdge::InAll;
+            for j in in_edges[v].iter().copied() {
+                if i != j {
+                    ok &= class[j] == MatchingEdge::InNone;
+                }
+            }
+            if ok {
+                inc = 1;
+                break;
+            }
+        } else if mat[u] == v && kind[i] == 2 && first[u] != usize::MAX {
+            let mut ok = class[i] == MatchingEdge::InAll;
+            for j in in_edges[u].iter().copied() {
+                if edges[j].0 == first[u] {
+                    ok &= class[j] == MatchingEdge::InAll;
+                }
+            }
+            if ok {
+                inc = 1;
+                break;
             }
         }
-        if chosen != usize::MAX {
-            mat[chosen] = i;
-        }
     }
-    mat.drain(..).filter(|&x| x == usize::MAX).count()
+    if inc == 1 {
+        println!("INC!");
+    }
+    result + inc
 }
 
 fn path_cover(instance: &Instance) -> u64 {
@@ -45,6 +61,7 @@ fn path_cover(instance: &Instance) -> u64 {
     }
     for (app, invs) in app_invs.drain(..).enumerate() {
         let mut edges = Vec::new();
+        let mut kind = Vec::<u8>::new();
         for ii in 0..invs.len() {
             let i = invs[ii];
             let t = instance.req_start[i];
@@ -54,10 +71,18 @@ fn path_cover(instance: &Instance) -> u64 {
                 let mut ok2 = instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] + instance.keepalive >= t;
                 if ok1 || ok2 {
                     edges.push((jj, ii));
+                    let mut k = 0;
+                    if ok1 {
+                        k = k | 1;
+                    }
+                    if ok2 {
+                        k = k | 2;
+                    }
+                    kind.push(k);
                 }
             }
         }
-        result += instance.app_coldstart[app] * (path_cover_single(invs.len(), edges) as u64);
+        result += instance.app_coldstart[app] * (path_cover_single(invs.len(), edges, kind) as u64);
     }
     result
 }

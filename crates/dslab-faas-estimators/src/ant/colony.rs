@@ -7,6 +7,8 @@ use rand_pcg::Pcg64;
 use crate::common::Instance;
 use crate::ant::initial::generate_initial;
 
+const MISS_ADD: u64 = 100000000u64;
+
 #[derive(Clone, Default)]
 pub struct AntColony {
     n_ants: usize,
@@ -25,8 +27,8 @@ impl AntColony {
             n_ants: 50,
             evaporation: 0.05,
             alpha: 1.,
-            init_beta: 4.,
-            beta_decay: 0.,//0.025,
+            init_beta: 5.,
+            beta_decay: 0.05,
             n_iters: 100,
             max_iters_elitist: 10,
             seed,
@@ -85,6 +87,7 @@ impl AntColony {
         }
         let mut best_seq = vec![0; pheromone.len()];
         let mut best_obj = u64::MAX;
+        let mut best_miss = usize::MAX;
         let mut global_best_obj = best_obj;
         /*let (mut best_seq, mut best_obj) = generate_initial(instance);
         let mut global_best_obj = best_obj;
@@ -96,6 +99,7 @@ impl AntColony {
         for iter_id in 0..self.n_iters {
             let mut ants = Vec::with_capacity(self.n_ants);
             let mut ant_obj = vec![0u64; self.n_ants];
+            let mut ant_miss = vec![0; self.n_ants];
             for ant in 0..self.n_ants {
                 let mut seq = Vec::with_capacity(pheromone.len());
                 let mut deleted = vec![false; pheromone.len()];
@@ -103,6 +107,9 @@ impl AntColony {
                     let mut probs = Vec::with_capacity(pheromone[i].len());
                     let mut possible = Vec::with_capacity(pheromone[i].len());
                     for j in 0..pheromone[i].len() {
+                        if j > 0 && deleted[possible_prev[i][j]] {
+                            continue;
+                        }
                         if j > 0 && prev_kind[i][j] != 3 {
                             if prev_kind[i][j] == 1 && seq[possible_prev[i][j]] == 0{ 
                                 continue;
@@ -112,13 +119,9 @@ impl AntColony {
                             }
                         }
                         let h: f64 = if possible_prev[i][j] == usize::MAX { 1. } else { 
-                            if deleted[possible_prev[i][j]] {
-                                0.
-                            } else {
-                                //let d = if seq[possible_prev[i][j]] == 0 { instance.app_coldstart[instance.req_app[i]] } else { 0 };
-                                //4. * (1. + 1. / ((instance.req_start[i] - instance.req_start[possible_prev[i][j]] - instance.req_dur[possible_prev[i][j]]) as f64)) 
-                                4. * (1. + ((instance.req_start[i] - instance.req_start[possible_prev[i][j]] - instance.req_dur[possible_prev[i][j]]) as f64) / (instance.keepalive as f64)) 
-                            }
+                            //let d = if seq[possible_prev[i][j]] == 0 { instance.app_coldstart[instance.req_app[i]] } else { 0 };
+                            //4. * (1. + 1. / ((instance.req_start[i] - instance.req_start[possible_prev[i][j]] - instance.req_dur[possible_prev[i][j]]) as f64)) 
+                            4. * (1. + ((instance.req_start[i] - instance.req_start[possible_prev[i][j]] - instance.req_dur[possible_prev[i][j]]) as f64) / (instance.keepalive as f64)) 
                         };
                         let p = pheromone[i][j].powf(self.alpha) * h.powf(beta);
                         probs.push(p);
@@ -144,6 +147,7 @@ impl AntColony {
                         conts[cont_id[i]].push(i);
                     }
                 }
+                println!("found {} containers", conts.len());
                 let mut events = Vec::with_capacity(conts.len() * 2);
                 for (i, cont) in conts.iter().enumerate() {
                     events.push((instance.req_start[cont[0]], 1, i));
@@ -154,6 +158,7 @@ impl AntColony {
                             d += instance.app_coldstart[instance.req_app[id]];
                         }
                         assert!(t + instance.keepalive >= instance.req_start[id]);
+                        assert!(t <= instance.req_start[id]);
                         t = t.max(instance.req_start[id]);
                         ant_obj[ant] += t - instance.req_start[id];
                         t += d;
@@ -164,10 +169,12 @@ impl AntColony {
                 let mut used = vec![vec![0u64; instance.hosts[0].len()]; instance.hosts.len()];
                 let mut loc = HashMap::<usize, usize>::new();
                 let mut missed = 0;
+                events.sort();
                 for (_, kind, c) in events.drain(..) {
                     if kind == 0 {
                         if let Some(h) = loc.remove(&c) {
                             for r in 0..used[h].len() {
+                                assert!(used[h][r] >= instance.apps[instance.req_app[conts[c][0]]][r]);
                                 used[h][r] -= instance.apps[instance.req_app[conts[c][0]]][r];
                             }
                         }
@@ -195,7 +202,7 @@ impl AntColony {
                     }
                     if chosen == usize::MAX {
                         missed += conts[c].len();
-                        ant_obj[ant] += (10000 * conts[c].len()) as u64;
+                        //ant_obj[ant] += 100000000u64 * (conts[c].len() as u64);
                     } else {
                         for r in 0..used[chosen].len() {
                             used[chosen][r] += instance.apps[instance.req_app[conts[c][0]]][r];
@@ -203,7 +210,9 @@ impl AntColony {
                         loc.insert(c, chosen);
                     }
                 }
+                ant_miss[ant] = missed;
                 if missed > 0 {
+                    ant_obj[ant] += MISS_ADD;
                     println!("missed {}", missed);
                 }
                 ants.push(seq);
@@ -214,23 +223,26 @@ impl AntColony {
                 }
             }
             let mut ord = (0..self.n_ants).collect::<Vec<_>>();
-            ord.sort_by_key(|i| ant_obj[*i]);
+            ord.sort_by_key(|i| (ant_miss[*i], ant_obj[*i]));
             println!("iter worst = {}; iter med = {}; iter best = {}", ant_obj[ord[self.n_ants - 1]], ant_obj[ord[self.n_ants/2]], ant_obj[ord[0]]);
             let mut coeff = 5000.;
-            if ant_obj[ord[0]] < best_obj || unchanged == self.max_iters_elitist {
+            if (best_miss > ant_miss[ord[0]] || (best_miss == ant_miss[ord[0]] && ant_obj[ord[0]] < best_obj)) || unchanged == self.max_iters_elitist {
                 best_seq = ants[ord[0]].clone();
                 best_obj = ant_obj[ord[0]];
+                best_miss = ant_miss[ord[0]];
                 global_best_obj = global_best_obj.min(best_obj);
                 unchanged = 0;
             } else {
                 unchanged += 1;
+                let obj = if best_miss > 0 { best_obj - MISS_ADD } else { best_obj };
                 for (i, s) in best_seq.iter().copied().enumerate() {
-                    pheromone[i][s] += self.evaporation * coeff / (best_obj as f64);
+                    pheromone[i][s] += self.evaporation * coeff * (-(best_miss as f64)).exp() / (obj as f64);
                 }
             }
             for j in 0..=(self.n_ants/10) {
+                let obj = if ant_miss[ord[j]] > 0 { ant_obj[ord[j]] - MISS_ADD } else {ant_obj[ord[j]]};
                 for (i, s) in ants[ord[j]].iter().copied().enumerate() {
-                    pheromone[i][s] += self.evaporation * (coeff - (j as f64)) / (ant_obj[ord[j]] as f64);
+                    pheromone[i][s] += self.evaporation * (coeff - (j as f64)) * (-(ant_miss[ord[j]] as f64)).exp() / (obj as f64);
                 }
             }
             beta -= self.beta_decay;

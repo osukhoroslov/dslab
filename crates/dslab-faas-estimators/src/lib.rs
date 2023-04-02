@@ -4,4 +4,5 @@ pub mod common;
 pub mod estimator;
 pub mod local_search_estimator;
 pub mod ls;
+pub mod matching;
 pub mod path_cover_estimator;
