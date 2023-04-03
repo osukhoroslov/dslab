@@ -15,3 +15,4 @@ pub use context::SimulationContext;
 pub use event::Event;
 pub use handler::EventHandler;
 pub use simulation::Simulation;
+pub use state::EPSILON;

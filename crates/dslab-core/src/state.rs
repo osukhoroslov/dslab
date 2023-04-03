@@ -9,7 +9,8 @@ use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
 
-const EPSILON: f64 = 1e-12;
+/// Epsilon to compare floating point values for equality.
+pub const EPSILON: f64 = 1e-12;
 
 pub struct SimulationState {
     clock: f64,
