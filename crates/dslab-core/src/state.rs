@@ -9,6 +9,9 @@ use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
 
+/// Epsilon to compare floating point values for equality.
+pub const EPSILON: f64 = 1e-12;
+
 pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
@@ -65,12 +68,12 @@ impl SimulationState {
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
-            time: self.clock + delay,
+            time: self.clock + delay.max(0.),
             src,
             dest,
             data: Box::new(data),
         };
-        if delay >= 0. {
+        if delay >= -EPSILON {
             self.events.push(event);
             self.event_count += 1;
             event_id
@@ -110,7 +113,7 @@ impl SimulationState {
     pub fn can_add_ordered_event(&self, delay: f64) -> bool {
         if let Some(evt) = self.ordered_events.back() {
             // small epsilon is used to account for floating-point errors
-            if delay + self.clock < evt.time - 1e-12 {
+            if delay + self.clock < evt.time - EPSILON {
                 return false;
             }
         }
