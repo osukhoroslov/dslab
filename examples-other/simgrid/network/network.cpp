@@ -172,21 +172,70 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
     }
 }
 
+void make_fat_tree_topology(sg4::NetZone* zone, int l2_switch_count, int l1_switch_count, int hosts_per_switch) {
+    int host_count = l1_switch_count * hosts_per_switch;
+
+    std::vector<std::vector<sg4::Link*>> uplinks(l1_switch_count);
+    for (uint32_t i = 0; i < l1_switch_count; i++) {
+        for (uint32_t j = 0; j < l2_switch_count; j++) {
+            auto link = zone->create_link("uplink-" + std::to_string(i) + "-" + std::to_string(j), std::to_string(1000 * hosts_per_switch / l2_switch_count) + "MBps")
+                ->set_latency(1e-4)
+                ->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
+            uplinks[i].push_back(link);
+        }
+    }
+    std::vector<std::vector<sg4::Link*>> downlinks(l1_switch_count);
+    for (uint32_t i = 0; i < l1_switch_count; i++) {
+        for (uint32_t j = 0; j < hosts_per_switch; ++j) {
+            auto link = zone->create_link("downlink-" + std::to_string(i) + "-" + std::to_string(j), "1000MBps")
+                ->set_latency(1e-4)
+                ->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
+            downlinks[i].push_back(link);
+        }
+    }
+
+    int cur_l2_switch = 0;
+
+    for (int i = 0; i < host_count; ++i) {
+        for (int j = 0; j < i; ++j) {
+            if (i / hosts_per_switch == j / hosts_per_switch) {
+                sg4::LinkInRoute a{downlinks[i / hosts_per_switch][i % hosts_per_switch]};
+                sg4::LinkInRoute b{downlinks[j / hosts_per_switch][j % hosts_per_switch]};
+                zone->add_route(
+                    sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
+                    sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
+                    nullptr, nullptr, {a, b}, true);
+            } else {
+                sg4::LinkInRoute a{uplinks[i / hosts_per_switch][cur_l2_switch % l2_switch_count]};
+                sg4::LinkInRoute b{downlinks[i / hosts_per_switch][i % hosts_per_switch]};
+                sg4::LinkInRoute c{downlinks[j / hosts_per_switch][j % hosts_per_switch]};
+                sg4::LinkInRoute d{uplinks[j / hosts_per_switch][cur_l2_switch % l2_switch_count]};
+                ++cur_l2_switch;
+                zone->add_route(
+                    sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
+                    sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
+                    nullptr, nullptr, {a, b, c, d}, true);
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
     simgrid::xbt::random::XbtRandom random(123);
 
-    xbt_assert(argc == 4 || argc == 3, "Usage: %s NET_TYPE HOST_COUNT [STAR_COUNT]", argv[0]);
+    xbt_assert(argc >= 3, "Usage: %s NET_TYPE HOST_COUNT [params...]", argv[0]);
     std::string net_type = argv[1];
-    xbt_assert(net_type == "full_mesh" || net_type == "star" || net_type == "tree", "NET_TYPE has to be one of [full_mesh, star, tree]");
-    if (net_type == "tree") {
+    xbt_assert(net_type == "full_mesh" || net_type == "star" || net_type == "tree" || net_type == "fat_tree", "NET_TYPE has to be one of [full_mesh, star, tree]");
+    if (net_type == "fat_tree") {
+        xbt_assert(argc == 5, "Usage: %s fat_tree HOST_COUNT L1_SWITCH_COUNT L2_SWITCH_COUNT", argv[0]);
+    } else if (net_type == "tree") {
         xbt_assert(argc == 4, "Usage: %s tree HOST_COUNT STAR_COUNT", argv[0]);
     } else {
         xbt_assert(argc == 3, "Usage: %s [full_mesh,star] HOST_COUNT", argv[0]);
     }
 
     uint32_t host_count = std::stoi(argv[2]);
-    uint32_t star_count = argc == 4 ? std::stoi(argv[3]) : 0;
 
     auto* zone = sg4::create_full_zone("net");
 
@@ -224,7 +273,12 @@ int main(int argc, char* argv[]) {
     } else if (net_type == "star") {
         make_star_topology(zone, host_count);
     } else if (net_type == "tree") {
+        uint32_t star_count = std::stoi(argv[3]);
         make_tree_topology(zone, star_count, host_count / star_count);
+    } else if (net_type == "fat_tree") {
+        uint32_t l1_switch_count = std::stoi(argv[3]);
+        uint32_t l2_switch_count = std::stoi(argv[4]);
+        make_fat_tree_topology(zone, l2_switch_count, l1_switch_count, host_count / l1_switch_count);
     }
 
     auto start = std::chrono::steady_clock::now();
