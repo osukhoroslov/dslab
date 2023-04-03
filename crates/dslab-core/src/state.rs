@@ -67,7 +67,7 @@ impl SimulationState {
         let event_id = self.event_count;
         let event = Event {
             id: event_id,
-            time: self.clock + delay.max(0.0),
+            time: self.clock + delay.max(0.),
             src,
             dest,
             data: Box::new(data),
