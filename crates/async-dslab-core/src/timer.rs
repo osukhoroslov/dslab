@@ -1,17 +1,17 @@
 use std::{cell::RefCell, cmp::Ordering, rc::Rc, sync::Arc};
 
-use dslab_core::Id;
+use dslab_core::{Event, Id};
 
-use crate::shared_state::SharedState;
+use crate::shared_state::{EventSetter, SharedState};
 
 pub struct Timer {
     pub id: Id,
     pub time: f64,
-    pub state: Rc<RefCell<SharedState>>,
+    pub state: Rc<RefCell<dyn EventSetter>>,
 }
 
 impl Timer {
-    pub fn new(time: f64, state: Rc<RefCell<SharedState>>) -> Self {
+    pub fn new(time: f64, state: Rc<RefCell<dyn EventSetter>>) -> Self {
         static mut TIMER_COUNTER: Id = 0;
         unsafe {
             TIMER_COUNTER += 1;

@@ -60,7 +60,7 @@ impl AsyncSimulationContext {
         self.sim_state.borrow_mut().spawn(future);
     }
 
-    pub fn async_wait_for_event<T>(&mut self, src: Id, dst: Id, timeout: f64) -> EventFuture
+    pub fn async_wait_for_event<T>(&mut self, src: Id, dst: Id, timeout: f64) -> EventFuture<T>
     where
         T: EventData,
     {
@@ -70,7 +70,7 @@ impl AsyncSimulationContext {
             msg_type: std::any::TypeId::of::<T>(),
         };
 
-        let state = Rc::new(RefCell::new(SharedState::default()));
+        let state = Rc::new(RefCell::new(SharedState::<T>::default()));
         state.borrow_mut().shared_content = AwaitResult::timeout_with(await_key.from, await_key.to);
 
         self.sim_state.borrow_mut().add_timer_on_state(timeout, state.clone());
@@ -82,16 +82,3 @@ impl AsyncSimulationContext {
         EventFuture { state }
     }
 }
-
-// async fn inner_wait(
-//     simulation_state: Rc<RefCell<AsyncSimulationState>>,
-//     key: AwaitKey,
-//     timeout: f64,
-//     state: Rc<RefCell<SharedState>>,
-// ) {
-//     state.borrow_mut().shared_content = AwaitResult::timeout_with(key.from, key.to);
-
-//     simulation_state.borrow_mut().add_awaiter_handler(key, state.clone());
-
-//     simulation_state.borrow_mut().wait_on_state(timeout, state).await;
-// }

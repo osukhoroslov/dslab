@@ -8,7 +8,7 @@ use std::{
     },
 };
 
-use dslab_core::{Event, Id};
+use dslab_core::{Event, EventHandler, Id};
 use futures::Future;
 use log::debug;
 use rand::{
@@ -19,13 +19,14 @@ use serde_json::json;
 
 use crate::{
     async_context::AsyncSimulationContext, async_state::AsyncSimulationState, executor::Executor,
-    shared_state::AwaitKey, task::Task,
+    log::log_undelivered_event, shared_state::AwaitKey, task::Task,
 };
 
 pub struct AsyncSimulation {
     sim_state: Rc<RefCell<AsyncSimulationState>>,
     name_to_id: HashMap<String, Id>,
     names: Rc<RefCell<Vec<String>>>,
+    handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
 
     executor: Executor,
 }
@@ -39,6 +40,7 @@ impl AsyncSimulation {
             sim_state: Rc::new(RefCell::new(AsyncSimulationState::new(seed, task_sender))),
             name_to_id: HashMap::new(),
             names: Rc::new(RefCell::new(Vec::new())),
+            handlers: Vec::new(),
 
             executor: Executor { ready_queue },
         }
@@ -51,6 +53,7 @@ impl AsyncSimulation {
         let id = self.name_to_id.len() as Id;
         self.name_to_id.insert(name.to_owned(), id);
         self.names.borrow_mut().push(name.to_owned());
+        self.handlers.push(None);
         id
     }
 
@@ -87,7 +90,9 @@ impl AsyncSimulation {
     }
 
     pub fn step(&mut self) -> bool {
-        self.process_tasks();
+        if self.process_task() {
+            return true;
+        }
 
         let mut sim_state = self.sim_state.borrow_mut();
         let next_timer = sim_state.peek_timer();
@@ -123,7 +128,7 @@ impl AsyncSimulation {
 
         next_timer.state.as_ref().borrow_mut().set_completed();
 
-        self.process_tasks();
+        self.process_task();
     }
 
     fn process_event(&mut self) {
@@ -139,11 +144,17 @@ impl AsyncSimulation {
             self.sim_state
                 .borrow_mut()
                 .set_event_for_await_key(&await_key, next_event);
-        } else {
-            panic!("kek lol mem");
-        }
 
-        self.process_tasks();
+            self.process_task();
+        } else if let Some(handler_opt) = self.handlers.get(next_event.dest as usize) {
+            if let Some(handler) = handler_opt {
+                handler.borrow_mut().on(next_event);
+            } else {
+                log_undelivered_event(next_event);
+            }
+        } else {
+            log_undelivered_event(next_event);
+        }
     }
 
     pub fn steps(&mut self, step_count: u64) -> bool {
@@ -181,6 +192,14 @@ impl AsyncSimulation {
         result
     }
 
+    pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
+        self.sim_state.borrow_mut().spawn(future);
+    }
+
+    fn process_task(&self) -> bool {
+        self.executor.process_task()
+    }
+
     pub fn rand(&mut self) -> f64 {
         self.sim_state.borrow_mut().rand()
     }
@@ -212,11 +231,19 @@ impl AsyncSimulation {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
-    pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
-        self.sim_state.borrow_mut().spawn(future);
-    }
-
-    fn process_tasks(&self) {
-        self.executor.process_tasks();
+    pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> Id
+    where
+        S: AsRef<str>,
+    {
+        let id = self.register(name.as_ref());
+        self.handlers[id as usize] = Some(handler);
+        debug!(
+            target: "simulation",
+            "[{:.3} {} simulation] Added handler: {}",
+            self.time(),
+            dslab_core::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": name.as_ref(), "id": id})
+        );
+        id
     }
 }

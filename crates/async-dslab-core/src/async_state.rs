@@ -27,7 +27,7 @@ use rand_pcg::Pcg64;
 use crate::{
     executor::Executor,
     log::log_incorrect_event,
-    shared_state::{AwaitKey, EventFuture, SharedState, TimerFuture},
+    shared_state::{AwaitKey, EmptyData, EventFuture, EventSetter, SharedState, TimerFuture},
     task::Task,
     timer::Timer,
 };
@@ -39,7 +39,7 @@ pub struct AsyncSimulationState {
     canceled_events: HashSet<EventId>,
     event_count: u64,
 
-    awaiters: HashMap<AwaitKey, Rc<RefCell<SharedState>>>,
+    awaiters: HashMap<AwaitKey, Rc<RefCell<dyn EventSetter>>>,
     timers: BinaryHeap<Timer>,
 
     task_sender: SyncSender<Arc<Task>>,
@@ -178,22 +178,18 @@ impl AsyncSimulationState {
     }
 
     pub fn wait_for(&mut self, timeout: f64) -> TimerFuture {
-        let state = Rc::new(RefCell::new(SharedState::default()));
+        let state = Rc::new(RefCell::new(SharedState::<EmptyData>::default()));
 
-        self.wait_on_state(timeout, state)
-    }
-
-    pub fn wait_on_state(&mut self, timeout: f64, state: Rc<RefCell<SharedState>>) -> TimerFuture {
         self.timers.push(Timer::new(self.time() + timeout, state.clone()));
 
         TimerFuture { state }
     }
 
-    pub fn add_timer_on_state(&mut self, timeout: f64, state: Rc<RefCell<SharedState>>) {
+    pub fn add_timer_on_state(&mut self, timeout: f64, state: Rc<RefCell<dyn EventSetter>>) {
         self.timers.push(Timer::new(self.time() + timeout, state.clone()));
     }
 
-    pub fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<SharedState>>) {
+    pub fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn EventSetter>>) {
         self.awaiters.insert(key, state);
     }
 }

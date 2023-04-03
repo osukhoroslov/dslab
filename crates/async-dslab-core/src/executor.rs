@@ -7,8 +7,8 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn process_tasks(&self) {
-        while let Ok(task) = self.ready_queue.try_recv() {
+    pub fn process_task(&self) -> bool {
+        if let Ok(task) = self.ready_queue.try_recv() {
             let mut future_slot = task.future.borrow_mut();
 
             if let Some(mut future) = future_slot.take() {
@@ -20,7 +20,11 @@ impl Executor {
                 if future.as_mut().poll(context).is_pending() {
                     *future_slot = Some(future);
                 }
+
+                return true;
             }
         }
+
+        return false;
     }
 }

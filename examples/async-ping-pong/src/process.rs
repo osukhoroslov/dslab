@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use async_dslab_core::{async_context::AsyncSimulationContext, shared_state::AwaitResult};
-use dslab_core::Id;
+use dslab_core::{cast, Event, EventHandler, Id};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -9,55 +9,83 @@ pub struct PingMessage {
     content: String,
 }
 
+#[derive(Serialize)]
+pub struct StartMessage {
+    pub content: String,
+}
+
 pub struct Process {
     pub peers: Rc<RefCell<Vec<Id>>>,
     pub ctx: AsyncSimulationContext,
+    pub is_pinger: bool,
 }
 
-pub async fn start_pinger(mut process: Process) {
-    let ctx = &mut process.ctx;
+impl Process {
+    fn on_start(&mut self, content: String) {
+        if self.is_pinger {
+            println!("time: {}\t pinger started with content {}", self.ctx.time(), content);
+            self.ctx.emit(
+                PingMessage {
+                    content: "hello".to_string(),
+                },
+                self.peers.borrow()[0],
+                200.,
+            );
+        } else {
+            println!("ponger started with content {}", content);
+        }
+    }
 
-    println!("pinger started! Time: {}", ctx.time());
+    fn on_message(&mut self, from: Id, content: String) {
+        println!(
+            "I am {} receive message from {} with content {}",
+            self.ctx.name(),
+            from,
+            content
+        );
 
-    ctx.async_wait_for(42.).await;
+        self.ctx.emit(
+            PingMessage {
+                content: "reply".to_string(),
+            },
+            from,
+            200.,
+        );
+    }
+}
 
-    println!("pinger is now at time: {}", ctx.time());
-
-    ctx.emit(
-        PingMessage {
-            content: "hello".to_string(),
-        },
-        process.peers.borrow()[0],
-        200.,
-    );
-    println!("pinger is not at time: {}", ctx.time());
+impl EventHandler for Process {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
+            StartMessage { content } => {
+                self.on_start(content);
+            }
+            PingMessage { content } => {
+                self.on_message(event.src, content);
+            }
+        })
+    }
 }
 
 pub async fn start_ponger(mut process: Process) {
     let ctx = &mut process.ctx;
 
-    println!("ponger started!");
+    println!("time: {}\t ponger started. Async wait for pinter message", ctx.time());
 
     let result = ctx
-        .async_wait_for_event::<PingMessage>(process.peers.borrow()[0], ctx.id(), 1000.)
+        .async_wait_for_event::<PingMessage>(process.peers.borrow()[0], ctx.id(), 500.)
         .await;
 
     match result {
-        AwaitResult::Ok(e) => {
-            let pm = e.data.downcast::<PingMessage>();
-            match pm {
-                Ok(val) => println!("got ok message: {}", val.content),
-                Err(..) => panic!("not a ping message"),
-            };
+        AwaitResult::Ok((e, data)) => {
+            println!("time: {}\t got ok message: {}", ctx.time(), data.content);
         }
-        AwaitResult::Timeout(e) => println!("got timeout message"),
+        AwaitResult::Timeout(e) => println!("time: {}\t event timeouted", ctx.time()),
     }
 
     ctx.async_wait_for(7.).await;
 
-    println!("ponger is now at time: {}", ctx.time());
+    println!("time: {}\t ponger after wait", ctx.time());
 
-    ctx.async_wait_for(100.).await;
-
-    println!("ponger is not at time: {}", ctx.time());
+    println!("ponger finished");
 }

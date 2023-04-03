@@ -2,7 +2,7 @@ use dslab_core::event::EventData;
 use dslab_core::{Event, Id};
 use serde::Serialize;
 
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::rc::Rc;
 use std::{cell::RefCell, future::Future, sync::Arc, task::Context};
 use std::{
@@ -13,14 +13,14 @@ use std::{
 use crate::timer::Timer;
 
 #[derive(Serialize)]
-struct EmptyData {}
+pub struct EmptyData {}
 
-pub enum AwaitResult {
+pub enum AwaitResult<T: EventData> {
     Timeout(Event),
-    Ok(Event),
+    Ok((Event, T)),
 }
 
-impl Default for AwaitResult {
+impl<T: EventData> Default for AwaitResult<T> {
     fn default() -> Self {
         Self::Timeout(Event {
             id: 0,
@@ -32,7 +32,7 @@ impl Default for AwaitResult {
     }
 }
 
-impl AwaitResult {
+impl<T: EventData> AwaitResult<T> {
     pub fn timeout_with(src: Id, dest: Id) -> Self {
         Self::Timeout(Event {
             id: 0,
@@ -44,27 +44,51 @@ impl AwaitResult {
     }
 }
 
-#[derive(Default)]
-pub struct SharedState {
+pub struct SharedState<T: EventData> {
     /// Whether or not the sleep time has elapsed
     pub completed: bool,
 
     pub waker: Option<Waker>,
 
-    pub shared_content: AwaitResult,
+    pub shared_content: AwaitResult<T>,
 }
 
-impl SharedState {
-    pub fn set_ok_completed_with_event(&mut self, e: Event) {
+impl<T: EventData> Default for SharedState<T> {
+    fn default() -> Self {
+        Self {
+            completed: false,
+            waker: None,
+            shared_content: AwaitResult::<T>::default(),
+        }
+    }
+}
+
+pub trait EventSetter: Any {
+    fn set_ok_completed_with_event(&mut self, e: Event);
+    fn set_completed(&mut self);
+}
+
+impl<T: EventData> EventSetter for SharedState<T> {
+    fn set_ok_completed_with_event(&mut self, mut e: Event) {
         if self.completed {
             return;
         }
 
-        self.shared_content = AwaitResult::Ok(e);
-        self.set_completed();
+        let downcast_result = e.data.downcast::<T>();
+
+        e.data = Box::new(EmptyData {});
+        match downcast_result {
+            Ok(data) => {
+                self.shared_content = AwaitResult::Ok((e, *data));
+                self.set_completed();
+            }
+            Err(_) => {
+                panic!("internal downcast conversion error");
+            }
+        };
     }
 
-    pub fn set_completed(&mut self) {
+    fn set_completed(&mut self) {
         if self.completed {
             return;
         }
@@ -75,12 +99,12 @@ impl SharedState {
     }
 }
 
-pub struct EventFuture {
-    pub state: Rc<RefCell<SharedState>>,
+pub struct EventFuture<T: EventData> {
+    pub state: Rc<RefCell<SharedState<T>>>,
 }
 
-impl Future for EventFuture {
-    type Output = AwaitResult;
+impl<T: EventData> Future for EventFuture<T> {
+    type Output = AwaitResult<T>;
     fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
         // println!("Polling EventFuture...{}", self.state.borrow().completed);
         let mut state = self.state.as_ref().borrow_mut();
@@ -98,7 +122,7 @@ impl Future for EventFuture {
 }
 
 pub struct TimerFuture {
-    pub state: Rc<RefCell<SharedState>>,
+    pub state: Rc<RefCell<SharedState<EmptyData>>>,
 }
 
 impl Future for TimerFuture {
