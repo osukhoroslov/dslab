@@ -9,7 +9,7 @@ use env_logger::Builder;
 
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
-use dslab_dag::network::load_network;
+use dslab_dag::network::read_network_config;
 use dslab_dag::resource::read_resources;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
@@ -77,7 +77,7 @@ fn main() {
     let args = Args::parse();
     let dag = DAG::from_file(&args.dag);
     let resources = read_resources(&args.system);
-    let network = load_network(&args.system);
+    let network_config = read_network_config(&args.system);
     let data_transfer_mode = match args.data_transfer_mode.as_str() {
         "via-master-node" => DataTransferMode::ViaMasterNode,
         "direct" => DataTransferMode::Direct,
@@ -96,7 +96,7 @@ fn main() {
         let mut sim = DagSimulation::new(
             123,
             resources.clone(),
-            network.clone(),
+            network_config.make_network().unwrap(),
             scheduler,
             Config { data_transfer_mode },
         );
