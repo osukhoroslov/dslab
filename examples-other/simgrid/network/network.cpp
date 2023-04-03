@@ -206,10 +206,10 @@ void make_fat_tree_topology(sg4::NetZone* zone, int l2_switch_count, int l1_swit
                     sg4::Host::by_name("host-" + std::to_string(j))->get_netpoint(),
                     nullptr, nullptr, {a, b}, true);
             } else {
-                sg4::LinkInRoute a{uplinks[i / hosts_per_switch][cur_l2_switch % l2_switch_count]};
-                sg4::LinkInRoute b{downlinks[i / hosts_per_switch][i % hosts_per_switch]};
-                sg4::LinkInRoute c{downlinks[j / hosts_per_switch][j % hosts_per_switch]};
-                sg4::LinkInRoute d{uplinks[j / hosts_per_switch][cur_l2_switch % l2_switch_count]};
+                sg4::LinkInRoute a{downlinks[i / hosts_per_switch][i % hosts_per_switch]};
+                sg4::LinkInRoute b{uplinks[i / hosts_per_switch][cur_l2_switch % l2_switch_count]};
+                sg4::LinkInRoute c{uplinks[j / hosts_per_switch][cur_l2_switch % l2_switch_count]};
+                sg4::LinkInRoute d{downlinks[j / hosts_per_switch][j % hosts_per_switch]};
                 ++cur_l2_switch;
                 zone->add_route(
                     sg4::Host::by_name("host-" + std::to_string(i))->get_netpoint(),
