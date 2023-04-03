@@ -163,7 +163,7 @@ fn run_experiments(args: &Args) {
                 let finished_runs = finished_runs.clone();
                 let results = results.clone();
                 pool.execute(move || {
-                    let network_config = NetworkConfig::shared(1000., 0.);
+                    let network_config = NetworkConfig::constant(1000., 0.);
 
                     let scheduler = PortfolioScheduler::new(algo);
 
