@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
 
@@ -20,16 +20,11 @@ impl TopologyResolver {
         Default::default()
     }
 
-    pub fn resolve_topology(
-        &mut self,
-        nodes: &BTreeMap<NodeId, Node>,
-        links: &BTreeMap<LinkID, Link>,
-        node_links_map: &NodeLinksMap,
-    ) {
+    pub fn resolve_topology(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
         self.parent_path = vec![vec![INVALID_NODE_ID; nodes.len()]; nodes.len()];
 
         if self.resolve_type == TopologyResolveType::Dijkstra {
-            for node in nodes.keys() {
+            for node in 0..nodes.len() {
                 self.dijkstra_for_node(node, links, node_links_map);
             }
         }
@@ -54,21 +49,17 @@ impl TopologyResolver {
         Some(path)
     }
 
-    fn resolve_with_floyd_warshall(
-        &mut self,
-        nodes: &BTreeMap<NodeId, Node>,
-        links: &BTreeMap<LinkID, Link>,
-        node_links_map: &NodeLinksMap,
-    ) {
+    fn resolve_with_floyd_warshall(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
         let mut current_paths = vec![vec![f64::INFINITY; nodes.len()]; nodes.len()];
-        for node in nodes.keys() {
-            current_paths[*node][*node] = 0.0;
-            self.parent_path[*node][*node] = *node;
+        #[allow(clippy::needless_range_loop)]
+        for node in 0..nodes.len() {
+            current_paths[node][node] = 0.0;
+            self.parent_path[node][node] = node;
         }
 
         for (node1, intermap) in node_links_map {
             for (node2, link_id) in intermap {
-                current_paths[*node1][*node2] = links.get(link_id).unwrap().latency;
+                current_paths[*node1][*node2] = links[*link_id].latency;
                 self.parent_path[*node1][*node2] = *node1;
             }
         }
@@ -89,12 +80,12 @@ impl TopologyResolver {
         }
     }
 
-    fn dijkstra_for_node(&mut self, node: &NodeId, links: &BTreeMap<LinkID, Link>, node_links_map: &NodeLinksMap) {
+    fn dijkstra_for_node(&mut self, node: NodeId, links: &[Link], node_links_map: &NodeLinksMap) {
         let mut latency: HashMap<NodeId, f64> = HashMap::new();
         for n in node_links_map.keys() {
             latency.insert(*n, f64::INFINITY);
         }
-        latency.insert(*node, 0.0);
+        latency.insert(node, 0.0);
         let mut visited: HashSet<NodeId> = HashSet::new();
         for _ in 0..node_links_map.len() {
             let mut relax_node = usize::MAX;
@@ -111,10 +102,10 @@ impl TopologyResolver {
             }
 
             for (node_to, link_id) in node_links_map.get(&relax_node).unwrap() {
-                let link = links.get(link_id).unwrap();
+                let link = &links[*link_id];
                 if latency[&relax_node] + link.latency < latency[node_to] {
                     latency.insert(*node_to, latency[&relax_node] + link.latency);
-                    self.parent_path[*node][*node_to] = relax_node;
+                    self.parent_path[node][*node_to] = relax_node;
                 }
             }
             visited.insert(relax_node);

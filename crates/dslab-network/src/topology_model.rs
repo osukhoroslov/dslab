@@ -1,7 +1,6 @@
-use priority_queue::DoublePriorityQueue;
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
 use std::rc::Rc;
 
 use dslab_core::component::Id;
@@ -14,6 +13,7 @@ use crate::topology_structures::{LinkID, NodeId};
 #[derive(Debug)]
 struct DataTransfer {}
 
+#[derive(Clone)]
 pub struct LinkUsage {
     pub link_id: usize,
     pub transfers_count: usize,
@@ -31,8 +31,9 @@ impl Ord for LinkUsage {
         if self.transfers_count == 0 || other.transfers_count == 0 {
             panic!("Invalid cmp for Link usage")
         }
-        self.get_path_bandwidth()
-            .total_cmp(&(other.get_path_bandwidth()))
+        other
+            .get_path_bandwidth()
+            .total_cmp(&(self.get_path_bandwidth()))
             .then(self.link_id.cmp(&other.link_id))
     }
 }
@@ -46,43 +47,62 @@ impl PartialOrd for LinkUsage {
 impl PartialEq for LinkUsage {
     fn eq(&self, other: &Self) -> bool {
         self.link_id == other.link_id
+            && self.transfers_count == other.transfers_count
+            && self.left_bandwidth == other.left_bandwidth
     }
 }
 
 impl Eq for LinkUsage {}
 
+#[derive(Debug)]
 pub struct Transfer {
     pub size_left: f64,
     pub last_update_time: f64,
     pub throughput: f64,
     pub data: Data,
+    path: Vec<LinkID>,
 }
 
 impl Transfer {
-    pub fn new(size: f64, data: Data) -> Transfer {
+    pub fn new(size: f64, data: Data, path: Vec<LinkID>, time: f64) -> Transfer {
         Transfer {
             size_left: size,
             data,
             throughput: 0.0,
-            last_update_time: 0.0,
+            last_update_time: time,
+            path,
         }
+    }
+
+    fn expected_time_left(&self) -> f64 {
+        self.size_left / self.throughput
+    }
+
+    fn expected_finish(&self) -> f64 {
+        self.last_update_time + self.expected_time_left()
     }
 }
 
 pub struct TopologyNetwork {
     topology: Rc<RefCell<Topology>>,
-    current_transfers: Vec<Transfer>,
+    current_transfers: BTreeMap<usize, Transfer>,
+    transfers_through_link: Vec<Vec<usize>>,
+    tmp_transfers_through_link: Vec<Vec<usize>>,
     next_event: Option<u64>,
     next_event_index: Option<usize>,
+    link_data: Vec<Option<LinkUsage>>,
 }
 
 impl TopologyNetwork {
     pub fn new(topology: Rc<RefCell<Topology>>) -> TopologyNetwork {
         TopologyNetwork {
             topology,
-            current_transfers: Vec::new(),
+            current_transfers: BTreeMap::new(),
+            transfers_through_link: Vec::new(),
+            tmp_transfers_through_link: Vec::new(),
             next_event: None,
             next_event_index: None,
+            link_data: Vec::new(),
         }
     }
 
@@ -105,97 +125,68 @@ impl TopologyNetwork {
         self.get_path(src, dst).is_some()
     }
 
-    fn calculate_transfers(&mut self) {
+    #[allow(dead_code)]
+    fn get_affected_transfers(&self, updated_transfer: usize) -> HashSet<usize> {
         if self.current_transfers.is_empty() {
+            return HashSet::new();
+        }
+        let limit = self.current_transfers[&updated_transfer].throughput;
+
+        let mut processed_links = HashSet::new();
+        let mut processed_transfers = HashSet::new();
+        let mut q = VecDeque::new();
+        q.push_back(updated_transfer);
+        while let Some(transfer) = q.pop_front() {
+            processed_transfers.insert(transfer);
+            for &link in self.current_transfers[&transfer].path.iter() {
+                if processed_links.contains(&link) {
+                    continue;
+                }
+                processed_links.insert(link);
+                for &t in self.transfers_through_link[link].iter() {
+                    if self.current_transfers[&t].throughput < limit {
+                        continue;
+                    }
+                    if !processed_transfers.contains(&t) {
+                        processed_transfers.insert(t);
+                        q.push_back(t);
+                    }
+                }
+            }
+        }
+        processed_transfers
+    }
+
+    fn update_next_event(&mut self, ctx: &mut SimulationContext) {
+        self.next_event_index = self
+            .current_transfers
+            .iter()
+            .min_by(|x, y| x.1.expected_finish().total_cmp(&y.1.expected_finish()))
+            .map(|(x, _y)| *x);
+
+        if let Some(event_idx) = self.next_event_index {
+            let transfer = &self.current_transfers[&event_idx];
+            let time = transfer.expected_finish();
+            self.next_event = Some(ctx.emit_self(
+                DataReceive {
+                    data: transfer.data.clone(),
+                },
+                time - ctx.time(),
+            ));
+        };
+    }
+
+    #[allow(dead_code)]
+    fn calc(&mut self, ctx: &mut SimulationContext, affected_transfers: HashSet<usize>) {
+        // eprintln!("{} {}", self.current_transfers.len(), affected_transfers.len());
+        if affected_transfers.is_empty() {
             return;
         }
 
-        let mut paths = Vec::new();
+        let topology = self.topology.borrow();
 
-        for transfer_idx in 0..self.current_transfers.len() {
-            let src = self.current_transfers[transfer_idx].data.src;
-            let dst = self.current_transfers[transfer_idx].data.dest;
-            let path = self.get_path(src, dst);
-            if path.is_none() {
-                panic!("Transfer with no path")
-            }
-            paths.push(path.unwrap());
-        }
-
-        let mut link_data = HashMap::new();
-        let mut link_paths = HashMap::new();
-        // Init initial link data
-        for (idx, path) in paths.iter().enumerate() {
-            for link_id in path {
-                if !link_data.contains_key(link_id) {
-                    let link_bandwidth = self.topology.borrow().get_link(link_id).unwrap().bandwidth;
-                    link_data.insert(
-                        *link_id,
-                        LinkUsage {
-                            link_id: *link_id,
-                            transfers_count: 0,
-                            left_bandwidth: link_bandwidth,
-                        },
-                    );
-                    link_paths.insert(*link_id, Vec::new());
-                }
-                link_paths.get_mut(link_id).unwrap().push(idx);
-                link_data.get_mut(link_id).unwrap().transfers_count += 1;
-            }
-        }
-
-        let mut current_link_usage = DoublePriorityQueue::new();
-        // Init current link usage
-        for (link_id, link_usage) in link_data {
-            current_link_usage.push(link_id, link_usage);
-        }
-
-        let mut assigned_path = vec![false; paths.len()];
-        // Calculate transfer bandwidths
-        while !current_link_usage.is_empty() {
-            let (link_with_minimal_bandwidth_id, link_with_minimal_bandwidth_usage) =
-                current_link_usage.pop_min().unwrap();
-            let mut links_decrease_paths = HashMap::new();
-            let bandwidth = link_with_minimal_bandwidth_usage.get_path_bandwidth();
-            for path_idx in link_paths.get(&link_with_minimal_bandwidth_id).unwrap() {
-                if assigned_path[*path_idx] {
-                    continue;
-                }
-                assigned_path[*path_idx] = true;
-                self.current_transfers[*path_idx].throughput = bandwidth;
-                for link in &paths[*path_idx] {
-                    if !links_decrease_paths.contains_key(link) {
-                        links_decrease_paths.insert(*link, 0);
-                    }
-                    *links_decrease_paths.get_mut(link).unwrap() += 1;
-                }
-            }
-            for (link_id, uses_amount) in links_decrease_paths {
-                if link_id != link_with_minimal_bandwidth_id {
-                    if current_link_usage.get(&link_id).unwrap().1.transfers_count == uses_amount {
-                        current_link_usage.remove(&link_id);
-                        continue;
-                    }
-                    current_link_usage.change_priority_by(&link_id, |link_usage: &mut LinkUsage| {
-                        link_usage.transfers_count -= uses_amount;
-                        link_usage.left_bandwidth -= bandwidth * uses_amount as f64;
-                    });
-                }
-            }
-        }
-
-        let (next_event_index, _next_event) = self
-            .current_transfers
-            .iter()
-            .enumerate()
-            .min_by(|x, y| (x.1.size_left / x.1.throughput).total_cmp(&(y.1.size_left / y.1.throughput)))
-            .unwrap();
-
-        self.next_event_index = Some(next_event_index);
-    }
-
-    fn recalculate_receive_time(&mut self, ctx: &mut SimulationContext) {
-        for transfer in &mut self.current_transfers {
+        for transfer_id in affected_transfers.iter() {
+            let transfer = self.current_transfers.get_mut(transfer_id).unwrap();
             transfer.size_left -= transfer.throughput * (ctx.time() - transfer.last_update_time);
             transfer.size_left = transfer.size_left.max(0.);
             transfer.last_update_time = ctx.time();
@@ -205,18 +196,173 @@ impl TopologyNetwork {
             ctx.cancel_event(event_id)
         };
 
-        self.calculate_transfers();
+        let affected_links = affected_transfers
+            .iter()
+            .flat_map(|transfer| self.current_transfers[transfer].path.iter().cloned())
+            .collect::<HashSet<LinkID>>();
 
-        if let Some(event_idx) = self.next_event_index {
-            let transfer = self.current_transfers.get(event_idx).unwrap();
-            let time = transfer.size_left / transfer.throughput;
-            self.next_event = Some(ctx.emit_self(
-                DataReceive {
-                    data: transfer.data.clone(),
-                },
-                time,
-            ));
+        let transfers_through_link = &mut self.tmp_transfers_through_link;
+
+        let mut current_link_usage: BinaryHeap<LinkUsage> = BinaryHeap::new();
+        for (link_id, transfers) in affected_links
+            .iter()
+            .map(|link_id| (link_id, &self.transfers_through_link[*link_id]))
+        {
+            let cur_transfers: Vec<usize> = transfers
+                .iter()
+                .filter(|transfer| affected_transfers.contains(transfer))
+                .cloned()
+                .collect();
+            if cur_transfers.is_empty() {
+                continue;
+            }
+            let link = LinkUsage {
+                link_id: *link_id,
+                transfers_count: cur_transfers.len(),
+                left_bandwidth: topology.get_link(link_id).unwrap().bandwidth,
+            };
+            transfers_through_link[*link_id] = cur_transfers;
+            self.link_data[*link_id] = Some(link);
+        }
+
+        for (transfer_id, transfer) in self.current_transfers.iter() {
+            if affected_transfers.contains(transfer_id) {
+                continue;
+            }
+            for &link in transfer.path.iter() {
+                if self.link_data[link].is_some() {
+                    self.link_data[link].as_mut().unwrap().left_bandwidth -= transfer.throughput;
+                }
+            }
+        }
+
+        for &link in affected_links.iter() {
+            if self.link_data[link].is_some() {
+                current_link_usage.push(self.link_data[link].clone().unwrap());
+            }
+        }
+
+        let mut assigned_transfer: HashSet<usize> = HashSet::new();
+
+        let mut last_bandwidth = 0.0;
+        while let Some(min_link) = current_link_usage.pop() {
+            let min_link_id = min_link.link_id;
+            if self.link_data[min_link_id].is_none() {
+                // delayed removal
+                continue;
+            }
+            if self.link_data[min_link_id].as_ref().unwrap() != &min_link {
+                // delayed update
+                current_link_usage.push(self.link_data[min_link_id].as_ref().unwrap().clone());
+                continue;
+            }
+
+            let bandwidth = min_link.get_path_bandwidth();
+            if bandwidth < last_bandwidth - 1e-12 {
+                panic!("{:.20} < {:.20}", bandwidth, last_bandwidth);
+            }
+            let bandwidth = bandwidth.max(last_bandwidth);
+            last_bandwidth = bandwidth;
+            for &transfer_idx in transfers_through_link[min_link_id].iter() {
+                if assigned_transfer.contains(&transfer_idx) {
+                    continue;
+                }
+                assigned_transfer.insert(transfer_idx);
+                self.current_transfers.get_mut(&transfer_idx).unwrap().throughput = bandwidth;
+                for &link in self.current_transfers[&transfer_idx].path.iter() {
+                    if link != min_link_id {
+                        if self.link_data[link].as_ref().unwrap().transfers_count == 1 {
+                            self.link_data[link] = None;
+                            continue;
+                        }
+                        let mut link_usage = self.link_data[link].take().unwrap();
+                        link_usage.transfers_count -= 1;
+                        link_usage.left_bandwidth -= bandwidth;
+                        self.link_data[link] = Some(link_usage);
+                    }
+                }
+            }
+            transfers_through_link[min_link_id].clear();
+        }
+    }
+
+    fn calc_all(&mut self, ctx: &mut SimulationContext) {
+        let topology = self.topology.borrow();
+
+        for transfer in self.current_transfers.values_mut() {
+            transfer.size_left -= transfer.throughput * (ctx.time() - transfer.last_update_time);
+            transfer.size_left = transfer.size_left.max(0.);
+            transfer.last_update_time = ctx.time();
+        }
+
+        if let Some(event_id) = self.next_event {
+            ctx.cancel_event(event_id)
         };
+
+        let mut current_link_usage: BinaryHeap<LinkUsage> = BinaryHeap::new();
+        for (link_id, transfers) in self.transfers_through_link.iter().enumerate() {
+            if transfers.is_empty() {
+                continue;
+            }
+            let link = LinkUsage {
+                link_id,
+                transfers_count: transfers.len(),
+                left_bandwidth: topology.get_link(&link_id).unwrap().bandwidth,
+            };
+            current_link_usage.push(link.clone());
+            self.link_data[link_id] = Some(link);
+        }
+
+        let mut assigned_transfer: HashSet<usize> = HashSet::new();
+
+        let mut last_bandwidth = 0.0;
+        while let Some(min_link) = current_link_usage.pop() {
+            let min_link_id = min_link.link_id;
+            if self.link_data[min_link_id].is_none() {
+                // delayed removal
+                continue;
+            }
+            if self.link_data[min_link_id].as_ref().unwrap() != &min_link {
+                // delayed update
+                current_link_usage.push(self.link_data[min_link_id].as_ref().unwrap().clone());
+                continue;
+            }
+
+            let bandwidth = min_link.get_path_bandwidth();
+            if bandwidth < last_bandwidth - 1e-12 {
+                panic!("{:.20} < {:.20}", bandwidth, last_bandwidth);
+            }
+            let bandwidth = bandwidth.max(last_bandwidth);
+            last_bandwidth = bandwidth;
+            for &transfer_idx in self.transfers_through_link[min_link_id].iter() {
+                if assigned_transfer.contains(&transfer_idx) {
+                    continue;
+                }
+                assigned_transfer.insert(transfer_idx);
+                self.current_transfers.get_mut(&transfer_idx).unwrap().throughput = bandwidth;
+                for &link in self.current_transfers[&transfer_idx].path.iter() {
+                    if link != min_link_id {
+                        if self.link_data[link].as_ref().unwrap().transfers_count == 1 {
+                            self.link_data[link] = None;
+                            continue;
+                        }
+                        let mut link_usage = self.link_data[link].take().unwrap();
+                        link_usage.transfers_count -= 1;
+                        link_usage.left_bandwidth -= bandwidth;
+                        self.link_data[link] = Some(link_usage);
+                    }
+                }
+            }
+        }
+    }
+
+    fn validate_array_lengths(&mut self) {
+        let topology = self.topology.borrow();
+        self.link_data.resize(topology.get_links_count(), None);
+        self.transfers_through_link
+            .resize(topology.get_links_count(), Vec::new());
+        self.tmp_transfers_through_link
+            .resize(topology.get_links_count(), Vec::new());
     }
 }
 
@@ -236,22 +382,51 @@ impl NetworkConfiguration for TopologyNetwork {
 
 impl DataOperation for TopologyNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        if self.check_path_exists(data.src, data.dest) {
-            self.current_transfers.push(Transfer::new(data.size, data));
-            self.recalculate_receive_time(ctx);
+        if !self.check_path_exists(data.src, data.dest) {
+            return;
         }
+        self.validate_array_lengths();
+
+        let path = self.get_path(data.src, data.dest).unwrap();
+        let id = data.id;
+        assert!(!self.current_transfers.contains_key(&data.id));
+        for &link in path.iter() {
+            self.transfers_through_link[link].push(id);
+        }
+        self.current_transfers
+            .insert(id, Transfer::new(data.size, data, path, ctx.time()));
+        // let affected_transfers = self.get_affected_transfers(id);
+        self.calc_all(ctx);
+        // self.calc(ctx, affected_transfers);
+        self.update_next_event(ctx);
     }
 
     fn receive_data(&mut self, _data: Data, ctx: &mut SimulationContext) {
-        self.current_transfers.remove(self.next_event_index.unwrap());
+        self.validate_array_lengths();
+        let next_event_index = self.next_event_index.unwrap();
+        // let mut affected_transfers = self.get_affected_transfers(next_event_index);
+        // assert!(affected_transfers.remove(&next_event_index));
+        let transfer = self.current_transfers.remove(&next_event_index).unwrap();
+        for &link in transfer.path.iter() {
+            let vec = self.transfers_through_link.get_mut(link).unwrap();
+            vec.remove(vec.iter().position(|&x| x == next_event_index).unwrap());
+        }
         self.next_event = None;
         self.next_event_index = None;
-        self.recalculate_receive_time(ctx);
+        self.calc_all(ctx);
+        // self.calc(ctx, affected_transfers);
+        self.update_next_event(ctx);
     }
 
     fn recalculate_operations(&mut self, ctx: &mut SimulationContext) {
-        self.recalculate_receive_time(ctx);
+        self.validate_array_lengths();
+        self.calc_all(ctx);
+        self.update_next_event(ctx);
     }
 }
 
 impl NetworkModel for TopologyNetwork {}
+
+impl Drop for TopologyNetwork {
+    fn drop(&mut self) {}
+}
