@@ -5,10 +5,10 @@ use std::rc::Rc;
 
 use dslab_compute::multicore::Compute;
 use dslab_core::simulation::Simulation;
-use dslab_network::model::NetworkModel;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
+use crate::network::NetworkConfig;
 use crate::resource::{Resource, ResourceConfig};
 use crate::runner::{Config, DAGRunner, Start};
 use crate::scheduler::Scheduler;
@@ -16,8 +16,8 @@ use crate::scheduler::Scheduler;
 /// Provides a convenient API for configuring and running simulations of DAG execution.
 pub struct DagSimulation {
     pub sim: Simulation,
-    resources: Vec<ResourceConfig>,
-    network_model: Rc<RefCell<dyn NetworkModel>>,
+    resource_configs: Vec<ResourceConfig>,
+    network_config: NetworkConfig,
     scheduler: Rc<RefCell<dyn Scheduler>>,
     config: Config,
 }
@@ -27,14 +27,14 @@ impl DagSimulation {
     pub fn new(
         seed: u64,
         resources: Vec<ResourceConfig>,
-        network_model: Rc<RefCell<dyn NetworkModel>>,
+        network_config: NetworkConfig,
         scheduler: Rc<RefCell<dyn Scheduler>>,
         config: Config,
     ) -> Self {
         DagSimulation {
             sim: Simulation::new(seed),
-            resources,
-            network_model,
+            resource_configs: resources,
+            network_config,
             scheduler,
             config,
         }
@@ -42,7 +42,7 @@ impl DagSimulation {
 
     /// Adds a resource with provided parameters.
     pub fn add_resource(&mut self, name: &str, speed: f64, cores: u32, memory: u64) {
-        self.resources.push(ResourceConfig {
+        self.resource_configs.push(ResourceConfig {
             name: name.to_string(),
             speed,
             cores,
@@ -53,12 +53,14 @@ impl DagSimulation {
     /// Initializes DAG simulation.
     pub fn init(&mut self, dag: DAG) -> Rc<RefCell<DAGRunner>> {
         let network = Rc::new(RefCell::new(Network::new(
-            self.network_model.clone(),
+            self.network_config
+                .make_network()
+                .expect("Failed to create network model"),
             self.sim.create_context("net"),
         )));
         self.sim.add_handler("net", network.clone());
         let resources = self
-            .resources
+            .resource_configs
             .iter()
             .map(|r| {
                 let compute = Rc::new(RefCell::new(Compute::new(

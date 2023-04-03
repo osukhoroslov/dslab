@@ -1,8 +1,6 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -22,9 +20,9 @@ use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
+use dslab_dag::network::NetworkConfig;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 
 #[derive(Parser, Debug)]
 #[command(about, long_about = None)]
@@ -165,14 +163,14 @@ fn run_experiments(args: &Args) {
                 let finished_runs = finished_runs.clone();
                 let results = results.clone();
                 pool.execute(move || {
-                    let network_model = Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1000., 0.)));
+                    let network_config = NetworkConfig::constant(1000., 0.);
 
                     let scheduler = PortfolioScheduler::new(algo);
 
                     let mut sim = DagSimulation::new(
                         123,
                         Vec::new(),
-                        network_model,
+                        network_config,
                         rc!(refcell!(scheduler)),
                         Config {
                             data_transfer_mode: DataTransferMode::Direct,

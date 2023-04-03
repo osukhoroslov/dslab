@@ -6,12 +6,10 @@ use rand_pcg::Pcg64;
 
 use dslab_compute::multicore::CoresDependency;
 
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use dslab_network::model::NetworkModel;
-
 use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
+use crate::network::NetworkConfig;
 use crate::resource::ResourceConfig;
 use crate::runner::Config;
 use crate::scheduler::Scheduler;
@@ -94,11 +92,8 @@ fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -
         .collect()
 }
 
-fn gen_network(rng: &mut Pcg64) -> Rc<RefCell<dyn NetworkModel>> {
-    Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
-        rng.gen_range(0.0..1_000_000.0),
-        rng.gen_range(0.0..1.0),
-    )))
+fn gen_network(rng: &mut Pcg64) -> NetworkConfig {
+    NetworkConfig::constant(rng.gen_range(0.0..1_000_000.0), rng.gen_range(0.0..1.0) * 1e6)
 }
 
 #[test]
@@ -229,7 +224,7 @@ fn test_4() {
         let mut sim = DagSimulation::new(
             123,
             Vec::new(),
-            Rc::new(RefCell::new(ConstantBandwidthNetwork::new(1.0, 0.0))),
+            NetworkConfig::constant(1.0, 0.0),
             Rc::new(RefCell::new(scheduler)),
             Config {
                 data_transfer_mode: DataTransferMode::Direct,
@@ -308,7 +303,7 @@ fn test_chain_1() {
     let mut sim = DagSimulation::new(
         123,
         Vec::new(),
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
+        NetworkConfig::constant(bandwidth, latency * 1e6),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
@@ -356,7 +351,7 @@ fn test_chain_2() {
     let mut sim = DagSimulation::new(
         123,
         Vec::new(),
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
+        NetworkConfig::constant(bandwidth, latency * 1e6),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
@@ -394,7 +389,7 @@ fn test_fork_join() {
     let mut sim = DagSimulation::new(
         123,
         Vec::new(),
-        Rc::new(RefCell::new(ConstantBandwidthNetwork::new(bandwidth, latency))),
+        NetworkConfig::constant(bandwidth, latency * 1e6),
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,

@@ -8,8 +8,8 @@ use sugars::{rc, refcell};
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
-use dslab_dag::network::load_network;
-use dslab_dag::resource::read_resources;
+use dslab_dag::network::read_network_config;
+use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
@@ -39,8 +39,8 @@ fn main() {
 
     let mut sim = DagSimulation::new(
         123,
-        read_resources(&args.system),
-        load_network(&args.system),
+        read_resource_configs(&args.system),
+        read_network_config(&args.system),
         rc!(refcell!(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
