@@ -15,7 +15,7 @@ use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::network::{read_network_config, NetworkConfig};
-use crate::resource::{read_resources, ResourceConfig};
+use crate::resource::{read_resource_configs, ResourceConfig};
 use crate::runner::Config;
 use crate::scheduler::{RcScheduler, SchedulerParams};
 
@@ -73,7 +73,7 @@ impl Experiment {
 
         let systems = get_all_files(&config.systems).into_iter().map(|path| {
             let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
-            let resources = read_resources(&path);
+            let resources = read_resource_configs(&path);
             assert!(
                 !resources.is_empty(),
                 "Can't have empty list of resources: {}",
@@ -136,13 +136,12 @@ impl Experiment {
             let finished_run_atomic = finished_run_atomic.clone();
             let results = results.clone();
             pool.execute(move || {
-                let network = run.network.make_network().unwrap();
                 let scheduler = (self.scheduler_resolver)(&run.scheduler).unwrap();
 
                 let mut sim = DagSimulation::new(
                     123,
                     run.resources,
-                    network,
+                    run.network,
                     scheduler,
                     Config {
                         data_transfer_mode: self.data_transfer_mode,

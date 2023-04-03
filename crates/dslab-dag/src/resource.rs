@@ -7,7 +7,6 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 
 use dslab_core::component::Id;
-use dslab_core::simulation::Simulation;
 
 use dslab_compute::multicore::*;
 
@@ -46,35 +45,11 @@ struct Resources {
     resources: Vec<ResourceConfig>,
 }
 
-/// Loads resources from YAML file.
+/// Reads resource configurations from YAML file.
 ///
 /// Configuration file example:
 /// https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml
-pub fn load_resources<P: AsRef<Path>>(file: P, sim: &mut Simulation) -> Vec<Resource> {
-    let resources = read_resources(&file);
-    let mut result: Vec<Resource> = Vec::new();
-    for resource in resources.into_iter() {
-        let compute = Rc::new(RefCell::new(Compute::new(
-            resource.speed,
-            resource.cores,
-            resource.memory,
-            sim.create_context(&resource.name),
-        )));
-        let id = sim.add_handler(&resource.name, compute.clone());
-        result.push(Resource {
-            id,
-            name: resource.name,
-            compute,
-            speed: resource.speed,
-            cores_available: resource.cores,
-            memory_available: resource.memory,
-        });
-    }
-    result
-}
-
-/// Reads resources from YAML file into simple structs without creating resource instances.
-pub fn read_resources<P: AsRef<Path>>(file: P) -> Vec<ResourceConfig> {
+pub fn read_resource_configs<P: AsRef<Path>>(file: P) -> Vec<ResourceConfig> {
     let resources: Resources = serde_yaml::from_str(
         &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
     )

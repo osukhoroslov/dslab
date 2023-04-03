@@ -21,6 +21,30 @@ pub struct NetworkConfig {
 }
 
 impl NetworkConfig {
+    /// Creates network config with ConstantBandwidthNetwork model.
+    ///
+    /// Bandwidth should be in MB/s, latency in μs.
+    pub fn constant(bandwidth: f64, latency: f64) -> Self {
+        Self {
+            model: "ConstantBandwidthNetwork".to_string(),
+            bandwidth,
+            latency,
+        }
+    }
+
+    /// Creates network config with SharedBandwidthNetwork model
+    ///
+    /// Bandwidth should be in MB/s, latency in μs.
+    pub fn shared(bandwidth: f64, latency: f64) -> Self {
+        Self {
+            model: "SharedBandwidthNetwork".to_string(),
+            bandwidth,
+            latency,
+        }
+    }
+}
+
+impl NetworkConfig {
     /// Creates network model based on stored parameters.
     pub fn make_network(&self) -> Option<Rc<RefCell<dyn NetworkModel>>> {
         if self.model == "ConstantBandwidthNetwork" {
@@ -44,20 +68,10 @@ struct Yaml {
     network: NetworkConfig,
 }
 
-/// Reads network model configuration from YAML file and creates the corresponding network model.
+/// Reads network model configuration from YAML file.
 ///
 /// Configuration file example:
 /// https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml
-pub fn load_network<P: AsRef<Path>>(file: P) -> Rc<RefCell<dyn NetworkModel>> {
-    let network = read_network_config(&file);
-
-    match network.make_network() {
-        Some(x) => x,
-        None => panic!("Unknown network model {}", network.model),
-    }
-}
-
-/// Reads network model configuration from YAML file into simple struct without creating network model.
 pub fn read_network_config<P: AsRef<Path>>(file: P) -> NetworkConfig {
     let network: Yaml = serde_yaml::from_str(
         &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),

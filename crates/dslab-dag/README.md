@@ -17,18 +17,18 @@ use std::cell::RefCell;
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
-use dslab_dag::network::load_network;
-use dslab_dag::resource::read_resources;
+use dslab_dag::network::read_network_config;
+use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 // load resources and network configuration
-let resources = read_resources("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
-let network_model = load_network("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
+let resources = read_resource_configs("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
+let network = read_network_config("../../examples/dag-demo/systems/cluster-het-4-32cores.yaml");
 // use simple scheduler implementation
 let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
-let mut sim = DagSimulation::new(123, resources, network_model, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
+let mut sim = DagSimulation::new(123, resources, network, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
 // read DAG from YAML file
 let dag = DAG::from_yaml("../../examples/dag-demo/dags/diamond.yaml");
 
