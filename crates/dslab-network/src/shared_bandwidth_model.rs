@@ -38,14 +38,20 @@ impl DataOperation for SharedBandwidthNetwork {
         ctx.cancel_event(self.next_event);
         self.throughput_model.insert(ctx.time(), data.size, data);
         if let Some((time, data)) = self.throughput_model.peek() {
-            self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
+            self.next_event = ctx.emit_self(
+                DataReceive { data: data.clone() },
+                fix_negative_epsilon(time - ctx.time()),
+            );
         }
     }
 
     fn receive_data(&mut self, _data: Data, ctx: &mut SimulationContext) {
         self.throughput_model.pop().unwrap();
         if let Some((time, data)) = self.throughput_model.peek() {
-            self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
+            self.next_event = ctx.emit_self(
+                DataReceive { data: data.clone() },
+                fix_negative_epsilon(time - ctx.time()),
+            );
         }
     }
 
@@ -53,3 +59,10 @@ impl DataOperation for SharedBandwidthNetwork {
 }
 
 impl NetworkModel for SharedBandwidthNetwork {}
+
+fn fix_negative_epsilon(x: f64) -> f64 {
+    if x < -1e-9 {
+        panic!("absolute value of {:.10} is too large", x);
+    }
+    x.max(0.)
+}
