@@ -2,7 +2,7 @@ use std::fs;
 use std::rc::Rc;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyModule, PyString, PyTuple};
+use pyo3::types::{PyDict, PyList, PyModule, PyString, PyTuple};
 
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
@@ -118,9 +118,10 @@ impl PyProcess {
 impl Process for PyProcess {
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
         Python::with_gil(|py| {
+            let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "from_json", (msg.tip, msg.data))
+                .call_method1(py, "fromJSON", (PyDict::from_sequence(py, args.into()).unwrap(),))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
@@ -134,9 +135,10 @@ impl Process for PyProcess {
 
     fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
         Python::with_gil(|py| {
+            let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "from_json", (msg.tip, msg.data))
+                .call_method1(py, "fromJSON", (PyDict::from_sequence(py, args.into()).unwrap(),))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc

@@ -1,4 +1,18 @@
-from dslabmp import Context, Message, Process, StateMember
+from dslabmp import Context, Message, Process, StateMember, Serialize
+
+
+class DataClass:
+    def __init__(self, x=42):
+        self.data = x
+
+    @staticmethod
+    @Serialize
+    def toJSON(self):
+        return {'value': self.data}
+
+    @staticmethod
+    def fromJSON(data):
+        return DataClass(data['value'])
 
 
 class TestProcess(Process):
@@ -6,6 +20,7 @@ class TestProcess(Process):
         self.data = StateMember(["elem1", (2, 3), {'key': 'value'}])
         self._id = StateMember(node_id)
         self.messages = StateMember([Message('GET', '')])
+        self.inner_member = StateMember(DataClass())
 
         # examples of set/get state member
         self._id = 'new_node_id'
@@ -31,7 +46,7 @@ class TestProcess(Process):
         assert self.messages is not None
         assert type(self.messages) == list
         assert type(self.messages[0]) == Message
-
+        assert self.inner_member.data == 42
         try:
             a = self.notexists
         except AttributeError:

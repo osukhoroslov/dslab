@@ -2,9 +2,21 @@ from __future__ import annotations
 import abc
 import json
 from typing import Any, Dict, List, Tuple, Union
-
+import sys
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
+
+
+def Serialize(serialize_func):
+    """"
+    Enriches serialized object with information about its class and module.
+    """
+    def SerializeWithModule(obj):
+        res = serialize_func(obj)
+        res['module'] = sys.modules[obj.__module__].__name__
+        res['classname'] = str(type(obj).__name__)
+        return res
+    return SerializeWithModule
 
 
 class Message:
@@ -26,12 +38,13 @@ class Message:
         self._data.pop(key, None)
 
     @staticmethod
-    def from_json(message_type: str, json_str: str) -> Message:
-        return Message(message_type, json.loads(json_str))
-
-    @staticmethod
+    @Serialize
     def toJSON(o):
         return {"_type": o._type, "_data": o._data}
+
+    @staticmethod
+    def fromJSON(data):
+        return Message(data['_type'], data['_data'])
 
 
 class Context(object):
@@ -58,7 +71,7 @@ class Context(object):
 
     def set_timer(self, timer_name: str, delay: float):
         """
-        Sets a timer that will trigger on_timer callback after the specified delay. 
+        Sets a timer that will trigger on_timer callback after the specified delay.
         If there is an active timer with this name, its delay is overridden.
         """
         if not isinstance(timer_name, str):
@@ -115,8 +128,8 @@ class StateMember:
 
     @staticmethod
     def _deserialize_message(dct):
-        if '_type' in dct:
-            return Message(dct['_type'], dct['_data'])
+        if 'module' in dct:
+            return getattr(getattr(sys.modules[dct['module']], dct['classname']), 'fromJSON')(dct)
         return dct
 
     @staticmethod
