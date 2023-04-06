@@ -116,7 +116,7 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            MessageDropped { id: message_id } => {
+            MessageDropped { id: message_id, .. } => {
                 self.take_event(system, message_id);
                 self.apply_event(system, event_id, false, false)?;
             }
@@ -129,7 +129,24 @@ pub trait Strategy {
     fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let state = system.get_state();
 
-        self.add_event(system, MessageDropped { id: event_id });
+        let event = self.clone_event(system, event_id);
+
+        match event {
+            MessageReceived { msg, src, dest, .. } => {
+                self.add_event(
+                    system,
+                    MessageDropped {
+                        id: event_id,
+                        msg,
+                        src,
+                        dest,
+                    },
+                );
+            }
+            _ => {
+                return Err("cannot drop missing message".to_owned());
+            }
+        }
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
@@ -234,25 +251,21 @@ pub trait Strategy {
                     self.log_message(search_depth, msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
-                    t!(format!(
-                        "{:>10} | {:>10} !-- {:<10} <-- timer fired",
-                        search_depth,
-                        proc,
-                        timer
-                    )
-                    .yellow());
+                    t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", search_depth, proc, timer).yellow());
                 }
                 TimerCancelled { proc, timer } => {
                     t!(format!(
                         "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
-                        search_depth,
-                        proc,
-                        timer
+                        search_depth, proc, timer
                     )
                     .yellow());
                 }
-                MessageDropped { .. } => {
-                    t!(format!("{:>10} | message dropped", search_depth).red());
+                MessageDropped { msg, src, dest, .. } => {
+                    t!(format!(
+                        "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
+                        search_depth, src, dest, msg
+                    )
+                    .red());
                 }
             }
         }
