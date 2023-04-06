@@ -48,7 +48,8 @@ impl Bfs {
 
             if let Some(result) = result {
                 self.mark_visited(state);
-                return result;
+                result?;
+                continue;
             }
 
             system.set_state(state);
