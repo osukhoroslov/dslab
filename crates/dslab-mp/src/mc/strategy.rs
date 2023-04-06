@@ -66,7 +66,7 @@ pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
 pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
 
 /// Checks if some invariant holds in the given state.
-/// Returns Some(status) if the invariant is broken and None otherwise.
+/// Returns Err(error) if the invariant is broken and Ok otherwise.
 pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
 
 /// Trait with common functions for different model checking strategies.
