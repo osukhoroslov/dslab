@@ -160,10 +160,10 @@ pub trait Strategy {
         }
 
         if corrupt {
-            event = self.corrupt_msg_data(event);
+            event = self.corrupt_msg_data(event, system.search_depth());
         }
 
-        self.debug_log(&event, LogContext::Default);
+        self.debug_log(&event, LogContext::Default, system.search_depth());
 
         system.apply_event(event);
 
@@ -193,8 +193,8 @@ pub trait Strategy {
     }
 
     /// Applies corruption to the MessageReceived event data.
-    fn corrupt_msg_data(&self, event: McEvent) -> McEvent {
-        self.debug_log(&event, LogContext::Corrupted);
+    fn corrupt_msg_data(&self, event: McEvent, search_depth: u64) -> McEvent {
+        self.debug_log(&event, LogContext::Corrupted, search_depth);
         match event {
             MessageReceived {
                 msg,
@@ -222,21 +222,21 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, LogContext::Duplicated);
+        self.debug_log(&event, LogContext::Duplicated, system.search_depth());
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, log_context: LogContext) {
+    fn debug_log(&self, event: &McEvent, log_context: LogContext, search_depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(self.search_depth(), msg, src, dest, log_context);
+                    self.log_message(search_depth, msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} !-- {:<10} <-- timer fired",
-                        self.search_depth(),
+                        search_depth,
                         proc,
                         timer
                     )
@@ -245,14 +245,14 @@ pub trait Strategy {
                 TimerCancelled { proc, timer } => {
                     t!(format!(
                         "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
-                        self.search_depth(),
+                        search_depth,
                         proc,
                         timer
                     )
                     .yellow());
                 }
                 MessageDropped { .. } => {
-                    t!(format!("{:>10} | message dropped", self.search_depth()).red());
+                    t!(format!("{:>10} | message dropped", search_depth).red());
                 }
             }
         }
@@ -345,9 +345,6 @@ pub trait Strategy {
 
     /// Returns the used execution mode.
     fn execution_mode(&self) -> &ExecutionMode;
-
-    /// Returns the current search depth in system states graph.
-    fn search_depth(&self) -> u64;
 
     /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;

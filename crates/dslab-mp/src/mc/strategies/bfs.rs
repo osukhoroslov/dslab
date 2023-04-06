@@ -10,7 +10,6 @@ pub struct Bfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
-    search_depth: u64,
     states_queue: VecDeque<McState>,
     execution_mode: ExecutionMode,
     summary: McSummary,
@@ -25,7 +24,6 @@ impl Bfs {
             prune,
             goal,
             invariant,
-            search_depth: 0,
             states_queue: VecDeque::new(),
             execution_mode,
             summary: McSummary::default(),
@@ -42,7 +40,6 @@ impl Bfs {
         while !self.states_queue.is_empty() {
             let available_events = system.available_events();
             let state = self.states_queue.pop_front().unwrap();
-            self.search_depth = state.search_depth;
 
             let result = self.check_state(&state);
 
@@ -80,10 +77,6 @@ impl Strategy for Bfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
-    }
-
-    fn search_depth(&self) -> u64 {
-        self.search_depth
     }
 
     fn visited(&mut self) -> &mut VisitedStates {

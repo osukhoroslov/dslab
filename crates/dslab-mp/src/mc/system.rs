@@ -98,4 +98,8 @@ impl McSystem {
     pub fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events()
     }
+
+    pub fn search_depth(&self) -> u64 {
+        self.search_depth
+    }
 }
