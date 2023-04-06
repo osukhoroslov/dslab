@@ -41,7 +41,7 @@ impl Bfs {
 
         while !self.states_queue.is_empty() {
             let available_events = system.available_events();
-            let state = self.states_queue.pop_front().expect("BFS error");
+            let state = self.states_queue.pop_front().unwrap();
             self.search_depth = state.search_depth;
 
             let result = self.check_state(&state);
