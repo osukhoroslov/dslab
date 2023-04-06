@@ -236,8 +236,8 @@ impl DAGRunner {
             self.trace_log.resources.push(json!({
                 "name": resource.name.clone(),
                 "speed": resource.compute.borrow().speed(),
-                "memory": resource.memory_available,
                 "cores": resource.cores_available,
+                "memory": resource.memory_available,
             }));
         }
         self.trace_log.log_dag(&self.dag);
