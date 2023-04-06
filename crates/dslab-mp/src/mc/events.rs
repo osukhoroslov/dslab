@@ -39,6 +39,9 @@ pub enum McEvent {
     },
     MessageDropped {
         id: McEventId,
+        msg: Message,
+        src: String,
+        dest: String,
     },
 }
 
