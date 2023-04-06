@@ -84,8 +84,10 @@ impl PendingEvents {
 
     /// Cancels given timer and recalculates available events.
     pub fn cancel_timer(&mut self, proc: String, timer: String) {
-        let unblocked_events = self.resolver.cancel_timer(self.timer_mapping[&(proc, timer)]);
-        self.available_events.extend(unblocked_events);
+        let id = self.timer_mapping.remove(&(proc, timer));
+        if let Some(id) = id {
+            self.pop(id);
+        }
     }
 
     /// Removes available event by its id.

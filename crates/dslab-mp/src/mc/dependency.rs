@@ -64,8 +64,4 @@ impl DependencyResolver {
         }
         unblocked
     }
-
-    pub fn cancel_timer(&mut self, event_id: McEventId) -> BTreeSet<McEventId> {
-        self.remove_timer(event_id)
-    }
 }
