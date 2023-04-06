@@ -312,7 +312,7 @@ pub trait Strategy {
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
-    fn check_state(&mut self, state: &McState, events_num: usize) -> Option<Result<(), String>> {
+    fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
             Some(Err(err))
@@ -324,7 +324,7 @@ pub trait Strategy {
             // Execution branch is pruned
             self.update_summary(status);
             Some(Ok(()))
-        } else if events_num == 0 {
+        } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
             Some(Err("nothing left to do to reach the goal".to_owned()))
         } else {

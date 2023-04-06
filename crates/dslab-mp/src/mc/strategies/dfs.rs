@@ -34,7 +34,7 @@ impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
 
-        let result = self.check_state(&state, available_events.len());
+        let result = self.check_state(&state);
 
         self.mark_visited(state);
         if let Some(result) = result {

@@ -72,6 +72,11 @@ impl PendingEvents {
         &self.available_events
     }
 
+    /// Returns number of currently available events
+    pub fn available_events_num(&self) -> usize {
+        self.available_events.len()
+    }
+
     /// Removes available event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
         assert!(self.available_events.remove(&event_id), "event is not available");

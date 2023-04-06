@@ -44,7 +44,7 @@ impl Bfs {
             let state = self.states_queue.pop_front().expect("BFS error");
             self.search_depth = state.search_depth;
 
-            let result = self.check_state(&state, available_events.len());
+            let result = self.check_state(&state);
 
             if let Some(result) = result {
                 self.mark_visited(state);
