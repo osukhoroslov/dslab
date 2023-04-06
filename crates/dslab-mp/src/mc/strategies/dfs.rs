@@ -8,7 +8,6 @@ pub struct Dfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
-    search_depth: u64,
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
@@ -22,7 +21,6 @@ impl Dfs {
             prune,
             goal,
             invariant,
-            search_depth: 0,
             execution_mode,
             summary: McSummary::default(),
             visited,
@@ -33,7 +31,6 @@ impl Dfs {
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
-        self.search_depth = state.search_depth;
 
         let result = self.check_state(&state);
 
@@ -66,10 +63,6 @@ impl Strategy for Dfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
-    }
-
-    fn search_depth(&self) -> u64 {
-        self.search_depth
     }
 
     fn visited(&mut self) -> &mut VisitedStates {
