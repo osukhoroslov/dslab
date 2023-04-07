@@ -94,12 +94,10 @@ impl PendingEvents {
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
         let result = self.events.remove(&event_id).unwrap();
         self.directives.remove(&event_id);
-        let was_available = self.available_events.remove(&event_id);
+        self.available_events.remove(&event_id);
         if let McEvent::TimerFired { .. } = result {
-            if was_available {
-                let unblocked_events = self.resolver.remove_timer(event_id);
-                self.available_events.extend(unblocked_events);
-            }
+            let unblocked_events = self.resolver.remove_timer(event_id);
+            self.available_events.extend(unblocked_events);
         }
         result
     }
