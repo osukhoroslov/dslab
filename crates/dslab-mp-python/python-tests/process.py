@@ -17,7 +17,7 @@ class TestProcess(Process):
     def __init__(self, node_id: str):
         self.data = StateMember(["elem1", (2, 3), {'key': 'value'}])
         self._id = StateMember(node_id)
-        self.messages = StateMember([Message('GET', '')])
+        self.messages = StateMember([Message('GET', '""')])
         self.inner_member = StateMember(DataClass())
 
         # examples of set/get state member

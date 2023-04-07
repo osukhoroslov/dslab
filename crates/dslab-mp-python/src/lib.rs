@@ -118,10 +118,9 @@ impl PyProcess {
 impl Process for PyProcess {
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
         Python::with_gil(|py| {
-            let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "deserialize", (PyDict::from_sequence(py, args.into()).unwrap(),))
+                .call1(py, (msg.tip, msg.data))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
@@ -135,10 +134,9 @@ impl Process for PyProcess {
 
     fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
         Python::with_gil(|py| {
-            let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "deserialize", (PyDict::from_sequence(py, args.into()).unwrap(),))
+                .call1(py, (msg.tip, msg.data))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc

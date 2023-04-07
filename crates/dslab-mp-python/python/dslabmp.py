@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Tuple, Union
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
 class Message:
-    def __init__(self, message_type: str, data: Dict[str, Any]):
+    def __init__(self, message_type: str, data: str):
         self._type = message_type
-        self._data = data
+        self._data = json.loads(data)
 
     @property
     def type(self) -> str:
@@ -25,7 +25,7 @@ class Message:
         self._data.pop(key, None)
 
     def serialize(self):
-        return {"_type": self._type, "_data": self._data}
+        return {"_type": self._type, "_data": json.dumps(self._data)}
 
     @staticmethod
     def deserialize(data):
