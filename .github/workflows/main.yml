@@ -14,17 +14,14 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
   build:
     name: Build and test
     runs-on: ubuntu-latest
@@ -32,14 +29,21 @@ jobs:
     - run: |
         sudo apt-get update
         sudo apt-get install -y libpango1.0-dev libatk1.0-dev libgtk-3-dev
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v2
+    - uses: actions/checkout@v3
+    - name: Cache cargo artifacts
+      id: cache-cargo
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-cargo-artifacts
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
     - name: Build
       run: cargo build --verbose
     - name: Run linter
