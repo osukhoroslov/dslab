@@ -6,19 +6,6 @@ import sys
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
-
-def Serialize(serialize_func):
-    """"
-    Enriches serialized object with information about its class and module.
-    """
-    def SerializeWithModule(obj):
-        res = serialize_func(obj)
-        res['module'] = sys.modules[obj.__module__].__name__
-        res['classname'] = str(type(obj).__name__)
-        return res
-    return SerializeWithModule
-
-
 class Message:
     def __init__(self, message_type: str, data: Dict[str, Any]):
         self._type = message_type
@@ -37,10 +24,8 @@ class Message:
     def remove(self, key: str):
         self._data.pop(key, None)
 
-    @staticmethod
-    @Serialize
-    def toJSON(o):
-        return {"_type": o._type, "_data": o._data}
+    def toJSON(self):
+        return {"_type": self._type, "_data": self._data}
 
     @staticmethod
     def fromJSON(data):
@@ -123,13 +108,24 @@ class StateMember:
         return json.dumps(self.inner, default=StateMember._serialize_message)
 
     @staticmethod
-    def _serialize_message(o):
-        return type(o).toJSON(o)
+    def _serialize_message(obj):
+        if hasattr(obj, 'toJSON'):
+            res = obj.toJSON()
+        else:
+            res = obj.__dict__
+        res['_module'] = sys.modules[obj.__module__].__name__
+        res['_class'] = str(type(obj).__name__)
+        return res
 
     @staticmethod
     def _deserialize_message(dct):
-        if 'module' in dct:
-            return getattr(getattr(sys.modules[dct['module']], dct['classname']), 'fromJSON')(dct)
+        if '_module' in dct:
+            cls = getattr(sys.modules[dct['_module']], dct['_class'])
+            if hasattr(cls, 'fromJSON'):
+                res = getattr(cls, 'fromJSON')(dct)
+                return res
+            else:
+                return cls(**dct)
         return dct
 
     @staticmethod

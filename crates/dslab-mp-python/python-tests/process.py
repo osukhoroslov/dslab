@@ -1,12 +1,10 @@
-from dslabmp import Context, Message, Process, StateMember, Serialize
+from dslabmp import Context, Message, Process, StateMember
 
 
 class DataClass:
     def __init__(self, x=42):
         self.data = x
 
-    @staticmethod
-    @Serialize
     def toJSON(self):
         return {'value': self.data}
 
