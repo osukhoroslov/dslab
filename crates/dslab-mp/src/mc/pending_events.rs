@@ -72,7 +72,7 @@ impl PendingEvents {
         &self.available_events
     }
 
-    /// Returns number of currently available events
+    /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
         self.available_events.len()
     }
