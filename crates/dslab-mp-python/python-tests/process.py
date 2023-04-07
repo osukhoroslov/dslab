@@ -5,11 +5,11 @@ class DataClass:
     def __init__(self, x=42):
         self.data = x
 
-    def toJSON(self):
+    def serialize(self):
         return {'value': self.data}
 
     @staticmethod
-    def fromJSON(data):
+    def deserialize(data):
         return DataClass(data['value'])
 
 

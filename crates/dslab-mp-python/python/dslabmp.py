@@ -1,8 +1,8 @@
 from __future__ import annotations
 import abc
 import json
-from typing import Any, Dict, List, Tuple, Union
 import sys
+from typing import Any, Dict, List, Tuple, Union
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
@@ -24,11 +24,11 @@ class Message:
     def remove(self, key: str):
         self._data.pop(key, None)
 
-    def toJSON(self):
+    def serialize(self):
         return {"_type": self._type, "_data": self._data}
 
     @staticmethod
-    def fromJSON(data):
+    def deserialize(data):
         return Message(data['_type'], data['_data'])
 
 
@@ -105,24 +105,25 @@ class StateMember:
         self.inner = t
 
     def serialize(self):
-        return json.dumps(self.inner, default=StateMember._serialize_message)
+        return json.dumps(self.inner, default=StateMember._serialize_obj)
 
     @staticmethod
-    def _serialize_message(obj):
-        if hasattr(obj, 'toJSON'):
-            res = obj.toJSON()
+    def _serialize_obj(obj):
+        res = {}
+        if hasattr(obj, 'serialize'):
+            res['data'] = obj.serialize()
         else:
-            res = obj.__dict__
+            res['data'] = obj.__dict__
         res['_module'] = sys.modules[obj.__module__].__name__
         res['_class'] = str(type(obj).__name__)
         return res
 
     @staticmethod
-    def _deserialize_message(dct):
+    def _deserialize_obj(dct):
         if '_module' in dct:
             cls = getattr(sys.modules[dct['_module']], dct['_class'])
-            if hasattr(cls, 'fromJSON'):
-                res = getattr(cls, 'fromJSON')(dct)
+            if hasattr(cls, 'deserialize'):
+                res = getattr(cls, 'deserialize')(dct['data'])
                 return res
             else:
                 return cls(**dct)
@@ -130,7 +131,7 @@ class StateMember:
 
     @staticmethod
     def deserialize(state):
-        return StateMember(json.loads(state, object_hook=StateMember._deserialize_message))
+        return StateMember(json.loads(state, object_hook=StateMember._deserialize_obj))
 
 
 class Process:

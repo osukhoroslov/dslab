@@ -121,7 +121,7 @@ impl Process for PyProcess {
             let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "fromJSON", (PyDict::from_sequence(py, args.into()).unwrap(),))
+                .call_method1(py, "deserialize", (PyDict::from_sequence(py, args.into()).unwrap(),))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
@@ -138,7 +138,7 @@ impl Process for PyProcess {
             let args = PyList::new(py, [("_type", msg.tip), ("_data", msg.data)]);
             let py_msg = self
                 .msg_class
-                .call_method1(py, "fromJSON", (PyDict::from_sequence(py, args.into()).unwrap(),))
+                .call_method1(py, "deserialize", (PyDict::from_sequence(py, args.into()).unwrap(),))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
