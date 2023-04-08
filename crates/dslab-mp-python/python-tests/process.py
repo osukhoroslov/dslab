@@ -34,7 +34,7 @@ class TestProcess(Process):
         assert type(self.messages[0]) == Message
         assert self.inner_member.data == 42
         tmp_value = "SHOULD BE DROPPED"
-        
+
         if msg.type == 'FIRST_STEP':
             # we suppose it will be discarded later
             self.data = tmp_value

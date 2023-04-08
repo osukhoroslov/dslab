@@ -102,10 +102,27 @@ class StateMember:
         self.inner = t
 
     def serialize(self):
+        """
+        Creates a string representation of the inner object.
+        """
         return json.dumps(self.inner, default=StateMember._serialize_obj)
 
     @staticmethod
+    def deserialize(state):
+        """
+        Creates a StateMember from string representation of the inner object.
+        It is guaranteed that StateMember.deserialize(x.serialize()) == x.
+        """
+        return StateMember(json.loads(state, object_hook=StateMember._deserialize_obj))
+
+    @staticmethod
     def _serialize_obj(obj):
+        """
+        For custom objects serialization chooses an approach:
+        1. [RECOMMENDED] Any object can specify its serialization to JSON if serialize(self) function is specified.
+        Have a look at DataClass in python-tests/process.py for an example.
+        2. [DEFAULT] Object is saved by its __dict__ representation.
+        """
         res = {}
         if hasattr(obj, 'serialize'):
             res['data'] = obj.serialize()
@@ -117,6 +134,12 @@ class StateMember:
 
     @staticmethod
     def _deserialize_obj(dct):
+        """
+        For custom objects deserialization chooses an approach:
+        1. [RECOMMENDED] Any object can specify its deserialization to JSON if deserialize() static function is specified.
+        Have a look at DataClass in python-tests/process.py for an example. 
+        2. [DEFAULT] Object is created from its __dict__ representation through constructor.
+        """
         if '_module' in dct:
             cls = getattr(sys.modules[dct['_module']], dct['_class'])
             if hasattr(cls, 'deserialize'):
@@ -125,10 +148,6 @@ class StateMember:
             else:
                 return cls(**dct['data'])
         return dct
-
-    @staticmethod
-    def deserialize(state):
-        return StateMember(json.loads(state, object_hook=StateMember._deserialize_obj))
 
 
 class Process:
