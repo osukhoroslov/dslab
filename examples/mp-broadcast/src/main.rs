@@ -47,7 +47,7 @@ fn build_system(config: &TestConfig) -> System {
         sys.add_node(node_name);
         sys.add_process(proc_name, boxed!(proc), node_name);
     }
-    return sys;
+    sys
 }
 
 fn check(sys: &mut System, config: &TestConfig) -> TestResult {
@@ -62,14 +62,14 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
         let mut delivered_msgs = Vec::new();
         for e in sys.event_log(&proc) {
             match e.event {
-                ProcessEvent::LocalMessageReceived{msg: m} => {
+                ProcessEvent::LocalMessageReceived { msg: m } => {
                     let data: Value = serde_json::from_str(&m.data).unwrap();
                     let message = data["text"].as_str().unwrap().to_string();
                     sent_msgs.push(message.clone());
                     all_sent.insert(message.clone());
                     history.push(message);
                 }
-                ProcessEvent::LocalMessageSent{msg: m} => {
+                ProcessEvent::LocalMessageSent { msg: m } => {
                     let data: Value = serde_json::from_str(&m.data).unwrap();
                     let message = data["text"].as_str().unwrap().to_string();
                     delivered_msgs.push(message.clone());
@@ -85,23 +85,16 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     }
 
     if config.debug {
-        println!(
-            "Messages sent across network: {}",
-            sys.network().message_count()
-        );
+        println!("Messages sent across network: {}", sys.network().message_count());
         println!("Process histories:");
         for proc in sys.process_names() {
-            println!(
-                "- [{}] {}",
-                proc,
-                histories.get(&proc).unwrap().join(", ")
-            );
+            println!("- [{}] {}", proc, histories.get(&proc).unwrap().join(", "));
         }
     }
 
     // NO DUPLICATION
     let mut no_duplication = true;
-    for (_, delivered_msgs) in &delivered {
+    for delivered_msgs in delivered.values() {
         let mut uniq = HashSet::new();
         for msg in delivered_msgs {
             if uniq.contains(msg) {
@@ -114,7 +107,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
 
     // NO CREATION
     let mut no_creation = true;
-    for (_, delivered_msgs) in &delivered {
+    for delivered_msgs in delivered.values() {
         for msg in delivered_msgs {
             if !all_sent.contains(msg) {
                 println!("Message '{}' was not sent!", msg);
@@ -126,7 +119,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     // VALIDITY
     let mut validity = true;
     for (proc, sent_msgs) in &sent {
-        if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
+        if sys.node_is_crashed(&sys.proc_node_name(proc)) {
             continue;
         }
         let delivered_msgs = delivered.get(proc).unwrap();
@@ -142,10 +135,10 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     let mut uniform_agreement = true;
     for msg in all_delivered.iter() {
         for (proc, delivered_msgs) in &delivered {
-            if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
+            if sys.node_is_crashed(&sys.proc_node_name(proc)) {
                 continue;
             }
-            if !delivered_msgs.contains(&msg) {
+            if !delivered_msgs.contains(msg) {
                 println!("Message '{}' is not delivered by correct process {}!", msg, proc);
                 uniform_agreement = false;
             }
@@ -170,7 +163,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
             }
             // check that other correct nodes have delivered all past events before delivering the message
             for (dst, delivered_msgs) in &delivered {
-                if sys.node_is_crashed(&sys.proc_node_name(&dst)) {
+                if sys.node_is_crashed(&sys.proc_node_name(dst)) {
                     continue;
                 }
                 let mut dst_past = HashSet::new();
@@ -182,10 +175,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
                     }
                 }
                 if !dst_past.is_superset(&src_past) {
-                    let missing = src_past
-                        .difference(&dst_past)
-                        .cloned()
-                        .collect::<Vec<String>>();
+                    let missing = src_past.difference(&dst_past).cloned().collect::<Vec<String>>();
                     println!(
                         "Causal order violation: {} not delivered [{}] before [{}]",
                         dst,
@@ -226,7 +216,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
 fn test_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
+    sys.send_local_message("proc-0", msg);
     sys.step_until_no_events();
     check(&mut sys, config)
 }
@@ -234,7 +224,7 @@ fn test_normal(config: &TestConfig) -> TestResult {
 fn test_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
+    sys.send_local_message("proc-0", msg);
     // let 2 messages to deliver (sender and one other node)
     sys.steps(2);
     // crash source node
@@ -246,7 +236,7 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
 fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
+    sys.send_local_message("proc-0", msg);
     // let 1 message to deliver (sender only)
     sys.step();
     sys.crash_node("node-0");
@@ -261,7 +251,7 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
         sys.network().disconnect_node(&format!("node-{}", &n.to_string()));
     }
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
+    sys.send_local_message("proc-0", msg);
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-0");
     sys.crash_node("node-1");
@@ -275,7 +265,7 @@ fn test_two_crashes2(config: &TestConfig) -> TestResult {
     sys.network().drop_outgoing("node-1");
     sys.network().drop_outgoing("node-2");
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
-    sys.send_local_message("proc-0", msg.clone());
+    sys.send_local_message("proc-0", msg);
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-1");
     sys.crash_node("node-2");
@@ -287,13 +277,13 @@ fn test_causal_order(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     sys.network().set_delays(100., 200.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
-    sys.send_local_message("proc-0", msg.clone());
-    while sys.event_log("proc-1").len() == 0 {
+    sys.send_local_message("proc-0", msg);
+    while sys.event_log("proc-1").is_empty() {
         sys.step();
     }
     sys.network().set_delays(10., 20.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "1:How?"));
-    sys.send_local_message("proc-1", msg.clone());
+    sys.send_local_message("proc-1", msg);
 
     while sys.event_log("proc-0").len() < 3 {
         sys.step();
@@ -301,7 +291,7 @@ fn test_causal_order(config: &TestConfig) -> TestResult {
 
     sys.network().set_delay(1.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Fine!"));
-    sys.send_local_message("proc-1", msg.clone());
+    sys.send_local_message("proc-1", msg);
     sys.step_until_no_events();
     check(&mut sys, config)
 }
@@ -309,7 +299,7 @@ fn test_causal_order(config: &TestConfig) -> TestResult {
 fn test_chaos_monkey(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     for i in 1..=config.monkeys {
-        let mut run_config = config.clone();
+        let mut run_config = *config;
         run_config.seed = rand.next_u64();
         println!("- Run {} (seed: {})", i, run_config.seed);
         let mut sys = build_system(config);
@@ -359,7 +349,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
     ];
     let mut msg_counts = Vec::new();
     for node_count in sys_sizes {
-        let mut run_config = config.clone();
+        let mut run_config = *config;
         run_config.proc_count = node_count;
         let mut sys = build_system(&run_config);
         let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
@@ -370,10 +360,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
     println!("\nMessage count:");
     for i in 0..sys_sizes.len() {
         let baseline = (sys_sizes[i] * (sys_sizes[i] - 1)) as u64;
-        println!(
-            "- N={}: {} (baseline {})",
-            sys_sizes[i], msg_counts[i], baseline
-        );
+        println!("- N={}: {} (baseline {})", sys_sizes[i], msg_counts[i], baseline);
     }
     Ok(true)
 }
