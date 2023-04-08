@@ -18,12 +18,8 @@ fn test_set_state() {
     env::set_var("PYTHONPATH", "python");
     let (mut sys, proc_state) = build_system();
     let data = r#"{"value": "Hello!"}"#;
-    sys.send_local_message("proc", Message::new("echo", data));
+    sys.send_local_message("proc", Message::new("FIRST_STEP", data));
     sys.step_until_no_events();
-
-    // process sends local message only if it has a secret which is not a state member
-    let msgs = sys.read_local_messages("proc");
-    assert_eq!(msgs.len(), 1);
 
     // process should not have anything but state members after `set_state()`
     sys.get_node("node")
@@ -32,8 +28,6 @@ fn test_set_state() {
         .get_process("proc")
         .unwrap()
         .set_state(&proc_state);
-    sys.send_local_message("proc", Message::new("echo", data));
+    sys.send_local_message("proc", Message::new("SECOND_STEP", data));
     sys.step_until_no_events();
-    let msgs = sys.read_local_messages("proc");
-    assert_eq!(msgs.len(), 0);
 }

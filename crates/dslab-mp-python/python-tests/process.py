@@ -27,24 +27,22 @@ class TestProcess(Process):
 
     def on_local_message(self, msg: Message, ctx: Context):
         assert self._id == 'new_node_id', 'get/set attributes work bad with state members'
-        tmp_value = "SHOULD BE DROPPED"
-        if self.data == tmp_value:
-            ctx.send_local(msg)
-
-        # we suppose it will be discarded later
-        self.data = tmp_value
         assert type(self.__dict__[
-                    'data']) == StateMember, 'field "data" must be a StateMember even after assignment'
-
-        if self.secret is None:
-            pass
-        else:
-            ctx.send_local(msg)
-
+                    'data']) == StateMember, 'field "data" must be a StateMember both before/after assignment'
         assert self.messages is not None
         assert type(self.messages) == list
         assert type(self.messages[0]) == Message
         assert self.inner_member.data == 42
+        tmp_value = "SHOULD BE DROPPED"
+        
+        if msg.type == 'FIRST_STEP':
+            # we suppose it will be discarded later
+            self.data = tmp_value
+            assert self.secret is not None, 'secret is still present'
+        elif msg.type == 'SECOND_STEP':
+            assert self.data != tmp_value, 'assignments that happened after serialization should be forgottten'
+            assert self.secret is None, 'secret should be forgotten'
+
         try:
             a = self.notexists
         except AttributeError:

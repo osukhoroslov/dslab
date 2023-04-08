@@ -7,29 +7,26 @@ from typing import Any, Dict, List, Tuple, Union
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
 class Message:
-    def __init__(self, message_type: str, data: str):
-        self._type = message_type
-        self._data = json.loads(data)
+    def __init__(self, message_type: str, data: Dict[str, Any]):
+        self.message_type = message_type
+        self.data = data
 
     @property
     def type(self) -> str:
-        return self._type
+        return self.message_type
 
     def __getitem__(self, key: str) -> Any:
-        return self._data[key]
+        return self.data[key]
 
     def __setitem__(self, key: str, value: Any):
-        self._data[key] = value
+        self.data[key] = value
 
     def remove(self, key: str):
-        self._data.pop(key, None)
-
-    def serialize(self):
-        return {"_type": self._type, "_data": json.dumps(self._data)}
+        self.data.pop(key, None)
 
     @staticmethod
-    def deserialize(data):
-        return Message(data['_type'], data['_data'])
+    def from_inner_data(type: str, data: str) -> Message:
+        return Message(type, json.loads(data))
 
 
 class Context(object):
@@ -46,13 +43,13 @@ class Context(object):
         if not isinstance(to, str):
             raise TypeError(
                 'to argument has to be string, not {}'.format(type(to)))
-        self._sent_messages.append((msg.type, json.dumps(msg._data), to))
+        self._sent_messages.append((msg.type, json.dumps(msg.data), to))
 
     def send_local(self, msg: Message):
         """
         Sends a _local_ message.
         """
-        self._sent_local_messages.append((msg.type, json.dumps(msg._data)))
+        self._sent_local_messages.append((msg.type, json.dumps(msg.data)))
 
     def set_timer(self, timer_name: str, delay: float):
         """
@@ -126,7 +123,7 @@ class StateMember:
                 res = getattr(cls, 'deserialize')(dct['data'])
                 return res
             else:
-                return cls(**dct)
+                return cls(**dct['data'])
         return dct
 
     @staticmethod
