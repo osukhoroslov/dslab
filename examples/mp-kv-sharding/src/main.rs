@@ -10,8 +10,8 @@ use log::LevelFilter;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use serde::{Deserialize, Serialize};
-use sugars::{boxed};
+use serde::Deserialize;
+use sugars::boxed;
 
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
@@ -20,21 +20,10 @@ use dslab_mp_python::PyProcessFactory;
 
 // MESSAGES ------------------------------------------------------------------------------------------------------------
 
-#[derive(Serialize)]
-struct GetMessage<'a> {
-    key: &'a str,
-}
-
 #[derive(Deserialize)]
 struct GetRespMessage<'a> {
     key: &'a str,
     value: Option<&'a str>,
-}
-
-#[derive(Serialize)]
-struct PutMessage<'a> {
-    key: &'a str,
-    value: &'a str,
 }
 
 #[derive(Deserialize)]
@@ -43,41 +32,20 @@ struct PutRespMessage<'a> {
     value: &'a str,
 }
 
-#[derive(Serialize)]
-struct DeleteMessage<'a> {
-    key: &'a str,
-}
-
 #[derive(Deserialize)]
 struct DeleteRespMessage<'a> {
     key: &'a str,
     value: Option<&'a str>,
 }
 
-#[derive(Serialize)]
-struct DumpKeysMessage {}
-
 #[derive(Deserialize)]
 struct DumpKeysRespMessage {
     keys: HashSet<String>,
 }
 
-#[derive(Serialize)]
-struct CountRecordsMessage {}
-
 #[derive(Deserialize)]
 struct CountRecordsRespMessage {
     count: u64,
-}
-
-#[derive(Serialize)]
-struct NodeAddedMessage<'a> {
-    id: &'a str,
-}
-
-#[derive(Serialize)]
-struct NodeRemovedMessage<'a> {
-    id: &'a str,
 }
 
 // UTILS ---------------------------------------------------------------------------------------------------------------
@@ -107,7 +75,7 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
         let proc_name = proc_names[n as usize].clone();
         let mut proc = config
             .process_factory
-            .build( (proc_name.clone(), proc_names.clone()), config.seed);
+            .build((proc_name.clone(), proc_names.clone()), config.seed);
         if measure_max_size {
             proc.set_max_size_freq(1000000);
         }
@@ -115,7 +83,7 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
         sys.add_node(&node_name);
         sys.add_process(&proc_name, boxed!(proc), &node_name);
     }
-    return sys;
+    sys
 }
 
 fn add_node_and_process(name: &str, sys: &mut System, config: &TestConfig) {
@@ -130,13 +98,7 @@ fn add_node_and_process(name: &str, sys: &mut System, config: &TestConfig) {
     sys.add_process(&proc_name, boxed!(proc), &node_name);
 }
 
-fn check_get(
-    sys: &mut System,
-    proc: &str,
-    key: &str,
-    expected: Option<&str>,
-    max_steps: u32,
-) -> TestResult {
+fn check_get(sys: &mut System, proc: &str, key: &str, expected: Option<&str>, max_steps: u32) -> TestResult {
     sys.send_local_message(proc, Message::new("GET", &format!(r#"{{"key": "{}"}}"#, key)));
     // sys.step_until_no_events();
     // let msgs = sys.read_local_messages(proc);
@@ -151,14 +113,11 @@ fn check_get(
     Ok(true)
 }
 
-fn check_put(
-    sys: &mut System,
-    proc: &str,
-    key: &str,
-    value: &str,
-    max_steps: u32,
-) -> TestResult {
-    sys.send_local_message(proc, Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}"}}"#, key, value)));
+fn check_put(sys: &mut System, proc: &str, key: &str, value: &str, max_steps: u32) -> TestResult {
+    sys.send_local_message(
+        proc,
+        Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}"}}"#, key, value)),
+    );
     // sys.step_until_no_events();
     // let msgs = sys.read_local_messages(proc);
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
@@ -172,21 +131,12 @@ fn check_put(
     Ok(true)
 }
 
-fn check_delete(
-    sys: &mut System,
-    proc: &str,
-    key: &str,
-    expected: Option<&str>,
-    max_steps: u32,
-) -> TestResult {
+fn check_delete(sys: &mut System, proc: &str, key: &str, expected: Option<&str>, max_steps: u32) -> TestResult {
     sys.send_local_message(proc, Message::new("DELETE", &format!(r#"{{"key": "{}"}}"#, key)));
     // sys.step_until_no_events();
     // let msgs = sys.read_local_messages(proc);
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
-    assume!(
-        res.is_ok(),
-        format!("DELETE_RESP is not returned by {}", proc)
-    )?;
+    assume!(res.is_ok(), format!("DELETE_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
     let msg = msgs.first().unwrap();
     assume_eq!(msg.tip, "DELETE_RESP")?;
@@ -201,10 +151,7 @@ fn dump_keys(sys: &mut System, proc: &str) -> Result<HashSet<String>, String> {
     // sys.step_until_no_events();
     // let msgs = sys.read_local_messages(proc);
     let res = sys.step_until_local_message_max_steps(proc, 100);
-    assume!(
-        res.is_ok(),
-        format!("DUMP_KEYS_RESP is not returned by {}", proc)
-    )?;
+    assume!(res.is_ok(), format!("DUMP_KEYS_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
     let msg = msgs.first().unwrap();
     assume_eq!(msg.tip, "DUMP_KEYS_RESP")?;
@@ -212,9 +159,7 @@ fn dump_keys(sys: &mut System, proc: &str) -> Result<HashSet<String>, String> {
     Ok(data.keys)
 }
 
-fn key_distribution(
-    sys: &mut System,
-) -> Result<HashMap<String, HashSet<String>>, String> {
+fn key_distribution(sys: &mut System) -> Result<HashMap<String, HashSet<String>>, String> {
     let mut dist = HashMap::new();
     for proc in sys.process_names() {
         dist.insert(proc.clone(), dump_keys(sys, &proc)?);
@@ -227,10 +172,7 @@ fn count_records(sys: &mut System, proc: &str) -> Result<u64, String> {
     // sys.step_until_no_events();
     // let msgs = sys.read_local_messages(proc);
     let res = sys.step_until_local_message_max_steps(proc, 100);
-    assume!(
-        res.is_ok(),
-        format!("COUNT_RECORDS_RESP is not returned by {}", proc)
-    )?;
+    assume!(res.is_ok(), format!("COUNT_RECORDS_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
     let msg = msgs.first().unwrap();
     assume_eq!(msg.tip, "COUNT_RECORDS_RESP")?;
@@ -243,10 +185,7 @@ fn send_proc_added(sys: &mut System, added: &str) {
         if sys.process_is_crashed(&proc) {
             continue;
         }
-        sys.send_local_message(
-            &proc,
-            Message::new("NODE_ADDED", &format!(r#"{{"id": "{}"}}"#, added))
-        );
+        sys.send_local_message(&proc, Message::new("NODE_ADDED", &format!(r#"{{"id": "{}"}}"#, added)));
     }
 }
 
@@ -257,14 +196,14 @@ fn send_proc_removed(sys: &mut System, removed: &str) {
         }
         sys.send_local_message(
             &proc,
-            Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed))
+            Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed)),
         );
     }
 }
 
 fn step_until_stabilized(
     sys: &mut System,
-    procs: &Vec<String>,
+    procs: &[String],
     expected_keys: u64,
     steps_per_iter: u64,
     max_steps: u64,
@@ -306,10 +245,9 @@ fn step_until_stabilized(
     )
 }
 
-
 fn check(
     sys: &mut System,
-    procs: &Vec<String>,
+    procs: &[String],
     expected: &HashMap<String, String>,
     check_values: bool,
     check_distribution: bool,
@@ -317,8 +255,8 @@ fn check(
     let mut stored_keys = HashSet::new();
     let mut proc_key_counts = Vec::new();
     for proc in procs.iter() {
-        let proc_count = count_records(sys, &proc)?;
-        let proc_keys = dump_keys(sys, &proc)?;
+        let proc_count = count_records(sys, proc)?;
+        let proc_keys = dump_keys(sys, proc)?;
         assume_eq!(proc_keys.len() as u64, proc_count)?;
         stored_keys.extend(proc_keys);
         proc_key_counts.push(proc_count);
@@ -341,7 +279,7 @@ fn check(
         println!("\nChecking values:");
         for proc in procs.iter() {
             for (k, v) in expected.iter() {
-                check_get(sys, &proc, k, Some(v), 100)?;
+                check_get(sys, proc, k, Some(v), 100)?;
             }
         }
         println!("OK")
@@ -357,21 +295,14 @@ fn check(
             .map(|x| (target_count - *x as f64).abs() / target_count)
             .collect();
         let avg_deviation = deviations.iter().sum::<f64>() / proc_key_counts.len() as f64;
-        let max_deviation = deviations
-            .iter()
-            .map(|x| R64::from_inner(*x))
-            .max()
-            .unwrap();
+        let max_deviation = deviations.iter().map(|x| R64::from_inner(*x)).max().unwrap();
         println!("\nStored keys per node:");
         println!("  - target: {}", target_count);
         println!("  - min: {}", min_count);
         println!("  - max: {}", max_count);
         println!("  - average deviation from target: {:.3}", avg_deviation);
         println!("  - max deviation from target: {:.3}", max_deviation);
-        assume!(
-            max_deviation <= 0.1,
-            "Max deviation from target is above 10%"
-        )?;
+        assume!(max_deviation <= 0.1, "Max deviation from target is above 10%")?;
     }
 
     Ok(true)
@@ -389,7 +320,7 @@ fn check_moved_keys(
     for proc in sys.process_names() {
         let b = before.get(&proc).unwrap_or(&empty);
         let a = after.get(&proc).unwrap_or(&empty);
-        let not_moved: HashSet<String> = a.intersection(&b).cloned().collect();
+        let not_moved: HashSet<String> = a.intersection(b).cloned().collect();
         not_moved_count += not_moved.len() as u64;
         total_count += b.len() as u64;
     }
@@ -399,28 +330,21 @@ fn check_moved_keys(
     println!("  - target: {}", target);
     println!("  - observed: {}", moved_count);
     println!("  - deviation: {:.3}", deviation);
-    assume!(
-        deviation <= 0.1,
-        format!("Deviation from target is above 10%")
-    )
+    assume!(deviation <= 0.1, format!("Deviation from target is above 10%"))
 }
 
-
 const SYMBOLS: [char; 36] = [
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-    't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+    'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ];
 const WEIGHTS: [usize; 36] = [
-    13, 16, 3, 8, 8, 5, 6, 23, 4, 8, 24, 12, 2, 1, 1, 10, 5, 8, 10, 1, 24, 3, 1, 8, 12, 22, 5, 20,
-    18, 5, 5, 2, 1, 3, 16, 22,
+    13, 16, 3, 8, 8, 5, 6, 23, 4, 8, 24, 12, 2, 1, 1, 10, 5, 8, 10, 1, 24, 3, 1, 8, 12, 22, 5, 20, 18, 5, 5, 2, 1, 3,
+    16, 22,
 ];
 
 fn random_string(length: usize, rand: &mut Pcg64) -> String {
     let dist = WeightedIndex::new(&WEIGHTS).unwrap();
-    rand.sample_iter(&dist)
-        .take(length)
-        .map(|x| SYMBOLS[x])
-        .collect()
+    rand.sample_iter(&dist).take(length).map(|x| SYMBOLS[x]).collect()
 }
 
 // TESTS ---------------------------------------------------------------------------------------------------------------
@@ -566,11 +490,7 @@ fn test_node_removed(config: &TestConfig) -> TestResult {
     send_proc_removed(&mut sys, &removed);
 
     // run the system until key the distribution is stabilized
-    let procs: Vec<String> = sys
-        .process_names()
-        .into_iter()
-        .filter(|x| *x != removed)
-        .collect();
+    let procs: Vec<String> = sys.process_names().into_iter().filter(|x| *x != removed).collect();
     step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
 
     check(&mut sys, &procs, &kv, true, false)
@@ -594,10 +514,7 @@ fn test_node_removed_after_crash(config: &TestConfig) -> TestResult {
     // crash a node and remove it from the system (stored keys are lost)
     let crashed = sys.process_names().choose(&mut rand).unwrap().clone();
     let crashed_keys = dump_keys(&mut sys, &crashed)?;
-    assume!(
-        crashed_keys.len() > 0,
-        "Proc stores no records, bad distribution"
-    )?;
+    assume!(!crashed_keys.is_empty(), "Proc stores no records, bad distribution")?;
     for k in crashed_keys {
         kv.remove(&k);
     }
@@ -605,11 +522,7 @@ fn test_node_removed_after_crash(config: &TestConfig) -> TestResult {
     send_proc_removed(&mut sys, &crashed);
 
     // run the system until key the distribution is stabilized
-    let procs: Vec<String> = sys
-        .process_names()
-        .into_iter()
-        .filter(|x| *x != crashed)
-        .collect();
+    let procs: Vec<String> = sys.process_names().into_iter().filter(|x| *x != crashed).collect();
     step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
 
     check(&mut sys, &procs, &kv, true, false)
@@ -618,7 +531,7 @@ fn test_node_removed_after_crash(config: &TestConfig) -> TestResult {
 fn test_migration(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let mut rand = Pcg64::seed_from_u64(config.seed);
-    let mut procs = sys.process_names().clone();
+    let mut procs = sys.process_names();
 
     // insert random key-value pairs
     let keys_count = 10000;
@@ -636,7 +549,7 @@ fn test_migration(config: &TestConfig) -> TestResult {
         let added = format!("{}", config.proc_count + i);
         add_node_and_process(&added, &mut sys, config);
         send_proc_added(&mut sys, &format!("proc-{}", added));
-        procs.push( format!("proc-{}", added));
+        procs.push(format!("proc-{}", added));
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
     }
 
@@ -644,8 +557,8 @@ fn test_migration(config: &TestConfig) -> TestResult {
 
     // remove old N nodes
     for _i in 0..config.proc_count {
-        let removed = &procs[0 as usize];
-        send_proc_removed(&mut sys, &removed);
+        let removed = &procs[0_usize];
+        send_proc_removed(&mut sys, removed);
         procs.remove(0);
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
     }
@@ -656,7 +569,7 @@ fn test_migration(config: &TestConfig) -> TestResult {
 fn test_scale_up_down(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let mut rand = Pcg64::seed_from_u64(config.seed);
-    let mut procs = sys.process_names().clone();
+    let mut procs = sys.process_names();
 
     // insert random key-value pairs
     let keys_count = 1000;
@@ -674,7 +587,7 @@ fn test_scale_up_down(config: &TestConfig) -> TestResult {
         let added = format!("{}", config.proc_count + i);
         add_node_and_process(&added, &mut sys, config);
         send_proc_added(&mut sys, &format!("proc-{}", added));
-        procs.push( format!("proc-{}", added));
+        procs.push(format!("proc-{}", added));
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
     }
 
@@ -683,7 +596,7 @@ fn test_scale_up_down(config: &TestConfig) -> TestResult {
     // remove new N nodes
     for _i in 0..config.proc_count {
         let removed = &procs[config.proc_count as usize];
-        send_proc_removed(&mut sys, &removed);
+        send_proc_removed(&mut sys, removed);
         procs.remove(config.proc_count as usize);
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
     }
@@ -765,11 +678,7 @@ fn test_distribution_node_removed(config: &TestConfig) -> TestResult {
     send_proc_removed(&mut sys, &removed);
 
     // run the system until key the distribution is stabilized
-    let procs: Vec<String> = sys
-        .process_names()
-        .into_iter()
-        .filter(|x| *x != removed)
-        .collect();
+    let procs: Vec<String> = sys.process_names().into_iter().filter(|x| *x != removed).collect();
     step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
     let dist_after = key_distribution(&mut sys)?;
 
@@ -778,7 +687,6 @@ fn test_distribution_node_removed(config: &TestConfig) -> TestResult {
 
     check(&mut sys, &procs, &kv, false, true)
 }
-
 
 // CLI -----------------------------------------------------------------------------------------------------------------
 
@@ -816,13 +724,13 @@ fn main() {
     }
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
 
-    let process_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
+    let process_factory = PyProcessFactory::new(&args.solution_path, "StorageProcess");
     let config = TestConfig {
         process_factory: &process_factory,
         proc_count: args.node_count,
         seed: args.seed,
     };
-    let mut single_config = config.clone();
+    let mut single_config = config;
     single_config.proc_count = 1;
     let mut tests = TestSuite::new();
 
@@ -832,24 +740,12 @@ fn main() {
     tests.add("MEMORY OVERHEAD", test_memory_overhead, config);
     tests.add("NODE ADDED", test_node_added, config);
     tests.add("NODE REMOVED", test_node_removed, config);
-    tests.add(
-        "NODE REMOVED AFTER CRASH",
-        test_node_removed_after_crash,
-        config,
-    );
+    tests.add("NODE REMOVED AFTER CRASH", test_node_removed_after_crash, config);
     tests.add("MIGRATION", test_migration, config);
     tests.add("SCALE UP DOWN", test_scale_up_down, config);
     tests.add("DISTRIBUTION", test_distribution, config);
-    tests.add(
-        "DISTRIBUTION NODE ADDED",
-        test_distribution_node_added,
-        config,
-    );
-    tests.add(
-        "DISTRIBUTION NODE REMOVED",
-        test_distribution_node_removed,
-        config,
-    );
+    tests.add("DISTRIBUTION NODE ADDED", test_distribution_node_added, config);
+    tests.add("DISTRIBUTION NODE REMOVED", test_distribution_node_removed, config);
 
     if args.test.is_none() {
         tests.run();
