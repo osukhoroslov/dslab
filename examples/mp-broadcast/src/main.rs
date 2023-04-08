@@ -87,7 +87,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     if config.debug {
         println!(
             "Messages sent across network: {}",
-            sys.network().borrow_mut().message_count()
+            sys.network().message_count()
         );
         println!("Process histories:");
         for proc in sys.process_names() {
@@ -126,7 +126,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     // VALIDITY
     let mut validity = true;
     for (proc, sent_msgs) in &sent {
-        if sys.node_is_crashed(&sys.node_name(&proc)) {
+        if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
             continue;
         }
         let delivered_msgs = delivered.get(proc).unwrap();
@@ -142,7 +142,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     let mut uniform_agreement = true;
     for msg in all_delivered.iter() {
         for (proc, delivered_msgs) in &delivered {
-            if sys.node_is_crashed(&sys.node_name(&proc)) {
+            if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
                 continue;
             }
             if !delivered_msgs.contains(&msg) {
@@ -170,7 +170,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
             }
             // check that other correct nodes have delivered all past events before delivering the message
             for (dst, delivered_msgs) in &delivered {
-                if sys.node_is_crashed(&sys.node_name(&dst)) {
+                if sys.node_is_crashed(&sys.proc_node_name(&dst)) {
                     continue;
                 }
                 let mut dst_past = HashSet::new();
@@ -258,7 +258,7 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     // simulate that 0 and 1 communicated only with each other and then crashed
     for n in 2..config.proc_count {
-        sys.network().borrow_mut().disconnect_node(&format!("node-{}", &n.to_string()));
+        sys.network().disconnect_node(&format!("node-{}", &n.to_string()));
     }
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
     sys.send_local_message("proc-0", msg.clone());
@@ -272,8 +272,8 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
 fn test_two_crashes2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     // simulate that 1 and 2 communicated only with 0 and then crashed
-    sys.network().borrow_mut().drop_outgoing("node-1");
-    sys.network().borrow_mut().drop_outgoing("node-2");
+    sys.network().drop_outgoing("node-1");
+    sys.network().drop_outgoing("node-2");
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
     sys.send_local_message("proc-0", msg.clone());
     sys.steps(config.proc_count.pow(2));
@@ -285,13 +285,13 @@ fn test_two_crashes2(config: &TestConfig) -> TestResult {
 
 fn test_causal_order(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    sys.network().borrow_mut().set_delays(100., 200.);
+    sys.network().set_delays(100., 200.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
     sys.send_local_message("proc-0", msg.clone());
     while sys.event_log("proc-1").len() == 0 {
         sys.step();
     }
-    sys.network().borrow_mut().set_delays(10., 20.);
+    sys.network().set_delays(10., 20.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "1:How?"));
     sys.send_local_message("proc-1", msg.clone());
 
@@ -299,7 +299,7 @@ fn test_causal_order(config: &TestConfig) -> TestResult {
         sys.step();
     }
 
-    sys.network().borrow_mut().set_delay(1.);
+    sys.network().set_delay(1.);
     let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Fine!"));
     sys.send_local_message("proc-1", msg.clone());
     sys.step_until_no_events();
@@ -323,20 +323,20 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
             let msg = Message::new("SEND", &format!(r#"{{"text": "{}:{}"}}"#, user, i));
             sys.send_local_message(&format!("proc-{}", user), msg.clone());
             if i % 2 == 0 {
-                sys.network().borrow_mut().set_delays(10., 20.);
+                sys.network().set_delays(10., 20.);
             } else {
-                sys.network().borrow_mut().set_delays(1., 2.);
+                sys.network().set_delays(1., 2.);
             }
             for _ in 1..10 {
                 if rand.gen_range(0.0..1.0) > 0.3 {
-                    sys.network().borrow_mut().drop_outgoing(&victim1);
+                    sys.network().drop_outgoing(&victim1);
                 } else {
-                    sys.network().borrow_mut().pass_outgoing(&victim1);
+                    sys.network().pass_outgoing(&victim1);
                 }
                 if rand.gen_range(0.0..1.0) > 0.3 {
-                    sys.network().borrow_mut().drop_outgoing(&victim2);
+                    sys.network().drop_outgoing(&victim2);
                 } else {
-                    sys.network().borrow_mut().pass_outgoing(&victim2);
+                    sys.network().pass_outgoing(&victim2);
                 }
                 sys.steps(rand.gen_range(1..5));
             }
@@ -365,7 +365,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
         let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
         sys.send_local_message("proc-0", msg.clone());
         sys.step_until_no_events();
-        msg_counts.push(sys.network().borrow_mut().message_count());
+        msg_counts.push(sys.network().message_count());
     }
     println!("\nMessage count:");
     for i in 0..sys_sizes.len() {
