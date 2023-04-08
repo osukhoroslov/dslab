@@ -66,7 +66,7 @@ fn init_logger(level: LevelFilter) {
 
 fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
     let mut sys = System::new(config.seed);
-    sys.network().borrow_mut().set_delays(0.01, 0.1);
+    sys.network().set_delays(0.01, 0.1);
     let mut proc_names = Vec::new();
     for n in 0..config.proc_count {
         proc_names.push(format!("proc-{}", n));
@@ -182,7 +182,7 @@ fn count_records(sys: &mut System, proc: &str) -> Result<u64, String> {
 
 fn send_proc_added(sys: &mut System, added: &str) {
     for proc in sys.process_names() {
-        if sys.process_is_crashed(&proc) {
+        if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
             continue;
         }
         sys.send_local_message(&proc, Message::new("NODE_ADDED", &format!(r#"{{"id": "{}"}}"#, added)));
@@ -191,7 +191,7 @@ fn send_proc_added(sys: &mut System, added: &str) {
 
 fn send_proc_removed(sys: &mut System, removed: &str) {
     for proc in sys.process_names() {
-        if sys.process_is_crashed(&proc) {
+        if sys.node_is_crashed(&sys.proc_node_name(&proc)) {
             continue;
         }
         sys.send_local_message(
@@ -518,7 +518,7 @@ fn test_node_removed_after_crash(config: &TestConfig) -> TestResult {
     for k in crashed_keys {
         kv.remove(&k);
     }
-    sys.crash_node(&sys.process_node(&crashed));
+    sys.crash_node(&sys.proc_node_name(&crashed));
     send_proc_removed(&mut sys, &crashed);
 
     // run the system until key the distribution is stabilized
