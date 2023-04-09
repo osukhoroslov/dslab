@@ -19,7 +19,7 @@ fn test_constant_model() {
         memory_util: None,
         memory_read_util: Some(1.),
         memory_write_util: Some(1.),
-        hdd_util: None,
+        hdd_state: None,
     };
     assert_eq!(model.get_power(state), 0.5);
 }
@@ -45,7 +45,7 @@ fn test_micron_model() {
         memory_util: None,
         memory_read_util: Some(0.),
         memory_write_util: Some(0.),
-        hdd_util: None,
+        hdd_state: None,
     };
     assert!(model.get_power(state.clone()) > 23.4);
     assert!(model.get_power(state.clone()) < 23.41);
@@ -55,7 +55,7 @@ fn test_micron_model() {
         memory_util: Some(0.5),
         memory_read_util: Some(0.4),
         memory_write_util: Some(0.8),
-        hdd_util: None,
+        hdd_state: None,
     };
     assert!(model.get_power(state.clone()) > 62.27);
     assert!(model.get_power(state.clone()) < 62.29);

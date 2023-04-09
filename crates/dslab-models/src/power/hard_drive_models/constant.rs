@@ -1,6 +1,6 @@
 //! Constant hard drive power model.
 
-use crate::power::hard_drive::HardDrivePowerModel;
+use crate::power::hard_drive::{HardDrivePowerModel, HardDriveState};
 
 /// A power model using a constant power consumption value.
 #[derive(Clone)]
@@ -18,7 +18,7 @@ impl ConstantPowerModel {
 }
 
 impl HardDrivePowerModel for ConstantPowerModel {
-    fn get_power(&self, _utilization: f64) -> f64 {
+    fn get_power(&self, _hdd_state: HardDriveState) -> f64 {
         self.power
     }
 }

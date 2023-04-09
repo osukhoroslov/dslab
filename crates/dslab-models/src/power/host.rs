@@ -2,7 +2,7 @@
 
 use crate::power::cpu::CpuPowerModel;
 use crate::power::cpu_models::constant::ConstantPowerModel;
-use crate::power::hard_drive::HardDrivePowerModel;
+use crate::power::hard_drive::{HardDrivePowerModel, HardDriveState};
 use crate::power::memory::MemoryPowerModel;
 
 /// Current host state properties essential to compute current host power consumption.
@@ -11,7 +11,7 @@ use crate::power::memory::MemoryPowerModel;
 /// `memory_util` - memory utilization from 0. to 1.
 /// `memory_read_util` - memory read footprint utilization from 0. to 1.
 /// `memory_write_util` - memory read footprint utilization from 0. to 1.
-/// `hdd_util` - hard drive utilization from 0. to 1.
+/// `hdd_state` - hard drive utilization from 0. to 1.
 ///
 /// If both `memory_read_util` and `memory_write_util` are both set, they are used instead of `memory_util`.
 #[derive(Clone)]
@@ -24,8 +24,8 @@ pub struct HostState {
     pub memory_read_util: Option<f64>,
     /// `memory_write_util` - memory read footprint utilization from 0. to 1.
     pub memory_write_util: Option<f64>,
-    /// `hdd_util` - hard drive utilization from 0. to 1.
-    pub hdd_util: Option<f64>,
+    /// `hdd_state` - hard drive utilization from 0. to 1.
+    pub hdd_state: Option<HardDriveState>,
 }
 
 impl HostState {
@@ -36,7 +36,7 @@ impl HostState {
             memory_util: None,
             memory_read_util: None,
             memory_write_util: None,
-            hdd_util: None,
+            hdd_state: None,
         }
     }
 
@@ -47,18 +47,18 @@ impl HostState {
             memory_util: Some(memory_util),
             memory_read_util: None,
             memory_write_util: None,
-            hdd_util: None,
+            hdd_state: None,
         }
     }
 
     /// Shortcut for building HostState from HDD utilization only.
-    pub fn hard_drive(hdd_util: f64) -> Self {
+    pub fn hard_drive(hdd_state: HardDriveState) -> Self {
         Self {
             cpu_util: None,
             memory_util: None,
             memory_read_util: None,
             memory_write_util: None,
-            hdd_util: Some(hdd_util),
+            hdd_state: Some(hdd_state),
         }
     }
 }
@@ -144,8 +144,8 @@ impl HostPowerModel {
             }
         }
         if let Some(model) = &self.hard_drive_power_model {
-            if let Some(hdd_util) = &host_state.hdd_util {
-                result += model.get_power(*hdd_util);
+            if let Some(hdd_state) = &host_state.hdd_state {
+                result += model.get_power(*hdd_state);
             }
         }
         result += self.other_power;
