@@ -39,8 +39,10 @@ impl PendingEvents {
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
         match &event {
-            McEvent::MessageReceived { .. } => {
-                self.available_events.insert(id);
+            McEvent::MessageReceived { msg, .. } => {
+                if self.resolver.add_message(msg.clone(), id) {
+                    self.available_events.insert(id);
+                }
             }
             McEvent::TimerFired {
                 proc,
@@ -98,6 +100,12 @@ impl PendingEvents {
         if let McEvent::TimerFired { .. } = result {
             let unblocked_events = self.resolver.remove_timer(event_id);
             self.available_events.extend(unblocked_events);
+        }
+        if let McEvent::MessageReceived { msg, .. } = result.clone() {
+            let unblocked_event = self.resolver.remove_message(msg, event_id);
+            if let Some(new_available) = unblocked_event {
+                self.available_events.insert(new_available);
+            }
         }
         result
     }

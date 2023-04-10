@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::events::{McEventId, McTime};
+use crate::message::Message;
 
 /// Tracks and enforces dependencies between events.
 ///
@@ -18,6 +19,7 @@ use crate::mc::events::{McEventId, McTime};
 #[derive(Default, Clone, Hash, Eq, PartialEq)]
 pub struct DependencyResolver {
     timers: BTreeMap<McEventId, TimerInfo>,
+    messages: BTreeMap<Message, Vec<McEventId>>,
     proc_timers: BTreeMap<String, BTreeSet<McEventId>>,
 }
 
@@ -63,5 +65,22 @@ impl DependencyResolver {
             }
         }
         unblocked
+    }
+
+    pub fn add_message(&mut self, msg: Message, event_id: McEventId) -> bool {
+        let vec_ref = self.messages.entry(msg).or_default();
+        vec_ref.push(event_id);
+        vec_ref.len() == 1
+    }
+
+    pub fn remove_message(&mut self, msg: Message, event_id: McEventId) -> Option<McEventId> {
+        let ids = self.messages.get_mut(&msg).unwrap();
+        let index_event = ids.iter().position(|id| *id == event_id).unwrap();
+        ids.remove(index_event);
+        if index_event == 0 && !ids.is_empty() {
+            Some(ids[0])
+        } else {
+            None
+        }
     }
 }
