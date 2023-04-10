@@ -22,5 +22,5 @@ pub trait Process {
     }
 
     /// Restores the process state by its string representation.
-    fn set_state(&self, _data: &String) {}
+    fn set_state(&self, _data: &str) {}
 }

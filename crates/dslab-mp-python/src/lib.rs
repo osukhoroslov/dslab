@@ -174,7 +174,7 @@ impl Process for PyProcess {
         })
     }
 
-    fn set_state(&self, data: &String) {
+    fn set_state(&self, data: &str) {
         Python::with_gil(|py| {
             self.proc
                 .call_method1(py, "set_state", (data,))
