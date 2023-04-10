@@ -8,21 +8,29 @@ JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 
 class Message:
     def __init__(self, message_type: str, data: Dict[str, Any]):
-        self.message_type = message_type
-        self.data = data
+        self._type = message_type
+        self._data = data
 
     @property
     def type(self) -> str:
-        return self.message_type
+        return self._type
 
     def __getitem__(self, key: str) -> Any:
-        return self.data[key]
+        return self._data[key]
 
     def __setitem__(self, key: str, value: Any):
-        self.data[key] = value
+        self._data[key] = value
 
     def remove(self, key: str):
-        self.data.pop(key, None)
+        self._data.pop(key, None)
+
+    def serialize(self) -> str:
+        return {'message_type': self._type, 'data': self._data}
+
+    @staticmethod
+    def deserialize(data: str) -> Message:
+        return Message(data['message_type'], data['data'])
+
 
     @staticmethod
     def from_inner_data(type: str, data: str) -> Message:
@@ -41,8 +49,7 @@ class Context(object):
         Sends a message to the specified process.
         """
         if not isinstance(to, str):
-            raise TypeError(
-                'to argument has to be string, not {}'.format(type(to)))
+            raise TypeError('to argument has to be string, not {}'.format(type(to)))
         self._sent_messages.append((msg.type, json.dumps(msg.data), to))
 
     def send_local(self, msg: Message):
@@ -57,11 +64,9 @@ class Context(object):
         If there is an active timer with this name, its delay is overridden.
         """
         if not isinstance(timer_name, str):
-            raise TypeError(
-                'timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
         if not isinstance(delay, (int, float)):
-            raise TypeError(
-                'delay argument has to be int or float, not {}'.format(type(delay)))
+            raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
         self._timer_actions.append((timer_name, delay, False))
@@ -72,11 +77,9 @@ class Context(object):
         If there is an active timer with this name, this call is ignored.
         """
         if not isinstance(timer_name, str):
-            raise TypeError(
-                'timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
         if not isinstance(delay, (int, float)):
-            raise TypeError(
-                'delay argument has to be int or float, not {}'.format(type(delay)))
+            raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
             raise ValueError('delay argument has to be non-negative')
         self._timer_actions.append((timer_name, delay, True))
@@ -86,8 +89,7 @@ class Context(object):
         Cancels timer with the specified name.
         """
         if not isinstance(timer_name, str):
-            raise TypeError(
-                'timer_name argument has to be str, not {}'.format(type(timer_name)))
+            raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
         self._timer_actions.append((timer_name, -1, False))
 
     def time(self) -> float:
@@ -101,14 +103,14 @@ class StateMember:
     def __init__(self, t: JSON):
         self.inner = t
 
-    def serialize(self):
+    def serialize(self) -> str:
         """
         Creates a string representation of the inner object.
         """
         return json.dumps(self.inner, default=StateMember._serialize_obj)
 
     @staticmethod
-    def deserialize(state):
+    def deserialize(state: str) -> StateMember:
         """
         Creates a StateMember from string representation of the inner object.
         It is guaranteed that StateMember.deserialize(x.serialize()) == x.
