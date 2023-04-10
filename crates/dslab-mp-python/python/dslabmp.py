@@ -118,10 +118,10 @@ class StateMember:
     @staticmethod
     def _serialize_obj(obj):
         """
-        For custom objects serialization chooses an approach:
-        1. [RECOMMENDED] Any object can specify its serialization to JSON if serialize(self) function is specified.
-        Have a look at DataClass in python-tests/process.py for an example.
-        2. [DEFAULT] Object is saved by its __dict__ representation.
+        Serializes objects using the following approaches:
+        1. Calls `obj.serialize()` method that should return a JSON serializable representation of obj.
+        It is recommended to implement this method for user-defined classes (see the Message class above for example).
+        2. If `serialize` method is not found, resorts to using the `obj.__dict__` representation.
         """
         res = {}
         if hasattr(obj, 'serialize'):
@@ -135,10 +135,12 @@ class StateMember:
     @staticmethod
     def _deserialize_obj(dct):
         """
-        For custom objects deserialization chooses an approach:
-        1. [RECOMMENDED] Any object can specify its deserialization to JSON if deserialize() static function is specified.
-        Have a look at DataClass in python-tests/process.py for an example. 
-        2. [DEFAULT] Object is created from its __dict__ representation through constructor.
+        Deserializes objects using the following approaches:
+        1. Calls `deserialize()` static method of the object's class that should recreate the object from the passed
+        JSON serializable representation. It is recommended to implement this method for user-defined classes
+        (see the Message class above for example).
+        2. If `deserialize()` method is not found, resorts to creating the object from its `__dict__` representation 
+        through constructor.
         """
         if '_module' in dct:
             cls = getattr(sys.modules[dct['_module']], dct['_class'])
