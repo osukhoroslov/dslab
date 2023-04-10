@@ -22,11 +22,11 @@ class Message:
     def remove(self, key: str):
         self._data.pop(key, None)
 
-    def serialize(self) -> str:
+    def serialize(self) -> Dict[str, Any]:
         return {'message_type': self._type, 'data': self._data}
 
     @staticmethod
-    def deserialize(data: str) -> Message:
+    def deserialize(data: Dict[str, Any]) -> Message:
         return Message(data['message_type'], data['data'])
 
 
@@ -48,13 +48,13 @@ class Context(object):
         """
         if not isinstance(to, str):
             raise TypeError('to argument has to be string, not {}'.format(type(to)))
-        self._sent_messages.append((msg.type, json.dumps(msg.data), to))
+        self._sent_messages.append((msg.type, json.dumps(msg._data), to))
 
     def send_local(self, msg: Message):
         """
         Sends a _local_ message.
         """
-        self._sent_local_messages.append((msg.type, json.dumps(msg.data)))
+        self._sent_local_messages.append((msg.type, json.dumps(msg._data)))
 
     def set_timer(self, timer_name: str, delay: float):
         """

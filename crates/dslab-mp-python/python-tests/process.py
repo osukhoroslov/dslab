@@ -48,8 +48,8 @@ class TestProcess(Process):
         except AttributeError:
             return
         except:
-            raise 'Incorrect exception raised when addressing not-existing member'
-        raise 'No exception raised when addressing not-existing member'
+            raise Exception('Incorrect exception raised when addressing not-existing member')
+        raise Exception('No exception raised when addressing not-existing member')
 
     def on_message(self, msg: Message, sender: str, ctx: Context):
         # process messages from server
