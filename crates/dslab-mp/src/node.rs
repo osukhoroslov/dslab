@@ -5,6 +5,7 @@ use std::rc::Rc;
 use colored::*;
 
 use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
+use serde::Serialize;
 
 use crate::context::Context;
 use crate::events::{MessageReceived, TimerFired};

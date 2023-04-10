@@ -31,7 +31,7 @@ struct TimerInfo {
 
 impl DependencyResolver {
     pub fn add_timer(&mut self, proc: String, delay: McTime, event_id: McEventId) -> bool {
-        println!("+ {}", event_id);
+        // println!("+ {}", event_id);
         let proc_timers = self.proc_timers.entry(proc.clone()).or_default();
         let mut blockers = BTreeSet::default();
         for id in proc_timers.iter() {
@@ -51,7 +51,7 @@ impl DependencyResolver {
     }
 
     pub fn remove_timer(&mut self, event_id: McEventId) -> BTreeSet<McEventId> {
-        println!("- {}", event_id);
+        // println!("- {}", event_id);
         let timer = self.timers.remove(&event_id).unwrap();
         let proc_timers = self.proc_timers.get_mut(&timer.proc).unwrap();
         assert!(proc_timers.remove(&event_id));

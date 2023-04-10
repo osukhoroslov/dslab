@@ -40,7 +40,7 @@ impl PendingEvents {
     /// Stores the passed event under the specified id (should not already exist).
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
-        println!("event add fixed {} {:?}", id, event);
+        // println!("event add fixed {} {:?}", id, event);
         match &event {
             McEvent::MessageReceived { msg, src, dest, ..} => {
                 if self.resolver.add_message(msg.clone(), src.clone(), dest.clone(), id) {
@@ -136,7 +136,7 @@ impl PendingEvents {
 
     /// Removes available event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
-        println!("event pop {}", event_id);
+        // println!("event pop {}", event_id);
         let result = self.events.remove(&event_id).unwrap();
         self.directives.remove(&event_id);
         self.available_events.remove(&event_id);
