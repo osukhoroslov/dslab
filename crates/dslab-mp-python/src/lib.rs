@@ -120,7 +120,7 @@ impl Process for PyProcess {
         Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
-                .call_method1(py, "from_inner_data", (msg.tip, msg.data))
+                .call_method1(py, "from_json_str", (msg.tip, msg.data))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
@@ -136,7 +136,7 @@ impl Process for PyProcess {
         Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
-                .call_method1(py, "from_inner_data", (msg.tip, msg.data))
+                .call_method1(py, "from_json_str", (msg.tip, msg.data))
                 .unwrap();
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc

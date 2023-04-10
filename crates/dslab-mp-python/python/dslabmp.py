@@ -4,11 +4,9 @@ import json
 import sys
 from typing import Any, Dict, List, Tuple, Union
 
-JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
-
 class Message:
-    def __init__(self, message_type: str, data: Dict[str, Any]):
-        self._type = message_type
+    def __init__(self, type_: str, data: Dict[str, Any]):
+        self._type = type_
         self._data = data
 
     @property
@@ -33,8 +31,8 @@ class Message:
 
 
     @staticmethod
-    def from_inner_data(type: str, data: str) -> Message:
-        return Message(type, json.loads(data))
+    def from_json_str(type_: str, data: str) -> Message:
+        return Message(type_, json.loads(data))
 
 
 class Context(object):
@@ -100,7 +98,7 @@ class Context(object):
 
 
 class StateMember:
-    def __init__(self, t: JSON):
+    def __init__(self, t: Any):
         self.inner = t
 
     def serialize(self) -> str:
