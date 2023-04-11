@@ -121,10 +121,7 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            MessageDropped { id: message_id, .. } => {
-                self.take_event(system, message_id);
-                self.apply_event(system, event_id, false, false)?;
-            }
+            _ => {}
         }
 
         Ok(())
@@ -139,9 +136,9 @@ pub trait Strategy {
         src: String,
         dest: String,
     ) -> Result<(), String> {
-        let state = system.get_state();
+        self.take_event(system, event_id);
 
-        self.add_event(
+        let drop_event_id = self.add_event(
             system,
             MessageDropped {
                 id: event_id,
@@ -151,12 +148,7 @@ pub trait Strategy {
             },
         );
 
-        let new_state = system.get_state();
-        if !self.have_visited(&new_state) {
-            self.search_step_impl(system, new_state)?;
-        }
-
-        system.set_state(state);
+        self.apply_event(system, drop_event_id, false, false)?;
 
         Ok(())
     }
