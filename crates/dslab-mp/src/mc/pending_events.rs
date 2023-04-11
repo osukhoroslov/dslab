@@ -43,9 +43,9 @@ impl PendingEvents {
         // println!("event add fixed {} {:?}", id, event);
         match &event {
             McEvent::MessageReceived { msg, .. } => {
-                // if self.resolver.add_message(msg.clone(), id) {
+                if self.resolver.add_message(msg.clone(), id) {
                     self.available_events.insert(id);
-                // }
+                }
             }
             McEvent::TimerFired {
                 proc,
@@ -144,12 +144,12 @@ impl PendingEvents {
             let unblocked_events = self.resolver.remove_timer(event_id);
             self.available_events.extend(unblocked_events);
         }
-        // if let McEvent::MessageReceived { msg, .. } = result.clone() {
-        //     let unblocked_event = self.resolver.remove_message(msg, event_id);
-        //     if let Some(new_available) = unblocked_event {
-        //         self.available_events.insert(new_available);
-        //     }
-        // }
+        if let McEvent::MessageReceived { msg, .. } = result.clone() {
+            let unblocked_event = self.resolver.remove_message(msg, event_id);
+            if let Some(new_available) = unblocked_event {
+                self.available_events.insert(new_available);
+            }
+        }
         result
     }
 }
