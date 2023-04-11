@@ -1,9 +1,12 @@
 //! Implementation of model checking BFS search strategy.
 
 use std::collections::VecDeque;
+use colored::*;
 
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
+
+use crate::util::t;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
 pub struct Bfs {
@@ -63,6 +66,9 @@ impl Bfs {
 
 impl Strategy for Bfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+        if self.execution_mode == ExecutionMode::Default {
+            t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())
+        }
         let res = self.bfs(system);
         match res {
             Ok(()) => Ok(self.summary.clone()),

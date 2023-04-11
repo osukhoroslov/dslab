@@ -1,7 +1,10 @@
 //! Implementation of model checking DFS search strategy.
 
+use colored::*;
+
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
+use crate::util::t;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
 pub struct Dfs {
@@ -48,6 +51,9 @@ impl Dfs {
 
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+        if self.execution_mode == ExecutionMode::Default {
+            t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())
+        }
         let state = system.get_state();
 
         let res = self.dfs(system, state);
