@@ -195,7 +195,6 @@ pub trait Strategy {
         } else {
             event = self.take_event(system, event_id);
         }
-        println!("apply event {:?}", event);
         if corrupt {
             event = self.corrupt_msg_data(event, system.search_depth());
         }
