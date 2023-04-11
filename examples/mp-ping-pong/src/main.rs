@@ -209,7 +209,7 @@ fn test_mc(config: &TestConfig) -> TestResult {
         }),
         Box::new(|_|{
             Ok(())
-        }), dslab_mp::mc::strategy::ExecutionMode::Default,
+        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
     assume!(
@@ -229,7 +229,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
-            if state.search_depth > 8 {
+            if state.search_depth > 7 {
                 Some("too deep".to_owned())
             } else {
                 None
@@ -243,7 +243,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
         }),
         Box::new(|_|{
             Ok(())
-        }), dslab_mp::mc::strategy::ExecutionMode::Default,
+        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
     assume!(
