@@ -79,10 +79,15 @@ pub trait Strategy {
     fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
         let event = self.clone_event(system, event_id);
         match event {
-            MessageReceived { options, .. } => {
+            MessageReceived {
+                msg,
+                src,
+                dest,
+                options,
+            } => {
                 match options {
                     DeliveryOptions::NoFailures(..) => self.apply_event(system, event_id, false, false)?,
-                    DeliveryOptions::Dropped => self.process_drop_event(system, event_id)?,
+                    DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
                         max_dupl_count,
@@ -90,7 +95,7 @@ pub trait Strategy {
                     } => {
                         // Drop
                         if can_be_dropped {
-                            self.process_drop_event(system, event_id)?;
+                            self.process_drop_event(system, event_id, msg, src, dest)?;
                         }
 
                         // Default (normal / corrupt)
@@ -126,27 +131,25 @@ pub trait Strategy {
     }
 
     /// Processes event dropping.
-    fn process_drop_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
+    fn process_drop_event(
+        &mut self,
+        system: &mut McSystem,
+        event_id: McEventId,
+        msg: Message,
+        src: String,
+        dest: String,
+    ) -> Result<(), String> {
         let state = system.get_state();
 
-        let event = self.clone_event(system, event_id);
-
-        match event {
-            MessageReceived { msg, src, dest, .. } => {
-                self.add_event(
-                    system,
-                    MessageDropped {
-                        id: event_id,
-                        msg,
-                        src,
-                        dest,
-                    },
-                );
-            }
-            _ => {
-                return Err("cannot drop missing message".to_owned());
-            }
-        }
+        self.add_event(
+            system,
+            MessageDropped {
+                id: event_id,
+                msg,
+                src,
+                dest,
+            },
+        );
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
