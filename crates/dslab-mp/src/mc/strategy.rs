@@ -138,14 +138,7 @@ pub trait Strategy {
     ) -> Result<(), String> {
         self.take_event(system, event_id);
 
-        let drop_event_id = self.add_event(
-            system,
-            MessageDropped {
-                msg,
-                src,
-                dest,
-            },
-        );
+        let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
         self.apply_event(system, drop_event_id, false, false)?;
 
