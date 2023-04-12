@@ -38,7 +38,6 @@ pub enum McEvent {
         timer: String,
     },
     MessageDropped {
-        id: McEventId,
         msg: Message,
         src: String,
         dest: String,
