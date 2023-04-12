@@ -52,7 +52,6 @@ impl DependencyResolver {
 
     pub fn remove_timer(&mut self, event_id: McEventId) -> BTreeSet<McEventId> {
         let timer = self.timers.remove(&event_id).unwrap();
-        assert!(timer.blockers.is_empty(), "trying to remove blocked timer");
         let proc_timers = self.proc_timers.get_mut(&timer.proc).unwrap();
         assert!(proc_timers.remove(&event_id));
 
