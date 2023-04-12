@@ -141,7 +141,6 @@ pub trait Strategy {
         let drop_event_id = self.add_event(
             system,
             MessageDropped {
-                id: event_id,
                 msg,
                 src,
                 dest,
