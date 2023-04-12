@@ -20,6 +20,9 @@ pub enum ExecutionMode {
     /// Default execution mode with reduced output intended for regular use.
     Default,
 
+    /// Collect statistics and states, but ignore debug output
+    Experiment,
+
     /// Execution with verbose output intended for debugging purposes.
     /// Runs slower than the default mode.
     Debug,
@@ -284,6 +287,7 @@ pub trait Strategy {
     {
         match log_mode {
             ExecutionMode::Debug => VisitedStates::Full(HashSet::default()),
+            ExecutionMode::Experiment => VisitedStates::Full(HashSet::default()),
             ExecutionMode::Default => VisitedStates::Partial(HashSet::default()),
         }
     }
@@ -316,9 +320,14 @@ pub trait Strategy {
 
     /// Adds new information to model checking execution summary.
     fn update_summary(&mut self, status: String) {
-        if let ExecutionMode::Debug = self.execution_mode() {
-            let counter = self.summary().states.entry(status).or_insert(0);
+        let update = |strategy: &mut Self| {
+            let counter = strategy.summary().states.entry(status).or_insert(0);
             *counter += 1;
+        };
+        match &self.execution_mode() {
+            ExecutionMode::Debug => update(self),
+            ExecutionMode::Experiment => update(self),
+            ExecutionMode::Default => {},
         }
     }
 
