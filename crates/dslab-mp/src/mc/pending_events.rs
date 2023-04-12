@@ -5,7 +5,7 @@ use crate::mc::dependency::DependencyResolver;
 use crate::mc::events::{McEvent, McEventId};
 
 /// Stores pending events and provides a convenient interface for working with them.  
-#[derive(Default, Clone, Hash, Eq, PartialEq)]
+#[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct PendingEvents {
     events: BTreeMap<McEventId, McEvent>,
     timer_mapping: BTreeMap<(String, String), usize>,

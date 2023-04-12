@@ -12,6 +12,7 @@ use crate::mc::pending_events::PendingEvents;
 
 use super::events::McEventId;
 
+#[derive(Debug)]
 pub struct McState {
     pub node_states: BTreeMap<String, McNodeState>,
     pub events: PendingEvents,

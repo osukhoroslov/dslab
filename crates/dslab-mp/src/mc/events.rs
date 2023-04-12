@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::message::Message;
 
-#[derive(Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum DeliveryOptions {
     /// Message will be received exactly once without corruption with specified max delay
     NoFailures(McTime),
@@ -20,7 +20,7 @@ pub enum DeliveryOptions {
 pub type McTime = OrderedFloat<f64>;
 pub type McEventId = usize;
 
-#[derive(Serialize, Clone, Eq, Hash, PartialEq)]
+#[derive(Serialize, Clone, Eq, Hash, PartialEq, Debug)]
 pub enum McEvent {
     MessageReceived {
         msg: Message,

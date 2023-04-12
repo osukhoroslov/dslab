@@ -13,7 +13,7 @@ use crate::network::Network;
 use crate::process::Process;
 use crate::util::t;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EventLogEntry {
     pub time: f64,
     pub event: ProcessEvent,
@@ -25,13 +25,13 @@ impl EventLogEntry {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TimerBehavior {
     SetOnce,
     OverrideExisting,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ProcessEvent {
     MessageSent {
         msg: Message,

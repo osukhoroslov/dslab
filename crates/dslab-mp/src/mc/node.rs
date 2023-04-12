@@ -10,6 +10,8 @@ use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
+
+#[derive(Debug)]
 pub struct ProcessEntryState {
     pub proc_state: Box<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,

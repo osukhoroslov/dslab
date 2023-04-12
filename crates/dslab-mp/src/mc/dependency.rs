@@ -16,14 +16,14 @@ use crate::message::Message;
 /// in the order of their activation).
 /// The inverse is generally not true - a new timer cannot block any existing timer with larger delay, because
 /// we do not know exactly the time moments when these timers were activated.
-#[derive(Default, Clone, Hash, Eq, PartialEq)]
+#[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct DependencyResolver {
     timers: BTreeMap<McEventId, TimerInfo>,
     messages: BTreeMap<Message, Vec<McEventId>>,
     proc_timers: BTreeMap<String, BTreeSet<McEventId>>,
 }
 
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq, Debug)]
 struct TimerInfo {
     proc: String,
     delay: McTime,
