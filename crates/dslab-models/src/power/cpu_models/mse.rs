@@ -9,7 +9,7 @@ use crate::power::cpu::CpuPowerModel;
 /// where `r` is the calibration parameter that is chosen such as to minimize the mean squared error (MSE)
 /// to the actual power measurements (1.4 in the original study).
 #[derive(Clone)]
-pub struct MsePowerModel {
+pub struct MseCpuPowerModel {
     #[allow(dead_code)]
     max_power: f64,
     min_power: f64,
@@ -17,7 +17,7 @@ pub struct MsePowerModel {
     factor: f64,
 }
 
-impl MsePowerModel {
+impl MseCpuPowerModel {
     /// Creates a MSE power model.
     ///
     /// * `max_power` - The maximum power consumption in W (at 100% utilization).
@@ -33,7 +33,7 @@ impl MsePowerModel {
     }
 }
 
-impl CpuPowerModel for MsePowerModel {
+impl CpuPowerModel for MseCpuPowerModel {
     fn get_power(&self, utilization: f64) -> f64 {
         self.min_power + self.factor * (2. * utilization - utilization.powf(self.r_param))
     }

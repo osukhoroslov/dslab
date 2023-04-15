@@ -4,11 +4,11 @@ use crate::power::memory::MemoryPowerModel;
 
 /// A power model using a constant power consumption value.
 #[derive(Clone)]
-pub struct ConstantPowerModel {
+pub struct ConstantMemoryPowerModel {
     power: f64,
 }
 
-impl ConstantPowerModel {
+impl ConstantMemoryPowerModel {
     /// Creates a constant power model.
     ///
     /// * `power` - The power consumption in W.
@@ -17,12 +17,12 @@ impl ConstantPowerModel {
     }
 }
 
-impl MemoryPowerModel for ConstantPowerModel {
-    fn get_power(&self, _utilization: f64) -> f64 {
+impl MemoryPowerModel for ConstantMemoryPowerModel {
+    fn get_power_simple(&self, _utilization: f64) -> f64 {
         self.power
     }
 
-    fn get_power_adv(&self, _read_util: f64, _write_util: f64) -> f64 {
+    fn get_power_advanced(&self, _read_util: f64, _write_util: f64) -> f64 {
         self.power
     }
 }

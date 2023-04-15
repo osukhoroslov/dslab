@@ -1,6 +1,6 @@
 use dslab_core::simulation::Simulation;
 
-use dslab_models::power::cpu_models::constant::ConstantPowerModel;
+use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
 use dslab_iaas::core::common::Allocation;
@@ -383,7 +383,7 @@ fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let power_model = HostPowerModel::cpu_only(Box::new(ConstantPowerModel::new(1.)));
+    let power_model = HostPowerModel::cpu_only(Box::new(ConstantCpuPowerModel::new(1.)));
     cloud_sim.set_host_power_model(power_model);
 
     let h = cloud_sim.add_host("h", 30, 30);

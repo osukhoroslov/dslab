@@ -9,11 +9,11 @@ use crate::power::cpu::CpuPowerModel;
 ///
 /// The power consumption is computed using linear interpolation between the closest measurements.
 #[derive(Clone)]
-pub struct EmpiricalPowerModel {
+pub struct EmpiricalCpuPowerModel {
     measurements: Vec<f64>,
 }
 
-impl EmpiricalPowerModel {
+impl EmpiricalCpuPowerModel {
     /// Creates an empirical power model.
     ///
     /// * `measurements` - Power consumption measurements for utilization levels from 0% to 100% with 10% step.
@@ -35,7 +35,7 @@ impl EmpiricalPowerModel {
     }
 }
 
-impl CpuPowerModel for EmpiricalPowerModel {
+impl CpuPowerModel for EmpiricalCpuPowerModel {
     fn get_power(&self, utilization: f64) -> f64 {
         if utilization % 0.1 == 0. {
             self.measurements[(utilization * 10.) as usize]

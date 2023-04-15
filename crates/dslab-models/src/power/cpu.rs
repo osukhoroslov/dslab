@@ -3,6 +3,7 @@
 use dyn_clone::{clone_trait_object, DynClone};
 
 /// A model for estimating the power consumption of CPU based on its utilization.
+/// Can also be used to model the power consumption of a whole host based on CPU utilization.
 pub trait CpuPowerModel: DynClone {
     /// Returns CPU power consumption in W.
     ///

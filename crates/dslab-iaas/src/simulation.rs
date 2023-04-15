@@ -10,7 +10,7 @@ use sugars::{rc, refcell};
 use dslab_core::context::SimulationContext;
 use dslab_core::simulation::Simulation;
 use dslab_core::Id;
-use dslab_models::power::cpu_models::linear::LinearPowerModel;
+use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
 use crate::core::config::SimulationConfig;
@@ -80,7 +80,7 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            host_power_model: HostPowerModel::cpu_only(Box::new(LinearPowerModel::new(1., 0.4))),
+            host_power_model: HostPowerModel::cpu_only(Box::new(LinearCpuPowerModel::new(1., 0.4))),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             batch_mode: false,
             batch_buffer: Vec::new(),

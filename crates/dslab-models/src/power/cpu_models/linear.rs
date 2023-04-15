@@ -4,14 +4,14 @@ use crate::power::cpu::CpuPowerModel;
 
 /// A power model based on linear interpolation between the minimum and maximum power consumption values.
 #[derive(Clone)]
-pub struct LinearPowerModel {
+pub struct LinearCpuPowerModel {
     #[allow(dead_code)]
     max_power: f64,
     min_power: f64,
     factor: f64,
 }
 
-impl LinearPowerModel {
+impl LinearCpuPowerModel {
     /// Creates a linear power model.
     ///
     /// * `max_power` - The maximum power consumption in W (at 100% utilization).
@@ -25,7 +25,7 @@ impl LinearPowerModel {
     }
 }
 
-impl CpuPowerModel for LinearPowerModel {
+impl CpuPowerModel for LinearCpuPowerModel {
     fn get_power(&self, utilization: f64) -> f64 {
         self.min_power + self.factor * utilization
     }

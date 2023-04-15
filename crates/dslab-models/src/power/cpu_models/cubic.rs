@@ -4,14 +4,14 @@ use crate::power::cpu::CpuPowerModel;
 
 /// A power model based on cubic interpolation between the minimum and maximum power consumption values.
 #[derive(Clone)]
-pub struct CubicPowerModel {
+pub struct CubicCpuPowerModel {
     #[allow(dead_code)]
     max_power: f64,
     min_power: f64,
     factor: f64,
 }
 
-impl CubicPowerModel {
+impl CubicCpuPowerModel {
     /// Creates a cubic power model.
     ///
     /// * `max_power` - The maximum power consumption in W (at 100% utilization).
@@ -25,7 +25,7 @@ impl CubicPowerModel {
     }
 }
 
-impl CpuPowerModel for CubicPowerModel {
+impl CpuPowerModel for CubicCpuPowerModel {
     fn get_power(&self, utilization: f64) -> f64 {
         self.min_power + self.factor * utilization.powf(3.)
     }

@@ -12,7 +12,7 @@ use crate::power::cpu::CpuPowerModel;
 /// where `tau` is the utilization level at which the server attains asymptotic (close to linear) power consumption,
 /// which is typically in the 0.5-0.8 range.
 #[derive(Clone)]
-pub struct AsymptoticPowerModel {
+pub struct AsymptoticCpuPowerModel {
     #[allow(dead_code)]
     max_power: f64,
     min_power: f64,
@@ -20,7 +20,7 @@ pub struct AsymptoticPowerModel {
     factor: f64,
 }
 
-impl AsymptoticPowerModel {
+impl AsymptoticCpuPowerModel {
     /// Creates an asymptotic power model.
     ///
     /// * `max_power` - The maximum power consumption in W (at 100% utilization).
@@ -36,7 +36,7 @@ impl AsymptoticPowerModel {
     }
 }
 
-impl CpuPowerModel for AsymptoticPowerModel {
+impl CpuPowerModel for AsymptoticCpuPowerModel {
     fn get_power(&self, utilization: f64) -> f64 {
         self.min_power + self.factor * (1. + utilization - E.powf(-utilization / self.tau)) / 2.
     }
