@@ -1,9 +1,9 @@
 //! Implementation of model checking BFS search strategy.
 
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashSet};
 use colored::*;
 
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
 use crate::mc::system::{McState, McSystem};
 
 use crate::util::t;
@@ -13,24 +13,28 @@ pub struct Bfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
+    collect: Option<CollectFn>,
     states_queue: VecDeque<McState>,
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
+    collected: HashSet<McState>,
 }
 
 impl Bfs {
     /// Creates a new Bfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
+    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, collect: Option<CollectFn>, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
             goal,
             invariant,
+            collect,
             states_queue: VecDeque::new(),
             execution_mode,
             summary: McSummary::default(),
             visited,
+            collected: HashSet::new(),
         }
     }
 }
@@ -99,6 +103,14 @@ impl Strategy for Bfs {
 
     fn invariant(&self) -> &InvariantFn {
         &self.invariant
+    }
+
+    fn collect(&self) -> &Option<CollectFn> {
+        &self.collect
+    }
+
+    fn collected(&mut self) -> &mut HashSet<McState> {
+        &mut self.collected
     }
 
     fn summary(&mut self) -> &mut McSummary {

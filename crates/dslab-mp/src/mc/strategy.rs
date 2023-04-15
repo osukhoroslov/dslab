@@ -78,6 +78,11 @@ pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
 pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
 
+/// Checks if given state should be collected.
+/// Returns Err(error) if the invariant is broken and Ok otherwise.
+pub type CollectFn = Box<dyn Fn(&McState) -> bool>;
+
+
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
     /// Launches the strategy execution.
@@ -328,7 +333,7 @@ pub trait Strategy {
     }
 
     /// Adds new information to model checking execution summary.
-    fn update_summary(&mut self, status: String) {
+    fn update_summary(&mut self, status: String, state: &McState) {
         let update = |strategy: &mut Self| {
             let counter = strategy.summary().states.entry(status).or_insert(0);
             *counter += 1;
@@ -337,6 +342,11 @@ pub trait Strategy {
             ExecutionMode::Debug => update(self),
             ExecutionMode::Experiment => update(self),
             ExecutionMode::Default => {},
+        }
+        if let Some(collect) = self.collect() {
+            if (*collect)(state) {
+                self.collected().insert(state.clone());
+            }
         }
     }
 
@@ -347,11 +357,11 @@ pub trait Strategy {
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
-            self.update_summary(status);
+            self.update_summary(status, state);
             Some(Ok(()))
         } else if let Some(status) = (self.prune())(state) {
             // Execution branch is pruned
-            self.update_summary(status);
+            self.update_summary(status, state);
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
@@ -367,6 +377,9 @@ pub trait Strategy {
     /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;
 
+    /// Returns the visited states set.
+    fn collected(&mut self) -> &mut HashSet<McState>;
+
     /// Returns the prune function.
     fn prune(&self) -> &PruneFn;
 
@@ -375,6 +388,9 @@ pub trait Strategy {
 
     /// Returns the invariant function.
     fn invariant(&self) -> &InvariantFn;
+
+    /// Returns the collect function.
+    fn collect(&self) -> &Option<CollectFn>;
 
     /// Returns the model checking execution summary.
     fn summary(&mut self) -> &mut McSummary;

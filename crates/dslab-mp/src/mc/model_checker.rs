@@ -1,7 +1,7 @@
 //! Model checker configuration and launching.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use colored::*;
@@ -15,6 +15,10 @@ use crate::mc::strategy::{McSummary, Strategy};
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
+
+use super::events::McTime;
+use super::pending_events::PendingEvents;
+use super::system::McState;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
@@ -66,5 +70,16 @@ impl ModelChecker {
             .to_string()
             .yellow());
         self.strategy.run(&mut self.system)
+    }
+
+    /// Runs model checking and returns collected states.
+    pub fn collect(&mut self) -> Result<HashSet<McState>, String> {
+        self.strategy.collect().as_ref().ok_or("cannot collect without specified handler")?;
+        self.strategy.run(&mut self.system)?;
+        Ok(self.strategy.collected().clone())
+    }
+
+    pub fn set_state(&mut self, state: McState) {
+        self.system.set_state(state);
     }
 }

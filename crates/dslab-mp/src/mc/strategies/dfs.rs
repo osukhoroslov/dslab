@@ -1,8 +1,10 @@
 //! Implementation of model checking DFS search strategy.
 
+use std::collections::HashSet;
+
 use colored::*;
 
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
 use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
@@ -11,22 +13,26 @@ pub struct Dfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
+    collect: Option<CollectFn>,
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
+    collected: HashSet<McState>,
 }
 
 impl Dfs {
     /// Creates a new Dfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
+    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, collect: Option<CollectFn>, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
             goal,
             invariant,
+            collect,
             execution_mode,
             summary: McSummary::default(),
             visited,
+            collected: HashSet::new(),
         }
     }
 }
@@ -51,7 +57,7 @@ impl Dfs {
 
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
-        if self.execution_mode == ExecutionMode::Default {
+        if self.execution_mode != ExecutionMode::Debug {
             t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())
         }
         let state = system.get_state();
@@ -85,6 +91,14 @@ impl Strategy for Dfs {
 
     fn invariant(&self) -> &InvariantFn {
         &self.invariant
+    }
+    
+    fn collect(&self) -> &Option<CollectFn> {
+        &self.collect
+    }
+
+    fn collected(&mut self) -> &mut HashSet<McState> {
+        &mut self.collected
     }
 
     fn summary(&mut self) -> &mut McSummary {
