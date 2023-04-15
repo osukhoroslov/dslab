@@ -8,7 +8,9 @@ use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 use crate::mc::pending_events::PendingEvents;
 
-#[derive(Debug)]
+use super::events::McEventId;
+
+#[derive(Debug, Clone)]
 pub struct McState {
     pub node_states: BTreeMap<String, McNodeState>,
     pub events: PendingEvents,

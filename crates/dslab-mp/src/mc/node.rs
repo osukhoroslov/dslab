@@ -10,9 +10,9 @@ use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProcessEntryState {
-    pub proc_state: Box<dyn ProcessState>,
+    pub proc_state: Rc<dyn ProcessState>,
     pub event_log: Vec<EventLogEntry>,
     pub local_outbox: Vec<Message>,
     pub pending_timers: HashMap<String, u64>,
