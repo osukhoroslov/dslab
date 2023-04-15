@@ -3,6 +3,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::ops::{AddAssign};
 
 use colored::*;
 use lazy_static::lazy_static;
@@ -55,6 +56,14 @@ pub enum VisitedStates {
 #[derive(Debug, Default, Clone)]
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
+}
+
+impl AddAssign<McSummary> for McSummary {
+    fn add_assign(&mut self, rhs: McSummary) {
+        for (key, value) in rhs.states {
+            *(self.states.entry(key).or_insert(0)) += value;
+        }
+    }
 }
 
 /// Decides whether to prune the executions originating from the given state.
