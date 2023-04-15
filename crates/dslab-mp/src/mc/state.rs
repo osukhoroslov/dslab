@@ -8,7 +8,7 @@ use crate::mc::pending_events::PendingEvents;
 
 /// Stores comprehensive information about the state of [`McSystem`](crate::mc::system::McSystem).
 /// Used to preserve and restore particular situations in [`McSystem`](crate::mc::system::McSystem).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct McState {
     /// States of nodes in the system.
     pub node_states: BTreeMap<String, McNodeState>,

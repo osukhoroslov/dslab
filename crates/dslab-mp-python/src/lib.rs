@@ -164,22 +164,22 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn state(&self) -> Box<dyn ProcessState> {
+    fn state(&self) -> Rc<dyn ProcessState> {
         Python::with_gil(|py| {
             let res = self
                 .proc
                 .call_method0(py, "get_state")
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
-            Box::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string())
+            Rc::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string())
         })
     }
 
-    fn set_state(&mut self, state: Box<dyn ProcessState>) {
-        let data = state.downcast::<StringProcessState>().unwrap();
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+        let data = state.downcast_rc::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "set_state", (*data,))
+                .call_method1(py, "set_state", ((*data).clone(),))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });
