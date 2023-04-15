@@ -13,6 +13,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_trace};
+use dslab_models::power::host::{HostPowerModel, HostState};
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::SimulationConfig;
@@ -23,7 +24,6 @@ use crate::core::events::allocation::{
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
-use crate::core::power_model::HostPowerModel;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
@@ -149,7 +149,7 @@ impl HostManager {
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
@@ -175,7 +175,7 @@ impl HostManager {
         self.vms.remove(&vm.id);
         self.recently_removed_vms.push(vm.id);
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
@@ -211,16 +211,16 @@ impl HostManager {
     }
 
     /// Returns the current power consumption.
-    pub fn get_power(&self, time: f64, cpu_load: f64) -> f64 {
+    pub fn get_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        self.power_model.get_power(time, cpu_util)
+        self.power_model.get_power(HostState::cpu(cpu_util))
     }
 
     /// Returns the total energy consumption.
     pub fn get_energy_consumed(&mut self, time: f64) -> f64 {
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.energy_meter.energy_consumed()
     }
@@ -350,7 +350,7 @@ impl HostManager {
         log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
         let time = self.ctx.time();
         let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(time, cpu_load);
+        let power = self.get_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
 

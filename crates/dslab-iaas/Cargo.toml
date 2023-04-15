@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 dslab-core = { path = "../dslab-core" }
+dslab-models = { path = "../dslab-models" }
 rand = "0.8.3"
 sugars = "3.0.0"
 log = "0.4"

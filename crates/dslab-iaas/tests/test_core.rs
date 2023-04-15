@@ -1,9 +1,11 @@
 use dslab_core::simulation::Simulation;
 
+use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
+use dslab_models::power::host::HostPowerModel;
+
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
 use dslab_iaas::core::monitoring::Monitoring;
-use dslab_iaas::core::power_model::{ConstantPowerModel, HostPowerModel};
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
 use dslab_iaas::core::vm::{ResourceConsumer, VmStatus};
@@ -18,10 +20,10 @@ fn name_wrapper(file_name: &str) -> String {
 }
 
 #[test]
-// Using default linear power model (0.4 + 0.6 * CPU load) with zero idle power.
+// Using default linear power model (0.4 + 0.6 * CPU load).
 // Host is loaded by 1/3 then power consumption is 0.4 + 0.6 / 3 = 0.6.
 // VM lifetime is 2 seconds + 1 second of initializing + 0.5 seconds of shutdown.
-// Thus, the overall energy consumed is (2 + 1 + 0.5) * 0.6 = 2.1.
+// Thus, the overall energy consumed is (2 + 1 + 0.5) * 0.6 + 6.5 * 0.4 = 4.7.
 
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
@@ -37,7 +39,7 @@ fn test_energy_consumption() {
     let end_time = cloud_sim.current_time();
 
     assert_eq!(end_time, 10.);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time), 2.1);
+    assert!((cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time) - 4.7).abs() < 1e-12);
 }
 
 #[test]
@@ -375,13 +377,13 @@ fn test_double_migration() {
 }
 
 #[test]
-// Default power model gets a result of 2.1 (test #1).
-// Override the power model with constant of 1, then the total consumption is 3.5.
+// Default power model gets a result of 4.7 (test #1).
+// Override the power model with constant of 1, then the total consumption is 10.0.
 fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
     let mut cloud_sim = CloudSimulation::new(sim, sim_config);
-    let power_model = HostPowerModel::new(Box::new(ConstantPowerModel::new(1.))).with_zero_idle_power();
+    let power_model = HostPowerModel::cpu_only(Box::new(ConstantCpuPowerModel::new(1.)));
     cloud_sim.set_host_power_model(power_model);
 
     let h = cloud_sim.add_host("h", 30, 30);
@@ -393,7 +395,7 @@ fn test_energy_consumption_override() {
     let end_time = cloud_sim.current_time();
 
     assert_eq!(end_time, 10.);
-    assert_eq!(cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time), 3.5);
+    assert_eq!(cloud_sim.host(h).borrow_mut().get_energy_consumed(end_time), 10.);
 }
 
 #[test]
