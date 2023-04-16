@@ -79,7 +79,8 @@ impl ModelChecker {
         Ok(self.strategy.collected().clone())
     }
 
-    pub fn set_state(&mut self, state: McState) {
+    pub fn set_state(&mut self, mut state: McState) {
+        state.search_depth = 0;
         self.system.set_state(state);
     }
 
