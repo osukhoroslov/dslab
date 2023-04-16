@@ -70,6 +70,10 @@ impl McSystem {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
                 self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer)
             }
+            McEvent::LocalMessageReceived { dest, msg } => {
+                let name = self.net.borrow().get_proc_node(&dest).clone();
+                self.nodes.get_mut(&name).unwrap().on_local_message_received(dest, msg)
+            }
             _ => vec![],
         };
 

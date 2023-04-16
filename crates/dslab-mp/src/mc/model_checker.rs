@@ -82,4 +82,8 @@ impl ModelChecker {
     pub fn set_state(&mut self, state: McState) {
         self.system.set_state(state);
     }
+
+    pub fn apply_event(&mut self, event: McEvent) {
+        self.system.apply_event(event);
+    }
 }

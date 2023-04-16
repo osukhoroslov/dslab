@@ -28,6 +28,10 @@ pub enum McEvent {
         dest: String,
         options: DeliveryOptions,
     },
+    LocalMessageReceived {
+        msg: Message,
+        dest: String,
+    },
     TimerFired {
         proc: String,
         timer: String,

@@ -60,6 +60,10 @@ impl PendingEvents {
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
+            McEvent::LocalMessageReceived { .. } => {
+                // can not happen
+                panic!("local message cant be received from insiders");
+            }
         };
         self.events.insert(id, event);
         id

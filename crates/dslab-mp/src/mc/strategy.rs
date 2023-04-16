@@ -9,7 +9,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
+use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired, LocalMessageReceived};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
@@ -138,7 +138,12 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            _ => {}
+            MessageDropped { id: message_id, .. } => {
+                self.take_event(system, message_id);
+                self.apply_event(system, event_id, false, false)?;
+            }
+            // impossible to get local message from insiders
+            LocalMessageReceived { .. } => {}
         }
 
         Ok(())
@@ -253,6 +258,9 @@ pub trait Strategy {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
                     self.log_message(search_depth, msg, src, dest, log_context);
+                }
+                LocalMessageReceived { msg, dest, .. } => {
+                    t!(format!("{:>10} | {:>10} <-- LOCAL {:?}", search_depth, dest, msg).green());
                 }
                 TimerFired { proc, timer, .. } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", search_depth, proc, timer).yellow());
