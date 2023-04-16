@@ -4,6 +4,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use colored::*;
+
 use crate::events::{MessageReceived, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent};
 use crate::mc::network::McNetwork;
@@ -12,6 +14,7 @@ use crate::mc::strategy::McSummary;
 use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
+use crate::util::t;
 
 use super::events::McTime;
 use super::pending_events::PendingEvents;
@@ -62,6 +65,7 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> Result<McSummary, String> {
+        t!(format!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS").yellow());
         self.strategy.run(&mut self.system)
     }
 }
