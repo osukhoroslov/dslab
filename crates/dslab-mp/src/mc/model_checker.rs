@@ -21,15 +21,15 @@ use super::pending_events::PendingEvents;
 use super::system::McState;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
-pub struct ModelChecker {
+pub struct ModelChecker<'a> {
     system: McSystem,
-    strategy: Box<dyn Strategy>,
+    strategy: Box<dyn Strategy + 'a>,
 }
 
-impl ModelChecker {
+impl<'a> ModelChecker<'a> {
     /// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
+    pub fn new(sys: &System, strategy: Box<dyn Strategy + 'a>) -> Self {
         let sim = sys.sim();
 
         let mut events = PendingEvents::new();

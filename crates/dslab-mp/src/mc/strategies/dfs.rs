@@ -9,20 +9,20 @@ use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
-pub struct Dfs {
-    prune: PruneFn,
-    goal: GoalFn,
-    invariant: InvariantFn,
-    collect: Option<CollectFn>,
+pub struct Dfs<'a> {
+    prune: PruneFn<'a>,
+    goal: GoalFn<'a>,
+    invariant: InvariantFn<'a>,
+    collect: Option<CollectFn<'a>>,
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
     collected: HashSet<McState>,
 }
 
-impl Dfs {
+impl<'a> Dfs<'a> {
     /// Creates a new Dfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, collect: Option<CollectFn>, execution_mode: ExecutionMode) -> Self {
+    pub fn new(prune: PruneFn<'a>, goal: GoalFn<'a>, invariant: InvariantFn<'a>, collect: Option<CollectFn<'a>>, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
@@ -37,7 +37,7 @@ impl Dfs {
     }
 }
 
-impl Dfs {
+impl<'a> Dfs<'a> {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
 
@@ -55,7 +55,7 @@ impl Dfs {
     }
 }
 
-impl Strategy for Dfs {
+impl<'a> Strategy for Dfs<'a> {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
         if self.execution_mode != ExecutionMode::Debug {
             t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())

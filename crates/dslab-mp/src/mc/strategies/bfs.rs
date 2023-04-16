@@ -9,11 +9,11 @@ use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
-pub struct Bfs {
-    prune: PruneFn,
-    goal: GoalFn,
-    invariant: InvariantFn,
-    collect: Option<CollectFn>,
+pub struct Bfs<'a> {
+    prune: PruneFn<'a>,
+    goal: GoalFn<'a>,
+    invariant: InvariantFn<'a>,
+    collect: Option<CollectFn<'a>>,
     states_queue: VecDeque<McState>,
     execution_mode: ExecutionMode,
     summary: McSummary,
@@ -21,9 +21,9 @@ pub struct Bfs {
     collected: HashSet<McState>,
 }
 
-impl Bfs {
+impl<'a> Bfs<'a> {
     /// Creates a new Bfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, collect: Option<CollectFn>, execution_mode: ExecutionMode) -> Self {
+    pub fn new(prune: PruneFn<'a>, goal: GoalFn<'a>, invariant: InvariantFn<'a>, collect: Option<CollectFn<'a>>, execution_mode: ExecutionMode) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
@@ -39,7 +39,7 @@ impl Bfs {
     }
 }
 
-impl Bfs {
+impl<'a> Bfs<'a> {
     fn bfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         // Start search from initial state
         self.states_queue.push_back(system.get_state());
@@ -68,7 +68,7 @@ impl Bfs {
     }
 }
 
-impl Strategy for Bfs {
+impl<'a> Strategy for Bfs<'a> {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
         if self.execution_mode == ExecutionMode::Default {
             t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())

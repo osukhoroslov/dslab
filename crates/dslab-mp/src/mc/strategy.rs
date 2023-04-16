@@ -68,19 +68,19 @@ impl AddAssign<McSummary> for McSummary {
 
 /// Decides whether to prune the executions originating from the given state.
 /// Returns Some(status) if the executions should be pruned and None otherwise.
-pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type PruneFn<'a> = Box<dyn Fn(&McState) -> Option<String> + 'a>;
 
 /// Checks if the given state is the final state, i.e. all expected events have already occurred.
 /// Returns Some(status) if the final state is reached and None otherwise.
-pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type GoalFn<'a> = Box<dyn Fn(&McState) -> Option<String> + 'a>;
 
 /// Checks if some invariant holds in the given state.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
-pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
+pub type InvariantFn<'a> = Box<dyn Fn(&McState) -> Result<(), String> + 'a>;
 
 /// Checks if given state should be collected.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
-pub type CollectFn = Box<dyn Fn(&McState) -> bool>;
+pub type CollectFn<'a> = Box<dyn Fn(&McState) -> bool + 'a>;
 
 
 /// Trait with common functions for different model checking strategies.
