@@ -77,6 +77,7 @@ impl DependencyResolver {
         if !ids.is_empty() {
             Some(ids[0])
         } else {
+            self.messages.remove(&msg);
             None
         }
     }
