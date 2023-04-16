@@ -3,6 +3,7 @@
 pub mod asymptotic;
 pub mod constant;
 pub mod cubic;
+pub mod dvfs;
 pub mod empirical;
 pub mod linear;
 pub mod mse;

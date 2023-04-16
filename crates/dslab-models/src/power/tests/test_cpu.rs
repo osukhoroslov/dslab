@@ -2,6 +2,7 @@
 
 use crate::power::cpu_models::asymptotic::AsymptoticCpuPowerModel;
 use crate::power::cpu_models::cubic::CubicCpuPowerModel;
+use crate::power::cpu_models::dvfs::DVFSCpuPowerModel;
 use crate::power::cpu_models::empirical::EmpiricalCpuPowerModel;
 use crate::power::cpu_models::mse::MseCpuPowerModel;
 use crate::power::cpu_models::square::SquareCpuPowerModel;
@@ -101,6 +102,22 @@ fn test_x3550_m3_xeon_x5675() {
     assert_eq!(model.get_power(HostState::cpu(0.1)), 98.);
     assert_eq!(model.get_power(HostState::cpu(0.85)), 197.);
     assert_eq!(model.get_power(HostState::cpu(1.)), 222.);
+}
+
+#[test]
+fn test_dvfs_model() {
+    let model = HostPowerModel::cpu_only(Box::new(DVFSCpuPowerModel::new(0.4, 1.)));
+
+    let state = HostState::new(
+        /*cpu_util*/ Some(0.4),
+        /*cpu_freq*/ Some(0.7),
+        None,
+        None,
+        None,
+        None,
+    );
+    assert!(model.get_power(state.clone()) > 0.59);
+    assert!(model.get_power(state) < 0.6);
 }
 
 #[test]
