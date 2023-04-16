@@ -6,12 +6,11 @@ use byteorder::{ByteOrder, LittleEndian};
 use clap::Parser;
 use env_logger::Builder;
 use log::LevelFilter;
-use md5;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use serde::{Deserialize, Serialize};
-use sugars::{boxed};
+use serde::Deserialize;
+use sugars::boxed;
 
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
@@ -63,14 +62,14 @@ fn build_system(config: &TestConfig) -> System {
     }
     for n in 0..config.proc_count {
         let proc_name = proc_names[n as usize].clone();
-        let mut proc = config
+        let proc = config
             .proc_factory
-            .build( (proc_name.clone(), proc_names.clone()), config.seed);
+            .build((proc_name.clone(), proc_names.clone()), config.seed);
         let node_name = format!("node-{}", n);
         sys.add_node(&node_name);
         sys.add_process(&proc_name, boxed!(proc), &node_name);
     }
-    return sys;
+    sys
 }
 
 fn check_get(
@@ -81,7 +80,10 @@ fn check_get(
     expected: Option<&str>,
     max_steps: u32,
 ) -> TestResult {
-    sys.send_local_message(proc, Message::new("GET", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)));
+    sys.send_local_message(
+        proc,
+        Message::new("GET", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)),
+    );
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("GET_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -93,15 +95,14 @@ fn check_get(
     Ok(true)
 }
 
-fn check_put(
-    sys: &mut System,
-    proc: &str,
-    key: &str,
-    value: &str,
-    quorum: u8,
-    max_steps: u32,
-) -> TestResult {
-    sys.send_local_message(proc, Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, key, value, quorum)));
+fn check_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8, max_steps: u32) -> TestResult {
+    sys.send_local_message(
+        proc,
+        Message::new(
+            "PUT",
+            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, key, value, quorum),
+        ),
+    );
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("PUT_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -113,13 +114,7 @@ fn check_put(
     Ok(true)
 }
 
-fn check_put_result(
-    sys: &mut System,
-    proc: &str,
-    key: &str,
-    value: &str,
-    max_steps: u32,
-) -> TestResult {
+fn check_put_result(sys: &mut System, proc: &str, key: &str, value: &str, max_steps: u32) -> TestResult {
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("PUT_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -139,12 +134,12 @@ fn check_delete(
     expected: Option<&str>,
     max_steps: u32,
 ) -> TestResult {
-    sys.send_local_message(proc, Message::new("DELETE", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)));
+    sys.send_local_message(
+        proc,
+        Message::new("DELETE", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)),
+    );
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
-    assume!(
-        res.is_ok(),
-        format!("DELETE_RESP is not returned by {}", proc)
-    )?;
+    assume!(res.is_ok(), format!("DELETE_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
     let msg = msgs.first().unwrap();
     assume_eq!(msg.tip, "DELETE_RESP")?;
@@ -155,20 +150,17 @@ fn check_delete(
 }
 
 const SYMBOLS: [char; 36] = [
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-    't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+    'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ];
 const WEIGHTS: [usize; 36] = [
-    13, 16, 3, 8, 8, 5, 6, 23, 4, 8, 24, 12, 2, 1, 1, 10, 5, 8, 10, 1, 24, 3, 1, 8, 12, 22, 5, 20,
-    18, 5, 5, 2, 1, 3, 16, 22,
+    13, 16, 3, 8, 8, 5, 6, 23, 4, 8, 24, 12, 2, 1, 1, 10, 5, 8, 10, 1, 24, 3, 1, 8, 12, 22, 5, 20, 18, 5, 5, 2, 1, 3,
+    16, 22,
 ];
 
 fn random_string(length: usize, rand: &mut Pcg64) -> String {
     let dist = WeightedIndex::new(&WEIGHTS).unwrap();
-    rand.sample_iter(&dist)
-        .take(length)
-        .map(|x| SYMBOLS[x])
-        .collect()
+    rand.sample_iter(&dist).take(length).map(|x| SYMBOLS[x]).collect()
 }
 
 fn key_replicas(key: &str, sys: &System) -> Vec<String> {
@@ -188,7 +180,7 @@ fn key_replicas(key: &str, sys: &System) -> Vec<String> {
 }
 
 fn key_non_replicas(key: &str, sys: &System) -> Vec<String> {
-    let replicas = key_replicas(&key, sys);
+    let replicas = key_replicas(key, sys);
     let mut non_replicas_pre = Vec::new();
     let mut non_replicas = Vec::new();
     let mut pre = true;
@@ -278,12 +270,24 @@ fn test_concurrent_writes(config: &TestConfig) -> TestResult {
 
     // concurrently put different values from the first and second non-replicas
     let value = random_string(8, &mut rand);
-    sys.send_local_message(&non_replicas[0], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2)));
+    sys.send_local_message(
+        &non_replicas[0],
+        Message::new(
+            "PUT",
+            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2),
+        ),
+    );
     // small delay to ensure writes will have different times
     sys.step_for_duration(0.01);
 
     let value2 = random_string(8, &mut rand);
-    sys.send_local_message(&non_replicas[1], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2)));
+    sys.send_local_message(
+        &non_replicas[1],
+        Message::new(
+            "PUT",
+            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2),
+        ),
+    );
 
     // the won value is the one written later
     // but it was not observed by the put from the first replica!
@@ -303,21 +307,33 @@ fn test_concurrent_writes_tie(config: &TestConfig) -> TestResult {
 
     // concurrently put different values from the first and second non-replicas
     let value = random_string(8, &mut rand);
-    sys.send_local_message(&non_replicas[0], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2)));
+    sys.send_local_message(
+        &non_replicas[0],
+        Message::new(
+            "PUT",
+            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2),
+        ),
+    );
     // send_put(&mut sys, &non_replicas[0], &key, &value, 2);
 
     let value2 = random_string(8, &mut rand);
-    sys.send_local_message(&non_replicas[1], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2)));
+    sys.send_local_message(
+        &non_replicas[1],
+        Message::new(
+            "PUT",
+            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2),
+        ),
+    );
     // send_put(&mut sys, &non_replicas[1], &key, &value2, 2);
 
     // with default seed, the won value is from the second replica
     // and is observed by the put from the first replica!
-    let won_value = &value2.clone().max(value);
-    check_put_result(&mut sys, &non_replicas[0], &key, &won_value, 100)?;
-    check_put_result(&mut sys, &non_replicas[1], &key, &won_value, 100)?;
+    let won_value = &value2.max(value);
+    check_put_result(&mut sys, &non_replicas[0], &key, won_value, 100)?;
+    check_put_result(&mut sys, &non_replicas[1], &key, won_value, 100)?;
 
     // get key from the third non-replica with quorum 3
-    check_get(&mut sys, &non_replicas[2], &key, 3, Some(&won_value), 100)
+    check_get(&mut sys, &non_replicas[2], &key, 3, Some(won_value), 100)
 }
 
 fn test_stale_replica(config: &TestConfig) -> TestResult {
@@ -409,7 +425,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
         // (make sure that the isolated replica is not among this key's replicas)
         loop {
             let some_key = random_string(8, &mut rand).to_uppercase();
-            if !key_replicas(&some_key, &sys).contains(&replica) {
+            if !key_replicas(&some_key, &sys).contains(replica) {
                 check_get(&mut sys, &non_replicas[0], &some_key, 3, None, 100)?;
                 break;
             }
@@ -420,7 +436,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
     // read key from the first replica with quorum 3
     // (the last written value should win)
     let expected = new_values.last().unwrap();
-    check_get(&mut sys, &replicas[0], &key, 3, Some(&expected), 100)
+    check_get(&mut sys, &replicas[0], &key, 3, Some(expected), 100)
 }
 
 fn test_sloppy_quorum_read(config: &TestConfig) -> TestResult {
