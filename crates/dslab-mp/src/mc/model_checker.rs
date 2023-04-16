@@ -65,7 +65,7 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> Result<McSummary, String> {
-        t!(format!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS").yellow());
+        t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS".to_string().yellow());
         self.strategy.run(&mut self.system)
     }
 }
