@@ -20,35 +20,16 @@ use dslab_mp_python::PyProcessFactory;
 
 // MESSAGES ------------------------------------------------------------------------------------------------------------
 
-#[derive(Serialize)]
-struct GetMessage<'a> {
-    key: &'a str,
-    quorum: u8,
-}
-
 #[derive(Deserialize)]
 struct GetRespMessage<'a> {
     key: &'a str,
     value: Option<&'a str>,
 }
 
-#[derive(Serialize)]
-struct PutMessage<'a> {
-    key: &'a str,
-    value: &'a str,
-    quorum: u8,
-}
-
 #[derive(Deserialize)]
 struct PutRespMessage<'a> {
     key: &'a str,
     value: &'a str,
-}
-
-#[derive(Serialize)]
-struct DeleteMessage<'a> {
-    key: &'a str,
-    quorum: u8,
 }
 
 #[derive(Deserialize)]
@@ -75,7 +56,7 @@ fn init_logger(level: LevelFilter) {
 
 fn build_system(config: &TestConfig) -> System {
     let mut sys = System::new(config.seed);
-    sys.network().borrow_mut().set_delays(0.01, 0.1);
+    sys.network().set_delays(0.01, 0.1);
     let mut proc_names = Vec::new();
     for n in 0..config.proc_count {
         proc_names.push(format!("proc-{}", n));
@@ -131,13 +112,6 @@ fn check_put(
     assume_eq!(data.value, value)?;
     Ok(true)
 }
-
-// fn send_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8) {
-//     sys.send_local(
-//         JsonMessage::from("PUT", &PutMessage { key, value, quorum }),
-//         node,
-//     );
-// }
 
 fn check_put_result(
     sys: &mut System,
@@ -204,7 +178,7 @@ fn key_replicas(key: &str, sys: &System) -> Vec<String> {
     let hash128 = LittleEndian::read_u128(&hash.0);
     let mut replica = (hash128 % proc_count as u128) as u32;
     for _ in 0..3 {
-        replicas.push(replica.to_string());
+        replicas.push(format!("proc-{}", replica));
         replica += 1;
         if replica == proc_count {
             replica = 0;
@@ -280,7 +254,7 @@ fn test_replicas_check(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-    let key = random_string(8, &mut rand);
+    let key = random_string(8, &mut rand).to_uppercase();
     let replicas = key_replicas(&key, &sys);
 
     // put key from the first replica with quorum 3
@@ -289,7 +263,7 @@ fn test_replicas_check(config: &TestConfig) -> TestResult {
 
     // disconnect each replica and check the stored value
     for replica in replicas.iter() {
-        sys.network().borrow_mut().disconnect_node(&sys.process_node(replica));
+        sys.network().disconnect_node(&sys.proc_node_name(replica));
         check_get(&mut sys, replica, &key, 1, Some(&value), 100)?;
     }
     Ok(true)
@@ -299,19 +273,17 @@ fn test_concurrent_writes(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-    let key = random_string(8, &mut rand);
+    let key = random_string(8, &mut rand).to_uppercase();
     let non_replicas = key_non_replicas(&key, &sys);
 
     // concurrently put different values from the first and second non-replicas
     let value = random_string(8, &mut rand);
     sys.send_local_message(&non_replicas[0], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2)));
-    // send_put(&mut sys, &non_replicas[0], &key, &value, 2);
     // small delay to ensure writes will have different times
     sys.step_for_duration(0.01);
 
     let value2 = random_string(8, &mut rand);
     sys.send_local_message(&non_replicas[1], Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2)));
-    // send_put(&mut sys, &non_replicas[1], &key, &value2, 2);
 
     // the won value is the one written later
     // but it was not observed by the put from the first replica!
@@ -326,7 +298,7 @@ fn test_concurrent_writes_tie(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-    let key = random_string(8, &mut rand);
+    let key = random_string(8, &mut rand).to_uppercase();
     let non_replicas = key_non_replicas(&key, &sys);
 
     // concurrently put different values from the first and second non-replicas
@@ -360,16 +332,16 @@ fn test_stale_replica(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &replicas[0], &key, &value, 3, 100)?;
 
     // disconnect the last replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[2]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
 
     // update key from the first replica with quorum 2
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[0], &key, &value2, 2, 100)?;
 
     // disconnect the first replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
     // connect the last replica
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[2]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[2]));
 
     // read key from the second replica with quorum 2
     // should update the last replica via read repair or anti-entropy
@@ -377,7 +349,7 @@ fn test_stale_replica(config: &TestConfig) -> TestResult {
 
     // step for a while and check whether the last replica got the recent value
     sys.steps(100);
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[2]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
     check_get(&mut sys, &replicas[2], &key, 1, Some(&value2), 100)
 }
 
@@ -393,22 +365,22 @@ fn test_stale_replica_delete(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &replicas[0], &key, &value, 3, 100)?;
 
     // disconnect the last replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[2]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
 
     // update key from the first replica with quorum 2
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[0], &key, &value2, 2, 100)?;
 
     // disconnect the first replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
     // connect the last replica
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[2]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[2]));
 
     // delete key from the last replica (should return the last-written value)
     check_delete(&mut sys, &replicas[2], &key, 2, Some(&value2), 100)?;
 
     // connect the first replica
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[0]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
 
     // get key from the first replica (should return None)
     check_get(&mut sys, &replicas[0], &key, 2, None, 100)
@@ -429,8 +401,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
     // disconnect each replica and update key from it with quorum 1
     let mut new_values = Vec::new();
     for replica in replicas.iter() {
-        sys.network().borrow_mut().disconnect_node(&sys.process_node(replica));
-        // sys.disconnect_node(replica);
+        sys.network().disconnect_node(&sys.proc_node_name(replica));
         let value2 = random_string(8, &mut rand);
         check_put(&mut sys, replica, &key, &value2, 1, 100)?;
         new_values.push(value2);
@@ -443,7 +414,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
                 break;
             }
         }
-        sys.network().borrow_mut().connect_node(&sys.process_node(replica));
+        sys.network().connect_node(&sys.proc_node_name(replica));
     }
 
     // read key from the first replica with quorum 3
@@ -461,14 +432,14 @@ fn test_sloppy_quorum_read(config: &TestConfig) -> TestResult {
     let non_replicas = key_non_replicas(&key, &sys);
 
     // disconnect the first replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
 
     // put key from the second replica with quorum 2
     let value = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[1], &key, &value, 2, 100)?;
 
     // disconnect the second replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[1]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[1]));
 
     // read key from the last non-replica with quorum 2 (should use sloppy quorum)
     // since non-replicas do not store any value, the last replica's value should win
@@ -489,7 +460,7 @@ fn test_sloppy_quorum_write(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &procs[0], &key, &value, 3, 100)?;
 
     // temporarily disconnect the first replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
 
     // update key from the second replica with quorum 3 (should use sloppy quorum)
     let value2 = random_string(8, &mut rand);
@@ -499,11 +470,11 @@ fn test_sloppy_quorum_write(config: &TestConfig) -> TestResult {
     check_get(&mut sys, &replicas[2], &key, 3, Some(&value2), 100)?;
 
     // reconnect the first replica and let it receive the update
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[0]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
     sys.steps(100);
 
     // check if the first replica got update
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
     check_get(&mut sys, &replicas[0], &key, 1, Some(&value2), 100)
 }
 
@@ -521,19 +492,19 @@ fn test_sloppy_quorum_tricky(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &procs[0], &key, &value, 3, 100)?;
 
     // temporarily disconnect the first replica
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
 
     // update key from the second replica with quorum 3 (should use sloppy quorum)
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[1], &key, &value2, 3, 100)?;
 
     // disconnect all members of the previous sloppy quorum
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[1]));
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&replicas[2]));
-    sys.network().borrow_mut().disconnect_node(&sys.process_node(&non_replicas[0]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[1]));
+    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().disconnect_node(&sys.proc_node_name(&non_replicas[0]));
 
     // reconnect the first replica
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[0]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
 
     // now we have only one node storing the key value:
     // - second replica: value (outdated)
@@ -544,14 +515,13 @@ fn test_sloppy_quorum_tricky(config: &TestConfig) -> TestResult {
     check_get(&mut sys, &non_replicas[2], &key, 2, Some(&value), 100)?;
 
     // reconnect the second replica
-    sys.network().borrow_mut().connect_node(&sys.process_node(&replicas[1]));
+    sys.network().connect_node(&sys.proc_node_name(&replicas[1]));
 
     // read key from the last non-replica with quorum 2
     // (should try to contact the main replicas first and receive the new value)
     check_get(&mut sys, &non_replicas[2], &key, 2, Some(&value2), 100)
 }
 
-/*
 fn test_partition_clients(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
@@ -565,8 +535,7 @@ fn test_partition_clients(config: &TestConfig) -> TestResult {
     let client2 = &non_replicas[1];
     let part1: Vec<&str> = replicas.iter().map(|s| &**s).collect();
     let part2: Vec<&str> = non_replicas.iter().map(|s| &**s).collect();
-    !!!
-    sys.network().borrow_mut().make_partition(&part1, &part2);
+    sys.network().make_partition(&part1, &part2);
 
     // put key from client1 with quorum 2 (should use sloppy quorum without any normal replica)
     let value = random_string(8, &mut rand);
@@ -598,7 +567,7 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
     // partition clients and replicas
     let part1: Vec<&str> = vec![client1, client2, replica1];
     let part2: Vec<&str> = vec![client3, replica2, replica3];
-    sys.make_partition(&part1, &part2);
+    sys.network().make_partition(&part1, &part2);
 
     // partition 1
     check_get(&mut sys, client1, &key, 2, Some(&value), 100)?;
@@ -616,7 +585,7 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
     check_get(&mut sys, client3, &key, 2, Some(&value3), 100)?;
 
     // heal partition
-    sys.reset_network();
+    sys.network().reset_network();
     sys.steps(100);
 
     // read key from all clients (should return the last-written value)
@@ -626,12 +595,11 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
 
     // check all replicas (should return the last-written value)
     for replica in replicas.iter() {
-        sys.disconnect_node(replica);
+        sys.network().disconnect_node(&sys.proc_node_name(replica));
         check_get(&mut sys, replica, &key, 1, Some(&value3), 100)?;
     }
     Ok(true)
 }
-*/
 
 // CLI -----------------------------------------------------------------------------------------------------------------
 
@@ -678,17 +646,17 @@ fn main() {
 
     let mut tests = TestSuite::new();
     tests.add("BASIC", test_basic, config);
-    // tests.add("REPLICAS CHECK", test_replicas_check, config);
-    // tests.add("CONCURRENT WRITES", test_concurrent_writes, config);
-    // tests.add("CONCURRENT WRITES TIE", test_concurrent_writes_tie, config);
-    // tests.add("STALE REPLICA", test_stale_replica, config);
-    // tests.add("STALE REPLICA DELETE", test_stale_replica_delete, config);
-    // tests.add("DIVERGED REPLICAS", test_diverged_replicas, config);
-    // tests.add("SLOPPY QUORUM READ", test_sloppy_quorum_read, config);
-    // tests.add("SLOPPY QUORUM WRITE", test_sloppy_quorum_write, config);
-    // tests.add("SLOPPY QUORUM TRICKY", test_sloppy_quorum_tricky, config);
-    // tests.add("PARTITION CLIENTS", test_partition_clients, config);
-    // tests.add("PARTITION MIXED", test_partition_mixed, config);
+    tests.add("REPLICAS CHECK", test_replicas_check, config);
+    tests.add("CONCURRENT WRITES", test_concurrent_writes, config);
+    tests.add("CONCURRENT WRITES TIE", test_concurrent_writes_tie, config);
+    tests.add("STALE REPLICA", test_stale_replica, config);
+    tests.add("STALE REPLICA DELETE", test_stale_replica_delete, config);
+    tests.add("DIVERGED REPLICAS", test_diverged_replicas, config);
+    tests.add("SLOPPY QUORUM READ", test_sloppy_quorum_read, config);
+    tests.add("SLOPPY QUORUM WRITE", test_sloppy_quorum_write, config);
+    tests.add("SLOPPY QUORUM TRICKY", test_sloppy_quorum_tricky, config);
+    tests.add("PARTITION CLIENTS", test_partition_clients, config);
+    tests.add("PARTITION MIXED", test_partition_mixed, config);
 
     if args.test.is_none() {
         tests.run();
