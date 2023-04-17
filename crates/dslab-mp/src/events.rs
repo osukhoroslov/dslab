@@ -4,9 +4,12 @@ use crate::message::Message;
 
 #[derive(Clone, Serialize)]
 pub struct MessageReceived {
+    pub id: u64,
     pub msg: Message,
     pub src: String,
+    pub src_node: String,
     pub dest: String,
+    pub dest_node: String,
 }
 
 #[derive(Clone, Serialize)]

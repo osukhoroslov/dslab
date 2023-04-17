@@ -1,5 +1,6 @@
 pub mod context;
 pub mod events;
+pub mod logger;
 pub mod mc;
 pub mod message;
 pub mod network;
