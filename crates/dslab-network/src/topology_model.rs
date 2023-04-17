@@ -31,7 +31,8 @@ impl Ord for LinkUsage {
         if self.transfers_count == 0 || other.transfers_count == 0 {
             panic!("Invalid cmp for Link usage")
         }
-        // LinkUsage is used in BinaryHeap, which extracts maximum element, and we need link with minimum bandwidth.
+        // sort order is reversed because LinkUsage is used in BinaryHeap,
+        // which extracts maximum element, and we need link with minimum bandwidth.
         other
             .get_path_bandwidth()
             .total_cmp(&(self.get_path_bandwidth()))
@@ -295,8 +296,8 @@ impl TopologyNetwork {
         }
     }
 
-    /// Same as [TopologyNetwork::calc] with `affected_transfers` equal to the set of all transfers, but this corner case
-    /// allows for some optimization.
+    /// Same as [TopologyNetwork::calc] with `affected_transfers` equal to the set of all transfers,
+    /// but this corner case allows for some optimization.
     fn calc_all(&mut self, ctx: &mut SimulationContext) {
         let topology = self.topology.borrow();
 
