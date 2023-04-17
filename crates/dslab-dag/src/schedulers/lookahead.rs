@@ -61,7 +61,7 @@ impl LookaheadScheduler {
         let mut result: Vec<(f64, Action)> = Vec::new();
 
         for task_id in task_ids.into_iter() {
-            let mut best_makespan = -1.;
+            let mut best_makespan = f64::MAX;
             let mut best_start = -1.;
             let mut best_finish = -1.;
             let mut best_resource = 0;
@@ -82,6 +82,7 @@ impl LookaheadScheduler {
                     &config,
                     ctx,
                 );
+
                 if res.is_none() {
                     continue;
                 }
@@ -182,6 +183,10 @@ impl LookaheadScheduler {
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
 
                     makespan = makespan.max(finish + output_time);
+
+                    if makespan >= best_makespan {
+                        break;
+                    }
                 }
 
                 for (resource, cores, scheduled_task) in to_undo.into_iter() {
@@ -198,7 +203,7 @@ impl LookaheadScheduler {
                 data_locations = old_data_location;
                 task_locations = old_task_location;
 
-                if best_makespan == -1. || best_makespan > makespan {
+                if best_makespan > makespan {
                     best_start = start_time;
                     best_finish = finish_time;
                     best_makespan = makespan;
