@@ -8,6 +8,7 @@ edition = "2021"
 dslab-core = { path = "../../crates/dslab-core" }
 dslab-mp = { path = "../../crates/dslab-mp" }
 dslab-mp-python = { path = "../../crates/dslab-mp-python" }
+mp-log-visualizer = { path = "../../tools/mp-log-visualizer" }
 assertables = "3.2.2"
 clap = { version = "3.1.17", features = ["cargo", "derive"] }
 env_logger = "0.9.0"

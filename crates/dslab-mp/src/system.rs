@@ -1,34 +1,50 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::path::Path;
 use std::rc::Rc;
 
-use colored::*;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
 use dslab_core::Simulation;
 
+use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
 use crate::node::{EventLogEntry, Node};
 use crate::process::Process;
-use crate::util::t;
 
 pub struct System {
     sim: Simulation,
     net: Rc<RefCell<Network>>,
     nodes: HashMap<String, Rc<RefCell<Node>>>,
     proc_nodes: HashMap<String, Rc<RefCell<Node>>>,
+    logger: Rc<RefCell<Logger>>,
 }
 
 impl System {
     pub fn new(seed: u64) -> Self {
+        let logger = Rc::new(RefCell::new(Logger::new()));
         let mut sim = Simulation::new(seed);
-        let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"))));
+        let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"), logger.clone())));
         Self {
             sim,
             net,
             nodes: HashMap::new(),
             proc_nodes: HashMap::new(),
+            logger,
+        }
+    }
+
+    pub fn with_log_file(seed: u64, log_path: &Path) -> Self {
+        let logger = Rc::new(RefCell::new(Logger::with_log_file(log_path)));
+        let mut sim = Simulation::new(seed);
+        let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"), logger.clone())));
+        Self {
+            sim,
+            net,
+            nodes: HashMap::new(),
+            proc_nodes: HashMap::new(),
+            logger,
         }
     }
 
@@ -49,6 +65,7 @@ impl System {
             name.to_string(),
             self.net.clone(),
             self.sim.create_context(name),
+            self.logger.clone(),
         )));
         let node_id = self.sim.add_handler(name, node.clone());
         assert!(
@@ -57,7 +74,11 @@ impl System {
             name
         );
         self.net.borrow_mut().add_node(name.to_string(), node_id);
-        t!(format!("{:>9.3} - node started: {}", self.sim.time(), name));
+        self.logger.borrow_mut().log(LogEntry::NodeStarted {
+            time: self.sim.time(),
+            node: name.to_string(),
+            node_id,
+        });
     }
 
     pub fn node_names(&self) -> Vec<String> {
@@ -80,14 +101,21 @@ impl System {
         let node_id = self.sim.lookup_id(node_name);
         self.sim.cancel_events(|e| e.src == node_id);
 
-        t!(format!("{:>9.3} - node crashed: {}", self.sim.time(), node_name).red());
+        self.logger.borrow_mut().log(LogEntry::NodeCrashed {
+            time: self.sim.time(),
+            node: node_name.to_string(),
+        });
     }
 
     pub fn recover_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
         node.borrow_mut().recover();
         self.sim.add_handler(node_name, node.clone());
-        t!(format!("{:>9.3} - node recovered: {}", self.sim.time(), node_name).green());
+
+        self.logger.borrow_mut().log(LogEntry::NodeRecovered {
+            time: self.sim.time(),
+            node: node_name.to_string(),
+        });
     }
 
     pub fn get_node(&self, name: &str) -> Option<Ref<Node>> {
@@ -116,12 +144,11 @@ impl System {
             "Process with name {} already exists, process names must be unique",
             name
         );
-        t!(format!(
-            "{:>9.3} - process started: {} @ {}",
-            self.sim.time(),
-            name,
-            node
-        ));
+        self.logger.borrow_mut().log(LogEntry::ProcessStarted {
+            time: self.sim.time(),
+            node: node.to_string(),
+            proc: name.to_string(),
+        });
     }
 
     pub fn process_names(&self) -> Vec<String> {
