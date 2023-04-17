@@ -91,6 +91,7 @@ pub struct TopologyNetwork {
     next_event: Option<u64>,
     next_event_index: Option<usize>,
     link_data: Vec<Option<LinkUsage>>,
+    full_mesh_optimization: bool,
 }
 
 impl TopologyNetwork {
@@ -103,7 +104,13 @@ impl TopologyNetwork {
             next_event: None,
             next_event_index: None,
             link_data: Vec::new(),
+            full_mesh_optimization: false,
         }
+    }
+
+    pub fn with_full_mesh_optimization(mut self) -> Self {
+        self.full_mesh_optimization = true;
+        self
     }
 
     fn get_location(&self, node: Id) -> NodeId {
@@ -176,9 +183,7 @@ impl TopologyNetwork {
         };
     }
 
-    #[allow(dead_code)]
     fn calc(&mut self, ctx: &mut SimulationContext, affected_transfers: HashSet<usize>) {
-        // eprintln!("{} {}", self.current_transfers.len(), affected_transfers.len());
         if affected_transfers.is_empty() {
             return;
         }
@@ -395,17 +400,26 @@ impl DataOperation for TopologyNetwork {
         }
         self.current_transfers
             .insert(id, Transfer::new(data.size, data, path, ctx.time()));
-        // let affected_transfers = self.get_affected_transfers(id);
-        self.calc_all(ctx);
-        // self.calc(ctx, affected_transfers);
+
+        if self.full_mesh_optimization {
+            let affected_transfers = self.get_affected_transfers(id);
+            self.calc(ctx, affected_transfers);
+        } else {
+            self.calc_all(ctx);
+        }
         self.update_next_event(ctx);
     }
 
     fn receive_data(&mut self, _data: Data, ctx: &mut SimulationContext) {
         self.validate_array_lengths();
         let next_event_index = self.next_event_index.unwrap();
-        // let mut affected_transfers = self.get_affected_transfers(next_event_index);
-        // assert!(affected_transfers.remove(&next_event_index));
+        let affected_transfers = if self.full_mesh_optimization {
+            let mut transfers = self.get_affected_transfers(next_event_index);
+            assert!(transfers.remove(&next_event_index));
+            transfers
+        } else {
+            HashSet::new()
+        };
         let transfer = self.current_transfers.remove(&next_event_index).unwrap();
         for &link in transfer.path.iter() {
             let vec = self.transfers_through_link.get_mut(link).unwrap();
@@ -413,8 +427,11 @@ impl DataOperation for TopologyNetwork {
         }
         self.next_event = None;
         self.next_event_index = None;
-        self.calc_all(ctx);
-        // self.calc(ctx, affected_transfers);
+        if self.full_mesh_optimization {
+            self.calc(ctx, affected_transfers);
+        } else {
+            self.calc_all(ctx);
+        }
         self.update_next_event(ctx);
     }
 
