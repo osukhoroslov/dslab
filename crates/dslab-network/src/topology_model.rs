@@ -14,14 +14,14 @@ use crate::topology_structures::{LinkID, NodeId};
 struct DataTransfer {}
 
 #[derive(Clone)]
-pub struct LinkUsage {
-    pub link_id: usize,
-    pub transfers_count: usize,
-    pub left_bandwidth: f64,
+struct LinkUsage {
+    link_id: usize,
+    transfers_count: usize,
+    left_bandwidth: f64,
 }
 
 impl LinkUsage {
-    pub fn get_path_bandwidth(&self) -> f64 {
+    fn get_path_bandwidth(&self) -> f64 {
         self.left_bandwidth / self.transfers_count as f64
     }
 }
@@ -31,10 +31,11 @@ impl Ord for LinkUsage {
         if self.transfers_count == 0 || other.transfers_count == 0 {
             panic!("Invalid cmp for Link usage")
         }
+        // LinkUsage is used in BinaryHeap, which extracts maximum element, and we need link with minimum bandwidth.
         other
             .get_path_bandwidth()
             .total_cmp(&(self.get_path_bandwidth()))
-            .then(self.link_id.cmp(&other.link_id))
+            .then(other.link_id.cmp(&self.link_id))
     }
 }
 
@@ -55,16 +56,16 @@ impl PartialEq for LinkUsage {
 impl Eq for LinkUsage {}
 
 #[derive(Debug)]
-pub struct Transfer {
-    pub size_left: f64,
-    pub last_update_time: f64,
-    pub throughput: f64,
-    pub data: Data,
+struct Transfer {
+    size_left: f64,
+    last_update_time: f64,
+    throughput: f64,
+    data: Data,
     path: Vec<LinkID>,
 }
 
 impl Transfer {
-    pub fn new(size: f64, data: Data, path: Vec<LinkID>, time: f64) -> Transfer {
+    fn new(size: f64, data: Data, path: Vec<LinkID>, time: f64) -> Transfer {
         Transfer {
             size_left: size,
             data,
@@ -108,8 +109,9 @@ impl TopologyNetwork {
         }
     }
 
-    pub fn with_full_mesh_optimization(mut self) -> Self {
-        self.full_mesh_optimization = true;
+    /// Enables optimization which greatly improves simulation times for cases with a lot of non-intersecting transfers.
+    pub fn with_full_mesh_optimization(mut self, full_mesh_optimization: bool) -> Self {
+        self.full_mesh_optimization = full_mesh_optimization;
         self
     }
 
@@ -132,7 +134,8 @@ impl TopologyNetwork {
         self.get_path(src, dst).is_some()
     }
 
-    #[allow(dead_code)]
+    /// Finds smallest subset of transfers which contains `updated_transfer` so that sets of links
+    /// used by transfers inside and outside this subset don't intersect.
     fn get_affected_transfers(&self, updated_transfer: usize) -> HashSet<usize> {
         if self.current_transfers.is_empty() {
             return HashSet::new();
@@ -183,6 +186,7 @@ impl TopologyNetwork {
         };
     }
 
+    /// Updates throughput for all transfers from `affected_transfers`.
     fn calc(&mut self, ctx: &mut SimulationContext, affected_transfers: HashSet<usize>) {
         if affected_transfers.is_empty() {
             return;
@@ -291,6 +295,8 @@ impl TopologyNetwork {
         }
     }
 
+    /// Same as [TopologyNetwork::calc] with `affected_transfers` equal to the set of all transfers, but this corner case
+    /// allows for some optimization.
     fn calc_all(&mut self, ctx: &mut SimulationContext) {
         let topology = self.topology.borrow();
 
@@ -443,7 +449,3 @@ impl DataOperation for TopologyNetwork {
 }
 
 impl NetworkModel for TopologyNetwork {}
-
-impl Drop for TopologyNetwork {
-    fn drop(&mut self) {}
-}
