@@ -18,6 +18,7 @@ use crate::util::t;
 
 use super::events::McTime;
 use super::pending_events::PendingEvents;
+use super::strategy::VisitedStates;
 use super::system::McState;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
@@ -80,6 +81,14 @@ impl<'a> ModelChecker<'a> {
             .ok_or("cannot collect without specified handler")?;
         self.strategy.run(&mut self.system)?;
         Ok(self.strategy.collected().clone())
+    }
+
+    pub fn set_visited(&mut self, visited: VisitedStates) {
+        *self.strategy.visited() = visited;
+    }
+
+    pub fn visited(&mut self) -> VisitedStates {
+        self.strategy.visited().clone()
     }
 
     pub fn set_state(&mut self, mut state: McState) {

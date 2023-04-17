@@ -41,6 +41,7 @@ pub enum LogContext {
     Corrupted,
 }
 
+#[derive(Clone)]
 /// Alternative implementations of storing the previously visited system states
 /// and checking if the state was visited.
 pub enum VisitedStates {
