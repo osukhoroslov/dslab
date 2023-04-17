@@ -12,11 +12,9 @@ use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
 #[derive(Default)]
 pub struct Topology {
-    link_id_counter: usize,
-    node_id_counter: usize,
     nodes_name_map: IndexMap<String, NodeId>,
-    nodes: BTreeMap<NodeId, Node>,
-    links: BTreeMap<LinkID, Link>,
+    nodes: Vec<Node>,
+    links: Vec<Link>,
     component_nodes: HashMap<Id, NodeId>,
     node_links_map: NodeLinksMap,
     resolver: Option<TopologyResolver>,
@@ -39,15 +37,11 @@ impl Topology {
 
     pub fn add_node(&mut self, node_name: &str, local_bandwidth: f64, local_latency: f64) {
         let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
-        let new_node_id = self.node_id_counter;
-        self.node_id_counter += 1;
+        let new_node_id = self.nodes.len();
         self.nodes_name_map.insert(node_name.to_string(), new_node_id);
-        self.nodes.insert(
-            new_node_id,
-            Node {
-                local_network: Box::new(local_network),
-            },
-        );
+        self.nodes.push(Node {
+            local_network: Box::new(local_network),
+        });
         self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 
@@ -55,11 +49,10 @@ impl Topology {
         assert!(bandwidth > 0.0, "Link bandwidth must be > 0");
         let node1 = self.get_node_id(node1_name);
         let node2 = self.get_node_id(node2_name);
-        self.check_node_exists(&node1);
-        self.check_node_exists(&node2);
-        let link_id = self.link_id_counter;
-        self.link_id_counter += 1;
-        self.links.insert(link_id, Link::new(latency, bandwidth));
+        self.check_node_exists(node1);
+        self.check_node_exists(node2);
+        let link_id = self.links.len();
+        self.links.push(Link::new(latency, bandwidth));
         self.node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
         self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
         self.on_topology_change();
@@ -111,11 +104,11 @@ impl Topology {
     }
 
     pub fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
-        self.nodes.get(id)
+        self.nodes.get(*id)
     }
 
     pub fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        self.nodes.get_mut(id)
+        self.nodes.get_mut(*id)
     }
 
     pub fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
@@ -140,14 +133,14 @@ impl Topology {
     }
 
     pub fn get_link(&self, link_id: &LinkID) -> Option<&Link> {
-        self.links.get(link_id)
+        self.links.get(*link_id)
     }
 
     pub fn get_link_between(&self, src: &NodeId, dst: &NodeId) -> Option<&Link> {
         let link_id = self.node_links_map.get(src).unwrap().get(dst);
         match link_id {
             None => None,
-            Some(link_id) => self.links.get(link_id),
+            Some(link_id) => self.links.get(*link_id),
         }
     }
 
@@ -219,7 +212,11 @@ impl Topology {
         0.0
     }
 
-    fn check_node_exists(&self, node_id: &NodeId) {
-        assert!(self.nodes.contains_key(node_id))
+    pub fn get_links_count(&self) -> usize {
+        self.links.len()
+    }
+
+    fn check_node_exists(&self, node_id: NodeId) {
+        assert!(node_id < self.nodes.len())
     }
 }

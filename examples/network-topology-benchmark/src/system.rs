@@ -72,10 +72,12 @@ impl EventHandler for Receiver {
     }
 }
 
-pub fn build_system(sim: &mut Simulation, mut topology: Topology) -> System {
+pub fn build_system(sim: &mut Simulation, mut topology: Topology, full_mesh_optimization: bool) -> System {
     topology.init();
     let topology_rc = rc!(refcell!(topology));
-    let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
+    let network_model = rc!(refcell!(
+        TopologyNetwork::new(topology_rc.clone()).with_full_mesh_optimization(full_mesh_optimization)
+    ));
     let network = Network::new_with_topology(network_model, topology_rc, sim.create_context("net"));
     let network_rc = rc!(refcell!(network));
     sim.add_handler("net", network_rc.clone());

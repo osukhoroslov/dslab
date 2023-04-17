@@ -44,25 +44,31 @@ fn main() {
     let args = Args::parse();
 
     println!("=== Full Mesh Topology ===");
-    run_benchmark(make_full_mesh_topology(args.host_count));
+    run_benchmark(make_full_mesh_topology(args.host_count), true);
 
     println!("=== Star Topology ===");
-    run_benchmark(make_star_topology(args.host_count));
+    run_benchmark(make_star_topology(args.host_count), false);
 
     println!("=== Tree Topology ===");
-    run_benchmark(make_tree_topology(args.star_count, args.host_count / args.star_count));
+    run_benchmark(
+        make_tree_topology(args.star_count, args.host_count / args.star_count),
+        false,
+    );
 
     println!("=== Fat-Tree Topology ===");
-    run_benchmark(make_fat_tree_topology(
-        args.l2_switch_count,
-        args.l1_switch_count,
-        args.host_count / args.l1_switch_count,
-    ));
+    run_benchmark(
+        make_fat_tree_topology(
+            args.l2_switch_count,
+            args.l1_switch_count,
+            args.host_count / args.l1_switch_count,
+        ),
+        false,
+    );
 }
 
-fn run_benchmark(topology: Topology) {
+fn run_benchmark(topology: Topology, full_mesh_optimization: bool) {
     let mut sim = Simulation::new(SIMULATION_SEED);
-    let sys = build_system(&mut sim, topology);
+    let sys = build_system(&mut sim, topology, full_mesh_optimization);
 
     let mut client = sim.create_context("client");
 
