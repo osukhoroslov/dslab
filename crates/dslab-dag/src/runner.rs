@@ -21,6 +21,7 @@ use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 
 use crate::dag::DAG;
+use crate::dag_stats::DAGStats;
 use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
@@ -78,6 +79,7 @@ pub struct DAGRunner {
     resource_data_items: HashMap<Id, BTreeSet<usize>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
+    dag_stats: DAGStats,
     config: Config,
     ctx: SimulationContext,
 }
@@ -131,6 +133,7 @@ impl DAGRunner {
             resource_data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
+            dag_stats: DAGStats::new(),
             config,
             ctx,
         }
@@ -176,6 +179,7 @@ impl DAGRunner {
             &self.ctx,
         );
         log_info!(self.ctx, "initial schedule built in {:.2?}", time.elapsed());
+        self.dag_stats.add_scheduling_time(time.elapsed().as_secs_f64());
         if let Some(makespan) = actions
             .iter()
             .filter_map(|action| match action {
@@ -213,6 +217,7 @@ impl DAGRunner {
             .max_by(|a, b| a.total_cmp(b))
         {
             log_info!(self.ctx, "expected makespan: {}", makespan);
+            self.dag_stats.set_expected_makespan(makespan);
         }
         self.actions.extend(actions);
         self.process_actions();
@@ -246,6 +251,10 @@ impl DAGRunner {
     /// Returns trace log.
     pub fn trace_log(&self) -> &TraceLog {
         &self.trace_log
+    }
+
+    pub fn dag_stats(&self) -> &DAGStats {
+        &self.dag_stats
     }
 
     fn process_schedule_action(
@@ -466,6 +475,8 @@ impl DAGRunner {
                 to,
             },
         );
+        self.dag_stats
+            .set_transfer_start(data_id, data_item.size, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -502,6 +513,7 @@ impl DAGRunner {
 
     fn on_task_completed(&mut self, task_id: usize) {
         let task_name = self.dag.get_task(task_id).name.clone();
+        self.dag_stats.set_task_finish(task_id, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -575,6 +587,7 @@ impl DAGRunner {
         }
 
         if !self.scheduler.borrow().is_static() {
+            let time = Instant::now();
             self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
                 task_id,
                 TaskState::Done,
@@ -585,6 +598,7 @@ impl DAGRunner {
                 },
                 &self.ctx,
             ));
+            self.dag_stats.add_scheduling_time(time.elapsed().as_secs_f64());
         }
         self.process_actions();
 
@@ -605,6 +619,8 @@ impl DAGRunner {
         );
         self.computations.insert(computation_id, task_id);
 
+        self.dag_stats
+            .set_task_start(task_id, location, cores, task.memory, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -623,6 +639,7 @@ impl DAGRunner {
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
 
+        self.dag_stats.set_transfer_finish(data_event_id, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -664,8 +681,15 @@ impl DAGRunner {
         self.dag.is_completed() && self.data_transfers.is_empty()
     }
 
-    fn check_and_log_completed(&self) {
+    fn check_and_log_completed(&mut self) {
         if self.is_completed() {
+            self.dag_stats.finalize(
+                self.ctx.time(),
+                System {
+                    resources: &self.resources,
+                    network: &self.network.borrow(),
+                },
+            );
             log_info!(self.ctx, "finished DAG execution");
         }
     }
