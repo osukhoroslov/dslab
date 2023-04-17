@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use colored::*;
 
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
+use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
@@ -22,7 +22,13 @@ pub struct Dfs<'a> {
 
 impl<'a> Dfs<'a> {
     /// Creates a new Dfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn<'a>, goal: GoalFn<'a>, invariant: InvariantFn<'a>, collect: Option<CollectFn<'a>>, execution_mode: ExecutionMode) -> Self {
+    pub fn new(
+        prune: PruneFn<'a>,
+        goal: GoalFn<'a>,
+        invariant: InvariantFn<'a>,
+        collect: Option<CollectFn<'a>>,
+        execution_mode: ExecutionMode,
+    ) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,
@@ -92,7 +98,7 @@ impl<'a> Strategy for Dfs<'a> {
     fn invariant(&self) -> &InvariantFn {
         &self.invariant
     }
-    
+
     fn collect(&self) -> &Option<CollectFn> {
         &self.collect
     }

@@ -1,9 +1,9 @@
 //! Implementation of model checking BFS search strategy.
 
-use std::collections::{VecDeque, HashSet};
 use colored::*;
+use std::collections::{HashSet, VecDeque};
 
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
+use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::{McState, McSystem};
 
 use crate::util::t;
@@ -23,7 +23,13 @@ pub struct Bfs<'a> {
 
 impl<'a> Bfs<'a> {
     /// Creates a new Bfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn<'a>, goal: GoalFn<'a>, invariant: InvariantFn<'a>, collect: Option<CollectFn<'a>>, execution_mode: ExecutionMode) -> Self {
+    pub fn new(
+        prune: PruneFn<'a>,
+        goal: GoalFn<'a>,
+        invariant: InvariantFn<'a>,
+        collect: Option<CollectFn<'a>>,
+        execution_mode: ExecutionMode,
+    ) -> Self {
         let visited = Self::initialize_visited(&execution_mode);
         Self {
             prune,

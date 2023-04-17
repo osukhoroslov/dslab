@@ -3,13 +3,13 @@
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::ops::{AddAssign};
+use std::ops::AddAssign;
 
 use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired, LocalMessageReceived};
+use crate::mc::events::McEvent::{LocalMessageReceived, MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
 use crate::mc::system::{McState, McSystem};
 use crate::message::Message;
@@ -81,7 +81,6 @@ pub type InvariantFn<'a> = Box<dyn Fn(&McState) -> Result<(), String> + 'a>;
 /// Checks if given state should be collected.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
 pub type CollectFn<'a> = Box<dyn Fn(&McState) -> bool + 'a>;
-
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
@@ -349,7 +348,7 @@ pub trait Strategy {
         match &self.execution_mode() {
             ExecutionMode::Debug => update(self),
             ExecutionMode::Experiment => update(self),
-            ExecutionMode::Default => {},
+            ExecutionMode::Default => {}
         }
         if let Some(collect) = self.collect() {
             if (*collect)(state) {

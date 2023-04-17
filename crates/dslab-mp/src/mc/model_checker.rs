@@ -74,7 +74,10 @@ impl<'a> ModelChecker<'a> {
 
     /// Runs model checking and returns collected states.
     pub fn collect(&mut self) -> Result<HashSet<McState>, String> {
-        self.strategy.collect().as_ref().ok_or("cannot collect without specified handler")?;
+        self.strategy
+            .collect()
+            .as_ref()
+            .ok_or("cannot collect without specified handler")?;
         self.strategy.run(&mut self.system)?;
         Ok(self.strategy.collected().clone())
     }
