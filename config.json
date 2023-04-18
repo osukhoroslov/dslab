@@ -1,0 +1,6 @@
+{
+    "output_dir": "artifacts",
+    "args": ["solution_kik0s.py", "author_correct.py", "author_optimized.py", "author_naive.py", "author_alo_send_many_once.py"],
+    "timeout": 100,
+    "command": ["./test_single.sh"]
+}
