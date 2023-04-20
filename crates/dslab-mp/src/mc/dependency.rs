@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap, VecDeque};
 use std::collections::BTreeSet;
+use std::collections::{BTreeMap, VecDeque};
 
 use crate::mc::events::{McEventId, McTime};
 use crate::message::Message;
