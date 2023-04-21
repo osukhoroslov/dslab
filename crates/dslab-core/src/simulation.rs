@@ -648,13 +648,13 @@ impl Simulation {
     /// let mut ctx1 = sim.create_context("comp1");
     /// let mut ctx2 = sim.create_context("comp2");
     /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
-    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 2.0);
-    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 3.0);
+    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 1.0);
+    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 2.0);
     /// let events = sim.dump_events();
     /// assert_eq!(events.len(), 3);
     /// assert_eq!((events[0].id, events[0].time), (event1, 1.0));
-    /// assert_eq!((events[1].id, events[1].time), (event2, 2.0));
-    /// assert_eq!((events[2].id, events[2].time), (event3, 3.0));
+    /// assert_eq!((events[1].id, events[1].time), (event2, 1.0));
+    /// assert_eq!((events[2].id, events[2].time), (event3, 2.0));
     /// ```
     pub fn dump_events(&self) -> Vec<Event> {
         self.sim_state.borrow().dump_events()
