@@ -50,8 +50,16 @@ impl Network {
         self.node_ids.insert(name, id);
     }
 
+    pub fn proc_locations(&self) -> &HashMap<String, String> {
+        &self.proc_locations
+    }
+
     pub fn set_proc_location(&mut self, proc: String, node: String) {
         self.proc_locations.insert(proc, node);
+    }
+
+    pub fn max_delay(&self) -> f64 {
+        self.max_delay
     }
 
     pub fn set_delay(&mut self, delay: f64) {
@@ -64,16 +72,32 @@ impl Network {
         self.max_delay = max_delay;
     }
 
+    pub fn drop_rate(&self) -> f64 {
+        self.drop_rate
+    }
+
     pub fn set_drop_rate(&mut self, drop_rate: f64) {
         self.drop_rate = drop_rate;
+    }
+
+    pub fn dupl_rate(&self) -> f64 {
+        self.dupl_rate
     }
 
     pub fn set_dupl_rate(&mut self, dupl_rate: f64) {
         self.dupl_rate = dupl_rate;
     }
 
+    pub fn corrupt_rate(&self) -> f64 {
+        self.corrupt_rate
+    }
+
     pub fn set_corrupt_rate(&mut self, corrupt_rate: f64) {
         self.corrupt_rate = corrupt_rate;
+    }
+
+    pub fn get_drop_incoming(&self) -> &HashSet<String> {
+        &self.drop_incoming
     }
 
     pub fn drop_incoming(&mut self, node: &str) {
@@ -84,6 +108,10 @@ impl Network {
     pub fn pass_incoming(&mut self, node: &str) {
         self.drop_incoming.remove(node);
         t!(format!("{:>9.3} - pass messages to {}", self.ctx.time(), node).green());
+    }
+
+    pub fn get_drop_outgoing(&self) -> &HashSet<String> {
+        &self.drop_outgoing
     }
 
     pub fn drop_outgoing(&mut self, node: &str) {
@@ -106,6 +134,10 @@ impl Network {
         self.drop_incoming.remove(node);
         self.drop_outgoing.remove(node);
         t!(format!("{:>9.3} - connected node: {}", self.ctx.time(), node).green());
+    }
+
+    pub fn disabled_links(&self) -> &HashSet<(String, String)> {
+        &self.disabled_links
     }
 
     pub fn disable_link(&mut self, from: &str, to: &str) {
@@ -149,6 +181,38 @@ impl Network {
         self.traffic
     }
 
+    pub fn dest_node_id(&self, dest: &str) -> Id {
+        let dest_node = self.proc_locations.get(dest).unwrap();
+        *self.node_ids.get(dest_node).unwrap()
+    }
+
+    fn message_is_dropped(&self, src: &String, dest: &String) -> bool {
+        self.ctx.rand() < self.drop_rate
+            || self.drop_outgoing.contains(src)
+            || self.drop_incoming.contains(dest)
+            || self.disabled_links.contains(&(src.clone(), dest.clone()))
+    }
+
+    fn corrupt_if_needed(&self, msg: Message) -> Message {
+        if self.ctx.rand() < self.corrupt_rate {
+            lazy_static! {
+                static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+            }
+            let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+            Message::new(msg.tip, corrupted_data)
+        } else {
+            msg
+        }
+    }
+
+    fn get_message_count(&self) -> u32 {
+        if self.ctx.rand() >= self.dupl_rate {
+            1
+        } else {
+            (self.ctx.rand() * 2.).ceil() as u32 + 1
+        }
+    }
+
     pub fn send_message(&mut self, msg: Message, src: &str, dest: &str) {
         let msg_size = msg.size();
         let src_node = self.proc_locations.get(src).unwrap();
@@ -165,31 +229,19 @@ impl Network {
             self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
-            if self.ctx.rand() >= self.drop_rate
-                && !self.drop_outgoing.contains(src_node)
-                && !self.drop_incoming.contains(dest_node)
-                && !self.disabled_links.contains(&(src_node.clone(), dest_node.clone()))
-            {
-                let msg = if self.ctx.rand() < self.corrupt_rate {
-                    lazy_static! {
-                        static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
-                    }
-                    let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                    Message::new(msg.tip, corrupted_data)
-                } else {
-                    msg
-                };
+            if !self.message_is_dropped(src_node, dest_node) {
+                let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
                     msg,
                     src: src.to_string(),
                     dest: dest.to_string(),
                 };
-                if self.ctx.rand() >= self.dupl_rate {
+                let msg_count = self.get_message_count();
+                if msg_count == 1 {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                     self.ctx.emit_as(e, src_node_id, dest_node_id, delay);
                 } else {
-                    let dups = (self.ctx.rand() * 2.).ceil() as u32 + 1;
-                    for _i in 0..dups {
+                    for _ in 0..msg_count {
                         let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
                         self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
                     }

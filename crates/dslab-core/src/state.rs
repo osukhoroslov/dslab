@@ -12,6 +12,7 @@ use crate::log::log_incorrect_event;
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
+#[derive(Clone)]
 pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
@@ -186,5 +187,23 @@ impl SimulationState {
 
     pub fn event_count(&self) -> u64 {
         self.event_count
+    }
+
+    pub fn dump_events(&self) -> Vec<Event> {
+        let mut output = Vec::new();
+        for event in self.events.iter() {
+            if !self.canceled_events.contains(&event.id) {
+                output.push((*event).clone())
+            }
+        }
+        for event in self.ordered_events.iter() {
+            if !self.canceled_events.contains(&event.id) {
+                output.push((*event).clone())
+            }
+        }
+        output.sort();
+        // Because the sorting order of events is inverted to be used with BinaryHeap
+        output.reverse();
+        output
     }
 }

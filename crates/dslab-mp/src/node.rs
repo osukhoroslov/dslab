@@ -13,7 +13,7 @@ use crate::network::Network;
 use crate::process::Process;
 use crate::util::t;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EventLogEntry {
     pub time: f64,
     pub event: ProcessEvent,
@@ -25,13 +25,13 @@ impl EventLogEntry {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TimerBehavior {
     SetOnce,
     OverrideExisting,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ProcessEvent {
     MessageSent {
         msg: Message,
@@ -62,13 +62,14 @@ pub enum ProcessEvent {
     },
 }
 
-struct ProcessEntry {
-    proc_impl: Box<dyn Process>,
-    event_log: Vec<EventLogEntry>,
-    local_outbox: Vec<Message>,
-    pending_timers: HashMap<String, u64>,
-    sent_message_count: u64,
-    received_message_count: u64,
+#[derive(Clone)]
+pub(crate) struct ProcessEntry {
+    pub(crate) proc_impl: Box<dyn Process>,
+    pub(crate) event_log: Vec<EventLogEntry>,
+    pub(crate) local_outbox: Vec<Message>,
+    pub(crate) pending_timers: HashMap<String, u64>,
+    pub(crate) sent_message_count: u64,
+    pub(crate) received_message_count: u64,
 }
 
 impl ProcessEntry {
@@ -85,9 +86,8 @@ impl ProcessEntry {
 }
 
 pub struct Node {
-    #[allow(dead_code)]
-    id: Id,
-    name: String,
+    pub id: Id,
+    pub name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
     clock_skew: f64,
@@ -178,7 +178,7 @@ impl Node {
             time,
             ProcessEvent::LocalMessageReceived { msg: msg.clone() },
         ));
-        let mut proc_ctx = Context::new(proc.clone(), self.ctx.clone(), self.clock_skew);
+        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
         proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
@@ -196,7 +196,7 @@ impl Node {
             },
         ));
         proc_entry.received_message_count += 1;
-        let mut proc_ctx = Context::new(proc.clone(), self.ctx.clone(), self.clock_skew);
+        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
@@ -206,7 +206,7 @@ impl Node {
         t!(format!("{:>9.3} {:>10} !-- {:<10}", time, proc, timer).yellow());
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
-        let mut proc_ctx = Context::new(proc.clone(), self.ctx.clone(), self.clock_skew);
+        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
@@ -243,6 +243,10 @@ impl Node {
                 _ => {}
             }
         }
+    }
+
+    pub(crate) fn processes(&self) -> HashMap<String, ProcessEntry> {
+        self.processes.clone()
     }
 }
 

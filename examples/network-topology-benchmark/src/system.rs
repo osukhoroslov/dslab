@@ -16,7 +16,7 @@ pub struct System {
     pub receivers: Vec<u32>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {
     pub data_size: f64,
     pub receiver_id: Id,

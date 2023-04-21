@@ -19,10 +19,10 @@ use crate::common::Start;
 use crate::task::*;
 use crate::worker::{TaskCompleted, WorkerRegister};
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ReportStatus {}
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ScheduleTasks {}
 
 #[derive(Debug, PartialEq)]

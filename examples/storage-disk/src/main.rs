@@ -34,7 +34,7 @@ struct User {
     ctx: SimulationContext,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Start {}
 
 impl User {
@@ -138,7 +138,7 @@ fn main() {
     let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
     let user_id = sim.add_handler(USER_NAME, user);
 
-    let mut root = sim.create_context("root");
+    let root = sim.create_context("root");
     root.emit_now(Start {}, user_id);
 
     sim.step_until_no_events();

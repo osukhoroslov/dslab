@@ -17,7 +17,7 @@ use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {
     size: f64,
     receiver_id: Id,
@@ -144,7 +144,7 @@ fn main() {
             senders.push(sender_id);
         }
 
-        let mut client = sim.create_context("client");
+        let client = sim.create_context("client");
         for i in 1..10 {
             client.emit(
                 Start {
@@ -187,7 +187,7 @@ fn main() {
         let sender_id = sim.add_handler(sender_name, rc!(refcell!(sender)));
         shared_network.borrow_mut().set_location(sender_id, "localhost");
 
-        let mut client = sim.create_context("client");
+        let client = sim.create_context("client");
         for i in 1..10 {
             client.emit(
                 Start {

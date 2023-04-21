@@ -2,7 +2,7 @@ use std::fmt::{Error, Formatter};
 
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Message {
     pub tip: String,
     pub data: String,

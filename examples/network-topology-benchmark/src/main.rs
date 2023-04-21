@@ -70,7 +70,7 @@ fn run_benchmark(topology: Topology, full_mesh_optimization: bool) {
     let mut sim = Simulation::new(SIMULATION_SEED);
     let sys = build_system(&mut sim, topology, full_mesh_optimization);
 
-    let mut client = sim.create_context("client");
+    let client = sim.create_context("client");
 
     for sender in sys.senders {
         for &receiver in &sys.receivers {

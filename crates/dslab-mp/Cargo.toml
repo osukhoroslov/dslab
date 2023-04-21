@@ -7,9 +7,13 @@ edition = "2021"
 [dependencies]
 dslab-core = { path = "../dslab-core" }
 colored = "2.0.0"
+downcast-rs = "1.2.0"
+dyn-clone = "1.0"
 lazy_static = "1.4.0"
 log = "0.4.17"
+ordered-float = { version = "3.4.0", features = ["serde"] }
 rand = "0.8.4"
+rand_pcg = "0.3.1"
 regex = "1.6.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

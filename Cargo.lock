@@ -799,6 +799,7 @@ dependencies = [
  "atty",
  "colored",
  "downcast-rs",
+ "dyn-clone",
  "env_logger 0.9.3",
  "erased-serde",
  "log 0.4.17",
@@ -877,10 +878,14 @@ name = "dslab-mp"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "downcast-rs",
  "dslab-core",
+ "dyn-clone",
  "lazy_static",
  "log 0.4.17",
+ "ordered-float",
  "rand 0.8.5",
+ "rand_pcg 0.3.1",
  "regex",
  "serde",
  "serde_json",
@@ -2372,6 +2377,16 @@ name = "order-stat"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efa535d5117d3661134dbf1719b6f0ffe06f2375843b13935db186cd094105eb"
+
+[[package]]
+name = "ordered-float"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13a384337e997e6860ffbaa83708b2ef329fd8c54cb67a5f64d421e0f943254f"
+dependencies = [
+ "num-traits",
+ "serde",
+]
 
 [[package]]
 name = "os_str_bytes"

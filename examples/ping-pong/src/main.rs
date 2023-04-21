@@ -53,7 +53,7 @@ fn main() {
         .init();
 
     let mut sim = Simulation::new(123);
-    let mut root = sim.create_context("root");
+    let root = sim.create_context("root");
 
     let network_opt = if args.use_network {
         let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(1000., 0.001)));

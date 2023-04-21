@@ -9,13 +9,17 @@ use crate::node::{ProcessEvent, TimerBehavior};
 pub struct Context {
     proc_name: String,
     time: f64,
-    sim_ctx: Rc<RefCell<SimulationContext>>,
+    sim_ctx: Option<Rc<RefCell<SimulationContext>>>,
     actions: Vec<ProcessEvent>,
 }
 
 impl Context {
-    pub fn new(proc_name: String, sim_ctx: Rc<RefCell<SimulationContext>>, clock_skew: f64) -> Self {
-        let time = sim_ctx.borrow().time() + clock_skew;
+    pub fn new(proc_name: String, sim_ctx: Option<Rc<RefCell<SimulationContext>>>, clock_skew: f64) -> Self {
+        let time = if let Some(sim_ctx) = sim_ctx.as_ref() {
+            sim_ctx.borrow().time() + clock_skew
+        } else {
+            0.0
+        };
         Self {
             proc_name,
             time,
@@ -29,7 +33,7 @@ impl Context {
     }
 
     pub fn rand(&mut self) -> f64 {
-        self.sim_ctx.borrow_mut().rand()
+        self.sim_ctx.as_ref().expect("sim_ctx is None").borrow_mut().rand()
     }
 
     pub fn send(&mut self, msg: Message, dest: String) {

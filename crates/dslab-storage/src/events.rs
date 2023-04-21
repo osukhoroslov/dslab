@@ -4,7 +4,7 @@ use serde::Serialize;
 
 // Storage events
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to completion of storage read request. Source: storage, destination: requester.
 pub struct DataReadCompleted {
     /// Request id returned by [`crate::storage::Storage::read()`] method.
@@ -13,7 +13,7 @@ pub struct DataReadCompleted {
     pub size: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to failure of storage read request. Source: storage, destination: requester.
 pub struct DataReadFailed {
     /// Request id returned by [`crate::storage::Storage::read()`] method.
@@ -22,7 +22,7 @@ pub struct DataReadFailed {
     pub error: String,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to completion of storage write request. Source: storage, destination: requester.
 pub struct DataWriteCompleted {
     /// Request id returned by [`crate::storage::Storage::write()`] method.
@@ -31,7 +31,7 @@ pub struct DataWriteCompleted {
     pub size: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to failure of storage write request. Source: storage, destination: requester.
 pub struct DataWriteFailed {
     /// Request id returned by [`crate::storage::Storage::write()`] method.
@@ -42,7 +42,7 @@ pub struct DataWriteFailed {
 
 // File events
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to completion of file system read request. Source: file system, destination: requester.
 pub struct FileReadCompleted {
     /// Request id returned by [`crate::fs::FileSystem::read()`] method.
@@ -53,7 +53,7 @@ pub struct FileReadCompleted {
     pub read_size: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to failure of file system read request. Source: file system, destination: requester.
 pub struct FileReadFailed {
     /// Id which was returned from `read` file system method.
@@ -64,7 +64,7 @@ pub struct FileReadFailed {
     pub error: String,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to completion of file system write request. Source: file system, destination: requester.
 pub struct FileWriteCompleted {
     /// Id which was returned from `write` file system method.
@@ -75,7 +75,7 @@ pub struct FileWriteCompleted {
     pub new_size: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 /// Corresponds to failure of file system write request. Source: file system, destination: requester.
 pub struct FileWriteFailed {
     /// Id which was returned from `write` file system method.

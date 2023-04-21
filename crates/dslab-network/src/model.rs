@@ -5,7 +5,7 @@ use dslab_core::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Data {
     pub id: usize,
     pub src: Id,
@@ -14,7 +14,7 @@ pub struct Data {
     pub notification_dest: Id,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Clone, Serialize)]
 pub struct Message {
     pub id: usize,
     pub src: Id,
@@ -24,37 +24,37 @@ pub struct Message {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct MessageSend {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct MessageReceive {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct MessageDelivery {
     pub message: Message,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DataTransferRequest {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct StartDataTransfer {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DataReceive {
     pub data: Data,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DataTransferCompleted {
     pub data: Data,
 }

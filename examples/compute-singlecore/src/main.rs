@@ -14,7 +14,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Start {}
 
 pub struct Task {
@@ -88,7 +88,7 @@ fn main() {
     let task2 = Task::new(compute, 200., 512, sim.create_context("task2"));
     let task2_id = sim.add_handler("task2", rc!(refcell!(task2)));
 
-    let mut ctx = sim.create_context("root");
+    let ctx = sim.create_context("root");
     ctx.emit(Start {}, task1_id, 0.);
     ctx.emit(Start {}, task2_id, 5.);
 

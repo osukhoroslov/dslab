@@ -6,7 +6,7 @@ use pyo3::types::{PyModule, PyString, PyTuple};
 
 use dslab_mp::context::Context;
 use dslab_mp::message::Message;
-use dslab_mp::process::Process;
+use dslab_mp::process::{Process, ProcessState, StringProcessState};
 
 #[cfg(test)]
 mod tests;
@@ -62,6 +62,7 @@ impl PyProcessFactory {
     }
 }
 
+#[derive(Clone)]
 pub struct PyProcess {
     proc: PyObject,
     msg_class: Rc<PyObject>,
@@ -163,21 +164,22 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn state(&self) -> String {
+    fn state(&self) -> Box<dyn ProcessState> {
         Python::with_gil(|py| {
             let res = self
                 .proc
                 .call_method0(py, "get_state")
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
-            res.as_ref(py).downcast::<PyString>().unwrap().to_string()
+            Box::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string())
         })
     }
 
-    fn set_state(&self, data: &str) {
+    fn set_state(&self, state: Box<dyn ProcessState>) {
+        let data = state.downcast::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
-                .call_method1(py, "set_state", (data,))
+                .call_method1(py, "set_state", (*data,))
                 .map_err(|e| log_python_error(e, py))
                 .unwrap();
         });
