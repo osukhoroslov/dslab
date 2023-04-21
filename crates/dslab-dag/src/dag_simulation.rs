@@ -89,7 +89,7 @@ impl DagSimulation {
             self.sim.create_context("runner"),
         )));
         let runner_id = self.sim.add_handler("runner", runner.clone());
-        let mut client = self.sim.create_context("client");
+        let client = self.sim.create_context("client");
         client.emit_now(Start {}, runner_id);
         runner
     }

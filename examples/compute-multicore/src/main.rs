@@ -250,7 +250,7 @@ fn main() {
     let allocator2_id = sim.add_handler("allocator2", rc!(refcell!(allocator2)));
     let allocator3_id = sim.add_handler("allocator3", rc!(refcell!(allocator3)));
 
-    let mut ctx = sim.create_context("root");
+    let ctx = sim.create_context("root");
     ctx.emit(Start {}, task1_id, 0.);
     ctx.emit(Start {}, task2_id, 0.);
     ctx.emit(Start {}, task3_id, 1000.);

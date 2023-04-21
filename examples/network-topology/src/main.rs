@@ -124,7 +124,7 @@ fn main() {
     topology_rc.borrow_mut().set_location(receiver_1_id, "receiver_1");
     topology_rc.borrow_mut().set_location(receiver_2_id, "receiver_2");
 
-    let mut client = sim.create_context("client");
+    let client = sim.create_context("client");
 
     client.emit_now(
         Start {

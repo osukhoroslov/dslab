@@ -67,9 +67,9 @@ fn main() {
     let mut sim = Simulation::new(seed);
     let mut rand = Pcg64::seed_from_u64(seed);
     // admin context for starting master and workers
-    let mut admin = sim.create_context("admin");
+    let admin = sim.create_context("admin");
     // client context for submitting tasks
-    let mut client = sim.create_context("client");
+    let client = sim.create_context("client");
 
     // create network and add hosts
     let network_model: Rc<RefCell<dyn NetworkModel>> = if use_shared_network {

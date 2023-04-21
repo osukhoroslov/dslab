@@ -50,21 +50,21 @@ impl Network {
         self.node_ids.insert(name, id);
     }
 
+    pub fn proc_locations(&self) -> &HashMap<String, String> {
+        &self.proc_locations
+    }
+
     pub fn set_proc_location(&mut self, proc: String, node: String) {
         self.proc_locations.insert(proc, node);
     }
 
-    pub fn proc_locations(&self) -> &HashMap<String, String> {
-        &self.proc_locations
+    pub fn max_delay(&self) -> f64 {
+        self.max_delay
     }
 
     pub fn set_delay(&mut self, delay: f64) {
         self.min_delay = delay;
         self.max_delay = delay;
-    }
-
-    pub fn max_delay(&self) -> f64 {
-        self.max_delay
     }
 
     pub fn set_delays(&mut self, min_delay: f64, max_delay: f64) {
@@ -186,14 +186,14 @@ impl Network {
         *self.node_ids.get(dest_node).unwrap()
     }
 
-    fn message_is_dropped(&mut self, src: &String, dest: &String) -> bool {
+    fn message_is_dropped(&self, src: &String, dest: &String) -> bool {
         self.ctx.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
             || self.drop_incoming.contains(dest)
             || self.disabled_links.contains(&(src.clone(), dest.clone()))
     }
 
-    fn corrupt_if_needed(&mut self, msg: Message) -> Message {
+    fn corrupt_if_needed(&self, msg: Message) -> Message {
         if self.ctx.rand() < self.corrupt_rate {
             lazy_static! {
                 static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
@@ -205,7 +205,7 @@ impl Network {
         }
     }
 
-    fn get_message_count(&mut self) -> u32 {
+    fn get_message_count(&self) -> u32 {
         if self.ctx.rand() >= self.dupl_rate {
             1
         } else {
@@ -215,10 +215,10 @@ impl Network {
 
     pub fn send_message(&mut self, msg: Message, src: &str, dest: &str) {
         let msg_size = msg.size();
-        let src_node = (*self.proc_locations.get(src).unwrap()).clone();
-        let dest_node = (*self.proc_locations.get(dest).unwrap()).clone();
-        let src_node_id = *self.node_ids.get(&src_node).unwrap();
-        let dest_node_id = *self.node_ids.get(&dest_node).unwrap();
+        let src_node = self.proc_locations.get(src).unwrap();
+        let dest_node = self.proc_locations.get(dest).unwrap();
+        let src_node_id = *self.node_ids.get(src_node).unwrap();
+        let dest_node_id = *self.node_ids.get(dest_node).unwrap();
         // local communication inside a node is reliable and fast
         if src_node == dest_node {
             let e = MessageReceived {

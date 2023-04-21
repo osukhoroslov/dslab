@@ -185,7 +185,7 @@ fn main() {
     let user = rc!(refcell!(User::new(fs.clone(), sim.create_context(USER_NAME))));
     let user_id = sim.add_handler(USER_NAME, user);
 
-    let mut root = sim.create_context("root");
+    let root = sim.create_context("root");
 
     root.emit_now(Init {}, user_id);
     sim.step_until_no_events();
