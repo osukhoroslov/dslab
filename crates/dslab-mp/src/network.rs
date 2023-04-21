@@ -229,7 +229,7 @@ impl Network {
             self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
-            if !self.message_is_dropped(&src_node, &dest_node) {
+            if !self.message_is_dropped(src_node, dest_node) {
                 let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
                     msg,
