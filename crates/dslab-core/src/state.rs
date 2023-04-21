@@ -202,6 +202,8 @@ impl SimulationState {
             }
         }
         output.sort();
+        // Because the sorting order of events is inverted to be used with BinaryHeap
+        output.reverse();
         output
     }
 }

@@ -616,9 +616,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// let event1 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// let event2 = comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
     /// sim.cancel_events(|e| e.id < 2);
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
@@ -633,6 +633,29 @@ impl Simulation {
     /// Returns a copy of pending events sorted by time.
     ///
     /// Currently used for model checking in dslab-mp.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Event, Simulation, SimulationContext};
+    ///
+    /// #[derive(Clone, Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut ctx1 = sim.create_context("comp1");
+    /// let mut ctx2 = sim.create_context("comp2");
+    /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
+    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 2.0);
+    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 3.0);
+    /// let events = sim.dump_events();
+    /// assert_eq!(events.len(), 3);
+    /// assert_eq!((events[0].id, events[0].time), (event1, 1.0));
+    /// assert_eq!((events[1].id, events[1].time), (event2, 2.0));
+    /// assert_eq!((events[2].id, events[2].time), (event3, 3.0));
+    /// ```
     pub fn dump_events(&self) -> Vec<Event> {
         self.sim_state.borrow().dump_events()
     }
