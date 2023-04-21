@@ -4,8 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::context::Context;
-use crate::mc::events::McEvent;
-use crate::mc::events::McTime;
+use crate::mc::events::{McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};

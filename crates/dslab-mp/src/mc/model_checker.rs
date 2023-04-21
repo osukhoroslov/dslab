@@ -7,17 +7,14 @@ use std::rc::Rc;
 use colored::*;
 
 use crate::events::{MessageReceived, TimerFired};
-use crate::mc::events::{DeliveryOptions, McEvent};
+use crate::mc::events::{DeliveryOptions, McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
-use crate::mc::strategy::McSummary;
-use crate::mc::strategy::Strategy;
+use crate::mc::pending_events::PendingEvents;
+use crate::mc::strategy::{McSummary, Strategy};
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
-
-use super::events::McTime;
-use super::pending_events::PendingEvents;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {

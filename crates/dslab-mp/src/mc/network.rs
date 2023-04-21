@@ -1,8 +1,7 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
-use crate::mc::events::McTime;
-use crate::mc::events::{DeliveryOptions, McEvent};
+use crate::mc::events::{DeliveryOptions, McEvent, McTime};
 use crate::message::Message;
 use crate::network::Network;
 

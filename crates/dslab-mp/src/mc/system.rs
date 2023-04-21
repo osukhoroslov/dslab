@@ -3,12 +3,10 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-use crate::mc::events::McEvent;
+use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 use crate::mc::pending_events::PendingEvents;
-
-use super::events::McEventId;
 
 #[derive(Debug)]
 pub struct McState {
