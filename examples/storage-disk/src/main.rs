@@ -172,7 +172,6 @@ fn main() {
     let user_id = sim.add_handler(USER_NAME, user);
 
     let root = sim.create_context("root");
-    root.emit_now(Start {}, user_id);
 
     println!("Starting test pack 1...");
     root.emit_now(Start1 {}, user_id);
