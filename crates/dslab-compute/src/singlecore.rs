@@ -117,7 +117,7 @@ impl EventHandler for Compute {
                     self.ctx.cancel_event(self.next_event);
                     self.throughput_model.insert(
                         RunningComputation::new(event.id, memory, requester),
-                        flops as f64,
+                        flops,
                         &mut self.ctx,
                     );
                     if let Some((time, computation)) = self.throughput_model.peek() {
