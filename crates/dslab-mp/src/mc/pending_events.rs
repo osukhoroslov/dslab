@@ -40,7 +40,6 @@ impl PendingEvents {
     /// Stores the passed event under the specified id (should not already exist).
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
-        // println!("event add fixed {} {:?}", id, event);
         match &event {
             McEvent::MessageReceived { msg, .. } => {
                 if self.resolver.add_message(msg.clone(), id) {
