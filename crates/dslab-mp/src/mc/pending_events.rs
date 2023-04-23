@@ -145,7 +145,7 @@ impl PendingEvents {
             self.available_events.extend(unblocked_events);
         }
         if let McEvent::MessageReceived { msg, .. } = result.clone() {
-            let unblocked_event = self.resolver.remove_message(msg, event_id);
+            let unblocked_event = self.resolver.remove_message(msg);
             if let Some(new_available) = unblocked_event {
                 self.available_events.insert(new_available);
             }

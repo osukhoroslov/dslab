@@ -209,7 +209,9 @@ fn test_mc(config: &TestConfig) -> TestResult {
         }),
         Box::new(|_|{
             Ok(())
-        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
+        }),
+        None,
+     dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
     assume!(
@@ -243,7 +245,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
         }),
         Box::new(|_|{
             Ok(())
-        }), dslab_mp::mc::strategy::ExecutionMode::Debug,
+        }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
     assume!(
