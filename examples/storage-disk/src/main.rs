@@ -129,7 +129,7 @@ fn main() {
     )));
     sim.add_handler(DISK_NAME, disk.clone());
 
-    let user = rc!(refcell!(User::new(disk.clone(), sim.create_context(USER_NAME))));
+    let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
     let root = sim.create_context("root");
 
     println!("Starting...");

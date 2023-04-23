@@ -126,7 +126,7 @@ fn main() {
     println!("Starting simple user...");
 
     let simple_user = rc!(refcell!(User::new(
-        simple_disk.clone(),
+        simple_disk,
         sim.create_context(SIMPLE_USER_NAME)
     )));
     root.emit_now(Start {}, sim.add_handler(SIMPLE_USER_NAME, simple_user));
@@ -167,7 +167,7 @@ fn main() {
     println!("Starting advanced user...");
 
     let advanced_user = rc!(refcell!(User::new(
-        advanced_disk.clone(),
+        advanced_disk,
         sim.create_context(ADVANCED_USER_NAME)
     )));
     root.emit_now(Start {}, sim.add_handler(ADVANCED_USER_NAME, advanced_user));
