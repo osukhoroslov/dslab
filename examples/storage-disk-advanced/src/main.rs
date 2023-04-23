@@ -125,10 +125,7 @@ fn main() {
 
     println!("Starting simple user...");
 
-    let simple_user = rc!(refcell!(User::new(
-        simple_disk,
-        sim.create_context(SIMPLE_USER_NAME)
-    )));
+    let simple_user = rc!(refcell!(User::new(simple_disk, sim.create_context(SIMPLE_USER_NAME))));
     root.emit_now(Start {}, sim.add_handler(SIMPLE_USER_NAME, simple_user));
 
     // Elapsed times in logs will be equal for all activities.
