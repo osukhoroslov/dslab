@@ -118,7 +118,7 @@ impl DiskSpec {
         self
     }
 
-    /// Sets read throughput factor function to given functor.
+    /// Sets write throughput factor function to given functor.
     pub fn set_write_throughput_factor_fn(
         &mut self,
         write_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
