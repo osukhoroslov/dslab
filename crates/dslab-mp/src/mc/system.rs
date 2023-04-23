@@ -8,7 +8,6 @@ use crate::mc::network::McNetwork;
 use crate::mc::node::{McNode, McNodeState};
 use crate::mc::pending_events::PendingEvents;
 
-use super::events::McEventId;
 
 #[derive(Debug, Clone)]
 pub struct McState {

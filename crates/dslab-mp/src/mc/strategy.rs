@@ -138,12 +138,8 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            MessageDropped { id: message_id, .. } => {
-                self.take_event(system, message_id);
-                self.apply_event(system, event_id, false, false)?;
-            }
-            // impossible to get local message from insiders
-            LocalMessageReceived { .. } => {}
+            // impossible to get local message or message drops from insiders
+            _ => {}
         }
 
         Ok(())

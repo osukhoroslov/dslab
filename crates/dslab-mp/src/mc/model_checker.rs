@@ -16,8 +16,6 @@ use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
 
-use super::events::McTime;
-use super::pending_events::PendingEvents;
 use super::strategy::VisitedStates;
 use super::system::McState;
 
