@@ -1,6 +1,6 @@
 #!/bin/bash
-cd examples/mp-guarantees
-cargo run -- --impl python/$1 --debug
+cd examples/mp-ping-pong
+cargo run -- --impl python/$1
 retVal=$?
 if [ $retVal -ne 0 ]; then
     echo "Error"

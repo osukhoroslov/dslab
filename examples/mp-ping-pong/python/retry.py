@@ -1,11 +1,11 @@
-from dslabmp import Context, Message, Process, StateMember
+from dslabmp import Context, Message, Process
 
 
 class PingClient(Process):
     def __init__(self, node_id: str, server_id: str):
         self._id = node_id
         self._server_id = server_id
-        self._ping = StateMember(None)
+        self._ping = None
 
     def on_local_message(self, msg: Message, ctx: Context):
         if msg.type == 'PING':

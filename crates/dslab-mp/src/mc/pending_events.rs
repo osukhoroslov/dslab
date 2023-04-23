@@ -136,7 +136,6 @@ impl PendingEvents {
 
     /// Removes available event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
-        // println!("event pop {}", event_id);
         let result = self.events.remove(&event_id).unwrap();
         self.directives.remove(&event_id);
         self.available_events.remove(&event_id);

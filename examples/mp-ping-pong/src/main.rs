@@ -186,9 +186,9 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
 fn test_mc(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
-    // let data2 = format!(r#"{{"value": 1}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
     system.send_local_message("client", Message::new("PING", &data.clone()));
-    // system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state|{
             if state.search_depth > 7 {
@@ -202,7 +202,7 @@ fn test_mc(config: &TestConfig) -> TestResult {
                 return None;
             }
 
-            if state.node_states["client-node"]["client"].local_outbox.len() == 1 {
+            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
                 return Some("got message".to_owned());
             }
             return None;
@@ -225,9 +225,9 @@ fn test_mc(config: &TestConfig) -> TestResult {
 fn test_mc_unreliable(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
-    // let data2 = format!(r#"{{"value": 1}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
     system.send_local_message("client", Message::new("PING", &data.clone()));
-    // system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
@@ -238,7 +238,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
             }
         }),
         Box::new(|state|{
-            if state.node_states["client-node"]["client"].local_outbox.len() == 1 {
+            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
                 return Some("got two messages".to_owned());
             }
             return None;
