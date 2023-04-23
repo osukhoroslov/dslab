@@ -256,6 +256,44 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
+    let mut system = build_system(config);
+    let data = format!(r#"{{"value": 0}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
+    system.send_local_message("client", Message::new("PING", &data.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.network().borrow_mut().set_drop_rate(0.3);
+    let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
+        Box::new(|state| {
+            let sent = state.node_states["client-node"]["client"].sent_message_count + state.node_states["server-node"]["server"].sent_message_count;
+            let received = state.node_states["server-node"]["server"].received_message_count + state.node_states["client-node"]["client"].received_message_count;
+            if sent - received > 4 {
+                Some("too many pending messages".to_owned())
+            } else if state.search_depth > 20 {
+                Some("too deep".to_owned())
+            } else {
+                None
+            }
+        }),
+        Box::new(|state|{
+            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
+                return Some("got two messages".to_owned());
+            }
+            return None;
+        }),
+        Box::new(|_|{
+            Ok(())
+        }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
+    )));
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    println!("{:?}", res.unwrap());
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Ping-Pong Tests
@@ -301,7 +339,8 @@ fn main() {
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
     tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config.clone());
     tests.add("MODEL CHECKING", test_mc, config.clone());
-    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable, config);
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE WITH LIMITS", test_mc_drop_rate_limited, config);
 
     if args.test.is_none() {
         tests.run();
