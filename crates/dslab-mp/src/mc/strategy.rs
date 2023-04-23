@@ -159,11 +159,13 @@ pub trait Strategy {
         src: String,
         dest: String,
     ) -> Result<(), String> {
+        let state = system.get_state();
         self.take_event(system, event_id);
 
         let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
         self.apply_event(system, drop_event_id, false, false)?;
+        system.set_state(state);
 
         Ok(())
     }
