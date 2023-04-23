@@ -6,7 +6,7 @@ use sugars::{rc, refcell};
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, Event, EventHandler};
 
-use crate::disk::Disk;
+use crate::disk::{Disk, DiskSpec};
 use crate::events::*;
 use crate::fs::FileSystem;
 use crate::storage::{Storage, StorageInfo};
@@ -27,12 +27,12 @@ fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> 
 }
 
 fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
-    let disk = rc!(refcell!(Disk::new_simple(
-        DISK_CAPACITY,
-        DISK_READ_BW,
-        DISK_WRITE_BW,
-        sim.create_context(name),
-    )));
+    let mut spec = DiskSpec::default();
+    spec.set_capacity(DISK_CAPACITY)
+        .set_constant_read_bw(DISK_READ_BW)
+        .set_constant_write_bw(DISK_WRITE_BW);
+
+    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(name),).unwrap()));
     sim.add_handler(name, disk.clone());
     disk
 }
