@@ -11,10 +11,10 @@ use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_debug;
+use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::{Disk, DiskSpec};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
@@ -58,20 +58,20 @@ impl EventHandler for User {
             Ticker {} => {
                 let time = self.ctx.time();
                 if time.eq(&0.) {
-                    log_debug!(self.ctx, "Step #0: Single 100 byte read, expected to end at t=1");
+                    log_info!(self.ctx, "Step #0: Single 100 byte read, expected to end at t=1");
                     self.requests.insert(self.disk.borrow_mut().read(100, self.ctx.id()), 0);
                 } else if time.eq(&1.) {
-                    log_debug!(self.ctx, "Step #1: Two 50 byte reads, expected to end at t=2");
+                    log_info!(self.ctx, "Step #1: Two 50 byte reads, expected to end at t=2");
                     self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
                     self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
                 } else if time.eq(&2.) {
-                    log_debug!(self.ctx, "Step #2: Starting 1st 200 byte read, expected to end at t=5");
+                    log_info!(self.ctx, "Step #2: Starting 1st 200 byte read, expected to end at t=5");
                     self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 2);
                 } else if time.eq(&3.) {
-                    log_debug!(self.ctx, "Step #3: Starting 2nd 200 byte read, expected to end at t=6");
+                    log_info!(self.ctx, "Step #3: Starting 2nd 200 byte read, expected to end at t=6");
                     self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 3);
                 } else if time.eq(&4.) {
-                    log_debug!(self.ctx, "Step #4: Trying to read 201 bytes... should fail");
+                    log_info!(self.ctx, "Step #4: Trying to read 201 bytes... should fail");
                     self.requests.insert(self.disk.borrow_mut().read(201, self.ctx.id()), 4);
                 } else if time.eq(&6.) {
                     return;
@@ -79,7 +79,7 @@ impl EventHandler for User {
                 self.ctx.emit_self(Ticker {}, 1.);
             }
             DataReadCompleted { request_id, size } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
                     "Step #{}: Completed reading {} bytes from disk",
                     self.requests[&request_id],
@@ -87,7 +87,7 @@ impl EventHandler for User {
                 );
             }
             DataReadFailed { request_id, error } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
                     "Step #{}: Reading failed. Error: {}",
                     self.requests[&request_id],
@@ -95,7 +95,7 @@ impl EventHandler for User {
                 );
             }
             DataWriteCompleted { request_id, size } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
                     "Step #{}: Completed writing {} bytes to disk",
                     self.requests[&request_id],
@@ -103,7 +103,7 @@ impl EventHandler for User {
                 );
             }
             DataWriteFailed { request_id, error } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
                     "Step #{}: Writing failed. Error: {}",
                     self.requests[&request_id],
@@ -121,12 +121,12 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(Disk::new_simple(
-        DISK_CAPACITY,
-        DISK_READ_BW,
-        DISK_WRITE_BW,
-        sim.create_context(DISK_NAME),
-    )));
+    let mut spec = DiskSpec::default();
+    spec.set_capacity(DISK_CAPACITY)
+        .set_constant_read_bw(DISK_READ_BW)
+        .set_constant_write_bw(DISK_WRITE_BW);
+
+    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(DISK_NAME),).unwrap()));
     sim.add_handler(DISK_NAME, disk.clone());
 
     let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));

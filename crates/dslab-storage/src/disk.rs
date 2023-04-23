@@ -37,6 +37,99 @@ struct DiskReadActivityCompleted {}
 #[derive(Clone, Serialize)]
 struct DiskWriteActivityCompleted {}
 
+type DiskThroughputModel = FairThroughputSharingModel<DiskActivity>;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// Represents disk specification.
+///
+/// Is filled by user and then passed to [`Disk`] when it is created.
+pub struct DiskSpec {
+    pub(in crate::disk) capacity: u64,
+    pub(in crate::disk) read_throughput_fn: ResourceThroughputFn,
+    pub(in crate::disk) write_throughput_fn: ResourceThroughputFn,
+    pub(in crate::disk) read_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    pub(in crate::disk) write_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+}
+
+/// An error type to be returned on invalid [`DiskSpec`].
+#[derive(Debug, Clone)]
+pub struct InvalidDiskSpecError {}
+
+const DEFAULT_DISK_CAPACITY: u64 = 1;
+const DEFAULT_DISK_READ_BW: f64 = 1.;
+const DEFAULT_DISK_WRITE_BW: f64 = 1.;
+
+impl Default for DiskSpec {
+    /// Creates default disk specification.
+    ///
+    /// Capacity of the disk, its read and write bandwidths are set to 1 and to be constant.
+    /// Read and write throughput functions are set to constant with multiplier = 1.
+    ///
+    /// After editing spec is passed to [`Disk`].
+    fn default() -> Self {
+        Self {
+            capacity: DEFAULT_DISK_CAPACITY,
+            read_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_READ_BW),
+            write_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_WRITE_BW),
+            read_throughput_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            write_throughput_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+        }
+    }
+}
+
+impl DiskSpec {
+    /// Sets capaticy of the disk.
+    pub fn set_capacity(&mut self, capacity: u64) -> &mut Self {
+        self.capacity = capacity;
+        self
+    }
+
+    /// Sets read bandwidth to be constant with given value.
+    pub fn set_constant_read_bw(&mut self, read_bw: f64) -> &mut Self {
+        self.read_throughput_fn = make_constant_throughput_fn(read_bw);
+        self
+    }
+
+    /// Sets write bandwidth to be constant with given value.
+    pub fn set_constant_write_bw(&mut self, write_bw: f64) -> &mut Self {
+        self.write_throughput_fn = make_constant_throughput_fn(write_bw);
+        self
+    }
+
+    /// Sets read throughput function to be constant with given value.
+    pub fn set_read_throughput_fn(&mut self, read_throughput_fn: ResourceThroughputFn) -> &mut Self {
+        self.read_throughput_fn = read_throughput_fn;
+        self
+    }
+
+    /// Sets write throughput function to be constant with given value.
+    pub fn set_write_throughput_fn(&mut self, write_throughput_fn: ResourceThroughputFn) -> &mut Self {
+        self.write_throughput_fn = write_throughput_fn;
+        self
+    }
+
+    /// Sets read throughput factor function to given functor.
+    pub fn set_read_throughput_factor_fn(
+        &mut self,
+        read_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    ) -> &mut Self {
+        self.read_throughput_factor_fn = read_throughput_factor_fn;
+        self
+    }
+
+    /// Sets read throughput factor function to given functor.
+    pub fn set_write_throughput_factor_fn(
+        &mut self,
+        write_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    ) -> &mut Self {
+        self.write_throughput_factor_fn = write_throughput_factor_fn;
+        self
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /// Represents a disk.
 ///
 /// Disk is characterized by its capacity and read/write throughput models.
@@ -45,8 +138,8 @@ struct DiskWriteActivityCompleted {}
 pub struct Disk {
     capacity: u64,
     used: u64,
-    read_throughput_model: FairThroughputSharingModel<DiskActivity>,
-    write_throughput_model: FairThroughputSharingModel<DiskActivity>,
+    read_throughput_model: DiskThroughputModel,
+    write_throughput_model: DiskThroughputModel,
     next_request_id: u64,
     next_read_event: u64,
     next_write_event: u64,
@@ -54,51 +147,26 @@ pub struct Disk {
 }
 
 impl Disk {
-    /// Creates new disk with constant throughput and factor functions.
-    pub fn new_simple(capacity: u64, read_bandwidth: f64, write_bandwidth: f64, ctx: SimulationContext) -> Self {
-        Self {
-            capacity,
+    /// Creates new disk from given spec.
+    ///
+    /// Returns [`InvalidDiskSpecError`] on invalid spec.
+    pub fn new(spec: DiskSpec, ctx: SimulationContext) -> Result<Self, InvalidDiskSpecError> {
+        Ok(Self {
+            capacity: spec.capacity,
             used: 0,
             read_throughput_model: FairThroughputSharingModel::new(
-                make_constant_throughput_fn(read_bandwidth),
-                boxed!(ConstantFactorFn::new(1.)),
+                spec.read_throughput_fn,
+                spec.read_throughput_factor_fn,
             ),
             write_throughput_model: FairThroughputSharingModel::new(
-                make_constant_throughput_fn(write_bandwidth),
-                boxed!(ConstantFactorFn::new(1.)),
+                spec.write_throughput_fn,
+                spec.write_throughput_factor_fn,
             ),
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
             ctx,
-        }
-    }
-
-    /// Creates new disk with arbitrary throughput and factor functions.
-    pub fn new(
-        capacity: u64,
-        read_throughput_function: ResourceThroughputFn,
-        write_throughput_function: ResourceThroughputFn,
-        read_throughput_factor_function: Box<dyn ActivityFactorFn<DiskActivity>>,
-        write_throughput_factor_function: Box<dyn ActivityFactorFn<DiskActivity>>,
-        ctx: SimulationContext,
-    ) -> Self {
-        Self {
-            capacity,
-            used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
-                read_throughput_function,
-                read_throughput_factor_function,
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
-                write_throughput_function,
-                write_throughput_factor_function,
-            ),
-            next_request_id: 0,
-            next_read_event: u64::MAX,
-            next_write_event: u64::MAX,
-            ctx,
-        }
+        })
     }
 
     fn make_unique_request_id(&mut self) -> u64 {

@@ -20,7 +20,7 @@ use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use dslab_network::model::NetworkModel;
 use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::{Disk, DiskSpec};
 
 use crate::common::Start;
 use crate::master::Master;
@@ -114,12 +114,14 @@ fn main() {
         sim.add_handler(compute_name, compute.clone());
         // disk
         let disk_name = format!("{}::disk", host);
-        let disk = Disk::new_simple(
-            disk_capacity,
-            disk_read_bandwidth,
-            disk_write_bandwidth,
-            sim.create_context(&disk_name),
-        );
+
+        let mut spec = DiskSpec::default();
+        spec.set_capacity(disk_capacity)
+            .set_constant_read_bw(disk_read_bandwidth)
+            .set_constant_write_bw(disk_write_bandwidth);
+
+        let disk = Disk::new(spec, sim.create_context(&disk_name)).unwrap();
+
         let worker_name = &format!("{}::worker", host);
         let worker = Worker::new(
             compute,
