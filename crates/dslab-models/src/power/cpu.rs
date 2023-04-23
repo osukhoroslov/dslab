@@ -18,6 +18,12 @@ pub trait CpuPowerModel: DynClone {
     fn get_power_with_freq(&self, utilization: f64, _frequency: f64) -> f64 {
         self.get_power(utilization)
     }
+
+    /// Returns CPU power consumption in W.
+    /// In addition, CPU state is passed (Px or Cx)
+    fn get_power_with_state(&self, utilization: f64, _state: String) -> f64 {
+        self.get_power(utilization)
+    }
 }
 
 clone_trait_object!(CpuPowerModel);

@@ -14,18 +14,18 @@ fn test_constant_model() {
     assert_eq!(model.get_power(HostState::hdd(HddState::Standby)), 0.5);
     assert_eq!(model.get_power(HostState::hdd(HddState::Idle)), 0.5);
 
-    let state = HostState::new(None, None, None, None, None, Some(HddState::Active));
+    let state = HostState::new(None, None, None, None, None, None, Some(HddState::Active));
     assert_eq!(model.get_power(state), 0.5);
 }
 
 #[test]
-fn test_state_wise_model() {
+fn test_state_based_model() {
     let model = HostPowerModel::hdd_only(Box::new(StateBasedHddPowerModel::ibm_36z15()));
 
     assert_eq!(model.get_power(HostState::hdd(HddState::Active)), 13.5);
     assert_eq!(model.get_power(HostState::hdd(HddState::Idle)), 10.2);
     assert_eq!(model.get_power(HostState::hdd(HddState::Standby)), 2.5);
 
-    let state = HostState::new(None, None, None, None, None, Some(HddState::Active));
+    let state = HostState::new(None, None, None, None, None, None, Some(HddState::Active));
     assert_eq!(model.get_power(state), 13.5);
 }

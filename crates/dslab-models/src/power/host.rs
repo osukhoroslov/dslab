@@ -14,6 +14,8 @@ pub struct HostState {
     pub cpu_util: Option<f64>,
     /// CPU relative frequency from 0 to 1.
     pub cpu_freq: Option<f64>,
+    /// CPU state. P-state or C-state.
+    pub cpu_state: Option<String>,
     /// Memory utilization from 0 to 1.
     pub memory_util: Option<f64>,
     /// Memory read utilization from 0 to 1.
@@ -29,6 +31,7 @@ impl HostState {
     pub fn new(
         cpu_util: Option<f64>,
         cpu_freq: Option<f64>,
+        cpu_state: Option<String>,
         memory_util: Option<f64>,
         memory_read_util: Option<f64>,
         memory_write_util: Option<f64>,
@@ -37,6 +40,7 @@ impl HostState {
         Self {
             cpu_util,
             cpu_freq,
+            cpu_state,
             memory_util,
             memory_read_util,
             memory_write_util,
@@ -49,6 +53,7 @@ impl HostState {
         Self {
             cpu_util: Some(cpu_util),
             cpu_freq: None,
+            cpu_state: None,
             memory_util: None,
             memory_read_util: None,
             memory_write_util: None,
@@ -61,6 +66,7 @@ impl HostState {
         Self {
             cpu_util: None,
             cpu_freq: None,
+            cpu_state: None,
             memory_util: Some(memory_util),
             memory_read_util: None,
             memory_write_util: None,
@@ -73,6 +79,7 @@ impl HostState {
         Self {
             cpu_util: None,
             cpu_freq: None,
+            cpu_state: None,
             memory_util: None,
             memory_read_util: None,
             memory_write_util: None,
@@ -148,6 +155,8 @@ impl HostPowerModel {
         if let Some(model) = &self.cpu_power_model {
             if let (Some(cpu_util), Some(cpu_freq)) = (host_state.cpu_util, host_state.cpu_freq) {
                 result += model.get_power_with_freq(cpu_util, cpu_freq);
+            } else if let (Some(cpu_state), Some(cpu_util)) = (host_state.cpu_state, host_state.cpu_util) {
+                result += model.get_power_with_state(cpu_util, cpu_state);
             } else if let Some(cpu_util) = host_state.cpu_util {
                 result += model.get_power(cpu_util);
             }

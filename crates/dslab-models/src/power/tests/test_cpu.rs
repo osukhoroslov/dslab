@@ -6,6 +6,7 @@ use crate::power::cpu_models::dvfs::DVFSCpuPowerModel;
 use crate::power::cpu_models::empirical::EmpiricalCpuPowerModel;
 use crate::power::cpu_models::mse::MseCpuPowerModel;
 use crate::power::cpu_models::square::SquareCpuPowerModel;
+use crate::power::cpu_models::statefull::StatefullCpuPowerModel;
 use crate::power::hdd_models::constant::ConstantHddPowerModel;
 use crate::power::host::HostPowerModel;
 use crate::power::host::HostState;
@@ -115,9 +116,63 @@ fn test_dvfs_model() {
         None,
         None,
         None,
+        None,
     );
     assert!(model.get_power(state.clone()) > 0.59);
     assert!(model.get_power(state) < 0.6);
+}
+
+#[test]
+fn test_dvfs_with_coefs_model() {
+    let model = HostPowerModel::cpu_only(Box::new(DVFSCpuPowerModel::new_with_coefs(0.4, 1., 0.3, 0.3)));
+
+    let state = HostState::new(
+        /*cpu_util*/ Some(0.4),
+        /*cpu_freq*/ Some(0.7),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+    assert!(model.get_power(state.clone()) > 0.6);
+    assert!(model.get_power(state.clone()) < 0.61);
+}
+
+#[test]
+fn test_statefull_model() {
+    let default_model = Box::new(MseCpuPowerModel::new(1., 0.4, 1.4));
+    let p1_model = Box::new(SquareCpuPowerModel::new(1., 0.4));
+
+    let mut statefull_model = Box::new(StatefullCpuPowerModel::new(default_model));
+    statefull_model.add_cpu_model("P1".to_string(), p1_model);
+
+    let model = HostPowerModel::cpu_only(statefull_model);
+
+    // Test default state
+    let state_c2 = HostState::new(
+        /*cpu_util*/ Some(0.5),
+        None,
+        /*cpu_state*/ Some("C2".to_string()),
+        None,
+        None,
+        None,
+        None,
+    );
+    assert!(model.get_power(state_c2.clone()) > 0.77);
+    assert!(model.get_power(state_c2) < 0.78);
+
+    // Test manually specifyed state
+    let state_p1 = HostState::new(
+        /*cpu_util*/ Some(0.5),
+        None,
+        /*cpu_state*/ Some("P1".to_string()),
+        None,
+        None,
+        None,
+        None,
+    );
+    assert_eq!(model.get_power(state_p1.clone()), 0.55);
 }
 
 #[test]

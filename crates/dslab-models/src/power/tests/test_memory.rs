@@ -14,7 +14,7 @@ fn test_constant_model() {
     assert_eq!(model.get_power(HostState::memory(0.5)), 0.5);
     assert_eq!(model.get_power(HostState::memory(1.)), 0.5);
 
-    let state = HostState::new(None, None, None, Some(1.), Some(1.), None);
+    let state = HostState::new(None, None, None, None, Some(1.), Some(1.), None);
     assert_eq!(model.get_power(state), 0.5);
 }
 
@@ -34,11 +34,11 @@ fn test_ddr3_model() {
     assert!(model.get_power(HostState::memory(1.)) > 89.9);
     assert!(model.get_power(HostState::memory(1.)) < 90.1);
 
-    let mut state = HostState::new(None, None, None, Some(0.), Some(0.), None);
+    let mut state = HostState::new(None, None, None, None, Some(0.), Some(0.), None);
     assert!(model.get_power(state.clone()) > 23.4);
     assert!(model.get_power(state.clone()) < 23.41);
 
-    state = HostState::new(None, None, Some(0.5), Some(0.4), Some(0.8), None);
+    state = HostState::new(None, None, None, Some(0.5), Some(0.4), Some(0.8), None);
     assert!(model.get_power(state.clone()) > 62.27);
     assert!(model.get_power(state.clone()) < 62.29);
 }
