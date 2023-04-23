@@ -169,7 +169,7 @@ fn main() {
     )));
     root.emit_now(Start {}, sim.add_handler(ADVANCED_USER_NAME, advanced_user));
 
-    // Elapsed times in logs will differ in same activities.
+    // Elapsed times in logs will differ for same activities.
     sim.step_until_no_events();
 
     println!("Finished advanced user");
