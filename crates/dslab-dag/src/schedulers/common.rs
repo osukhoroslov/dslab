@@ -186,33 +186,42 @@ fn find_earliest_slot(
     total_memory: u64,
     memory_usage: &Treap,
 ) -> (f64, Vec<u32>) {
-    let mut possible_starts = scheduled_tasks
+    // current iterators to a position in BTreeSet where ScheduledTask::new(possible_start, 0., 0) is supposed to be
+    let mut iters = scheduled_tasks
         .iter()
-        .flat_map(|schedule| {
-            schedule
-                .iter()
+        .map(|tasks| {
+            tasks
+                .range((Unbounded, Included(ScheduledTask::new(start_time, 0., 0))))
                 .rev()
-                .map(|scheduled_task| scheduled_task.finish_time)
-                .take_while(|&x| x >= start_time)
+                .take(1)
+                .chain(tasks.range((Excluded(ScheduledTask::new(start_time, 0., 0)), Unbounded)))
+                .peekable()
         })
         .collect::<Vec<_>>();
-    possible_starts.push(start_time);
-    possible_starts.sort_by(|a, b| a.total_cmp(b));
-    possible_starts.dedup();
+    // last item to the left of corresponding iter
+    let mut last_task: Vec<Option<&ScheduledTask>> = vec![None; scheduled_tasks.len()];
 
     let mut cores: Vec<u32> = Vec::new();
-    for &possible_start in possible_starts.iter() {
+
+    let mut possible_start = start_time;
+    loop {
         if memory_usage.max(possible_start, possible_start + task_exec_time) + need_memory > total_memory {
             continue;
         }
 
-        for (core, tasks) in scheduled_tasks.iter().enumerate() {
-            let next = tasks
-                .range((Excluded(ScheduledTask::new(possible_start, 0., 0)), Unbounded))
-                .next();
-            let prev = tasks
-                .range((Unbounded, Included(ScheduledTask::new(possible_start, 0., 0))))
-                .next_back();
+        for core in 0..scheduled_tasks.len() {
+            while let Some(&task) = iters[core].peek() {
+                if task.start_time <= possible_start {
+                    last_task[core] = iters[core].next();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        for core in 0..scheduled_tasks.len() {
+            let next = iters[core].peek();
+            let prev = last_task[core];
             if let Some(scheduled_task) = prev {
                 if scheduled_task.finish_time > possible_start {
                     continue;
@@ -231,7 +240,25 @@ fn find_earliest_slot(
         } else {
             cores.clear();
         }
+
+        let next_possible_start = last_task
+            .iter()
+            .filter_map(|task| task.map(|t| t.finish_time))
+            .chain(
+                iters
+                    .iter_mut()
+                    .filter_map(|iter| iter.peek().map(|task| task.finish_time)),
+            )
+            .filter(|time| time > &possible_start)
+            .min_by(|a, b| a.total_cmp(b));
+        if let Some(time) = next_possible_start {
+            assert!(time > possible_start);
+            possible_start = time;
+        } else {
+            break;
+        }
     }
+
     (start_time, cores)
 }
 
