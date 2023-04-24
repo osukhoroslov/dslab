@@ -79,7 +79,7 @@ impl Default for DiskSpec {
 }
 
 impl DiskSpec {
-    /// Sets capaticy of the disk.
+    /// Sets capacity of the disk.
     pub fn set_capacity(&mut self, capacity: u64) -> &mut Self {
         self.capacity = capacity;
         self
@@ -97,13 +97,13 @@ impl DiskSpec {
         self
     }
 
-    /// Sets read throughput function to be constant with given value.
+    /// Sets custom throughput function for read operations.
     pub fn set_read_throughput_fn(&mut self, read_throughput_fn: ResourceThroughputFn) -> &mut Self {
         self.read_throughput_fn = read_throughput_fn;
         self
     }
 
-    /// Sets write throughput function to be constant with given value.
+    /// Sets custom throughput function for write operations.
     pub fn set_write_throughput_fn(&mut self, write_throughput_fn: ResourceThroughputFn) -> &mut Self {
         self.write_throughput_fn = write_throughput_fn;
         self
