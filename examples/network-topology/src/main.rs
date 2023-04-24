@@ -14,6 +14,7 @@ use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_info};
 use dslab_network::model::DataTransferCompleted;
 use dslab_network::network::Network;
+use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_network::topology::Topology;
 use dslab_network::topology_model::TopologyNetwork;
 
@@ -83,13 +84,13 @@ fn main() {
 
     let mut topology = Topology::new();
     // network nodes
-    topology.add_node("sender_1", 100.0, 0.0);
-    topology.add_node("sender_2", 100.0, 0.0);
-    topology.add_node("switch_1", 100.0, 0.0);
-    topology.add_node("switch_2", 100.0, 0.0);
-    topology.add_node("receiver_1", 100.0, 0.0);
-    topology.add_node("receiver_2", 100.0, 0.0);
-    topology.add_node("sender_3", 100.0, 0.0);
+    topology.add_node("sender_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("sender_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("switch_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("switch_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("receiver_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("receiver_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
+    topology.add_node("sender_3", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
     // network links
     topology.add_link("sender_1", "switch_1", 100.0, 1.0);
     topology.add_link("sender_2", "switch_1", 90.0, 1.0);

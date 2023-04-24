@@ -11,6 +11,7 @@ use sugars::{rc, refcell};
 use dslab_core::simulation::Simulation;
 use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use dslab_network::network::Network;
+use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 
 use crate::process::{NetworkProcess, Process, Start};
 
@@ -59,8 +60,12 @@ fn main() {
         let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(1000., 0.001)));
         let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
         sim.add_handler("net", network.clone());
-        network.borrow_mut().add_node("host1", 1000., 0.);
-        network.borrow_mut().add_node("host2", 1000., 0.);
+        network
+            .borrow_mut()
+            .add_node("host1", Box::new(SharedBandwidthNetwork::new(1000., 0.)));
+        network
+            .borrow_mut()
+            .add_node("host2", Box::new(SharedBandwidthNetwork::new(1000., 0.)));
         Some(network)
     } else {
         None

@@ -11,8 +11,6 @@ use dslab_core::{cast, log_debug};
 use crate::model::*;
 use crate::topology::Topology;
 
-// pub const NETWORK_ID: &str = "net";
-
 pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
     topology: Rc<RefCell<Topology>>,
@@ -43,10 +41,8 @@ impl Network {
         }
     }
 
-    pub fn add_node(&mut self, node_id: &str, local_bandwidth: f64, local_latency: f64) {
-        self.topology
-            .borrow_mut()
-            .add_node(node_id, local_bandwidth, local_latency)
+    pub fn add_node(&mut self, node_id: &str, local_network: Box<dyn NetworkModel>) {
+        self.topology.borrow_mut().add_node(node_id, local_network)
     }
 
     pub fn add_link(&mut self, node1: &str, node2: &str, bandwidth: f64, latency: f64) {
