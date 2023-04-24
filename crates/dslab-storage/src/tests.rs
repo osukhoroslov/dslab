@@ -27,12 +27,12 @@ fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> 
 }
 
 fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
-    let mut spec = DiskSpec::default();
-    spec.set_capacity(DISK_CAPACITY)
-        .set_constant_read_bw(DISK_READ_BW)
-        .set_constant_write_bw(DISK_WRITE_BW);
-
-    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(name))));
+    let disk = rc!(refcell!(Disk::simple(
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW,
+        sim.create_context(name)
+    )));
     sim.add_handler(name, disk.clone());
     disk
 }
