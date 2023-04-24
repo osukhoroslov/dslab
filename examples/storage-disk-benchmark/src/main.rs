@@ -180,9 +180,7 @@ fn main() {
             .set_constant_read_bw(DISK_READ_BW)
             .set_constant_write_bw(DISK_WRITE_BW);
 
-        let disk = rc!(refcell!(
-            Disk::new(spec, sim.create_context(disk_name.clone()),).unwrap()
-        ));
+        let disk = rc!(refcell!(Disk::new(spec, sim.create_context(disk_name.clone()),)));
 
         disks.push((sim.add_handler(disk_name, disk.clone()), disk));
     }

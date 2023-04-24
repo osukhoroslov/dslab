@@ -32,7 +32,7 @@ fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
         .set_constant_read_bw(DISK_READ_BW)
         .set_constant_write_bw(DISK_WRITE_BW);
 
-    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(name),).unwrap()));
+    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(name))));
     sim.add_handler(name, disk.clone());
     disk
 }

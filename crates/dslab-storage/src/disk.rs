@@ -52,10 +52,6 @@ pub struct DiskSpec {
     pub(in crate::disk) write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
 }
 
-/// An error type to be returned on invalid [`DiskSpec`].
-#[derive(Debug, Clone)]
-pub struct InvalidDiskSpecError {}
-
 const DEFAULT_DISK_CAPACITY: u64 = 1;
 const DEFAULT_DISK_READ_BW: f64 = 1.;
 const DEFAULT_DISK_WRITE_BW: f64 = 1.;
@@ -144,8 +140,8 @@ impl Disk {
     /// Creates new disk from given spec.
     ///
     /// Returns [`InvalidDiskSpecError`] on invalid spec.
-    pub fn new(spec: DiskSpec, ctx: SimulationContext) -> Result<Self, InvalidDiskSpecError> {
-        Ok(Self {
+    pub fn new(spec: DiskSpec, ctx: SimulationContext) -> Self {
+        Self {
             capacity: spec.capacity,
             used: 0,
             read_throughput_model: FairThroughputSharingModel::new(spec.read_throughput_fn, spec.read_factor_fn),
@@ -154,7 +150,7 @@ impl Disk {
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
             ctx,
-        })
+        }
     }
 
     fn make_unique_request_id(&mut self) -> u64 {

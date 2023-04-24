@@ -168,14 +168,14 @@ fn main() {
         .set_capacity(DISK_1_CAPACITY)
         .set_constant_read_bw(DISK_1_READ_BW)
         .set_constant_write_bw(DISK_1_WRITE_BW);
-    let disk1 = rc!(refcell!(Disk::new(spec1, sim.create_context(DISK_1_NAME)).unwrap()));
+    let disk1 = rc!(refcell!(Disk::new(spec1, sim.create_context(DISK_1_NAME))));
 
     let mut spec2 = DiskSpec::default();
     spec2
         .set_capacity(DISK_2_CAPACITY)
         .set_constant_read_bw(DISK_2_READ_BW)
         .set_constant_write_bw(DISK_2_WRITE_BW);
-    let disk2 = rc!(refcell!(Disk::new(spec2, sim.create_context(DISK_2_NAME)).unwrap()));
+    let disk2 = rc!(refcell!(Disk::new(spec2, sim.create_context(DISK_2_NAME))));
 
     let fs = rc!(refcell!(FileSystem::new(sim.create_context(FILESYSTEM_NAME))));
     sim.add_handler(FILESYSTEM_NAME, fs.clone());

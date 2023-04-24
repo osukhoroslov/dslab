@@ -121,9 +121,7 @@ fn main() {
         .set_constant_read_bw(DISK_READ_BW)
         .set_constant_write_bw(DISK_WRITE_BW);
 
-    let simple_disk = rc!(refcell!(
-        Disk::new(simple_spec, sim.create_context(SIMPLE_DISK_NAME)).unwrap()
-    ));
+    let simple_disk = rc!(refcell!(Disk::new(simple_spec, sim.create_context(SIMPLE_DISK_NAME))));
     sim.add_handler(SIMPLE_DISK_NAME, simple_disk.clone());
 
     println!("Starting simple user...");
@@ -173,8 +171,7 @@ fn main() {
     let advanced_disk = rc!(refcell!(Disk::new(
         advanced_spec,
         sim.create_context(ADVANCED_DISK_NAME),
-    )
-    .unwrap()));
+    )));
     sim.add_handler(ADVANCED_DISK_NAME, advanced_disk.clone());
 
     println!("Starting advanced user...");

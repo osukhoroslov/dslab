@@ -120,7 +120,7 @@ fn main() {
             .set_constant_read_bw(disk_read_bandwidth)
             .set_constant_write_bw(disk_write_bandwidth);
 
-        let disk = Disk::new(spec, sim.create_context(&disk_name)).unwrap();
+        let disk = Disk::new(spec, sim.create_context(&disk_name));
 
         let worker_name = &format!("{}::worker", host);
         let worker = Worker::new(

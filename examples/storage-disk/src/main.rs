@@ -126,7 +126,7 @@ fn main() {
         .set_constant_read_bw(DISK_READ_BW)
         .set_constant_write_bw(DISK_WRITE_BW);
 
-    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(DISK_NAME),).unwrap()));
+    let disk = rc!(refcell!(Disk::new(spec, sim.create_context(DISK_NAME),)));
     sim.add_handler(DISK_NAME, disk.clone());
 
     let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
