@@ -18,7 +18,7 @@ use crate::message::Message;
 #[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct DependencyResolver {
     timers: BTreeMap<McEventId, TimerInfo>,
-    messages: BTreeMap<Message, VecDeque<McEventId>>,
+    messages: BTreeMap<(Message, String, String), VecDeque<McEventId>>,
     proc_timers: BTreeMap<String, BTreeSet<McEventId>>,
 }
 
@@ -65,19 +65,19 @@ impl DependencyResolver {
         unblocked
     }
 
-    pub fn add_message(&mut self, msg: Message, event_id: McEventId) -> bool {
-        let vec_ref = self.messages.entry(msg).or_default();
+    pub fn add_message(&mut self, msg: Message, src: String, dest: String, event_id: McEventId) -> bool {
+        let vec_ref = self.messages.entry((msg, src, dest)).or_default();
         vec_ref.push_back(event_id);
         vec_ref.len() == 1
     }
 
-    pub fn remove_message(&mut self, msg: Message) -> Option<McEventId> {
-        let ids = self.messages.get_mut(&msg).unwrap();
+    pub fn remove_message(&mut self, msg: Message, src: String, dest: String) -> Option<McEventId> {
+        let ids = self.messages.get_mut(&(msg.clone(), src.clone(), dest.clone())).unwrap();
         ids.pop_front();
         if !ids.is_empty() {
             Some(ids[0])
         } else {
-            self.messages.remove(&msg);
+            self.messages.remove(&(msg, src, dest));
             None
         }
     }
