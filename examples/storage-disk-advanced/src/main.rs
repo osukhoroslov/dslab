@@ -156,11 +156,11 @@ fn main() {
         //
         // Using the uniformly randomized factor function for read operations,
         // so read bandwidth will be multiplied by random factor from 0.9 to 1.1.
-        .set_read_throughput_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
+        .set_read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
         //
         // Using the empirical factor function for write operations,
         // so write bandwidth will be multiplied by factor generated from distribution weighted with given weights.
-        .set_write_throughput_factor_fn(boxed!(EmpiricalFactorFn::new(&[
+        .set_write_factor_fn(boxed!(EmpiricalFactorFn::new(&[
             (0.8, 3),
             (0.9, 10),
             (1., 31),

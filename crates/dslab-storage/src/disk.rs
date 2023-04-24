@@ -72,8 +72,8 @@ impl Default for DiskSpec {
             capacity: DEFAULT_DISK_CAPACITY,
             read_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_READ_BW),
             write_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_WRITE_BW),
-            read_throughput_factor_fn: boxed!(ConstantFactorFn::new(1.)),
-            write_throughput_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
         }
     }
 }
@@ -110,20 +110,14 @@ impl DiskSpec {
     }
 
     /// Sets read throughput factor function to given functor.
-    pub fn set_read_throughput_factor_fn(
-        &mut self,
-        read_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    ) -> &mut Self {
-        self.read_throughput_factor_fn = read_throughput_factor_fn;
+    pub fn set_read_factor_fn(&mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+        self.read_factor_fn = read_factor_fn;
         self
     }
 
     /// Sets write throughput factor function to given functor.
-    pub fn set_write_throughput_factor_fn(
-        &mut self,
-        write_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    ) -> &mut Self {
-        self.write_throughput_factor_fn = write_throughput_factor_fn;
+    pub fn set_write_factor_fn(&mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+        self.write_factor_fn = write_factor_fn;
         self
     }
 }
@@ -154,14 +148,8 @@ impl Disk {
         Ok(Self {
             capacity: spec.capacity,
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
-                spec.read_throughput_fn,
-                spec.read_throughput_factor_fn,
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
-                spec.write_throughput_fn,
-                spec.write_throughput_factor_fn,
-            ),
+            read_throughput_model: FairThroughputSharingModel::new(spec.read_throughput_fn, spec.read_factor_fn),
+            write_throughput_model: FairThroughputSharingModel::new(spec.write_throughput_fn, spec.write_factor_fn),
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,

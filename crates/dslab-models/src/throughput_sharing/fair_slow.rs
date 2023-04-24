@@ -63,13 +63,10 @@ pub struct SlowFairThroughputSharingModel<T> {
 
 impl<T> SlowFairThroughputSharingModel<T> {
     /// Creates model with given throughput and factor functions.
-    pub fn new(
-        throughput_function: ResourceThroughputFn,
-        factor_function: Box<dyn ActivityFactorFn<T>>,
-    ) -> Self {
+    pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
         Self {
             throughput_function,
-            throughput_factor_function,
+            factor_function,
             entries: BinaryHeap::new(),
             next_id: 0,
             last_throughput_per_item: 0.,
@@ -86,7 +83,7 @@ impl<T> SlowFairThroughputSharingModel<T> {
     pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
         Self {
             throughput_function,
-            throughput_factor_function: boxed!(ConstantFactorFn::new(1.)),
+            factor_function: boxed!(ConstantFactorFn::new(1.)),
             entries: BinaryHeap::new(),
             next_id: 0,
             last_throughput_per_item: 0.,
@@ -111,7 +108,7 @@ impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
     fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         let new_count = self.entries.len() + 1;
         self.recalculate(ctx.time(), (self.throughput_function)(new_count) / new_count as f64);
-        let volume = volume / self.throughput_factor_function.get_factor(&item, ctx);
+        let volume = volume / self.factor_function.get_factor(&item, ctx);
         self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }

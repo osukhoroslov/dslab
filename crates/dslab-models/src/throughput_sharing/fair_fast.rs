@@ -60,14 +60,11 @@ pub struct FairThroughputSharingModel<T> {
 
 impl<T> FairThroughputSharingModel<T> {
     /// Creates model with given throughput and factor functions.
-    pub fn new(
-        throughput_function: ResourceThroughputFn,
-        factor_function: Box<dyn ActivityFactorFn<T>>,
-    ) -> Self {
+    pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
         Self {
             activities: BinaryHeap::new(),
             throughput_function,
-            throughput_factor_function,
+            factor_function,
             throughput_per_activity: 0.,
             next_id: 0,
             total_work: 0.,
@@ -85,7 +82,7 @@ impl<T> FairThroughputSharingModel<T> {
         Self {
             activities: BinaryHeap::new(),
             throughput_function,
-            throughput_factor_function: boxed!(ConstantFactorFn::new(1.)),
+            factor_function: boxed!(ConstantFactorFn::new(1.)),
             throughput_per_activity: 0.,
             next_id: 0,
             total_work: 0.,
@@ -113,7 +110,7 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
         if !self.activities.is_empty() {
             self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
         }
-        let volume = volume / self.throughput_factor_function.get_factor(&item, ctx);
+        let volume = volume / self.factor_function.get_factor(&item, ctx);
         let finish_work = self.total_work + volume;
         self.activities
             .push(Activity::<T>::new(self.next_id, item, finish_work));
