@@ -56,7 +56,8 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     let mut all_sent = HashSet::new();
     let mut all_delivered = HashSet::new();
     let mut histories = HashMap::new();
-    for proc in sys.process_names() {
+    for proc in 0..config.proc_count {
+        let proc = format!("proc-{}", proc);
         let mut history = Vec::new();
         let mut sent_msgs = Vec::new();
         let mut delivered_msgs = Vec::new();

@@ -91,9 +91,9 @@ impl System {
 
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
-        for proc in node.borrow().process_names() {
-            self.proc_nodes.remove(&proc);
-        }
+        // for proc in node.borrow().process_names() {
+        //     self.proc_nodes.remove(&proc);
+        // }
         self.sim.remove_handler(node_name);
         node.borrow_mut().crash();
 
