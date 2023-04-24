@@ -3,7 +3,7 @@
 use colored::*;
 use std::collections::{HashSet, VecDeque};
 
-use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, McResult};
 use crate::mc::system::{McState, McSystem};
 
 use crate::util::t;
@@ -75,13 +75,13 @@ impl<'a> Bfs<'a> {
 }
 
 impl<'a> Strategy for Bfs<'a> {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+    fn run(&mut self, system: &mut McSystem) -> Result<McResult, String> {
         if self.execution_mode == ExecutionMode::Default {
             t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())
         }
         let res = self.bfs(system);
         match res {
-            Ok(()) => Ok(self.summary.clone()),
+            Ok(()) => Ok(McResult { summary: self.summary.clone(), collected: self.collected.clone() }),
             Err(err) => Err(err),
         }
     }

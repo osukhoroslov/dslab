@@ -59,11 +59,16 @@ pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
 
-impl AddAssign<McSummary> for McSummary {
-    fn add_assign(&mut self, rhs: McSummary) {
-        for (key, value) in rhs.states {
-            *(self.states.entry(key).or_insert(0)) += value;
-        }
+/// Model checking execution result.
+#[derive(Debug, Default, Clone)]
+pub struct McResult {
+    pub(crate) summary: McSummary,
+    pub(crate) collected: HashSet<McState>,
+}
+
+impl McResult {
+    pub fn new(summary: McSummary, collected: HashSet<McState>) -> Self {
+        McResult { summary, collected }
     }
 }
 
@@ -86,7 +91,7 @@ pub type CollectFn<'a> = Box<dyn Fn(&McState) -> bool + 'a>;
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
     /// Launches the strategy execution.
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
+    fn run(&mut self, system: &mut McSystem) -> Result<McResult, String>;
 
     /// Callback which in called whenever a new system state is discovered.
     fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;
@@ -337,7 +342,7 @@ pub trait Strategy {
     }
 
     /// Adds new information to model checking execution summary.
-    fn update_summary(&mut self, status: String, state: &McState) {
+    fn update_result(&mut self, status: String, state: &McState) {
         let update = |strategy: &mut Self| {
             let counter = strategy.summary().states.entry(status).or_insert(0);
             *counter += 1;
@@ -361,11 +366,11 @@ pub trait Strategy {
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
-            self.update_summary(status, state);
+            self.update_result(status, state);
             Some(Ok(()))
         } else if let Some(status) = (self.prune())(state) {
             // Execution branch is pruned
-            self.update_summary(status, state);
+            self.update_result(status, state);
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed

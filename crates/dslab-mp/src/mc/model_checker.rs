@@ -11,12 +11,12 @@ use crate::mc::events::{DeliveryOptions, McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
-use crate::mc::strategy::{McSummary, Strategy};
+use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
 
-use super::strategy::VisitedStates;
+use super::strategy::McResult;
 use super::system::McState;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
@@ -64,29 +64,11 @@ impl<'a> ModelChecker<'a> {
     }
 
     /// Runs model checking and returns the result on completion.
-    pub fn run(&mut self) -> Result<McSummary, String> {
+    pub fn run(&mut self) -> Result<McResult, String> {
         t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
             .to_string()
             .yellow());
         self.strategy.run(&mut self.system)
-    }
-
-    /// Runs model checking and returns collected states.
-    pub fn collect(&mut self) -> Result<HashSet<McState>, String> {
-        self.strategy
-            .collect()
-            .as_ref()
-            .ok_or("cannot collect without specified handler")?;
-        self.strategy.run(&mut self.system)?;
-        Ok(self.strategy.collected().clone())
-    }
-
-    pub fn set_visited(&mut self, visited: VisitedStates) {
-        *self.strategy.visited() = visited;
-    }
-
-    pub fn visited(&mut self) -> VisitedStates {
-        self.strategy.visited().clone()
     }
 
     pub fn set_state(&mut self, mut state: McState) {

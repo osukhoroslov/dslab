@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use colored::*;
 
-use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, McResult};
 use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
@@ -62,7 +62,7 @@ impl<'a> Dfs<'a> {
 }
 
 impl<'a> Strategy for Dfs<'a> {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+    fn run(&mut self, system: &mut McSystem) -> Result<McResult, String> {
         if self.execution_mode != ExecutionMode::Debug {
             t!(format!("RUNNING MODEL CHECKING THROUGH EVERY POSSIBLE EXECUTION PATH").yellow())
         }
@@ -70,7 +70,7 @@ impl<'a> Strategy for Dfs<'a> {
 
         let res = self.dfs(system, state);
         match res {
-            Ok(()) => Ok(self.summary.clone()),
+            Ok(()) => Ok(McResult { summary: self.summary.clone(), collected: self.collected.clone() }),
             Err(err) => Err(err),
         }
     }
