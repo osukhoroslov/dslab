@@ -62,8 +62,8 @@ pub struct McSummary {
 /// Model checking execution result.
 #[derive(Debug, Default, Clone)]
 pub struct McResult {
-    pub(crate) summary: McSummary,
-    pub(crate) collected: HashSet<McState>,
+    pub summary: McSummary,
+    pub collected: HashSet<McState>,
 }
 
 impl McResult {
