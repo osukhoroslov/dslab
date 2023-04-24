@@ -51,7 +51,7 @@ impl<T> Eq for Activity<T> {}
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ResourceThroughputFn,
-    throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
+    factor_function: Box<dyn ActivityFactorFn<T>>,
     throughput_per_activity: f64,
     next_id: u64,
     total_work: f64,
@@ -59,10 +59,10 @@ pub struct FairThroughputSharingModel<T> {
 }
 
 impl<T> FairThroughputSharingModel<T> {
-    /// Creates model with given throughput function and throughput factor function.
+    /// Creates model with given throughput and factor functions.
     pub fn new(
         throughput_function: ResourceThroughputFn,
-        throughput_factor_function: Box<dyn ActivityFactorFn<T>>,
+        factor_function: Box<dyn ActivityFactorFn<T>>,
     ) -> Self {
         Self {
             activities: BinaryHeap::new(),

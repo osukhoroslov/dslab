@@ -48,8 +48,8 @@ pub struct DiskSpec {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) read_throughput_fn: ResourceThroughputFn,
     pub(in crate::disk) write_throughput_fn: ResourceThroughputFn,
-    pub(in crate::disk) read_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    pub(in crate::disk) write_throughput_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    pub(in crate::disk) read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    pub(in crate::disk) write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
 }
 
 /// An error type to be returned on invalid [`DiskSpec`].
