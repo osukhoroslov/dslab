@@ -1,3 +1,4 @@
+use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_network::topology::Topology;
 
 pub fn make_full_mesh_topology(host_count: usize) -> Topology {
@@ -5,7 +6,7 @@ pub fn make_full_mesh_topology(host_count: usize) -> Topology {
 
     for i in 0..host_count {
         let host_name = format!("host_{}", i);
-        topology.add_node(&host_name, 1e+5, 0.);
+        topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
     }
 
     for i in 0..host_count {
@@ -20,11 +21,11 @@ pub fn make_star_topology(host_count: usize) -> Topology {
     let mut topology = Topology::new();
 
     let switch_name = "switch".to_string();
-    topology.add_node(&switch_name, 1e+5, 0.);
+    topology.add_node(&switch_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
 
     for i in 0..host_count {
         let host_name = format!("host_{}", i);
-        topology.add_node(&host_name, 1e+5, 0.);
+        topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
         topology.add_link(&host_name, &switch_name, 1000., 1e-4);
     }
     topology
@@ -34,12 +35,12 @@ pub fn make_tree_topology(star_count: usize, hosts_per_star: usize) -> Topology 
     let mut topology = Topology::new();
 
     let root_switch_name = "root_switch".to_string();
-    topology.add_node(&root_switch_name, 1e+5, 0.);
+    topology.add_node(&root_switch_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
 
     let downlink_bw = 1000.;
     for i in 0..star_count {
         let switch_name = format!("switch_{}", i);
-        topology.add_node(&switch_name, 1e+5, 0.);
+        topology.add_node(&switch_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
         topology.add_link(
             &root_switch_name,
             &switch_name,
@@ -49,7 +50,7 @@ pub fn make_tree_topology(star_count: usize, hosts_per_star: usize) -> Topology 
 
         for j in 0..hosts_per_star {
             let host_name = format!("host_{}_{}", i, j);
-            topology.add_node(&host_name, 1e+5, 0.);
+            topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
             topology.add_link(&host_name, &switch_name, downlink_bw, 1e-4);
         }
     }
@@ -61,7 +62,7 @@ pub fn make_fat_tree_topology(l2_switch_count: usize, l1_switch_count: usize, ho
 
     for i in 0..l2_switch_count {
         let switch_name = format!("l2_switch_{}", i);
-        topology.add_node(&switch_name, 1e+5, 0.);
+        topology.add_node(&switch_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
     }
 
     let downlink_bw = 1000.;
@@ -69,11 +70,11 @@ pub fn make_fat_tree_topology(l2_switch_count: usize, l1_switch_count: usize, ho
 
     for i in 0..l1_switch_count {
         let switch_name = format!("l1_switch_{}", i);
-        topology.add_node(&switch_name, 1e+5, 0.);
+        topology.add_node(&switch_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
 
         for j in 0..hosts_per_switch {
             let host_name = format!("host_{}_{}", i, j);
-            topology.add_node(&host_name, 1e+5, 0.);
+            topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
             topology.add_link(&switch_name, &host_name, downlink_bw, 1e-4);
         }
 

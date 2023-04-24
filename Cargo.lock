@@ -856,6 +856,7 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "dslab-core",
+ "dslab-models",
  "dyn-clone",
  "env_logger 0.8.4",
  "log 0.4.17",
@@ -870,6 +871,7 @@ dependencies = [
 name = "dslab-models"
 version = "0.1.0"
 dependencies = [
+ "dyn-clone",
  "sugars",
 ]
 
@@ -907,7 +909,6 @@ dependencies = [
  "dslab-models",
  "indexmap",
  "log 0.4.17",
- "priority-queue",
  "serde",
 ]
 

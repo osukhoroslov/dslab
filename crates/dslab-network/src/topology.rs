@@ -6,7 +6,6 @@ use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
 use crate::model::*;
-use crate::shared_bandwidth_model::SharedBandwidthNetwork;
 use crate::topology_resolver::TopologyResolver;
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
@@ -35,13 +34,10 @@ impl Topology {
         panic!("Node with name {} doesn't exists", node_name)
     }
 
-    pub fn add_node(&mut self, node_name: &str, local_bandwidth: f64, local_latency: f64) {
-        let local_network = SharedBandwidthNetwork::new(local_bandwidth, local_latency);
+    pub fn add_node(&mut self, node_name: &str, local_network: Box<dyn NetworkModel>) {
         let new_node_id = self.nodes.len();
         self.nodes_name_map.insert(node_name.to_string(), new_node_id);
-        self.nodes.push(Node {
-            local_network: Box::new(local_network),
-        });
+        self.nodes.push(Node { local_network });
         self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 

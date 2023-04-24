@@ -86,9 +86,10 @@ fn main() {
     let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
     for i in 0..host_count {
-        network
-            .borrow_mut()
-            .add_node(&format!("host{}", i), local_bandwidth as f64, local_latency);
+        network.borrow_mut().add_node(
+            &format!("host{}", i),
+            Box::new(SharedBandwidthNetwork::new(local_bandwidth as f64, local_latency)),
+        );
     }
     let hosts = network.borrow().get_nodes();
 
