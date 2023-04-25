@@ -23,7 +23,7 @@ const SEED: u64 = 16;
 const DISK_NAME: &str = "Disk";
 const USER_NAME: &str = "User";
 
-const DISK_CAPACITY: u64 = 200;
+const DISK_CAPACITY: u64 = 300;
 const DISK_READ_BW: f64 = 100.;
 const DISK_WRITE_BW: f64 = 100.;
 
@@ -47,6 +47,17 @@ impl User {
             ctx,
         }
     }
+
+    fn print_disk_info(&self) {
+        let disk_info = self.disk.borrow().info();
+        log_info!(
+            self.ctx,
+            "Disk info: capacity = {}, used space = {}, free space = {}",
+            disk_info.capacity,
+            disk_info.used_space,
+            disk_info.free_space
+        )
+    }
 }
 
 impl EventHandler for User {
@@ -58,12 +69,14 @@ impl EventHandler for User {
             Ticker {} => {
                 let time = self.ctx.time();
                 if time.eq(&0.) {
-                    log_info!(self.ctx, "Step #0: Single 100 byte read, expected to end at t=1");
-                    self.requests.insert(self.disk.borrow_mut().read(100, self.ctx.id()), 0);
+                    self.print_disk_info();
+                    log_info!(self.ctx, "Step #0: Single 100 byte write, expected to end at t=1");
+                    self.requests
+                        .insert(self.disk.borrow_mut().write(100, self.ctx.id()), 0);
                 } else if time.eq(&1.) {
-                    log_info!(self.ctx, "Step #1: Two 50 byte reads, expected to end at t=2");
-                    self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
-                    self.requests.insert(self.disk.borrow_mut().read(50, self.ctx.id()), 1);
+                    log_info!(self.ctx, "Step #1: Two 50 byte writes, expected to end at t=2");
+                    self.requests.insert(self.disk.borrow_mut().write(50, self.ctx.id()), 1);
+                    self.requests.insert(self.disk.borrow_mut().write(50, self.ctx.id()), 1);
                 } else if time.eq(&2.) {
                     log_info!(self.ctx, "Step #2: Starting 1st 200 byte read, expected to end at t=5");
                     self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 2);
@@ -71,8 +84,12 @@ impl EventHandler for User {
                     log_info!(self.ctx, "Step #3: Starting 2nd 200 byte read, expected to end at t=6");
                     self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), 3);
                 } else if time.eq(&4.) {
-                    log_info!(self.ctx, "Step #4: Trying to read 201 bytes... should fail");
-                    self.requests.insert(self.disk.borrow_mut().read(201, self.ctx.id()), 4);
+                    log_info!(self.ctx, "Step #4: Trying to write 101 bytes... should fail");
+                    self.requests
+                        .insert(self.disk.borrow_mut().write(101, self.ctx.id()), 4);
+                } else if time.eq(&5.) {
+                    log_info!(self.ctx, "Step #5: Trying to read 301 bytes... should fail");
+                    self.requests.insert(self.disk.borrow_mut().read(301, self.ctx.id()), 5);
                 } else if time.eq(&6.) {
                     return;
                 }
@@ -85,6 +102,7 @@ impl EventHandler for User {
                     self.requests[&request_id],
                     size
                 );
+                self.print_disk_info();
             }
             DataReadFailed { request_id, error } => {
                 log_info!(
@@ -101,6 +119,7 @@ impl EventHandler for User {
                     self.requests[&request_id],
                     size
                 );
+                self.print_disk_info();
             }
             DataWriteFailed { request_id, error } => {
                 log_info!(
