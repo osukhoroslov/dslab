@@ -91,6 +91,15 @@ impl EventHandler for User {
                     log_info!(self.ctx, "Step #5: Trying to read 301 bytes... should fail");
                     self.requests.insert(self.disk.borrow_mut().read(301, self.ctx.id()), 5);
                 } else if time.eq(&6.) {
+                    log_info!(
+                        self.ctx,
+                        "Step #6: Cleaning some space and trying to write once more... now success"
+                    );
+                    self.disk.borrow_mut().mark_free(1).unwrap();
+                    self.print_disk_info();
+                    self.requests
+                        .insert(self.disk.borrow_mut().write(101, self.ctx.id()), 6);
+                } else if time.eq(&8.) {
                     return;
                 }
                 self.ctx.emit_self(Ticker {}, 1.);
