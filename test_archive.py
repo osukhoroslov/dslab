@@ -2,6 +2,7 @@ import subprocess
 import json
 import os
 import time
+import re
 
 # Load config from JSON file
 with open('config.json', 'r') as f:
@@ -17,7 +18,8 @@ summary = {
     'success': 0,
     'wrong': [],
     'non_zero_exit': [],
-    'timed_out': []
+    'timed_out': [],
+    'test_results': {}
 }
 
 # Run command with each argument
@@ -39,7 +41,6 @@ for arg in config['args']:
             # Process has finished
             break
         elif time.time() - start_time > config['timeout']:
-            print(time.time(), start_time)
             # Process has timed out
             p.kill()
             summary['timed_out'].append(arg)
@@ -64,6 +65,30 @@ for arg in config['args']:
         f.write(f"Stdout: {stdout_file}\n")
         f.write(f"Stderr: {stderr_file}\n")
 
+    # Get summary for tests:
+
+    with open(stdout_file, 'r') as f:
+        cur_test = None
+        for line in f.readlines():
+            m = re.match(r'--- ([\d\w _-]+) ---', line)
+            if m:
+                cur_test = str(m.group(1))
+            m = re.match(r'((PASSED)|(FAILED))', line)
+            if m:
+                status = m.group(1)
+                results = summary['test_results'].get(cur_test, {})
+                sols = results.get(status, [])
+                sols.append(arg)
+                results[status] = sols
+                summary['test_results'][cur_test] = results
+                cur_test = None
+        if cur_test is not None:
+            status = 'RUNTIME_ERROR'
+            results = summary['test_results'].get(cur_test, {})
+            sols = results.get(status, [])
+            sols.append(arg)
+            results[status] = sols
+            summary['test_results'][cur_test] = results
     # Increment total count
     summary['total'] += 1
 
@@ -75,3 +100,5 @@ with open(summary_file, 'w') as f:
     f.write(f"Wrong runs: {summary['wrong']}\n")
     f.write(f"Failed runs (non-zero exit code): {summary['non_zero_exit']}\n")
     f.write(f"Failed runs (timed out): {summary['timed_out']}\n")
+    f.write(f"\n\n{json.dumps(summary['test_results'], indent=4, sort_keys=True)}\n")
+
