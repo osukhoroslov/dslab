@@ -192,8 +192,10 @@ fn test_mc(config: &TestConfig) -> TestResult {
     system.send_local_message("client", Message::new("PING", &data2.clone()));
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state|{
-            if state.search_depth > 7 {
-                Some("too deep".to_owned())
+            if state.node_states["client-node"]["client"].sent_message_count > 4 {
+                Some("too many messages sent".to_owned())
+            } else if state.node_states["server-node"]["server"].sent_message_count > 4 {
+                Some("too many messages sent".to_owned())
             } else {
                 None
             }
@@ -204,12 +206,16 @@ fn test_mc(config: &TestConfig) -> TestResult {
             }
 
             if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
-                return Some("got message".to_owned());
+                return Some("got two messages".to_owned());
             }
             return None;
         }),
-        Box::new(|_|{
-            Ok(())
+        Box::new(|state|{
+            if state.search_depth > 20 {
+                Err("too deep".to_owned())
+            } else {
+                Ok(())
+            }
         }),
         None,
      dslab_mp::mc::strategy::ExecutionMode::Debug,
