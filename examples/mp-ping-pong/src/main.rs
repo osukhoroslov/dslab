@@ -8,6 +8,7 @@ use std::io::Write;
 
 use assertables::assume;
 use clap::Parser;
+use dslab_mp::mc::events::McEvent;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::strategies::dfs::Dfs;
 use env_logger::Builder;
@@ -265,12 +266,15 @@ fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
-            let sent = state.node_states["client-node"]["client"].sent_message_count + state.node_states["server-node"]["server"].sent_message_count;
-            let received = state.node_states["server-node"]["server"].received_message_count + state.node_states["client-node"]["client"].received_message_count;
-            if sent - received > 4 {
-                Some("too many pending messages".to_owned())
-            } else if state.search_depth > 20 {
-                Some("too deep".to_owned())
+            let drops = state.log.iter().filter(|event| 
+                if let McEvent::MessageDropped{..} = event {
+                    true
+                } else {
+                    false
+                }
+            ).count();
+            if drops > 3 {
+                Some("too many dropped messages".to_owned())
             } else {
                 None
             }
@@ -281,8 +285,13 @@ fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
             }
             return None;
         }),
-        Box::new(|_|{
-            Ok(())
+        
+        Box::new(|state|{
+            if state.search_depth > 20 {
+                Err("too deep".to_owned())
+            } else {
+                Ok(())
+            }
         }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
