@@ -18,7 +18,7 @@ impl Context {
         let time = if let Some(sim_ctx) = sim_ctx.as_ref() {
             sim_ctx.borrow().time() + clock_skew
         } else {
-            0.0
+            clock_skew
         };
         Self {
             proc_name,
