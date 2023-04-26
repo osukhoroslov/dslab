@@ -266,15 +266,20 @@ fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
+            let num_drops_allowed: u64 = 3;
             let drops = state.log.iter().filter(|event| 
-                if let McEvent::MessageDropped{..} = event {
+                if let McEvent::MessageDropped{..} = **event {
                     true
                 } else {
                     false
                 }
             ).count();
-            if drops > 3 {
+            if drops > num_drops_allowed as usize {
                 Some("too many dropped messages".to_owned())
+            } else if state.node_states["client-node"]["client"].sent_message_count > num_drops_allowed + 2 {
+                Some("too many messages sent".to_owned())
+            } else if state.node_states["server-node"]["server"].sent_message_count > num_drops_allowed + 2 {
+                Some("too many messages sent".to_owned())
             } else {
                 None
             }
