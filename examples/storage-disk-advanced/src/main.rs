@@ -115,7 +115,8 @@ fn main() {
     let mut sim = Simulation::new(SEED);
     let root = sim.create_context("root");
 
-    let simple_spec = DiskSpec::default()
+    let mut simple_spec = DiskSpec::default();
+    simple_spec
         .set_capacity(DISK_CAPACITY)
         .set_constant_read_bw(DISK_READ_BW)
         .set_constant_write_bw(DISK_WRITE_BW);
@@ -133,7 +134,8 @@ fn main() {
 
     println!("Finished simple user");
 
-    let advanced_spec = DiskSpec::default()
+    let mut advanced_spec = DiskSpec::default();
+    advanced_spec
         .set_capacity(DISK_CAPACITY)
         //
         // Using the constant throughput function for read operations,
