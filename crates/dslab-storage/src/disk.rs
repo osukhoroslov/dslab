@@ -76,43 +76,43 @@ impl Default for DiskSpec {
 
 impl DiskSpec {
     /// Sets capacity of the disk.
-    pub fn set_capacity(&mut self, capacity: u64) -> &mut Self {
+    pub fn set_capacity(mut self, capacity: u64) -> Self {
         self.capacity = capacity;
         self
     }
 
     /// Sets read bandwidth to be constant with given value.
-    pub fn set_constant_read_bw(&mut self, read_bw: f64) -> &mut Self {
+    pub fn set_constant_read_bw(mut self, read_bw: f64) -> Self {
         self.read_throughput_fn = make_constant_throughput_fn(read_bw);
         self
     }
 
     /// Sets write bandwidth to be constant with given value.
-    pub fn set_constant_write_bw(&mut self, write_bw: f64) -> &mut Self {
+    pub fn set_constant_write_bw(mut self, write_bw: f64) -> Self {
         self.write_throughput_fn = make_constant_throughput_fn(write_bw);
         self
     }
 
     /// Sets custom throughput function for read operations.
-    pub fn set_read_throughput_fn(&mut self, read_throughput_fn: ResourceThroughputFn) -> &mut Self {
+    pub fn set_read_throughput_fn(mut self, read_throughput_fn: ResourceThroughputFn) -> Self {
         self.read_throughput_fn = read_throughput_fn;
         self
     }
 
     /// Sets custom throughput function for write operations.
-    pub fn set_write_throughput_fn(&mut self, write_throughput_fn: ResourceThroughputFn) -> &mut Self {
+    pub fn set_write_throughput_fn(mut self, write_throughput_fn: ResourceThroughputFn) -> Self {
         self.write_throughput_fn = write_throughput_fn;
         self
     }
 
     /// Sets throughput factor function for read operations.
-    pub fn set_read_factor_fn(&mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+    pub fn set_read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
         self.read_factor_fn = read_factor_fn;
         self
     }
 
     /// Sets throughput factor function for write operations.
-    pub fn set_write_factor_fn(&mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+    pub fn set_write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
         self.write_factor_fn = write_factor_fn;
         self
     }
@@ -157,8 +157,8 @@ impl Disk {
     ///
     /// A short form for manual creating [`DiskSpec`] and passing it to [`Disk::new()`].
     pub fn simple(capacity: u64, read_bw: f64, write_bw: f64, ctx: SimulationContext) -> Self {
-        let mut spec = DiskSpec::default();
-        spec.set_capacity(capacity)
+        let spec = DiskSpec::default()
+            .set_capacity(capacity)
             .set_constant_read_bw(read_bw)
             .set_constant_write_bw(write_bw);
         Self::new(spec, ctx)
