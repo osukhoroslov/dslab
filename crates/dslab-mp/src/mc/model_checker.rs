@@ -31,7 +31,8 @@ impl<'a> ModelChecker<'a> {
     pub fn new(sys: &System, strategy: Box<dyn Strategy + 'a>) -> Self {
         let sim = sys.sim();
 
-        let mut events = PendingEvents::new();
+        let insta_network = sys.network().max_delay() == 0.0;
+        let mut events = PendingEvents::new(insta_network);
         for event in sim.dump_events() {
             if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
                 events.push(McEvent::MessageReceived {

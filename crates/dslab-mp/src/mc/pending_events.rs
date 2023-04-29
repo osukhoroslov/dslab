@@ -13,11 +13,12 @@ pub struct PendingEvents {
     directives: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
+    is_insta: bool,
 }
 
 impl PendingEvents {
     /// Creates a new empty PendingEvents instance.
-    pub fn new() -> Self {
+    pub fn new(is_insta: bool) -> Self {
         PendingEvents {
             events: BTreeMap::default(),
             timer_mapping: BTreeMap::default(),
@@ -25,6 +26,7 @@ impl PendingEvents {
             directives: BTreeSet::default(),
             resolver: DependencyResolver::default(),
             id_counter: 0,
+            is_insta
         }
     }
 
@@ -79,13 +81,33 @@ impl PendingEvents {
         if let Some(directive) = self.directives.iter().next() {
             BTreeSet::from_iter(vec![*directive])
         } else {
-            self.available_events.clone()
+            if self.is_insta {
+                BTreeSet::from_iter(self.available_events.clone().into_iter().filter(|event_id| {
+                    if let McEvent::TimerFired { .. } = self.events[event_id] {
+                        false
+                    } else {
+                        true
+                    }
+                }))
+            } else {
+                self.available_events.clone()
+            }
         }
     }
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
-        self.available_events.len()
+        if self.is_insta {
+            self.available_events.iter().filter(|event_id| {
+                if let McEvent::TimerFired { .. } = self.events[event_id] {
+                    false
+                } else {
+                    true
+                }
+            }).count()
+        } else {
+            self.available_events.len()
+        }
     }
 
     /// Cancels given timer and recalculates available events.
@@ -134,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_dependency_resolver_simple() {
-        let mut pending_events = PendingEvents::new();
+        let mut pending_events = PendingEvents::new(false);
         let mut sequence = Vec::new();
         let mut rev_id = vec![0; 9];
         for node_id in 0..3 {
@@ -167,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_dependency_resolver_pop() {
-        let mut pending_events = PendingEvents::new();
+        let mut pending_events = PendingEvents::new(false);
         let mut sequence = Vec::new();
         let mut rev_id = vec![0; 12];
 
