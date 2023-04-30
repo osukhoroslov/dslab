@@ -11,3 +11,6 @@ mod pending_events;
 pub mod strategies;
 pub mod strategy;
 mod system;
+
+#[cfg(test)]
+mod tests;

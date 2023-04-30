@@ -69,16 +69,16 @@ impl Strategy for Dfs {
         &mut self.visited
     }
 
-    fn prune(&self) -> &PruneFn {
-        &self.prune
+    fn prune(&mut self) -> &mut PruneFn {
+        &mut self.prune
     }
 
-    fn goal(&self) -> &GoalFn {
-        &self.goal
+    fn goal(&mut self) -> &mut GoalFn {
+        &mut self.goal
     }
 
-    fn invariant(&self) -> &InvariantFn {
-        &self.invariant
+    fn invariant(&mut self) -> &mut InvariantFn {
+        &mut self.invariant
     }
 
     fn summary(&mut self) -> &mut McSummary {

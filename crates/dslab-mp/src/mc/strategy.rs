@@ -56,15 +56,15 @@ pub struct McSummary {
 
 /// Decides whether to prune the executions originating from the given state.
 /// Returns Some(status) if the executions should be pruned and None otherwise.
-pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type PruneFn = Box<dyn FnMut(&McState) -> Option<String>>;
 
 /// Checks if the given state is the final state, i.e. all expected events have already occurred.
 /// Returns Some(status) if the final state is reached and None otherwise.
-pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type GoalFn = Box<dyn FnMut(&McState) -> Option<String>>;
 
 /// Checks if some invariant holds in the given state.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
-pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
+pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
@@ -350,13 +350,13 @@ pub trait Strategy {
     fn visited(&mut self) -> &mut VisitedStates;
 
     /// Returns the prune function.
-    fn prune(&self) -> &PruneFn;
+    fn prune(&mut self) -> &mut PruneFn;
 
     /// Returns the goal function.
-    fn goal(&self) -> &GoalFn;
+    fn goal(&mut self) -> &mut GoalFn;
 
     /// Returns the invariant function.
-    fn invariant(&self) -> &InvariantFn;
+    fn invariant(&mut self) -> &mut InvariantFn;
 
     /// Returns the model checking execution summary.
     fn summary(&mut self) -> &mut McSummary;
