@@ -66,14 +66,24 @@ impl Experiment {
             .and_then(|f| serde_yaml::from_str(&f).ok())
             .unwrap_or_else(|| panic!("Can't read config from file {}", config_path.as_ref().display()));
 
-        let dags = get_all_files(&config.dags).into_iter().map(|path| {
+        let dags_paths: Vec<PathBuf> = config
+            .dags
+            .iter()
+            .map(|path| config_path.as_ref().parent().unwrap().join(path))
+            .collect();
+        let dags = get_all_files(&dags_paths).into_iter().map(|path| {
             (
                 path.file_name().unwrap().to_str().unwrap().to_string(),
                 DAG::from_file(&path),
             )
         });
 
-        let systems = get_all_files(&config.systems).into_iter().map(|path| {
+        let systems_paths: Vec<PathBuf> = config
+            .systems
+            .iter()
+            .map(|path| config_path.as_ref().parent().unwrap().join(path))
+            .collect();
+        let systems = get_all_files(&systems_paths).into_iter().map(|path| {
             let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
             let resources = read_resource_configs(&path);
             assert!(
