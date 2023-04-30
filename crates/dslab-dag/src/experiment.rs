@@ -27,6 +27,7 @@ pub struct RunResult {
     pub system: String,
     pub scheduler: String,
     pub makespan: f64,
+    pub exec_time: f64,
     pub run_stats: RunStats,
 }
 
@@ -161,8 +162,10 @@ impl Experiment {
                 );
 
                 let runner = sim.init(run.dag);
+                sim.init(run.dag);
+                let start = Instant::now();
                 sim.step_until_no_events();
-
+                let exec_time = start.elapsed().as_secs_f64();
                 let makespan = sim.time();
 
                 results.lock().unwrap().push(RunResult {
@@ -170,6 +173,7 @@ impl Experiment {
                     system: run.system_name,
                     scheduler: run.scheduler.to_string(),
                     makespan,
+                    exec_time,
                     run_stats: runner.borrow().run_stats().clone(),
                 });
 
