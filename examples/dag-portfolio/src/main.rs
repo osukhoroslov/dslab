@@ -21,6 +21,7 @@ use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::NetworkConfig;
+use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
 
@@ -98,7 +99,10 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 100.);
+        let mut dag = DAG::from_wfcommons(
+            format!("{}{}", dags_folder, filename),
+            &ParserConfig::with_reference_speed(100.),
+        );
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);

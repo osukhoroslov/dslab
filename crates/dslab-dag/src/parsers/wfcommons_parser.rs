@@ -7,6 +7,7 @@ use serde_json::from_str;
 use dslab_compute::multicore::CoresDependency;
 
 use crate::dag::*;
+use crate::parsers::config::ParserConfig;
 
 #[derive(Serialize, Deserialize)]
 struct Cpu {
@@ -73,9 +74,7 @@ struct Json {
 
 impl DAG {
     /// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
-    ///
-    /// Reference machine speed should be in Gflop/s.
-    pub fn from_wfcommons<P: AsRef<Path>>(file: P, reference_speed: f64) -> Self {
+    pub fn from_wfcommons<P: AsRef<Path>>(file: P, config: &ParserConfig) -> Self {
         let json: Json = from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
         )
@@ -103,13 +102,19 @@ impl DAG {
             if let Some(machine_speed) = task.machine.as_ref().and_then(|m| machine_speed.get(m)) {
                 flops *= *machine_speed;
             } else {
-                flops *= reference_speed;
+                flops *= config.reference_speed;
             }
+
+            let memory = if !config.ignore_memory {
+                (task.memory.unwrap_or(0) as f64 / 1000.).ceil() as u64 // convert KB to MB (round up to nearest)
+            } else {
+                0
+            };
 
             let task_id = dag.add_task(
                 &task.name,
                 flops,
-                (task.memory.unwrap_or(0) as f64 / 1000.).ceil() as u64, // convert KB to MB (round up to nearest)
+                memory,
                 1,
                 task.cores.unwrap_or(1.) as u32,
                 CoresDependency::Linear,

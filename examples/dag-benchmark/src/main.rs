@@ -9,6 +9,7 @@ use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::read_network_config;
+use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
@@ -47,7 +48,7 @@ fn main() {
         },
     );
 
-    let dag = DAG::from_wfcommons(&args.dag, 100.);
+    let dag = DAG::from_wfcommons(&args.dag, &ParserConfig::with_reference_speed(100.));
     let total_tasks = dag.get_tasks().len();
     let runner = sim.init(dag);
     runner.borrow_mut().enable_trace_log(args.save_trace);

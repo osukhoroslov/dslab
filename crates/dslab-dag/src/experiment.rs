@@ -15,6 +15,7 @@ use crate::dag::DAG;
 use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::network::{read_network_config, NetworkConfig};
+use crate::parsers::config::ParserConfig;
 use crate::resource::{read_resource_configs, ResourceConfig};
 use crate::run_stats::RunStats;
 use crate::runner::Config;
@@ -34,6 +35,8 @@ pub struct RunResult {
 #[derive(Deserialize)]
 struct ExperimentConfig {
     dags: Vec<PathBuf>,
+    #[serde(default)]
+    dag_parser: ParserConfig,
     systems: Vec<PathBuf>,
     schedulers: Vec<String>,
     data_transfer_mode: DataTransferMode,
@@ -75,7 +78,7 @@ impl Experiment {
         let dags = get_all_files(&dags_paths).into_iter().map(|path| {
             (
                 path.file_name().unwrap().to_str().unwrap().to_string(),
-                DAG::from_file(&path),
+                DAG::from_file(&path, &config.dag_parser),
             )
         });
 

@@ -10,6 +10,7 @@ use env_logger::Builder;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::read_network_config;
+use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
@@ -75,7 +76,7 @@ fn main() {
         .init();
 
     let args = Args::parse();
-    let dag = DAG::from_file(&args.dag);
+    let dag = DAG::from_file(&args.dag, &ParserConfig::default());
     let resource_configs = read_resource_configs(&args.system);
     let network_config = read_network_config(&args.system);
     let data_transfer_mode = match args.data_transfer_mode.as_str() {
