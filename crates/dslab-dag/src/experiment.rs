@@ -163,10 +163,13 @@ impl Experiment {
 
                 let runner = sim.init(run.dag);
                 sim.init(run.dag);
+
                 let start = Instant::now();
                 sim.step_until_no_events();
                 let exec_time = start.elapsed().as_secs_f64();
-                let makespan = sim.time();
+
+                // 3 decimal places is enough
+                let makespan = (sim.time() * 1000.).round() / 1000.;
 
                 results.lock().unwrap().push(RunResult {
                     dag: run.dag_name,
