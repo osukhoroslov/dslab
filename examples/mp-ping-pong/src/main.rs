@@ -11,6 +11,7 @@ use clap::Parser;
 use dslab_mp::mc::events::McEvent;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::system::McState;
 use env_logger::Builder;
 use log::LevelFilter;
 use sugars::boxed;
@@ -184,6 +185,16 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn mc_goal<'a>() -> Box<dyn Fn(&McState) -> Option<String> + 'a> {
+    Box::new(|state| {
+        if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
+            Some("got two messages".to_owned())
+        } else {
+            None
+        }
+    })
+} 
+
 fn test_mc(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
@@ -200,16 +211,7 @@ fn test_mc(config: &TestConfig) -> TestResult {
                 None
             }
         }),        
-        Box::new(|state|{
-            if !state.events.available_events().is_empty() {
-                return None;
-            }
-
-            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
-                return Some("got two messages".to_owned());
-            }
-            return None;
-        }),
+        mc_goal(),
         Box::new(|state|{
             if state.search_depth > 20 {
                 Err("too deep".to_owned())
@@ -244,12 +246,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
                 None
             }
         }),
-        Box::new(|state|{
-            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
-                return Some("got two messages".to_owned());
-            }
-            return None;
-        }),
+        mc_goal(),
         Box::new(|_|{
             Ok(())
         }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
@@ -290,13 +287,7 @@ fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
                 None
             }
         }),
-        Box::new(|state|{
-            if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
-                return Some("got two messages".to_owned());
-            }
-            return None;
-        }),
-        
+        mc_goal(),
         Box::new(|state|{
             if state.search_depth > 20 {
                 Err("too deep".to_owned())
