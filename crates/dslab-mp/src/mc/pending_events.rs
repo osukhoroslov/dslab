@@ -13,7 +13,7 @@ pub struct PendingEvents {
     directives: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
-    is_insta: bool,
+    pub is_insta: bool,
 }
 
 impl PendingEvents {

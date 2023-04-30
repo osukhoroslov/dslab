@@ -74,6 +74,7 @@ impl<'a> ModelChecker<'a> {
 
     pub fn set_state(&mut self, mut state: McState) {
         state.search_depth = 0;
+        state.events.is_insta = self.system.events.is_insta;
         self.system.set_state(state);
     }
 
