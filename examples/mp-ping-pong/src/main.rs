@@ -199,7 +199,7 @@ fn mc_goal<'a>() -> Box<dyn Fn(&McState) -> Option<String> + 'a> {
 fn mc_check_received_messages(state: &McState, messages_expected: &HashSet<String>) -> Result<(), String> {
     let mut messages_got = HashSet::<String>::default();
     for message in &state.node_states["client-node"]["client"].local_outbox {
-        if messages_got.insert(message.data.clone()) {
+        if !messages_got.insert(message.data.clone()) {
             return Err("result duplicated".to_owned());
         }
         if !messages_expected.contains(&message.data) {
