@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
 /// Common settings for DAG parsers.
+#[derive(Debug, Deserialize)]
 pub struct ParserConfig {
     /// Reference machine speed in Gflop/s (default: 10).
     pub reference_speed: f64,
