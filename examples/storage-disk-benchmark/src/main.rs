@@ -174,14 +174,12 @@ fn main() {
 
     for i in 0..args.disks {
         let disk_name = format!("disk-{}", i);
-
         let disk = rc!(refcell!(Disk::simple(
             DISK_CAPACITY,
             DISK_READ_BW,
             DISK_WRITE_BW,
             sim.create_context(&disk_name),
         )));
-
         disks.push((sim.add_handler(disk_name, disk.clone()), disk));
     }
 

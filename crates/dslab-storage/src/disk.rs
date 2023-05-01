@@ -155,7 +155,8 @@ impl Disk {
 
     /// Creates disk with given capacity, read and write bandwidth values.
     ///
-    /// A short form for manual creating [`DiskSpec`] and passing it to [`Disk::new()`].
+    /// The underlying disk model uses constant throughput and factor functions.
+    /// A short form for manually creating [`DiskSpec`] and passing it to [`Disk::new()`].
     pub fn simple(capacity: u64, read_bw: f64, write_bw: f64, ctx: SimulationContext) -> Self {
         let mut spec = DiskSpec::default();
         spec.set_capacity(capacity)

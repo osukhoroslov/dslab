@@ -68,11 +68,11 @@ impl EventHandler for User {
             }
             Ticker {} => {
                 let time = self.ctx.time();
-                if time.eq(&0.) {
+                if time == 0. {
                     self.print_disk_info();
                     log_info!(self.ctx, "Step #0: Single 100 byte write, expected to end at t=1");
                     self.requests
-                        .insert(self.disk.borrow_mut().write(100, self.ctx.id()), 0);
+                        .insert(self.disk.borrow_mut().write(100, self.ctx.id()), step);
                 } else if time.eq(&1.) {
                     log_info!(self.ctx, "Step #1: Two 50 byte writes, expected to end at t=2");
                     self.requests.insert(self.disk.borrow_mut().write(50, self.ctx.id()), 1);
@@ -99,7 +99,6 @@ impl EventHandler for User {
                     self.print_disk_info();
                     self.requests
                         .insert(self.disk.borrow_mut().write(101, self.ctx.id()), 6);
-                } else if time.eq(&8.) {
                     return;
                 }
                 self.ctx.emit_self(Ticker {}, 1.);
@@ -163,5 +162,5 @@ fn main() {
     println!("Starting...");
     root.emit_now(Start {}, sim.add_handler(USER_NAME, user));
     sim.step_until_no_events();
-    println!("Finish");
+    println!("Finished");
 }

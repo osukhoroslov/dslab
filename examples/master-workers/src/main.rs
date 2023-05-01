@@ -114,7 +114,6 @@ fn main() {
         sim.add_handler(compute_name, compute.clone());
         // disk
         let disk_name = format!("{}::disk", host);
-
         let disk = Disk::simple(
             disk_capacity,
             disk_read_bandwidth,

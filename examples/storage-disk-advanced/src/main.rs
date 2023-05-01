@@ -124,9 +124,9 @@ fn main() {
     let simple_disk = rc!(refcell!(Disk::new(simple_spec, sim.create_context(SIMPLE_DISK_NAME))));
     sim.add_handler(SIMPLE_DISK_NAME, simple_disk.clone());
 
-    println!("Starting simple user...");
+    println!("Starting simulation with simple disk...");
 
-    let simple_user = rc!(refcell!(User::new(simple_disk, sim.create_context(SIMPLE_USER_NAME))));
+    let client = rc!(refcell!(User::new(simple_disk, sim.create_context(CLIENT_NAME))));
     root.emit_now(Start {}, sim.add_handler(SIMPLE_USER_NAME, simple_user));
 
     // Elapsed times in logs will be equal for all activities.
@@ -139,11 +139,11 @@ fn main() {
         .set_capacity(DISK_CAPACITY)
         //
         // Using the constant throughput function for read operations,
-        // so total throughput will not change during the simulation.
+        // so total throughput will not depend on operations count.
         .set_read_throughput_fn(make_constant_throughput_fn(DISK_READ_BW))
         //
         // Using custom throughput function for write operations,
-        // so total throughput will depend on activities count `n` as follows.
+        // so total throughput will depend on operations count `n` as follows.
         .set_write_throughput_fn(boxed!(|n| {
             if n < 4 {
                 DISK_WRITE_BW
@@ -153,11 +153,11 @@ fn main() {
         }))
         //
         // Using the uniformly randomized factor function for read operations,
-        // so read bandwidth will be multiplied by random factor from 0.9 to 1.1.
+        // so operation's throughput will be multiplied by a random factor from 0.9 to 1.1.
         .set_read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
-        //
         // Using the empirical factor function for write operations,
-        // so write bandwidth will be multiplied by factor generated from distribution weighted with given weights.
+        // so operation's throughput will be multiplied by a random factor
+        // generated from the specified weighted points distribution.
         .set_write_factor_fn(boxed!(EmpiricalFactorFn::new(&[
             (0.8, 3),
             (0.9, 10),
