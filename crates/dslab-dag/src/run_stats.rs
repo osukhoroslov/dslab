@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::system::System;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct DAGStats {
+pub struct RunStats {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expected_makespan: Option<f64>,
     pub scheduling_time: f64,
@@ -42,7 +42,7 @@ pub struct DAGStats {
     resource_last_used: HashMap<usize, f64>,
 }
 
-impl DAGStats {
+impl RunStats {
     pub fn new() -> Self {
         Self::default()
     }

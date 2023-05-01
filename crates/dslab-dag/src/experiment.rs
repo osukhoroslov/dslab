@@ -16,6 +16,7 @@ use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::network::{read_network_config, NetworkConfig};
 use crate::resource::{read_resource_configs, ResourceConfig};
+use crate::run_stats::RunStats;
 use crate::runner::Config;
 use crate::scheduler::{RcScheduler, SchedulerParams};
 
@@ -26,6 +27,7 @@ pub struct RunResult {
     pub system: String,
     pub scheduler: String,
     pub makespan: f64,
+    pub run_stats: RunStats,
 }
 
 #[derive(Deserialize)]
@@ -148,7 +150,7 @@ impl Experiment {
                     },
                 );
 
-                sim.init(run.dag);
+                let runner = sim.init(run.dag);
                 sim.step_until_no_events();
 
                 let makespan = sim.time();
@@ -158,6 +160,7 @@ impl Experiment {
                     system: run.system_name,
                     scheduler: run.scheduler.to_string(),
                     makespan,
+                    run_stats: runner.borrow().run_stats().clone(),
                 });
 
                 finished_run_atomic.fetch_add(1, Ordering::SeqCst);
