@@ -60,7 +60,7 @@ impl LookaheadScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
-        for task_id in task_ids.into_iter() {
+        for &task_id in task_ids.iter() {
             let mut best_makespan = f64::MAX;
             let mut best_start = -1.;
             let mut best_finish = -1.;
@@ -117,8 +117,11 @@ impl LookaheadScheduler {
                     ScheduledTask::new(start_time, finish_time, task_id),
                 ));
 
-                let mut unscheduled_tasks = (0..task_count).filter(|&task| !scheduled[task]).collect::<Vec<usize>>();
-                unscheduled_tasks.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
+                let unscheduled_tasks = task_ids
+                    .iter()
+                    .cloned()
+                    .filter(|&task| !scheduled[task])
+                    .collect::<Vec<usize>>();
                 let mut makespan = finish_time + output_time;
 
                 for &child in unscheduled_tasks.iter() {
@@ -227,6 +230,7 @@ impl LookaheadScheduler {
                 data_locations.insert(output, resources[best_resource].id);
             }
             task_locations.insert(task_id, resources[best_resource].id);
+            memory_usage[best_resource].add(best_start, best_finish, dag.get_task(task_id).memory);
 
             result.push((
                 best_start,
