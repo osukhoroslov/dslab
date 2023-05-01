@@ -126,7 +126,10 @@ fn main() {
 
     println!("Starting simulation with simple disk...");
 
-    let client = rc!(refcell!(Client::new(simple_disk, sim.create_context(SIMPLE_CLIENT_NAME))));
+    let client = rc!(refcell!(Client::new(
+        simple_disk,
+        sim.create_context(SIMPLE_CLIENT_NAME)
+    )));
     root.emit_now(Start {}, sim.add_handler(SIMPLE_CLIENT_NAME, client));
 
     // Elapsed times in logs will be equal for all activities.

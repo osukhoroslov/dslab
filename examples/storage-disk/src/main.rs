@@ -76,21 +76,26 @@ impl EventHandler for Client {
                         .insert(self.disk.borrow_mut().write(100, self.ctx.id()), step);
                 } else if time.eq(&1.) {
                     log_info!(self.ctx, "Step #1: Two 50 byte writes, expected to end at t=2");
-                    self.requests.insert(self.disk.borrow_mut().write(50, self.ctx.id()), step);
-                    self.requests.insert(self.disk.borrow_mut().write(50, self.ctx.id()), step);
+                    self.requests
+                        .insert(self.disk.borrow_mut().write(50, self.ctx.id()), step);
+                    self.requests
+                        .insert(self.disk.borrow_mut().write(50, self.ctx.id()), step);
                 } else if time.eq(&2.) {
                     log_info!(self.ctx, "Step #2: Starting 1st 200 byte read, expected to end at t=5");
-                    self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), step);
+                    self.requests
+                        .insert(self.disk.borrow_mut().read(200, self.ctx.id()), step);
                 } else if time.eq(&3.) {
                     log_info!(self.ctx, "Step #3: Starting 2nd 200 byte read, expected to end at t=6");
-                    self.requests.insert(self.disk.borrow_mut().read(200, self.ctx.id()), step);
+                    self.requests
+                        .insert(self.disk.borrow_mut().read(200, self.ctx.id()), step);
                 } else if time.eq(&4.) {
                     log_info!(self.ctx, "Step #4: Trying to write 101 bytes... should fail");
                     self.requests
                         .insert(self.disk.borrow_mut().write(101, self.ctx.id()), step);
                 } else if time.eq(&5.) {
                     log_info!(self.ctx, "Step #5: Trying to read 301 bytes... should fail");
-                    self.requests.insert(self.disk.borrow_mut().read(301, self.ctx.id()), step);
+                    self.requests
+                        .insert(self.disk.borrow_mut().read(301, self.ctx.id()), step);
                 } else if time.eq(&6.) {
                     log_info!(
                         self.ctx,
