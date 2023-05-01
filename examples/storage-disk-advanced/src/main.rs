@@ -24,8 +24,8 @@ const SEED: u64 = 16;
 const SIMPLE_DISK_NAME: &str = "SimpleDisk";
 const ADVANCED_DISK_NAME: &str = "AdvancedDisk";
 
-const SIMPLE_USER_NAME: &str = "SimpleUser";
-const ADVANCED_USER_NAME: &str = "AdvancedUser";
+const SIMPLE_CLIENT_NAME: &str = "SimpleClient";
+const ADVANCED_CLIENT_NAME: &str = "AdvancedClient";
 
 const DISK_CAPACITY: u64 = 1000;
 const DISK_READ_BW: f64 = 100.;
@@ -34,7 +34,7 @@ const DISK_WRITE_BW: f64 = 100.;
 const READ_ITERATIONS: u64 = 100;
 const WRITE_ITERATIONS: u64 = 100;
 
-struct User {
+struct Client {
     disk: Rc<RefCell<Disk>>,
     requests: HashMap<u64, u64>, // request_id -> test case
     ctx: SimulationContext,
@@ -47,7 +47,7 @@ struct Start {}
 #[derive(Clone, Serialize)]
 struct Ticker {}
 
-impl User {
+impl Client {
     fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
         Self {
             disk,
@@ -58,7 +58,7 @@ impl User {
     }
 }
 
-impl EventHandler for User {
+impl EventHandler for Client {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start {} => {
@@ -126,8 +126,8 @@ fn main() {
 
     println!("Starting simulation with simple disk...");
 
-    let client = rc!(refcell!(User::new(simple_disk, sim.create_context(CLIENT_NAME))));
-    root.emit_now(Start {}, sim.add_handler(SIMPLE_USER_NAME, simple_user));
+    let client = rc!(refcell!(Client::new(simple_disk, sim.create_context(SIMPLE_CLIENT_NAME))));
+    root.emit_now(Start {}, sim.add_handler(SIMPLE_CLIENT_NAME, client));
 
     // Elapsed times in logs will be equal for all activities.
     sim.step_until_no_events();
@@ -176,11 +176,11 @@ fn main() {
 
     println!("Starting advanced user...");
 
-    let advanced_user = rc!(refcell!(User::new(
+    let advanced_user = rc!(refcell!(Client::new(
         advanced_disk,
-        sim.create_context(ADVANCED_USER_NAME)
+        sim.create_context(ADVANCED_CLIENT_NAME)
     )));
-    root.emit_now(Start {}, sim.add_handler(ADVANCED_USER_NAME, advanced_user));
+    root.emit_now(Start {}, sim.add_handler(ADVANCED_CLIENT_NAME, advanced_user));
 
     // Elapsed times in logs will differ for same activities.
     sim.step_until_no_events();
