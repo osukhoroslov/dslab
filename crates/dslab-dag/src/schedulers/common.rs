@@ -205,10 +205,6 @@ fn find_earliest_slot(
 
     let mut possible_start = start_time;
     loop {
-        if memory_usage.max(possible_start, possible_start + task_exec_time) + need_memory > total_memory {
-            continue;
-        }
-
         for core in 0..scheduled_tasks.len() {
             while let Some(&task) = iters[core].peek() {
                 if task.start_time <= possible_start {
@@ -219,26 +215,28 @@ fn find_earliest_slot(
             }
         }
 
-        for core in 0..scheduled_tasks.len() {
-            let next = iters[core].peek();
-            let prev = last_task[core];
-            if let Some(scheduled_task) = prev {
-                if scheduled_task.finish_time > possible_start {
-                    continue;
+        if memory_usage.max(possible_start, possible_start + task_exec_time) + need_memory <= total_memory {
+            for core in 0..scheduled_tasks.len() {
+                let next = iters[core].peek();
+                let prev = last_task[core];
+                if let Some(scheduled_task) = prev {
+                    if scheduled_task.finish_time > possible_start {
+                        continue;
+                    }
                 }
-            }
-            if let Some(scheduled_task) = next {
-                if scheduled_task.start_time < possible_start + task_exec_time {
-                    continue;
+                if let Some(scheduled_task) = next {
+                    if scheduled_task.start_time < possible_start + task_exec_time {
+                        continue;
+                    }
                 }
+                cores.push(core as u32);
             }
-            cores.push(core as u32);
-        }
-        if cores.len() >= need_cores as usize {
-            start_time = possible_start;
-            break;
-        } else {
-            cores.clear();
+            if cores.len() >= need_cores as usize {
+                start_time = possible_start;
+                break;
+            } else {
+                cores.clear();
+            }
         }
 
         let next_possible_start = last_task
