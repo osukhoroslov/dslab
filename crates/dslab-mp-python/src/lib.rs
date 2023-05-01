@@ -175,7 +175,7 @@ impl Process for PyProcess {
         })
     }
 
-    fn set_state(&self, state: Box<dyn ProcessState>) {
+    fn set_state(&mut self, state: Box<dyn ProcessState>) {
         let data = state.downcast::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
