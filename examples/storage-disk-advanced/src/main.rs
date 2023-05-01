@@ -140,11 +140,9 @@ fn main() {
     let mut advanced_spec = DiskSpec::default();
     advanced_spec
         .set_capacity(DISK_CAPACITY)
-        //
         // Using the constant throughput function for read operations,
         // so total throughput will not depend on operations count.
         .set_read_throughput_fn(make_constant_throughput_fn(DISK_READ_BW))
-        //
         // Using custom throughput function for write operations,
         // so total throughput will depend on operations count `n` as follows.
         .set_write_throughput_fn(boxed!(|n| {
@@ -154,7 +152,6 @@ fn main() {
                 DISK_WRITE_BW / 2.
             }
         }))
-        //
         // Using the uniformly randomized factor function for read operations,
         // so operation's throughput will be multiplied by a random factor from 0.9 to 1.1.
         .set_read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
