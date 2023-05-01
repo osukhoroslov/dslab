@@ -23,6 +23,7 @@ use dslab_network::network::Network;
 use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
 use crate::resource::Resource;
+use crate::run_stats::RunStats;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::system::System;
 use crate::task::TaskState;
@@ -78,6 +79,7 @@ pub struct DAGRunner {
     resource_data_items: HashMap<Id, BTreeSet<usize>>,
     available_cores: Vec<BTreeSet<u32>>,
     trace_log_enabled: bool,
+    run_stats: RunStats,
     config: Config,
     ctx: SimulationContext,
 }
@@ -131,6 +133,7 @@ impl DAGRunner {
             resource_data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
+            run_stats: RunStats::new(),
             config,
             ctx,
         }
@@ -175,7 +178,9 @@ impl DAGRunner {
             self.config.clone(),
             &self.ctx,
         );
-        log_info!(self.ctx, "initial schedule built in {:.2?}", time.elapsed());
+        let scheduling_time = time.elapsed();
+        log_info!(self.ctx, "initial schedule built in {:.2?}", scheduling_time);
+        self.run_stats.add_scheduling_time(scheduling_time.as_secs_f64());
         if let Some(makespan) = actions
             .iter()
             .filter_map(|action| match action {
@@ -213,6 +218,7 @@ impl DAGRunner {
             .max_by(|a, b| a.total_cmp(b))
         {
             log_info!(self.ctx, "expected makespan: {}", makespan);
+            self.run_stats.set_expected_makespan(makespan);
         }
         self.actions.extend(actions);
         self.process_actions();
@@ -246,6 +252,10 @@ impl DAGRunner {
     /// Returns trace log.
     pub fn trace_log(&self) -> &TraceLog {
         &self.trace_log
+    }
+
+    pub fn run_stats(&self) -> &RunStats {
+        &self.run_stats
     }
 
     fn process_schedule_action(
@@ -466,6 +476,8 @@ impl DAGRunner {
                 to,
             },
         );
+        self.run_stats
+            .set_transfer_start(data_id, data_item.size, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -502,6 +514,7 @@ impl DAGRunner {
 
     fn on_task_completed(&mut self, task_id: usize) {
         let task_name = self.dag.get_task(task_id).name.clone();
+        self.run_stats.set_task_finish(task_id, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -575,6 +588,7 @@ impl DAGRunner {
         }
 
         if !self.scheduler.borrow().is_static() {
+            let time = Instant::now();
             self.actions.extend(self.scheduler.borrow_mut().on_task_state_changed(
                 task_id,
                 TaskState::Done,
@@ -585,6 +599,7 @@ impl DAGRunner {
                 },
                 &self.ctx,
             ));
+            self.run_stats.add_scheduling_time(time.elapsed().as_secs_f64());
         }
         self.process_actions();
 
@@ -605,6 +620,8 @@ impl DAGRunner {
         );
         self.computations.insert(computation_id, task_id);
 
+        self.run_stats
+            .set_task_start(task_id, location, cores, task.memory, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -623,6 +640,7 @@ impl DAGRunner {
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
 
+        self.run_stats.set_transfer_finish(data_event_id, self.ctx.time());
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -664,8 +682,15 @@ impl DAGRunner {
         self.dag.is_completed() && self.data_transfers.is_empty()
     }
 
-    fn check_and_log_completed(&self) {
+    fn check_and_log_completed(&mut self) {
         if self.is_completed() {
+            self.run_stats.finalize(
+                self.ctx.time(),
+                System {
+                    resources: &self.resources,
+                    network: &self.network.borrow(),
+                },
+            );
             log_info!(self.ctx, "finished DAG execution");
         }
     }

@@ -7,6 +7,7 @@ pub mod experiment;
 pub mod network;
 pub mod parsers;
 pub mod resource;
+pub mod run_stats;
 pub mod runner;
 pub mod scheduler;
 pub mod schedulers;
