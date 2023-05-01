@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
@@ -64,7 +65,7 @@ impl McSystem {
     pub fn apply_event(&mut self, event: McEvent) {
         self.search_depth += 1;
         self.log.push(event.clone());
-        let new_events = match event {
+        let mut new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
                 self.nodes.get_mut(&name).unwrap().on_message_received(dest, msg, src, self.search_depth)
@@ -79,6 +80,30 @@ impl McSystem {
             }
             _ => vec![],
         };
+        new_events.sort_by(|a, b| {
+            let type_a = match a {
+                McEvent::TimerFired { .. } => 1,
+                McEvent::TimerCancelled { .. } => 2,
+                _ => 0,
+            };
+            let type_b = match b {
+                McEvent::TimerFired { .. } => 1,
+                McEvent::TimerCancelled { .. } => 2,
+                _ => 0,
+            };
+            if type_a != type_b {
+                return type_a.cmp(&type_b);
+            }
+            if type_a == 2 {
+                return Ordering::Equal;
+            }
+            if let McEvent::TimerFired { timer_delay: timer_delay_a, .. } = a {
+                if let McEvent::TimerFired { timer_delay: timer_delay_b, .. } = b {
+                    return timer_delay_a.cmp(&timer_delay_b);
+                }
+            }
+            return Ordering::Equal;
+        });
         for new_event in new_events {
             self.events.push(new_event);
         }
