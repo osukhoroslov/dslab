@@ -3,6 +3,7 @@ mod retry;
 
 
 use std::borrow::BorrowMut;
+use std::collections::HashSet;
 use std::env;
 use std::io::Write;
 
@@ -195,29 +196,68 @@ fn mc_goal<'a>() -> Box<dyn Fn(&McState) -> Option<String> + 'a> {
     })
 } 
 
+fn mc_check_received_messages(state: &McState, messages_expected: &HashSet<String>) -> Result<(), String> {
+    let mut messages_got = HashSet::<String>::default();
+    for message in &state.node_states["client-node"]["client"].local_outbox {
+        if messages_got.insert(message.data.clone()) {
+            return Err("result duplicated".to_owned());
+        }
+        if !messages_expected.contains(&message.data) {
+            return Err("this result was not expected".to_owned());
+        }
+    }
+    Ok(())
+}
+
+fn mc_check_too_deep(state: &McState, depth: u64) -> Result<(), String> {
+    if state.search_depth > depth {
+        Err("too deep".to_owned())
+    } else {
+        Ok(())
+    }
+}
+
+fn mc_prune_number_of_drops(state: &McState, drops_allowed: u64) -> Option<String> {
+    let drops = state.log.iter().filter(|event| 
+        if let McEvent::MessageDropped{..} = **event {
+            true
+        } else {
+            false
+        }
+    ).count();
+    if drops > drops_allowed as usize {
+        Some("too many dropped messages".to_owned())
+    } else {
+        None
+    }
+}
+
+fn mc_prune_many_messages_sent(state: &McState, allowed: u64) -> Option<String> {
+    if state.node_states["client-node"]["client"].sent_message_count > allowed {
+        Some("too many messages sent from client".to_owned())
+    } else if state.node_states["server-node"]["server"].sent_message_count > allowed {
+        Some("too many messages sent from server".to_owned())
+    } else {
+        None
+    }
+}
+
 fn test_mc(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data.clone()));
     system.send_local_message("client", Message::new("PING", &data2.clone()));
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state|{
-            if state.node_states["client-node"]["client"].sent_message_count > 4 {
-                Some("too many messages sent".to_owned())
-            } else if state.node_states["server-node"]["server"].sent_message_count > 4 {
-                Some("too many messages sent".to_owned())
-            } else {
-                None
-            }
+            mc_prune_many_messages_sent(state, 4)
         }),        
         mc_goal(),
         Box::new(|state|{
-            if state.search_depth > 20 {
-                Err("too deep".to_owned())
-            } else {
-                Ok(())
-            }
+            mc_check_received_messages(state, &messages_expected)?;
+            mc_check_too_deep(state, 20)?;
+            Ok(())
         }),
         None,
      dslab_mp::mc::strategy::ExecutionMode::Debug,
@@ -235,19 +275,17 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data.clone()));
     system.send_local_message("client", Message::new("PING", &data2.clone()));
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
-            if state.search_depth > 7 {
-                Some("too deep".to_owned())
-            } else {
-                None
-            }
+            mc_check_too_deep(state, 7).err()
         }),
         mc_goal(),
-        Box::new(|_|{
+        Box::new(|state|{
+            mc_check_received_messages(state, &messages_expected)?;
             Ok(())
         }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
@@ -264,36 +302,22 @@ fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data.clone()));
     system.send_local_message("client", Message::new("PING", &data2.clone()));
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = ModelChecker::new(&system, Box::new(Dfs::new(
         Box::new(|state| {
-            let num_drops_allowed: u64 = 3;
-            let drops = state.log.iter().filter(|event| 
-                if let McEvent::MessageDropped{..} = **event {
-                    true
-                } else {
-                    false
-                }
-            ).count();
-            if drops > num_drops_allowed as usize {
-                Some("too many dropped messages".to_owned())
-            } else if state.node_states["client-node"]["client"].sent_message_count > num_drops_allowed + 2 {
-                Some("too many messages sent".to_owned())
-            } else if state.node_states["server-node"]["server"].sent_message_count > num_drops_allowed + 2 {
-                Some("too many messages sent".to_owned())
-            } else {
-                None
-            }
+            let num_drops_allowed = 3;
+            mc_prune_number_of_drops(state, num_drops_allowed).or_else(||
+                mc_prune_many_messages_sent(state, num_drops_allowed + 2)
+            )
         }),
         mc_goal(),
         Box::new(|state|{
-            if state.search_depth > 20 {
-                Err("too deep".to_owned())
-            } else {
-                Ok(())
-            }
+            mc_check_received_messages(state, &messages_expected)?;
+            mc_check_too_deep(state, 20)?;
+            Ok(())
         }),None, dslab_mp::mc::strategy::ExecutionMode::Debug,
     )));
     let res = mc.run();
