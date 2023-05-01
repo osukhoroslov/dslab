@@ -175,6 +175,7 @@ pub trait Strategy {
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
+            self.mark_visited(system.get_state());
             self.search_step_impl(system, new_state)?;
         }
 
@@ -209,7 +210,7 @@ pub trait Strategy {
                 options,
             } => {
                 lazy_static! {
-                    static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                    static ref RE: Regex = Regex::new(r"\w+").unwrap();
                 }
                 let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
                 MessageReceived {
