@@ -22,7 +22,7 @@ use crate::runner::Config;
 use crate::scheduler::{RcScheduler, SchedulerParams};
 
 /// Contains result of a single simulation run.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RunResult {
     pub dag: String,
     pub system: String,
@@ -40,6 +40,7 @@ struct ExperimentConfig {
     systems: Vec<PathBuf>,
     schedulers: Vec<String>,
     data_transfer_mode: DataTransferMode,
+    traces_dir: Option<String>,
 }
 
 struct Run {
@@ -57,9 +58,43 @@ pub struct Experiment {
     runs: Vec<Run>,
     data_transfer_mode: DataTransferMode,
     scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
+    traces_dir: Option<String>,
 }
 
 impl Experiment {
+    /// Creates new experiment.
+    pub fn new(
+        dags: Vec<(String, DAG)>,
+        systems: Vec<(String, Vec<ResourceConfig>, NetworkConfig)>,
+        data_transfer_mode: DataTransferMode,
+        schedulers: Vec<SchedulerParams>,
+        scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
+        traces_dir: Option<String>,
+    ) -> Self {
+        let runs = dags
+            .into_iter()
+            .cartesian_product(systems.into_iter())
+            .cartesian_product(schedulers.into_iter())
+            .map(
+                |(((dag_name, dag), (system_name, resources, network)), scheduler)| Run {
+                    dag_name,
+                    dag,
+                    system_name,
+                    resources,
+                    network,
+                    scheduler,
+                },
+            )
+            .collect::<Vec<_>>();
+
+        Self {
+            runs,
+            data_transfer_mode,
+            scheduler_resolver,
+            traces_dir,
+        }
+    }
+
     /// Loads experiment from YAML config file.
     pub fn load<P: AsRef<Path>>(
         config_path: P,
@@ -77,7 +112,7 @@ impl Experiment {
             .collect();
         let dags = get_all_files(&dags_paths).into_iter().map(|path| {
             (
-                path.file_name().unwrap().to_str().unwrap().to_string(),
+                path.file_stem().unwrap().to_str().unwrap().to_string(),
                 DAG::from_file(&path, &config.dag_parser),
             )
         });
@@ -89,6 +124,7 @@ impl Experiment {
             .collect();
         let systems = get_all_files(&systems_paths).into_iter().map(|path| {
             let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
+            let file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
             let resources = read_resource_configs(&path);
             assert!(
                 !resources.is_empty(),
@@ -102,7 +138,7 @@ impl Experiment {
                 file_name,
                 network
             );
-            (file_name, resources, network)
+            (file_stem, resources, network)
         });
 
         let schedulers = config
@@ -132,15 +168,24 @@ impl Experiment {
             )
             .collect::<Vec<_>>();
 
+        let traces_dir = config
+            .traces_dir
+            .map(|path| String::from(config_path.as_ref().parent().unwrap().join(path).to_string_lossy()));
+
         Self {
             runs,
             data_transfer_mode: config.data_transfer_mode,
             scheduler_resolver,
+            traces_dir,
         }
     }
 
     /// Runs experiment and returns its results.
     pub fn run(self, num_threads: usize) -> Vec<RunResult> {
+        if let Some(dir) = &self.traces_dir {
+            std::fs::create_dir_all(dir).unwrap();
+        }
+
         let total_runs = self.runs.len();
 
         let finished_run_atomic = Arc::new(AtomicUsize::new(0));
@@ -151,6 +196,7 @@ impl Experiment {
         for run in self.runs.into_iter() {
             let finished_run_atomic = finished_run_atomic.clone();
             let results = results.clone();
+            let traces_dir = self.traces_dir.clone();
             pool.execute(move || {
                 let scheduler = (self.scheduler_resolver)(&run.scheduler).unwrap();
 
@@ -165,14 +211,26 @@ impl Experiment {
                 );
 
                 let runner = sim.init(run.dag);
-                sim.init(run.dag);
+                if traces_dir.is_some() {
+                    runner.borrow_mut().enable_trace_log(true);
+                }
 
                 let start = Instant::now();
                 sim.step_until_no_events();
                 let exec_time = start.elapsed().as_secs_f64();
+                let makespan = sim.time();
 
-                // 3 decimal places is enough
-                let makespan = (sim.time() * 1000.).round() / 1000.;
+                runner.borrow().validate_completed();
+                if let Some(dir) = traces_dir {
+                    runner
+                        .borrow()
+                        .trace_log()
+                        .save_to_file(&format!(
+                            "{}/{}_{}_{}.json",
+                            dir, &run.dag_name, &run.system_name, &run.scheduler,
+                        ))
+                        .unwrap();
+                }
 
                 results.lock().unwrap().push(RunResult {
                     dag: run.dag_name,

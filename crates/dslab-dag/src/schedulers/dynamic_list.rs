@@ -1,4 +1,8 @@
 use std::collections::HashMap;
+use std::str::FromStr;
+use std::string::ToString;
+
+use strum_macros::{Display, EnumIter, EnumString};
 
 use dslab_core::context::SimulationContext;
 
@@ -16,76 +20,71 @@ struct Resource {
     speed: f64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Display, EnumIter, EnumString)]
 pub enum TaskCriterion {
-    BottomLevel,
-    ChildrenCount,
+    CompSize,
     DataSize,
-    ComputationSize,
+    ChildrenCount,
+    BottomLevel,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Display, EnumIter, EnumString)]
 pub enum ResourceCriterion {
+    Speed,
     TaskData,
     IdleCores,
-    Speed,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Display, EnumIter, EnumString)]
 pub enum CoresCriterion {
+    MaxCores,
     Efficiency90,
     Efficiency50,
-    MaxCores,
 }
 
-pub struct PortfolioScheduler {
+#[derive(Clone, Debug)]
+pub struct DynamicListStrategy {
     pub task_criterion: TaskCriterion,
     pub resource_criterion: ResourceCriterion,
     pub cores_criterion: CoresCriterion,
+}
+
+impl DynamicListStrategy {
+    pub fn from_params(params: &SchedulerParams) -> Self {
+        let task_criterion_str: String = params.get("task").unwrap();
+        let resource_criterion_str: String = params.get("resource").unwrap();
+        let cores_criterion_str: String = params.get("cores").unwrap_or(CoresCriterion::MaxCores.to_string());
+        Self {
+            task_criterion: TaskCriterion::from_str(&task_criterion_str)
+                .expect("Wrong task criterion: {task_criterion_str}"),
+            resource_criterion: ResourceCriterion::from_str(&resource_criterion_str)
+                .expect("Wrong resource criterion: {resource_criterion_str}"),
+            cores_criterion: CoresCriterion::from_str(&cores_criterion_str)
+                .expect("Wrong cores criterion: {cores_criterion_str}"),
+        }
+    }
+}
+
+pub struct DynamicListScheduler {
+    pub strategy: DynamicListStrategy,
     data_location: HashMap<usize, usize>,
 }
 
-impl PortfolioScheduler {
-    pub fn new(algo: usize) -> Self {
-        PortfolioScheduler {
-            task_criterion: match algo / 9 {
-                0 => TaskCriterion::BottomLevel,
-                1 => TaskCriterion::ChildrenCount,
-                2 => TaskCriterion::DataSize,
-                3 => TaskCriterion::ComputationSize,
-                _ => {
-                    eprintln!("Wrong algo {}", algo);
-                    std::process::exit(1);
-                }
-            },
-            resource_criterion: match algo % 9 / 3 {
-                0 => ResourceCriterion::TaskData,
-                1 => ResourceCriterion::IdleCores,
-                2 => ResourceCriterion::Speed,
-                _ => {
-                    eprintln!("Wrong algo {}", algo);
-                    std::process::exit(1);
-                }
-            },
-            cores_criterion: match algo % 3 {
-                0 => CoresCriterion::Efficiency90,
-                1 => CoresCriterion::Efficiency50,
-                2 => CoresCriterion::MaxCores,
-                _ => {
-                    eprintln!("Wrong algo {}", algo);
-                    std::process::exit(1);
-                }
-            },
+impl DynamicListScheduler {
+    pub fn new(strategy: DynamicListStrategy) -> Self {
+        DynamicListScheduler {
+            strategy,
             data_location: HashMap::new(),
         }
     }
 
     pub fn from_params(params: &SchedulerParams) -> Self {
-        Self::new(params.get("algo").unwrap())
+        Self::new(DynamicListStrategy::from_params(params))
     }
 
-    fn schedule(&mut self, dag: &DAG, resources: &[crate::resource::Resource]) -> Vec<Action> {
-        let mut resources: Vec<Resource> = resources
+    fn schedule(&mut self, dag: &DAG, system: System, ctx: &SimulationContext) -> Vec<Action> {
+        let mut resources: Vec<Resource> = system
+            .resources
             .iter()
             .map(|resource| Resource {
                 cores_available: resource.cores_available,
@@ -95,7 +94,8 @@ impl PortfolioScheduler {
             .collect();
         let mut result: Vec<Action> = Vec::new();
 
-        let rank = calc_ranks(1., 0., dag);
+        let avg_net_time = system.avg_net_time(ctx.id(), &DataTransferMode::Direct);
+        let rank = calc_ranks(system.avg_flop_time(), avg_net_time, dag);
 
         let get_data_size = |task_id: usize| -> f64 {
             let task = dag.get_task(task_id);
@@ -109,16 +109,16 @@ impl PortfolioScheduler {
         };
 
         let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<Vec<usize>>();
-        ready_tasks.sort_by(|&a, &b| match self.task_criterion {
-            TaskCriterion::BottomLevel => rank[b].total_cmp(&rank[a]),
-            TaskCriterion::ChildrenCount => dag.get_task(b).outputs.len().cmp(&dag.get_task(a).outputs.len()),
+        ready_tasks.sort_by(|&a, &b| match self.strategy.task_criterion {
+            TaskCriterion::CompSize => dag.get_task(b).flops.total_cmp(&dag.get_task(a).flops),
             TaskCriterion::DataSize => get_data_size(b).total_cmp(&get_data_size(a)),
-            TaskCriterion::ComputationSize => dag.get_task(b).flops.total_cmp(&dag.get_task(a).flops),
+            TaskCriterion::ChildrenCount => dag.get_task(b).outputs.len().cmp(&dag.get_task(a).outputs.len()),
+            TaskCriterion::BottomLevel => rank[b].total_cmp(&rank[a]),
         });
 
         for task in ready_tasks.into_iter() {
             let mut total_task_data: HashMap<usize, f64> = HashMap::new();
-            if self.resource_criterion == ResourceCriterion::TaskData {
+            if self.strategy.resource_criterion == ResourceCriterion::TaskData {
                 for input in dag.get_task(task).inputs.iter() {
                     if let Some(location) = self.data_location.get(input) {
                         *total_task_data.entry(*location).or_default() += dag.get_data_item(*input).size;
@@ -131,13 +131,13 @@ impl PortfolioScheduler {
                     resources[r].cores_available >= dag.get_task(task).min_cores
                         && resources[r].memory_available >= dag.get_task(task).memory
                 })
-                .min_by(|&a, &b| match self.resource_criterion {
+                .min_by(|&a, &b| match self.strategy.resource_criterion {
+                    ResourceCriterion::Speed => resources[b].speed.total_cmp(&resources[a].speed),
                     ResourceCriterion::TaskData => total_task_data
                         .get(&b)
                         .unwrap_or(&0.)
                         .total_cmp(total_task_data.get(&a).unwrap_or(&0.)),
                     ResourceCriterion::IdleCores => resources[b].cores_available.cmp(&resources[a].cores_available),
-                    ResourceCriterion::Speed => resources[b].speed.total_cmp(&resources[a].speed),
                 });
 
             if best_resource.is_none() {
@@ -155,10 +155,10 @@ impl PortfolioScheduler {
                 1
             };
 
-            let cores = match self.cores_criterion {
+            let cores = match self.strategy.cores_criterion {
+                CoresCriterion::MaxCores => resources[best_resource].cores_available,
                 CoresCriterion::Efficiency90 => get_max_cores_for_efficiency(0.9),
                 CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
-                CoresCriterion::MaxCores => resources[best_resource].cores_available,
             };
             let cores = cores.clamp(dag.get_task(task).min_cores, dag.get_task(task).max_cores);
 
@@ -178,14 +178,14 @@ impl PortfolioScheduler {
     }
 }
 
-impl Scheduler for PortfolioScheduler {
-    fn start(&mut self, dag: &DAG, system: System, config: Config, _ctx: &SimulationContext) -> Vec<Action> {
+impl Scheduler for DynamicListScheduler {
+    fn start(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Action> {
         assert_ne!(
             config.data_transfer_mode,
             DataTransferMode::Manual,
-            "PortfolioScheduler doesn't support DataTransferMode::Manual"
+            "DynamicListScheduler doesn't support DataTransferMode::Manual"
         );
-        self.schedule(dag, system.resources)
+        self.schedule(dag, system, ctx)
     }
 
     fn on_task_state_changed(
@@ -194,9 +194,9 @@ impl Scheduler for PortfolioScheduler {
         _task_state: TaskState,
         dag: &DAG,
         system: System,
-        _ctx: &SimulationContext,
+        ctx: &SimulationContext,
     ) -> Vec<Action> {
-        self.schedule(dag, system.resources)
+        self.schedule(dag, system, ctx)
     }
 
     fn is_static(&self) -> bool {
