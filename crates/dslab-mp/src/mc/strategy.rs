@@ -70,6 +70,14 @@ impl McResult {
     pub fn new(summary: McSummary, collected: HashSet<McState>) -> Self {
         McResult { summary, collected }
     }
+
+    pub fn combine(&mut self, other: McResult) {
+        self.collected.extend(other.collected.into_iter());
+        for (state, cnt) in other.summary.states {
+            let entry = self.summary.states.entry(state).or_insert(0);
+            *entry += cnt;
+        }
+    }
 }
 
 /// Decides whether to prune the executions originating from the given state.
