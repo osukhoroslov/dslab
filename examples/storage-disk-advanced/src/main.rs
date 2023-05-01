@@ -63,10 +63,10 @@ impl EventHandler for Client {
         cast!(match event.data {
             Start {} => {
                 self.start_time = self.ctx.time();
-                for i in 1..READ_ITERATIONS {
+                for i in 0..READ_ITERATIONS {
                     self.requests.insert(self.disk.borrow_mut().read(10, self.ctx.id()), i);
                 }
-                for i in 1..WRITE_ITERATIONS {
+                for i in 0..WRITE_ITERATIONS {
                     self.requests
                         .insert(self.disk.borrow_mut().write(10, self.ctx.id()), READ_ITERATIONS + i);
                 }
