@@ -141,7 +141,14 @@ impl McNode {
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking
-                        proc_entry.pending_timers.insert(name, 0);
+                        proc_entry.pending_timers.insert(name.clone(), 0);
+                        let proc_copy = proc.clone();
+                        new_events.retain(|event| {
+                            match event {
+                                McEvent::TimerCancelled { proc, timer } if *proc == proc_copy && *timer == name => false,
+                                _ => true
+                            }
+                        });
                     }
                 }
                 ProcessEvent::TimerCancelled { name } => {
