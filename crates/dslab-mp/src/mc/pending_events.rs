@@ -82,13 +82,18 @@ impl PendingEvents {
             BTreeSet::from_iter(vec![*directive])
         } else {
             if self.is_insta {
-                BTreeSet::from_iter(self.available_events.clone().into_iter().filter(|event_id| {
+                let res = BTreeSet::from_iter(self.available_events.clone().into_iter().filter(|event_id| {
                     if let McEvent::TimerFired { .. } = self.events[event_id] {
                         false
                     } else {
                         true
                     }
-                }))
+                }));
+                if res.is_empty() {
+                    self.available_events.clone()
+                } else {
+                    res
+                }
             } else {
                 self.available_events.clone()
             }
@@ -98,13 +103,18 @@ impl PendingEvents {
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
         if self.is_insta {
-            self.available_events.iter().filter(|event_id| {
+            let res = self.available_events.iter().filter(|event_id| {
                 if let McEvent::TimerFired { .. } = self.events[event_id] {
                     false
                 } else {
                     true
                 }
-            }).count()
+            }).count();
+            if res == 0 {
+                self.available_events.len()
+            } else {
+                res
+            }
         } else {
             self.available_events.len()
         }
