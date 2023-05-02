@@ -26,9 +26,12 @@ use crate::storage::{Storage, StorageInfo};
 /// Describes a disk operation.
 #[derive(Clone)]
 pub struct DiskActivity {
-    request_id: u64,
-    requester: Id,
-    size: u64,
+    /// Request Id.
+    pub request_id: u64,
+    /// Requester.
+    pub requester: Id,
+    /// Size.
+    pub size: u64,
 }
 
 #[derive(Clone, Serialize)]

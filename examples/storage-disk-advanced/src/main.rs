@@ -4,6 +4,7 @@ use std::io::Write;
 use std::rc::Rc;
 
 use env_logger::Builder;
+use rand::distributions::Uniform;
 use serde::Serialize;
 use sugars::{boxed, rc, refcell};
 
@@ -14,8 +15,8 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 
-use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, EmpiricalFactorFn};
-use dslab_storage::disk::{Disk, DiskSpec};
+use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, ActivityFactorFn};
+use dslab_storage::disk::{Disk, DiskActivity, DiskSpec};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
@@ -55,6 +56,17 @@ impl Client {
             ctx,
             start_time: 0.,
         }
+    }
+}
+
+struct ExampleDiskFactorFn {}
+
+impl ActivityFactorFn<DiskActivity> for ExampleDiskFactorFn {
+    fn get_factor(&mut self, item: &DiskActivity, ctx: &mut SimulationContext) -> f64 {
+        if item.size < 10 {
+            return 1.;
+        }
+        ctx.sample_from_distribution(&Uniform::<f64>::new(0.9, 1.))
     }
 }
 
@@ -158,15 +170,7 @@ fn main() {
         // Using the empirical factor function for write operations,
         // so operation's throughput will be multiplied by a random factor
         // generated from the specified weighted points distribution.
-        .set_write_factor_fn(boxed!(EmpiricalFactorFn::new(&[
-            (0.8, 3),
-            (0.9, 10),
-            (1., 31),
-            (1.1, 15),
-            (1.2, 5),
-            (1.3, 6)
-        ])
-        .unwrap()));
+        .set_write_factor_fn(boxed!(ExampleDiskFactorFn {}));
 
     let advanced_disk = rc!(refcell!(Disk::new(
         advanced_spec,
