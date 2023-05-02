@@ -25,7 +25,7 @@ const CLIENT_NAME: &str = "Client";
 
 const DISK_CAPACITY: u64 = 300;
 const DISK_READ_BW: f64 = 100.;
-const DISK_WRITE_BW: f64 = 100.;
+const DISK_WRITE_BW: f64 = 200.;
 
 struct Client {
     disk: Rc<RefCell<Disk>>,
