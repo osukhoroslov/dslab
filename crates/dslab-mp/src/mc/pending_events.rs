@@ -92,7 +92,9 @@ impl PendingEvents {
     pub fn cancel_timer(&mut self, proc: String, timer: String) {
         let id = self.timer_mapping.remove(&(proc, timer));
         if let Some(id) = id {
-            self.pop(id);
+            if self.events.contains_key(&id) {                
+                self.pop(id);
+            }
         }
     }
 
