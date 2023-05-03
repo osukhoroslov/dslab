@@ -1,11 +1,11 @@
 //! DAG task.
 
-use enum_iterator::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 use dslab_compute::multicore::CoresDependency;
 
 /// Represents a DAG task state.
-#[derive(Eq, PartialEq, Copy, Clone, Debug, IntoEnumIterator)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, EnumIter)]
 pub enum TaskState {
     /// Waiting for its dependencies.
     Pending,

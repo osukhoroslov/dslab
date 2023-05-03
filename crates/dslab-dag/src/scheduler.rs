@@ -16,10 +16,10 @@ use crate::system::System;
 use crate::task::TaskState;
 
 use crate::schedulers::dls::DlsScheduler;
+use crate::schedulers::dynamic_list::DynamicListScheduler;
 use crate::schedulers::heft::HeftScheduler;
 use crate::schedulers::lookahead::LookaheadScheduler;
 use crate::schedulers::peft::PeftScheduler;
-use crate::schedulers::portfolio_scheduler::PortfolioScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 /// Represents an action ordered by the scheduler.
@@ -163,11 +163,11 @@ impl std::fmt::Display for SchedulerParams {
 pub fn default_scheduler_resolver(params: &SchedulerParams) -> Option<RcScheduler> {
     match params.name.as_str() {
         "Simple" => Some(Rc::new(RefCell::new(SimpleScheduler::new()))),
+        "DynamicList" => Some(Rc::new(RefCell::new(DynamicListScheduler::from_params(params)))),
         "HEFT" => Some(Rc::new(RefCell::new(HeftScheduler::from_params(params)))),
         "Lookahead" => Some(Rc::new(RefCell::new(LookaheadScheduler::from_params(params)))),
         "PEFT" => Some(Rc::new(RefCell::new(PeftScheduler::from_params(params)))),
         "DLS" => Some(Rc::new(RefCell::new(DlsScheduler::from_params(params)))),
-        "Portfolio" => Some(Rc::new(RefCell::new(PortfolioScheduler::from_params(params)))),
         _ => None,
     }
 }

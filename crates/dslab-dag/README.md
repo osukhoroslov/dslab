@@ -18,6 +18,7 @@ use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::read_network_config;
+use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
@@ -30,7 +31,7 @@ let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
 let mut sim = DagSimulation::new(123, resources, network, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
 // read DAG from YAML file
-let dag = DAG::from_yaml("../../examples/dag-demo/dags/diamond.yaml");
+let dag = DAG::from_yaml("../../examples/dag-demo/dags/diamond.yaml", &ParserConfig::default());
 
 // init simulation
 let runner = sim.init(dag);

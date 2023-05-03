@@ -8,7 +8,7 @@ use std::time::Instant;
 use serde::Serialize;
 use serde_json::json;
 
-use enum_iterator::IntoEnumIterator;
+use strum::IntoEnumIterator;
 
 use dslab_compute::multicore::*;
 use dslab_core::cast;
@@ -699,7 +699,7 @@ impl DAGRunner {
     pub fn validate_completed(&self) {
         if !self.is_completed() {
             let mut states: Vec<String> = Vec::new();
-            for task_state in TaskState::into_enum_iter() {
+            for task_state in TaskState::iter() {
                 let cnt = self
                     .dag
                     .get_tasks()

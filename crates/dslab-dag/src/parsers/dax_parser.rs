@@ -7,6 +7,7 @@ use serde_xml_rs::from_str;
 use dslab_compute::multicore::CoresDependency;
 
 use crate::dag::*;
+use crate::parsers::config::ParserConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct File {
@@ -35,7 +36,7 @@ struct DAX {
 
 impl DAG {
     /// Reads DAG from a file in [DAX format](https://pegasus.isi.edu/documentation/development/schemas.html).
-    pub fn from_dax<P: AsRef<Path>>(file: P, reference_speed: f64) -> Self {
+    pub fn from_dax<P: AsRef<Path>>(file: P, config: &ParserConfig) -> Self {
         let dax: DAX = from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
         )
@@ -45,7 +46,7 @@ impl DAG {
         for job in dax.jobs.iter() {
             let task_id = dag.add_task(
                 &job.name,
-                job.runtime * reference_speed,
+                job.runtime * config.reference_speed,
                 0, // task memory consumption is not present in DAX files
                 1, // cores info is not present in DAX files
                 1, // assuming all tasks require a single core

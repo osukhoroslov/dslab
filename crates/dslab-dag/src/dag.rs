@@ -6,6 +6,7 @@ use std::path::Path;
 use dslab_compute::multicore::CoresDependency;
 
 use crate::data_item::*;
+use crate::parsers::config::ParserConfig;
 use crate::task::*;
 
 /// Represents a computation consisting of multiple tasks with data dependencies
@@ -36,11 +37,11 @@ impl DAG {
     /// - WfCommons format (.json extension)
     /// - DAX format (.xml extension)
     /// - DOT format (.dot extension)
-    pub fn from_file<P: AsRef<Path>>(file: P) -> Self {
+    pub fn from_file<P: AsRef<Path>>(file: P, parser_config: &ParserConfig) -> Self {
         match file.as_ref().extension().unwrap().to_str().unwrap() {
-            "yaml" => DAG::from_yaml(file),
-            "json" => DAG::from_wfcommons(file, 10.), // default reference speed is 10 Gflop/s
-            "xml" => DAG::from_dax(file, 10.),        // default reference speed is 10 Gflop/s
+            "yaml" => DAG::from_yaml(file, parser_config),
+            "json" => DAG::from_wfcommons(file, parser_config),
+            "xml" => DAG::from_dax(file, parser_config),
             "dot" => DAG::from_dot(file),
             _ => {
                 panic!("Unknown extension for dag: {}", file.as_ref().display());

@@ -1,41 +1,34 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::str::FromStr;
 
 extern crate reqwest;
 
 use clap::Parser;
 use env_logger::Builder;
-use log::log_enabled;
-use log::Level::Info;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use sugars::{rc, refcell};
-use threadpool::ThreadPool;
+use strum::IntoEnumIterator;
 
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
-use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
+use dslab_dag::experiment::{Experiment, RunResult};
 use dslab_dag::network::NetworkConfig;
-use dslab_dag::runner::Config;
-use dslab_dag::schedulers::portfolio_scheduler::PortfolioScheduler;
+use dslab_dag::parsers::config::ParserConfig;
+use dslab_dag::resource::ResourceConfig;
+use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
+use dslab_dag::schedulers::dynamic_list::{CoresCriterion, DynamicListStrategy, ResourceCriterion, TaskCriterion};
 
 #[derive(Parser, Debug)]
 #[command(about, long_about = None)]
 struct Args {
-    /// Run only one experiment (algo-dag-platform)
-    #[arg(long)]
-    run_one: Option<String>,
-
     /// Save trace logs to data/traces/
     #[arg(long)]
     save_traces: bool,
 
-    /// Load results from data/results.txt without running simulation
+    /// Load results from data/results.json without running simulation
     #[arg(long)]
     load_results: bool,
 
@@ -44,11 +37,15 @@ struct Args {
     threads: usize,
 }
 
-struct RunResult {
-    algo: usize,
-    dag: usize,
-    platform: usize,
-    time: f64,
+fn main() {
+    Builder::from_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+    let args = Args::parse();
+    if !args.load_results {
+        run_experiments(&args);
+    }
+    process_results();
 }
 
 fn run_experiments(args: &Args) {
@@ -87,7 +84,7 @@ fn run_experiments(args: &Args) {
         eprintln!("All workflows saved to folder data/dags");
     }
 
-    let mut dags: Vec<DAG> = Vec::new();
+    let mut dags: Vec<(String, DAG)> = Vec::new();
     let mut rng = Pcg64::seed_from_u64(456);
 
     let mut filenames = std::fs::read_dir(dags_folder)
@@ -98,7 +95,13 @@ fn run_experiments(args: &Args) {
 
     for filename in filenames.into_iter() {
         eprintln!("Loading DAG from {}", filename);
-        let mut dag = DAG::from_wfcommons(format!("{}{}", dags_folder, filename), 100.);
+        let mut dag = DAG::from_wfcommons(
+            format!("{}{}", dags_folder, filename),
+            &ParserConfig {
+                reference_speed: 100.,
+                ignore_memory: true,
+            },
+        );
 
         for task_id in 0..dag.get_tasks().len() {
             let task = dag.get_task_mut(task_id);
@@ -107,7 +110,7 @@ fn run_experiments(args: &Args) {
                 fixed_part: rng.gen_range(0.0..0.2),
             }
         }
-        dags.push(dag);
+        dags.push((filename.replace(".json", ""), dag));
     }
 
     // up to 3 clusters for each platform, each triple means (nodes, speed in Gflop/s, bandwidth in MB/s)
@@ -123,222 +126,100 @@ fn run_experiments(args: &Args) {
         // vec![(32, 100., 300.), (32, 200., 200.), (32, 300., 100.)],
         // vec![(32, 100., 300.), (32, 200., 100.), (32, 300., 200.)],
     ];
-    let enable_trace_log = args.save_traces;
-    let traces_folder = "data/traces/";
-
-    if enable_trace_log {
-        std::fs::create_dir_all(traces_folder).unwrap();
-    }
-
-    let run_one = args.run_one.as_ref().map(|s| {
-        let mut s = s.split('-');
-        (
-            s.next().unwrap().parse::<usize>().unwrap(),
-            s.next().unwrap().parse::<usize>().unwrap(),
-            s.next().unwrap().parse::<usize>().unwrap(),
-        )
-    });
-
-    let pool = ThreadPool::new(args.threads);
-
-    let algos = 36;
-
-    let total_runs = algos * dags.len() * platform_configs.len();
-    let finished_runs = Arc::new(AtomicUsize::new(0));
-
-    let results = Arc::new(Mutex::new(Vec::<(usize, usize, usize, f64)>::new()));
-
-    for algo in 0..algos {
-        for (dag_id, dag) in dags.iter().enumerate() {
-            for (platform_id, platform_config) in platform_configs.iter().enumerate() {
-                if let Some((one_algo, one_dag, one_platform)) = run_one {
-                    if algo != one_algo || dag_id != one_dag || one_platform != platform_id {
-                        continue;
-                    }
-                }
-                let dag = dag.clone();
-                let platform_config = platform_config.clone();
-                let algo = algo;
-                let total_runs = total_runs;
-                let finished_runs = finished_runs.clone();
-                let results = results.clone();
-                pool.execute(move || {
-                    let network_config = NetworkConfig::constant(1000., 0.);
-
-                    let scheduler = PortfolioScheduler::new(algo);
-
-                    let mut sim = DagSimulation::new(
-                        123,
-                        Vec::new(),
-                        network_config,
-                        rc!(refcell!(scheduler)),
-                        Config {
-                            data_transfer_mode: DataTransferMode::Direct,
-                        },
-                    );
-                    let mut create_resource = |speed, cluster: usize, node: usize| {
-                        let name = format!("compute-{}-{}", cluster, node);
-                        let cores = 8;
-                        let memory = 1_000_000; // use lots of memory to ignore memory capacity constraint
-                        sim.add_resource(&name, speed, cores, memory);
-                    };
-
-                    for (cluster, &(nodes, speed, _bandwidth)) in platform_config.iter().enumerate() {
-                        for node in 0..nodes {
-                            create_resource(speed, cluster, node);
-                        }
-                    }
-
-                    let runner = sim.init(dag);
-                    runner.borrow_mut().enable_trace_log(enable_trace_log);
-
-                    let t = Instant::now();
-                    sim.step_until_no_events();
-                    if log_enabled!(Info) {
-                        println!(
-                            "Processed {} events in {:.2?} ({:.0} events/sec)",
-                            sim.event_count(),
-                            t.elapsed(),
-                            sim.event_count() as f64 / t.elapsed().as_secs_f64()
-                        );
-                    }
-                    runner.borrow().validate_completed();
-                    if enable_trace_log {
-                        runner
-                            .borrow()
-                            .trace_log()
-                            .save_to_file(&format!(
-                                "{}{:0>3}-{:0>3}-{:0>3}.json",
-                                traces_folder, algo, dag_id, platform_id
-                            ))
-                            .unwrap();
-                    }
-
-                    finished_runs.fetch_add(1, Ordering::SeqCst);
-                    print!(
-                        "\rFinished {}/{} runs",
-                        finished_runs.load(Ordering::SeqCst),
-                        total_runs
-                    );
-                    std::io::stdout().flush().unwrap();
-                    results.lock().unwrap().push((algo, dag_id, platform_id, sim.time()));
+    let mut systems = Vec::new();
+    for (id, platform_config) in platform_configs.iter().enumerate() {
+        let system_name = format!("system-{id}");
+        let mut resources = Vec::new();
+        for (cluster, &(nodes, speed, _bandwidth)) in platform_config.iter().enumerate() {
+            for node in 0..nodes {
+                let name = format!("compute-{}-{}", cluster, node);
+                let cores = 8;
+                let memory = 0; // memory usage is ignored
+                resources.push(ResourceConfig {
+                    name,
+                    speed,
+                    cores,
+                    memory,
                 });
             }
         }
-    }
-    let t = Instant::now();
-    pool.join();
-
-    if run_one.is_none() {
-        println!("\rFinished {} runs in {:.2?}", total_runs, t.elapsed());
-
-        let mut results = results.lock().unwrap();
-        results.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
-
-        std::fs::File::create("data/results.txt")
-            .unwrap()
-            .write_all(
-                results
-                    .iter()
-                    .map(|(algo, dag_id, platform_id, time)| {
-                        format!("{}\t{}\t{}\t{:.3}\n", algo, dag_id, platform_id, time)
-                    })
-                    .collect::<Vec<_>>()
-                    .join("")
-                    .as_bytes(),
-            )
-            .unwrap();
-    } else {
-        println!("\rFinished one run in {:.2?}", t.elapsed());
-    }
-}
-
-fn process_results() {
-    let results = std::fs::read_to_string("data/results.txt")
-        .unwrap()
-        .split('\n')
-        .filter(|s| !s.is_empty())
-        .map(|s| {
-            let mut s = s.split('\t');
-            RunResult {
-                algo: s.next().unwrap().parse::<usize>().unwrap(),
-                dag: s.next().unwrap().parse::<usize>().unwrap(),
-                platform: s.next().unwrap().parse::<usize>().unwrap(),
-                time: s.next().unwrap().parse::<f64>().unwrap(),
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let mut algos = results.iter().map(|t| t.algo).collect::<Vec<_>>();
-    algos.sort();
-    algos.dedup();
-    let algo_ind: HashMap<usize, usize> = algos.iter().enumerate().map(|(x, &y)| (y, x)).collect();
-
-    let dags = results.iter().map(|t| t.dag).max().unwrap() + 1;
-    let platforms = results.iter().map(|t| t.platform).max().unwrap() + 1;
-
-    let mut data = vec![vec![vec![0.; platforms]; dags]; algos.len()];
-    for result in results.into_iter() {
-        data[*algo_ind.get(&result.algo).unwrap()][result.dag][result.platform] = result.time;
+        let network_config = NetworkConfig::constant(1000., 0.);
+        systems.push((system_name, resources, network_config));
     }
 
-    let mut avg_place = vec![0.; algos.len()];
-    let mut avg_ratio_to_best = vec![0.; algos.len()];
-    let mut first_places_cnt = vec![0; algos.len()];
-
-    for dag in 0..dags {
-        for platform in 0..platforms {
-            let mut results: Vec<(usize, f64)> =
-                (0..algos.len()).map(|algo| (algo, data[algo][dag][platform])).collect();
-            results.sort_by(|a, b| a.1.total_cmp(&b.1));
-            let best_time = results[0].1;
-            first_places_cnt[results[0].0] += 1;
-            for (i, (algo, tm)) in results.into_iter().enumerate() {
-                avg_place[algo] += (i + 1) as f64;
-                avg_ratio_to_best[algo] += tm / best_time;
+    let mut algos = Vec::new();
+    for task_criterion in TaskCriterion::iter() {
+        for resource_criterion in ResourceCriterion::iter() {
+            for cores_criterion in CoresCriterion::iter() {
+                let algo_str = format!(
+                    "DynamicList[task={},resource={},cores={}]",
+                    task_criterion, resource_criterion, cores_criterion
+                );
+                algos.push(SchedulerParams::from_str(&algo_str).unwrap());
             }
         }
     }
 
-    let total_runs = dags * platforms;
-    for i in 0..algos.len() {
-        avg_place[i] /= total_runs as f64;
-        avg_ratio_to_best[i] /= total_runs as f64;
-    }
+    let traces_dir = args.save_traces.then(|| "data/traces".to_string());
 
-    println!("| algo | task cr          | resource cr | cores cr      | avg place | avg ratio | # best |");
-    println!("|------|------------------|-------------|---------------|-----------|-----------|--------|");
-    algos.sort_by(|&a, &b| avg_ratio_to_best[a].total_cmp(&avg_ratio_to_best[b]));
-    for algo in algos {
-        let scheduler = PortfolioScheduler::new(algo);
-        let algo_ind = *algo_ind.get(&algo).unwrap();
-        println!(
-            "| {: >4} | {: >16} | {: >11} | {: >13} | {: >9.3} | {: >9.3} | {: >6.3} |",
-            algo,
-            format!("{:?}", scheduler.task_criterion),
-            format!("{:?}", scheduler.resource_criterion),
-            format!("{:?}", scheduler.cores_criterion),
-            avg_place[algo_ind],
-            avg_ratio_to_best[algo_ind],
-            first_places_cnt[algo_ind],
-        );
-    }
+    let experiment = Experiment::new(
+        dags,
+        systems,
+        DataTransferMode::Direct,
+        algos,
+        default_scheduler_resolver,
+        traces_dir,
+    );
+
+    let mut results = experiment.run(args.threads);
+
+    // we replace exec_time with 0 to avoid changes of results file (stored in git)
+    // due to simulation speed differences
+    results.iter_mut().for_each(|result| result.exec_time = 0.);
+    std::fs::File::create("data/results.json")
+        .unwrap()
+        .write_all(serde_json::to_string_pretty(&results).unwrap().as_bytes())
+        .unwrap();
 }
 
-fn main() {
-    Builder::from_default_env()
-        .format(|buf, record| writeln!(buf, "{}", record.args()))
-        .init();
-
-    let args = Args::parse();
-
-    if !args.load_results {
-        run_experiments(&args);
+fn process_results() {
+    let results: Vec<RunResult> = serde_json::from_str(&std::fs::read_to_string("data/results.json").unwrap()).unwrap();
+    let mut grouped_results: HashMap<(String, String), HashMap<String, f64>> = HashMap::new();
+    for result in results {
+        grouped_results
+            .entry((result.dag, result.system))
+            .or_default()
+            .insert(result.scheduler, result.makespan);
     }
 
-    if args.run_one.is_some() {
-        return;
+    let mut avg_ratio_to_best = HashMap::new();
+    let mut first_places_cnt = HashMap::new();
+    for algo_results in grouped_results.values() {
+        let best_makespan = algo_results.values().min_by(|a, b| a.total_cmp(b)).unwrap();
+        for (algo, makespan) in algo_results.iter() {
+            *avg_ratio_to_best.entry(algo.clone()).or_insert(0.) += makespan / best_makespan;
+            if makespan == best_makespan {
+                *first_places_cnt.entry(algo.clone()).or_insert(0) += 1;
+            }
+        }
     }
+    for (_, val) in avg_ratio_to_best.iter_mut() {
+        *val /= grouped_results.len() as f64;
+    }
+    let mut avg_ratio_to_best = Vec::from_iter(avg_ratio_to_best);
+    avg_ratio_to_best.sort_by(|&(_, a), &(_, b)| a.total_cmp(&b));
 
-    process_results();
+    println!("| task crit     | resource crit | cores crit    | avg ratio | # best |");
+    println!("|---------------|---------------|---------------|-----------|--------|");
+    for (algo, avg_ratio) in avg_ratio_to_best.iter() {
+        let strategy = DynamicListStrategy::from_params(&SchedulerParams::from_str(algo).unwrap());
+        println!(
+            "| {: >13} | {: >13} | {: >13} | {: >9.3} | {: >6.3} |",
+            strategy.task_criterion,
+            strategy.resource_criterion,
+            strategy.cores_criterion,
+            avg_ratio,
+            first_places_cnt.remove(algo).unwrap_or(0)
+        );
+    }
 }

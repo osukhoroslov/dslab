@@ -8,14 +8,15 @@ edition = "2021"
 dslab-core = { path = "../dslab-core" }
 dslab-compute = { path = "../dslab-compute" }
 dslab-network = { path = "../dslab-network" }
+indexmap = "1.9.2"
+itertools = "0.10.5"
 log = "0.4"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde-xml-rs = "0.5.1"
-serde_yaml = "0.8"
-enum-iterator = "0.7.0"
 rand = "0.8.4"
 rand_pcg = "0.3.1"
-itertools = "0.10.5"
+serde = { version = "1.0", features = ["derive"] }
+serde-xml-rs = "0.5.1"
+serde_json = "1.0"
+serde_yaml = "0.8"
+strum = "0.24"
+strum_macros = "0.24"
 threadpool = "1.8.1"
-indexmap = "1.9.2"

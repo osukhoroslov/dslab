@@ -7,6 +7,7 @@ use serde_yaml::Value;
 use dslab_compute::multicore::CoresDependency;
 
 use crate::dag::DAG;
+use crate::parsers::config::ParserConfig;
 
 fn one() -> u32 {
     1
@@ -50,7 +51,7 @@ struct Yaml {
 impl DAG {
     /// Reads DAG from a file in
     /// [YAML format](https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/dags/diamond.yaml).
-    pub fn from_yaml<P: AsRef<Path>>(file: P) -> Self {
+    pub fn from_yaml<P: AsRef<Path>>(file: P, config: &ParserConfig) -> Self {
         let yaml: Yaml = serde_yaml::from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
         )
@@ -67,7 +68,7 @@ impl DAG {
             let task_id = dag.add_task(
                 &task.name,
                 task.flops,
-                task.memory,
+                if !config.ignore_memory { task.memory } else { 0 },
                 task.min_cores,
                 task.max_cores,
                 match &task.cores_dependency {
