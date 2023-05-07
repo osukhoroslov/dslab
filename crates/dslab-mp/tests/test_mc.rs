@@ -5,10 +5,10 @@ use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
 use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, PruneFn, Strategy};
-use dslab_mp::mc::state::McState;
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
 use dslab_mp::system::System;
