@@ -9,7 +9,7 @@ use crate::events::{MessageReceived, TimerFired};
 use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
-use crate::process::Process;
+use crate::process::{Process, ProcessState};
 
 #[derive(Clone, Debug)]
 pub struct EventLogEntry {
@@ -143,6 +143,10 @@ impl Node {
 
     pub fn process_names(&self) -> Vec<String> {
         self.processes.keys().cloned().collect()
+    }
+
+    pub fn set_process_state(&mut self, proc: &str, state: Box<dyn ProcessState>) {
+        self.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {
