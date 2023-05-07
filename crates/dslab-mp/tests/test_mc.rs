@@ -3,15 +3,15 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use sugars::{boxed, rc, refcell};
 
-use crate::context::Context;
-use crate::mc::model_checker::ModelChecker;
-use crate::mc::strategies::bfs::Bfs;
-use crate::mc::strategies::dfs::Dfs;
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, PruneFn, Strategy};
-use crate::mc::system::McState;
-use crate::message::Message;
-use crate::process::{Process, ProcessState, StringProcessState};
-use crate::system::System;
+use dslab_mp::context::Context;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, PruneFn, Strategy};
+use dslab_mp::mc::system::McState;
+use dslab_mp::message::Message;
+use dslab_mp::process::{Process, ProcessState, StringProcessState};
+use dslab_mp::system::System;
 
 #[derive(Clone)]
 struct PingMessageNode {
