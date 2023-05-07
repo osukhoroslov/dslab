@@ -1,44 +1,12 @@
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::hash::{Hash, Hasher};
+use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
 
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
-use crate::mc::node::{McNode, McNodeState};
+use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
-
-#[derive(Debug)]
-pub struct McState {
-    pub node_states: BTreeMap<String, McNodeState>,
-    pub events: PendingEvents,
-    pub search_depth: u64,
-}
-
-impl McState {
-    pub fn new(events: PendingEvents, search_depth: u64) -> Self {
-        Self {
-            node_states: BTreeMap::new(),
-            events,
-            search_depth,
-        }
-    }
-}
-
-impl PartialEq for McState {
-    fn eq(&self, other: &Self) -> bool {
-        self.events == other.events && self.node_states == other.node_states
-    }
-}
-
-impl Eq for McState {}
-
-impl Hash for McState {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.events.hash(hasher);
-        self.node_states.hash(hasher);
-    }
-}
+use crate::mc::state::McState;
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,

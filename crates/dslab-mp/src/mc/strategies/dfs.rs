@@ -1,7 +1,8 @@
 //! Implementation of model checking DFS search strategy.
 
+use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::system::McSystem;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
 pub struct Dfs {

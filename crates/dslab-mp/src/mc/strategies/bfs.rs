@@ -2,8 +2,9 @@
 
 use std::collections::VecDeque;
 
+use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::system::McSystem;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
 pub struct Bfs {

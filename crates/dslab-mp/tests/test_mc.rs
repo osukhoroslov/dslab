@@ -8,7 +8,7 @@ use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, PruneFn, Strategy};
-use dslab_mp::mc::system::McState;
+use dslab_mp::mc::state::McState;
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
 use dslab_mp::system::System;
@@ -309,11 +309,8 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
 #[case("bfs")]
 fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
-
     let goal = build_one_message_goal();
-
-    let count_states = rc!(refcell!(0));
-    let invariant = build_dumb_counter_invariant(count_states.clone());
+    let invariant = boxed!(|_: &McState| Ok(()));
 
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
