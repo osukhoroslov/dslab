@@ -1,0 +1,94 @@
+
+--- RUN ---
+
+
+PASSED
+
+
+--- RESULT ---
+
+
+PASSED
+
+
+--- RESULT UNRELIABLE ---
+
+
+PASSED
+
+
+--- 10 RESULTS UNRELIABLE ---
+
+
+FAILED: No messages returned by the client
+
+
+--- DROP PING ---
+
+
+FAILED: No messages returned by the client
+
+
+--- DROP PONG ---
+
+
+FAILED: No messages returned by the client
+
+
+--- DROP PING 2 ---
+
+
+FAILED: No messages returned by the client
+
+
+--- DROP PONG 2 ---
+
+
+FAILED: No messages returned by the client
+
+
+--- 10 UNIQUE RESULTS ---
+
+
+PASSED
+
+
+--- 10 UNIQUE RESULTS UNRELIABLE ---
+
+
+FAILED: No messages
+
+
+--- MODEL CHECKING ---
+
+McResult { summary: McSummary { states: {"got two messages": 2} }, collected: {} }
+
+PASSED
+
+
+--- MODEL CHECKING UNRELIABLE ---
+
+
+FAILED: model checher found error: nothing left to do to reach the goal
+
+
+--- MODEL CHECKING UNRELIABLE WITH LIMITS ---
+
+
+FAILED: model checher found error: nothing left to do to reach the goal
+
+-------------------------------------------------------------------------------
+
+Passed 5 from 13 tests
+
+Failed tests:
+- 10 RESULTS UNRELIABLE: No messages returned by the client
+- DROP PING: No messages returned by the client
+- DROP PONG: No messages returned by the client
+- DROP PING 2: No messages returned by the client
+- DROP PONG 2: No messages returned by the client
+- 10 UNIQUE RESULTS UNRELIABLE: No messages
+- MODEL CHECKING UNRELIABLE: model checher found error: nothing left to do to reach the goal
+- MODEL CHECKING UNRELIABLE WITH LIMITS: model checher found error: nothing left to do to reach the goal
+
+Error

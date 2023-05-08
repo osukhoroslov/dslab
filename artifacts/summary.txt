@@ -1,0 +1,118 @@
+Total runs: 3
+Successful runs: 1
+Wrong runs: ['basic.py']
+Failed runs (non-zero exit code): ['retry.py']
+Failed runs (timed out): []
+
+
+{
+    "10 RESULTS UNRELIABLE": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "10 UNIQUE RESULTS": {
+        "FAILED": [
+            "retry.py"
+        ],
+        "PASSED": [
+            "basic.py",
+            "retry_ordered.py"
+        ]
+    },
+    "10 UNIQUE RESULTS UNRELIABLE": {
+        "FAILED": [
+            "basic.py",
+            "retry.py"
+        ],
+        "PASSED": [
+            "retry_ordered.py"
+        ]
+    },
+    "DROP PING": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "DROP PING 2": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "DROP PONG": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "DROP PONG 2": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "MODEL CHECKING": {
+        "PASSED": [
+            "basic.py",
+            "retry_ordered.py"
+        ],
+        "RUNTIME_ERROR": [
+            "retry.py"
+        ]
+    },
+    "MODEL CHECKING UNRELIABLE": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry_ordered.py"
+        ]
+    },
+    "MODEL CHECKING UNRELIABLE WITH LIMITS": {
+        "FAILED": [
+            "basic.py"
+        ],
+        "PASSED": [
+            "retry_ordered.py"
+        ]
+    },
+    "RESULT": {
+        "PASSED": [
+            "basic.py",
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "RESULT UNRELIABLE": {
+        "PASSED": [
+            "basic.py",
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    },
+    "RUN": {
+        "PASSED": [
+            "basic.py",
+            "retry.py",
+            "retry_ordered.py"
+        ]
+    }
+}

@@ -1,0 +1,5 @@
+Command: ./test_single.sh retry.py
+Exit code: 101
+Time taken: 1.00 seconds
+Stdout: artifacts/retry.py_stdout.log
+Stderr: artifacts/retry.py_stderr.log

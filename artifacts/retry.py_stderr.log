@@ -1,0 +1,914 @@
+warning: unused import: `HashSet`
+ --> crates/dslab-mp/src/mc/model_checker.rs:4:33
+  |
+4 | use std::collections::{HashMap, HashSet};
+  |                                 ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::ops::AddAssign`
+ --> crates/dslab-mp/src/mc/strategy.rs:6:5
+  |
+6 | use std::ops::AddAssign;
+  |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde::Serialize`
+ --> crates/dslab-mp/src/node.rs:8:5
+  |
+8 | use serde::Serialize;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a module
+ --> crates/dslab-mp/src/mc/mod.rs:6:1
+  |
+6 | pub mod events;
+  | ^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> crates/dslab-mp/src/mc/mod.rs:1:9
+  |
+1 | #![warn(missing_docs)]
+  |         ^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+ --> crates/dslab-mp/src/mc/events.rs:7:1
+  |
+7 | pub enum DeliveryOptions {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:14:9
+   |
+14 |         can_be_dropped: bool,
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:15:9
+   |
+15 |         max_dupl_count: u32,
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:16:9
+   |
+16 |         can_be_corrupted: bool,
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a type alias
+  --> crates/dslab-mp/src/mc/events.rs:20:1
+   |
+20 | pub type McTime = OrderedFloat<f64>;
+   | ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a type alias
+  --> crates/dslab-mp/src/mc/events.rs:21:1
+   |
+21 | pub type McEventId = usize;
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+  --> crates/dslab-mp/src/mc/events.rs:24:1
+   |
+24 | pub enum McEvent {
+   | ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:25:5
+   |
+25 |     MessageReceived {
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:26:9
+   |
+26 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:27:9
+   |
+27 |         src: String,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:28:9
+   |
+28 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:29:9
+   |
+29 |         options: DeliveryOptions,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:31:5
+   |
+31 |     LocalMessageReceived {
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:32:9
+   |
+32 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:33:9
+   |
+33 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:35:5
+   |
+35 |     TimerFired {
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:36:9
+   |
+36 |         proc: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:37:9
+   |
+37 |         timer: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:38:9
+   |
+38 |         timer_delay: McTime,
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:40:5
+   |
+40 |     TimerCancelled {
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:41:9
+   |
+41 |         proc: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:42:9
+   |
+42 |         timer: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:44:5
+   |
+44 |     MessageDropped {
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:45:9
+   |
+45 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:46:9
+   |
+46 |         src: String,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:47:9
+   |
+47 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/events.rs:52:5
+   |
+52 |     pub fn duplicate(&self) -> Option<McEvent> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/model_checker.rs:74:5
+   |
+74 |     pub fn set_state(&mut self, mut state: McState) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/model_checker.rs:79:5
+   |
+79 |     pub fn apply_event(&mut self, event: McEvent) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/strategy.rs:65:5
+   |
+65 |     pub summary: McSummary,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/strategy.rs:66:5
+   |
+66 |     pub collected: HashSet<McState>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/strategy.rs:70:5
+   |
+70 |     pub fn new(summary: McSummary, collected: HashSet<McState>) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a module
+  --> crates/dslab-mp/src/mc/mod.rs:13:1
+   |
+13 | pub mod system;
+   | ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+  --> crates/dslab-mp/src/mc/system.rs:12:1
+   |
+12 | pub struct McState {
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:13:5
+   |
+13 |     pub node_states: BTreeMap<String, McNodeState>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:14:5
+   |
+14 |     pub events: PendingEvents,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:15:5
+   |
+15 |     pub search_depth: u64,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:16:5
+   |
+16 |     pub log: Vec<McEvent>,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:20:5
+   |
+20 |     pub fn new(events: PendingEvents, search_depth: u64, log: Vec<McEvent>) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+  --> crates/dslab-mp/src/mc/system.rs:45:1
+   |
+45 | pub struct McSystem {
+   | ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:50:5
+   |
+50 |     pub log: Vec<McEvent>,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:54:5
+   |
+54 |     pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: PendingEvents) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:64:5
+   |
+64 |     pub fn apply_event(&mut self, event: McEvent) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:87:5
+   |
+87 |     pub fn get_state(&self) -> McState {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:95:5
+   |
+95 |     pub fn set_state(&mut self, state: McState) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates/dslab-mp/src/mc/system.rs:104:5
+    |
+104 |     pub fn available_events(&self) -> BTreeSet<McEventId> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates/dslab-mp/src/mc/system.rs:108:5
+    |
+108 |     pub fn search_depth(&self) -> u64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `dslab-mp` (lib) generated 51 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 0.09s
+     Running `/home/kikos/dev/hse/22-23/diploma/dslab/target/debug/mp-ping-pong --impl python/retry.py`
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    2.000     client <<< local      PING {"value": "Hello!"}
+    2.000     client --> server     PING {"value": "Hello!"}
+    3.000     server <-- client     PING {"value": "Hello!"}
+    3.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    5.000     client !-- check_pong
+    5.000     client --> server     PING {"value": "Hello!"}
+    6.000     server <-- client     PING {"value": "Hello!"}
+    6.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    8.000     client !-- check_pong
+    8.000     client --> server     PING {"value": "Hello!"}
+    9.000     server <-- client     PING {"value": "Hello!"}
+    9.000     server --> client     PONG {"value": "Hello!"}
+   10.000     client <-- server     PONG {"value": "Hello!"}
+   10.000     client >>> local      PONG {"value": "Hello!"}
+   10.000     client <<< local      PING {"value": "Hello!"}
+   10.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   13.000     client !-- check_pong
+   13.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   16.000     client !-- check_pong
+   16.000     client --> server     PING {"value": "Hello!"}
+   17.000     server <-- client     PING {"value": "Hello!"}
+   17.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   19.000     client !-- check_pong
+   19.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   22.000     client !-- check_pong
+   22.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   25.000     client !-- check_pong
+   25.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   28.000     client !-- check_pong
+   28.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   31.000     client !-- check_pong
+   31.000     client --> server     PING {"value": "Hello!"}
+   32.000     server <-- client     PING {"value": "Hello!"}
+   32.000     server --> client     PONG {"value": "Hello!"}
+   33.000     client <-- server     PONG {"value": "Hello!"}
+   33.000     client >>> local      PONG {"value": "Hello!"}
+   33.000     client <<< local      PING {"value": "Hello!"}
+   33.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   36.000     client !-- check_pong
+   36.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   39.000     client !-- check_pong
+   39.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   42.000     client !-- check_pong
+   42.000     client --> server     PING {"value": "Hello!"}
+   43.000     server <-- client     PING {"value": "Hello!"}
+   43.000     server --> client     PONG {"value": "Hello!"}
+   44.000     client <-- server     PONG {"value": "Hello!"}
+   44.000     client >>> local      PONG {"value": "Hello!"}
+   44.000     client <<< local      PING {"value": "Hello!"}
+   44.000     client --> server     PING {"value": "Hello!"}
+   45.000     server <-- client     PING {"value": "Hello!"}
+   45.000     server --> client     PONG {"value": "Hello!"}
+   46.000     client <-- server     PONG {"value": "Hello!"}
+   46.000     client >>> local      PONG {"value": "Hello!"}
+   46.000     client <<< local      PING {"value": "Hello!"}
+   46.000     client --> server     PING {"value": "Hello!"}
+   47.000     server <-- client     PING {"value": "Hello!"}
+   47.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   49.000     client !-- check_pong
+   49.000     client --> server     PING {"value": "Hello!"}
+   50.000     server <-- client     PING {"value": "Hello!"}
+   50.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   52.000     client !-- check_pong
+   52.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   55.000     client !-- check_pong
+   55.000     client --> server     PING {"value": "Hello!"}
+   56.000     server <-- client     PING {"value": "Hello!"}
+   56.000     server --> client     PONG {"value": "Hello!"}
+   57.000     client <-- server     PONG {"value": "Hello!"}
+   57.000     client >>> local      PONG {"value": "Hello!"}
+   57.000     client <<< local      PING {"value": "Hello!"}
+   57.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   60.000     client !-- check_pong
+   60.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   63.000     client !-- check_pong
+   63.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   66.000     client !-- check_pong
+   66.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   69.000     client !-- check_pong
+   69.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   72.000     client !-- check_pong
+   72.000     client --> server     PING {"value": "Hello!"}
+   73.000     server <-- client     PING {"value": "Hello!"}
+   73.000     server --> client     PONG {"value": "Hello!"}
+   74.000     client <-- server     PONG {"value": "Hello!"}
+   74.000     client >>> local      PONG {"value": "Hello!"}
+   74.000     client <<< local      PING {"value": "Hello!"}
+   74.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   77.000     client !-- check_pong
+   77.000     client --> server     PING {"value": "Hello!"}
+   78.000     server <-- client     PING {"value": "Hello!"}
+   78.000     server --> client     PONG {"value": "Hello!"}
+   79.000     client <-- server     PONG {"value": "Hello!"}
+   79.000     client >>> local      PONG {"value": "Hello!"}
+   79.000     client <<< local      PING {"value": "Hello!"}
+   79.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   82.000     client !-- check_pong
+   82.000     client --> server     PING {"value": "Hello!"}
+   83.000     server <-- client     PING {"value": "Hello!"}
+   83.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   85.000     client !-- check_pong
+   85.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   88.000     client !-- check_pong
+   88.000     client --> server     PING {"value": "Hello!"}
+   89.000     server <-- client     PING {"value": "Hello!"}
+   89.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   91.000     client !-- check_pong
+   91.000     client --> server     PING {"value": "Hello!"}
+   92.000     server <-- client     PING {"value": "Hello!"}
+   92.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   94.000     client !-- check_pong
+   94.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   97.000     client !-- check_pong
+   97.000     client --> server     PING {"value": "Hello!"}
+   98.000     server <-- client     PING {"value": "Hello!"}
+   98.000     server --> client     PONG {"value": "Hello!"}
+   99.000     client <-- server     PONG {"value": "Hello!"}
+   99.000     client >>> local      PONG {"value": "Hello!"}
+   99.000     client <<< local      PING {"value": "Hello!"}
+   99.000     client --> server     PING {"value": "Hello!"}
+  100.000     server <-- client     PING {"value": "Hello!"}
+  100.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+  102.000     client !-- check_pong
+  102.000     client --> server     PING {"value": "Hello!"}
+  103.000     server <-- client     PING {"value": "Hello!"}
+  103.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+  105.000     client !-- check_pong
+  105.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+  108.000     client !-- check_pong
+  108.000     client --> server     PING {"value": "Hello!"}
+  109.000     server <-- client     PING {"value": "Hello!"}
+  109.000     server --> client     PONG {"value": "Hello!"}
+  110.000     client <-- server     PONG {"value": "Hello!"}
+  110.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    3.000     client !-- check_pong
+    3.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    6.000     client !-- check_pong
+    6.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    9.000     client !-- check_pong
+    9.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   12.000     client !-- check_pong
+   12.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   15.000     client !-- check_pong
+   15.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   18.000     client !-- check_pong
+   18.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   21.000     client !-- check_pong
+   21.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   24.000     client !-- check_pong
+   24.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   27.000     client !-- check_pong
+   27.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   30.000     client !-- check_pong
+   30.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   33.000     client !-- check_pong
+   33.000     client --> server     PING {"value": "Hello!"}
+   34.000     server <-- client     PING {"value": "Hello!"}
+   34.000     server --> client     PONG {"value": "Hello!"}
+   35.000     client <-- server     PONG {"value": "Hello!"}
+   35.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    3.000     client !-- check_pong
+    3.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    6.000     client !-- check_pong
+    6.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    9.000     client !-- check_pong
+    9.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   12.000     client !-- check_pong
+   12.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   15.000     client !-- check_pong
+   15.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   18.000     client !-- check_pong
+   18.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   21.000     client !-- check_pong
+   21.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   24.000     client !-- check_pong
+   24.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   27.000     client !-- check_pong
+   27.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   30.000     client !-- check_pong
+   30.000     client --> server     PING {"value": "Hello!"}
+   31.000     server <-- client     PING {"value": "Hello!"}
+   31.000     server --> client     PONG {"value": "Hello!"}
+   32.000     client <-- server     PONG {"value": "Hello!"}
+   32.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000 - drop messages from client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    3.000     client !-- check_pong
+    3.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    6.000     client !-- check_pong
+    6.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    9.000     client !-- check_pong
+    9.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   12.000     client !-- check_pong
+   12.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   15.000     client !-- check_pong
+   15.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   18.000     client !-- check_pong
+   18.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   21.000     client !-- check_pong
+   21.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   24.000     client !-- check_pong
+   24.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   27.000     client !-- check_pong
+   27.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   30.000     client !-- check_pong
+   30.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+   30.000 - pass messages from client-node
+   33.000     client !-- check_pong
+   33.000     client --> server     PING {"value": "Hello!"}
+   34.000     server <-- client     PING {"value": "Hello!"}
+   34.000     server --> client     PONG {"value": "Hello!"}
+   35.000     client <-- server     PONG {"value": "Hello!"}
+   35.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000 - drop messages from server-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    3.000     client !-- check_pong
+    3.000     client --> server     PING {"value": "Hello!"}
+    4.000     server <-- client     PING {"value": "Hello!"}
+    4.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    6.000     client !-- check_pong
+    6.000     client --> server     PING {"value": "Hello!"}
+    7.000     server <-- client     PING {"value": "Hello!"}
+    7.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    9.000     client !-- check_pong
+    9.000     client --> server     PING {"value": "Hello!"}
+   10.000     server <-- client     PING {"value": "Hello!"}
+   10.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   12.000     client !-- check_pong
+   12.000     client --> server     PING {"value": "Hello!"}
+   13.000     server <-- client     PING {"value": "Hello!"}
+   13.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+   15.000     client !-- check_pong
+   15.000     client --> server     PING {"value": "Hello!"}
+   15.000 - pass messages from server-node
+   16.000     server <-- client     PING {"value": "Hello!"}
+   16.000     server --> client     PONG {"value": "Hello!"}
+   17.000     client <-- server     PONG {"value": "Hello!"}
+   17.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello0!"}
+    0.000     client --> server     PING {"value": "Hello0!"}
+    1.009     server <-- client     PING {"value": "Hello0!"}
+    1.009     server --> client     PONG {"value": "Hello0!"}
+    2.312     client <-- server     PONG {"value": "Hello0!"}
+    2.312     client >>> local      PONG {"value": "Hello0!"}
+    2.312     client <<< local      PING {"value": "Hello1!"}
+    2.312     client --> server     PING {"value": "Hello1!"}
+    4.131     server <-- client     PING {"value": "Hello1!"}
+    4.131     server --> client     PONG {"value": "Hello1!"}
+    5.137     client <-- server     PONG {"value": "Hello1!"}
+    5.137     client >>> local      PONG {"value": "Hello1!"}
+    5.137     client <<< local      PING {"value": "Hello2!"}
+    5.137     client --> server     PING {"value": "Hello2!"}
+    6.974     server <-- client     PING {"value": "Hello2!"}
+    6.974     server --> client     PONG {"value": "Hello2!"}
+    8.137     client !-- check_pong
+    8.137     client --> server     PING {"value": "Hello2!"}
+    8.194     client <-- server     PONG {"value": "Hello2!"}
+    8.194     client >>> local      PONG {"value": "Hello2!"}
+    8.194     client <<< local      PING {"value": "Hello3!"}
+    8.194     client --> server     PING {"value": "Hello3!"}
+    9.329     server <-- client     PING {"value": "Hello2!"}
+    9.329     server --> client     PONG {"value": "Hello2!"}
+    9.604     server <-- client     PING {"value": "Hello3!"}
+    9.604     server --> client     PONG {"value": "Hello3!"}
+   10.568     client <-- server     PONG {"value": "Hello2!"}
+   10.568     client >>> local      PONG {"value": "Hello2!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello0!"}
+    0.000     client --> server     PING {"value": "Hello0!"}
+    1.009     server <-- client     PING {"value": "Hello0!"}
+    1.009     server --> client     PONG {"value": "Hello0!"}
+    2.312     client <-- server     PONG {"value": "Hello0!"}
+    2.312     client >>> local      PONG {"value": "Hello0!"}
+    2.312     client <<< local      PING {"value": "Hello1!"}
+    2.312     client --> server     PING {"value": "Hello1!"}
+    4.131     server <-- client     PING {"value": "Hello1!"}
+    4.131     server --> client     PONG {"value": "Hello1!"}
+      !!!     server --x client     PONG {"value": "Hello1!"} <-- message dropped
+    5.312     client !-- check_pong
+    5.312     client --> server     PING {"value": "Hello1!"}
+    6.422     server <-- client     PING {"value": "Hello1!"}
+    6.422     server --> client     PONG {"value": "Hello1!"}
+      !!!     server --x client     PONG {"value": "Hello1!"} <-- message dropped
+    8.312     client !-- check_pong
+    8.312     client --> server     PING {"value": "Hello1!"}
+   10.190     server <-- client     PING {"value": "Hello1!"}
+   10.190     server --> client     PONG {"value": "Hello1!"}
+   11.312     client !-- check_pong
+   11.312     client --> server     PING {"value": "Hello1!"}
+      !!!     client --x server     PING {"value": "Hello1!"} <-- message dropped
+   11.540     client <-- server     PONG {"value": "Hello1!"}
+   11.540     client >>> local      PONG {"value": "Hello1!"}
+   11.540     client <<< local      PING {"value": "Hello2!"}
+   11.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   14.540     client !-- check_pong
+   14.540     client --> server     PING {"value": "Hello2!"}
+   15.950     server <-- client     PING {"value": "Hello2!"}
+   15.950     server --> client     PONG {"value": "Hello2!"}
+      !!!     server --x client     PONG {"value": "Hello2!"} <-- message dropped
+   17.540     client !-- check_pong
+   17.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   20.540     client !-- check_pong
+   20.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   23.540     client !-- check_pong
+   23.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   26.540     client !-- check_pong
+   26.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   29.540     client !-- check_pong
+   29.540     client --> server     PING {"value": "Hello2!"}
+   31.077     server <-- client     PING {"value": "Hello2!"}
+   31.077     server --> client     PONG {"value": "Hello2!"}
+   32.540     client !-- check_pong
+   32.540     client --> server     PING {"value": "Hello2!"}
+      !!!     client --x server     PING {"value": "Hello2!"} <-- message dropped
+   32.888     client <-- server     PONG {"value": "Hello2!"}
+   32.888     client >>> local      PONG {"value": "Hello2!"}
+   32.888     client <<< local      PING {"value": "Hello3!"}
+   32.888     client --> server     PING {"value": "Hello3!"}
+      !!!     client --x server     PING {"value": "Hello3!"} <-- message dropped
+   35.888     client !-- check_pong
+   35.888     client --> server     PING {"value": "Hello3!"}
+      !!!     client --x server     PING {"value": "Hello3!"} <-- message dropped
+   38.888     client !-- check_pong
+   38.888     client --> server     PING {"value": "Hello3!"}
+   40.062     server <-- client     PING {"value": "Hello3!"}
+   40.062     server --> client     PONG {"value": "Hello3!"}
+   41.888     client !-- check_pong
+   41.888     client --> server     PING {"value": "Hello3!"}
+   41.934     client <-- server     PONG {"value": "Hello3!"}
+   41.934     client >>> local      PONG {"value": "Hello3!"}
+   41.934     client <<< local      PING {"value": "Hello4!"}
+   41.934     client --> server     PING {"value": "Hello4!"}
+   42.965     server <-- client     PING {"value": "Hello4!"}
+   42.965     server --> client     PONG {"value": "Hello4!"}
+   43.855     server <-- client     PING {"value": "Hello3!"}
+   43.855     server --> client     PONG {"value": "Hello3!"}
+      !!!     server --x client     PONG {"value": "Hello3!"} <-- message dropped
+   44.340     client <-- server     PONG {"value": "Hello4!"}
+   44.340     client >>> local      PONG {"value": "Hello4!"}
+   44.340     client <<< local      PING {"value": "Hello5!"}
+   44.340     client --> server     PING {"value": "Hello5!"}
+   45.661     server <-- client     PING {"value": "Hello5!"}
+   45.661     server --> client     PONG {"value": "Hello5!"}
+      !!!     server --x client     PONG {"value": "Hello5!"} <-- message dropped
+   47.340     client !-- check_pong
+   47.340     client --> server     PING {"value": "Hello5!"}
+      !!!     client --x server     PING {"value": "Hello5!"} <-- message dropped
+   50.340     client !-- check_pong
+   50.340     client --> server     PING {"value": "Hello5!"}
+   51.989     server <-- client     PING {"value": "Hello5!"}
+   51.989     server --> client     PONG {"value": "Hello5!"}
+   53.340     client !-- check_pong
+   53.340     client --> server     PING {"value": "Hello5!"}
+      !!!     client --x server     PING {"value": "Hello5!"} <-- message dropped
+   53.456     client <-- server     PONG {"value": "Hello5!"}
+   53.456     client >>> local      PONG {"value": "Hello5!"}
+   53.456     client <<< local      PING {"value": "Hello6!"}
+   53.456     client --> server     PING {"value": "Hello6!"}
+      !!!     client --x server     PING {"value": "Hello6!"} <-- message dropped
+   56.456     client !-- check_pong
+   56.456     client --> server     PING {"value": "Hello6!"}
+      !!!     client --x server     PING {"value": "Hello6!"} <-- message dropped
+   59.456     client !-- check_pong
+   59.456     client --> server     PING {"value": "Hello6!"}
+      !!!     client --x server     PING {"value": "Hello6!"} <-- message dropped
+   62.456     client !-- check_pong
+   62.456     client --> server     PING {"value": "Hello6!"}
+      !!!     client --x server     PING {"value": "Hello6!"} <-- message dropped
+   65.456     client !-- check_pong
+   65.456     client --> server     PING {"value": "Hello6!"}
+   67.194     server <-- client     PING {"value": "Hello6!"}
+   67.194     server --> client     PONG {"value": "Hello6!"}
+   68.456     client !-- check_pong
+   68.456     client --> server     PING {"value": "Hello6!"}
+      !!!     client --x server     PING {"value": "Hello6!"} <-- message dropped
+   68.948     client <-- server     PONG {"value": "Hello6!"}
+   68.948     client >>> local      PONG {"value": "Hello6!"}
+   68.948     client <<< local      PING {"value": "Hello7!"}
+   68.948     client --> server     PING {"value": "Hello7!"}
+   70.431     server <-- client     PING {"value": "Hello7!"}
+   70.431     server --> client     PONG {"value": "Hello7!"}
+   71.444     client <-- server     PONG {"value": "Hello7!"}
+   71.444     client >>> local      PONG {"value": "Hello7!"}
+   71.444     client <<< local      PING {"value": "Hello8!"}
+   71.444     client --> server     PING {"value": "Hello8!"}
+      !!!     client --x server     PING {"value": "Hello8!"} <-- message dropped
+   74.444     client !-- check_pong
+   74.444     client --> server     PING {"value": "Hello8!"}
+   75.946     server <-- client     PING {"value": "Hello8!"}
+   75.946     server --> client     PONG {"value": "Hello8!"}
+      !!!     server --x client     PONG {"value": "Hello8!"} <-- message dropped
+   77.444     client !-- check_pong
+   77.444     client --> server     PING {"value": "Hello8!"}
+      !!!     client --x server     PING {"value": "Hello8!"} <-- message dropped
+   80.444     client !-- check_pong
+   80.444     client --> server     PING {"value": "Hello8!"}
+   81.563     server <-- client     PING {"value": "Hello8!"}
+   81.563     server --> client     PONG {"value": "Hello8!"}
+      !!!     server --x client     PONG {"value": "Hello8!"} <-- message dropped
+   83.444     client !-- check_pong
+   83.444     client --> server     PING {"value": "Hello8!"}
+   85.018     server <-- client     PING {"value": "Hello8!"}
+   85.018     server --> client     PONG {"value": "Hello8!"}
+      !!!     server --x client     PONG {"value": "Hello8!"} <-- message dropped
+   86.444     client !-- check_pong
+   86.444     client --> server     PING {"value": "Hello8!"}
+      !!!     client --x server     PING {"value": "Hello8!"} <-- message dropped
+   89.444     client !-- check_pong
+   89.444     client --> server     PING {"value": "Hello8!"}
+   90.799     server <-- client     PING {"value": "Hello8!"}
+   90.799     server --> client     PONG {"value": "Hello8!"}
+   92.444     client !-- check_pong
+   92.444     client --> server     PING {"value": "Hello8!"}
+   92.706     client <-- server     PONG {"value": "Hello8!"}
+   92.706     client >>> local      PONG {"value": "Hello8!"}
+   92.706     client <<< local      PING {"value": "Hello9!"}
+   92.706     client --> server     PING {"value": "Hello9!"}
+      !!!     client --x server     PING {"value": "Hello9!"} <-- message dropped
+   94.224     server <-- client     PING {"value": "Hello8!"}
+   94.224     server --> client     PONG {"value": "Hello8!"}
+   95.667     client <-- server     PONG {"value": "Hello8!"}
+   95.667     client >>> local      PONG {"value": "Hello8!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": 0}
+    0.000     client --> server     PING {"value": 0}
+    0.000     client <<< local      PING {"value": 1}
+    0.000     client --> server     PING {"value": 1}
+RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS
+         0 |     server <-- client     PING {"value": 0}
+         1 |     server <-- client     PING {"value": 1}
+         2 |     client !-- check_pong <-- timer fired
+         3 |     client !-- check_pong <-- timer fired
+         4 |     client <-- server     PONG {"value": 0}
+         5 |     client xxx check_pong <-- timer cancelled
+         6 |     client <-- server     PONG {"value": 1}
+         7 |     server <-- client     PING {"value": 1}
+         8 |     client !-- check_pong <-- timer fired
+
+!!! Error when calling Python code:
+
+Traceback (most recent call last):
+  File "/home/kikos/dev/hse/22-23/diploma/dslab/examples/mp-ping-pong/python/retry.py", line 26, in on_timer
+    ctx.send(self._ping, self._server_id)
+  File "/home/kikos/dev/hse/22-23/diploma/dslab/crates/dslab-mp-python/python/dslabmp.py", line 48, in send
+    self._sent_messages.append((msg.type, json.dumps(msg._data), to))
+AttributeError: 'NoneType' object has no attribute 'type'
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: PyErr { type: <class 'AttributeError'>, value: AttributeError("'NoneType' object has no attribute 'type'"), traceback: Some(<traceback object at 0x7f20c3735980>) }', crates/dslab-mp-python/src/lib.rs:155:18
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

@@ -1,0 +1,5 @@
+Command: ./test_single.sh retry_ordered.py
+Exit code: 0
+Time taken: 15.01 seconds
+Stdout: artifacts/retry_ordered.py_stdout.log
+Stderr: artifacts/retry_ordered.py_stderr.log

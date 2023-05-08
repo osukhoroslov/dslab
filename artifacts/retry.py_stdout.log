@@ -1,0 +1,64 @@
+
+--- RUN ---
+
+
+PASSED
+
+
+--- RESULT ---
+
+
+PASSED
+
+
+--- RESULT UNRELIABLE ---
+
+
+PASSED
+
+
+--- 10 RESULTS UNRELIABLE ---
+
+
+PASSED
+
+
+--- DROP PING ---
+
+
+PASSED
+
+
+--- DROP PONG ---
+
+
+PASSED
+
+
+--- DROP PING 2 ---
+
+
+PASSED
+
+
+--- DROP PONG 2 ---
+
+
+PASSED
+
+
+--- 10 UNIQUE RESULTS ---
+
+
+FAILED: Wrong message data: {"value": "Hello2!"}, expected: {"value": "Hello3!"}
+
+
+--- 10 UNIQUE RESULTS UNRELIABLE ---
+
+
+FAILED: Wrong message data: {"value": "Hello8!"}, expected: {"value": "Hello9!"}
+
+
+--- MODEL CHECKING ---
+
+Error

@@ -1,0 +1,5 @@
+Command: ./test_single.sh basic.py
+Exit code: 1
+Time taken: 3.00 seconds
+Stdout: artifacts/basic.py_stdout.log
+Stderr: artifacts/basic.py_stderr.log

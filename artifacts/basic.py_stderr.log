@@ -1,0 +1,531 @@
+   Compiling dslab-mp v0.1.0 (/home/kikos/dev/hse/22-23/diploma/dslab/crates/dslab-mp)
+warning: unused import: `HashSet`
+ --> crates/dslab-mp/src/mc/model_checker.rs:4:33
+  |
+4 | use std::collections::{HashMap, HashSet};
+  |                                 ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::ops::AddAssign`
+ --> crates/dslab-mp/src/mc/strategy.rs:6:5
+  |
+6 | use std::ops::AddAssign;
+  |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde::Serialize`
+ --> crates/dslab-mp/src/node.rs:8:5
+  |
+8 | use serde::Serialize;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a module
+ --> crates/dslab-mp/src/mc/mod.rs:6:1
+  |
+6 | pub mod events;
+  | ^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> crates/dslab-mp/src/mc/mod.rs:1:9
+  |
+1 | #![warn(missing_docs)]
+  |         ^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+ --> crates/dslab-mp/src/mc/events.rs:7:1
+  |
+7 | pub enum DeliveryOptions {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:14:9
+   |
+14 |         can_be_dropped: bool,
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:15:9
+   |
+15 |         max_dupl_count: u32,
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:16:9
+   |
+16 |         can_be_corrupted: bool,
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a type alias
+  --> crates/dslab-mp/src/mc/events.rs:20:1
+   |
+20 | pub type McTime = OrderedFloat<f64>;
+   | ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a type alias
+  --> crates/dslab-mp/src/mc/events.rs:21:1
+   |
+21 | pub type McEventId = usize;
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+  --> crates/dslab-mp/src/mc/events.rs:24:1
+   |
+24 | pub enum McEvent {
+   | ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:25:5
+   |
+25 |     MessageReceived {
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:26:9
+   |
+26 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:27:9
+   |
+27 |         src: String,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:28:9
+   |
+28 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:29:9
+   |
+29 |         options: DeliveryOptions,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:31:5
+   |
+31 |     LocalMessageReceived {
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:32:9
+   |
+32 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:33:9
+   |
+33 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:35:5
+   |
+35 |     TimerFired {
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:36:9
+   |
+36 |         proc: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:37:9
+   |
+37 |         timer: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:38:9
+   |
+38 |         timer_delay: McTime,
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:40:5
+   |
+40 |     TimerCancelled {
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:41:9
+   |
+41 |         proc: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:42:9
+   |
+42 |         timer: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates/dslab-mp/src/mc/events.rs:44:5
+   |
+44 |     MessageDropped {
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:45:9
+   |
+45 |         msg: Message,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:46:9
+   |
+46 |         src: String,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/events.rs:47:9
+   |
+47 |         dest: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/events.rs:52:5
+   |
+52 |     pub fn duplicate(&self) -> Option<McEvent> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/model_checker.rs:74:5
+   |
+74 |     pub fn set_state(&mut self, mut state: McState) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/model_checker.rs:79:5
+   |
+79 |     pub fn apply_event(&mut self, event: McEvent) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/strategy.rs:65:5
+   |
+65 |     pub summary: McSummary,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/strategy.rs:66:5
+   |
+66 |     pub collected: HashSet<McState>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/strategy.rs:70:5
+   |
+70 |     pub fn new(summary: McSummary, collected: HashSet<McState>) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a module
+  --> crates/dslab-mp/src/mc/mod.rs:13:1
+   |
+13 | pub mod system;
+   | ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+  --> crates/dslab-mp/src/mc/system.rs:12:1
+   |
+12 | pub struct McState {
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:13:5
+   |
+13 |     pub node_states: BTreeMap<String, McNodeState>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:14:5
+   |
+14 |     pub events: PendingEvents,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:15:5
+   |
+15 |     pub search_depth: u64,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:16:5
+   |
+16 |     pub log: Vec<McEvent>,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:20:5
+   |
+20 |     pub fn new(events: PendingEvents, search_depth: u64, log: Vec<McEvent>) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+  --> crates/dslab-mp/src/mc/system.rs:45:1
+   |
+45 | pub struct McSystem {
+   | ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates/dslab-mp/src/mc/system.rs:50:5
+   |
+50 |     pub log: Vec<McEvent>,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:54:5
+   |
+54 |     pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: PendingEvents) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:64:5
+   |
+64 |     pub fn apply_event(&mut self, event: McEvent) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:87:5
+   |
+87 |     pub fn get_state(&self) -> McState {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates/dslab-mp/src/mc/system.rs:95:5
+   |
+95 |     pub fn set_state(&mut self, state: McState) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates/dslab-mp/src/mc/system.rs:104:5
+    |
+104 |     pub fn available_events(&self) -> BTreeSet<McEventId> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates/dslab-mp/src/mc/system.rs:108:5
+    |
+108 |     pub fn search_depth(&self) -> u64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling dslab-mp-python v0.1.0 (/home/kikos/dev/hse/22-23/diploma/dslab/crates/dslab-mp-python)
+warning: `dslab-mp` (lib) generated 51 warnings
+   Compiling mp-ping-pong v0.1.0 (/home/kikos/dev/hse/22-23/diploma/dslab/examples/mp-ping-pong)
+    Finished dev [unoptimized + debuginfo] target(s) in 2.46s
+     Running `/home/kikos/dev/hse/22-23/diploma/dslab/target/debug/mp-ping-pong --impl python/basic.py`
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+    2.000     client <-- server     PONG {"value": "Hello!"}
+    2.000     client >>> local      PONG {"value": "Hello!"}
+    2.000     client <<< local      PING {"value": "Hello!"}
+    2.000     client --> server     PING {"value": "Hello!"}
+    3.000     server <-- client     PING {"value": "Hello!"}
+    3.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000 - drop messages from client-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+      !!!     client --x server     PING {"value": "Hello!"} <-- message dropped
+    0.000 - pass messages from client-node
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000 - drop messages from server-node
+    0.000     client <<< local      PING {"value": "Hello!"}
+    0.000     client --> server     PING {"value": "Hello!"}
+    1.000     server <-- client     PING {"value": "Hello!"}
+    1.000     server --> client     PONG {"value": "Hello!"}
+      !!!     server --x client     PONG {"value": "Hello!"} <-- message dropped
+    1.000 - pass messages from server-node
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello0!"}
+    0.000     client --> server     PING {"value": "Hello0!"}
+    1.009     server <-- client     PING {"value": "Hello0!"}
+    1.009     server --> client     PONG {"value": "Hello0!"}
+    2.312     client <-- server     PONG {"value": "Hello0!"}
+    2.312     client >>> local      PONG {"value": "Hello0!"}
+    2.312     client <<< local      PING {"value": "Hello1!"}
+    2.312     client --> server     PING {"value": "Hello1!"}
+    4.131     server <-- client     PING {"value": "Hello1!"}
+    4.131     server --> client     PONG {"value": "Hello1!"}
+    5.137     client <-- server     PONG {"value": "Hello1!"}
+    5.137     client >>> local      PONG {"value": "Hello1!"}
+    5.137     client <<< local      PING {"value": "Hello2!"}
+    5.137     client --> server     PING {"value": "Hello2!"}
+    6.974     server <-- client     PING {"value": "Hello2!"}
+    6.974     server --> client     PONG {"value": "Hello2!"}
+    8.194     client <-- server     PONG {"value": "Hello2!"}
+    8.194     client >>> local      PONG {"value": "Hello2!"}
+    8.194     client <<< local      PING {"value": "Hello3!"}
+    8.194     client --> server     PING {"value": "Hello3!"}
+    9.386     server <-- client     PING {"value": "Hello3!"}
+    9.386     server --> client     PONG {"value": "Hello3!"}
+   10.796     client <-- server     PONG {"value": "Hello3!"}
+   10.796     client >>> local      PONG {"value": "Hello3!"}
+   10.796     client <<< local      PING {"value": "Hello4!"}
+   10.796     client --> server     PING {"value": "Hello4!"}
+   12.035     server <-- client     PING {"value": "Hello4!"}
+   12.035     server --> client     PONG {"value": "Hello4!"}
+   13.686     client <-- server     PONG {"value": "Hello4!"}
+   13.686     client >>> local      PONG {"value": "Hello4!"}
+   13.686     client <<< local      PING {"value": "Hello5!"}
+   13.686     client --> server     PING {"value": "Hello5!"}
+   14.928     server <-- client     PING {"value": "Hello5!"}
+   14.928     server --> client     PONG {"value": "Hello5!"}
+   16.285     client <-- server     PONG {"value": "Hello5!"}
+   16.285     client >>> local      PONG {"value": "Hello5!"}
+   16.285     client <<< local      PING {"value": "Hello6!"}
+   16.285     client --> server     PING {"value": "Hello6!"}
+   17.459     server <-- client     PING {"value": "Hello6!"}
+   17.459     server --> client     PONG {"value": "Hello6!"}
+   19.331     client <-- server     PONG {"value": "Hello6!"}
+   19.331     client >>> local      PONG {"value": "Hello6!"}
+   19.331     client <<< local      PING {"value": "Hello7!"}
+   19.331     client --> server     PING {"value": "Hello7!"}
+   21.298     server <-- client     PING {"value": "Hello7!"}
+   21.298     server --> client     PONG {"value": "Hello7!"}
+   22.329     client <-- server     PONG {"value": "Hello7!"}
+   22.329     client >>> local      PONG {"value": "Hello7!"}
+   22.329     client <<< local      PING {"value": "Hello8!"}
+   22.329     client --> server     PING {"value": "Hello8!"}
+   23.703     server <-- client     PING {"value": "Hello8!"}
+   23.703     server --> client     PONG {"value": "Hello8!"}
+   25.515     client <-- server     PONG {"value": "Hello8!"}
+   25.515     client >>> local      PONG {"value": "Hello8!"}
+   25.515     client <<< local      PING {"value": "Hello9!"}
+   25.515     client --> server     PING {"value": "Hello9!"}
+   27.200     server <-- client     PING {"value": "Hello9!"}
+   27.200     server --> client     PONG {"value": "Hello9!"}
+   28.994     client <-- server     PONG {"value": "Hello9!"}
+   28.994     client >>> local      PONG {"value": "Hello9!"}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": "Hello0!"}
+    0.000     client --> server     PING {"value": "Hello0!"}
+    1.009     server <-- client     PING {"value": "Hello0!"}
+    1.009     server --> client     PONG {"value": "Hello0!"}
+    2.312     client <-- server     PONG {"value": "Hello0!"}
+    2.312     client >>> local      PONG {"value": "Hello0!"}
+    2.312     client <<< local      PING {"value": "Hello1!"}
+    2.312     client --> server     PING {"value": "Hello1!"}
+    4.131     server <-- client     PING {"value": "Hello1!"}
+    4.131     server --> client     PONG {"value": "Hello1!"}
+      !!!     server --x client     PONG {"value": "Hello1!"} <-- message dropped
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": 0}
+    0.000     client --> server     PING {"value": 0}
+    0.000     client <<< local      PING {"value": 1}
+    0.000     client --> server     PING {"value": 1}
+RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS
+         0 |     server <-- client     PING {"value": 0}
+         1 |     server <-- client     PING {"value": 1}
+         2 |     client <-- server     PONG {"value": 0}
+         3 |     client <-- server     PONG {"value": 1}
+         2 |     client <-- server     PONG {"value": 1}
+         3 |     client <-- server     PONG {"value": 0}
+         1 |     client <-- server     PONG {"value": 0}
+         2 |     server <-- client     PING {"value": 1}
+         0 |     server <-- client     PING {"value": 1}
+         1 |     server <-- client     PING {"value": 0}
+         2 |     client <-- server     PONG {"value": 1}
+         3 |     client <-- server     PONG {"value": 0}
+         2 |     client <-- server     PONG {"value": 0}
+         3 |     client <-- server     PONG {"value": 1}
+         1 |     client <-- server     PONG {"value": 1}
+         2 |     server <-- client     PING {"value": 0}
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": 0}
+    0.000     client --> server     PING {"value": 0}
+    0.000     client <<< local      PING {"value": 1}
+    0.000     client --> server     PING {"value": 1}
+RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS
+         0 |     server <-- client     PING {"value": 0}
+         1 |     server <-- client     PING {"value": 1}
+         2 |     server --x client     PONG {"value": 0} <-- message dropped
+         3 |     server --x client     PONG {"value": 1} <-- message dropped
+    0.000 - node started: server-node
+    0.000 - node started: client-node
+    0.000 - process started: server @ server-node
+    0.000 - process started: client @ client-node
+    0.000     client <<< local      PING {"value": 0}
+    0.000     client --> server     PING {"value": 0}
+    0.000     client <<< local      PING {"value": 1}
+    0.000     client --> server     PING {"value": 1}
+RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS
+         0 |     server <-- client     PING {"value": 0}
+         1 |     server <-- client     PING {"value": 1}
+         2 |     server --x client     PONG {"value": 0} <-- message dropped
+         3 |     server --x client     PONG {"value": 1} <-- message dropped

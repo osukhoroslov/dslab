@@ -1,0 +1,85 @@
+
+--- RUN ---
+
+
+PASSED
+
+
+--- RESULT ---
+
+
+PASSED
+
+
+--- RESULT UNRELIABLE ---
+
+
+PASSED
+
+
+--- 10 RESULTS UNRELIABLE ---
+
+
+PASSED
+
+
+--- DROP PING ---
+
+
+PASSED
+
+
+--- DROP PONG ---
+
+
+PASSED
+
+
+--- DROP PING 2 ---
+
+
+PASSED
+
+
+--- DROP PONG 2 ---
+
+
+PASSED
+
+
+--- 10 UNIQUE RESULTS ---
+
+
+PASSED
+
+
+--- 10 UNIQUE RESULTS UNRELIABLE ---
+
+
+PASSED
+
+
+--- MODEL CHECKING ---
+
+McResult { summary: McSummary { states: {"too many messages sent from client": 196, "got two messages": 87} }, collected: {} }
+
+PASSED
+
+
+--- MODEL CHECKING UNRELIABLE ---
+
+McResult { summary: McSummary { states: {"got two messages": 79, "too deep": 1711} }, collected: {} }
+
+PASSED
+
+
+--- MODEL CHECKING UNRELIABLE WITH LIMITS ---
+
+McResult { summary: McSummary { states: {"too many dropped messages": 225, "too many messages sent from client": 4843, "got two messages": 1368} }, collected: {} }
+
+PASSED
+
+-------------------------------------------------------------------------------
+
+Passed 13 from 13 tests
+
