@@ -81,7 +81,7 @@ impl DiskBuilder {
     /// The underlying disk model uses constant throughput and factor functions.
     ///
     /// An alias for
-    /// ```rust
+    /// ```ignore
     /// DiskBuilder::new()
     ///     .capacity(capacity)
     ///     .constant_read_bw(read_bw)
