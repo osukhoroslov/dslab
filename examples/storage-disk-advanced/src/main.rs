@@ -16,7 +16,7 @@ use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 
 use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, ActivityFactorFn};
-use dslab_storage::disk::{Disk, DiskActivity, DiskSpec};
+use dslab_storage::disk::{Disk, DiskActivity, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
@@ -127,13 +127,12 @@ fn main() {
     let mut sim = Simulation::new(SEED);
     let root = sim.create_context("root");
 
-    let mut simple_spec = DiskSpec::default();
-    simple_spec
-        .set_capacity(DISK_CAPACITY)
-        .set_constant_read_bw(DISK_READ_BW)
-        .set_constant_write_bw(DISK_WRITE_BW);
+    let simple_builder = DiskBuilder::new()
+        .capacity(DISK_CAPACITY)
+        .constant_read_bw(DISK_READ_BW)
+        .constant_write_bw(DISK_WRITE_BW);
 
-    let simple_disk = rc!(refcell!(Disk::new(simple_spec, sim.create_context(SIMPLE_DISK_NAME))));
+    let simple_disk = rc!(refcell!(simple_builder.build(sim.create_context(SIMPLE_DISK_NAME))));
     sim.add_handler(SIMPLE_DISK_NAME, simple_disk.clone());
 
     println!("Starting simulation with simple disk...");
@@ -149,15 +148,14 @@ fn main() {
 
     println!("Finished simple user");
 
-    let mut advanced_spec = DiskSpec::default();
-    advanced_spec
-        .set_capacity(DISK_CAPACITY)
+    let advanced_builder = DiskBuilder::new()
+        .capacity(DISK_CAPACITY)
         // Using the constant throughput function for read operations,
         // so total throughput will not depend on operations count.
-        .set_read_throughput_fn(make_constant_throughput_fn(DISK_READ_BW))
+        .read_throughput_fn(make_constant_throughput_fn(DISK_READ_BW))
         // Using custom throughput function for write operations,
         // so total throughput will depend on operations count `n` as follows.
-        .set_write_throughput_fn(boxed!(|n| {
+        .write_throughput_fn(boxed!(|n| {
             if n < 4 {
                 DISK_WRITE_BW
             } else {
@@ -166,16 +164,13 @@ fn main() {
         }))
         // Using the uniformly randomized factor function for read operations,
         // so operation's throughput will be multiplied by a random factor from 0.9 to 1.1.
-        .set_read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
+        .read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
         // Using the empirical factor function for write operations,
         // so operation's throughput will be multiplied by a random factor
         // generated from the specified weighted points distribution.
-        .set_write_factor_fn(boxed!(ExampleDiskFactorFn {}));
+        .write_factor_fn(boxed!(ExampleDiskFactorFn {}));
 
-    let advanced_disk = rc!(refcell!(Disk::new(
-        advanced_spec,
-        sim.create_context(ADVANCED_DISK_NAME),
-    )));
+    let advanced_disk = rc!(refcell!(advanced_builder.build(sim.create_context(ADVANCED_DISK_NAME),)));
     sim.add_handler(ADVANCED_DISK_NAME, advanced_disk.clone());
 
     println!("Starting advanced user...");

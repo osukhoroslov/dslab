@@ -44,80 +44,118 @@ type DiskThroughputModel = FairThroughputSharingModel<DiskActivity>;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// Represents disk specification.
+/// Disk builder. This is a type for convenient disk setup.
 ///
-/// Is filled by user and then passed to [`Disk`] when it is created.
-pub struct DiskSpec {
-    pub(in crate::disk) capacity: u64,
-    pub(in crate::disk) read_throughput_fn: ResourceThroughputFn,
-    pub(in crate::disk) write_throughput_fn: ResourceThroughputFn,
-    pub(in crate::disk) read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    pub(in crate::disk) write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+/// After disk settings are filled, [`DiskBuilder::build()`] should be called with [`SimulationContext`] to build a disk.
+pub struct DiskBuilder {
+    capacity: Option<u64>,
+    read_throughput_fn: Option<ResourceThroughputFn>,
+    write_throughput_fn: Option<ResourceThroughputFn>,
+    read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
 }
 
-const DEFAULT_DISK_CAPACITY: u64 = 1;
-const DEFAULT_DISK_READ_BW: f64 = 1.;
-const DEFAULT_DISK_WRITE_BW: f64 = 1.;
-
-impl Default for DiskSpec {
-    /// Creates default disk specification.
+impl Default for DiskBuilder {
+    /// Creates default disk builder.
     ///
-    /// Capacity of the disk, its read and write bandwidths are set to 1 and to be constant.
-    /// Read and write throughput functions are set to constant with multiplier = 1.
-    ///
-    /// After editing spec is passed to [`Disk`].
+    /// May be incomplete. User should fill required disk settings using other functions.
     fn default() -> Self {
         Self {
-            capacity: DEFAULT_DISK_CAPACITY,
-            read_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_READ_BW),
-            write_throughput_fn: make_constant_throughput_fn(DEFAULT_DISK_WRITE_BW),
+            capacity: None,
+            read_throughput_fn: None,
+            write_throughput_fn: None,
             read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
             write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
         }
     }
 }
 
-impl DiskSpec {
+impl DiskBuilder {
+    /// Same as [`DiskBuilder::default()`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Creates disk builder and fills it with given capacity, read and write bandwidth values.
+    ///
+    /// The underlying disk model uses constant throughput and factor functions.
+    ///
+    /// An alias for
+    /// ```rust
+    /// DiskBuilder::new()
+    ///     .capacity(capacity)
+    ///     .constant_read_bw(read_bw)
+    ///     .constant_write_bw(write_bw)
+    /// ```
+    pub fn simple(capacity: u64, read_bw: f64, write_bw: f64) -> Self {
+        Self::new()
+            .capacity(capacity)
+            .constant_read_bw(read_bw)
+            .constant_write_bw(write_bw)
+    }
+
     /// Sets capacity of the disk.
-    pub fn set_capacity(&mut self, capacity: u64) -> &mut Self {
-        self.capacity = capacity;
+    pub fn capacity(mut self, capacity: u64) -> Self {
+        self.capacity.replace(capacity);
         self
     }
 
     /// Sets read bandwidth to be constant with given value.
-    pub fn set_constant_read_bw(&mut self, read_bw: f64) -> &mut Self {
-        self.read_throughput_fn = make_constant_throughput_fn(read_bw);
+    pub fn constant_read_bw(mut self, read_bw: f64) -> Self {
+        self.read_throughput_fn.replace(make_constant_throughput_fn(read_bw));
         self
     }
 
     /// Sets write bandwidth to be constant with given value.
-    pub fn set_constant_write_bw(&mut self, write_bw: f64) -> &mut Self {
-        self.write_throughput_fn = make_constant_throughput_fn(write_bw);
+    pub fn constant_write_bw(mut self, write_bw: f64) -> Self {
+        self.write_throughput_fn.replace(make_constant_throughput_fn(write_bw));
         self
     }
 
     /// Sets custom throughput function for read operations.
-    pub fn set_read_throughput_fn(&mut self, read_throughput_fn: ResourceThroughputFn) -> &mut Self {
-        self.read_throughput_fn = read_throughput_fn;
+    pub fn read_throughput_fn(mut self, read_throughput_fn: ResourceThroughputFn) -> Self {
+        self.read_throughput_fn.replace(read_throughput_fn);
         self
     }
 
     /// Sets custom throughput function for write operations.
-    pub fn set_write_throughput_fn(&mut self, write_throughput_fn: ResourceThroughputFn) -> &mut Self {
-        self.write_throughput_fn = write_throughput_fn;
+    pub fn write_throughput_fn(mut self, write_throughput_fn: ResourceThroughputFn) -> Self {
+        self.write_throughput_fn.replace(write_throughput_fn);
         self
     }
 
     /// Sets throughput factor function for read operations.
-    pub fn set_read_factor_fn(&mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+    pub fn read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
         self.read_factor_fn = read_factor_fn;
         self
     }
 
     /// Sets throughput factor function for write operations.
-    pub fn set_write_factor_fn(&mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> &mut Self {
+    pub fn write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
         self.write_factor_fn = write_factor_fn;
         self
+    }
+
+    /// Builds disk from given builder and simulation context.
+    ///
+    /// Panics on invalid or incomplete disk settings.
+    pub fn build(self, ctx: SimulationContext) -> Disk {
+        Disk {
+            capacity: self.capacity.unwrap(),
+            used: 0,
+            read_throughput_model: FairThroughputSharingModel::new(
+                self.read_throughput_fn.unwrap(),
+                self.read_factor_fn,
+            ),
+            write_throughput_model: FairThroughputSharingModel::new(
+                self.write_throughput_fn.unwrap(),
+                self.write_factor_fn,
+            ),
+            next_request_id: 0,
+            next_read_event: u64::MAX,
+            next_write_event: u64::MAX,
+            ctx,
+        }
     }
 }
 
@@ -128,46 +166,19 @@ impl DiskSpec {
 /// Disk is characterized by its capacity and read/write throughput models.
 ///
 /// Disk state includes the amount of used disk space and state of throughput models.
+/// Should be created using [`DiskBuilder`].
 pub struct Disk {
-    capacity: u64,
-    used: u64,
-    read_throughput_model: DiskThroughputModel,
-    write_throughput_model: DiskThroughputModel,
-    next_request_id: u64,
-    next_read_event: u64,
-    next_write_event: u64,
-    ctx: SimulationContext,
+    pub(in crate::disk) capacity: u64,
+    pub(in crate::disk) used: u64,
+    pub(in crate::disk) read_throughput_model: DiskThroughputModel,
+    pub(in crate::disk) write_throughput_model: DiskThroughputModel,
+    pub(in crate::disk) next_request_id: u64,
+    pub(in crate::disk) next_read_event: u64,
+    pub(in crate::disk) next_write_event: u64,
+    pub(in crate::disk) ctx: SimulationContext,
 }
 
 impl Disk {
-    /// Creates new disk from given spec.
-    ///
-    /// Returns [`InvalidDiskSpecError`] on invalid spec.
-    pub fn new(spec: DiskSpec, ctx: SimulationContext) -> Self {
-        Self {
-            capacity: spec.capacity,
-            used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(spec.read_throughput_fn, spec.read_factor_fn),
-            write_throughput_model: FairThroughputSharingModel::new(spec.write_throughput_fn, spec.write_factor_fn),
-            next_request_id: 0,
-            next_read_event: u64::MAX,
-            next_write_event: u64::MAX,
-            ctx,
-        }
-    }
-
-    /// Creates disk with given capacity, read and write bandwidth values.
-    ///
-    /// The underlying disk model uses constant throughput and factor functions.
-    /// A short form for manually creating [`DiskSpec`] and passing it to [`Disk::new()`].
-    pub fn simple(capacity: u64, read_bw: f64, write_bw: f64, ctx: SimulationContext) -> Self {
-        let mut spec = DiskSpec::default();
-        spec.set_capacity(capacity)
-            .set_constant_read_bw(read_bw)
-            .set_constant_write_bw(write_bw);
-        Self::new(spec, ctx)
-    }
-
     fn make_unique_request_id(&mut self) -> u64 {
         let request_id = self.next_request_id;
         self.next_request_id += 1;

@@ -19,7 +19,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::{Disk, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
 use dslab_storage::storage::Storage;
 
@@ -174,12 +174,12 @@ fn main() {
 
     for i in 0..args.disks {
         let disk_name = format!("disk-{}", i);
-        let disk = rc!(refcell!(Disk::simple(
+        let disk = rc!(refcell!(DiskBuilder::simple(
             DISK_CAPACITY,
             DISK_READ_BW,
             DISK_WRITE_BW,
-            sim.create_context(&disk_name),
-        )));
+        )
+        .build(sim.create_context(&disk_name))));
         disks.push((sim.add_handler(disk_name, disk.clone()), disk));
     }
 

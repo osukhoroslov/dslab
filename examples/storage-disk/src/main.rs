@@ -14,7 +14,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
 
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::{Disk, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
@@ -154,12 +154,12 @@ fn main() {
 
     let mut sim = Simulation::new(SEED);
 
-    let disk = rc!(refcell!(Disk::simple(
+    let disk = rc!(refcell!(DiskBuilder::simple(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,
-        sim.create_context(DISK_NAME),
-    )));
+    )
+    .build(sim.create_context(DISK_NAME))));
     sim.add_handler(DISK_NAME, disk.clone());
 
     let user = rc!(refcell!(Client::new(disk, sim.create_context(CLIENT_NAME))));
