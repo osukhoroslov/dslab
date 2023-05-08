@@ -242,7 +242,7 @@ fn mc_prune_many_messages_sent(state: &McState, allowed: u64) -> Option<String> 
     }
 }
 
-fn test_mc(config: &TestConfig) -> TestResult {
+fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
@@ -271,7 +271,7 @@ fn test_mc(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
-fn test_mc_unreliable(config: &TestConfig) -> TestResult {
+fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
@@ -298,7 +298,7 @@ fn test_mc_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
-fn test_mc_drop_rate_limited(config: &TestConfig) -> TestResult {
+fn test_mc_limited_drops(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = format!(r#"{{"value": 0}}"#);
     let data2 = format!(r#"{{"value": 1}}"#);
