@@ -10,3 +10,15 @@ number_of_hosts: 50
 host_cpu_capacity: 64
 host_memory_capacity: 128
 step_duration: 500
+
+# Hosts
+hosts:
+  - count: 50
+    cpus: 64
+    memory: 128
+    name_prefix: h
+
+# Schedulers
+schedulers:
+  - name: s
+    algorithm: BestFit

@@ -5,8 +5,25 @@ vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 36000
-number_of_hosts: 40
+simulation_length: 3600
+number_of_hosts: 150
 host_cpu_capacity: 64
 host_memory_capacity: 128
 step_duration: 500
+
+#Vms
+vm_dataset:
+    dataset_type: Azure
+    path: .
+
+# Hosts
+hosts:
+  - count: 150
+    cpus: 64
+    memory: 128
+    name_prefix: h
+
+# Schedulers
+schedulers:
+  - name: s
+    algorithm: BestFit

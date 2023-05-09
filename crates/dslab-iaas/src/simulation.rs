@@ -27,7 +27,10 @@ use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
+use crate::extensions::azure_dataset_reader::AzureDatasetReader;
 use crate::extensions::dataset_reader::DatasetReader;
+use crate::extensions::dataset_type::VmDatasetType;
+use crate::extensions::huawei_dataset_reader::HuaweiDatasetReader;
 
 struct VMSpawnRequest {
     pub resource_consumer: ResourceConsumer,
@@ -117,6 +120,31 @@ impl CloudSimulation {
                     let name = format!("{}{}", prefix, i + 1);
                     let alg = placement_algorithm_resolver(scheduler_config.algorithm.clone());
                     sim.add_scheduler(&name, alg);
+                }
+            }
+        }
+
+        // Spawn VM from specifyed dataset
+        if sim.sim_config.vm_dataset.is_some() {
+            let dataset_config = sim.sim_config.vm_dataset.as_ref().unwrap();
+
+            match dataset_config.dataset_type {
+                VmDatasetType::Azure => {
+                    let mut dataset = AzureDatasetReader::new(
+                        sim.sim_config.simulation_length,
+                        sim.sim_config.host_cpu_capacity,
+                        sim.sim_config.host_memory_capacity,
+                    );
+                    dataset.parse(
+                        format!("{}/vm_types.csv", dataset_config.path),
+                        format!("{}/vm_instances.csv", dataset_config.path),
+                    );
+                    sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
+                }
+                VmDatasetType::Huawei => {
+                    let mut dataset = HuaweiDatasetReader::new(sim.sim_config.simulation_length);
+                    dataset.parse(format!("{}/Huawei-East-1.csv", dataset_config.path));
+                    sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
                 }
             }
         }

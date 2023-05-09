@@ -4,6 +4,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::extensions::dataset_type::VmDatasetType;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfigRaw {
     /// periodically send statistics from host to monitoring
@@ -32,10 +34,21 @@ pub struct SimulationConfigRaw {
     pub step_duration: Option<f64>,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<f64>,
+    /// Dataset of virtual machines
+    pub vm_dataset: Option<VmDatasetConfig>,
     /// cloud physical hosts
     pub hosts: Option<Vec<HostConfig>>,
     /// cloud schedulers
     pub schedulers: Option<Vec<SchedulerConfig>>,
+}
+
+/// Represents virtual machines dataset supported by this framework.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct VmDatasetConfig {
+    /// dataset type, one of supported by dslab framework
+    pub dataset_type: VmDatasetType,
+    /// dataset file path where data is stored
+    pub path: String,
 }
 
 /// Represents scheduler(s) configuration.
@@ -97,6 +110,8 @@ pub struct SimulationConfig {
     pub step_duration: f64,
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: f64,
+    /// Dataset of virtual machines
+    pub vm_dataset: Option<VmDatasetConfig>,
     /// cloud physical hosts
     pub hosts: Vec<HostConfig>,
     /// cloud schedulers
@@ -120,6 +135,7 @@ impl SimulationConfig {
             host_memory_capacity: 1.,
             step_duration: 500.,
             vm_allocation_timeout: 50.,
+            vm_dataset: None,
             hosts: Vec::new(),
             schedulers: Vec::new(),
         }
@@ -146,6 +162,7 @@ impl SimulationConfig {
             host_memory_capacity: data.host_memory_capacity.unwrap_or(default.host_memory_capacity),
             step_duration: data.step_duration.unwrap_or(default.step_duration),
             vm_allocation_timeout: data.vm_allocation_timeout.unwrap_or(default.vm_allocation_timeout),
+            vm_dataset: data.vm_dataset,
             hosts: data.hosts.unwrap_or_default(),
             schedulers: data.schedulers.unwrap_or_default(),
         }
