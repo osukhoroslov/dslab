@@ -102,6 +102,9 @@ impl PendingEvents {
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
+        if let Some(_) = self.directives.iter().next() {
+            return 1;
+        }
         if self.is_insta {
             let res = self.available_events.iter().filter(|event_id| {
                 if let McEvent::TimerFired { .. } = self.events[event_id] {
