@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use dslab_core::event::EventId;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use dslab_core::event::EventId;
 use dslab_core::Id;
 use dslab_core::SimulationContext;
 
