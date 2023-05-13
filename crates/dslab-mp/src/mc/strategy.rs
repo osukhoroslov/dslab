@@ -167,10 +167,10 @@ pub trait Strategy {
         }
 
         if corrupt {
-            event = self.corrupt_msg_data(event, system.search_depth());
+            event = self.corrupt_msg_data(event, system.depth());
         }
 
-        self.debug_log(&event, LogContext::Default, system.search_depth());
+        self.debug_log(&event, LogContext::Default, system.depth());
 
         system.apply_event(event);
 
@@ -230,31 +230,31 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, LogContext::Duplicated, system.search_depth());
+        self.debug_log(&event, LogContext::Duplicated, system.depth());
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, log_context: LogContext, search_depth: u64) {
+    fn debug_log(&self, event: &McEvent, log_context: LogContext, depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(search_depth, msg, src, dest, log_context);
+                    self.log_message(depth, msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
-                    t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", search_depth, proc, timer).yellow());
+                    t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
                 }
                 TimerCancelled { proc, timer } => {
                     t!(format!(
                         "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
-                        search_depth, proc, timer
+                        depth, proc, timer
                     )
                     .yellow());
                 }
                 MessageDropped { msg, src, dest, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
-                        search_depth, src, dest, msg
+                        depth, src, dest, msg
                     )
                     .red());
                 }

@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use crate::mc::node::McNodeState;
 use crate::mc::pending_events::PendingEvents;
 
-/// Stores comprehensive information about the state of model checking system.
+/// Stores comprehensive information about the state of [`McSystem`](crate::mc::system::McSystem).
 /// Used to preserve and restore particular situations in [`McSystem`](crate::mc::system::McSystem).
 #[derive(Debug)]
 pub struct McState {
@@ -17,17 +17,17 @@ pub struct McState {
     pub events: PendingEvents,
 
     /// Depth in the search graph of model checking algorithm.
-    pub search_depth: u64,
+    pub depth: u64,
 }
 
 impl McState {
     /// Creates a new model checking state with the specified events
     /// in the system and the search algorithm depth.
-    pub fn new(events: PendingEvents, search_depth: u64) -> Self {
+    pub fn new(events: PendingEvents, depth: u64) -> Self {
         Self {
             node_states: BTreeMap::new(),
             events,
-            search_depth,
+            depth,
         }
     }
 }

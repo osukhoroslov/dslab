@@ -12,7 +12,7 @@ pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: Rc<RefCell<McNetwork>>,
     pub(crate) events: PendingEvents,
-    search_depth: u64,
+    depth: u64,
 }
 
 impl McSystem {
@@ -21,12 +21,12 @@ impl McSystem {
             nodes,
             net,
             events,
-            search_depth: 0,
+            depth: 0,
         }
     }
 
     pub fn apply_event(&mut self, event: McEvent) {
-        self.search_depth += 1;
+        self.depth += 1;
         let new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
@@ -45,7 +45,7 @@ impl McSystem {
     }
 
     pub fn get_state(&self) -> McState {
-        let mut state = McState::new(self.events.clone(), self.search_depth);
+        let mut state = McState::new(self.events.clone(), self.depth);
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
@@ -57,14 +57,14 @@ impl McSystem {
             self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
         self.events = state.events;
-        self.search_depth = state.search_depth;
+        self.depth = state.depth;
     }
 
     pub fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events()
     }
 
-    pub fn search_depth(&self) -> u64 {
-        self.search_depth
+    pub fn depth(&self) -> u64 {
+        self.depth
     }
 }

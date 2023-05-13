@@ -1,6 +1,7 @@
-use rstest::rstest;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
