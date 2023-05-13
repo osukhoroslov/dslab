@@ -233,13 +233,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
