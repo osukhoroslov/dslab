@@ -255,13 +255,7 @@ fn two_states_one_message_pruned(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
@@ -283,13 +277,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_drop_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
@@ -310,13 +298,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_drop_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
@@ -344,13 +326,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_dupl_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
@@ -380,13 +356,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_dupl_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
@@ -413,13 +383,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some text".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some text"));
     sys.network().set_corrupt_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
@@ -444,20 +408,8 @@ fn visited_states(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system_with_collector();
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data_1".to_string(),
-        },
-    );
-    sys.send_local_message(
-        "process1",
-        Message {
-            tip: "PING".to_string(),
-            data: "some_data_2".to_string(),
-        },
-    );
+    sys.send_local_message("process1", Message::new("PING", "some_data_1"));
+    sys.send_local_message("process1", Message::new("PING", "some_data_2"));
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
