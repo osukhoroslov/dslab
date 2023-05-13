@@ -16,13 +16,12 @@ pub struct McState {
     /// List of events waiting for delivery.
     pub events: PendingEvents,
 
-    /// Depth in the search graph of model checking algorithm.
+    /// Depth of the state in the state graph (i.e. the number of events happened since the initial state).
     pub depth: u64,
 }
 
 impl McState {
-    /// Creates a new model checking state with the specified events
-    /// in the system and the search algorithm depth.
+    /// Creates a new state with the specified events in the system and the depth.
     pub fn new(events: PendingEvents, depth: u64) -> Self {
         Self {
             node_states: BTreeMap::new(),
