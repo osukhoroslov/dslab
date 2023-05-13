@@ -245,11 +245,7 @@ pub trait Strategy {
                     t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
                 }
                 TimerCancelled { proc, timer } => {
-                    t!(format!(
-                        "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
-                        depth, proc, timer
-                    )
-                    .yellow());
+                    t!(format!("{:>10} | {:>10} xxx {:<10} <-- timer cancelled", depth, proc, timer).yellow());
                 }
                 MessageDropped { msg, src, dest, .. } => {
                     t!(format!(
