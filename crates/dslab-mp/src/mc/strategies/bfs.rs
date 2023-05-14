@@ -37,7 +37,6 @@ impl Bfs {
     fn bfs(&mut self, system: &mut McSystem) -> Result<(), String> {
         // Start search from initial state
         self.states_queue.push_back(system.get_state());
-        self.mark_visited(system.get_state());
 
         while !self.states_queue.is_empty() {
             let state = self.states_queue.pop_front().unwrap();

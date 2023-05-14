@@ -49,7 +49,6 @@ impl Dfs {
 impl Strategy for Dfs {
     fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
         let state = system.get_state();
-        self.mark_visited(system.get_state());
 
         let res = self.dfs(system, state);
         match res {

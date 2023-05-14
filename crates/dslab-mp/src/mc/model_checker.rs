@@ -64,6 +64,7 @@ impl ModelChecker {
         t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
             .to_string()
             .yellow());
+        self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }
 }
