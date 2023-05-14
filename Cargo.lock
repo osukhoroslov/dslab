@@ -133,6 +133,57 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46016233fc1bb55c23b856fe556b7db6ccd05119a0a392e04f0b3b7c79058f16"
 
 [[package]]
+name = "async-event-details"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "dslab-compute",
+ "dslab-core",
+ "env_logger 0.9.3",
+ "futures",
+ "log 0.4.17",
+ "priority-queue",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "serde",
+ "serde_json",
+ "sugars",
+]
+
+[[package]]
+name = "async-master-workers"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "dslab-compute",
+ "dslab-core",
+ "dslab-network",
+ "dslab-storage",
+ "env_logger 0.9.3",
+ "futures",
+ "log 0.4.17",
+ "priority-queue",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "serde",
+ "sugars",
+]
+
+[[package]]
+name = "async-network-ping-pong"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "dslab-core",
+ "dslab-network",
+ "env_logger 0.9.3",
+ "futures",
+ "log 0.4.17",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "atk"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -866,6 +917,7 @@ dependencies = [
  "dyn-clone",
  "env_logger 0.9.3",
  "erased-serde",
+ "futures",
  "log 0.4.17",
  "rand 0.8.5",
  "rand_pcg 0.3.1",

@@ -1,18 +1,35 @@
-use std::collections::{BinaryHeap, HashSet, VecDeque};
+use std::any::TypeId;
+use std::cell::RefCell;
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::rc::Rc;
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::distributions::{Alphanumeric, DistString};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
+async_core! {
+    use futures::Future;
+    use crate::async_core::shared_state::{
+        AwaitEventSharedState, EmptyData, TimerFuture,
+    };
+}
+
+use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter, DetailsKey};
+use crate::async_core::task::Task;
+use crate::async_core::timer::{Timer, TimerId};
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
+use crate::{async_core, async_details_core};
 
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct SimulationState {
     clock: f64,
     rand: Pcg64,
@@ -20,10 +37,19 @@ pub struct SimulationState {
     ordered_events: VecDeque<Event>,
     canceled_events: HashSet<EventId>,
     event_count: u64,
+
+    awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
+    details_getters: HashMap<TypeId, fn(&dyn EventData) -> DetailsKey>,
+
+    timers: BinaryHeap<Timer>,
+    canceled_timers: HashSet<TimerId>,
+    timer_count: u64,
+
+    task_sender: Sender<Arc<Task>>,
 }
 
 impl SimulationState {
-    pub fn new(seed: u64) -> Self {
+    pub fn new(seed: u64, task_sender: Sender<Arc<Task>>) -> Self {
         Self {
             clock: 0.0,
             rand: Pcg64::seed_from_u64(seed),
@@ -31,6 +57,13 @@ impl SimulationState {
             ordered_events: VecDeque::new(),
             canceled_events: HashSet::new(),
             event_count: 0,
+            awaiters: HashMap::new(),
+            details_getters: HashMap::new(),
+            timers: BinaryHeap::new(),
+            canceled_timers: HashSet::new(),
+            timer_count: 0,
+
+            task_sender,
         }
     }
 
@@ -143,13 +176,28 @@ impl SimulationState {
         }
     }
 
-    pub fn peek_event(&self) -> Option<&Event> {
-        let maybe_heap = self.events.peek();
-        let maybe_deque = self.ordered_events.front();
-        if maybe_heap.is_some() && (maybe_deque.is_none() || maybe_heap.unwrap() > maybe_deque.unwrap()) {
-            maybe_heap
-        } else {
-            maybe_deque
+    pub fn peek_event(&mut self) -> Option<&Event> {
+        loop {
+            let maybe_heap = self.events.peek();
+            let maybe_deque = self.ordered_events.front();
+            let heap_event_id = if let Some(event) = maybe_heap { event.id } else { 0 };
+            let deque_event_id = if let Some(event) = maybe_deque { event.id } else { 0 };
+
+            if maybe_heap.is_some() && (maybe_deque.is_none() || maybe_heap.unwrap() > maybe_deque.unwrap()) {
+                if self.canceled_events.remove(&heap_event_id) {
+                    self.events.pop().unwrap();
+                } else {
+                    return self.events.peek();
+                }
+            } else if maybe_deque.is_some() {
+                if self.canceled_events.remove(&deque_event_id) {
+                    self.ordered_events.pop_front().unwrap();
+                } else {
+                    return self.ordered_events.front();
+                }
+            } else {
+                return None;
+            }
         }
     }
 
@@ -225,5 +273,100 @@ impl SimulationState {
         // Because the sorting order of events is inverted to be used with BinaryHeap
         output.reverse();
         output
+    }
+
+    pub fn cancel_component_timers(&mut self, component_id: Id) {
+        for timer in self.timers.iter() {
+            if timer.component_id == component_id {
+                self.canceled_timers.insert(timer.id);
+            }
+        }
+    }
+
+    async_core! {
+        pub fn peek_timer(&mut self) -> Option<&Timer> {
+            loop {
+                if let Some(timer) = self.timers.peek() {
+                    if !self.canceled_timers.remove(&timer.id) {
+                        return Some(timer);
+                    }
+                } else {
+                    return None;
+                }
+            }
+        }
+
+        pub fn next_timer(&mut self) -> Option<Timer> {
+            loop {
+                if let Some(timer) = self.timers.pop() {
+                    if !self.canceled_timers.remove(&timer.id) {
+                        self.clock = timer.time;
+                        return Some(timer);
+                    }
+                } else {
+                    return None;
+                }
+            }
+        }
+
+        pub(crate) fn has_handler_on_key(&self, key: &AwaitKey) -> bool {
+            self.awaiters.contains_key(key)
+        }
+
+        pub(crate) fn set_event_for_await_key(&mut self, key: &AwaitKey, event: Event) -> bool {
+            if !self.awaiters.contains_key(key) {
+                return false;
+            }
+
+            let shared_state = self.awaiters.remove(key).unwrap();
+
+            shared_state.borrow_mut().set_ok_completed_with_event(event);
+
+            true
+        }
+
+        pub fn spawn(&mut self, future: impl Future<Output = ()>) {
+            let task = Arc::new(Task::new(future, self.task_sender.clone()));
+
+            self.task_sender.send(task).expect("channel is closed");
+        }
+
+        pub fn wait_for(&mut self, component_id: Id, timeout: f64) -> TimerFuture {
+            let state = Rc::new(RefCell::new(AwaitEventSharedState::<EmptyData>::default()));
+            let timer = self.get_timer(component_id, self.time() + timeout, state.clone());
+
+            self.timers.push(timer);
+
+            TimerFuture { state }
+        }
+
+        pub(crate) fn add_timer_on_state(
+            &mut self,
+            component_id: Id,
+            timeout: f64,
+            state: Rc<RefCell<dyn AwaitResultSetter>>,
+        ) {
+            let timer = self.get_timer(component_id, self.time() + timeout, state);
+            self.timers.push(timer);
+        }
+
+        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
+            self.awaiters.insert(key, state);
+        }
+
+        fn get_timer(&mut self, component_id: Id, time: f64, state: Rc<RefCell<dyn AwaitResultSetter>>) -> Timer {
+            self.timer_count += 1;
+            Timer::new(self.timer_count, component_id, time, state)
+        }
+
+        pub fn get_details_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> DetailsKey> {
+            self.details_getters.get(&type_id).copied()
+        }
+    }
+
+    async_details_core! {
+        pub fn register_details_getter_for<T: EventData>(&mut self, details_getter: fn(&dyn EventData) -> DetailsKey) {
+            self.details_getters.insert(TypeId::of::<T>(), details_getter);
+        }
     }
 }

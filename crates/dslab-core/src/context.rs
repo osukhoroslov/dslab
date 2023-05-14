@@ -1,16 +1,33 @@
 //! Accessing simulation from components.
 
+#[allow(unused_imports)]
+use core::panic;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
+async_core! {
+    use std::any::TypeId;
+    use futures::Future;
+
+    use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, AwaitResult, EventFuture};
+}
+
+async_details_core! {
+    use std::any::type_name;
+    use crate::async_core::shared_state::DetailsKey;
+}
+
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
+use crate::{async_core, async_details_core};
 
 /// A facade for accessing the simulation state and producing events from simulation components.
+#[derive(Clone)]
 pub struct SimulationContext {
     id: Id,
     name: String,
@@ -647,5 +664,207 @@ impl SimulationContext {
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
+    }
+
+    async_core! {
+        /// spawn a background separate task
+        pub fn spawn(&self, future: impl Future<Output = ()>) {
+            self.sim_state.borrow_mut().spawn(future);
+        }
+
+        /// wait for the given timeout.
+        ///
+        /// Example:
+        ///
+        /// ctx.async_wait_for(5.).await;
+        ///
+        pub async fn async_wait_for(&self, timeout: f64) {
+            if timeout < 0.{
+                panic!("timeout must be a positive value");
+            }
+
+            let future = self.sim_state.borrow_mut().wait_for(self.id, timeout);
+            future.await;
+        }
+
+
+        /// async wait for any event of type T from src component with timeout
+        /// Example:
+        ///
+        /// let event_result = ctx.async_wait_for_event::<PingMessage>(pinger_id, timeout).await;
+        ///
+        pub async fn async_wait_for_event<T>(&self, src: Id, timeout: f64) -> AwaitResult<T>
+        where
+            T: EventData,
+        {
+            if timeout < 0.{
+                panic!("timeout must be a positive value");
+            }
+
+            self.async_wait_for_event_to(src, self.id, timeout).await
+        }
+
+        /// async wait for any event of type T from src component without timeout
+        /// Example:
+        ///
+        /// let (event, data) = ctx.async_handle_event::<PingMessage>(pinger_id).await;
+        ///
+        pub async fn async_handle_event<T>(&self, src: Id) -> (Event, T)
+        where
+            T: EventData,
+        {
+            self.async_handle_event_to::<T>(src, self.id).await
+        }
+
+        /// async handle event from self
+        pub async fn async_handle_self<T>(&self) -> (Event, T)
+        where
+            T: EventData,
+        {
+            self.async_handle_event_to::<T>(self.id, self.id).await
+        }
+
+        async fn async_handle_event_to<T>(&self, src: Id, dst: Id) -> (Event, T)
+        where
+            T: EventData,
+        {
+            let result = self.async_wait_for_event_to::<T>(src, dst, -1.).await;
+            match result {
+                AwaitResult::Ok(t) => t,
+                AwaitResult::Timeout(_) => panic!("unexpected timeout"),
+            }
+        }
+
+        fn async_wait_for_event_to<T>(&self, src: Id, dst: Id, timeout: f64) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            if self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_some() {
+                panic!("try to async handle event that has detailed key handling, use async details handlers");
+            }
+
+            let await_key = AwaitKey::new::<T>(src, dst);
+
+            self.create_event_future(await_key, timeout)
+        }
+    }
+
+    async_details_core! {
+        /// async wait for event of type T from src component with details flag and timeout
+        /// Example:
+        ///
+        /// let request_id = disk.send_data_read_request(/* some args */);
+        /// let event_result = ctx.async_detailed_wait_for_event::<DataReadCompleted>(disk_id, request_id, timeout).await;
+        ///
+        pub async fn async_detailed_wait_for_event<T>(&self, src: Id, details: DetailsKey, timeout: f64) -> AwaitResult<T>
+        where
+            T: EventData,
+        {
+            if timeout < 0.{
+                panic!("timeout must be a positive value");
+            }
+
+            self.async_detailed_wait_for_event_to(src, self.id, details, timeout).await
+        }
+
+        /// async wait for event of type T from src component with details flag without timeout
+        /// Example:
+        ///
+        /// let request_id = disk.send_data_read_request(...);
+        /// let (event, data) = ctx.async_detailed_handle_event::<DataReadCompleted>(disk_id, request_id).await;
+        ///
+        pub async fn async_detailed_handle_event<T>(&self, src: Id, details: DetailsKey) -> (Event, T)
+        where
+            T: EventData,
+        {
+            self.async_detailed_handle_event_to::<T>(src, self.id, details).await
+        }
+
+        /// async detailed handle event from self
+        pub async fn async_detailed_handle_self<T>(&self, details: DetailsKey) -> (Event, T)
+        where
+            T: EventData,
+        {
+            self.async_detailed_handle_event_to::<T>(self.id, self.id, details)
+                .await
+        }
+
+        /// Register the function for a type of EventData to get await details to futher call
+        /// ctx.async_detailed_handle_event::<T>(from, details)
+        ///
+        /// # Example
+        ///
+        /// pub struct TaskCompleted {
+        ///     request_id: u64
+        ///     some_other_data: u64
+        /// }
+        ///
+        /// pub fn get_task_completed_details(data: &dyn EventData) -> DetailsKey {
+        ///     let event = data.downcast_ref::<TaskCompleted>().unwrap();
+        ///     event.request_id as DetailsKey
+        /// }
+        ///
+        /// let sim = Simulation::new(42);
+        /// let ctx = sim.create_context("host")
+        /// ctx.register_details_getter_for::<TaskCompleted>(get_task_completed_details);
+        ///
+        pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
+            self.sim_state
+                .borrow_mut()
+                .register_details_getter_for::<T>(details_getter);
+        }
+
+        fn async_detailed_wait_for_event_to<T>(
+            &self,
+            src: Id,
+            dst: Id,
+            details: DetailsKey,
+            timeout: f64,
+        ) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            if self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_none() {
+                panic!(
+                    "simulation does not have details getter for type {}, register it before useing async_detailed getters",
+                    type_name::<T>()
+                );
+            }
+
+            let await_key = AwaitKey::new_with_details::<T>(src, dst, details);
+
+            self.create_event_future(await_key, timeout)
+        }
+
+        async fn async_detailed_handle_event_to<T>(&self, src: Id, dst: Id, details: DetailsKey) -> (Event, T)
+        where
+            T: EventData,
+        {
+            let result = self.async_detailed_wait_for_event_to::<T>(src, dst, details, -1.).await;
+            match result {
+                AwaitResult::Ok(t) => t,
+                AwaitResult::Timeout(_) => panic!("unexpected timeout"),
+            }
+        }
+    }
+
+    async_core! {
+        fn create_event_future<T>(&self, await_key: AwaitKey, timeout: f64) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
+            state.borrow_mut().shared_content = AwaitResult::timeout_with(await_key.from, await_key.to);
+
+            if timeout >= 0. {
+                self.sim_state.borrow_mut().add_timer_on_state(await_key.to, timeout, state.clone());
+            }
+
+            self.sim_state
+                .borrow_mut()
+                .add_awaiter_handler(await_key, state.clone());
+
+            EventFuture { state }
+        }
     }
 }
