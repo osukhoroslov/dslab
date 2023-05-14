@@ -247,7 +247,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String) {
 fn two_states_one_message_pruned(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| Some("pruned".to_string()));
 
-    let goal = build_one_message_goal();
+    let goal = boxed!(|_: &McState| None);
 
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
