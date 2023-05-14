@@ -12,7 +12,7 @@ use crate::draw_utils::*;
 
 const X_PADDING: f64 = 30.0;
 const ROW_STEP: f64 = 20.0;
-const MEMORY_HEIGHT: f64 = 100.0;
+const MAX_MEMORY_HEIGHT: f64 = 200.0;
 
 struct TimelineResourceBlock {
     start: f64,
@@ -236,6 +236,14 @@ impl Widget<AppData> for TimelineWidget {
         self.timeline_right = timeline_right;
         self.total_time = data.total_time;
 
+        let max_memory = data
+            .compute
+            .borrow()
+            .iter()
+            .map(|compute| compute.memory)
+            .max()
+            .unwrap_or_default();
+
         let mut y = 20.;
         for compute in data.compute.borrow().iter() {
             let y0 = y;
@@ -333,7 +341,9 @@ impl Widget<AppData> for TimelineWidget {
                         task_id,
                     ));
                 }
-                self.draw_memory_usage(ctx, y, MEMORY_HEIGHT / compute.memory as f64, memory);
+                let height = MAX_MEMORY_HEIGHT * compute.memory as f64 / max_memory as f64;
+                let height = height.max(ROW_STEP);
+                self.draw_memory_usage(ctx, y, height / compute.memory as f64, memory);
                 ctx.stroke(
                     Line::new(Point::new(X_PADDING, y), Point::new(size.width - X_PADDING, y)),
                     &Color::WHITE,
@@ -343,11 +353,11 @@ impl Widget<AppData> for TimelineWidget {
                     ctx,
                     &format!("Memory: {}", compute.memory),
                     15.,
-                    Point::new(X_PADDING + 5., y + MEMORY_HEIGHT / 2. - 10.),
+                    Point::new(X_PADDING + 5., y + height / 2. - 10.),
                     false,
                     false,
                 );
-                y += MEMORY_HEIGHT;
+                y += height;
             }
 
             if data.timeline_uploading {
