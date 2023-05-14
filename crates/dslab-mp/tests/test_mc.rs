@@ -383,7 +383,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message("process1", Message::new("PING", "some text"));
+    sys.send_local_message("process1", Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"));
     sys.network().set_corrupt_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);

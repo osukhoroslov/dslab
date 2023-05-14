@@ -211,7 +211,7 @@ pub trait Strategy {
                 options,
             } => {
                 lazy_static! {
-                    static ref RE: Regex = Regex::new(r"\w+").unwrap();
+                    static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
                 }
                 let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
                 MessageReceived {
