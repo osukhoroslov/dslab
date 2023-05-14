@@ -9,12 +9,14 @@ use crate::app_data::*;
 use crate::draw_utils::*;
 
 const NODE_RADIUS: f64 = 30.;
+const MIN_EDGE_WIDTH: f64 = 0.5;
+const MAX_EDGE_WIDTH: f64 = 5.;
 
 const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
 pub struct GraphWidget {
     nodes: Vec<Point>,
-    edges: Vec<(usize, usize)>,
+    edges: Vec<(usize, usize, f64)>,
     last_mouse_position: Option<Point>,
     has_input: bool,
     has_output: bool,
@@ -42,10 +44,11 @@ impl GraphWidget {
             for &output in task.outputs.iter() {
                 used_data_items.insert(output);
                 for &consumer in graph.data_items[output].consumers.iter() {
-                    self.edges.push((i, consumer));
+                    self.edges.push((i, consumer, graph.data_items[output].size));
                 }
                 if graph.data_items[output].consumers.is_empty() {
-                    self.edges.push((i, self.nodes.len() - 1));
+                    self.edges
+                        .push((i, self.nodes.len() - 1, graph.data_items[output].size));
                 }
             }
         }
@@ -55,13 +58,14 @@ impl GraphWidget {
             }
 
             for &consumer in graph.data_items[data_item].consumers.iter() {
-                self.edges.push((self.nodes.len() - 2, consumer));
+                self.edges
+                    .push((self.nodes.len() - 2, consumer, graph.data_items[data_item].size));
             }
         }
 
         self.has_input = false;
         self.has_output = false;
-        for &(from, to) in self.edges.iter() {
+        for &(from, to, _w) in self.edges.iter() {
             if from == self.nodes.len() - 2 {
                 self.has_input = true;
             }
@@ -76,7 +80,7 @@ impl GraphWidget {
     fn init_nodes(&mut self, size: Size, data: &AppData) {
         let mut g: Vec<Vec<usize>> = vec![Vec::new(); self.nodes.len()];
 
-        for &(u, v) in self.edges.iter() {
+        for &(u, v, _w) in self.edges.iter() {
             if data.graph_levels_from_end {
                 g[u].push(v);
             } else {
@@ -197,8 +201,18 @@ impl Widget<AppData> for GraphWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _: &Env) {
-        for &(from, to) in self.edges.iter() {
-            ctx.stroke(Line::new(self.nodes[from], self.nodes[to]), &Color::WHITE, 1.);
+        let max_width = self
+            .edges
+            .iter()
+            .map(|x| x.2)
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap_or_default();
+        for &(from, to, w) in self.edges.iter() {
+            ctx.stroke(
+                Line::new(self.nodes[from], self.nodes[to]),
+                &Color::WHITE,
+                (w / max_width * MAX_EDGE_WIDTH).max(MIN_EDGE_WIDTH),
+            );
         }
 
         let time = data.slider * data.total_time;
