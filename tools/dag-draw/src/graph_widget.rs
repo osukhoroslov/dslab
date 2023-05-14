@@ -70,14 +70,18 @@ impl GraphWidget {
             }
         }
 
-        self.init_nodes(size);
+        self.init_nodes(size, data);
     }
 
-    fn init_nodes(&mut self, size: Size) {
+    fn init_nodes(&mut self, size: Size, data: &AppData) {
         let mut g: Vec<Vec<usize>> = vec![Vec::new(); self.nodes.len()];
 
         for &(u, v) in self.edges.iter() {
-            g[u].push(v);
+            if data.graph_levels_from_end {
+                g[u].push(v);
+            } else {
+                g[v].push(u);
+            }
         }
 
         let mut level: Vec<i32> = vec![0; self.nodes.len()];
@@ -99,8 +103,12 @@ impl GraphWidget {
         let min_level = level.iter().min().unwrap();
         let max_level = level.iter().max().unwrap();
 
-        let left_x = NODE_RADIUS * 2.;
-        let right_x = size.width - NODE_RADIUS * 2.;
+        let mut left_x = size.width - NODE_RADIUS * 2.;
+        let mut right_x = NODE_RADIUS * 2.;
+
+        if data.graph_levels_from_end {
+            std::mem::swap(&mut left_x, &mut right_x);
+        }
 
         for (level, tasks) in by_level.iter() {
             let x =
@@ -173,12 +181,15 @@ impl Widget<AppData> for GraphWidget {
                 self.init(ctx.size(), data);
             }
             LifeCycle::Size(size) => {
-                self.init_nodes(*size);
+                self.init_nodes(*size, data);
             }
             _ => {}
         };
     }
-    fn update(&mut self, ctx: &mut UpdateCtx, _: &AppData, _: &AppData, _: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _: &Env) {
+        if old_data.graph_levels_from_end != data.graph_levels_from_end {
+            self.init_nodes(ctx.size(), data);
+        }
         ctx.request_paint();
     }
     fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &AppData, _: &Env) -> druid::Size {

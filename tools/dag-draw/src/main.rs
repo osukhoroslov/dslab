@@ -159,6 +159,9 @@ fn make_layout() -> impl Widget<AppData> {
                             Flex::column()
                                 .with_flex_child(
                                     Flex::column()
+                                        .with_child(
+                                            Checkbox::new("Levels from the end").lens(AppData::graph_levels_from_end),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()
