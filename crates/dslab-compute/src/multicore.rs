@@ -222,6 +222,9 @@ impl Compute {
             ctx,
         }
     }
+    pub fn id(&self) -> Id {
+        self.ctx.id()
+    }
 
     /// Returns the core speed.
     pub fn speed(&self) -> f64 {

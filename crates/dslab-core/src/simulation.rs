@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::mpsc::channel;
 
 use log::Level::Trace;
 use log::{debug, log_enabled, trace};
@@ -11,12 +12,24 @@ use rand::prelude::Distribution;
 use serde_json::json;
 use serde_type_name::type_name;
 
+async_core! {
+    use futures::Future;
+    use crate::async_core::shared_state::AwaitKey;
+}
+
+async_details_core! {
+    use crate::async_core::shared_state::DetailsKey;
+    use crate::async_core::sync::channel::Channel;
+    use crate::event::EventData;
+}
+
+use crate::async_core::executor::Executor;
 use crate::component::Id;
 use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
-use crate::Event;
+use crate::{async_core, async_details_core, async_disabled, async_only_core, Event};
 
 /// Represents a simulation, provides methods for its configuration and execution.
 pub struct Simulation {
@@ -24,16 +37,22 @@ pub struct Simulation {
     name_to_id: HashMap<String, Id>,
     names: Rc<RefCell<Vec<String>>>,
     handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+
+    #[allow(dead_code)]
+    executor: Executor,
 }
 
 impl Simulation {
     /// Creates a new simulation with specified random seed.
     pub fn new(seed: u64) -> Self {
+        let (task_sender, ready_queue) = channel();
+
         Self {
-            sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
+            sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
             name_to_id: HashMap::new(),
             names: Rc::new(RefCell::new(Vec::new())),
             handlers: Vec::new(),
+            executor: Executor::new(ready_queue),
         }
     }
 
@@ -278,6 +297,14 @@ impl Simulation {
     {
         let id = self.lookup_id(name.as_ref());
         self.handlers[id as usize] = None;
+
+        // cancel pending events related to the removed component
+        let id = self.lookup_id(name.as_ref());
+        self.cancel_events(|e| e.src == id || e.dst == id);
+
+        // cancel pending timers related to the removed component
+        self.sim_state.borrow_mut().cancel_component_timers(id);
+
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Removed handler: {}",
@@ -339,10 +366,64 @@ impl Simulation {
     /// status = sim.step();
     /// assert!(!status);
     /// ```
-    pub fn step(&mut self) -> bool {
-        let next = self.sim_state.borrow_mut().next_event();
-        if let Some(event) = next {
-            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+    ///
+    /// Definition of step is different for different build features of dslab-core.
+    pub fn step(&self) -> bool {
+        self.step_inner()
+    }
+
+    async_disabled! {
+        fn step_inner(&self) -> bool {
+            let event_opt = self.sim_state.borrow_mut().next_event();
+            match event_opt {
+                Some(event) => {
+                    self.deliver_event_via_handler(event);
+                    true
+                }
+                None => false,
+            }
+        }
+    }
+
+    async_core! {
+        fn step_inner(&self) -> bool {
+            if self.process_task() {
+                return true;
+            }
+
+            let has_timer = self.sim_state.borrow_mut().peek_timer().is_some();
+            let has_event = self.sim_state.borrow_mut().peek_event().is_some();
+
+            if !has_timer && !has_event {
+                return false;
+            }
+            if !has_timer {
+                self.process_event();
+                return true;
+            }
+            if !has_event {
+                self.process_timer();
+                return true;
+            }
+
+            let next_timer_time = self.sim_state.borrow_mut().peek_timer().unwrap().time;
+            let next_event_time = self.sim_state.borrow_mut().peek_event().unwrap().time;
+
+            if next_timer_time <= next_event_time {
+                self.process_timer();
+            } else {
+                self.process_event();
+            }
+
+            true
+        }
+
+        fn process_event(&self) -> bool {
+            let event = self.sim_state.borrow_mut().next_event().unwrap();
+
+            let await_key = self.get_await_key(&event);
+
+            if self.sim_state.borrow().has_handler_on_key(&await_key) {
                 if log_enabled!(Trace) {
                     let src_name = self.lookup_name(event.src);
                     let dst_name = self.lookup_name(event.dst);
@@ -355,17 +436,110 @@ impl Simulation {
                         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
                     );
                 }
-                if let Some(handler) = handler_opt {
-                    handler.borrow_mut().on(event);
-                } else {
-                    log_undelivered_event(event);
-                }
+
+                self.sim_state.borrow_mut().set_event_for_await_key(&await_key, event);
+
+                self.process_task();
+                return true;
+            }
+
+            self.deliver_event_via_handler(event);
+
+            true
+        }
+
+        fn process_task(&self) -> bool {
+            self.executor.process_task()
+        }
+
+        fn process_timer(&self) {
+            let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
+
+            next_timer.state.as_ref().borrow_mut().set_completed();
+
+            self.process_task();
+        }
+
+        /// spawn the background process. Similar to "launch a new thread"
+        pub fn spawn(&self, future: impl Future<Output = ()>) {
+            self.sim_state.borrow_mut().spawn(future);
+        }
+    }
+
+    async_details_core! {
+        fn get_await_key(&self, event: &Event) -> AwaitKey {
+            match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
+                Some(getter) => AwaitKey::new_with_details_by_ref(
+                    event.src,
+                    event.dst,
+                    event.data.as_ref(),
+                    getter(event.data.as_ref()),
+                ),
+                None => AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref()),
+            }
+        }
+
+        /// Register the function for a type of EventData to get await details to futher call
+        /// ctx.async_detailed_handle_event::<T>(from, details)
+        ///
+        /// # Example
+        ///
+        ///
+        /// pub struct TaskCompleted {
+        ///     request_id: u64
+        ///     some_other_data: u64
+        /// }
+        ///
+        /// pub fn get_task_completed_details(data: &dyn EventData) -> DetailsKey {
+        ///     let event = data.downcast_ref::<TaskCompleted>().unwrap();
+        ///     event.request_id as DetailsKey
+        /// }
+        ///
+        /// let sim = Simulation::new(42);
+        /// sim.register_details_getter_for::<TaskCompleted>(get_task_completed_details);
+        ///
+        pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
+            self.sim_state
+                .borrow_mut()
+                .register_details_getter_for::<T>(details_getter);
+        }
+
+        /// Create a simulation go-like Channel for "message-passing" data
+        pub fn create_channel<T, S>(&mut self, name: S) -> Channel<T>
+        where
+            S: AsRef<str>,
+        {
+            Channel::new(self.create_context(name))
+        }
+    }
+
+    async_only_core! {
+        fn get_await_key(&self, event: &Event) -> AwaitKey {
+             AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref())
+        }
+    }
+
+    fn deliver_event_via_handler(&self, event: Event) {
+        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+            if log_enabled!(Trace) {
+                let src_name = self.lookup_name(event.src);
+                let dst_name = self.lookup_name(event.dst);
+                trace!(
+                    target: &dst_name,
+                    "[{:.3} {} {}] {}",
+                    event.time,
+                    crate::log::get_colored("EVENT", colored::Color::BrightBlack),
+                    dst_name,
+                    json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
+                );
+            }
+            if let Some(handler) = handler_opt {
+                handler.borrow_mut().on(event);
             } else {
                 log_undelivered_event(event);
             }
-            true
         } else {
-            false
+            log_undelivered_event(event);
         }
     }
 
@@ -506,21 +680,63 @@ impl Simulation {
     /// assert_eq!(sim.time(), 3.6);
     /// assert!(!status); // there are no more events
     /// ```
+    ///
+    /// Implementation is feature-defined
     pub fn step_until_time(&mut self, time: f64) -> bool {
-        let mut result = true;
-        loop {
-            if let Some(event) = self.sim_state.borrow().peek_event() {
-                if event.time > time {
+        self.step_until_time_inner(time)
+    }
+
+    async_disabled! {
+        fn step_until_time_inner(&mut self, time: f64) -> bool {
+            let mut result = true;
+            loop {
+                if let Some(event) = self.sim_state.borrow_mut().peek_event() {
+                    if event.time > time {
+                        break;
+                    }
+                } else {
+                    result = false;
                     break;
                 }
-            } else {
-                result = false;
-                break;
+                self.step();
             }
-            self.step();
+            self.sim_state.borrow_mut().set_time(time);
+            result
         }
-        self.sim_state.borrow_mut().set_time(time);
-        result
+    }
+
+    async_core! {
+        fn step_until_time_inner(&mut self, time: f64) -> bool {
+            let mut result;
+            loop {
+                while self.process_task() {}
+
+                result = false;
+                let mut step = false;
+
+                if let Some(event) = self.sim_state.borrow_mut().peek_event() {
+                    result = true;
+                    if event.time <= time {
+                        step = true;
+                    }
+                }
+
+                if let Some(timer) = self.sim_state.borrow_mut().peek_timer() {
+                    result = true;
+                    if timer.time <= time {
+                        step = true;
+                    }
+                }
+
+                if step {
+                    self.step();
+                } else {
+                    break;
+                }
+            }
+            self.sim_state.borrow_mut().set_time(time);
+            result
+        }
     }
 
     /// Returns a random float in the range _[0, 1)_
