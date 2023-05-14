@@ -373,9 +373,9 @@ fn main() {
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
     tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config.clone());
-    tests.add("MODEL CHECKING", test_mc, config.clone());
-    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable, config.clone());
-    tests.add("MODEL CHECKING UNRELIABLE WITH LIMITS", test_mc_drop_rate_limited, config);
+    tests.add("MODEL CHECKING", test_mc_reliable_network, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE WITH LIMITS", test_mc_limited_drops, config);
 
     if args.test.is_none() {
         tests.run();
