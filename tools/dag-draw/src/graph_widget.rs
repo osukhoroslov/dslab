@@ -8,15 +8,17 @@ use std::f64::consts::PI;
 use crate::app_data::*;
 use crate::draw_utils::*;
 
-const NODE_RADIUS: f64 = 30.;
-const MIN_EDGE_WIDTH: f64 = 0.5;
-const MAX_EDGE_WIDTH: f64 = 5.;
+const MIN_NODE_RADIUS: f64 = 30.;
+const MAX_NODE_RADIUS: f64 = 60.;
+const MIN_EDGE_WIDTH: f64 = 1.;
+const MAX_EDGE_WIDTH: f64 = 10.;
 
 const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
 pub struct GraphWidget {
     nodes: Vec<Point>,
     edges: Vec<(usize, usize, f64)>,
+    radius: Vec<f64>,
     last_mouse_position: Option<Point>,
     has_input: bool,
     has_output: bool,
@@ -27,6 +29,7 @@ impl GraphWidget {
         GraphWidget {
             nodes: Vec::new(),
             edges: Vec::new(),
+            radius: Vec::new(),
             last_mouse_position: None,
             has_input: false,
             has_output: false,
@@ -78,6 +81,35 @@ impl GraphWidget {
     }
 
     fn init_nodes(&mut self, size: Size, data: &AppData) {
+        let graph = data.graph.borrow();
+
+        self.radius.clear();
+        self.radius.resize(graph.tasks.len() + 2, MIN_NODE_RADIUS);
+
+        if data.graph_variable_node_size {
+            let min_task_size = (0..graph.tasks.len())
+                .map(|task| graph.tasks[task].flops)
+                .min_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default()
+                .max(1.)
+                .ln();
+            let max_task_size = (0..graph.tasks.len())
+                .map(|task| graph.tasks[task].flops)
+                .max_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default()
+                .max(1.)
+                .ln();
+            for task in 0..graph.tasks.len() {
+                let task_size = data.graph.borrow().tasks[task].flops.max(1.).ln();
+                self.radius[task] = if min_task_size == max_task_size {
+                    MIN_NODE_RADIUS
+                } else {
+                    (task_size - min_task_size) / (max_task_size - min_task_size) * (MAX_NODE_RADIUS - MIN_NODE_RADIUS)
+                        + MIN_NODE_RADIUS
+                };
+            }
+        }
+
         let mut g: Vec<Vec<usize>> = vec![Vec::new(); self.nodes.len()];
 
         for &(u, v, _w) in self.edges.iter() {
@@ -107,8 +139,8 @@ impl GraphWidget {
         let min_level = level.iter().min().unwrap();
         let max_level = level.iter().max().unwrap();
 
-        let mut left_x = size.width - NODE_RADIUS * 2.;
-        let mut right_x = NODE_RADIUS * 2.;
+        let mut left_x = size.width - MIN_NODE_RADIUS * 2.;
+        let mut right_x = MIN_NODE_RADIUS * 2.;
 
         if data.graph_levels_from_end {
             std::mem::swap(&mut left_x, &mut right_x);
@@ -117,8 +149,8 @@ impl GraphWidget {
         for (level, tasks) in by_level.iter() {
             let x =
                 ((level - min_level) as f64 + 0.5) / (max_level - min_level + 1) as f64 * (left_x - right_x) + right_x;
-            let top_y = NODE_RADIUS * 2.;
-            let bottom_y = size.height - NODE_RADIUS * 2.;
+            let top_y = MIN_NODE_RADIUS * 2.;
+            let bottom_y = size.height - MIN_NODE_RADIUS * 2.;
             for (ind, &task_id) in tasks.iter().enumerate() {
                 let y = (ind as f64 + 0.5) / tasks.len() as f64 * (bottom_y - top_y) + top_y;
                 self.nodes[task_id] = Point::new(x, y);
@@ -151,7 +183,7 @@ impl Widget<AppData> for GraphWidget {
                 // select task
                 data.selected_task = None;
                 for task_id in (0..self.nodes.len()).rev() {
-                    if self.nodes[task_id].distance(e.pos) < NODE_RADIUS {
+                    if self.nodes[task_id].distance(e.pos) < self.radius[task_id] {
                         data.selected_task = Some(task_id);
                         break;
                     }
@@ -191,7 +223,10 @@ impl Widget<AppData> for GraphWidget {
         };
     }
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _: &Env) {
-        if old_data.graph_levels_from_end != data.graph_levels_from_end {
+        if old_data.graph_levels_from_end != data.graph_levels_from_end
+            || old_data.graph_variable_edge_width != data.graph_variable_edge_width
+            || old_data.graph_variable_node_size != data.graph_variable_node_size
+        {
             self.init_nodes(ctx.size(), data);
         }
         ctx.request_paint();
@@ -207,7 +242,10 @@ impl Widget<AppData> for GraphWidget {
             .map(|x| x.2)
             .max_by(|a, b| a.total_cmp(b))
             .unwrap_or_default();
-        for &(from, to, w) in self.edges.iter() {
+        for &(from, to, mut w) in self.edges.iter() {
+            if !data.graph_variable_edge_width {
+                w = 0.;
+            }
             ctx.stroke(
                 Line::new(self.nodes[from], self.nodes[to]),
                 &Color::WHITE,
@@ -218,15 +256,16 @@ impl Widget<AppData> for GraphWidget {
         let time = data.slider * data.total_time;
 
         for task_id in 0..self.nodes.len() - 2 {
-            ctx.fill(Circle::new(self.nodes[task_id], NODE_RADIUS), &BACKGROUND);
+            let radius = self.radius[task_id];
+            ctx.fill(Circle::new(self.nodes[task_id], radius), &BACKGROUND);
             if let Some(task_info) = &data.task_info.borrow()[task_id] {
                 if task_info.scheduled < time {
                     if time < task_info.started {
                         ctx.fill(
                             CircleSegment::new(
                                 self.nodes[task_id],
-                                NODE_RADIUS * 0.7,
-                                NODE_RADIUS * 0.6,
+                                radius * 0.7,
+                                radius * 0.6,
                                 -PI / 2.,
                                 (time - task_info.scheduled) / (task_info.started - task_info.scheduled) * PI * 2.,
                             ),
@@ -236,8 +275,8 @@ impl Widget<AppData> for GraphWidget {
                         ctx.fill(
                             CircleSegment::new(
                                 self.nodes[task_id],
-                                NODE_RADIUS,
-                                NODE_RADIUS * 0.6,
+                                radius,
+                                radius * 0.6,
                                 -PI / 2.,
                                 ((time - task_info.started) / (task_info.completed - task_info.started)).min(1.)
                                     * PI
@@ -249,7 +288,7 @@ impl Widget<AppData> for GraphWidget {
                 }
             }
             ctx.stroke(
-                Circle::new(self.nodes[task_id], NODE_RADIUS),
+                Circle::new(self.nodes[task_id], radius),
                 &Color::WHITE,
                 if data.selected_task.is_some() && data.selected_task.unwrap() == task_id {
                     5.
@@ -262,9 +301,12 @@ impl Widget<AppData> for GraphWidget {
 
         // input
         if self.has_input {
-            ctx.fill(Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS), &BACKGROUND);
+            ctx.fill(
+                Circle::new(self.nodes[self.nodes.len() - 2], MIN_NODE_RADIUS),
+                &BACKGROUND,
+            );
             ctx.stroke(
-                Circle::new(self.nodes[self.nodes.len() - 2], NODE_RADIUS),
+                Circle::new(self.nodes[self.nodes.len() - 2], MIN_NODE_RADIUS),
                 &Color::WHITE,
                 1.,
             );
@@ -273,9 +315,12 @@ impl Widget<AppData> for GraphWidget {
 
         // output
         if self.has_output {
-            ctx.fill(Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS), &BACKGROUND);
+            ctx.fill(
+                Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
+                &BACKGROUND,
+            );
             ctx.stroke(
-                Circle::new(self.nodes[self.nodes.len() - 1], NODE_RADIUS),
+                Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
                 &Color::WHITE,
                 1.,
             );

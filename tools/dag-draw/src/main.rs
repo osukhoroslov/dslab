@@ -162,6 +162,13 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(
                                             Checkbox::new("Levels from the end").lens(AppData::graph_levels_from_end),
                                         )
+                                        .with_child(
+                                            Checkbox::new("Variable edge width")
+                                                .lens(AppData::graph_variable_edge_width),
+                                        )
+                                        .with_child(
+                                            Checkbox::new("Variable node size").lens(AppData::graph_variable_node_size),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()
