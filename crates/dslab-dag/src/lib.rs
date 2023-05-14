@@ -2,6 +2,7 @@
 
 pub mod dag;
 pub mod dag_simulation;
+pub mod dag_stats;
 pub mod data_item;
 pub mod experiment;
 pub mod network;

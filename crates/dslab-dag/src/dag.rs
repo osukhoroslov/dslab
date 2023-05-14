@@ -5,6 +5,7 @@ use std::path::Path;
 
 use dslab_compute::multicore::CoresDependency;
 
+use crate::dag_stats::DagStats;
 use crate::data_item::*;
 use crate::parsers::config::ParserConfig;
 use crate::task::*;
@@ -182,5 +183,9 @@ impl DAG {
     /// Checks whether all tasks are completed.
     pub fn is_completed(&self) -> bool {
         self.tasks.len() == self.completed_task_count
+    }
+
+    pub fn stats(&self) -> DagStats {
+        DagStats::new(self)
     }
 }
