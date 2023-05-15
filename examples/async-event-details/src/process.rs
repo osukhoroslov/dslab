@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
 use dslab_core::async_core::shared_state::DetailsKey;
-use dslab_core::async_core::sync::channel::Channel;
+use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
 use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
 
 use futures::future::FutureExt;
@@ -25,7 +25,7 @@ pub struct Worker {
     compute: Rc<RefCell<Compute>>,
     compute_id: Id,
     ctx: SimulationContext,
-    task_chan: Channel<TaskInfo>,
+    task_chan: UnboundedBlockingQueue<TaskInfo>,
 }
 
 impl Worker {
@@ -33,7 +33,7 @@ impl Worker {
         compute: Rc<RefCell<Compute>>,
         compute_id: Id,
         ctx: SimulationContext,
-        task_chan: Channel<TaskInfo>,
+        task_chan: UnboundedBlockingQueue<TaskInfo>,
     ) -> Self {
         Self {
             id: ctx.id(),
