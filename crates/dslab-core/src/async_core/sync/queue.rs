@@ -18,19 +18,19 @@ fn get_notify_details(data: &dyn EventData) -> DetailsKey {
     notify.ticket_id as DetailsKey
 }
 
-/// Channel provides a go-like channel functionality for "message-passing" any type of data
+/// MPMC Unbounded queue with blocking receives for any type of data.
 ///
-/// It is implemented as MPMC Unbounded queue with blocking receives.
+/// Data is guarantied to be delivered in order that receivers call their .receive() method.
 ///
-/// Data is guarantied to be delivered in order that receivers call their "receive" methods.
-pub struct Channel<T> {
+/// Each Future got by .receive() must be awaited.
+pub struct UnboundedBlockingQueue<T> {
     ctx: SimulationContext,
     queue: RefCell<VecDeque<T>>,
     send_ticket: Ticket,
     receive_ticket: Ticket,
 }
 
-impl<T> Channel<T> {
+impl<T> UnboundedBlockingQueue<T> {
     async_details_core! {
         pub(crate) fn new(ctx: SimulationContext) -> Self {
             ctx.register_details_getter_for::<Notify>(get_notify_details);

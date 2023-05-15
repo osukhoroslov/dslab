@@ -19,7 +19,7 @@ async_core! {
 
 async_details_core! {
     use crate::async_core::shared_state::DetailsKey;
-    use crate::async_core::sync::channel::Channel;
+    use crate::async_core::sync::queue::UnboundedBlockingQueue;
     use crate::event::EventData;
 }
 
@@ -505,11 +505,11 @@ impl Simulation {
         }
 
         /// Create a simulation go-like Channel for "message-passing" data
-        pub fn create_channel<T, S>(&mut self, name: S) -> Channel<T>
+        pub fn create_channel<T, S>(&mut self, name: S) -> UnboundedBlockingQueue<T>
         where
             S: AsRef<str>,
         {
-            Channel::new(self.create_context(name))
+            UnboundedBlockingQueue::new(self.create_context(name))
         }
     }
 
