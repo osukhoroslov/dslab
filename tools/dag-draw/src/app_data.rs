@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::rc::Rc;
 
 use druid::{Color, Data, Lens};
+use serde::Deserialize;
 use serde_json::Value;
 
 use dslab_dag::trace_log::{Graph, TraceLog};
@@ -235,11 +236,51 @@ impl AppData {
             timeline_cores: true,
             timeline_memory: true,
             graph_levels_from_end: false,
-            graph_variable_edge_width: true,
-            graph_variable_node_size: true,
+            graph_variable_edge_width: false,
+            graph_variable_node_size: false,
             selected_task: None,
             selected_task_info: "".to_string(),
             graph: Rc::new(RefCell::new(trace_log.graph)),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct AppDataSettings {
+    files_limit: Option<usize>,
+    tasks_limit: Option<usize>,
+    timeline_downloading: Option<bool>,
+    timeline_uploading: Option<bool>,
+    timeline_cores: Option<bool>,
+    timeline_memory: Option<bool>,
+    graph_levels_from_end: Option<bool>,
+    graph_variable_edge_width: Option<bool>,
+    graph_variable_node_size: Option<bool>,
+}
+
+impl AppData {
+    pub fn apply_settings(&mut self, settings: &AppDataSettings) {
+        macro_rules! copy_setting {
+            ($setting:ident) => {
+                if let Some(x) = settings.$setting {
+                    self.$setting = x;
+                }
+            };
+        }
+
+        copy_setting!(timeline_downloading);
+        copy_setting!(timeline_uploading);
+        copy_setting!(timeline_cores);
+        copy_setting!(timeline_memory);
+        copy_setting!(graph_levels_from_end);
+        copy_setting!(graph_variable_edge_width);
+        copy_setting!(graph_variable_node_size);
+
+        if let Some(x) = settings.files_limit {
+            self.files_limit_str = x.to_string();
+        }
+        if let Some(x) = settings.tasks_limit {
+            self.tasks_limit_str = x.to_string();
         }
     }
 }

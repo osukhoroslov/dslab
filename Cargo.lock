@@ -627,6 +627,7 @@ dependencies = [
 name = "dag-draw"
 version = "0.1.0"
 dependencies = [
+ "clap 4.2.1",
  "druid",
  "dslab-dag",
  "serde",

@@ -6,8 +6,9 @@ mod panels_widget;
 mod poly;
 mod timeline_widget;
 
-use std::env;
+use std::path::PathBuf;
 
+use clap::Parser;
 use druid::kurbo::Insets;
 use druid::widget::{
     Axis, Checkbox, CrossAxisAlignment, Flex, Label, LineBreaking, Scroll, Slider, Tabs, TabsEdge, TabsTransition,
@@ -18,7 +19,7 @@ use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
 
 use dslab_dag::trace_log::TraceLog;
 
-use crate::app_data::AppData;
+use crate::app_data::{AppData, AppDataSettings};
 use crate::draw_utils::*;
 use crate::graph_widget::GraphWidget;
 use crate::panels_widget::PanelsWidget;
@@ -26,20 +27,34 @@ use crate::timeline_widget::TimelineWidget;
 
 pub const PADDING: f64 = 8.0;
 
-fn main() {
-    let trace_log: TraceLog = serde_json::from_str(
-        &std::fs::read_to_string(match env::args().collect::<Vec<_>>().get(1) {
-            Some(x) => x.clone(),
-            None => {
-                eprintln!("Usage: cargo run -- /path/to/trace.json");
-                std::process::exit(1);
-            }
-        })
-        .unwrap(),
-    )
-    .unwrap();
+#[derive(Parser)]
+struct Args {
+    /// Path to json file with traces.
+    #[arg(short, long)]
+    trace: PathBuf,
 
-    let app_data = AppData::from_trace_log(trace_log);
+    /// Path to json file with viewer settings to overwrite default ones.
+    #[arg(short, long)]
+    settings: Option<PathBuf>,
+}
+
+fn main() {
+    let args = Args::parse();
+    let trace_log: TraceLog = serde_json::from_str(
+        &std::fs::read_to_string(&args.trace).unwrap_or_else(|_| panic!("Can't read trace from {:?}", &args.trace)),
+    )
+    .unwrap_or_else(|_| panic!("Can't parse trace from {:?}", &args.trace));
+    let settings: Option<AppDataSettings> = args.settings.map(|s| {
+        serde_json::from_str(
+            &std::fs::read_to_string(&s).unwrap_or_else(|_| panic!("Can't read settings from {:?}", &s)),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse settings from {:?}", &args.trace))
+    });
+
+    let mut app_data = AppData::from_trace_log(trace_log);
+    if let Some(settings) = settings {
+        app_data.apply_settings(&settings);
+    }
 
     let window = WindowDesc::new(make_layout)
         .window_size(Size {
@@ -162,10 +177,12 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(
                                             Checkbox::new("Levels from the end").lens(AppData::graph_levels_from_end),
                                         )
+                                        .with_spacer(PADDING)
                                         .with_child(
                                             Checkbox::new("Variable edge width")
                                                 .lens(AppData::graph_variable_edge_width),
                                         )
+                                        .with_spacer(PADDING)
                                         .with_child(
                                             Checkbox::new("Variable node size").lens(AppData::graph_variable_node_size),
                                         )

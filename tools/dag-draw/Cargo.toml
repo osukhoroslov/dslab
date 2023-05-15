@@ -9,3 +9,4 @@ druid = "0.7.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 dslab-dag = { path = "../../crates/dslab-dag" }
+clap = { version = "4.1.9", features = ["derive"] }
