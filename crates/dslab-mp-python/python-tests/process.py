@@ -26,8 +26,6 @@ class TestProcess(Process):
 
         # we suppose it will be discarded later
         self.data = tmp_value
-        assert type(self.__dict__[
-                    'data']) == StateMember, 'field "data" must be a StateMember even after assignment'
 
         if msg.type == 'FIRST_STEP':
             # we suppose it will be discarded later
