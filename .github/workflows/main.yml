@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, mc-updates ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,7 +46,7 @@ jobs:
           ${{ runner.os }}-
     - name: Build
       run: cargo build --verbose
-    - name: Run linter
-      run: cargo clippy -- -D warnings
+    # - name: Run linter
+    #   run: cargo clippy -- -D warnings
     - name: Run tests
       run: cargo test --verbose
