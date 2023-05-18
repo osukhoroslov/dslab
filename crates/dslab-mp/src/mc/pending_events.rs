@@ -26,7 +26,7 @@ impl PendingEvents {
             directives: BTreeSet::default(),
             resolver: DependencyResolver::default(),
             id_counter: 0,
-            is_insta
+            is_insta,
         }
     }
 
@@ -41,7 +41,7 @@ impl PendingEvents {
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
         match &event {
-            McEvent::MessageReceived { msg, src, dest, ..} => {
+            McEvent::MessageReceived { msg, src, dest, .. } => {
                 if self.resolver.add_message(msg.clone(), src.clone(), dest.clone(), id) {
                     self.available_events.insert(id);
                 }
@@ -106,13 +106,17 @@ impl PendingEvents {
             return 1;
         }
         if self.is_insta {
-            let res = self.available_events.iter().filter(|event_id| {
-                if let McEvent::TimerFired { .. } = self.events[event_id] {
-                    false
-                } else {
-                    true
-                }
-            }).count();
+            let res = self
+                .available_events
+                .iter()
+                .filter(|event_id| {
+                    if let McEvent::TimerFired { .. } = self.events[event_id] {
+                        false
+                    } else {
+                        true
+                    }
+                })
+                .count();
             if res == 0 {
                 self.available_events.len()
             } else {
@@ -127,7 +131,7 @@ impl PendingEvents {
     pub fn cancel_timer(&mut self, proc: String, timer: String) {
         let id = self.timer_mapping.remove(&(proc, timer));
         if let Some(id) = id {
-            if self.events.contains_key(&id) {                
+            if self.events.contains_key(&id) {
                 self.pop(id);
             }
         }

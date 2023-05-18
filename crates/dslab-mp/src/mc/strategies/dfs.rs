@@ -4,7 +4,9 @@ use std::collections::HashSet;
 
 use colored::*;
 
-use crate::mc::strategy::{CollectFn, ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, McResult};
+use crate::mc::strategy::{
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McSummary, PruneFn, Strategy, VisitedStates,
+};
 use crate::mc::system::{McState, McSystem};
 use crate::util::t;
 
@@ -70,7 +72,10 @@ impl<'a> Strategy for Dfs<'a> {
 
         let res = self.dfs(system, state);
         match res {
-            Ok(()) => Ok(McResult { summary: self.summary.clone(), collected: self.collected.clone() }),
+            Ok(()) => Ok(McResult {
+                summary: self.summary.clone(),
+                collected: self.collected.clone(),
+            }),
             Err(err) => Err(err),
         }
     }

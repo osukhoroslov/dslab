@@ -68,15 +68,24 @@ impl McSystem {
         let mut new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
-                self.nodes.get_mut(&name).unwrap().on_message_received(dest, msg, src, self.search_depth)
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_message_received(dest, msg, src, self.search_depth)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
-                self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer, self.search_depth)
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_timer_fired(proc, timer, self.search_depth)
             }
             McEvent::LocalMessageReceived { dest, msg } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
-                self.nodes.get_mut(&name).unwrap().on_local_message_received(dest, msg, self.search_depth)
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_local_message_received(dest, msg, self.search_depth)
             }
             _ => vec![],
         };
@@ -97,8 +106,16 @@ impl McSystem {
             if type_a == 2 {
                 return Ordering::Equal;
             }
-            if let McEvent::TimerFired { timer_delay: timer_delay_a, .. } = a {
-                if let McEvent::TimerFired { timer_delay: timer_delay_b, .. } = b {
+            if let McEvent::TimerFired {
+                timer_delay: timer_delay_a,
+                ..
+            } = a
+            {
+                if let McEvent::TimerFired {
+                    timer_delay: timer_delay_b,
+                    ..
+                } = b
+                {
                     return timer_delay_a.cmp(&timer_delay_b);
                 }
             }

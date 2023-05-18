@@ -72,7 +72,10 @@ impl DependencyResolver {
     }
 
     pub fn remove_message(&mut self, msg: Message, src: String, dest: String) -> Option<McEventId> {
-        let ids = self.messages.get_mut(&(msg.clone(), src.clone(), dest.clone())).unwrap();
+        let ids = self
+            .messages
+            .get_mut(&(msg.clone(), src.clone(), dest.clone()))
+            .unwrap();
         ids.pop_front();
         if !ids.is_empty() {
             Some(ids[0])
