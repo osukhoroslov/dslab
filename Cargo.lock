@@ -170,7 +170,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-network-ping-pong"
+name = "async-ping-pong"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.23",

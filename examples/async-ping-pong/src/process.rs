@@ -9,12 +9,12 @@ use serde::Serialize;
 pub struct StartMessage {}
 
 #[derive(Serialize, Clone)]
-pub struct PingMessage {
+pub struct Ping {
     payload: f64,
 }
 
 #[derive(Serialize, Clone)]
-pub struct PongMessage {
+pub struct Pong {
     payload: f64,
 }
 
@@ -52,18 +52,18 @@ impl Process {
         for _i in 0..=self.iterations {
             let peer = self.peers.borrow()[self.ctx.gen_range(0..self.peer_count)];
             self.send(
-                PingMessage {
+                Ping {
                     payload: self.ctx.time(),
                 },
                 peer,
             );
-            self.ctx.async_handle_event::<PongMessage>(peer).await;
+            self.ctx.async_handle_event::<Pong>(peer).await;
         }
     }
 
     fn on_ping(&mut self, from: Id) {
         self.send(
-            PongMessage {
+            Pong {
                 payload: self.ctx.time(),
             },
             from,
@@ -79,7 +79,7 @@ impl Process {
 impl EventHandler for Process {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            PingMessage { payload: _ } => {
+            Ping { payload: _ } => {
                 self.on_ping(event.src);
             }
             StartMessage {} => {
@@ -130,33 +130,42 @@ impl NetworkProcess {
 
         for _i in 0..=self.iterations {
             let peer = self.peers.borrow()[self.ctx.gen_range(0..self.peer_count)];
-            self.net.borrow_mut().send_event(
-                PingMessage {
-                    payload: self.ctx.time(),
-                },
-                self.id,
-                peer,
-            );
 
-            self.ctx.async_handle_event::<PongMessage>(peer).await;
+            self.send_ping(peer);
+
+            self.ctx.async_handle_event::<Pong>(peer).await;
         }
     }
 
     fn on_ping(&self, from: Id) {
+        self.send_pong(from);
+    }
+
+    fn send_ping(&self, dest: Id) {
         self.net.borrow_mut().send_event(
-            PongMessage {
+            Ping {
                 payload: self.ctx.time(),
             },
             self.id,
-            from,
-        )
+            dest,
+        );
+    }
+
+    fn send_pong(&self, dest: Id) {
+        self.net.borrow_mut().send_event(
+            Pong {
+                payload: self.ctx.time(),
+            },
+            self.id,
+            dest,
+        );
     }
 }
 
 impl EventHandler for NetworkProcess {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            PingMessage { payload: _ } => {
+            Ping { payload: _ } => {
                 self.on_ping(event.src);
             }
             StartMessage {} => {
