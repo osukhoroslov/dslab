@@ -16,7 +16,7 @@ use crate::network::Network;
 use crate::node::{EventLogEntry, Node};
 use crate::process::Process;
 
-/// Models distributed system consisting of multiple nodes connected via network.  
+/// Models distributed system consisting of multiple nodes connected via network.
 pub struct System {
     sim: Simulation,
     net: Rc<RefCell<Network>>,

@@ -78,15 +78,10 @@ impl AsyncWorker {
             self.master_id,
             0.5,
         );
-
-        self.ctx.spawn(self.listen_task_requests());
     }
 
-    async fn listen_task_requests(&self) {
-        loop {
-            let (_, req) = self.ctx.async_handle_event::<TaskRequest>(self.master_id).await;
-            self.ctx.spawn(self.process_task_request(req));
-        }
+    fn on_task_request(&self, req: TaskRequest) {
+        self.ctx.spawn(self.process_task_request(req));
     }
 
     async fn process_task_request(&self, req: TaskRequest) {
@@ -189,6 +184,27 @@ impl EventHandler for AsyncWorker {
         cast!(match event.data {
             Start {} => {
                 self.on_start();
+            }
+            TaskRequest {
+                id,
+                flops,
+                memory,
+                min_cores,
+                max_cores,
+                cores_dependency,
+                input_size,
+                output_size,
+            } => {
+                self.on_task_request(TaskRequest {
+                    id,
+                    flops,
+                    memory,
+                    min_cores,
+                    max_cores,
+                    cores_dependency,
+                    input_size,
+                    output_size,
+                });
             }
         })
     }

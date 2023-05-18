@@ -1,4 +1,4 @@
-//! channel implementation
+//! queues implementation
 
 use std::{cell::RefCell, collections::VecDeque};
 
@@ -53,7 +53,7 @@ impl<T> UnboundedBlockingQueue<T> {
             }
         }
 
-        /// Async receive data from channel. Each receive must be awaited.
+        /// Async receive data from queue. Each receive must be awaited.
         pub async fn receive(&self) -> T {
             self.receive_ticket.next();
             if self.queue.borrow().is_empty() {

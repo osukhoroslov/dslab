@@ -1,4 +1,4 @@
-//! go-like channel for message-passing
+//! synchronization primitives
 
 use crate::async_details_core;
 
