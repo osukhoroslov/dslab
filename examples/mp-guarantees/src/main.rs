@@ -346,7 +346,7 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
         res.as_ref()?;
         let sender_mem = sys.max_size("sender");
         let receiver_mem = sys.max_size("receiver");
-        let net_message_count = sys.network().message_count();
+        let net_message_count = sys.network().network_message_count();
         let net_traffic = sys.network().traffic();
         println!(
             "{:<6} Send Mem: {:<8} Recv Mem: {:<8} Messages: {:<8} Traffic: {}",

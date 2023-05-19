@@ -481,7 +481,7 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
 
         let init_time = sys.time();
         let init_net_traffic = sys.network().traffic();
-        let init_msg_count = sys.network().message_count();
+        let init_msg_count = sys.network().network_message_count();
         let mut init_loads = HashMap::new();
         for proc in sys.process_names() {
             init_loads.insert(
@@ -501,7 +501,7 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
         let max_load = *loads.iter().max().unwrap();
         let duration = sys.time() - init_time;
         let traffic = sys.network().traffic();
-        let message_count = sys.network().message_count();
+        let message_count = sys.network().network_message_count();
         measurements.push((
             duration,
             (traffic - init_net_traffic) as f64 / duration,
@@ -555,7 +555,7 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
 
         let init_time = sys.time();
         let init_net_traffic = sys.network().traffic();
-        let init_msg_count = sys.network().message_count();
+        let init_msg_count = sys.network().network_message_count();
         let mut init_loads = HashMap::new();
         for proc in sys.process_names() {
             init_loads.insert(
@@ -579,7 +579,7 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
         let max_load = *loads.iter().max().unwrap();
         let duration = sys.time() - init_time;
         let traffic = sys.network().traffic();
-        let message_count = sys.network().message_count();
+        let message_count = sys.network().network_message_count();
         measurements.push((
             duration,
             (traffic - init_net_traffic) as f64 / duration,

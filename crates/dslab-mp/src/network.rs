@@ -1,15 +1,17 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
-use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use dslab_core::event::EventId;
 use dslab_core::Id;
 use dslab_core::SimulationContext;
 
 use crate::events::MessageReceived;
+use crate::logger::*;
 use crate::message::Message;
-use crate::util::t;
 
 pub struct Network {
     min_delay: f64,
@@ -22,13 +24,15 @@ pub struct Network {
     drop_incoming: HashSet<String>,
     drop_outgoing: HashSet<String>,
     disabled_links: HashSet<(String, String)>,
+    network_message_count: u64,
     message_count: u64,
     traffic: u64,
     ctx: SimulationContext,
+    logger: Rc<RefCell<Logger>>,
 }
 
 impl Network {
-    pub fn new(ctx: SimulationContext) -> Self {
+    pub fn new(ctx: SimulationContext, logger: Rc<RefCell<Logger>>) -> Self {
         Self {
             min_delay: 1.,
             max_delay: 1.,
@@ -40,9 +44,11 @@ impl Network {
             drop_incoming: HashSet::new(),
             drop_outgoing: HashSet::new(),
             disabled_links: HashSet::new(),
+            network_message_count: 0,
             message_count: 0,
             traffic: 0,
             ctx,
+            logger,
         }
     }
 
@@ -102,12 +108,20 @@ impl Network {
 
     pub fn drop_incoming(&mut self, node: &str) {
         self.drop_incoming.insert(node.to_string());
-        t!(format!("{:>9.3} - drop messages to {}", self.ctx.time(), node).red());
+
+        self.logger.borrow_mut().log(LogEntry::DropIncoming {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn pass_incoming(&mut self, node: &str) {
         self.drop_incoming.remove(node);
-        t!(format!("{:>9.3} - pass messages to {}", self.ctx.time(), node).green());
+
+        self.logger.borrow_mut().log(LogEntry::PassIncoming {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn get_drop_outgoing(&self) -> &HashSet<String> {
@@ -116,24 +130,40 @@ impl Network {
 
     pub fn drop_outgoing(&mut self, node: &str) {
         self.drop_outgoing.insert(node.to_string());
-        t!(format!("{:>9.3} - drop messages from {}", self.ctx.time(), node).red());
+
+        self.logger.borrow_mut().log(LogEntry::DropOutgoing {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn pass_outgoing(&mut self, node: &str) {
         self.drop_outgoing.remove(node);
-        t!(format!("{:>9.3} - pass messages from {}", self.ctx.time(), node).green());
+
+        self.logger.borrow_mut().log(LogEntry::PassOutgoing {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn disconnect_node(&mut self, node: &str) {
         self.drop_incoming.insert(node.to_string());
         self.drop_outgoing.insert(node.to_string());
-        t!(format!("{:>9.3} - disconnected node: {}", self.ctx.time(), node).red());
+
+        self.logger.borrow_mut().log(LogEntry::NodeDisconnected {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn connect_node(&mut self, node: &str) {
         self.drop_incoming.remove(node);
         self.drop_outgoing.remove(node);
-        t!(format!("{:>9.3} - connected node: {}", self.ctx.time(), node).green());
+
+        self.logger.borrow_mut().log(LogEntry::NodeConnected {
+            time: self.ctx.time(),
+            node: node.to_string(),
+        });
     }
 
     pub fn disabled_links(&self) -> &HashSet<(String, String)> {
@@ -142,12 +172,22 @@ impl Network {
 
     pub fn disable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.insert((from.to_string(), to.to_string()));
-        t!(format!("{:>9.3} - disabled link: {:>10} --> {:<10}", self.ctx.time(), from, to).red());
+
+        self.logger.borrow_mut().log(LogEntry::LinkDisabled {
+            time: self.ctx.time(),
+            from: from.to_string(),
+            to: to.to_string(),
+        });
     }
 
     pub fn enable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.remove(&(from.to_string(), to.to_string()));
-        t!(format!("{:>9.3} - enabled link: {:>10} --> {:<10}", self.ctx.time(), from, to).green());
+
+        self.logger.borrow_mut().log(LogEntry::LinkEnabled {
+            time: self.ctx.time(),
+            from: from.to_string(),
+            to: to.to_string(),
+        });
     }
 
     pub fn make_partition(&mut self, group1: &[&str], group2: &[&str]) {
@@ -157,24 +197,26 @@ impl Network {
                 self.disabled_links.insert((n2.to_string(), n1.to_string()));
             }
         }
-        t!(format!(
-            "{:>9.3} - network partition: {:?} -x- {:?}",
-            self.ctx.time(),
-            group1,
-            group2
-        )
-        .red());
+
+        self.logger.borrow_mut().log(LogEntry::NetworkPartition {
+            time: self.ctx.time(),
+            group1: group1.iter().map(|&node| node.to_string()).collect(),
+            group2: group2.iter().map(|&node| node.to_string()).collect(),
+        });
     }
 
     pub fn reset_network(&mut self) {
         self.disabled_links.clear();
         self.drop_incoming.clear();
         self.drop_outgoing.clear();
-        t!(format!("{:>9.3} - network reset, all problems healed", self.ctx.time()).green());
+
+        self.logger
+            .borrow_mut()
+            .log(LogEntry::NetworkReset { time: self.ctx.time() });
     }
 
-    pub fn message_count(&self) -> u64 {
-        self.message_count
+    pub fn network_message_count(&self) -> u64 {
+        self.network_message_count
     }
 
     pub fn traffic(&self) -> u64 {
@@ -219,12 +261,27 @@ impl Network {
         let dest_node = self.proc_locations.get(dest).unwrap();
         let src_node_id = *self.node_ids.get(src_node).unwrap();
         let dest_node_id = *self.node_ids.get(dest_node).unwrap();
+
+        let msg_id = self.message_count;
+
+        self.log_message_sent(
+            msg_id,
+            src_node.to_string(),
+            src.to_string(),
+            dest_node.to_string(),
+            dest.to_string(),
+            msg.clone(),
+        );
+
         // local communication inside a node is reliable and fast
         if src_node == dest_node {
             let e = MessageReceived {
+                id: self.message_count,
                 msg,
                 src: src.to_string(),
+                src_node: src_node.to_string(),
                 dest: dest.to_string(),
+                dest_node: dest_node.to_string(),
             };
             self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
         // communication between different nodes can be faulty
@@ -232,9 +289,12 @@ impl Network {
             if !self.message_is_dropped(src_node, dest_node) {
                 let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
+                    id: self.message_count,
                     msg,
                     src: src.to_string(),
+                    src_node: src_node.to_string(),
                     dest: dest.to_string(),
+                    dest_node: dest_node.to_string(),
                 };
                 let msg_count = self.get_message_count();
                 if msg_count == 1 {
@@ -247,14 +307,39 @@ impl Network {
                     }
                 }
             } else {
-                t!(format!(
-                    "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                    "!!!", src, dest, msg
-                )
-                .red());
+                self.logger.borrow_mut().log(LogEntry::MessageDropped {
+                    time: self.ctx.time(),
+                    msg_id: msg_id.to_string(),
+                    src_proc: src.to_string(),
+                    src_node: src_node.to_string(),
+                    dest_proc: dest.to_string(),
+                    dest_node: dest_node.to_string(),
+                    msg,
+                });
             }
-            self.message_count += 1;
+            self.network_message_count += 1;
             self.traffic += msg_size as u64;
         }
+        self.message_count += 1;
+    }
+
+    fn log_message_sent(
+        &self,
+        msg_id: EventId,
+        src_node: String,
+        src_proc: String,
+        dest_node: String,
+        dest_proc: String,
+        msg: Message,
+    ) {
+        self.logger.borrow_mut().log(LogEntry::MessageSent {
+            time: self.ctx.time(),
+            msg_id: msg_id.to_string(),
+            src_node,
+            src_proc,
+            dest_node,
+            dest_proc,
+            msg,
+        });
     }
 }
