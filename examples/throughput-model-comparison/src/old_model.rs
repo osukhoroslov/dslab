@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
+use dslab_core::SimulationContext;
 use sugars::boxed;
 
 use dslab_models::throughput_sharing::ThroughputSharingModel;
@@ -94,19 +95,19 @@ impl<T> FairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         if self.entries.is_empty() {
             self.last_throughput_per_item = (self.throughput_function)(1);
-            let finish_time = current_time + volume / self.last_throughput_per_item;
+            let finish_time = ctx.time() + volume / self.last_throughput_per_item;
             self.time_fn = TimeFunction::ident();
             self.entries.push(Activity::<T>::new(finish_time, self.next_id, item));
         } else {
             let new_count = self.entries.len() + 1;
             let new_throughput_per_item = (self.throughput_function)(new_count) / new_count as f64;
             self.time_fn
-                .update(current_time, self.last_throughput_per_item / new_throughput_per_item);
+                .update(ctx.time(), self.last_throughput_per_item / new_throughput_per_item);
             self.last_throughput_per_item = new_throughput_per_item;
-            let finish_time = current_time + volume / new_throughput_per_item;
+            let finish_time = ctx.time() + volume / new_throughput_per_item;
             self.entries.push(Activity::<T>::new(
                 self.time_fn.inversed().at(finish_time),
                 self.next_id,

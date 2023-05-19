@@ -19,8 +19,8 @@ use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_error, log_info};
 
+use dslab_storage::disk::{Disk, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};
-use dslab_storage::shared_disk::SharedDisk;
 use dslab_storage::storage::Storage;
 
 const SEED: u64 = 16;
@@ -50,7 +50,7 @@ struct Args {
 }
 
 struct Runner {
-    disks: Vec<(Id, Rc<RefCell<SharedDisk>>)>,
+    disks: Vec<(Id, Rc<RefCell<Disk>>)>,
     ctx: SimulationContext,
     requests_count: u64,
     max_size: u64,
@@ -96,7 +96,7 @@ fn generate_requests(disks_count: u64, requests_count: u64, max_size: u64, max_s
 }
 
 impl Runner {
-    fn new(disks: Vec<(Id, Rc<RefCell<SharedDisk>>)>, ctx: SimulationContext) -> Self {
+    fn new(disks: Vec<(Id, Rc<RefCell<Disk>>)>, ctx: SimulationContext) -> Self {
         Self {
             disks,
             ctx,
@@ -174,12 +174,12 @@ fn main() {
 
     for i in 0..args.disks {
         let disk_name = format!("disk-{}", i);
-        let disk = rc!(refcell!(SharedDisk::new_simple(
+        let disk = rc!(refcell!(DiskBuilder::simple(
             DISK_CAPACITY,
             DISK_READ_BW,
             DISK_WRITE_BW,
-            sim.create_context(disk_name.clone()),
-        )));
+        )
+        .build(sim.create_context(&disk_name))));
         disks.push((sim.add_handler(disk_name, disk.clone()), disk));
     }
 

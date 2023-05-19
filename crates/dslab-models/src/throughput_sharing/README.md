@@ -4,7 +4,9 @@ This model evaluates how some resource with limited throughput (e.g. network, st
 
 This model can be used to calculate completion times of such activities as network data transfers, storage read/write operations or compute tasks.
 
-The dependence of resource total throughput on the number of concurrent activities, i.e. throughput degradation, can be modeled with an arbitrary used-defined function.
+The dependence of resource total throughput on the number of concurrent activities, i.e. throughput degradation, can be modeled with a used-defined _resource throughput function_.
+
+The dependence of effective activity throughput on its properties or the variability of throughput can be modeled with a used-defined _activity factor function_.
 
 ## Slow algorithm
 
@@ -12,7 +14,7 @@ This is a simple algorithm which explicitly recalculates all activities' complet
 
 Recalculation consists of 3 steps:
 
-1) Update `throughput_per_item` using the degradation function.
+1) Update `throughput_per_item` using the resource throughput function.
 2) Compute `processed_volume` - amount of work done by each activity since the last recalculation time.
 3) For each activity update its `remaining_volume` by subtracting the `processed_volume` and push the updated entry to the new binary heap.
 4) Update the last recalculation time.

@@ -1,12 +1,15 @@
-//! Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
-//! and completion.
+//! Slow implementation of fair throughput sharing model, which recalculates all event times
+//! at each activity creation and completion.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use super::model::{ThroughputFunction, ThroughputSharingModel};
+use dslab_core::SimulationContext;
+
+use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
+use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
@@ -50,7 +53,8 @@ impl<T> Eq for Activity<T> {}
 /// Slow implementation of fair throughput sharing model, which recalculates all event times at each activity creation
 /// and completion.
 pub struct SlowFairThroughputSharingModel<T> {
-    throughput_function: ThroughputFunction,
+    throughput_function: ResourceThroughputFn,
+    factor_function: Box<dyn ActivityFactorFn<T>>,
     entries: BinaryHeap<Activity<T>>,
     next_id: u64,
     last_throughput_per_item: f64,
@@ -58,15 +62,28 @@ pub struct SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> SlowFairThroughputSharingModel<T> {
+    /// Creates model with given throughput and factor functions.
+    pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
+        Self {
+            throughput_function,
+            factor_function,
+            entries: BinaryHeap::new(),
+            next_id: 0,
+            last_throughput_per_item: 0.,
+            last_recalculation_time: 0.,
+        }
+    }
+
     /// Creates model with fixed throughput.
     pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |_| throughput))
+        Self::with_dynamic_throughput(make_constant_throughput_fn(throughput))
     }
 
     /// Creates model with dynamic throughput, represented by given closure.
-    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
+    pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
         Self {
             throughput_function,
+            factor_function: boxed!(ConstantFactorFn::new(1.)),
             entries: BinaryHeap::new(),
             next_id: 0,
             last_throughput_per_item: 0.,
@@ -88,9 +105,10 @@ impl<T> SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         let new_count = self.entries.len() + 1;
-        self.recalculate(current_time, (self.throughput_function)(new_count) / new_count as f64);
+        self.recalculate(ctx.time(), (self.throughput_function)(new_count) / new_count as f64);
+        let volume = volume / self.factor_function.get_factor(&item, ctx);
         self.entries.push(Activity::<T>::new(volume, self.next_id, item));
         self.next_id += 1;
     }

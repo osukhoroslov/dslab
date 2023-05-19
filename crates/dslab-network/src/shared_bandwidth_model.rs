@@ -36,7 +36,8 @@ impl NetworkConfiguration for SharedBandwidthNetwork {
 impl DataOperation for SharedBandwidthNetwork {
     fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         ctx.cancel_event(self.next_event);
-        self.throughput_model.insert(ctx.time(), data.size, data);
+        let size = data.size;
+        self.throughput_model.insert(data, size, ctx);
         if let Some((time, data)) = self.throughput_model.peek() {
             self.next_event = ctx.emit_self(DataReceive { data: data.clone() }, time - ctx.time());
         }

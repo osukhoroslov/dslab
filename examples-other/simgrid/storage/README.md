@@ -1,6 +1,6 @@
 # Storage example & benchmark
 
-This is a SimGrid example corresponding to [storage-shared-disk-benchmark](../../../examples/storage-shared-disk-benchmark). It executes the specified number of disk read requests with random size and start time. The requests are randomly distributed across the specified number of disks.
+This is a SimGrid example corresponding to [storage-disk-benchmark](../../../examples/storage-disk-benchmark). It executes the specified number of disk read requests with random size and start time. The requests are randomly distributed across the specified number of disks.
 
 ## Build
 

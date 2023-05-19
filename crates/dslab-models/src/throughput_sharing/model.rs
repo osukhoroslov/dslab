@@ -1,11 +1,13 @@
-//! Definition of the throughput sharing model trait.
+//! Core elements of the throughput sharing model.
+
+use dslab_core::context::SimulationContext;
 
 /// Trait for throughput sharing model.
 pub trait ThroughputSharingModel<T> {
     /// Adds new activity into the model.
     ///
-    /// Activity starts at `current_time`, has amount of work `value` and is represented by `item`.
-    fn insert(&mut self, current_time: f64, volume: f64, item: T);
+    /// Activity is represented by `item`, has amount of work `volume` and starts at `ctx.time()`.
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext);
     /// Returns the next activity completion time (if any) along with corresponding activity item.
     ///
     /// The returned activity is removed from the model.
@@ -16,6 +18,32 @@ pub trait ThroughputSharingModel<T> {
     fn peek(&self) -> Option<(f64, &T)>;
 }
 
-/// Type alias for function used to describe the dependence of resource throughput on the number of concurrent
-/// activities.
-pub type ThroughputFunction = Box<dyn Fn(usize) -> f64>;
+/// Function that computes the total resource throughput based on the number of concurrent activities.
+///
+/// It can be used to model the performance degradation caused by interference, resource contention, etc.
+pub type ResourceThroughputFn = Box<dyn Fn(usize) -> f64>;
+
+/// Provides the function that computes the throughput factor per activity.
+///
+/// It can be used to model the dependence of throughput achieved by the activity on its properties
+/// (e.g. amount of work or data) or to model the variability of throughput based on some distribution.
+///
+/// Note that the dependence of activity throughput on other concurrent activities
+/// (resource contention, interference, etc.) is supposed to be modeled by the `ResourceThroughputFn`.
+pub trait ActivityFactorFn<T> {
+    /// Returns the throughput factor for activity represented by `item`.
+    ///
+    /// The factor per each activity is computed only once when the activity is arrived.
+    /// The simulation context is provided to enable access to the current simulation time and the random engine.
+    ///
+    /// The factor value is used to obtain the effective activity throughput as follows:
+    /// `effective_throughput = allocated_throughput * factor`.
+    /// The factor value below 1 means that the activity does not fully utilize the allocated throughput.
+    /// The factor value above 1 means that the activity somehow surpasses the allocated throughput.
+    ///
+    /// To achieve the desired behaviour the implementations of `ThroughputSharingModel` actually use the factor value
+    /// to scale the activity volume. When a new activity is added to a model, the factor value obtained from
+    /// `get_factor` is used to scale the activity volume as follows: `new_volume = volume / factor`. This achieves
+    /// the same effect as changing the effective activity throughput.
+    fn get_factor(&mut self, item: &T, ctx: &mut SimulationContext) -> f64;
+}

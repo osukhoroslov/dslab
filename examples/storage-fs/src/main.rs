@@ -13,7 +13,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
 
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::DiskBuilder;
 use dslab_storage::events::{FileReadCompleted, FileReadFailed, FileWriteCompleted, FileWriteFailed};
 use dslab_storage::fs::FileSystem;
 
@@ -35,11 +35,11 @@ const DISK_2_CAPACITY: u64 = 10000000;
 const DISK_1_MOUNT_POINT: &str = "/disk1/";
 const DISK_2_MOUNT_POINT: &str = "/disk2/";
 
-const DISK_1_READ_BW: u64 = 100;
-const DISK_2_READ_BW: u64 = 100000;
+const DISK_1_READ_BW: f64 = 100.;
+const DISK_2_READ_BW: f64 = 100000.;
 
-const DISK_1_WRITE_BW: u64 = 100;
-const DISK_2_WRITE_BW: u64 = 1000;
+const DISK_1_WRITE_BW: f64 = 100.;
+const DISK_2_WRITE_BW: f64 = 1000.;
 
 struct User {
     fs: Rc<RefCell<FileSystem>>,
@@ -162,18 +162,19 @@ fn main() {
     let mut sim = Simulation::new(SEED);
 
     // Creating two disks for file system
-    let disk1 = rc!(refcell!(Disk::new_simple(
+    let disk1 = rc!(refcell!(DiskBuilder::simple(
         DISK_1_CAPACITY,
         DISK_1_READ_BW,
         DISK_1_WRITE_BW,
-        sim.create_context(DISK_1_NAME),
-    )));
-    let disk2 = rc!(refcell!(Disk::new_simple(
+    )
+    .build(sim.create_context(DISK_1_NAME))));
+
+    let disk2 = rc!(refcell!(DiskBuilder::simple(
         DISK_2_CAPACITY,
         DISK_2_READ_BW,
         DISK_2_WRITE_BW,
-        sim.create_context(DISK_2_NAME),
-    )));
+    )
+    .build(sim.create_context(DISK_2_NAME))));
 
     let fs = rc!(refcell!(FileSystem::new(sim.create_context(FILESYSTEM_NAME))));
     sim.add_handler(FILESYSTEM_NAME, fs.clone());

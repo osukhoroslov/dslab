@@ -872,7 +872,9 @@ dependencies = [
 name = "dslab-models"
 version = "0.1.0"
 dependencies = [
+ "dslab-core",
  "dyn-clone",
+ "rand 0.8.5",
  "sugars",
 ]
 
@@ -3397,6 +3399,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213701ba3370744dcd1a12960caa4843b3d68b4d1c0a5d575e0d65b2ee9d16c0"
 
 [[package]]
+name = "storage-disk-advanced-example"
+version = "0.1.0"
+dependencies = [
+ "dslab-core",
+ "dslab-models",
+ "dslab-storage",
+ "env_logger 0.10.0",
+ "log 0.4.17",
+ "rand 0.8.5",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "storage-disk-benchmark"
 version = "0.1.0"
 dependencies = [
@@ -3414,8 +3430,9 @@ name = "storage-disk-example"
 version = "0.1.0"
 dependencies = [
  "dslab-core",
+ "dslab-models",
  "dslab-storage",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "log 0.4.17",
  "serde",
  "sugars",
@@ -3423,18 +3440,6 @@ dependencies = [
 
 [[package]]
 name = "storage-fs-example"
-version = "0.1.0"
-dependencies = [
- "dslab-core",
- "dslab-storage",
- "env_logger 0.9.3",
- "log 0.4.17",
- "serde",
- "sugars",
-]
-
-[[package]]
-name = "storage-shared-disk-example"
 version = "0.1.0"
 dependencies = [
  "dslab-core",

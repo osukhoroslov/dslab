@@ -6,7 +6,7 @@ use sugars::{rc, refcell};
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, Event, EventHandler};
 
-use crate::disk::Disk;
+use crate::disk::{Disk, DiskBuilder};
 use crate::events::*;
 use crate::fs::FileSystem;
 use crate::storage::{Storage, StorageInfo};
@@ -15,8 +15,8 @@ use crate::storage::{Storage, StorageInfo};
 
 const SEED: u64 = 16;
 const DISK_CAPACITY: u64 = 100;
-const DISK_READ_BW: u64 = 100;
-const DISK_WRITE_BW: u64 = 100;
+const DISK_READ_BW: f64 = 100.;
+const DISK_WRITE_BW: f64 = 100.;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -27,12 +27,14 @@ fn make_filesystem(sim: &mut Simulation, name: &str) -> Rc<RefCell<FileSystem>> 
 }
 
 fn make_simple_disk(sim: &mut Simulation, name: &str) -> Rc<RefCell<Disk>> {
-    rc!(refcell!(Disk::new_simple(
+    let disk = rc!(refcell!(DiskBuilder::simple(
         DISK_CAPACITY,
         DISK_READ_BW,
         DISK_WRITE_BW,
-        sim.create_context(name),
-    )))
+    )
+    .build(sim.create_context(name))));
+    sim.add_handler(name, disk.clone());
+    disk
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -444,20 +446,17 @@ fn disk_good_read_write_with_time_check() {
     disk.borrow_mut().write(2, checker_write_id);
     sim.step_until_no_events();
 
-    assert_eq!(sim.time(), 2. / DISK_WRITE_BW as f64);
+    assert_eq!(sim.time(), 2. / DISK_WRITE_BW);
 
     disk.borrow_mut().read(2, checker_read_id);
     sim.step_until_no_events();
 
-    assert_eq!(sim.time(), 2. / DISK_READ_BW as f64 + 2. / DISK_WRITE_BW as f64);
+    assert_eq!(sim.time(), 2. / DISK_READ_BW + 2. / DISK_WRITE_BW);
 
     disk.borrow_mut().read(1, checker_read_id);
     sim.step_until_no_events();
 
-    assert_eq!(
-        sim.time(),
-        2. / DISK_READ_BW as f64 + 2. / DISK_WRITE_BW as f64 + 1. / DISK_WRITE_BW as f64
-    );
+    assert_eq!(sim.time(), 2. / DISK_READ_BW + 2. / DISK_WRITE_BW + 1. / DISK_WRITE_BW);
 }
 
 // Read fails because of too big requested size

@@ -5,7 +5,10 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use super::model::{ThroughputFunction, ThroughputSharingModel};
+use dslab_core::SimulationContext;
+
+use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
+use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
@@ -47,7 +50,8 @@ impl<T> Eq for Activity<T> {}
 /// Fast implementation of fair throughput sharing model.
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
-    throughput_function: ThroughputFunction,
+    throughput_function: ResourceThroughputFn,
+    factor_function: Box<dyn ActivityFactorFn<T>>,
     throughput_per_activity: f64,
     next_id: u64,
     total_work: f64,
@@ -55,16 +59,30 @@ pub struct FairThroughputSharingModel<T> {
 }
 
 impl<T> FairThroughputSharingModel<T> {
-    /// Creates model with fixed throughput.
-    pub fn with_fixed_throughput(throughput: f64) -> Self {
-        Self::with_dynamic_throughput(boxed!(move |_| throughput))
-    }
-
-    /// Creates model with dynamic throughput, represented by given closure.
-    pub fn with_dynamic_throughput(throughput_function: ThroughputFunction) -> Self {
+    /// Creates model with given throughput and factor functions.
+    pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
         Self {
             activities: BinaryHeap::new(),
             throughput_function,
+            factor_function,
+            throughput_per_activity: 0.,
+            next_id: 0,
+            total_work: 0.,
+            last_update: 0.,
+        }
+    }
+
+    /// Creates model with fixed throughput.
+    pub fn with_fixed_throughput(throughput: f64) -> Self {
+        Self::with_dynamic_throughput(make_constant_throughput_fn(throughput))
+    }
+
+    /// Creates model with dynamic throughput, represented by given closure.
+    pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
+        Self {
+            activities: BinaryHeap::new(),
+            throughput_function,
+            factor_function: boxed!(ConstantFactorFn::new(1.)),
             throughput_per_activity: 0.,
             next_id: 0,
             total_work: 0.,
@@ -88,17 +106,18 @@ impl<T> FairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, current_time: f64, volume: f64, item: T) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
         if !self.activities.is_empty() {
-            self.increment_total_work((current_time - self.last_update) * self.throughput_per_activity);
+            self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
         }
+        let volume = volume / self.factor_function.get_factor(&item, ctx);
         let finish_work = self.total_work + volume;
         self.activities
             .push(Activity::<T>::new(self.next_id, item, finish_work));
         self.next_id += 1;
         let count = self.activities.len();
         self.throughput_per_activity = (self.throughput_function)(count) / count as f64;
-        self.last_update = current_time;
+        self.last_update = ctx.time();
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {

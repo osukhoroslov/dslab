@@ -4,40 +4,65 @@ use std::io::Write;
 use std::rc::Rc;
 
 use env_logger::Builder;
+use log::LevelFilter;
 use serde::Serialize;
-use sugars::{boxed, rc, refcell};
+use sugars::{rc, refcell};
 
-use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_debug;
 use dslab_core::simulation::Simulation;
+use dslab_core::{cast, Id};
+use dslab_core::{log_error, log_info};
 
-use dslab_storage::bandwidth::{make_uniform_bw_model, EmpiricalBWModel, WeightedBandwidth};
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::{Disk, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
-const SEED: u64 = 16;
-
+const SEED: u64 = 123;
+const DISK_CAPACITY: u64 = 300;
+const DISK_READ_BW: f64 = 150.;
+const DISK_WRITE_BW: f64 = 125.;
 const DISK_NAME: &str = "Disk";
-const USER_NAME: &str = "User";
+const CLIENT_NAME: &str = "Client";
 
-const DISK_CAPACITY: u64 = 5;
-const DISK_READ_BW: u64 = 100;
-const DISK_WRITE_BW: u64 = 100;
+fn main() {
+    // Setup logging
+    Builder::new()
+        .filter_level(LevelFilter::Info)
+        .parse_default_env()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 
-struct User {
+    // Build a simulation with a disk and a client
+    let mut sim = Simulation::new(SEED);
+
+    let disk = rc!(refcell!(DiskBuilder::simple(
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW,
+    )
+    .build(sim.create_context(DISK_NAME))));
+    sim.add_handler(DISK_NAME, disk.clone());
+
+    let client = rc!(refcell!(DiskClient::new(disk, sim.create_context(CLIENT_NAME))));
+    sim.add_handler(CLIENT_NAME, client.clone());
+
+    // Run the simulation
+    client.borrow_mut().start();
+    sim.step_until_no_events();
+}
+
+struct DiskClient {
     disk: Rc<RefCell<Disk>>,
-    requests: HashMap<u64, u64>, // request_id -> test case
+    requests: HashMap<u64, u64>, // request_id -> step
     ctx: SimulationContext,
 }
 
 #[derive(Clone, Serialize)]
-struct Start {}
+struct Step {}
 
-impl User {
+impl DiskClient {
     fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
         Self {
             disk,
@@ -45,103 +70,125 @@ impl User {
             ctx,
         }
     }
+
+    fn id(&self) -> Id {
+        self.ctx.id()
+    }
+
+    fn start(&mut self) {
+        self.ctx.emit_self(Step {}, 0.);
+    }
+
+    fn print_disk_info(&self) {
+        let disk_info = self.disk.borrow().info();
+        log_info!(
+            self.ctx,
+            "Disk info: capacity = {}, used space = {}, free space = {}",
+            disk_info.capacity,
+            disk_info.used_space,
+            disk_info.free_space
+        )
+    }
 }
 
-impl EventHandler for User {
+impl EventHandler for DiskClient {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            Start {} => {
-                log_debug!(self.ctx, "Test #0: Reading 3 bytes... should be OK");
-                self.requests.insert(self.disk.borrow_mut().read(3, self.ctx.id()), 0);
-
-                log_debug!(self.ctx, "Test #1: Then trying to read 6 bytes... should fail");
-                self.requests.insert(self.disk.borrow_mut().read(6, self.ctx.id()), 1);
-
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
-
-                log_debug!(self.ctx, "Test #2: Writing 4 bytes... should be OK");
-                self.requests.insert(self.disk.borrow_mut().write(4, self.ctx.id()), 2);
-
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
-
-                log_debug!(self.ctx, "Test #3: Writing 2 more bytes... should fail");
-                self.requests.insert(self.disk.borrow_mut().write(2, self.ctx.id()), 3);
-
-                log_debug!(self.ctx, "Used space: {}", self.disk.borrow().used_space());
+            Step {} => {
+                let time = self.ctx.time();
+                let step = time as u64;
+                match step {
+                    0 => {
+                        self.print_disk_info();
+                        log_info!(self.ctx, "Step 0: Single 100 byte write, expected to end at t=0.8");
+                        let req = self.disk.borrow_mut().write(100, self.id());
+                        self.requests.insert(req, step);
+                    }
+                    1 => {
+                        log_info!(
+                            self.ctx,
+                            "Step 1: Two concurrent 50 byte writes, expected to end at t=1.8"
+                        );
+                        let req1 = self.disk.borrow_mut().write(50, self.id());
+                        let req2 = self.disk.borrow_mut().write(50, self.id());
+                        self.requests.insert(req1, step);
+                        self.requests.insert(req2, step);
+                    }
+                    2 => {
+                        log_info!(
+                            self.ctx,
+                            "Step 2: Starting first 200 byte read, expected to end at t=3.667"
+                        );
+                        let req = self.disk.borrow_mut().read(200, self.id());
+                        self.requests.insert(req, step);
+                    }
+                    3 => {
+                        log_info!(
+                            self.ctx,
+                            "Step 3: Starting second 200 byte read, expected to end at t=4.667"
+                        );
+                        let req = self.disk.borrow_mut().read(200, self.id());
+                        self.requests.insert(req, step);
+                    }
+                    4 => {
+                        log_info!(self.ctx, "Step 4: Trying to write 101 bytes... should fail");
+                        let req = self.disk.borrow_mut().write(101, self.id());
+                        self.requests.insert(req, step);
+                    }
+                    5 => {
+                        log_info!(self.ctx, "Step 5: Trying to read 301 bytes... should fail");
+                        let req = self.disk.borrow_mut().read(301, self.id());
+                        self.requests.insert(req, step);
+                    }
+                    6 => {
+                        log_info!(
+                            self.ctx,
+                            "Step 6: Freeing space and trying to write once more... now success"
+                        );
+                        self.disk.borrow_mut().mark_free(1).unwrap();
+                        self.print_disk_info();
+                        let req = self.disk.borrow_mut().write(101, self.id());
+                        self.requests.insert(req, step);
+                        return;
+                    }
+                    _ => {}
+                }
+                self.ctx.emit_self(Step {}, 1.);
             }
             DataReadCompleted { request_id, size } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
-                    "Test #{}: Completed reading {} bytes from disk",
+                    "Step {}: Completed reading {} bytes from disk",
                     self.requests[&request_id],
                     size
                 );
+                self.print_disk_info();
             }
             DataReadFailed { request_id, error } => {
-                log_debug!(
+                log_error!(
                     self.ctx,
-                    "Test #{}: Reading failed. Error: {}",
+                    "Step {}: Reading failed. Error: {}",
                     self.requests[&request_id],
                     error
                 );
             }
             DataWriteCompleted { request_id, size } => {
-                log_debug!(
+                log_info!(
                     self.ctx,
-                    "Test #{}: Completed writing {} bytes to disk",
+                    "Step {}: Completed writing {} bytes to disk",
                     self.requests[&request_id],
                     size
                 );
+                self.print_disk_info();
             }
             DataWriteFailed { request_id, error } => {
-                log_debug!(
+                log_error!(
                     self.ctx,
-                    "Test #{}: Writing failed. Error: {}",
+                    "Step {}: Writing failed. Error: {}",
                     self.requests[&request_id],
                     error
                 );
             }
         })
     }
-}
-
-fn main() {
-    println!("Starting...");
-
-    Builder::from_default_env()
-        .format(|buf, record| writeln!(buf, "{}", record.args()))
-        .init();
-
-    let mut sim = Simulation::new(SEED);
-
-    // Creating empirical bandwidth model with weighted points distribution
-    let points = [
-        WeightedBandwidth::new(DISK_READ_BW - 20, 3),
-        WeightedBandwidth::new(DISK_READ_BW - 10, 10),
-        WeightedBandwidth::new(DISK_READ_BW, 31),
-        WeightedBandwidth::new(DISK_READ_BW + 10, 15),
-        WeightedBandwidth::new(DISK_READ_BW + 20, 5),
-        WeightedBandwidth::new(DISK_READ_BW + 30, 6),
-    ];
-    let model = EmpiricalBWModel::new(&points);
-    assert!(model.is_ok());
-
-    let disk = rc!(refcell!(Disk::new(
-        DISK_CAPACITY,
-        // Using created model as read bandwidth model for disk
-        boxed!(model.unwrap()),
-        // Creating randomized bandwidth model with uniform distribution in [DISK_WRITE_BW - 10; DISK_WRITE_BW + 10)
-        boxed!(make_uniform_bw_model(DISK_WRITE_BW - 10, DISK_WRITE_BW + 10)),
-        sim.create_context(DISK_NAME),
-    )));
-
-    let user = rc!(refcell!(User::new(disk, sim.create_context(USER_NAME))));
-    let user_id = sim.add_handler(USER_NAME, user);
-
-    let root = sim.create_context("root");
-    root.emit_now(Start {}, user_id);
-
-    sim.step_until_no_events();
-
-    println!("Finish");
 }
