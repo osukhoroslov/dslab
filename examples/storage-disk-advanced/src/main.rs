@@ -1,154 +1,47 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
 use env_logger::Builder;
+use log::LevelFilter;
 use rand::distributions::Uniform;
-use serde::Serialize;
 use sugars::{boxed, rc, refcell};
 
 use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
+use dslab_core::{log_error, log_info};
 
 use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, ActivityFactorFn};
 use dslab_storage::disk::{Disk, DiskActivity, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
-const SEED: u64 = 16;
-
-const SIMPLE_DISK_NAME: &str = "SimpleDisk";
-const ADVANCED_DISK_NAME: &str = "AdvancedDisk";
-
-const SIMPLE_CLIENT_NAME: &str = "SimpleClient";
-const ADVANCED_CLIENT_NAME: &str = "AdvancedClient";
-
+const SEED: u64 = 12345;
+const DISK_NAME: &str = "Disk";
 const DISK_CAPACITY: u64 = 1000;
-const DISK_READ_BW: f64 = 100.;
+const DISK_READ_BW: f64 = 125.;
 const DISK_WRITE_BW: f64 = 100.;
-
-const READ_ITERATIONS: u64 = 100;
-const WRITE_ITERATIONS: u64 = 100;
-
-struct Client {
-    disk: Rc<RefCell<Disk>>,
-    requests: HashMap<u64, u64>, // request_id -> test case
-    ctx: SimulationContext,
-    start_time: f64,
-}
-
-#[derive(Clone, Serialize)]
-struct Start {}
-
-#[derive(Clone, Serialize)]
-struct Ticker {}
-
-impl Client {
-    fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
-        Self {
-            disk,
-            requests: HashMap::new(),
-            ctx,
-            start_time: 0.,
-        }
-    }
-}
-
-struct ExampleDiskFactorFn {}
-
-impl ActivityFactorFn<DiskActivity> for ExampleDiskFactorFn {
-    fn get_factor(&mut self, item: &DiskActivity, ctx: &mut SimulationContext) -> f64 {
-        if item.size < 10 {
-            return 1.;
-        }
-        ctx.sample_from_distribution(&Uniform::<f64>::new(0.9, 1.))
-    }
-}
-
-impl EventHandler for Client {
-    fn on(&mut self, event: Event) {
-        cast!(match event.data {
-            Start {} => {
-                self.start_time = self.ctx.time();
-                for i in 0..READ_ITERATIONS {
-                    self.requests.insert(self.disk.borrow_mut().read(10, self.ctx.id()), i);
-                }
-                for i in 0..WRITE_ITERATIONS {
-                    self.requests
-                        .insert(self.disk.borrow_mut().write(10, self.ctx.id()), READ_ITERATIONS + i);
-                }
-            }
-            DataReadCompleted { request_id, size: _ } => {
-                log_info!(
-                    self.ctx,
-                    "Read iteration #{} completed. Elapsed time = {}",
-                    self.requests[&request_id],
-                    self.ctx.time() - self.start_time,
-                );
-            }
-            DataReadFailed { request_id, error } => {
-                log_info!(
-                    self.ctx,
-                    "Read iteration #{} failed. Error: {}",
-                    self.requests[&request_id],
-                    error
-                );
-            }
-            DataWriteCompleted { request_id, size: _ } => {
-                log_info!(
-                    self.ctx,
-                    "Write iteration #{} completed. Elapsed time = {}",
-                    self.requests[&request_id] - READ_ITERATIONS,
-                    self.ctx.time() - self.start_time,
-                );
-            }
-            DataWriteFailed { request_id, error } => {
-                log_info!(
-                    self.ctx,
-                    "Write iteration #{} failed. Error: {}",
-                    self.requests[&request_id],
-                    error
-                );
-            }
-        })
-    }
-}
+const CLIENT_NAME: &str = "Client";
 
 fn main() {
-    Builder::from_default_env()
+    // Setup logging
+    Builder::new()
+        .filter_level(LevelFilter::Info)
+        .parse_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(SEED);
-    let root = sim.create_context("root");
-
-    let simple_builder = DiskBuilder::new()
+    // Simple disk model
+    let simple_disk_builder = DiskBuilder::new()
         .capacity(DISK_CAPACITY)
         .constant_read_bw(DISK_READ_BW)
         .constant_write_bw(DISK_WRITE_BW);
 
-    let simple_disk = rc!(refcell!(simple_builder.build(sim.create_context(SIMPLE_DISK_NAME))));
-    sim.add_handler(SIMPLE_DISK_NAME, simple_disk.clone());
-
-    println!("Starting simulation with simple disk...");
-
-    let client = rc!(refcell!(Client::new(
-        simple_disk,
-        sim.create_context(SIMPLE_CLIENT_NAME)
-    )));
-    root.emit_now(Start {}, sim.add_handler(SIMPLE_CLIENT_NAME, client));
-
-    // Elapsed times in logs will be equal for all activities.
-    sim.step_until_no_events();
-
-    println!("Finished simple user");
-
-    let advanced_builder = DiskBuilder::new()
+    // Advanced disk model
+    let advanced_disk_builder = DiskBuilder::new()
         .capacity(DISK_CAPACITY)
         // Using the constant throughput function for read operations,
         // so total throughput will not depend on operations count.
@@ -156,33 +49,99 @@ fn main() {
         // Using custom throughput function for write operations,
         // so total throughput will depend on operations count `n` as follows.
         .write_throughput_fn(boxed!(|n| {
-            if n < 4 {
+            if n <= 4 {
                 DISK_WRITE_BW
             } else {
                 DISK_WRITE_BW / 2.
             }
         }))
         // Using the uniformly randomized factor function for read operations,
-        // so operation's throughput will be multiplied by a random factor from 0.9 to 1.1.
-        .read_factor_fn(boxed!(make_uniform_factor_fn(0.9, 1.1)))
-        // Using the empirical factor function for write operations,
-        // so operation's throughput will be multiplied by a random factor
-        // generated from the specified weighted points distribution.
-        .write_factor_fn(boxed!(ExampleDiskFactorFn {}));
+        // so operation's throughput will be multiplied by a random factor from 0.8 to 1.1.
+        .read_factor_fn(boxed!(make_uniform_factor_fn(0.8, 1.1)))
+        // Using the custom factor function for write operations
+        // with dependency on operation's data size and randomization.
+        .write_factor_fn(boxed!(ExampleActivityFactorFn {}));
 
-    let advanced_disk = rc!(refcell!(advanced_builder.build(sim.create_context(ADVANCED_DISK_NAME),)));
-    sim.add_handler(ADVANCED_DISK_NAME, advanced_disk.clone());
+    println!("Simulation with simple disk model:");
+    run_simulation(simple_disk_builder);
 
-    println!("Starting advanced user...");
+    println!("\nSimulation with advanced disk model:");
+    run_simulation(advanced_disk_builder);
+}
 
-    let advanced_user = rc!(refcell!(Client::new(
-        advanced_disk,
-        sim.create_context(ADVANCED_CLIENT_NAME)
-    )));
-    root.emit_now(Start {}, sim.add_handler(ADVANCED_CLIENT_NAME, advanced_user));
+fn run_simulation(disk_builder: DiskBuilder) {
+    let mut sim = Simulation::new(SEED);
 
-    // Elapsed times in logs will differ for same activities.
+    let disk = rc!(refcell!(disk_builder.build(sim.create_context(DISK_NAME))));
+    sim.add_handler(DISK_NAME, disk.clone());
+
+    let client = rc!(refcell!(DiskClient::new(disk, sim.create_context(CLIENT_NAME))));
+    sim.add_handler(CLIENT_NAME, client.clone());
+
+    client.borrow_mut().start();
     sim.step_until_no_events();
+}
 
-    println!("Finished advanced user");
+struct ExampleActivityFactorFn {}
+
+impl ActivityFactorFn<DiskActivity> for ExampleActivityFactorFn {
+    fn get_factor(&mut self, item: &DiskActivity, ctx: &mut SimulationContext) -> f64 {
+        if item.size < 100 {
+            1.
+        } else {
+            ctx.sample_from_distribution(&Uniform::<f64>::new(0.8, 1.))
+        }
+    }
+}
+
+struct DiskClient {
+    disk: Rc<RefCell<Disk>>,
+    ctx: SimulationContext,
+}
+
+impl DiskClient {
+    fn new(disk: Rc<RefCell<Disk>>, ctx: SimulationContext) -> Self {
+        Self { disk, ctx }
+    }
+
+    fn start(&mut self) {
+        for _ in 0..6 {
+            self.disk.borrow_mut().write(20, self.ctx.id());
+        }
+        for _ in 0..4 {
+            self.disk.borrow_mut().write(180, self.ctx.id());
+        }
+        for _ in 0..10 {
+            self.disk.borrow_mut().read(100, self.ctx.id());
+        }
+    }
+}
+
+impl EventHandler for DiskClient {
+    fn on(&mut self, event: Event) {
+        cast!(match event.data {
+            DataReadCompleted { request_id, size: _ } => {
+                log_info!(
+                    self.ctx,
+                    "Read {} completed. Elapsed time = {}",
+                    request_id - 10,
+                    self.ctx.time()
+                );
+            }
+            DataReadFailed { request_id, error } => {
+                log_error!(self.ctx, "Read {} failed. Error: {}", request_id - 10, error);
+            }
+            DataWriteCompleted { request_id, size: _ } => {
+                log_info!(
+                    self.ctx,
+                    "Write {} completed. Elapsed time = {}",
+                    request_id,
+                    self.ctx.time(),
+                );
+            }
+            DataWriteFailed { request_id, error } => {
+                log_error!(self.ctx, "Write {} failed. Error: {}", request_id, error);
+            }
+        })
+    }
 }
