@@ -121,26 +121,16 @@ impl EventHandler for DiskClient {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             DataReadCompleted { request_id, size: _ } => {
-                log_info!(
-                    self.ctx,
-                    "Read {} completed. Elapsed time = {}",
-                    request_id - 10,
-                    self.ctx.time()
-                );
+                log_info!(self.ctx, "Read {} completed", request_id - 10);
             }
             DataReadFailed { request_id, error } => {
-                log_error!(self.ctx, "Read {} failed. Error: {}", request_id - 10, error);
+                log_error!(self.ctx, "Read {} failed: {}", request_id - 10, error);
             }
             DataWriteCompleted { request_id, size: _ } => {
-                log_info!(
-                    self.ctx,
-                    "Write {} completed. Elapsed time = {}",
-                    request_id,
-                    self.ctx.time(),
-                );
+                log_info!(self.ctx, "Write {} completed", request_id,);
             }
             DataWriteFailed { request_id, error } => {
-                log_error!(self.ctx, "Write {} failed. Error: {}", request_id, error);
+                log_error!(self.ctx, "Write {} failed: {}", request_id, error);
             }
         })
     }
