@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::env;
 use std::io::Write;
+use std::path::Path;
+use std::process::Command;
 
 use assertables::{assume, assume_eq};
 use clap::Parser;
@@ -27,6 +29,7 @@ struct TestConfig<'a> {
     reliable: bool,
     once: bool,
     ordered: bool,
+    write_log: bool,
 }
 
 fn init_logger(level: LevelFilter) {
@@ -37,7 +40,11 @@ fn init_logger(level: LevelFilter) {
 }
 
 fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
-    let mut sys = System::new(config.seed);
+    let mut sys = if config.write_log {
+        System::with_log_file(config.seed, Path::new("log.txt"))
+    } else {
+        System::new(config.seed)
+    };
     sys.add_node("sender-node");
     sys.add_node("receiver-node");
 
@@ -398,6 +405,10 @@ struct Args {
     /// Run overhead tests
     #[clap(long, short)]
     overhead: bool,
+
+    /// Run mp logs visualizer
+    #[clap(long, short = 'v')]
+    visualize: bool,
 }
 
 // MAIN ----------------------------------------------------------------------------------------------------------------
@@ -419,6 +430,7 @@ fn main() {
         reliable: false,
         once: false,
         ordered: false,
+        write_log: args.visualize,
     };
     let mut tests = TestSuite::new();
 
@@ -556,5 +568,11 @@ fn main() {
         tests.run();
     } else {
         tests.run_test(&args.test.unwrap());
+        if args.visualize {
+            Command::new("cargo")
+                .args(["run", "--package", "mp-log-visualizer", "--", "log.txt"])
+                .output()
+                .expect("Failed to execute visualizer");
+        }
     }
 }

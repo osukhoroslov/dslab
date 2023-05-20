@@ -3,6 +3,8 @@ mod retry;
 
 use std::env;
 use std::io::Write;
+use std::path::Path;
+use std::process::Command;
 
 use assertables::assume;
 use clap::Parser;
@@ -27,6 +29,7 @@ use crate::retry::server::RetryPingServer;
 struct TestConfig {
     impl_path: String,
     seed: u64,
+    write_log: bool,
 }
 
 fn init_logger(level: LevelFilter) {
@@ -37,7 +40,11 @@ fn init_logger(level: LevelFilter) {
 }
 
 fn build_system(config: &TestConfig) -> System {
-    let mut sys = System::new(config.seed);
+    let mut sys = if config.write_log {
+        System::with_log_file(config.seed, Path::new("log.txt"))
+    } else {
+        System::new(config.seed)
+    };
     sys.add_node("server-node");
     sys.add_node("client-node");
     let (server, client): (Box<dyn Process>, Box<dyn Process>) = match config.impl_path.as_str() {
@@ -197,6 +204,10 @@ struct Args {
     /// Random seed used in tests
     #[clap(long, short, default_value = "123")]
     seed: u64,
+
+    /// Run mp logs visualizer
+    #[clap(long, short = 'v')]
+    visualize: bool,
 }
 
 // MAIN ----------------------------------------------------------------------------------------------------------------
@@ -210,6 +221,7 @@ fn main() {
     let config = TestConfig {
         impl_path: args.impl_path,
         seed: args.seed,
+        write_log: args.visualize,
     };
 
     let mut tests = TestSuite::new();
@@ -228,5 +240,11 @@ fn main() {
         tests.run();
     } else {
         tests.run_test(&args.test.unwrap());
+        if args.visualize {
+            Command::new("cargo")
+                .args(["run", "--package", "mp-log-visualizer", "--", "log.txt"])
+                .output()
+                .expect("Failed to execute visualizer");
+        }
     }
 }

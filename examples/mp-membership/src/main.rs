@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::Write;
+use std::path::Path;
+use std::process::Command;
 
 use assertables::{assume, assume_eq};
 use clap::Parser;
@@ -39,6 +41,7 @@ struct TestConfig<'a> {
     process_factory: &'a PyProcessFactory,
     process_count: u32,
     seed: u64,
+    write_log: bool,
 }
 
 fn init_logger(level: LevelFilter) {
@@ -49,7 +52,11 @@ fn init_logger(level: LevelFilter) {
 }
 
 fn build_system(config: &TestConfig) -> System {
-    let mut sys = System::new(config.seed);
+    let mut sys = if config.write_log {
+        System::with_log_file(config.seed, Path::new("log.txt"))
+    } else {
+        System::new(config.seed)
+    };
     sys.network().set_delays(0.01, 0.1);
     for n in 0..config.process_count {
         // process and node on which it runs have the same name
@@ -642,6 +649,10 @@ struct Args {
     /// Number of chaos monkey runs
     #[clap(long, short, default_value = "100")]
     monkeys: u32,
+
+    /// Run mp logs visualizer
+    #[clap(long, short = 'v')]
+    visualize: bool,
 }
 
 // MAIN --------------------------------------------------------------------------------------------
@@ -658,6 +669,7 @@ fn main() {
         process_factory: &process_factory,
         process_count: args.process_count,
         seed: args.seed,
+        write_log: args.visualize,
     };
     let mut tests = TestSuite::new();
 
@@ -701,5 +713,11 @@ fn main() {
         tests.run();
     } else {
         tests.run_test(&args.test.unwrap());
+        if args.visualize {
+            Command::new("cargo")
+                .args(["run", "--package", "mp-log-visualizer", "--", "log.txt"])
+                .output()
+                .expect("Failed to execute visualizer");
+        }
     }
 }
