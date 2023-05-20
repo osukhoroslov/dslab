@@ -3,27 +3,31 @@ use std::collections::HashMap;
 use dslab_faas::config::Config;
 use dslab_faas::trace::Trace;
 
-use crate::estimator::{Estimation, Estimator};
-use crate::ant::colony::AntColony;
 use crate::common::Instance;
+use crate::estimator::{Estimation, Estimator};
+use crate::path_cover_estimator::path_cover;
 
-pub struct AntColonyEstimator {
-    inner: AntColony,
+#[cxx::bridge]
+pub mod external {
+    unsafe extern "C++" {
+        include!("dslab-faas-estimators/include/lp_lower_cplex.hpp");
+
+        pub fn lp_lower_bound(arrival: &[u64], duration: &[u64], app: &[u64], app_coldstart: &[u64], keepalive: u64, init_estimate: u64) -> u64;
+    }
+}
+
+pub struct LpLowerEstimator {
     keepalive: f64,
     round_mul: f64,
 }
 
-impl AntColonyEstimator {
-    pub fn new(colony: AntColony, keepalive: f64, round_mul: f64) -> Self {
-        Self {
-            inner: colony,
-            keepalive,
-            round_mul,
-        }
+impl LpLowerEstimator {
+    pub fn new(keepalive: f64, round_mul: f64) -> Self {
+        Self { keepalive, round_mul }
     }
 }
 
-impl Estimator for AntColonyEstimator {
+impl Estimator for LpLowerEstimator {
     type EstimationType = f64;
 
     fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
@@ -74,7 +78,10 @@ impl Estimator for AntColonyEstimator {
             instance.req_dur.push(item.1);
             instance.req_start.push(item.0);
         }
-        let obj = self.inner.run(&instance);
-        Estimation::UpperBound((obj as f64) / self.round_mul)
+
+        let init_estimate = path_cover(&instance, true);
+        let tmp = instance.req_app.iter().map(|x| *x as u64).collect::<Vec<_>>();
+        let obj = external::lp_lower_bound(&instance.req_start, &instance.req_dur, &tmp, &instance.app_coldstart, instance.keepalive, init_estimate);
+        Estimation::LowerBound((obj as f64) / self.round_mul)
     }
 }

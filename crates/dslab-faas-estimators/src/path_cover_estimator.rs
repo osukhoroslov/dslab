@@ -7,9 +7,12 @@ use crate::common::Instance;
 use crate::matching::*;
 use crate::estimator::{Estimation, Estimator};
 
-fn path_cover_single(n: usize, edges: Vec<(usize, usize)>, kind: Vec<u8>) -> usize {
+fn path_cover_single(n: usize, edges: Vec<(usize, usize)>, kind: Vec<u8>, intersection: bool) -> usize {
     let mat = convex_matching(n, edges.clone());
     let result = mat.iter().filter(|&x| *x == usize::MAX).count();
+    if intersection {
+        return result;
+    }
     let class = classify_edges(n, edges.clone(), mat.clone());
     let mut inc = 0;
     let mut in_edges = vec![Vec::new(); n];
@@ -53,7 +56,7 @@ fn path_cover_single(n: usize, edges: Vec<(usize, usize)>, kind: Vec<u8>) -> usi
     result + inc
 }
 
-fn path_cover(instance: &Instance) -> u64 {
+pub(crate) fn path_cover(instance: &Instance, intersection: bool) -> u64 {
     let mut result = 0u64;
     let mut app_invs = vec![Vec::<usize>::new(); instance.apps.len()];
     for (i, app) in instance.req_app.iter().enumerate() {
@@ -69,7 +72,7 @@ fn path_cover(instance: &Instance) -> u64 {
                 let j = invs[jj];
                 let mut ok1 = instance.req_start[j] + instance.req_dur[j] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.keepalive >= t;
                 let mut ok2 = instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] <= t  && instance.req_start[j] + instance.req_dur[j] + instance.app_coldstart[app] + instance.keepalive >= t;
-                if ok1 || ok2 {
+                if (intersection && ok1 && ok2) || (!intersection && (ok1 || ok2)) {
                     edges.push((jj, ii));
                     let mut k = 0;
                     if ok1 {
@@ -82,7 +85,7 @@ fn path_cover(instance: &Instance) -> u64 {
                 }
             }
         }
-        result += instance.app_coldstart[app] * (path_cover_single(invs.len(), edges, kind) as u64);
+        result += instance.app_coldstart[app] * (path_cover_single(invs.len(), edges, kind, intersection) as u64);
     }
     result
 }
@@ -152,7 +155,7 @@ impl Estimator for PathCoverEstimator {
             instance.req_dur.push(item.1);
             instance.req_start.push(item.0);
         }
-        let obj = path_cover(&instance);
+        let obj = path_cover(&instance, false);
         Estimation::LowerBound((obj as f64) / self.round_mul)
     }
 }

@@ -9,10 +9,9 @@ use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTr
 use dslab_faas::scheduler::LeastLoadedScheduler;
 use dslab_faas::simulation::ServerlessSimulation;
 use dslab_faas::trace::{ApplicationData, RequestData, Trace};
-use dslab_faas_estimators::ant::colony::AntColony;
-use dslab_faas_estimators::ant_colony_estimator::AntColonyEstimator;
 use dslab_faas_estimators::estimator::{Estimation, Estimator};
 use dslab_faas_estimators::local_search_estimator::LocalSearchEstimator;
+use dslab_faas_estimators::lp_lower_estimator::LpLowerEstimator;
 use dslab_faas_estimators::ls::accept::SimulatedAnnealingAcceptanceCriterion;
 use dslab_faas_estimators::ls::annealing::ExponentialAnnealingSchedule;
 use dslab_faas_estimators::ls::common::OptimizationGoal;
@@ -20,13 +19,14 @@ use dslab_faas_estimators::ls::initial::GreedyInitialSolutionGenerator;
 use dslab_faas_estimators::ls::local_search::LocalSearch;
 use dslab_faas_estimators::ls::neighborhood::DestroyRepairNeighborhood;
 use dslab_faas_estimators::path_cover_estimator::PathCoverEstimator;
+use dslab_faas_estimators::segment_lower_estimator::SegmentLowerEstimator;
 
 fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<(f64, f64)> {
     let mut result = Vec::new();
-    for i in 0..5 {
+    for i in 0..2 {
         let mut trace_config = AzureTraceConfig {
-            time_period: 240,
-            time_skip: 240 * i,
+            time_period: 120,
+            time_skip: 120 * i,
             start_generator: StartGenerator::PoissonFit,
             app_preferences: apps.clone(),
             .. Default::default()
@@ -50,7 +50,7 @@ fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<(f64, f64)> {
         config1.scheduler = Box::new(LeastLoadedScheduler::new(true, true, true));
         config1.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(10.0 * 60.0, 0.0));
         config2.coldstart_policy = Box::new(FixedTimeColdStartPolicy::new(10.0 * 60.0, 0.0));
-        for _ in 0..6 {
+        for _ in 0..2 {
             let mut host1: HostConfig = Default::default();
             host1.resources = vec![("mem".to_string(), 4096)];
             host1.cores = 4;
@@ -65,18 +65,31 @@ fn run(arg: &str, apps: Vec<AppPreference>) -> Vec<(f64, f64)> {
         sim.step_until_no_events();
         let coldstart1 = sim.stats().global_stats.invocation_stats.cold_start_latency.sum();
         println!("Simulation coldstart latency = {}", coldstart1);
-        let mut up_est = AntColonyEstimator::new(AntColony::new(1), 10.0 * 60.0, 1000.);
-        let mut low_est = PathCoverEstimator::new(10.0 * 60.0, 1000.);
+        //let mut up_est = AntColonyEstimator::new(AntColony::new(1), 10.0 * 60.0, 1000.);
+        let mut low_est = LpLowerEstimator::new(10.0 * 60.0, 1000.0);//PathCoverEstimator::new(10.0 * 60.0, 1000.);
+        let mut low_est2 = SegmentLowerEstimator::new(10.0 * 60.0, 1000.0);
+        let mut tmp_est = PathCoverEstimator::new(10.0 * 60.0, 1000.0);
         let mut upper = 0.;
         let mut lower = 0.;
-        if let Estimation::UpperBound(x) = up_est.estimate(&config2, trace.as_ref()) {
+        /*if let Estimation::UpperBound(x) = up_est.estimate(&config2, trace.as_ref()) {
             println!("Upper coldstart latency = {}", x);
             upper = x;
         } else {
             panic!("wtf");
-        }
+        }*/
         if let Estimation::LowerBound(x) = low_est.estimate(&config2, trace.as_ref()) {
             println!("Lower coldstart latency = {}", x);
+            lower = x;
+        } else {
+            panic!("wtf");
+        }
+        if let Estimation::LowerBound(x) = tmp_est.estimate(&config2, trace.as_ref()) {
+            println!("Path cover latency = {}", x);
+        } else {
+            panic!("wtf");
+        }
+        if let Estimation::LowerBound(x) = low_est2.estimate(&config2, trace.as_ref()) {
+            println!("Lower coldstart latency (by resources) = {}", x);
             lower = x;
         } else {
             panic!("wtf");
