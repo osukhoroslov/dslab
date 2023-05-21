@@ -49,7 +49,7 @@ impl Host {
         Self {
             id,
             invoker,
-            container_manager: ContainerManager::new(resources, ctx.clone()),
+            container_manager: ContainerManager::new(id, resources, ctx.clone()),
             cpu: Cpu::new(cores, cpu_policy, ctx.clone()),
             function_registry,
             invocation_registry,
@@ -169,6 +169,7 @@ impl Host {
             }
         } else {
             let container = self.container_manager.get_container_mut(id).unwrap();
+            container.last_change = time;
             container.status = ContainerStatus::Idle;
             let immut_container = self.container_manager.get_container(id).unwrap();
             let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
@@ -209,10 +210,11 @@ impl Host {
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let prewarm = f64::max(0.0, self.coldstart.borrow_mut().prewarm_window(app));
-            if prewarm != 0. {
+            if prewarm > 1e-9 {
+                let tag = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
                 self.ctx
                     .borrow_mut()
-                    .emit(IdleDeployEvent { id: app_id }, self.controller_id, prewarm);
+                    .emit(IdleDeployEvent { id: app_id, tag }, self.controller_id, prewarm);
                 self.new_container_end_event(cont_id, expect, 0.0);
             } else {
                 let immut_container = self.container_manager.get_container(cont_id).unwrap();

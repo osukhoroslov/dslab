@@ -27,7 +27,7 @@ fn main() {
     let trace = process_opendc_trace(Path::new(&args.trace), trace_config);
     let config = Config {
         cpu_policy: Box::<IgnoredCpuPolicy>::default(),
-        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0)),
+        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(120.0 * 60.0, 0.0, false)),
         ..Default::default()
     };
     let mut sim = ServerlessSimulation::new(Simulation::new(1), config);

@@ -18,6 +18,7 @@ pub enum ContainerStatus {
 pub struct Container {
     pub status: ContainerStatus,
     pub id: usize,
+    pub host_id: usize,
     pub deployment_time: f64,
     pub app_id: usize,
     pub invocations: FxIndexSet<usize>,
@@ -44,6 +45,7 @@ impl Container {
 
 pub struct ContainerManager {
     active_invocations: usize,
+    host_id: usize,
     resources: ResourceProvider,
     containers: FxIndexMap<usize, Container>,
     containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
@@ -53,9 +55,10 @@ pub struct ContainerManager {
 }
 
 impl ContainerManager {
-    pub fn new(resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
+    pub fn new(host_id: usize, resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self {
             active_invocations: 0,
+            host_id,
             resources,
             containers: FxIndexMap::default(),
             containers_by_app: Default::default(),
@@ -138,6 +141,7 @@ impl ContainerManager {
         let container = Container {
             status: ContainerStatus::Deploying,
             id: cont_id,
+            host_id: self.host_id,
             deployment_time: app.get_deployment_time(),
             app_id: app.id,
             invocations: Default::default(),

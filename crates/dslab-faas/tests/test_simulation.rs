@@ -13,7 +13,7 @@ use dslab_faas::simulation::ServerlessSimulation;
 #[test]
 fn test_simulation() {
     let config = Config {
-        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0)),
+        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0, true)),
         ..Default::default()
     };
     let mut sim = ServerlessSimulation::new(Simulation::new(1), config);
@@ -49,7 +49,7 @@ fn test_simulation() {
 #[test]
 fn test_simulation_with_invoker_queueing() {
     let config = Config {
-        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0)),
+        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0, true)),
         ..Default::default()
     };
     let mut sim = ServerlessSimulation::new(Simulation::new(1), config);

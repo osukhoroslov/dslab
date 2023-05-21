@@ -12,7 +12,7 @@ use dslab_faas::simulation::ServerlessSimulation;
 #[test]
 fn test_invocation_lifecycle() {
     let config = Config {
-        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0)),
+        coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(1.0, 0.0, false)),
         cpu_policy: Box::new(IgnoredCpuPolicy::default()),
         ..Default::default()
     };

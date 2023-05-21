@@ -130,7 +130,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0)),
+            coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(0.0, 0.0, false)),
             cpu_policy: Box::<ContendedCpuPolicy>::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),
