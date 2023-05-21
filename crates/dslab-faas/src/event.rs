@@ -14,6 +14,7 @@ pub struct ContainerStartEvent {
 #[derive(Clone, Serialize)]
 pub struct IdleDeployEvent {
     pub id: usize,
+    pub tag: u64,
 }
 
 #[derive(Clone, Serialize)]

@@ -95,6 +95,10 @@ impl SampleMetric {
         &self.data
     }
 
+    pub fn to_vec(&self) -> Vec<f64> {
+        self.data.to_vec()
+    }
+
     /// Extends current metric with zeros to given number of samples.
     /// If given number of samples is less than current number of samples, does nothing.
     pub fn extend_inplace(&mut self, len: usize) {
