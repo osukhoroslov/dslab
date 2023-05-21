@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use rstest::rstest;
@@ -82,6 +83,53 @@ impl Process for CollectorNode {
     }
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct PostponedReceiverNode {
+    timer_fired: bool,
+    message: Option<Message>,
+}
+
+impl PostponedReceiverNode {
+    pub fn new() -> Self {
+        Self {
+            timer_fired: false,
+            message: None,
+        }
+    }
+}
+
+impl Process for PostponedReceiverNode {
+    fn on_message(&mut self, msg: Message, _: String, ctx: &mut Context) {
+        if self.timer_fired {
+            ctx.send_local(msg);
+        } else {
+            self.message = Some(msg);
+        }
+    }
+
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+        ctx.set_timer("timeout", 1.0);
+    }
+
+    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+        self.timer_fired = true;
+        ctx.send_local(Message::new("TIMER", "timeout"));
+        if let Some(msg) = self.message.take() {
+            ctx.send_local(msg);
+        }
+    }
+
+    fn state(&self) -> Box<dyn ProcessState> {
+        boxed!(self.clone())
+    }
+
+    fn set_state(&mut self, state: Box<dyn ProcessState>) {
+        let postponed_state = (*state).as_any().downcast_ref::<Self>().unwrap();
+        self.timer_fired = postponed_state.timer_fired;
+        self.message = postponed_state.message.clone();
+    }
+}
+
 fn build_ping_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
@@ -104,6 +152,17 @@ fn build_ping_system_with_collector() -> System {
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys.add_process("process3", process3, "node3");
+    sys
+}
+
+fn build_postponed_delivery_system() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(PingMessageNode::new("process2"));
+    let process2 = boxed!(PostponedReceiverNode::new());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
     sys
 }
 
@@ -407,4 +466,45 @@ fn visited_states(#[case] strategy_name: String) {
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 5);
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn timer(#[case] strategy_name: String) {
+    let prune = boxed!(|_: &McState| None);
+
+    let goal = build_no_events_left_goal();
+
+    let count_states = rc!(refcell!(0));
+    let count_states_cloned = count_states.clone();
+    let invariant = boxed!(move |state: &McState| {
+        *count_states_cloned.borrow_mut() += 1;
+        let proc2_outbox = &state.node_states["node2"]["process2"].local_outbox;
+
+        if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
+            return Err("invalid order".to_string());
+        }
+
+        if state.events.available_events_num() == 0 {
+            if proc2_outbox.len() == 2 && proc2_outbox[1].tip == "PING" {
+                return Ok(());
+            } else {
+                return Err("wrong set of delivered events".to_string());
+            }
+        }
+
+        Ok(())
+    });
+
+    let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
+
+    let mut sys = build_postponed_delivery_system();
+    sys.send_local_message("process1", Message::new("PING", "some_data_1"));
+    sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
+
+    let mut mc = ModelChecker::new(&sys, strategy);
+    let result = mc.run();
+    assert!(result.is_ok());
+    assert_eq!(*count_states.borrow(), 4); // final states for both branches are equal: first timer, then message
 }
