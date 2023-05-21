@@ -213,7 +213,8 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&build_ping_system(), strategy);
     let result = mc.run();
 
-    assert_eq!(result.err(), Some("nothing left to do to reach the goal".to_string()));
+    let expected = Err("nothing left to do to reach the goal".to_string());
+    assert_eq!(result, expected);
 }
 
 #[rstest]
@@ -301,7 +302,8 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
-    assert_eq!(result.err(), Some("nothing left to do to reach the goal".to_string()));
+    let expected = Err("nothing left to do to reach the goal".to_string());
+    assert_eq!(result, expected);
 }
 
 #[rstest]
@@ -355,7 +357,8 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
-    assert_eq!(result.err(), Some("too many messages".to_string()));
+    let expected = Err("too many messages".to_string());
+    assert_eq!(result, expected);
 }
 
 #[rstest]

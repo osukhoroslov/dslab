@@ -50,7 +50,7 @@ pub enum VisitedStates {
 }
 
 /// Model checking execution summary (used in Debug mode).
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
