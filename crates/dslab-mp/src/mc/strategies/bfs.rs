@@ -41,9 +41,7 @@ impl Bfs {
         while !self.states_queue.is_empty() {
             let state = self.states_queue.pop_front().unwrap();
 
-            let result = self.check_state(&state);
-
-            if let Some(result) = result {
+            if let Some(result) = self.check_state(&state) {
                 result?;
                 continue;
             }
