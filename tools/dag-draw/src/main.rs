@@ -33,7 +33,7 @@ struct Args {
     #[arg(short, long)]
     trace: PathBuf,
 
-    /// Path to json file with viewer settings to overwrite default ones.
+    /// Path to json file with viewer settings to override default ones.
     #[arg(short, long)]
     settings: Option<PathBuf>,
 }
