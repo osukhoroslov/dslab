@@ -22,7 +22,7 @@ use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use dslab_network::model::{DataTransferCompleted, NetworkModel};
 use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
-use dslab_storage::disk::Disk;
+use dslab_storage::disk::DiskBuilder;
 
 use crate::common::Start;
 use crate::events::{
@@ -64,8 +64,8 @@ fn main() {
     let network_latency = 0.5;
     let network_bandwidth = 1000;
     let disk_capacity = 1000;
-    let disk_read_bandwidth = 2000;
-    let disk_write_bandwidth = 2000;
+    let disk_read_bandwidth = 2000.;
+    let disk_write_bandwidth = 2000.;
     let task_count = args.task_count;
     let use_shared_network = args.use_shared_network;
     let seed = 123;
@@ -129,12 +129,9 @@ fn main() {
         sim.add_handler(compute_name, compute.clone());
         // disk
         let disk_name = format!("{}::disk", host);
-        let disk = Disk::new_simple(
-            disk_capacity,
-            disk_read_bandwidth,
-            disk_write_bandwidth,
-            sim.create_context(&disk_name),
-        );
+        let disk = DiskBuilder::simple(disk_capacity, disk_read_bandwidth, disk_write_bandwidth)
+            .build(sim.create_context(&disk_name));
+
         let worker_name = &format!("{}::worker", host);
         let worker = AsyncWorker::new(
             compute,

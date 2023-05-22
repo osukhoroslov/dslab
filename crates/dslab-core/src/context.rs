@@ -13,12 +13,13 @@ async_core! {
     use std::any::TypeId;
     use futures::Future;
 
-    use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, AwaitResult, EventFuture};
+    use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, EventFuture};
+    use crate::async_core::await_details::AwaitResult;
 }
 
 async_details_core! {
     use std::any::type_name;
-    use crate::async_core::shared_state::DetailsKey;
+    use crate::async_core::await_details::DetailsKey;
 }
 
 use crate::component::Id;

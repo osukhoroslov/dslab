@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
-use dslab_core::async_core::shared_state::DetailsKey;
+use dslab_core::async_core::await_details::DetailsKey;
 use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
 use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
 

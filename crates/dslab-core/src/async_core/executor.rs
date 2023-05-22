@@ -1,4 +1,4 @@
-//! Executing tasks
+//! Executing tasks from ready_queue
 
 use std::{
     sync::{mpsc::Receiver, Arc},
@@ -13,12 +13,12 @@ pub struct Executor {
 }
 
 impl Executor {
-    /// Create an executor
+    /// Creates an executor
     pub fn new(ready_queue: Receiver<Arc<Task>>) -> Self {
         Self { ready_queue }
     }
 
-    /// Poll one task from ready-queue
+    /// Polls one task from ready_queue
     ///
     /// Returns true if any progress has been make, false otherwise.
     pub fn process_task(&self) -> bool {

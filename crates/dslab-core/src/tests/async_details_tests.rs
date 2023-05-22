@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use serde::Serialize;
 
 use crate::{
-    async_core::shared_state::DetailsKey, cast, event::EventData, EventHandler, Simulation, SimulationContext,
+    async_core::await_details::DetailsKey, cast, event::EventData, EventHandler, Simulation, SimulationContext,
 };
 
 #[derive(Clone, Serialize)]
