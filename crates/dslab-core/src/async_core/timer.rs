@@ -2,9 +2,8 @@
 
 use std::{cell::RefCell, cmp::Ordering, rc::Rc};
 
-use crate::Id;
-
 use super::shared_state::AwaitResultSetter;
+use crate::Id;
 
 /// Timer Identifier
 pub type TimerId = u64;

@@ -2,9 +2,8 @@
 //!
 //!
 
-use crate::{event::EventData, Event, Id};
-
 use super::shared_state::EmptyData;
+use crate::{event::EventData, Event, Id};
 
 /// type of key that represents the details of event to wait for
 pub type DetailsKey = u64;

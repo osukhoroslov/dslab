@@ -2,12 +2,12 @@
 
 use std::{
     cell::RefCell,
+    future::Future,
     pin::Pin,
     sync::{mpsc::Sender, Arc},
 };
 
 use super::waker::CustomWake;
-use std::future::Future;
 
 /// Abstract task that contains future and sends itself to the executor on
 /// wake-up notification
