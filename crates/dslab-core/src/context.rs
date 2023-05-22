@@ -1,31 +1,26 @@
 //! Accessing simulation from components.
 
-#[allow(unused_imports)]
-use core::panic;
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
+use crate::async_core;
+use crate::component::Id;
+use crate::event::{Event, EventData, EventId};
+use crate::state::SimulationState;
+
 async_core! {
     use std::any::TypeId;
+    use std::any::type_name;
+
     use futures::Future;
 
     use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, EventFuture};
     use crate::async_core::await_details::AwaitResult;
-}
-
-async_details_core! {
-    use std::any::type_name;
     use crate::async_core::await_details::DetailsKey;
 }
-
-use crate::component::Id;
-use crate::event::{Event, EventData, EventId};
-use crate::state::SimulationState;
-use crate::{async_core, async_details_core};
 
 /// A facade for accessing the simulation state and producing events from simulation components.
 #[derive(Clone)]
@@ -748,9 +743,7 @@ impl SimulationContext {
 
             self.create_event_future(await_key, timeout)
         }
-    }
 
-    async_details_core! {
         /// async wait for event of type T from src component with details flag and timeout
         /// Example:
         ///
@@ -847,9 +840,7 @@ impl SimulationContext {
                 AwaitResult::Timeout(_) => panic!("unexpected timeout"),
             }
         }
-    }
 
-    async_core! {
         fn create_event_future<T>(&self, await_key: AwaitKey, timeout: f64) -> EventFuture<T>
         where
             T: EventData,

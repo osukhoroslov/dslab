@@ -8,7 +8,7 @@ use rand_pcg::Pcg64;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
-use crate::{async_core, async_details_core, async_disabled};
+use crate::{async_core, async_disabled};
 
 async_core! {
     use std::any::TypeId;
@@ -391,9 +391,7 @@ impl SimulationState {
         pub fn get_details_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> DetailsKey> {
             self.details_getters.get(&type_id).copied()
         }
-    }
 
-    async_details_core! {
         pub fn register_details_getter_for<T: EventData>(&mut self, details_getter: fn(&dyn EventData) -> DetailsKey) {
             self.details_getters.insert(TypeId::of::<T>(), details_getter);
         }

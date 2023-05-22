@@ -20,7 +20,7 @@ impl Executor {
 
     /// Polls one task from ready_queue
     ///
-    /// Returns true if any progress has been make, false otherwise.
+    /// Returns true if any progress has been made, false otherwise.
     pub fn process_task(&self) -> bool {
         if let Ok(task) = self.ready_queue.try_recv() {
             let mut future_slot = task.future.borrow_mut();

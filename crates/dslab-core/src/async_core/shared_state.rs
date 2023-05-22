@@ -12,16 +12,14 @@ use serde::Serialize;
 
 use crate::async_core::await_details::{AwaitResult, DetailsKey};
 use crate::event::EventData;
-use crate::{async_details_core, Event, Id};
+use crate::{Event, Id};
 
 #[derive(Serialize, Clone)]
 pub(crate) struct EmptyData {}
 
-pub(crate) struct AwaitEventSharedState<T: EventData> {
+pub struct AwaitEventSharedState<T: EventData> {
     pub completed: bool,
-
     pub waker: Option<Waker>,
-
     pub shared_content: AwaitResult<T>,
 }
 
@@ -35,10 +33,10 @@ impl<T: EventData> Default for AwaitEventSharedState<T> {
     }
 }
 
-pub(crate) trait AwaitResultSetter: Any {
-    fn set_ok_completed_with_event(&mut self, e: Event);
-    fn set_completed(&mut self);
+pub trait AwaitResultSetter: Any {
     fn is_completed(&self) -> bool;
+    fn set_completed(&mut self);
+    fn set_ok_completed_with_event(&mut self, e: Event);
 }
 
 impl<T: EventData> AwaitResultSetter for AwaitEventSharedState<T> {
@@ -84,11 +82,11 @@ pub struct EventFuture<T: EventData> {
 
 impl<T: EventData> Future for EventFuture<T> {
     type Output = AwaitResult<T>;
-    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut state = self.state.as_ref().borrow_mut();
 
         if !state.completed {
-            state.waker = Some(_cx.waker().clone());
+            state.waker = Some(cx.waker().clone());
             return Poll::Pending;
         }
 
@@ -107,12 +105,11 @@ pub struct TimerFuture {
 
 impl Future for TimerFuture {
     type Output = ();
-    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
-        // println!("Polling EventFuture...{}", self.state.borrow().completed);
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut state = self.state.as_ref().borrow_mut();
 
         if !state.completed {
-            state.waker = Some(_cx.waker().clone());
+            state.waker = Some(cx.waker().clone());
             return Poll::Pending;
         }
 
@@ -147,23 +144,21 @@ impl AwaitKey {
         }
     }
 
-    async_details_core! {
-        pub fn new_with_details<T: EventData>(from: Id, to: Id, details: DetailsKey) -> Self {
-            Self {
-                from,
-                to,
-                msg_type: TypeId::of::<T>(),
-                details,
-            }
+    pub fn new_with_details<T: EventData>(from: Id, to: Id, details: DetailsKey) -> Self {
+        Self {
+            from,
+            to,
+            msg_type: TypeId::of::<T>(),
+            details,
         }
+    }
 
-        pub fn new_with_details_by_ref(from: Id, to: Id, data: &dyn EventData, details: DetailsKey) -> Self {
-            Self {
-                from,
-                to,
-                msg_type: data.type_id(),
-                details,
-            }
+    pub fn new_with_details_by_ref(from: Id, to: Id, data: &dyn EventData, details: DetailsKey) -> Self {
+        Self {
+            from,
+            to,
+            msg_type: data.type_id(),
+            details,
         }
     }
 }
