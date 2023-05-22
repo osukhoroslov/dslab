@@ -186,7 +186,7 @@ impl DagStats {
             }
         }
 
-        events.sort_by(|a, b| a.0.total_cmp(&b.0).then(b.1.cmp(&a.1)));
+        events.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
         let mut cur = 0;
         let mut max_parallelism = 0;
         for (_, delta) in events.into_iter() {
