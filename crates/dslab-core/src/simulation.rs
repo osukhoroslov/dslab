@@ -18,9 +18,6 @@ async_core! {
 
     use crate::async_core::shared_state::AwaitKey;
     use crate::async_core::executor::Executor;
-}
-
-async_details_core! {
     use crate::event::EventData;
     use crate::async_core::await_details::DetailsKey;
     use crate::async_core::sync::queue::UnboundedBlockingQueue;
@@ -31,7 +28,7 @@ use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
-use crate::{async_core, async_details_core, async_disabled, async_only_core, Event};
+use crate::{async_core, async_disabled, Event};
 
 async_disabled! {
     /// Represents a simulation, provides methods for its configuration and execution.
@@ -524,9 +521,7 @@ impl Simulation {
         pub fn spawn(&self, future: impl Future<Output = ()>) {
             self.sim_state.borrow_mut().spawn(future);
         }
-    }
 
-    async_details_core! {
         fn get_await_key(&self, event: &Event) -> AwaitKey {
             match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
                 Some(getter) => AwaitKey::new_with_details_by_ref(
@@ -570,12 +565,6 @@ impl Simulation {
             S: AsRef<str>,
         {
             UnboundedBlockingQueue::new(self.create_context(name))
-        }
-    }
-
-    async_only_core! {
-        fn get_await_key(&self, event: &Event) -> AwaitKey {
-             AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref())
         }
     }
 
