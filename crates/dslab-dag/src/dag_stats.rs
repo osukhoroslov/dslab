@@ -62,7 +62,7 @@ impl FromIterator<f64> for SequenceStats {
         }
 
         let mut avg = sum / cnt as f64;
-        let mut std = ((sq_sum - 2. * sum * avg) / cnt as f64 + avg * avg).sqrt();
+        let mut std = (((sq_sum - 2. * sum * avg) / cnt as f64 + avg * avg).max(0.)).sqrt();
         if cnt == 0 {
             min = 0.;
             max = 0.;
