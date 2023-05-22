@@ -1,5 +1,4 @@
-//! TODO makogon
-//!
+//! Contains public interfaces for async_core functionality
 //!
 
 use super::shared_state::EmptyData;
@@ -8,7 +7,7 @@ use crate::{event::EventData, Event, Id};
 /// type of key that represents the details of event to wait for
 pub type DetailsKey = u64;
 
-/// enum represents the await resuls of SimulationContext::async_wait_for_event...
+/// enum represents the await result of SimulationContext::async_wait_for_event...
 pub enum AwaitResult<T: EventData> {
     /// contains Event with time and source that it was waited from. Id and data are empty
     Timeout(Event),
