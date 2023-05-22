@@ -10,7 +10,6 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use clap::Parser;
-use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -23,6 +22,7 @@ use dslab_network::model::{DataTransferCompleted, NetworkModel};
 use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_storage::disk::DiskBuilder;
+use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
 use crate::common::Start;
 use crate::events::{
@@ -77,7 +77,7 @@ fn main() {
     // client context for submitting tasks
     let client = sim.create_context("client");
 
-    // register details getter for events
+    // register details getters for events
     sim.register_details_getter_for::<DataTransferCompleted>(get_data_transfer_completed_details);
     sim.register_details_getter_for::<DataReadCompleted>(get_data_read_completed_details);
     sim.register_details_getter_for::<DataWriteCompleted>(get_data_write_completed_details);

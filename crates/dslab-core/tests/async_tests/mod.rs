@@ -3,7 +3,9 @@ use std::{cell::RefCell, rc::Rc};
 use futures::{stream::FuturesUnordered, StreamExt};
 use serde::Serialize;
 
-use crate::{async_core::await_details::AwaitResult, cast, EventHandler, Id, Simulation, SimulationContext};
+use dslab_core::{
+    async_core::await_details::AwaitResult, cast, Event, EventHandler, Id, Simulation, SimulationContext,
+};
 
 #[test]
 fn test_wait_for() {
@@ -80,7 +82,7 @@ impl SimpleListener {
 }
 
 impl EventHandler for SimpleListener {
-    fn on(&mut self, event: crate::Event) {
+    fn on(&mut self, event: Event) {
         cast!(match event.data {
             Start { timeout } => {
                 self.on_start(timeout);
