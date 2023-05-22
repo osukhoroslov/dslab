@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
-use dslab_faas::extra::azure_trace::{
-    process_azure_trace, AppPreference, AzureTraceConfig, DurationGenerator, StartGenerator,
-};
+use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
 use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::SampleMetric;
