@@ -15,14 +15,25 @@ const MAX_EDGE_WIDTH: f64 = 10.;
 
 const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
+#[derive(Clone, Copy)]
+enum NodeType {
+    Task,
+    Input,
+    Output,
+}
+
+#[derive(Clone)]
+struct Node {
+    node_type: NodeType,
+    name: String,
+    pos: Point,
+    radius: f64,
+}
+
 pub struct GraphWidget {
-    nodes: Vec<Point>,
-    names: Vec<String>,
+    nodes: Vec<Node>,
     edges: Vec<(usize, usize, f64)>,
-    radius: Vec<f64>,
     last_mouse_position: Option<Point>,
-    has_input: bool,
-    has_output: bool,
 }
 
 impl GraphWidget {
@@ -30,53 +41,97 @@ impl GraphWidget {
         GraphWidget {
             nodes: Vec::new(),
             edges: Vec::new(),
-            names: Vec::new(),
-            radius: Vec::new(),
             last_mouse_position: None,
-            has_input: false,
-            has_output: false,
         }
     }
 
     fn init(&mut self, size: Size, data: &AppData) {
         let graph = data.graph.borrow();
-        // last 2 nodes are for input and output
-        self.nodes.resize(graph.tasks.len() + 2, Point::new(0., 0.));
-        self.names = graph.tasks.iter().map(|t| t.name.clone()).collect();
+
+        self.nodes.clear();
+        for task in graph.tasks.iter() {
+            self.nodes.push(Node {
+                node_type: NodeType::Task,
+                name: task.name.clone(),
+                pos: Point::new(0., 0.),
+                radius: MIN_NODE_RADIUS,
+            });
+        }
+
+        let mut inputs = (0..graph.data_items.len()).collect::<BTreeSet<usize>>();
+        let mut outputs = (0..graph.data_items.len()).collect::<BTreeSet<usize>>();
+
+        for task in graph.tasks.iter() {
+            for output in task.outputs.iter() {
+                inputs.remove(output);
+            }
+            for input in task.inputs.iter() {
+                outputs.remove(input);
+            }
+        }
+
+        let inputs = inputs
+            .into_iter()
+            .map(|input| {
+                self.nodes.push(Node {
+                    node_type: NodeType::Input,
+                    name: graph.data_items[input].name.clone(),
+                    pos: Point::new(0., 0.),
+                    radius: MIN_NODE_RADIUS,
+                });
+                (input, self.nodes.len() - 1)
+            })
+            .collect::<HashMap<usize, usize>>();
+        let outputs = outputs
+            .into_iter()
+            .map(|output| {
+                self.nodes.push(Node {
+                    node_type: NodeType::Output,
+                    name: graph.data_items[output].name.clone(),
+                    pos: Point::new(0., 0.),
+                    radius: MIN_NODE_RADIUS,
+                });
+                (output, self.nodes.len() - 1)
+            })
+            .collect::<HashMap<usize, usize>>();
+
+        let min_task_size = (0..graph.tasks.len())
+            .map(|task| graph.tasks[task].flops)
+            .min_by(|a, b| a.total_cmp(b))
+            .unwrap_or_default()
+            .max(1.)
+            .ln();
+        let max_task_size = (0..graph.tasks.len())
+            .map(|task| graph.tasks[task].flops)
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap_or_default()
+            .max(1.)
+            .ln();
+        if min_task_size != max_task_size {
+            for task in 0..graph.tasks.len() {
+                let task_size = data.graph.borrow().tasks[task].flops.max(1.).ln();
+                self.nodes[task].radius = (task_size - min_task_size) / (max_task_size - min_task_size)
+                    * (MAX_NODE_RADIUS - MIN_NODE_RADIUS)
+                    + MIN_NODE_RADIUS;
+            }
+        }
 
         self.edges.clear();
-        let mut used_data_items: BTreeSet<usize> = BTreeSet::new();
         for (i, task) in graph.tasks.iter().enumerate() {
             for &output in task.outputs.iter() {
-                used_data_items.insert(output);
-                for &consumer in graph.data_items[output].consumers.iter() {
-                    self.edges.push((i, consumer, graph.data_items[output].size));
+                if let Some(ind) = outputs.get(&output) {
+                    self.edges.push((i, *ind, graph.data_items[output].size));
+                } else {
+                    for &consumer in graph.data_items[output].consumers.iter() {
+                        self.edges.push((i, consumer, graph.data_items[output].size));
+                    }
                 }
-                if graph.data_items[output].consumers.is_empty() {
-                    self.edges
-                        .push((i, self.nodes.len() - 1, graph.data_items[output].size));
-                }
-            }
-        }
-        for data_item in 0..graph.data_items.len() {
-            if used_data_items.contains(&data_item) {
-                continue;
             }
 
-            for &consumer in graph.data_items[data_item].consumers.iter() {
-                self.edges
-                    .push((self.nodes.len() - 2, consumer, graph.data_items[data_item].size));
-            }
-        }
-
-        self.has_input = false;
-        self.has_output = false;
-        for &(from, to, _w) in self.edges.iter() {
-            if from == self.nodes.len() - 2 {
-                self.has_input = true;
-            }
-            if to == self.nodes.len() - 1 {
-                self.has_output = true;
+            for &input in task.inputs.iter() {
+                if let Some(ind) = inputs.get(&input) {
+                    self.edges.push((*ind, i, graph.data_items[input].size));
+                }
             }
         }
 
@@ -84,35 +139,6 @@ impl GraphWidget {
     }
 
     fn init_nodes(&mut self, size: Size, data: &AppData) {
-        let graph = data.graph.borrow();
-
-        self.radius.clear();
-        self.radius.resize(graph.tasks.len() + 2, MIN_NODE_RADIUS);
-
-        if data.graph_variable_node_size {
-            let min_task_size = (0..graph.tasks.len())
-                .map(|task| graph.tasks[task].flops)
-                .min_by(|a, b| a.total_cmp(b))
-                .unwrap_or_default()
-                .max(1.)
-                .ln();
-            let max_task_size = (0..graph.tasks.len())
-                .map(|task| graph.tasks[task].flops)
-                .max_by(|a, b| a.total_cmp(b))
-                .unwrap_or_default()
-                .max(1.)
-                .ln();
-            for task in 0..graph.tasks.len() {
-                let task_size = data.graph.borrow().tasks[task].flops.max(1.).ln();
-                self.radius[task] = if min_task_size == max_task_size {
-                    MIN_NODE_RADIUS
-                } else {
-                    (task_size - min_task_size) / (max_task_size - min_task_size) * (MAX_NODE_RADIUS - MIN_NODE_RADIUS)
-                        + MIN_NODE_RADIUS
-                };
-            }
-        }
-
         let mut g: Vec<Vec<usize>> = vec![Vec::new(); self.nodes.len()];
 
         for &(u, v, _w) in self.edges.iter() {
@@ -128,19 +154,47 @@ impl GraphWidget {
         let mut by_level: HashMap<i32, Vec<usize>> = HashMap::new();
 
         for v in 0..self.nodes.len() {
-            if v == self.nodes.len() - 2 && !self.has_input {
-                continue;
-            }
-            if v == self.nodes.len() - 1 && !self.has_output {
-                continue;
-            }
             if !used[v] {
                 Self::dfs(v, &g, &mut level, &mut used, &mut by_level)
             }
         }
 
-        let min_level = level.iter().min().unwrap();
-        let max_level = level.iter().max().unwrap();
+        let mut to_add: Vec<(usize, i32)> = Vec::new();
+
+        let min_level = *level.iter().min().unwrap();
+        let max_level = *level.iter().max().unwrap();
+
+        for (&level, tasks) in by_level.iter_mut() {
+            tasks.retain(|&task| {
+                let target_level = match self.nodes[task].node_type {
+                    NodeType::Input => {
+                        if data.graph_levels_from_end {
+                            max_level
+                        } else {
+                            min_level
+                        }
+                    }
+                    NodeType::Output => {
+                        if data.graph_levels_from_end {
+                            min_level
+                        } else {
+                            max_level
+                        }
+                    }
+                    NodeType::Task => level,
+                };
+                if target_level != level {
+                    to_add.push((task, target_level));
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+
+        for (task, target_level) in to_add {
+            by_level.entry(target_level).or_default().push(task);
+        }
 
         let mut left_x = size.width - MIN_NODE_RADIUS * 2.;
         let mut right_x = MIN_NODE_RADIUS * 2.;
@@ -156,7 +210,7 @@ impl GraphWidget {
             let bottom_y = size.height - MIN_NODE_RADIUS * 2.;
             for (ind, &task_id) in tasks.iter().enumerate() {
                 let y = (ind as f64 + 0.5) / tasks.len() as f64 * (bottom_y - top_y) + top_y;
-                self.nodes[task_id] = Point::new(x, y);
+                self.nodes[task_id].pos = Point::new(x, y);
             }
         }
     }
@@ -186,7 +240,7 @@ impl Widget<AppData> for GraphWidget {
                 // select task
                 data.selected_task = None;
                 for task_id in (0..self.nodes.len()).rev() {
-                    if self.nodes[task_id].distance(e.pos) < self.radius[task_id] {
+                    if self.nodes[task_id].pos.distance(e.pos) < self.nodes[task_id].radius {
                         data.selected_task = Some(task_id);
                         break;
                     }
@@ -205,7 +259,7 @@ impl Widget<AppData> for GraphWidget {
             }
             Event::MouseMove(e) => {
                 if e.buttons.contains(MouseButton::Left) && self.last_mouse_position.is_some() {
-                    self.nodes[data.selected_task.unwrap()] += e.pos - self.last_mouse_position.unwrap();
+                    self.nodes[data.selected_task.unwrap()].pos += e.pos - self.last_mouse_position.unwrap();
                     self.last_mouse_position = Some(e.pos);
                     ctx.request_paint();
                 }
@@ -226,10 +280,7 @@ impl Widget<AppData> for GraphWidget {
         };
     }
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _: &Env) {
-        if old_data.graph_levels_from_end != data.graph_levels_from_end
-            || old_data.graph_variable_edge_width != data.graph_variable_edge_width
-            || old_data.graph_variable_node_size != data.graph_variable_node_size
-        {
+        if old_data.graph_levels_from_end != data.graph_levels_from_end {
             self.init_nodes(ctx.size(), data);
         }
         ctx.request_paint();
@@ -250,7 +301,7 @@ impl Widget<AppData> for GraphWidget {
                 w = 0.;
             }
             ctx.stroke(
-                Line::new(self.nodes[from], self.nodes[to]),
+                Line::new(self.nodes[from].pos, self.nodes[to].pos),
                 &Color::WHITE,
                 (w / max_width * MAX_EDGE_WIDTH).max(MIN_EDGE_WIDTH),
             );
@@ -258,87 +309,118 @@ impl Widget<AppData> for GraphWidget {
 
         let time = data.slider * data.total_time;
 
-        for task_id in 0..self.nodes.len() - 2 {
-            let radius = self.radius[task_id];
-            ctx.fill(Circle::new(self.nodes[task_id], radius), &BACKGROUND);
-            if let Some(task_info) = &data.task_info.borrow()[task_id] {
-                if task_info.scheduled < time {
-                    if time < task_info.started {
-                        ctx.fill(
-                            CircleSegment::new(
-                                self.nodes[task_id],
-                                radius * 0.7,
-                                radius * 0.6,
-                                -PI / 2.,
-                                (time - task_info.scheduled) / (task_info.started - task_info.scheduled) * PI * 2.,
-                            ),
-                            &task_info.color,
+        for task_id in 0..self.nodes.len() {
+            let radius = if data.graph_variable_node_size {
+                self.nodes[task_id].radius
+            } else {
+                MIN_NODE_RADIUS
+            };
+            ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
+            match self.nodes[task_id].node_type {
+                NodeType::Task => {
+                    if let Some(task_info) = &data.task_info.borrow()[task_id] {
+                        if task_info.scheduled < time {
+                            if time < task_info.started {
+                                ctx.fill(
+                                    CircleSegment::new(
+                                        self.nodes[task_id].pos,
+                                        radius * 0.7,
+                                        radius * 0.6,
+                                        -PI / 2.,
+                                        (time - task_info.scheduled) / (task_info.started - task_info.scheduled)
+                                            * PI
+                                            * 2.,
+                                    ),
+                                    &task_info.color,
+                                );
+                            } else {
+                                ctx.fill(
+                                    CircleSegment::new(
+                                        self.nodes[task_id].pos,
+                                        radius,
+                                        radius * 0.6,
+                                        -PI / 2.,
+                                        ((time - task_info.started) / (task_info.completed - task_info.started))
+                                            .min(1.)
+                                            * PI
+                                            * 2.,
+                                    ),
+                                    &task_info.color,
+                                );
+                            }
+                        }
+                    }
+                    ctx.stroke(
+                        Circle::new(self.nodes[task_id].pos, radius),
+                        &Color::WHITE,
+                        if data.selected_task.is_some() && data.selected_task.unwrap() == task_id {
+                            5.
+                        } else {
+                            1.
+                        },
+                    );
+                    if data.graph_show_task_names {
+                        paint_text(
+                            ctx,
+                            &self.nodes[task_id].name,
+                            radius * 3.5 / self.nodes[task_id].name.len().max(6) as f64,
+                            self.nodes[task_id].pos,
+                            true,
+                            true,
                         );
                     } else {
-                        ctx.fill(
-                            CircleSegment::new(
-                                self.nodes[task_id],
-                                radius,
-                                radius * 0.6,
-                                -PI / 2.,
-                                ((time - task_info.started) / (task_info.completed - task_info.started)).min(1.)
-                                    * PI
-                                    * 2.,
-                            ),
-                            &task_info.color,
+                        paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id].pos, true, true);
+                    }
+                }
+                NodeType::Input => {
+                    ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
+                    ctx.stroke(Circle::new(self.nodes[task_id].pos, radius), &Color::WHITE, 1.);
+                    if data.graph_show_task_names {
+                        paint_text(
+                            ctx,
+                            &self.nodes[task_id].name,
+                            radius * 3.5 / self.nodes[task_id].name.len().max(6) as f64,
+                            self.nodes[task_id].pos,
+                            true,
+                            true,
                         );
+                    } else {
+                        paint_text(ctx, "input", 18., self.nodes[task_id].pos, true, true);
+                    }
+                }
+                NodeType::Output => {
+                    ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
+                    ctx.stroke(Circle::new(self.nodes[task_id].pos, radius), &Color::WHITE, 1.);
+                    if data.graph_show_task_names {
+                        paint_text(
+                            ctx,
+                            &self.nodes[task_id].name,
+                            radius * 3.5 / self.nodes[task_id].name.len().max(6) as f64,
+                            self.nodes[task_id].pos,
+                            true,
+                            true,
+                        );
+                    } else {
+                        paint_text(ctx, "output", 18., self.nodes[task_id].pos, true, true);
                     }
                 }
             }
-            ctx.stroke(
-                Circle::new(self.nodes[task_id], radius),
-                &Color::WHITE,
-                if data.selected_task.is_some() && data.selected_task.unwrap() == task_id {
-                    5.
-                } else {
-                    1.
-                },
-            );
-            if data.graph_show_task_names {
-                paint_text(
-                    ctx,
-                    &self.names[task_id],
-                    radius * 3.5 / self.names[task_id].len().max(6) as f64,
-                    self.nodes[task_id],
-                    true,
-                    true,
-                );
-            } else {
-                paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id], true, true);
-            }
         }
 
-        // input
-        if self.has_input {
-            ctx.fill(
-                Circle::new(self.nodes[self.nodes.len() - 2], MIN_NODE_RADIUS),
-                &BACKGROUND,
-            );
-            ctx.stroke(
-                Circle::new(self.nodes[self.nodes.len() - 2], MIN_NODE_RADIUS),
-                &Color::WHITE,
-                1.,
-            );
-            paint_text(ctx, "input", 18., self.nodes[self.nodes.len() - 2], true, true);
-        }
+        // // input
+        // }
 
-        // output
-        if self.has_output {
-            ctx.fill(
-                Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
-                &BACKGROUND,
-            );
-            ctx.stroke(
-                Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
-                &Color::WHITE,
-                1.,
-            );
-            paint_text(ctx, "output", 18., self.nodes[self.nodes.len() - 1], true, true);
-        }
+        // // output
+        //     ctx.fill(
+        //         Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
+        //         &BACKGROUND,
+        //     );
+        //     ctx.stroke(
+        //         Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
+        //         &Color::WHITE,
+        //         1.,
+        //     );
+        //     paint_text(ctx, "output", 18., self.nodes[self.nodes.len() - 1], true, true);
+        // }
     }
 }

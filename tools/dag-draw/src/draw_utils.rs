@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::fmt::Write;
 
 use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
@@ -80,48 +79,8 @@ pub fn draw_upload(ctx: &mut PaintCtx, pos: Point) {
 }
 
 pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
-    if task_id == data.graph.borrow().tasks.len() {
-        // input
-        let mut inputs: BTreeSet<usize> = BTreeSet::new();
-        for task in data.graph.borrow().tasks.iter() {
-            for &data_item in task.inputs.iter() {
-                inputs.insert(data_item);
-            }
-        }
-        for task in data.graph.borrow().tasks.iter() {
-            for data_item in task.outputs.iter() {
-                inputs.remove(data_item);
-            }
-        }
-        return format!(
-            "Inputs: {}\n\n",
-            inputs
-                .iter()
-                .map(|&i| data.graph.borrow().data_items[i].name.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-    } else if task_id == data.graph.borrow().tasks.len() + 1 {
-        // output
-        let mut outputs: BTreeSet<usize> = BTreeSet::new();
-        for task in data.graph.borrow().tasks.iter() {
-            for &data_item in task.outputs.iter() {
-                outputs.insert(data_item);
-            }
-        }
-        for task in data.graph.borrow().tasks.iter() {
-            for data_item in task.inputs.iter() {
-                outputs.remove(data_item);
-            }
-        }
-        return format!(
-            "Outputs: {}\n\n",
-            outputs
-                .iter()
-                .map(|&i| data.graph.borrow().data_items[i].name.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+    if task_id >= data.task_info.borrow().len() {
+        return String::new();
     }
 
     let task_info = &data.task_info.borrow()[task_id];
