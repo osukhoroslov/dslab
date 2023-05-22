@@ -1,9 +1,10 @@
+
 use std::{cell::RefCell, rc::Rc};
 
 use serde::Serialize;
 
-use crate::{
-    async_core::await_details::DetailsKey, cast, event::EventData, EventHandler, Simulation, SimulationContext,
+use dslab_core::{
+    async_core::await_details::DetailsKey, cast, event::EventData, Event, EventHandler, Simulation, SimulationContext,
 };
 
 #[derive(Clone, Serialize)]
@@ -58,7 +59,7 @@ impl SimpleExchanger {
 }
 
 impl EventHandler for SimpleExchanger {
-    fn on(&mut self, event: crate::Event) {
+    fn on(&mut self, event: Event) {
         cast!(match event.data {
             Message { details: _ } => {
                 panic!("standard event handling must be unreachable");

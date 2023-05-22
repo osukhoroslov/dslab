@@ -12,7 +12,7 @@ use serde::Serialize;
 
 use crate::async_core::await_details::{AwaitResult, DetailsKey};
 use crate::event::EventData;
-use crate::{async_core, async_details_core, Event, Id};
+use crate::{async_details_core, Event, Id};
 
 #[derive(Serialize, Clone)]
 pub(crate) struct EmptyData {}

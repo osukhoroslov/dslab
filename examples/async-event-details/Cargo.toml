@@ -1,9 +1,8 @@
 [package]
 name = "async-event-details"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 dslab-core = { path = "../../crates/dslab-core", features = ["async_details_core"] }

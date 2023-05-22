@@ -17,6 +17,3 @@ pub use event::Event;
 pub use handler::EventHandler;
 pub use simulation::Simulation;
 pub use state::EPSILON;
-
-#[cfg(test)]
-mod tests;

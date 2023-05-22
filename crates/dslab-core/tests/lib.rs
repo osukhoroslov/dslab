@@ -1,5 +1,5 @@
-use crate::async_core;
-use crate::async_details_core;
+use dslab_core::async_core;
+use dslab_core::async_details_core;
 
 async_core! {
     mod async_tests;
