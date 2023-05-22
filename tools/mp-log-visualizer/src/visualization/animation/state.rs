@@ -280,14 +280,14 @@ impl State {
 
     pub fn update(&mut self) {
         self.check_keyboard_events();
-        if self.is_animation_finished() {
-            return;
-        }
         if self.paused || get_time() - self.start_time < 1. {
             self.last_updated = get_time();
             return;
         } else {
-            self.current_time += (get_time() - self.last_updated) * (self.global_speed as f64);
+            self.current_time = f64::min(
+                self.end_time,
+                self.current_time + (get_time() - self.last_updated) * (self.global_speed as f64),
+            );
             self.last_updated = get_time();
         }
 
@@ -672,8 +672,5 @@ impl State {
 
     pub fn get_timer_radius(&self) -> f32 {
         DEFAULT_TIMER_RADIUS * self.scale_coef
-    }
-    pub fn is_animation_finished(&self) -> bool {
-        self.current_time >= self.end_time
     }
 }
