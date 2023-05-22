@@ -11,7 +11,6 @@ pub type TimerId = u64;
 
 /// Timer will set the given `state` as completed at time
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct Timer {
     /// unique identifier of timer
     pub id: TimerId,
@@ -25,7 +24,6 @@ pub struct Timer {
 
 impl Timer {
     /// Create a timer
-    #[allow(dead_code)]
     pub(crate) fn new(id: TimerId, component_id: Id, time: f64, state: Rc<RefCell<dyn AwaitResultSetter>>) -> Self {
         Self {
             id,
