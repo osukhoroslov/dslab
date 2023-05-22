@@ -675,9 +675,7 @@ impl SimulationContext {
         /// ctx.async_wait_for(5.).await;
         ///
         pub async fn async_wait_for(&self, timeout: f64) {
-            if timeout < 0.{
-                panic!("timeout must be a positive value");
-            }
+            assert!(timeout >= 0., "timeout must be a positive value");
 
             let future = self.sim_state.borrow_mut().wait_for(self.id, timeout);
             future.await;
@@ -693,9 +691,7 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            if timeout < 0.{
-                panic!("timeout must be a positive value");
-            }
+            assert!(timeout >= 0., "timeout must be a positive value");
 
             self.async_wait_for_event_to(src, self.id, timeout).await
         }
@@ -727,7 +723,7 @@ impl SimulationContext {
             let result = self.async_wait_for_event_to::<T>(src, dst, -1.).await;
             match result {
                 AwaitResult::Ok(t) => t,
-                AwaitResult::Timeout(_) => panic!("unexpected timeout"),
+                AwaitResult::Timeout(_) => panic!("internal error: unexpected timeout"),
             }
         }
 
@@ -735,9 +731,10 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            if self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_some() {
-                panic!("try to async handle event that has detailed key handling, use async details handlers");
-            }
+            assert!(
+                self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_none(),
+                "try to async handle event that has detailed key handling, use async details handlers"
+            );
 
             let await_key = AwaitKey::new::<T>(src, dst);
 
@@ -754,9 +751,7 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            if timeout < 0.{
-                panic!("timeout must be a positive value");
-            }
+            assert!(timeout >= 0., "timeout must be a non-negative value");
 
             self.async_detailed_wait_for_event_to(src, self.id, details, timeout).await
         }
@@ -818,12 +813,11 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            if self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_none() {
-                panic!(
-                    "simulation does not have details getter for type {}, register it before useing async_detailed getters",
-                    type_name::<T>()
-                );
-            }
+            assert!(
+                self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_some(),
+                "simulation does not have details getter for type {}, register it before useing async_detailed getters",
+                type_name::<T>()
+            );
 
             let await_key = AwaitKey::new_with_details::<T>(src, dst, details);
 
@@ -837,7 +831,7 @@ impl SimulationContext {
             let result = self.async_detailed_wait_for_event_to::<T>(src, dst, details, -1.).await;
             match result {
                 AwaitResult::Ok(t) => t,
-                AwaitResult::Timeout(_) => panic!("unexpected timeout"),
+                AwaitResult::Timeout(_) => panic!("internal error: unexpected timeout"),
             }
         }
 
