@@ -27,6 +27,7 @@ pub struct AppData {
     pub graph_levels_from_end: bool,
     pub graph_variable_edge_width: bool,
     pub graph_variable_node_size: bool,
+    pub graph_show_task_names: bool,
     pub selected_task: Option<usize>,
     pub selected_task_info: String,
     pub graph: Rc<RefCell<Graph>>,
@@ -238,6 +239,7 @@ impl AppData {
             graph_levels_from_end: false,
             graph_variable_edge_width: false,
             graph_variable_node_size: false,
+            graph_show_task_names: false,
             selected_task: None,
             selected_task_info: "".to_string(),
             graph: Rc::new(RefCell::new(trace_log.graph)),
@@ -256,6 +258,7 @@ pub struct AppDataSettings {
     graph_levels_from_end: Option<bool>,
     graph_variable_edge_width: Option<bool>,
     graph_variable_node_size: Option<bool>,
+    graph_show_task_names: Option<bool>,
 }
 
 impl AppData {
@@ -275,6 +278,7 @@ impl AppData {
         copy_setting!(graph_levels_from_end);
         copy_setting!(graph_variable_edge_width);
         copy_setting!(graph_variable_node_size);
+        copy_setting!(graph_show_task_names);
 
         if let Some(x) = settings.files_limit {
             self.files_limit_str = x.to_string();

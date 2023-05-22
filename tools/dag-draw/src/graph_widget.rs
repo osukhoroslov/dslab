@@ -17,6 +17,7 @@ const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
 pub struct GraphWidget {
     nodes: Vec<Point>,
+    names: Vec<String>,
     edges: Vec<(usize, usize, f64)>,
     radius: Vec<f64>,
     last_mouse_position: Option<Point>,
@@ -29,6 +30,7 @@ impl GraphWidget {
         GraphWidget {
             nodes: Vec::new(),
             edges: Vec::new(),
+            names: Vec::new(),
             radius: Vec::new(),
             last_mouse_position: None,
             has_input: false,
@@ -40,6 +42,7 @@ impl GraphWidget {
         let graph = data.graph.borrow();
         // last 2 nodes are for input and output
         self.nodes.resize(graph.tasks.len() + 2, Point::new(0., 0.));
+        self.names = graph.tasks.iter().map(|t| t.name.clone()).collect();
 
         self.edges.clear();
         let mut used_data_items: BTreeSet<usize> = BTreeSet::new();
@@ -296,7 +299,18 @@ impl Widget<AppData> for GraphWidget {
                     1.
                 },
             );
-            paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id], true, true);
+            if data.graph_show_task_names {
+                paint_text(
+                    ctx,
+                    &self.names[task_id],
+                    radius * 3.5 / self.names[task_id].len().max(6) as f64,
+                    self.nodes[task_id],
+                    true,
+                    true,
+                );
+            } else {
+                paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id], true, true);
+            }
         }
 
         // input

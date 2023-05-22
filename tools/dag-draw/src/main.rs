@@ -186,6 +186,10 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(
                                             Checkbox::new("Variable node size").lens(AppData::graph_variable_node_size),
                                         )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Show node names").lens(AppData::graph_show_task_names),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()
