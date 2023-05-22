@@ -81,10 +81,12 @@ impl FromIterator<f64> for SequenceStats {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct LevelProfile {
+    /// Level index.
+    pub level: usize,
     /// Total number of tasks.
     pub task_count: usize,
     /// Stats about task size.
-    pub task_size: SequenceStats,
+    pub task_comp_size: SequenceStats,
     /// Stats about input size for one task.
     pub task_input_size: SequenceStats,
     /// Stats about output size for one task.
@@ -116,7 +118,11 @@ impl DagStats {
             depth: levels.len(),
             width: levels.iter().map(|l| l.len()).max().unwrap(),
             max_parallelism: Self::get_max_parallelism(dag, &levels),
-            level_profiles: levels.iter().map(|l| Self::get_level_profile(dag, l)).collect(),
+            level_profiles: levels
+                .iter()
+                .enumerate()
+                .map(|(i, l)| Self::get_level_profile(dag, i, l))
+                .collect(),
         }
     }
 
@@ -196,7 +202,7 @@ impl DagStats {
         max_parallelism as usize
     }
 
-    fn get_level_profile(dag: &DAG, level: &[usize]) -> LevelProfile {
+    fn get_level_profile(dag: &DAG, level_index: usize, level: &[usize]) -> LevelProfile {
         let predecessor_count = level
             .iter()
             .flat_map(|&t| dag.get_tasks()[t].inputs.iter().cloned())
@@ -210,8 +216,9 @@ impl DagStats {
             .collect::<HashSet<_>>()
             .len();
         LevelProfile {
+            level: level_index,
             task_count: level.len(),
-            task_size: level.iter().map(|&t| dag.get_tasks()[t].flops).collect(),
+            task_comp_size: level.iter().map(|&t| dag.get_tasks()[t].flops).collect(),
             task_input_size: level
                 .iter()
                 .flat_map(|&t| dag.get_tasks()[t].inputs.iter())
