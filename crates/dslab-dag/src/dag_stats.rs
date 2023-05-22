@@ -206,14 +206,15 @@ impl DagStats {
         let predecessor_count = level
             .iter()
             .flat_map(|&t| dag.get_tasks()[t].inputs.iter().cloned())
-            .filter(|data_item| !dag.get_inputs().contains(data_item))
-            .collect::<HashSet<_>>()
+            .filter_map(|data_item| dag.get_data_item(data_item).producer)
+            .collect::<HashSet<usize>>()
             .len();
         let successor_count = level
             .iter()
             .flat_map(|&t| dag.get_tasks()[t].outputs.iter().cloned())
             .filter(|data_item| !dag.get_outputs().contains(data_item))
-            .collect::<HashSet<_>>()
+            .flat_map(|data_item| dag.get_data_item(data_item).consumers.iter().cloned())
+            .collect::<HashSet<usize>>()
             .len();
         LevelProfile {
             level: level_index,
