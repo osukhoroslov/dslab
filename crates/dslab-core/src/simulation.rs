@@ -11,6 +11,13 @@ use rand::prelude::Distribution;
 use serde_json::json;
 use serde_type_name::type_name;
 
+use crate::component::Id;
+use crate::context::SimulationContext;
+use crate::handler::EventHandler;
+use crate::log::log_undelivered_event;
+use crate::state::SimulationState;
+use crate::{async_core, async_disabled, Event};
+
 async_core! {
     use std::sync::mpsc::channel;
 
@@ -22,13 +29,6 @@ async_core! {
     use crate::async_core::await_details::DetailsKey;
     use crate::async_core::sync::queue::UnboundedBlockingQueue;
 }
-
-use crate::component::Id;
-use crate::context::SimulationContext;
-use crate::handler::EventHandler;
-use crate::log::log_undelivered_event;
-use crate::state::SimulationState;
-use crate::{async_core, async_disabled, Event};
 
 async_disabled! {
     /// Represents a simulation, provides methods for its configuration and execution.

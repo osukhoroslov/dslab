@@ -9,7 +9,6 @@ use std::{
 };
 
 use core::mem::ManuallyDrop;
-
 use futures::task::WakerRef;
 
 pub(super) trait CustomWake {
