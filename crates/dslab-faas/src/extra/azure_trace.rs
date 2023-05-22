@@ -1,4 +1,5 @@
-/// This file contains functions responsible for parsing Azure functions trace and generating experiments using it.
+/// This file contains functions responsible for parsing Azure functions 2019 trace and generating experiments using it.
+/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::read_dir;
