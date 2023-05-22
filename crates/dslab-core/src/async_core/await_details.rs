@@ -7,7 +7,7 @@ use crate::{event::EventData, Event, Id};
 /// type of key that represents the details of event to wait for
 pub type DetailsKey = u64;
 
-/// enum represents the await result of SimulationContext::async_wait_for_event...
+/// Represents the result of `SimulationContext::async_wait_for_event` call.
 pub enum AwaitResult<T: EventData> {
     /// contains Event with time and source that it was waited from. Id and data are empty
     Timeout(Event),
