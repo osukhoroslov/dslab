@@ -73,6 +73,7 @@ pub struct State {
     pub scale_coef: f32,
     pub start_time: f64,
     pub end_time: f64,
+    pub last_msg_speed: f32,
 }
 
 impl State {
@@ -109,6 +110,7 @@ impl State {
             scale_coef: 1.,
             start_time,
             end_time: 0.,
+            last_msg_speed: 1.,
         }
     }
 
@@ -136,15 +138,17 @@ impl State {
         duration: f32,
         copies_received: u64,
     ) {
+        let src_node = self.nodes.get(src).unwrap();
+        let dest_node = self.nodes.get(dest).unwrap();
         if self.global_speed == DEFAULT_GLOBAL_SPEED && duration > 0. {
             self.global_speed = duration / 10.;
+            self.last_msg_speed = duration / calc_dist(src_node.borrow().get_pos(), dest_node.borrow().get_pos());
         }
 
-        let src_node = self.nodes.get(src).unwrap();
         let msg = StateMessage::new(
             id.clone(),
             Rc::clone(src_node),
-            Rc::clone(self.nodes.get(dest).unwrap()),
+            Rc::clone(dest_node),
             tip,
             data,
             MessageStatus::Queued,
@@ -301,7 +305,7 @@ impl State {
 
         self.travelling_messages.retain(|id, msg_ref| {
             let mut msg = msg_ref.borrow_mut();
-            msg.update(self.global_speed, self.current_time as f32);
+            msg.update(self.global_speed, self.current_time as f32, self.last_msg_speed);
             msg.update_status(self.current_time as f32);
             if msg.status == MessageStatus::Delivered {
                 msg.dest.borrow_mut().messages_received.push(id.clone());
@@ -360,8 +364,12 @@ impl State {
             let new_current_time = self.event_queue.front().unwrap().time - 0.01;
             let delta = new_current_time - self.current_time;
             for msg in self.travelling_messages.values() {
-                msg.borrow_mut()
-                    .update_with_jump(self.global_speed, self.current_time as f32, delta as f32);
+                msg.borrow_mut().update_with_jump(
+                    self.global_speed,
+                    self.current_time as f32,
+                    delta as f32,
+                    self.last_msg_speed,
+                );
             }
             self.current_time = new_current_time;
         }

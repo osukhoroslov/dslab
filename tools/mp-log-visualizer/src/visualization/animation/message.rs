@@ -65,13 +65,13 @@ impl StateMessage {
         self.dest.borrow().get_pos() - self.get_pos()
     }
 
-    pub fn get_own_speed(&self, current_time: f32) -> f32 {
+    pub fn get_own_speed(&self, current_time: f32, last_msg_speed: f32) -> f32 {
         let direction = self.get_direction();
         let travel_time_left = self.time_delivered - current_time;
         let mut own_speed = if !self.is_dropped() {
             1.0 / ((get_fps() as f32) * travel_time_left / direction.length())
         } else {
-            1.0 / ((get_fps() as f32) * 3.0 / direction.length())
+            1.0 / ((get_fps() as f32) * last_msg_speed)
         };
         if own_speed < 0. {
             own_speed = MAX_MESSAGE_SPEED;
@@ -79,9 +79,9 @@ impl StateMessage {
         own_speed
     }
 
-    pub fn update(&mut self, global_speed: f32, current_time: f32) {
+    pub fn update(&mut self, global_speed: f32, current_time: f32, last_msg_speed: f32) {
         let direction = self.get_direction();
-        let own_speed = self.get_own_speed(current_time);
+        let own_speed = self.get_own_speed(current_time, last_msg_speed);
 
         let mut new_pos = self.get_pos() + direction.normalize() * own_speed * global_speed;
 
@@ -105,9 +105,9 @@ impl StateMessage {
         };
     }
 
-    pub fn update_with_jump(&mut self, global_speed: f32, current_time: f32, delta: f32) {
+    pub fn update_with_jump(&mut self, global_speed: f32, current_time: f32, delta: f32, last_msg_speed: f32) {
         let direction = self.get_direction();
-        let own_speed = self.get_own_speed(current_time);
+        let own_speed = self.get_own_speed(current_time, last_msg_speed);
         let jump_dist = own_speed * global_speed * delta;
         let new_pos = if self.is_dropped() {
             self.dest.borrow().get_pos()
