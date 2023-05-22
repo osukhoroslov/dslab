@@ -161,7 +161,7 @@ impl TimelineWidget {
     }
 
     fn transfer_selected(&self, transfer: &Transfer, data: &AppData) -> bool {
-        if data.selected_task.is_none() {
+        if data.selected_task.is_none() || data.graph.borrow().tasks.len() <= data.selected_task.unwrap() {
             return false;
         }
         let task = &data.graph.borrow().tasks[data.selected_task.unwrap()];
