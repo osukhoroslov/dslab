@@ -6,7 +6,7 @@ use crate::dag::DAG;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DagStats {
-    /// Total numbert of tasks.
+    /// Total number of tasks.
     pub task_count: usize,
     /// Max of max_cores among all tasks.
     pub max_cores_per_task: u32,
