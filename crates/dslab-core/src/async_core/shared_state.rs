@@ -121,7 +121,6 @@ impl Future for TimerFuture {
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
-#[allow(dead_code)]
 pub(crate) struct AwaitKey {
     pub from: Id,
     pub to: Id,
