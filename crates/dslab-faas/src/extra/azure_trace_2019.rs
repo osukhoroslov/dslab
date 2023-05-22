@@ -11,7 +11,7 @@ use csv::ReaderBuilder;
 use indexmap::{IndexMap, IndexSet};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use rv::dist::{Exponential, LogNormal};
+use rv::dist::{Empirical, Exponential, LogNormal};
 use rv::traits::Rv;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
@@ -414,10 +414,10 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
                         total += cnt;
                     }
                     if total > 0 {
+                        let dist = Empirical::new(samples);
                         for _ in 0..total {
-                            let second = *samples.choose(&mut gen).unwrap()
-                                + gen.gen_range(0.0..60.0)
-                                + ((part_id * 1440 * 60) as f64);
+                            let second =
+                                dist.draw(&mut gen) + gen.gen_range(0.0..60.0) + ((part_id * 1440 * 60) as f64);
                             invocations.push((int_id, second, 0.));
                         }
                         inv_map.insert(id.clone(), (begin, total));
