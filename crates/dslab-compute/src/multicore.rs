@@ -222,6 +222,7 @@ impl Compute {
             ctx,
         }
     }
+
     pub fn id(&self) -> Id {
         self.ctx.id()
     }

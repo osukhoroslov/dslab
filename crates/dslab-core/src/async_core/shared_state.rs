@@ -1,9 +1,5 @@
 //! Shared state and event notification
 
-use crate::event::EventData;
-use crate::{async_core, async_details_core, Event, Id};
-use serde::Serialize;
-
 use std::any::{Any, TypeId};
 use std::rc::Rc;
 use std::{cell::RefCell, future::Future, task::Context};
@@ -12,44 +8,14 @@ use std::{
     task::{Poll, Waker},
 };
 
-/// type of key that represents the details of event to wait for
-pub type DetailsKey = u64;
+use serde::Serialize;
+
+use crate::async_core::await_details::{AwaitResult, DetailsKey};
+use crate::event::EventData;
+use crate::{async_core, async_details_core, Event, Id};
 
 #[derive(Serialize, Clone)]
 pub(crate) struct EmptyData {}
-
-/// enum represents the await resuls of SimulationContext::async_wait_for_event...
-pub enum AwaitResult<T: EventData> {
-    /// contains Event with time and source that it was waited from. Id and data are empty
-    Timeout(Event),
-    /// contains full event without data, and data of specific type separately
-    Ok((Event, T)),
-}
-
-impl<T: EventData> Default for AwaitResult<T> {
-    fn default() -> Self {
-        Self::Timeout(Event {
-            id: 0,
-            time: 0.,
-            src: 0,
-            dest: 0,
-            data: Box::new(EmptyData {}),
-        })
-    }
-}
-
-impl<T: EventData> AwaitResult<T> {
-    /// create a default result
-    pub fn timeout_with(src: Id, dest: Id) -> Self {
-        Self::Timeout(Event {
-            id: 0,
-            time: 0.,
-            src,
-            dest,
-            data: Box::new(EmptyData {}),
-        })
-    }
-}
 
 pub(crate) struct AwaitEventSharedState<T: EventData> {
     pub completed: bool,
@@ -164,23 +130,21 @@ pub(crate) struct AwaitKey {
 }
 
 impl AwaitKey {
-    async_core! {
-        pub fn new<T: EventData>(from: Id, to: Id) -> Self {
-            Self {
-                from,
-                to,
-                msg_type: TypeId::of::<T>(),
-                details: 0,
-            }
+    pub fn new<T: EventData>(from: Id, to: Id) -> Self {
+        Self {
+            from,
+            to,
+            msg_type: TypeId::of::<T>(),
+            details: 0,
         }
+    }
 
-        pub fn new_by_ref(from: Id, to: Id, data: &dyn EventData) -> Self {
-            Self {
-                from,
-                to,
-                msg_type: data.type_id(),
-                details: 0,
-            }
+    pub fn new_by_ref(from: Id, to: Id, data: &dyn EventData) -> Self {
+        Self {
+            from,
+            to,
+            msg_type: data.type_id(),
+            details: 0,
         }
     }
 

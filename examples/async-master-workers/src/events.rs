@@ -1,5 +1,5 @@
 use dslab_compute::multicore::{CompFinished, CompStarted};
-use dslab_core::{async_core::shared_state::DetailsKey, event::EventData};
+use dslab_core::{async_core::await_details::DetailsKey, event::EventData};
 use dslab_network::model::DataTransferCompleted;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 

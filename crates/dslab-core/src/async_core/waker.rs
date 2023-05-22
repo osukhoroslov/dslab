@@ -53,9 +53,6 @@ where
     unsafe { Waker::from_raw(RawWaker::new(ptr, waker_vtable::<W>())) }
 }
 
-// FIXME: panics on Arc::clone / refcount changes could wreak havoc on the
-// code here. We should guard against this by aborting.
-
 #[allow(clippy::redundant_clone)] // The clone here isn't actually redundant.
 unsafe fn increase_refcount<T: CustomWake>(data: *const ()) {
     // Retain Arc, but don't touch refcount by wrapping in ManuallyDrop

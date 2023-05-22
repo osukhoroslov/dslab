@@ -19,7 +19,7 @@ pub struct Task {
 }
 
 impl Task {
-    /// Create a new task from future. TODO explain unsafe
+    /// Creates a new task from future. TODO explain unsafe
     pub fn new(future: impl Future<Output = ()>, task_sender: Sender<Arc<Task>>) -> Self {
         unsafe {
             let boxed: Box<dyn Future<Output = ()>> = Box::new(future);

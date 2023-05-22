@@ -3,7 +3,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::mpsc::channel;
 
 use log::Level::Trace;
 use log::{debug, log_enabled, trace};
@@ -13,17 +12,20 @@ use serde_json::json;
 use serde_type_name::type_name;
 
 async_core! {
+    use std::sync::mpsc::channel;
+
     use futures::Future;
+
     use crate::async_core::shared_state::AwaitKey;
+    use crate::async_core::executor::Executor;
 }
 
 async_details_core! {
-    use crate::async_core::shared_state::DetailsKey;
-    use crate::async_core::sync::queue::UnboundedBlockingQueue;
     use crate::event::EventData;
+    use crate::async_core::await_details::DetailsKey;
+    use crate::async_core::sync::queue::UnboundedBlockingQueue;
 }
 
-use crate::async_core::executor::Executor;
 use crate::component::Id;
 use crate::context::SimulationContext;
 use crate::handler::EventHandler;
@@ -31,28 +33,53 @@ use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 use crate::{async_core, async_details_core, async_disabled, async_only_core, Event};
 
-/// Represents a simulation, provides methods for its configuration and execution.
-pub struct Simulation {
-    sim_state: Rc<RefCell<SimulationState>>,
-    name_to_id: HashMap<String, Id>,
-    names: Rc<RefCell<Vec<String>>>,
-    handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+async_disabled! {
+    /// Represents a simulation, provides methods for its configuration and execution.
+    pub struct Simulation {
+        sim_state: Rc<RefCell<SimulationState>>,
+        name_to_id: HashMap<String, Id>,
+        names: Rc<RefCell<Vec<String>>>,
+        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+    }
+}
 
-    #[allow(dead_code)]
-    executor: Executor,
+async_core! {
+    /// Represents a simulation, provides methods for its configuration and execution.
+    pub struct Simulation {
+        sim_state: Rc<RefCell<SimulationState>>,
+        name_to_id: HashMap<String, Id>,
+        names: Rc<RefCell<Vec<String>>>,
+        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+
+        executor: Executor,
+    }
 }
 
 impl Simulation {
-    /// Creates a new simulation with specified random seed.
-    pub fn new(seed: u64) -> Self {
-        let (task_sender, ready_queue) = channel();
+    async_disabled! {
+        /// Creates a new simulation with specified random seed.
+        pub fn new(seed: u64) -> Self {
+            Self {
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
+                name_to_id: HashMap::new(),
+                names: Rc::new(RefCell::new(Vec::new())),
+                handlers: Vec::new(),
+            }
+        }
+    }
 
-        Self {
-            sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
-            name_to_id: HashMap::new(),
-            names: Rc::new(RefCell::new(Vec::new())),
-            handlers: Vec::new(),
-            executor: Executor::new(ready_queue),
+    async_core! {
+        /// Creates a new simulation with specified random seed.
+        pub fn new(seed: u64) -> Self {
+            let (task_sender, ready_queue) = channel();
+
+            Self {
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
+                name_to_id: HashMap::new(),
+                names: Rc::new(RefCell::new(Vec::new())),
+                handlers: Vec::new(),
+                executor: Executor::new(ready_queue),
+            }
         }
     }
 
@@ -291,27 +318,60 @@ impl Simulation {
     /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
+    ///
+    /// Implementation is feature-defined
     pub fn remove_handler<S>(&mut self, name: S)
     where
         S: AsRef<str>,
     {
-        let id = self.lookup_id(name.as_ref());
-        self.handlers[id as usize] = None;
+        self.remove_handler_inner(name);
+    }
 
-        // cancel pending events related to the removed component
-        let id = self.lookup_id(name.as_ref());
-        self.cancel_events(|e| e.src == id || e.dst == id);
+    async_core! {
+        fn remove_handler_inner<S>(&mut self, name: S)
+        where
+            S: AsRef<str>,
+        {
+            let id = self.lookup_id(name.as_ref());
+            self.handlers[id as usize] = None;
 
-        // cancel pending timers related to the removed component
-        self.sim_state.borrow_mut().cancel_component_timers(id);
+            // cancel pending events related to the removed component
+            let id = self.lookup_id(name.as_ref());
+            self.cancel_events(|e| e.src == id || e.dst == id);
 
-        debug!(
-            target: "simulation",
-            "[{:.3} {} simulation] Removed handler: {}",
-            self.time(),
-            crate::log::get_colored("DEBUG", colored::Color::Blue),
-            json!({"name": name.as_ref(), "id": id})
-        );
+            // cancel pending timers related to the removed component
+            self.sim_state.borrow_mut().cancel_component_timers(id);
+
+            debug!(
+                target: "simulation",
+                "[{:.3} {} simulation] Removed handler: {}",
+                self.time(),
+                crate::log::get_colored("DEBUG", colored::Color::Blue),
+                json!({"name": name.as_ref(), "id": id})
+            );
+        }
+    }
+
+    async_disabled! {
+        fn remove_handler_inner<S>(&mut self, name: S)
+        where
+            S: AsRef<str>,
+        {
+            let id = self.lookup_id(name.as_ref());
+            self.handlers[id as usize] = None;
+
+            // cancel pending events related to the removed component
+            let id = self.lookup_id(name.as_ref());
+            self.cancel_events(|e| e.src == id || e.dest == id);
+
+            debug!(
+                target: "simulation",
+                "[{:.3} {} simulation] Removed handler: {}",
+                self.time(),
+                crate::log::get_colored("DEBUG", colored::Color::Blue),
+                json!({"name": name.as_ref(), "id": id})
+            );
+        }
     }
 
     /// Returns the current simulation time.

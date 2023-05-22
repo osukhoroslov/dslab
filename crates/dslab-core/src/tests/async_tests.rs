@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use futures::{stream::FuturesUnordered, StreamExt};
 use serde::Serialize;
 
-use crate::{async_core::shared_state::AwaitResult, cast, EventHandler, Id, Simulation, SimulationContext};
+use crate::{async_core::await_details::AwaitResult, cast, EventHandler, Id, Simulation, SimulationContext};
 
 #[test]
 fn test_wait_for() {

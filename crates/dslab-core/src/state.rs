@@ -1,69 +1,98 @@
-use std::any::TypeId;
-use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
-use std::rc::Rc;
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::distributions::{Alphanumeric, DistString};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-async_core! {
-    use futures::Future;
-    use crate::async_core::shared_state::{
-        AwaitEventSharedState, EmptyData, TimerFuture,
-    };
-}
-
-use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter, DetailsKey};
-use crate::async_core::task::Task;
-use crate::async_core::timer::{Timer, TimerId};
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
-use crate::{async_core, async_details_core};
+use crate::{async_core, async_details_core, async_disabled};
+
+async_core! {
+    use std::any::TypeId;
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    use std::sync::mpsc::Sender;
+    use std::sync::Arc;
+
+    use futures::Future;
+
+    use crate::async_core::await_details::DetailsKey;
+    use crate::async_core::shared_state::{AwaitEventSharedState, EmptyData, TimerFuture};
+    use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter};
+    use crate::async_core::task::Task;
+    use crate::async_core::timer::{Timer, TimerId};
+}
 
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
-#[derive(Clone)]
-#[allow(dead_code)]
-pub struct SimulationState {
-    clock: f64,
-    rand: Pcg64,
-    events: BinaryHeap<Event>,
-    ordered_events: VecDeque<Event>,
-    canceled_events: HashSet<EventId>,
-    event_count: u64,
+async_disabled! {
+    #[derive(Clone)]
+    pub struct SimulationState {
+        clock: f64,
+        rand: Pcg64,
+        events: BinaryHeap<Event>,
+        ordered_events: VecDeque<Event>,
+        canceled_events: HashSet<EventId>,
+        event_count: u64,
+    }
+}
 
-    awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
-    details_getters: HashMap<TypeId, fn(&dyn EventData) -> DetailsKey>,
+async_core! {
+    #[derive(Clone)]
+    pub struct SimulationState {
+        clock: f64,
+        rand: Pcg64,
+        events: BinaryHeap<Event>,
+        ordered_events: VecDeque<Event>,
+        canceled_events: HashSet<EventId>,
+        event_count: u64,
 
-    timers: BinaryHeap<Timer>,
-    canceled_timers: HashSet<TimerId>,
-    timer_count: u64,
+        awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
+        details_getters: HashMap<TypeId, fn(&dyn EventData) -> DetailsKey>,
 
-    task_sender: Sender<Arc<Task>>,
+        timers: BinaryHeap<Timer>,
+        canceled_timers: HashSet<TimerId>,
+        timer_count: u64,
+
+        task_sender: Sender<Arc<Task>>,
+    }
 }
 
 impl SimulationState {
-    pub fn new(seed: u64, task_sender: Sender<Arc<Task>>) -> Self {
-        Self {
-            clock: 0.0,
-            rand: Pcg64::seed_from_u64(seed),
-            events: BinaryHeap::new(),
-            ordered_events: VecDeque::new(),
-            canceled_events: HashSet::new(),
-            event_count: 0,
-            awaiters: HashMap::new(),
-            details_getters: HashMap::new(),
-            timers: BinaryHeap::new(),
-            canceled_timers: HashSet::new(),
-            timer_count: 0,
+    async_disabled! {
+        pub fn new(seed: u64) -> Self {
+            Self {
+                clock: 0.0,
+                rand: Pcg64::seed_from_u64(seed),
+                events: BinaryHeap::new(),
+                ordered_events: VecDeque::new(),
+                canceled_events: HashSet::new(),
+                event_count: 0,
+            }
+        }
+    }
+    async_core! {
+        pub fn new(seed: u64, task_sender: Sender<Arc<Task>>) -> Self {
+            Self {
+                clock: 0.0,
+                rand: Pcg64::seed_from_u64(seed),
+                events: BinaryHeap::new(),
+                ordered_events: VecDeque::new(),
+                canceled_events: HashSet::new(),
+                event_count: 0,
+                awaiters: HashMap::new(),
+                details_getters: HashMap::new(),
+                timers: BinaryHeap::new(),
+                canceled_timers: HashSet::new(),
+                timer_count: 0,
 
-            task_sender,
+                task_sender,
+            }
         }
     }
 
@@ -275,15 +304,15 @@ impl SimulationState {
         output
     }
 
-    pub fn cancel_component_timers(&mut self, component_id: Id) {
-        for timer in self.timers.iter() {
-            if timer.component_id == component_id {
-                self.canceled_timers.insert(timer.id);
+    async_core! {
+        pub fn cancel_component_timers(&mut self, component_id: Id) {
+            for timer in self.timers.iter() {
+                if timer.component_id == component_id {
+                    self.canceled_timers.insert(timer.id);
+                }
             }
         }
-    }
 
-    async_core! {
         pub fn peek_timer(&mut self) -> Option<&Timer> {
             loop {
                 if let Some(timer) = self.timers.peek() {
