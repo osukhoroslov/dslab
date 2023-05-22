@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
-use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
+use dslab_faas::extra::azure_trace::{
+    process_azure_trace, AppPreference, AzureTraceConfig, DurationGenerator, StartGenerator,
+};
 use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::SampleMetric;
@@ -66,7 +68,12 @@ fn main() {
     let args = Args::parse();
     let trace_config = AzureTraceConfig {
         time_period: 8 * 60,
-        app_preferences: vec![AppPreference::new(68, 0.45, 0.55)],
+        app_preferences: vec![
+            AppPreference::new(17, 0.3, 0.4),
+            AppPreference::new(17, 0.4, 0.5),
+            AppPreference::new(17, 0.5, 0.6),
+            AppPreference::new(17, 0.6, 0.7),
+        ],
         ..Default::default()
     };
     let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));

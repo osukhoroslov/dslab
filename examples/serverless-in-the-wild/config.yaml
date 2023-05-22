@@ -6,8 +6,8 @@ base_config:
           quantity: 4096
       invoker: FIFOInvoker
       count: 18
-  scheduler: BasicScheduler
-  idle_deployer: BasicDeployer
+  scheduler: LocalityBasedScheduler[warm_only=false]
+  idle_deployer: LocalityBasedDeployer[]
   cpu_policy: contended
 coldstart_policies:
   - No unloading

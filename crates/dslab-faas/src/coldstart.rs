@@ -84,8 +84,8 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
 
     fn to_string(&self) -> String {
         format!(
-            "FixedTimeColdStartPolicy[keepalive={:.2},prewarm{:.2}]",
-            self.keepalive_window, self.prewarm_window
+            "FixedTimeColdStartPolicy[keepalive={:.2},prewarm={:.2},reset_keepalive={}]",
+            self.keepalive_window, self.prewarm_window, self.reset_keepalive
         )
     }
 }
