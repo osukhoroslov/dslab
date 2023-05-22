@@ -8,12 +8,13 @@ use crate::app_data::*;
 use crate::data::*;
 use crate::draw_utils::*;
 
-const BLOCK_WIDTH: f64 = 300.0;
+const BLOCK_WIDTH: f64 = 305.0;
 const BLOCK_X_PADDING: f64 = 10.0;
 const BLOCK_Y_PADDING: f64 = 20.0;
 const LABEL_WIDTH: f64 = BLOCK_WIDTH / 3.0;
 const CORE_SIZE: f64 = 15.0;
 const ROW_STEP: f64 = 20.0;
+const CORES_PER_ROW: u32 = 15;
 
 pub struct PanelsWidget {}
 
@@ -138,7 +139,18 @@ impl PanelsWidget {
             }
         }
 
+        let extra_tasks = active_tasks.len().max(tasks_limit) - tasks_limit;
         let extra_tasks_space = tasks_limit - active_tasks.len().min(tasks_limit);
+        if extra_tasks > 0 {
+            paint_text(
+                ctx,
+                &format!("+{}", extra_tasks),
+                18.,
+                Point::new(leftx + LABEL_WIDTH + 5., *downy - 25.),
+                false,
+                false,
+            );
+        }
 
         for task_id in active_tasks.into_iter().rev().take(tasks_limit).rev() {
             let task_info = data.task_info.borrow()[task_id].as_ref().unwrap().clone();
@@ -256,7 +268,8 @@ impl PanelsWidget {
             downy += 25.;
 
             let mut xcore = leftx + 5. + CORE_SIZE / 2.;
-            let ycore = downy + 25. / 2.;
+            let mut ycore = downy + 25. / 2.;
+            let mut core_index = 0;
 
             for &task_id in compute.tasks.iter() {
                 if data.task_info.borrow()[task_id].is_none() {
@@ -274,21 +287,34 @@ impl PanelsWidget {
                         &task_info.color,
                     );
                     xcore += 20.;
+                    core_index += 1;
+                    if core_index == CORES_PER_ROW {
+                        core_index = 0;
+                        xcore -= 20. * CORES_PER_ROW as f64;
+                        ycore += 20.;
+                    }
                 }
             }
 
             let xcore = leftx + 5. + CORE_SIZE / 2.;
+            let ycore = downy + 25. / 2.;
 
             // cores (without filling them right now)
             for i in 0..compute.cores {
                 ctx.stroke(
-                    Rect::from_center_size(Point::new(xcore + (i as f64) * 20., ycore), Size::new(15., 15.)),
+                    Rect::from_center_size(
+                        Point::new(
+                            xcore + (i % CORES_PER_ROW) as f64 * 20.,
+                            ycore + (i / CORES_PER_ROW) as f64 * 20.,
+                        ),
+                        Size::new(15., 15.),
+                    ),
                     &Color::WHITE,
                     1.,
                 );
             }
 
-            downy += 25.;
+            downy += 5. + ((compute.cores.max(1) + CORES_PER_ROW - 1) / CORES_PER_ROW) as f64 * 20.;
 
             // line below cores
             ctx.stroke(
