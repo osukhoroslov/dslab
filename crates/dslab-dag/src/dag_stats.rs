@@ -143,10 +143,11 @@ impl DagStats {
             return;
         }
         let mut level = 0;
-        for pred in dag.get_tasks()[task]
+        for pred in dag
+            .get_task(task)
             .inputs
             .iter()
-            .flat_map(|&data_item| dag.get_data_items()[data_item].producer)
+            .flat_map(|&data_item| dag.get_data_item(data_item).producer)
         {
             Self::dfs(dag, pred, levels);
             level = level.max(levels[pred] + 1);
@@ -158,14 +159,15 @@ impl DagStats {
         let mut ranks = vec![0f64; dag.get_tasks().len()];
         for tasks in levels.iter().rev() {
             for &task in tasks.iter() {
-                ranks[task] = dag.get_tasks()[task]
+                ranks[task] = dag
+                    .get_task(task)
                     .outputs
                     .iter()
-                    .flat_map(|&data_item| dag.get_data_items()[data_item].consumers.iter())
+                    .flat_map(|&data_item| dag.get_data_item(data_item).consumers.iter())
                     .map(|&succ| ranks[succ])
                     .max_by(|a, b| a.total_cmp(b))
                     .unwrap_or_default()
-                    + dag.get_tasks()[task].flops;
+                    + dag.get_task(task).flops;
             }
         }
         ranks.into_iter().max_by(|a, b| a.total_cmp(b)).unwrap()
@@ -178,14 +180,15 @@ impl DagStats {
 
         for tasks in levels.iter() {
             for &task in tasks.iter() {
-                let start_time = dag.get_tasks()[task]
+                let start_time = dag
+                    .get_task(task)
                     .inputs
                     .iter()
-                    .filter_map(|&data_item| dag.get_data_items()[data_item].producer)
+                    .filter_map(|&data_item| dag.get_data_item(data_item).producer)
                     .map(|task| finish_times[task])
                     .max_by(|a, b| a.total_cmp(b))
                     .unwrap_or_default();
-                let finish_time = start_time + dag.get_tasks()[task].flops;
+                let finish_time = start_time + dag.get_task(task).flops;
                 events.push((start_time, 1));
                 events.push((finish_time, -1));
                 finish_times[task] = finish_time;
@@ -205,13 +208,13 @@ impl DagStats {
     fn get_level_profile(dag: &DAG, level_index: usize, level: &[usize]) -> LevelProfile {
         let predecessor_count = level
             .iter()
-            .flat_map(|&t| dag.get_tasks()[t].inputs.iter().cloned())
+            .flat_map(|&t| dag.get_task(t).inputs.iter().cloned())
             .filter_map(|data_item| dag.get_data_item(data_item).producer)
             .collect::<HashSet<usize>>()
             .len();
         let successor_count = level
             .iter()
-            .flat_map(|&t| dag.get_tasks()[t].outputs.iter().cloned())
+            .flat_map(|&t| dag.get_task(t).outputs.iter().cloned())
             .filter(|data_item| !dag.get_outputs().contains(data_item))
             .flat_map(|data_item| dag.get_data_item(data_item).consumers.iter().cloned())
             .collect::<HashSet<usize>>()
@@ -219,16 +222,16 @@ impl DagStats {
         LevelProfile {
             level: level_index,
             task_count: level.len(),
-            task_comp_size: level.iter().map(|&t| dag.get_tasks()[t].flops).collect(),
+            task_comp_size: level.iter().map(|&t| dag.get_task(t).flops).collect(),
             task_input_size: level
                 .iter()
-                .flat_map(|&t| dag.get_tasks()[t].inputs.iter())
-                .map(|&data_item| dag.get_data_items()[data_item].size)
+                .flat_map(|&t| dag.get_task(t).inputs.iter())
+                .map(|&data_item| dag.get_data_item(data_item).size)
                 .collect(),
             task_output_size: level
                 .iter()
-                .flat_map(|&t| dag.get_tasks()[t].outputs.iter())
-                .map(|&data_item| dag.get_data_items()[data_item].size)
+                .flat_map(|&t| dag.get_task(t).outputs.iter())
+                .map(|&data_item| dag.get_data_item(data_item).size)
                 .collect(),
             predecessor_count,
             successor_count,
