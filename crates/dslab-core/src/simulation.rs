@@ -16,9 +16,9 @@ use crate::context::SimulationContext;
 use crate::handler::EventHandler;
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
-use crate::{async_core, async_disabled, Event};
+use crate::{async_disabled, async_enabled, Event};
 
-async_core! {
+async_enabled! {
     use std::sync::mpsc::channel;
 
     use futures::Future;
@@ -40,7 +40,7 @@ async_disabled! {
     }
 }
 
-async_core! {
+async_enabled! {
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
@@ -65,7 +65,7 @@ impl Simulation {
         }
     }
 
-    async_core! {
+    async_enabled! {
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             let (task_sender, ready_queue) = channel();
@@ -324,7 +324,7 @@ impl Simulation {
         self.remove_handler_inner(name);
     }
 
-    async_core! {
+    async_enabled! {
         fn remove_handler_inner<S>(&mut self, name: S)
         where
             S: AsRef<str>,
@@ -442,7 +442,7 @@ impl Simulation {
         }
     }
 
-    async_core! {
+    async_enabled! {
         fn step_inner(&self) -> bool {
             if self.process_task() {
                 return true;
@@ -754,7 +754,7 @@ impl Simulation {
         }
     }
 
-    async_core! {
+    async_enabled! {
         fn step_until_time_inner(&mut self, time: f64) -> bool {
             let mut result;
             loop {

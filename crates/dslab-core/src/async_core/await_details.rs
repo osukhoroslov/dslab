@@ -4,7 +4,7 @@
 use super::shared_state::EmptyData;
 use crate::{event::EventData, Event, Id};
 
-/// type of key that represents the details of event to wait for
+/// Type of key that represents the details of event to wait for.
 pub type DetailsKey = u64;
 
 /// Represents the result of `SimulationContext::async_wait_for_event` call.

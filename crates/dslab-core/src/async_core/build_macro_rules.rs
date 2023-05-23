@@ -1,6 +1,6 @@
 /// wrap code that will be built for async dslab-core functionality
 #[macro_export]
-macro_rules! async_core {
+macro_rules! async_enabled {
     ($($item:item)*) => {
         $(#[cfg(feature = "async_core")]
         $item)*

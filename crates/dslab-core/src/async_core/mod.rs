@@ -1,9 +1,9 @@
 #![doc = include_str!("../../readme.md")]
 
-use crate::async_core;
+use crate::async_enabled;
 pub(crate) mod build_macro_rules;
 
-async_core! {
+async_enabled! {
     pub mod await_details;
     pub mod sync;
 
