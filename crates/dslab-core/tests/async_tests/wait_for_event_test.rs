@@ -91,7 +91,7 @@ fn test_async_wait_for_event() {
 
     assert!(system_context.time() >= 100.);
 
-    sim.spawn(async {
+    sim.spawn(async move {
         let start_test_time = 202.;
         system_context
             .async_wait_for(start_test_time - system_context.time())
