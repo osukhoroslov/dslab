@@ -8,9 +8,9 @@ use rand_pcg::Pcg64;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
-use crate::{async_core, async_disabled};
+use crate::{async_disabled, async_enabled};
 
-async_core! {
+async_enabled! {
     use std::any::TypeId;
     use std::cell::RefCell;
     use std::collections::HashMap;
@@ -42,7 +42,7 @@ async_disabled! {
     }
 }
 
-async_core! {
+async_enabled! {
     #[derive(Clone)]
     pub struct SimulationState {
         clock: f64,
@@ -76,7 +76,7 @@ impl SimulationState {
             }
         }
     }
-    async_core! {
+    async_enabled! {
         pub fn new(seed: u64, task_sender: Sender<Arc<Task>>) -> Self {
             Self {
                 clock: 0.0,
@@ -304,7 +304,7 @@ impl SimulationState {
         output
     }
 
-    async_core! {
+    async_enabled! {
         pub fn cancel_component_timers(&mut self, component_id: Id) {
             for timer in self.timers.iter() {
                 if timer.component_id == component_id {

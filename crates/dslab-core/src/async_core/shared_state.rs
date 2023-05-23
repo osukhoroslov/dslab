@@ -44,6 +44,16 @@ impl<T: EventData> AwaitResultSetter for AwaitEventSharedState<T> {
         self.completed
     }
 
+    fn set_completed(&mut self) {
+        if self.completed {
+            return;
+        }
+        self.completed = true;
+        if let Some(waker) = self.waker.take() {
+            waker.wake()
+        }
+    }
+
     fn set_ok_completed_with_event(&mut self, mut e: Event) {
         if self.completed {
             return;
@@ -61,16 +71,6 @@ impl<T: EventData> AwaitResultSetter for AwaitEventSharedState<T> {
                 panic!("internal downcast conversion error");
             }
         };
-    }
-
-    fn set_completed(&mut self) {
-        if self.completed {
-            return;
-        }
-        self.completed = true;
-        if let Some(waker) = self.waker.take() {
-            waker.wake()
-        }
     }
 }
 

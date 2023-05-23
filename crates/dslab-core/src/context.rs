@@ -6,12 +6,12 @@ use std::rc::Rc;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
-use crate::async_core;
+use crate::async_enabled;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
-async_core! {
+async_enabled! {
     use std::any::TypeId;
     use std::any::type_name;
 
@@ -662,7 +662,7 @@ impl SimulationContext {
         self.names.borrow()[id as usize].clone()
     }
 
-    async_core! {
+    async_enabled! {
         /// spawn a background separate task
         pub fn spawn(&self, future: impl Future<Output = ()>) {
             self.sim_state.borrow_mut().spawn(future);

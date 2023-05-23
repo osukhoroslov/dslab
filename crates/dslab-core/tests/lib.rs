@@ -1,5 +1,5 @@
-use dslab_core::async_core;
+use dslab_core::async_enabled;
 
-async_core! {
+async_enabled! {
     mod async_tests;
 }
