@@ -518,7 +518,7 @@ impl Simulation {
         }
 
         /// spawn the background process. Similar to "launch a new thread"
-        pub fn spawn(&self, future: impl Future<Output = ()>) {
+        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
             self.sim_state.borrow_mut().spawn(future);
         }
 
