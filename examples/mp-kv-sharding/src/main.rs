@@ -345,7 +345,7 @@ const WEIGHTS: [usize; 36] = [
 ];
 
 fn random_string(length: usize, rand: &mut Pcg64) -> String {
-    let dist = WeightedIndex::new(&WEIGHTS).unwrap();
+    let dist = WeightedIndex::new(WEIGHTS).unwrap();
     rand.sample_iter(&dist).take(length).map(|x| SYMBOLS[x]).collect()
 }
 
