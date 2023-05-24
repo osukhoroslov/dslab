@@ -188,7 +188,7 @@ fn key_non_replicas(key: &str, sys: &System) -> Vec<String> {
     let mut non_replicas = Vec::new();
     let mut pre = true;
     let mut process_names = sys.process_names();
-    process_names.sort(); 
+    process_names.sort();
     for proc in process_names {
         if replicas.contains(&proc) {
             pre = false;
