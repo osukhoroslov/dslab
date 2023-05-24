@@ -2,10 +2,10 @@ from dslabmp import Context, Message, Process
 from typing import List
 
 
-class StorageProcess(Process):
-    def __init__(self, process_name: str, processes: List[str]):
-        self._name = process_name
-        self._processes = set(processes)
+class StorageNode(Process):
+    def __init__(self, node_id: str, nodes: List[str]):
+        self._id = node_id
+        self._nodes = set(nodes)
         self._data = {}
 
     def on_local_message(self, msg: Message, ctx: Context):
@@ -59,7 +59,7 @@ class StorageProcess(Process):
         # Response:
         #   N/A
         elif msg.type == 'NODE_ADDED':
-            self._processes.add(msg['id'])
+            self._nodes.add(msg['id'])
 
         # Notification that a node is removed from the system.
         # Request:
@@ -67,7 +67,7 @@ class StorageProcess(Process):
         # Response:
         #   N/A
         elif msg.type == 'NODE_REMOVED':
-            self._processes.remove(msg['id'])
+            self._nodes.remove(msg['id'])
 
         # Get number of records stored on the node
         # Request:
