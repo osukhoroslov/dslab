@@ -86,7 +86,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
     }
 
     if config.debug {
-        println!("Messages sent across network: {}", sys.network().message_count());
+        println!("Messages sent across network: {}", sys.network().network_message_count());
         println!("Process histories:");
         for proc in sys.process_names() {
             println!("- [{}] {}", proc, histories.get(&proc).unwrap().join(", "));
@@ -356,7 +356,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
         let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
         sys.send_local_message("proc-0", msg.clone());
         sys.step_until_no_events();
-        msg_counts.push(sys.network().message_count());
+        msg_counts.push(sys.network().network_message_count());
     }
     println!("\nMessage count:");
     for i in 0..sys_sizes.len() {
