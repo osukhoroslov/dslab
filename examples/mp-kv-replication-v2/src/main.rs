@@ -21,7 +21,7 @@ use dslab_mp_python::PyProcessFactory;
 // MESSAGES ----------------------------------------------------------------------------------------
 
 #[derive(Serialize)]
-struct GetMessage<'a> {
+struct GetReqMessage<'a> {
     key: &'a str,
     quorum: u8,
 }
@@ -34,7 +34,7 @@ struct GetRespMessage<'a> {
 }
 
 #[derive(Serialize)]
-struct PutMessage<'a> {
+struct PutReqMessage<'a> {
     key: &'a str,
     value: &'a str,
     context: Option<String>,
@@ -92,7 +92,7 @@ fn check_get(
     expected: Option<Vec<&str>>,
     max_steps: u32,
 ) -> Result<(Vec<String>, Option<String>), String> {
-    sys.send_local_message(proc, Message::json("GET", &GetMessage { key, quorum }));
+    sys.send_local_message(proc, Message::json("GET", &GetReqMessage { key, quorum }));
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("GET_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -136,18 +136,7 @@ fn check_put(
     quorum: u8,
     max_steps: u32,
 ) -> Result<(Vec<String>, String), String> {
-    sys.send_local_message(
-        proc,
-        Message::json(
-            "PUT",
-            &PutMessage {
-                key,
-                value,
-                quorum,
-                context,
-            },
-        ),
-    );
+    send_put(sys, proc, key, value, quorum, context);
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("PUT_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -166,7 +155,7 @@ fn send_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8, co
         proc,
         Message::json(
             "PUT",
-            &PutMessage {
+            &PutReqMessage {
                 key,
                 value,
                 quorum,
@@ -234,7 +223,9 @@ fn key_non_replicas(key: &str, sys: &System) -> Vec<String> {
     let mut non_replicas_pre = Vec::new();
     let mut non_replicas = Vec::new();
     let mut pre = true;
-    for proc in sys.process_names_sorted() {
+    let mut process_names = sys.process_names();
+    process_names.sort();
+    for proc in process_names {
         if replicas.contains(&proc) {
             pre = false;
             continue;
@@ -261,7 +252,7 @@ fn test_basic(config: &TestConfig) -> TestResult {
     let non_replicas = key_non_replicas(&key, &sys);
     println!("Key {} replicas: {:?}", key, replicas);
 
-    // get key from the first process
+    // get key from the first node
     check_get(&mut sys, &procs[0], &key, 2, Some(vec![]), 100)?;
 
     // put key from the first replica
@@ -283,7 +274,7 @@ fn test_basic(config: &TestConfig) -> TestResult {
     assume_eq!(values.len(), 1, "Expected single value")?;
     assume_eq!(values[0], value2)?;
 
-    // get key from the first process
+    // get key from the first node
     check_get(&mut sys, &procs[0], &key, 2, Some(vec![&value2]), 100)?;
     Ok(true)
 }
@@ -499,7 +490,7 @@ fn test_partitioned_clients(config: &TestConfig) -> TestResult {
     let non_replica2 = &non_replicas[1];
     let non_replica3 = &non_replicas[2];
 
-    // put key from the first process with quorum 3
+    // put key from the first node with quorum 3
     let value = random_string(8, &mut rand);
     check_put(&mut sys, &procs[0], &key, &value, None, 3, 100)?;
 
@@ -642,7 +633,7 @@ fn test_shopping_cart_2(config: &TestConfig) -> TestResult {
     sys.network().reset_network();
     sys.steps(100);
 
-    // read key from all non-replica processes
+    // read key from all non-replica nodes
     let expected: HashSet<_> = vec!["cheese", "wine", "milk", "eggs", "beer", "snacks"]
         .into_iter()
         .collect();
@@ -678,7 +669,7 @@ fn test_shopping_xcart_1(config: &TestConfig) -> TestResult {
     let cart0 = vec!["beer", "snacks"];
     let (_, ctx) = check_put(&mut sys, proc_1, &key, &cart0.join(","), None, 3, 100)?;
 
-    // partition processes into two parts
+    // partition nodes into two parts
     let part1: Vec<&str> = vec![proc_1, proc_2, replica1];
     let part2: Vec<&str> = vec![proc_3, replica2, replica3];
     sys.network().make_partition(&part1, &part2);
@@ -713,7 +704,7 @@ fn test_shopping_xcart_1(config: &TestConfig) -> TestResult {
     sys.network().reset_network();
     sys.steps(100);
 
-    // read key from all non-replica processes
+    // read key from all non-replica nodes
     let expected: HashSet<_> = vec!["cheese", "wine", "milk", "eggs"].into_iter().collect();
     for proc in non_replicas.iter() {
         let (values, _) = check_get(&mut sys, proc, &key, 2, None, 100)?;
@@ -786,7 +777,7 @@ fn test_shopping_xcart_2(config: &TestConfig) -> TestResult {
     sys.network().reset_network();
     sys.steps(100);
 
-    // read key from all non-replica processes
+    // read key from all non-replica nodes
     let expected: HashSet<_> = vec!["milk", "eggs", "wine", "snacks", "cheese"].into_iter().collect();
     for proc in non_replicas.iter() {
         let (values, _) = check_get(&mut sys, proc, &key, 2, None, 100)?;

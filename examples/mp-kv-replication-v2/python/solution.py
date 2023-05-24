@@ -4,9 +4,9 @@ from typing import List
 
 
 class StorageProcess(Process):
-    def __init__(self, process_id: str, processes: List[str]):
-        self._id = process_id
-        self._processes = processes
+    def __init__(self, node_id: str, nodes: List[str]):
+        self._id = node_id
+        self._nodes = nodes
         self._data = {}
 
     def on_local_message(self, msg: Message, ctx: Context):
@@ -24,7 +24,7 @@ class StorageProcess(Process):
         #   }
         if msg.type == 'GET':
             key = msg['key']
-            print("[py] Key", key, "replicas:", get_key_replicas(key, len(self._processes)))
+            print("[py] Key", key, "replicas:", get_key_replicas(key, len(self._nodes)))
             if key in self._data:
                 values = [self._data.get(key)]
                 context = 'todo'
