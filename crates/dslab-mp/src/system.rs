@@ -179,12 +179,6 @@ impl System {
         self.proc_nodes.keys().cloned().collect()
     }
 
-    pub fn process_names_sorted(&self) -> Vec<String> {
-        let mut res = self.process_names();
-        res.sort();
-        res
-    }
-
     pub fn send_local_message(&mut self, proc: &str, msg: Message) {
         let mut node = self.proc_nodes[proc].borrow_mut();
         assert!(
