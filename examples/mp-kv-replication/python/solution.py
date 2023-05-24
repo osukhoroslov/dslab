@@ -4,9 +4,9 @@ from typing import List
 
 
 class StorageNode(Process):
-    def __init__(self, process_name: str, processes: List[str]):
-        self._name = process_name
-        self._processes = processes
+    def __init__(self, node_id: str, nodes: List[str]):
+        self._id = node_id
+        self._nodes = nodes
         self._data = {}
 
     def on_local_message(self, msg: Message, ctx: Context):
@@ -18,7 +18,7 @@ class StorageNode(Process):
         #   GET_RESP {"key": "some key", "value": null} - if record for this key is not found
         if msg.type == 'GET':
             key = msg['key']
-            print("[py] Key", key, "replicas:", get_key_replicas(key, len(self._processes)))
+            print("[py] Key", key, "replicas:", get_key_replicas(key, len(self._nodes)))
             value = self._data.get(key)
             resp = Message('GET_RESP', {
                 'key': key,
@@ -68,7 +68,7 @@ def get_key_replicas(key: str, node_count: int):
     key_hash = int.from_bytes(hashlib.md5(key.encode('utf8')).digest(), 'little', signed=False)
     cur = key_hash % node_count
     for _ in range(3):
-        replicas.append(f"proc-{cur}")
+        replicas.append(str(cur))
         cur = get_next_replica(cur, node_count)
     return replicas
 

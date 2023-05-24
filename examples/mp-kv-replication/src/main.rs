@@ -9,7 +9,7 @@ use log::LevelFilter;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sugars::boxed;
 
 use dslab_mp::message::Message;
@@ -19,16 +19,35 @@ use dslab_mp_python::PyProcessFactory;
 
 // MESSAGES ------------------------------------------------------------------------------------------------------------
 
+#[derive(Serialize)]
+struct GetReqMessage<'a> {
+    key: &'a str,
+    quorum: u8,
+}
+
 #[derive(Deserialize)]
 struct GetRespMessage<'a> {
     key: &'a str,
     value: Option<&'a str>,
 }
 
+#[derive(Serialize)]
+struct PutReqMessage<'a> {
+    key: &'a str,
+    value: &'a str,
+    quorum: u8,
+}
+
 #[derive(Deserialize)]
 struct PutRespMessage<'a> {
     key: &'a str,
     value: &'a str,
+}
+
+#[derive(Serialize)]
+struct DeleteReqMessage<'a> {
+    key: &'a str,
+    quorum: u8,
 }
 
 #[derive(Deserialize)]
@@ -58,14 +77,14 @@ fn build_system(config: &TestConfig) -> System {
     sys.network().set_delays(0.01, 0.1);
     let mut proc_names = Vec::new();
     for n in 0..config.proc_count {
-        proc_names.push(format!("proc-{}", n));
+        proc_names.push(format!("{}", n));
     }
     for n in 0..config.proc_count {
         let proc_name = proc_names[n as usize].clone();
         let proc = config
             .proc_factory
             .build((proc_name.clone(), proc_names.clone()), config.seed);
-        let node_name = format!("node-{}", n);
+        let node_name = proc_name.clone();
         sys.add_node(&node_name);
         sys.add_process(&proc_name, boxed!(proc), &node_name);
     }
@@ -80,10 +99,7 @@ fn check_get(
     expected: Option<&str>,
     max_steps: u32,
 ) -> TestResult {
-    sys.send_local_message(
-        proc,
-        Message::new("GET", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)),
-    );
+    sys.send_local_message(proc, Message::json("GET", &GetReqMessage { key, quorum }));
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("GET_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -95,23 +111,8 @@ fn check_get(
     Ok(true)
 }
 
-fn check_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8, max_steps: u32) -> TestResult {
-    sys.send_local_message(
-        proc,
-        Message::new(
-            "PUT",
-            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, key, value, quorum),
-        ),
-    );
-    let res = sys.step_until_local_message_max_steps(proc, max_steps);
-    assume!(res.is_ok(), format!("PUT_RESP is not returned by {}", proc))?;
-    let msgs = res.unwrap();
-    let msg = msgs.first().unwrap();
-    assume_eq!(msg.tip, "PUT_RESP")?;
-    let data: PutRespMessage = serde_json::from_str(&msg.data).unwrap();
-    assume_eq!(data.key, key)?;
-    assume_eq!(data.value, value)?;
-    Ok(true)
+fn send_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8) {
+    sys.send_local_message(proc, Message::json("PUT", &PutReqMessage { key, value, quorum }));
 }
 
 fn check_put_result(sys: &mut System, proc: &str, key: &str, value: &str, max_steps: u32) -> TestResult {
@@ -126,6 +127,11 @@ fn check_put_result(sys: &mut System, proc: &str, key: &str, value: &str, max_st
     Ok(true)
 }
 
+fn check_put(sys: &mut System, proc: &str, key: &str, value: &str, quorum: u8, max_steps: u32) -> TestResult {
+    send_put(sys, proc, key, value, quorum);
+    check_put_result(sys, proc, key, value, max_steps)
+}
+
 fn check_delete(
     sys: &mut System,
     proc: &str,
@@ -134,10 +140,7 @@ fn check_delete(
     expected: Option<&str>,
     max_steps: u32,
 ) -> TestResult {
-    sys.send_local_message(
-        proc,
-        Message::new("DELETE", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum)),
-    );
+    sys.send_local_message(proc, Message::json("DELETE", &DeleteReqMessage { key, quorum }));
     let res = sys.step_until_local_message_max_steps(proc, max_steps);
     assume!(res.is_ok(), format!("DELETE_RESP is not returned by {}", proc))?;
     let msgs = res.unwrap();
@@ -170,7 +173,7 @@ fn key_replicas(key: &str, sys: &System) -> Vec<String> {
     let hash128 = LittleEndian::read_u128(&hash.0);
     let mut replica = (hash128 % proc_count as u128) as u32;
     for _ in 0..3 {
-        replicas.push(format!("proc-{}", replica));
+        replicas.push(format!("{}", replica));
         replica += 1;
         if replica == proc_count {
             replica = 0;
@@ -270,24 +273,12 @@ fn test_concurrent_writes(config: &TestConfig) -> TestResult {
 
     // concurrently put different values from the first and second non-replicas
     let value = random_string(8, &mut rand);
-    sys.send_local_message(
-        &non_replicas[0],
-        Message::new(
-            "PUT",
-            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2),
-        ),
-    );
+    send_put(&mut sys, &non_replicas[0], &key, &value, 2);
     // small delay to ensure writes will have different times
     sys.step_for_duration(0.01);
 
     let value2 = random_string(8, &mut rand);
-    sys.send_local_message(
-        &non_replicas[1],
-        Message::new(
-            "PUT",
-            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2),
-        ),
-    );
+    send_put(&mut sys, &non_replicas[1], &key, &value2, 2);
 
     // the won value is the one written later
     // but it was not observed by the put from the first replica!
@@ -307,24 +298,10 @@ fn test_concurrent_writes_tie(config: &TestConfig) -> TestResult {
 
     // concurrently put different values from the first and second non-replicas
     let value = random_string(8, &mut rand);
-    sys.send_local_message(
-        &non_replicas[0],
-        Message::new(
-            "PUT",
-            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value, 2),
-        ),
-    );
-    // send_put(&mut sys, &non_replicas[0], &key, &value, 2);
+    send_put(&mut sys, &non_replicas[0], &key, &value, 2);
 
     let value2 = random_string(8, &mut rand);
-    sys.send_local_message(
-        &non_replicas[1],
-        Message::new(
-            "PUT",
-            &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, &key, &value2, 2),
-        ),
-    );
-    // send_put(&mut sys, &non_replicas[1], &key, &value2, 2);
+    send_put(&mut sys, &non_replicas[1], &key, &value2, 2);
 
     // with default seed, the won value is from the second replica
     // and is observed by the put from the first replica!
@@ -635,9 +612,9 @@ struct Args {
     #[clap(long, short)]
     debug: bool,
 
-    /// Number of nodes used in tests
+    /// Number of processes
     #[clap(long, short, default_value = "6")]
-    node_count: u32,
+    proc_count: u32,
 
     /// Random seed used in tests
     #[clap(long, short, default_value = "123")]
@@ -656,7 +633,7 @@ fn main() {
     let process_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
     let config = TestConfig {
         proc_factory: &process_factory,
-        proc_count: args.node_count,
+        proc_count: args.proc_count,
         seed: args.seed,
     };
 
