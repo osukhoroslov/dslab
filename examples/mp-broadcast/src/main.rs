@@ -7,6 +7,7 @@ use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use serde::Serialize;
 use serde_json::Value;
 use sugars::boxed;
 
@@ -25,6 +26,11 @@ struct TestConfig<'a> {
     seed: u64,
     monkeys: u32,
     debug: bool,
+}
+
+#[derive(Serialize)]
+struct BroadcastMessage<'a> {
+    text: &'a str
 }
 
 fn init_logger(level: LevelFilter) {
@@ -216,7 +222,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
 
 fn test_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     sys.step_until_no_events();
     check(&mut sys, config)
@@ -224,7 +230,7 @@ fn test_normal(config: &TestConfig) -> TestResult {
 
 fn test_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     // let 2 messages to deliver (sender and one other node)
     sys.steps(2);
@@ -236,7 +242,7 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
 
 fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     // let 1 message to deliver (sender only)
     sys.step();
@@ -251,7 +257,7 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
     for n in 2..config.proc_count {
         sys.network().disconnect_node(&format!("node-{}", &n.to_string()));
     }
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-0");
@@ -265,7 +271,7 @@ fn test_two_crashes2(config: &TestConfig) -> TestResult {
     // simulate that 1 and 2 communicated only with 0 and then crashed
     sys.network().drop_outgoing("node-1");
     sys.network().drop_outgoing("node-2");
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("node-1");
@@ -277,13 +283,13 @@ fn test_two_crashes2(config: &TestConfig) -> TestResult {
 fn test_causal_order(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     sys.network().set_delays(100., 200.);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
     sys.send_local_message("proc-0", msg);
     while sys.event_log("proc-1").is_empty() {
         sys.step();
     }
     sys.network().set_delays(10., 20.);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "1:How?"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "1:How?"});
     sys.send_local_message("proc-1", msg);
 
     while sys.event_log("proc-0").len() < 3 {
@@ -291,7 +297,7 @@ fn test_causal_order(config: &TestConfig) -> TestResult {
     }
 
     sys.network().set_delay(1.);
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Fine!"));
+    let msg = Message::json("SEND", &BroadcastMessage{text: "0:Fine!"});
     sys.send_local_message("proc-1", msg);
     sys.step_until_no_events();
     check(&mut sys, config)
@@ -311,7 +317,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         }
         for i in 0..10 {
             let user = rand.gen_range(0..config.proc_count).to_string();
-            let msg = Message::new("SEND", &format!(r#"{{"text": "{}:{}"}}"#, user, i));
+            let msg = Message::json("SEND", &BroadcastMessage{text: &format!("{}:{}", user, i)});
             sys.send_local_message(&format!("proc-{}", user), msg.clone());
             if i % 2 == 0 {
                 sys.network().set_delays(10., 20.);
@@ -353,7 +359,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
         let mut run_config = *config;
         run_config.proc_count = node_count;
         let mut sys = build_system(&run_config);
-        let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, "0:Hello!"));
+        let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello!"});
         sys.send_local_message("proc-0", msg.clone());
         sys.step_until_no_events();
         msg_counts.push(sys.network().network_message_count());
