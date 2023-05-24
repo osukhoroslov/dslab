@@ -44,26 +44,24 @@ fn build_system(config: &TestConfig) -> System {
     let mut sys = System::new(config.seed);
     let mut proc_names = Vec::new();
     for n in 0..config.proc_count {
-        proc_names.push(format!("proc-{}", n));
+        proc_names.push(format!("{}", n));
     }
-    for n in 0..config.proc_count {
-        let proc_name = &proc_names[n as usize];
+    for proc_name in &proc_names {
         let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
-        let node_name = &format!("node-{}", n);
-        sys.add_node(node_name);
-        sys.add_process(proc_name, boxed!(proc), node_name);
+        sys.add_node(proc_name);
+        sys.add_process(proc_name, boxed!(proc), proc_name);
     }
     sys
 }
 
-fn check(sys: &mut System, config: &TestConfig) -> TestResult {
+fn check(sys: &System, config: &TestConfig) -> TestResult {
     let mut sent = HashMap::new();
     let mut delivered = HashMap::new();
     let mut all_sent = HashSet::new();
     let mut all_delivered = HashSet::new();
     let mut histories = HashMap::new();
     for proc in 0..config.proc_count {
-        let proc = format!("proc-{}", proc);
+        let proc = format!("{}", proc);
         let mut history = Vec::new();
         let mut sent_msgs = Vec::new();
         let mut delivered_msgs = Vec::new();
@@ -168,7 +166,7 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
                     break;
                 }
             }
-            // check that other correct nodes have delivered all past events before delivering the message
+            // check that other correct processes have delivered all past events before delivering the message
             for (dst, delivered_msgs) in &delivered {
                 if sys.node_is_crashed(&sys.proc_node_name(dst)) {
                     continue;
@@ -223,32 +221,32 @@ fn check(sys: &mut System, config: &TestConfig) -> TestResult {
 fn test_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
+    sys.send_local_message("0", msg);
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
-    // let 2 messages to deliver (sender and one other node)
+    sys.send_local_message("0", msg);
+    // let 2 messages to deliver (sender and one other process)
     sys.steps(2);
     // crash source node
-    sys.crash_node("node-0");
+    sys.crash_node("0");
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
+    sys.send_local_message("0", msg);
     // let 1 message to deliver (sender only)
     sys.step();
-    sys.crash_node("node-0");
+    sys.crash_node("0");
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_two_crashes(config: &TestConfig) -> TestResult {
@@ -258,49 +256,49 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
         sys.network().disconnect_node(&format!("node-{}", &n.to_string()));
     }
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
+    sys.send_local_message("0", msg);
     sys.steps(config.proc_count.pow(2));
-    sys.crash_node("node-0");
-    sys.crash_node("node-1");
+    sys.crash_node("0");
+    sys.crash_node("1");
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_two_crashes2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     // simulate that 1 and 2 communicated only with 0 and then crashed
-    sys.network().drop_outgoing("node-1");
-    sys.network().drop_outgoing("node-2");
+    sys.network().drop_outgoing("1");
+    sys.network().drop_outgoing("2");
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
+    sys.send_local_message("0", msg);
     sys.steps(config.proc_count.pow(2));
-    sys.crash_node("node-1");
-    sys.crash_node("node-2");
+    sys.crash_node("1");
+    sys.crash_node("2");
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_causal_order(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     sys.network().set_delays(100., 200.);
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello"});
-    sys.send_local_message("proc-0", msg);
-    while sys.event_log("proc-1").is_empty() {
+    sys.send_local_message("0", msg);
+    while sys.event_log("1").is_empty() {
         sys.step();
     }
     sys.network().set_delays(10., 20.);
     let msg = Message::json("SEND", &BroadcastMessage{text: "1:How?"});
-    sys.send_local_message("proc-1", msg);
+    sys.send_local_message("1", msg);
 
-    while sys.event_log("proc-0").len() < 3 {
+    while sys.event_log("0").len() < 3 {
         sys.step();
     }
 
     sys.network().set_delay(1.);
     let msg = Message::json("SEND", &BroadcastMessage{text: "0:Fine!"});
-    sys.send_local_message("proc-1", msg);
+    sys.send_local_message("1", msg);
     sys.step_until_no_events();
-    check(&mut sys, config)
+    check(&sys, config)
 }
 
 fn test_chaos_monkey(config: &TestConfig) -> TestResult {
@@ -318,7 +316,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         for i in 0..10 {
             let user = rand.gen_range(0..config.proc_count).to_string();
             let msg = Message::json("SEND", &BroadcastMessage{text: &format!("{}:{}", user, i)});
-            sys.send_local_message(&format!("proc-{}", user), msg.clone());
+            sys.send_local_message(&user, msg.clone());
             if i % 2 == 0 {
                 sys.network().set_delays(10., 20.);
             } else {
@@ -341,7 +339,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         sys.crash_node(&victim1);
         sys.crash_node(&victim2);
         sys.step_until_no_events();
-        check(&mut sys, config)?;
+        check(&sys, config)?;
     }
     Ok(true)
 }
@@ -360,13 +358,13 @@ fn test_scalability(config: &TestConfig) -> TestResult {
         run_config.proc_count = node_count;
         let mut sys = build_system(&run_config);
         let msg = Message::json("SEND", &BroadcastMessage{text: "0:Hello!"});
-        sys.send_local_message("proc-0", msg.clone());
+        sys.send_local_message("0", msg.clone());
         sys.step_until_no_events();
         msg_counts.push(sys.network().network_message_count());
     }
     println!("\nMessage count:");
     for i in 0..sys_sizes.len() {
-        let baseline = (sys_sizes[i] * (sys_sizes[i] - 1)) as u64;
+        let baseline = sys_sizes[i] * (sys_sizes[i] - 1);
         println!("- N={}: {} (baseline {})", sys_sizes[i], msg_counts[i], baseline);
     }
     Ok(true)
@@ -394,17 +392,13 @@ struct Args {
     #[clap(long, short, default_value = "123")]
     seed: u64,
 
-    /// Number of nodes used in tests
+    /// Number of processes
     #[clap(long, short, default_value = "5")]
-    node_count: u64,
+    proc_count: u64,
 
     /// Number of chaos monkey runs
     #[clap(long, short, default_value = "10")]
     monkeys: u32,
-
-    /// Path to dslib directory
-    #[clap(long = "lib", short = 'l', default_value = "../../dslib")]
-    dslib_path: String,
 }
 
 // MAIN --------------------------------------------------------------------------------------------
@@ -420,7 +414,7 @@ fn main() {
     let proc_factory = PyProcessFactory::new(&args.solution_path, "BroadcastProcess");
     let config = TestConfig {
         proc_factory: &proc_factory,
-        proc_count: args.node_count,
+        proc_count: args.proc_count,
         seed: args.seed,
         monkeys: args.monkeys,
         debug: args.debug,
