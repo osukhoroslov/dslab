@@ -34,7 +34,7 @@ pub struct TaskCompleted {
 pub struct AsyncWorker {
     id: Id,
     compute: Rc<RefCell<Compute>>,
-    disk: RefCell<Disk>,
+    disk: Rc<RefCell<Disk>>,
     net: Rc<RefCell<Network>>,
     master_id: Id,
     net_id: Id,
@@ -46,18 +46,18 @@ pub struct AsyncWorker {
 impl AsyncWorker {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
-        disk: Disk,
+        disk: Rc<RefCell<Disk>>,
         net: Rc<RefCell<Network>>,
         master_id: Id,
         ctx: SimulationContext,
     ) -> Self {
         let net_id = net.borrow().id();
         let compute_id = compute.borrow().id();
-        let disk_id = disk.id();
+        let disk_id = disk.borrow().id();
         Self {
             id: ctx.id(),
             compute,
-            disk: RefCell::new(disk),
+            disk,
             net,
             net_id,
             compute_id,

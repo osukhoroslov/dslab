@@ -129,8 +129,13 @@ fn main() {
         sim.add_handler(compute_name, compute.clone());
         // disk
         let disk_name = format!("{}::disk", host);
-        let disk = DiskBuilder::simple(disk_capacity, disk_read_bandwidth, disk_write_bandwidth)
-            .build(sim.create_context(&disk_name));
+        let disk = rc!(refcell!(DiskBuilder::simple(
+            disk_capacity,
+            disk_read_bandwidth,
+            disk_write_bandwidth
+        )
+        .build(sim.create_context(&disk_name))));
+        sim.add_handler(disk_name, disk.clone());
 
         let worker_name = &format!("{}::worker", host);
         let worker = AsyncWorker::new(
