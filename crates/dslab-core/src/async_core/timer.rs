@@ -1,4 +1,4 @@
-//! Timers for simulation
+//! Timers for simulation.
 
 use std::{cell::RefCell, cmp::Ordering, rc::Rc};
 
@@ -8,7 +8,7 @@ use crate::Id;
 /// Timer Identifier
 pub type TimerId = u64;
 
-/// Timer will set the given `state` as completed at time
+/// Timer will set the given `state` as completed at time.
 #[derive(Clone)]
 pub struct Timer {
     /// unique identifier of timer
@@ -22,7 +22,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    /// Create a timer
+    /// Creates a timer.
     pub(crate) fn new(id: TimerId, component_id: Id, time: f64, state: Rc<RefCell<dyn AwaitResultSetter>>) -> Self {
         Self {
             id,
