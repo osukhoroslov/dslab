@@ -800,6 +800,53 @@ impl SimulationContext {
 
 
         /// Async wait for any event of type T from src component with timeout.
+        ///
+        /// # Example
+        /// ```rust
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let mut res = client_ctx.async_wait_for_event::<Message>(root_id, 10.).await;
+        ///     match res {
+        ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
+        ///         AwaitResult::Timeout(e) => {
+        ///             assert_eq!(e.src, root_id);
+        ///             assert_eq!(e.dest, client_ctx.id());
+        ///         }
+        ///     }
+        ///
+        ///     res = client_ctx.async_wait_for_event::<Message>(root_id, 50.).await;
+        ///     match res {
+        ///         AwaitResult::Ok((e, data)) => {
+        ///             assert_eq!(e.src, root_id);
+        ///             assert_eq!(data.payload, 42);
+        ///         }
+        ///         AwaitResult::Timeout(..) => panic!("expect ok here"),
+        ///     }
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 60.);
+        /// ```
         pub async fn async_wait_for_event<T>(&self, src: Id, timeout: f64) -> AwaitResult<T>
         where
             T: EventData,
@@ -809,11 +856,41 @@ impl SimulationContext {
             self.async_wait_for_event_to(src, self.id, timeout).await
         }
 
-        /// async wait for any event of type T from src component without timeout
-        /// Example:
+        /// Async wait for any event of type T from src component without timeout.
         ///
-        /// let (event, data) = ctx.async_handle_event::<PingMessage>(pinger_id).await;
+        /// # Example:
         ///
+        /// ```rust
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.async_handle_event::<Message>(root_id).await;
+        ///     assert_eq!(e.src, root_id);
+        ///     assert_eq!(data.payload, 42);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
         pub async fn async_handle_event<T>(&self, src: Id) -> (Event, T)
         where
             T: EventData,
