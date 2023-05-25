@@ -146,7 +146,9 @@ impl SpammerNode {
 }
 
 impl Process for SpammerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) {}
+
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
         for i in 0..self.cnt {
             ctx.send(
                 Message {
@@ -157,8 +159,6 @@ impl Process for SpammerNode {
             );
         }
     }
-
-    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 
@@ -583,9 +583,9 @@ fn many_dropped_messages(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_reached_depth_goal(10);
     let mut sys = build_spammer_delivery_system();
-    sys.network().drop_outgoing("node1");
+    sys.send_local_message("process1", Message::new("START", "start spamming!!!"));
 
-    sys.send_local_message("process2", Message::new("START", "start spamming!!!"));
+    sys.network().drop_outgoing("node1");
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
     let mut mc = ModelChecker::new(&mut sys, strategy);
     let result = mc.run();
