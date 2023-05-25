@@ -1,7 +1,3 @@
-//! synchronization primitives
+//! Synchronization primitives.
 
-use crate::async_enabled;
-
-async_enabled! {
-    pub mod queue;
-}
+pub mod queue;

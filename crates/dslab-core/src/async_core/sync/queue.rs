@@ -1,4 +1,4 @@
-//! queues implementation
+//! Queues implementation.
 
 use std::{cell::RefCell, collections::VecDeque};
 
@@ -41,7 +41,7 @@ impl<T> UnboundedBlockingQueue<T> {
         }
     }
 
-    /// Non-blocking send data to the queue
+    /// Sends data to the queue without blocking.
     pub fn send(&self, data: T) {
         self.send_ticket.next();
         self.queue.borrow_mut().push_back(data);
@@ -52,7 +52,7 @@ impl<T> UnboundedBlockingQueue<T> {
         }
     }
 
-    /// Async receive data from queue. Each receive must be awaited.
+    /// Async receives data from queue. Each receive must be awaited.
     pub async fn receive(&self) -> T {
         self.receive_ticket.next();
         if self.queue.borrow().is_empty() {
