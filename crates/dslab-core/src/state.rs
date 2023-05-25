@@ -51,6 +51,7 @@ async_enabled! {
         ordered_events: VecDeque<Event>,
         canceled_events: HashSet<EventId>,
         event_count: u64,
+        registered_handlers: Vec<bool>,
 
         awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
         details_getters: HashMap<TypeId, fn(&dyn EventData) -> DetailsKey>,
@@ -85,6 +86,7 @@ impl SimulationState {
                 ordered_events: VecDeque::new(),
                 canceled_events: HashSet::new(),
                 event_count: 0,
+                registered_handlers: Vec::new(),
                 awaiters: HashMap::new(),
                 details_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
@@ -304,7 +306,35 @@ impl SimulationState {
         output
     }
 
+    async_disabled! {
+        pub fn mark_registered_handler(&mut self, _id: Id) {}
+    }
+
     async_enabled! {
+        pub fn mark_registered_handler(&mut self, id: Id) {
+            while self.registered_handlers.len() < id as usize {
+                self.registered_handlers.push(false);
+            }
+
+            if self.registered_handlers.len() < id as usize + 1 {
+                self.registered_handlers.push(true);
+            } else {
+                self.registered_handlers[id as usize] = true;
+            }
+        }
+
+        pub fn mark_removed_handler(&mut self, id: Id) {
+            self.registered_handlers[id as usize] = false;
+        }
+
+        fn has_registered_handler(&self, component_id: Id) -> bool {
+            if let Some(flag) = self.registered_handlers.get(component_id as usize) {
+                *flag
+            } else {
+                false
+            }
+        }
+
         pub fn cancel_component_timers(&mut self, component_id: Id) {
             for timer in self.timers.iter() {
                 if timer.component_id == component_id {
@@ -354,7 +384,19 @@ impl SimulationState {
             true
         }
 
-        pub fn spawn(&mut self, future: impl Future<Output = ()>) {
+        pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
+            let task = Arc::new(Task::new(future, self.task_sender.clone()));
+
+            self.task_sender.send(task).expect("channel is closed");
+        }
+
+        pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
+            assert!(
+                self.has_registered_handler(component_id),
+                "register handler for component {} before spawning async tasks. Empty impl EventHandler is OK.",
+                component_id,
+            );
+
             let task = Arc::new(Task::new(future, self.task_sender.clone()));
 
             self.task_sender.send(task).expect("channel is closed");

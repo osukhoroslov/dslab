@@ -41,7 +41,7 @@ impl<T> UnboundedBlockingQueue<T> {
         }
     }
 
-    /// Non-blocking send data to the channel
+    /// Non-blocking send data to the queue
     pub fn send(&self, data: T) {
         self.send_ticket.next();
         self.queue.borrow_mut().push_back(data);

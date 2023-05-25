@@ -1,9 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
+use serde::Serialize;
+
 use dslab_core::{cast, event::EventData, Event, EventHandler, Id, SimulationContext};
 use dslab_network::network::Network;
-
-use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct StartMessage {}

@@ -1,15 +1,15 @@
 use std::{cell::RefCell, rc::Rc};
 
-use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
-use dslab_core::async_core::await_details::DetailsKey;
-use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
-use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
-
 use futures::future::FutureExt;
 use futures::select;
 
 use serde::Serialize;
 use serde_json::json;
+
+use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
+use dslab_core::async_core::await_details::DetailsKey;
+use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
+use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
 
 use crate::events::{Start, TaskCompleted, TaskRequest};
 

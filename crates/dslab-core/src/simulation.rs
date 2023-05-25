@@ -267,6 +267,7 @@ impl Simulation {
     {
         let id = self.register(name.as_ref());
         self.handlers[id as usize] = Some(handler);
+        self.sim_state.borrow_mut().mark_registered_handler(id);
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -331,6 +332,7 @@ impl Simulation {
         {
             let id = self.lookup_id(name.as_ref());
             self.handlers[id as usize] = None;
+            self.sim_state.borrow_mut().mark_removed_handler(id);
 
             // cancel pending events related to the removed component
             let id = self.lookup_id(name.as_ref());
@@ -517,10 +519,7 @@ impl Simulation {
             self.process_task();
         }
 
-        /// spawn the background process. Similar to "launch a new thread"
-        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
-            self.sim_state.borrow_mut().spawn(future);
-        }
+
 
         fn get_await_key(&self, event: &Event) -> AwaitKey {
             match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
@@ -534,33 +533,226 @@ impl Simulation {
             }
         }
 
-        /// Register the function for a type of EventData to get await details to futher call
+        /// Spawns the background process. Similar to "launch a new thread".
+        /// Only 'static Futures are allowed. To spawn methods of components use `SimulationContext::spawn`
+        ///
+        /// # Example:
+        ///
+        /// ```rust
+        /// use dslab_core::Simulation;
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// let ctx = sim.create_context("client");
+        ///
+        /// sim.spawn(async move {
+        ///     let initial_time = ctx.time();
+        ///     ctx.async_wait_for(5.).await;
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(5., sim.time());
+        /// ```
+        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
+            self.sim_state.borrow_mut().spawn(future);
+        }
+
+        /// Register the function for a type of EventData to get await details to further call
         /// ctx.async_detailed_handle_event::<T>(from, details)
         ///
         /// # Example
+        /// ```rust
+        /// use std::cell::RefCell;
+        /// use std::rc::Rc;
         ///
+        /// use serde::Serialize;
         ///
-        /// pub struct TaskCompleted {
-        ///     request_id: u64
-        ///     some_other_data: u64
+        /// use dslab_core::async_core::{AwaitResult, DetailsKey};
+        /// use dslab_core::event::EventData;
+        /// use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct SomeEvent {
+        ///     request_id: u64,
         /// }
         ///
-        /// pub fn get_task_completed_details(data: &dyn EventData) -> DetailsKey {
-        ///     let event = data.downcast_ref::<TaskCompleted>().unwrap();
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {}
+        ///
+        /// struct Client {
+        ///     ctx: SimulationContext,
+        ///     root_id: Id,
+        ///     actions_finished: RefCell<u32>,
+        /// }
+        ///
+        /// impl Client {
+        ///     fn on_start(&self) {
+        ///         self.ctx.spawn(self.listen_first());
+        ///         self.ctx.spawn(self.listen_second());
+        ///     }
+        ///
+        ///     async fn listen_first(&self) {
+        ///         let mut result = self
+        ///             .ctx
+        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 10.)
+        ///             .await;
+        ///         if let AwaitResult::Timeout(e) = result {
+        ///             assert_eq!(e.src, self.root_id);
+        ///         } else {
+        ///             panic!("expect result timeout here");
+        ///         }
+        ///         result = self
+        ///             .ctx
+        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 100.)
+        ///             .await;
+        ///         if let AwaitResult::Ok((e, data)) = result {
+        ///             assert_eq!(e.src, self.root_id);
+        ///             assert_eq!(data.request_id, 1);
+        ///         } else {
+        ///             panic!("expected result ok");
+        ///         }
+        ///         *self.actions_finished.borrow_mut() += 1;
+        ///     }
+        ///
+        ///     async fn listen_second(&self) {
+        ///         let (e, data) = self.ctx.async_detailed_handle_event::<SomeEvent>(self.root_id, 2).await;
+        ///         assert_eq!(e.src, self.root_id);
+        ///         assert_eq!(data.request_id, 2);
+        ///         *self.actions_finished.borrow_mut() += 1;
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Client {
+        ///     fn on(&mut self, event: Event) {
+        ///         cast!(match event.data {
+        ///             Start {} => {
+        ///                 self.on_start();
+        ///             }
+        ///             SomeEvent { request_id } => {
+        ///                 panic!(
+        ///                     "unexpected handling SomeEvent with request id {} at time {}",
+        ///                     request_id,
+        ///                     self.ctx.time()
+        ///                 );
+        ///             }
+        ///         })
+        ///     }
+        /// }
+        ///
+        /// pub fn get_some_event_details(data: &dyn EventData) -> DetailsKey {
+        ///     let event = data.downcast_ref::<SomeEvent>().unwrap();
         ///     event.request_id as DetailsKey
         /// }
         ///
-        /// let sim = Simulation::new(42);
-        /// sim.register_details_getter_for::<TaskCompleted>(get_task_completed_details);
         ///
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
+        ///
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        ///
+        /// let root_ctx = sim.create_context("root");
+        ///
+        /// let client = Rc::new(RefCell::new(Client {
+        ///     ctx: client_ctx,
+        ///     root_id: root_ctx.id(),
+        ///     actions_finished: RefCell::new(0),
+        /// }));
+        /// sim.add_handler("client", client.clone());
+        ///
+        /// root_ctx.emit_now(Start {}, client_id);
+        /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);
+        /// root_ctx.emit(SomeEvent { request_id: 2 }, client_id, 60.);
+        ///
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
+        /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
+        ///
+        /// ```
         pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
             self.sim_state
                 .borrow_mut()
                 .register_details_getter_for::<T>(details_getter);
         }
 
-        /// Create a simulation go-like Channel for "message-passing" data
-        pub fn create_channel<T, S>(&mut self, name: S) -> UnboundedBlockingQueue<T>
+        /// Creates an UnboundedBlockingQueue for "message-passing" data.
+        ///
+        /// # Examples:
+        /// ```rust
+        ///
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
+        ///
+        /// struct AnyStruct {
+        ///     payload: u32,
+        /// }
+        ///
+        /// struct Client {
+        ///     ctx: SimulationContext,
+        ///     queue: UnboundedBlockingQueue<AnyStruct>,
+        /// }
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {}
+        ///
+        /// impl Client {
+        ///     fn on_start(&self) {
+        ///         self.ctx.spawn(self.producer());
+        ///         self.ctx.spawn(self.consumer());
+        ///     }
+        ///
+        ///     async fn producer(&self) {
+        ///         for i in 0..10 {
+        ///             self.ctx.async_wait_for(5.).await;
+        ///             self.queue.send(AnyStruct {payload: i});
+        ///         }
+        ///     }
+        ///
+        ///     async fn consumer(&self) {
+        ///         for i in 0..10 {
+        ///             let msg = self.queue.receive().await;
+        ///             assert_eq!(msg.payload, i);
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Client {
+        ///     fn on(&mut self, event: Event) {
+        ///         cast!(match event.data {
+        ///             Start {} => {
+        ///                 self.on_start();
+        ///             }
+        ///         })
+        ///     }
+        /// }
+        ///
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        ///
+        /// let queue: UnboundedBlockingQueue<AnyStruct> = sim.create_queue("client_queue");
+        /// let client = Rc::new(RefCell::new(Client {ctx: client_ctx, queue }));
+        ///
+        /// sim.add_handler("client", client);
+        ///
+        /// let root_ctx = sim.create_context("root");
+        /// root_ctx.emit(Start{}, client_id, 10.);
+        ///
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(sim.time(), 60.); // 10. from start delay + 5.*10 from send steps delays
+        /// ```
+        pub fn create_queue<T, S>(&mut self, name: S) -> UnboundedBlockingQueue<T>
         where
             S: AsRef<str>,
         {
