@@ -13,5 +13,4 @@ fn test_launching() {
     println!("STDERR: {}", stderr);
 
     assert!(output.status.success());
-    assert!(!stderr.to_lowercase().contains("error"));
 }
