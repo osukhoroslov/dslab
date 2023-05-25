@@ -24,9 +24,6 @@ class TestProcess(Process):
         if self.data == tmp_value:
             ctx.send_local(msg)
 
-        # we suppose it will be discarded later
-        self.data = tmp_value
-
         if msg.type == 'FIRST_STEP':
             # we suppose it will be discarded later
             self.data = tmp_value
