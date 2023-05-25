@@ -2,7 +2,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use futures::future::FutureExt;
 use futures::select;
-
 use serde::Serialize;
 use serde_json::json;
 
