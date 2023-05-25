@@ -270,7 +270,7 @@ fn build_no_events_left_goal() -> GoalFn {
 
 fn build_reached_depth_goal(depth: u64) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.events.available_events_num() == 0 && state.depth >= depth{
+        if state.events.available_events_num() == 0 && state.depth >= depth {
             Some("final".to_string())
         } else {
             None
