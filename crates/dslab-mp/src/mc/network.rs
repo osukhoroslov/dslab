@@ -62,12 +62,7 @@ impl McNetwork {
                 },
             }
         } else {
-            McEvent::MessageReceived {
-                msg,
-                src,
-                dest,
-                options: DeliveryOptions::Dropped,
-            }
+            McEvent::MessageDropped { msg, src, dest }
         }
     }
 }

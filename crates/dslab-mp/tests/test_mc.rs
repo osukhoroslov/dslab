@@ -130,6 +130,45 @@ impl Process for PostponedReceiverNode {
     }
 }
 
+#[derive(Clone)]
+struct SpammerNode {
+    other: String,
+    cnt: u64,
+}
+
+impl SpammerNode {
+    pub fn new(other: &str) -> Self {
+        Self {
+            other: other.to_string(),
+            cnt: 10,
+        }
+    }
+}
+
+impl Process for SpammerNode {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+        for i in 0..self.cnt {
+            ctx.send(
+                Message {
+                    tip: "MESSAGE".to_string(),
+                    data: i.to_string(),
+                },
+                self.other.clone(),
+            );
+        }
+    }
+
+    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
+
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+
+    fn state(&self) -> Box<dyn ProcessState> {
+        boxed!("".to_string())
+    }
+
+    fn set_state(&mut self, _: Box<dyn ProcessState>) {}
+}
+
 fn build_ping_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
@@ -161,6 +200,17 @@ fn build_postponed_delivery_system() -> System {
     sys.add_node("node2");
     let process1 = boxed!(PingMessageNode::new("process2"));
     let process2 = boxed!(PostponedReceiverNode::new());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
+    sys
+}
+
+fn build_spammer_delivery_system() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(SpammerNode::new("process2"));
+    let process2 = boxed!(PingMessageNode::new("process1"));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -211,6 +261,16 @@ fn build_one_message_get_data_goal(goal_data: Rc<RefCell<Vec<String>>>) -> GoalF
 fn build_no_events_left_goal() -> GoalFn {
     boxed!(|state: &McState| {
         if state.events.available_events_num() == 0 {
+            Some("final".to_string())
+        } else {
+            None
+        }
+    })
+}
+
+fn build_reached_depth_goal(depth: u64) -> GoalFn {
+    boxed!(move |state: &McState| {
+        if state.events.available_events_num() == 0 && state.depth >= depth{
             Some("final".to_string())
         } else {
             None
@@ -507,4 +567,27 @@ fn timer(#[case] strategy_name: String) {
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 4); // final states for both branches are equal: first timer, then message
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn many_dropped_messages(#[case] strategy_name: String) {
+    let invariant = boxed!(|state: &McState| {
+        if state.events.available_events_num() > 1 {
+            Err("MessageDropped directives should have strict order".to_owned())
+        } else {
+            Ok(())
+        }
+    });
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_reached_depth_goal(10);
+    let mut sys = build_spammer_delivery_system();
+    sys.network().drop_outgoing("node1");
+
+    sys.send_local_message("process2", Message::new("START", "start spamming!!!"));
+    let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
+    let mut mc = ModelChecker::new(&mut sys, strategy);
+    let result = mc.run();
+    assert!(result.is_ok());
 }

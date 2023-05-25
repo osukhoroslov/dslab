@@ -122,7 +122,9 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            _ => {}
+            MessageDropped { .. } => {
+                self.apply_event(system, event_id, false, false)?;
+            }
         }
 
         Ok(())
