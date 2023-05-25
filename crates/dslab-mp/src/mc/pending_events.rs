@@ -39,7 +39,7 @@ impl PendingEvents {
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
         match &event {
-            McEvent::MessageReceived { msg, src, dest, ..} => {
+            McEvent::MessageReceived { msg, src, dest, .. } => {
                 if self.resolver.add_message(msg.clone(), src.clone(), dest.clone(), id) {
                     self.available_events.insert(id);
                 }
@@ -81,7 +81,7 @@ impl PendingEvents {
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
-        if let Some(_) = self.directives.iter().next() {
+        if self.directives.iter().next().is_some() {
             return 1;
         }
         self.available_events.len()
