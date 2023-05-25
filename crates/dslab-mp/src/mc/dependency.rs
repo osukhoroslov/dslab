@@ -91,7 +91,6 @@ impl DependencyResolver {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use serde::Serialize;
@@ -99,7 +98,7 @@ mod tests {
     use crate::{mc::dependency::DependencyResolver, message::Message};
 
     #[derive(Serialize)]
-    struct EmptyMessage{}
+    struct EmptyMessage {}
 
     #[test]
     fn test_dependency_resolver_messages() {
@@ -114,19 +113,29 @@ mod tests {
             assert!(resolver.add_timer(proc.to_owned(), ordered_float::OrderedFloat(1.0), event_id()));
             assert!(!resolver.add_timer(proc.to_owned(), ordered_float::OrderedFloat(3.0), event_id()));
         }
-        
+
         for proc_from in procs {
             for proc_to in procs {
                 if proc_to == proc_from {
                     continue;
                 }
-                assert!(resolver.add_message(Message::json("MSG", &EmptyMessage{}), proc_from.to_owned(), proc_to.to_owned(), event_id()));
-                assert!(!resolver.add_message(Message::json("MSG", &EmptyMessage{}), proc_from.to_owned(), proc_to.to_owned(), event_id()));
+                assert!(resolver.add_message(
+                    Message::json("MSG", &EmptyMessage {}),
+                    proc_from.to_owned(),
+                    proc_to.to_owned(),
+                    event_id()
+                ));
+                assert!(!resolver.add_message(
+                    Message::json("MSG", &EmptyMessage {}),
+                    proc_from.to_owned(),
+                    proc_to.to_owned(),
+                    event_id()
+                ));
             }
         }
         assert_eq!(resolver.messages.len(), 6);
         assert_eq!(resolver.timers.len(), 6);
-        
+
         let mut counter: usize = 0;
         let mut event_id = || {
             counter += 1;
@@ -141,15 +150,24 @@ mod tests {
                 if proc_to == proc_from {
                     continue;
                 }
-                assert!(resolver.remove_message(Message::json("MSG", &EmptyMessage{}), proc_from.to_owned(), proc_to.to_owned()).is_some());
-                assert!(resolver.remove_message(Message::json("MSG", &EmptyMessage{}), proc_from.to_owned(), proc_to.to_owned()).is_none());
+                assert!(resolver
+                    .remove_message(
+                        Message::json("MSG", &EmptyMessage {}),
+                        proc_from.to_owned(),
+                        proc_to.to_owned()
+                    )
+                    .is_some());
+                assert!(resolver
+                    .remove_message(
+                        Message::json("MSG", &EmptyMessage {}),
+                        proc_from.to_owned(),
+                        proc_to.to_owned()
+                    )
+                    .is_none());
             }
         }
         assert!(resolver.messages.is_empty());
         assert!(resolver.timers.is_empty());
         assert!(resolver.proc_timers.is_empty());
-        
     }
-
-
 }
