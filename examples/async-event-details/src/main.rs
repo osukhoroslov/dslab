@@ -2,7 +2,6 @@ mod events;
 mod process;
 
 use std::io::Write;
-
 use std::time::Instant;
 
 use clap::Parser;
@@ -14,7 +13,7 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
-use dslab_core::{simulation::Simulation, Id, SimulationContext};
+use dslab_core::{simulation::Simulation, Event, EventHandler, Id, SimulationContext};
 
 use crate::process::TaskInfo;
 
@@ -62,6 +61,10 @@ impl Client {
     }
 }
 
+impl EventHandler for Client {
+    fn on(&mut self, _event: Event) {}
+}
+
 fn register_deails_getters(sim: &Simulation) {
     sim.register_details_getter_for::<CompStarted>(get_compute_start_id);
     sim.register_details_getter_for::<CompFailed>(get_compute_failed_id);
@@ -105,7 +108,7 @@ fn main() {
         compute,
         compute_id,
         sim.create_context(&worker_name),
-        sim.create_channel::<TaskInfo, &String>(&worker_chan_name),
+        sim.create_queue::<TaskInfo, &String>(&worker_chan_name),
     )));
 
     sim.add_handler(worker_name, worker.clone());
@@ -114,9 +117,19 @@ fn main() {
 
     admin.emit_now(Start {}, worker.borrow().id());
 
+    let client_name = "client";
+
     // client context for submitting tasks
-    let client = Client::new(sim.create_context("client"), 100., task_count, worker.borrow().id());
-    client.run();
+    let client = rc!(refcell!(Client::new(
+        sim.create_context(client_name),
+        100.,
+        task_count,
+        worker.borrow().id()
+    )));
+
+    sim.add_handler(client_name, client.clone());
+
+    client.borrow().run();
 
     let t = Instant::now();
 

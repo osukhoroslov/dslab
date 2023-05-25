@@ -14,8 +14,7 @@ use dslab_network::{
     shared_bandwidth_model::SharedBandwidthNetwork,
 };
 
-use crate::process::{Process, StartMessage};
-use process::NetworkProcess;
+use process::{NetworkProcess, Process, StartMessage};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

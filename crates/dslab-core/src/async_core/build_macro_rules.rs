@@ -1,4 +1,4 @@
-/// wrap code that will be built for async dslab-core functionality
+/// Wrap code that will be built for async dslab-core functionality.
 #[macro_export]
 macro_rules! async_enabled {
     ($($item:item)*) => {
@@ -7,7 +7,7 @@ macro_rules! async_enabled {
     }
 }
 
-/// wrap code that will be built only if async functionality is disabled
+/// Wrap code that will be built only if async functionality is disabled.
 #[macro_export]
 macro_rules! async_disabled {
     ($($item:item)*) => {

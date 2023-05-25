@@ -1,7 +1,7 @@
+use serde::Serialize;
+
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted};
 use dslab_core::{async_core::await_details::DetailsKey, event::EventData};
-
-use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct Start {}

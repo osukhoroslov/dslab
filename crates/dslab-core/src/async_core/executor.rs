@@ -1,4 +1,4 @@
-//! Executing tasks from ready_queue
+//! Executing tasks from ready_queue.
 
 use std::{
     sync::{mpsc::Receiver, Arc},
@@ -7,18 +7,18 @@ use std::{
 
 use super::{task::Task, waker};
 
-/// Polling tasks from queue
+/// Polling tasks from queue.
 pub struct Executor {
     ready_queue: Receiver<Arc<Task>>,
 }
 
 impl Executor {
-    /// Creates an executor
+    /// Creates an executor.
     pub fn new(ready_queue: Receiver<Arc<Task>>) -> Self {
         Self { ready_queue }
     }
 
-    /// Polls one task from ready_queue
+    /// Polls one task from ready_queue.
     ///
     /// Returns true if any progress has been made, false otherwise.
     pub fn process_task(&self) -> bool {
