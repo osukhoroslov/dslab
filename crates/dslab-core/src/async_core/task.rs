@@ -1,4 +1,4 @@
-//! task declaration
+//! Task declaration.
 
 use std::{
     cell::RefCell,
