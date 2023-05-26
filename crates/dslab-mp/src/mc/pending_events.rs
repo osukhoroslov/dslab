@@ -81,7 +81,7 @@ impl PendingEvents {
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
-        if self.directives.iter().next().is_some() {
+        if !self.directives.is_empty() {
             return 1;
         }
         self.available_events.len()
