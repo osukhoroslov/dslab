@@ -107,7 +107,7 @@ mod tests {
         let mut counter: usize = 0;
         let mut event_id = || {
             counter += 1;
-            return counter;
+            counter
         };
         for proc in procs {
             assert!(resolver.add_timer(proc.to_owned(), ordered_float::OrderedFloat(1.0), event_id()));
@@ -139,7 +139,7 @@ mod tests {
         let mut counter: usize = 0;
         let mut event_id = || {
             counter += 1;
-            return counter;
+            counter
         };
         for _ in procs {
             assert!(!resolver.remove_timer(event_id()).is_empty());
