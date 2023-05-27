@@ -151,10 +151,7 @@ impl Process for SpammerNode {
     fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
         for i in 0..self.cnt {
             ctx.send(
-                Message {
-                    tip: "MESSAGE".to_string(),
-                    data: i.to_string(),
-                },
+                Message::new("MESSAGE".to_string(),i.to_string()),
                 self.other.clone(),
             );
         }
