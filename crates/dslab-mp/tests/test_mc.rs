@@ -155,12 +155,6 @@ impl Process for SpammerNode {
     }
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
-
-    fn state(&self) -> Box<dyn ProcessState> {
-        boxed!("".to_string())
-    }
-
-    fn set_state(&mut self, _: Box<dyn ProcessState>) {}
 }
 
 fn build_ping_system() -> System {
