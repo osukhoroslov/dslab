@@ -39,8 +39,8 @@ impl PendingEvents {
     pub(crate) fn push_with_fixed_id(&mut self, event: McEvent, id: McEventId) -> McEventId {
         assert!(!self.events.contains_key(&id), "event with such id already exists");
         match &event {
-            McEvent::MessageReceived { msg, .. } => {
-                if self.resolver.add_message(msg.clone(), id) {
+            McEvent::MessageReceived { msg, src, dest, .. } => {
+                if self.resolver.add_message(msg.clone(), src.clone(), dest.clone(), id) {
                     self.available_events.insert(id);
                 }
             }
@@ -81,6 +81,9 @@ impl PendingEvents {
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
+        if !self.directives.is_empty() {
+            return 1;
+        }
         self.available_events.len()
     }
 
@@ -101,8 +104,8 @@ impl PendingEvents {
             let unblocked_events = self.resolver.remove_timer(event_id);
             self.available_events.extend(unblocked_events);
         }
-        if let McEvent::MessageReceived { msg, .. } = result.clone() {
-            if let Some(unblocked_event) = self.resolver.remove_message(msg) {
+        if let McEvent::MessageReceived { msg, src, dest, .. } = result.clone() {
+            if let Some(unblocked_event) = self.resolver.remove_message(msg, src, dest) {
                 self.available_events.insert(unblocked_event);
             }
         }
@@ -132,7 +135,7 @@ mod tests {
         let mut sequence = Vec::new();
         let mut rev_id = vec![0; 9];
         for node_id in 0..3 {
-            let times: Vec<u64> = (0..3).into_iter().collect();
+            let times: Vec<u64> = (0..3).collect();
             for event_time in times {
                 let event = McEvent::TimerFired {
                     proc: node_id.to_string(),
@@ -166,7 +169,7 @@ mod tests {
         let mut rev_id = vec![0; 12];
 
         for node_id in 0..3 {
-            let times: Vec<u64> = (0..3).into_iter().collect();
+            let times: Vec<u64> = (0..3).collect();
             for event_time in times {
                 let event = McEvent::TimerFired {
                     proc: node_id.to_string(),

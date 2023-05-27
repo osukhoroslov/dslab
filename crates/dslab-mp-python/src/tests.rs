@@ -11,7 +11,7 @@ fn build_system() -> (System, Box<dyn ProcessState>) {
     let process = proc_f.build(("node",), 1);
     let state = process.state();
     sys.add_process("proc", Box::new(process), "node");
-    return (sys, state);
+    (sys, state)
 }
 
 #[test]
@@ -27,11 +27,7 @@ fn test_set_state() {
     assert_eq!(msgs.len(), 1);
 
     // process should not have anything but state members after `set_state()`
-    sys.get_mut_node("node")
-        .unwrap()
-        .get_process("proc")
-        .unwrap()
-        .set_state(proc_state);
+    sys.get_mut_node("node").unwrap().set_process_state("proc", proc_state);
     sys.send_local_message("proc", Message::new("echo", data));
     sys.step_until_no_events();
     let msgs = sys.read_local_messages("proc");

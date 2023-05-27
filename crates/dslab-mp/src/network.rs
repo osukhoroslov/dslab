@@ -238,7 +238,7 @@ impl Network {
     fn corrupt_if_needed(&self, msg: Message) -> Message {
         if self.ctx.rand() < self.corrupt_rate {
             lazy_static! {
-                static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
             }
             let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
             Message::new(msg.tip, corrupted_data)

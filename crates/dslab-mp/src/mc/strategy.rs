@@ -10,7 +10,8 @@ use regex::Regex;
 
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::state::McState;
+use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
 
@@ -49,22 +50,22 @@ pub enum VisitedStates {
 }
 
 /// Model checking execution summary (used in Debug mode).
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct McSummary {
     pub(crate) states: HashMap<String, u32>,
 }
 
 /// Decides whether to prune the executions originating from the given state.
 /// Returns Some(status) if the executions should be pruned and None otherwise.
-pub type PruneFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type PruneFn = Box<dyn FnMut(&McState) -> Option<String>>;
 
 /// Checks if the given state is the final state, i.e. all expected events have already occurred.
 /// Returns Some(status) if the final state is reached and None otherwise.
-pub type GoalFn = Box<dyn Fn(&McState) -> Option<String>>;
+pub type GoalFn = Box<dyn FnMut(&McState) -> Option<String>>;
 
 /// Checks if some invariant holds in the given state.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
-pub type InvariantFn = Box<dyn Fn(&McState) -> Result<(), String>>;
+pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
@@ -121,7 +122,9 @@ pub trait Strategy {
                 system.events.cancel_timer(proc, timer);
                 self.apply_event(system, event_id, false, false)?;
             }
-            _ => {}
+            MessageDropped { .. } => {
+                self.apply_event(system, event_id, false, false)?;
+            }
         }
 
         Ok(())
@@ -136,11 +139,13 @@ pub trait Strategy {
         src: String,
         dest: String,
     ) -> Result<(), String> {
+        let state = system.get_state();
         self.take_event(system, event_id);
 
         let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
         self.apply_event(system, drop_event_id, false, false)?;
+        system.set_state(state);
 
         Ok(())
     }
@@ -164,15 +169,16 @@ pub trait Strategy {
         }
 
         if corrupt {
-            event = self.corrupt_msg_data(event, system.search_depth());
+            event = self.corrupt_msg_data(event, system.depth());
         }
 
-        self.debug_log(&event, LogContext::Default, system.search_depth());
+        self.debug_log(&event, LogContext::Default, system.depth());
 
         system.apply_event(event);
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
+            self.mark_visited(system.get_state());
             self.search_step_impl(system, new_state)?;
         }
 
@@ -207,7 +213,7 @@ pub trait Strategy {
                 options,
             } => {
                 lazy_static! {
-                    static ref RE: Regex = Regex::new(r#""\w+""#).unwrap();
+                    static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
                 }
                 let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
                 MessageReceived {
@@ -226,31 +232,27 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, LogContext::Duplicated, system.search_depth());
+        self.debug_log(&event, LogContext::Duplicated, system.depth());
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, log_context: LogContext, search_depth: u64) {
+    fn debug_log(&self, event: &McEvent, log_context: LogContext, depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(search_depth, msg, src, dest, log_context);
+                    self.log_message(depth, msg, src, dest, log_context);
                 }
                 TimerFired { proc, timer, .. } => {
-                    t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", search_depth, proc, timer).yellow());
+                    t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
                 }
                 TimerCancelled { proc, timer } => {
-                    t!(format!(
-                        "{:>10} | {:>10} xxx {:<10} <-- timer cancelled",
-                        search_depth, proc, timer
-                    )
-                    .yellow());
+                    t!(format!("{:>10} | {:>10} xxx {:<10} <-- timer cancelled", depth, proc, timer).yellow());
                 }
                 MessageDropped { msg, src, dest, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
-                        search_depth, src, dest, msg
+                        depth, src, dest, msg
                     )
                     .red());
                 }
@@ -350,13 +352,13 @@ pub trait Strategy {
     fn visited(&mut self) -> &mut VisitedStates;
 
     /// Returns the prune function.
-    fn prune(&self) -> &PruneFn;
+    fn prune(&mut self) -> &mut PruneFn;
 
     /// Returns the goal function.
-    fn goal(&self) -> &GoalFn;
+    fn goal(&mut self) -> &mut GoalFn;
 
     /// Returns the invariant function.
-    fn invariant(&self) -> &InvariantFn;
+    fn invariant(&mut self) -> &mut InvariantFn;
 
     /// Returns the model checking execution summary.
     fn summary(&mut self) -> &mut McSummary;

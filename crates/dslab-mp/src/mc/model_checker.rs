@@ -7,7 +7,7 @@ use std::rc::Rc;
 use colored::*;
 
 use crate::events::{MessageReceived, TimerFired};
-use crate::mc::events::{DeliveryOptions, McEvent, McTime};
+use crate::mc::events::{McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
@@ -28,15 +28,22 @@ impl ModelChecker {
     pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
         let sim = sys.sim();
 
+        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
+
+        let mut nodes: HashMap<String, McNode> = HashMap::new();
+        for node in sys.nodes() {
+            let node = sys.get_node(&node).unwrap();
+            nodes.insert(node.name.clone(), McNode::new(node.processes(), mc_net.clone()));
+        }
+
         let mut events = PendingEvents::new();
         for event in sim.dump_events() {
             if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
-                events.push(McEvent::MessageReceived {
-                    msg: value.msg.clone(),
-                    src: value.src.clone(),
-                    dest: value.dest.clone(),
-                    options: DeliveryOptions::NoFailures(McTime::from(sys.network().max_delay())),
-                });
+                events.push(
+                    mc_net
+                        .borrow_mut()
+                        .send_message(value.msg.clone(), value.src.clone(), value.dest.clone()),
+                );
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {
                     proc: value.proc.clone(),
@@ -44,14 +51,6 @@ impl ModelChecker {
                     timer_delay: McTime::from(0.0),
                 });
             }
-        }
-
-        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
-
-        let mut nodes: HashMap<String, McNode> = HashMap::new();
-        for node in sys.nodes() {
-            let node = sys.get_node(&node).unwrap();
-            nodes.insert(node.name.clone(), McNode::new(node.processes(), mc_net.clone()));
         }
 
         Self {
@@ -65,6 +64,7 @@ impl ModelChecker {
         t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
             .to_string()
             .yellow());
+        self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }
 }

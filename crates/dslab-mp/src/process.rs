@@ -54,7 +54,7 @@ pub trait Process: DynClone {
     }
 
     /// Restores the process state.
-    fn set_state(&self, _state: Box<dyn ProcessState>) {}
+    fn set_state(&mut self, _state: Box<dyn ProcessState>) {}
 }
 
 clone_trait_object!(Process);

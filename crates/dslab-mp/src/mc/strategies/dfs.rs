@@ -1,7 +1,8 @@
 //! Implementation of model checking DFS search strategy.
 
+use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::system::McSystem;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
 pub struct Dfs {
@@ -32,10 +33,7 @@ impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
 
-        let result = self.check_state(&state);
-
-        self.mark_visited(state);
-        if let Some(result) = result {
+        if let Some(result) = self.check_state(&state) {
             return result;
         }
 
@@ -69,16 +67,16 @@ impl Strategy for Dfs {
         &mut self.visited
     }
 
-    fn prune(&self) -> &PruneFn {
-        &self.prune
+    fn prune(&mut self) -> &mut PruneFn {
+        &mut self.prune
     }
 
-    fn goal(&self) -> &GoalFn {
-        &self.goal
+    fn goal(&mut self) -> &mut GoalFn {
+        &mut self.goal
     }
 
-    fn invariant(&self) -> &InvariantFn {
-        &self.invariant
+    fn invariant(&mut self) -> &mut InvariantFn {
+        &mut self.invariant
     }
 
     fn summary(&mut self) -> &mut McSummary {

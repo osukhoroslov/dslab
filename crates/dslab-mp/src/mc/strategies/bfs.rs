@@ -2,8 +2,9 @@
 
 use std::collections::VecDeque;
 
+use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
-use crate::mc::system::{McState, McSystem};
+use crate::mc::system::McSystem;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
 pub struct Bfs {
@@ -38,20 +39,15 @@ impl Bfs {
         self.states_queue.push_back(system.get_state());
 
         while !self.states_queue.is_empty() {
-            let available_events = system.available_events();
             let state = self.states_queue.pop_front().unwrap();
 
-            let result = self.check_state(&state);
-
-            if let Some(result) = result {
-                self.mark_visited(state);
+            if let Some(result) = self.check_state(&state) {
                 result?;
                 continue;
             }
 
             system.set_state(state);
-            self.mark_visited(system.get_state());
-
+            let available_events = system.available_events();
             for event_id in available_events {
                 self.process_event(system, event_id)?;
             }
@@ -83,16 +79,16 @@ impl Strategy for Bfs {
         &mut self.visited
     }
 
-    fn prune(&self) -> &PruneFn {
-        &self.prune
+    fn prune(&mut self) -> &mut PruneFn {
+        &mut self.prune
     }
 
-    fn goal(&self) -> &GoalFn {
-        &self.goal
+    fn goal(&mut self) -> &mut GoalFn {
+        &mut self.goal
     }
 
-    fn invariant(&self) -> &InvariantFn {
-        &self.invariant
+    fn invariant(&mut self) -> &mut InvariantFn {
+        &mut self.invariant
     }
 
     fn summary(&mut self) -> &mut McSummary {

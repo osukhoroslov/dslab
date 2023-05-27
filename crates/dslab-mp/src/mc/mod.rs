@@ -8,6 +8,7 @@ pub mod model_checker;
 mod network;
 mod node;
 mod pending_events;
+pub mod state;
 pub mod strategies;
 pub mod strategy;
 mod system;
