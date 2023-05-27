@@ -135,7 +135,7 @@ mod tests {
         let mut sequence = Vec::new();
         let mut rev_id = vec![0; 9];
         for node_id in 0..3 {
-            let times: Vec<u64> = (0..3).into_iter().collect();
+            let times: Vec<u64> = (0..3).collect();
             for event_time in times {
                 let event = McEvent::TimerFired {
                     proc: node_id.to_string(),
@@ -169,7 +169,7 @@ mod tests {
         let mut rev_id = vec![0; 12];
 
         for node_id in 0..3 {
-            let times: Vec<u64> = (0..3).into_iter().collect();
+            let times: Vec<u64> = (0..3).collect();
             for event_time in times {
                 let event = McEvent::TimerFired {
                     proc: node_id.to_string(),
