@@ -59,13 +59,7 @@ impl Process for CollectorNode {
     fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
         self.cnt += 1;
         if self.cnt == 2 {
-            ctx.send(
-                Message {
-                    tip: "COLLECTED".to_string(),
-                    data: 2.to_string(),
-                },
-                self.other.clone(),
-            );
+            ctx.send(Message::new("COLLECTED", "2"), self.other.clone());
         }
     }
 
