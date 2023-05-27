@@ -587,7 +587,7 @@ fn many_dropped_messages(#[case] strategy_name: String) {
 
     sys.network().drop_outgoing("node1");
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
-    let mut mc = ModelChecker::new(&mut sys, strategy);
+    let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
     assert!(result.is_ok());
 }
