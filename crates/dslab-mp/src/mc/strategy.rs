@@ -137,7 +137,7 @@ pub struct McStats {
     pub statuses: HashMap<String, u32>,
     /// States that were collected with Collect predicate
     pub collected_states: HashSet<McState>,
-    failure_trace: Vec<McEvent>,
+    pub(crate) failure_trace: Vec<McEvent>,
 }
 
 impl McStats {

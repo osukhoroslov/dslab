@@ -96,4 +96,9 @@ impl ModelChecker {
         }
         Ok(total_stats)
     }
+
+    /// Returns trace in state graph which guides system to failure.
+    pub fn get_failure_trace(&mut self) -> Vec<McEvent> {
+        self.strategy.summary().failure_trace.clone()
+    }
 }

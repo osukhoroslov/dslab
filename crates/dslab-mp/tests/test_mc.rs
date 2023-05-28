@@ -7,6 +7,7 @@ use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
+use dslab_mp::mc::events::McEvent::{MessageReceived, TimerFired};
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
@@ -126,6 +127,29 @@ impl Process for PostponedReceiverNode {
 }
 
 #[derive(Clone)]
+struct DumbReceiverNode {}
+
+impl DumbReceiverNode {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Process for DumbReceiverNode{
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+        ctx.send_local(msg);
+    }
+
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+        ctx.set_timer("timeout", 1.0);
+    }
+
+    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+        ctx.send_local(Message::new("TIMER", "timeout"));
+    }
+}
+
+#[derive(Clone)]
 struct SpammerNode {
     other: String,
     cnt: u64,
@@ -198,6 +222,17 @@ fn build_postponed_delivery_system() -> System {
     sys.add_node("node2");
     let process1 = boxed!(PingMessageNode::new("process2"));
     let process2 = boxed!(PostponedReceiverNode::new());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
+    sys
+}
+
+fn build_dumb_delivery_system_with_useless_timer() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(PingMessageNode::new("process2"));
+    let process2 = boxed!(DumbReceiverNode::new());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -558,6 +593,47 @@ fn timer(#[case] strategy_name: String) {
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 4); // final states for both branches are equal: first timer, then message
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn useless_timer(#[case] strategy_name: String) {
+    let prune = boxed!(|_: &McState| None);
+
+    let goal = build_no_events_left_goal();
+
+    let invariant = boxed!(move |state: &McState| {
+        let proc2_outbox = &state.node_states["node2"]["process2"].local_outbox;
+
+        if state.events.available_events_num() == 0 {
+            if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
+                return Err("invalid order".to_string());
+            }
+            if proc2_outbox.len() == 2 && proc2_outbox[1].tip == "PING" {
+                return Ok(());
+            } else {
+                return Err("wrong set of delivered events".to_string());
+            }
+        }
+
+        Ok(())
+    });
+
+    let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
+
+    let mut sys = build_dumb_delivery_system_with_useless_timer();
+    sys.send_local_message("process1", Message::new("PING", "some_data_1"));
+    sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
+
+    let mut mc = ModelChecker::new(&sys, strategy);
+    let result = mc.run();
+    assert!(if let Err(msg) = result { msg == "invalid order" } else { false });
+
+    let trace = mc.get_failure_trace();
+    assert_eq!(trace.len(), 2);
+    assert!(matches!(trace[0].clone(), MessageReceived { .. }));
+    assert!(matches!(trace[1].clone(), TimerFired { .. }));
 }
 
 #[rstest]
