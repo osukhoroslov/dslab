@@ -53,7 +53,7 @@ pub enum VisitedStates {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct McSummary {
     pub(crate) statuses: HashMap<String, u32>,
-    failure_trace: Vec<McEvent>,
+    pub(crate) failure_trace: Vec<McEvent>,
 }
 
 /// Decides whether to prune the executions originating from the given state.
