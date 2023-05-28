@@ -30,11 +30,17 @@ impl McSystem {
         let new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
-                self.nodes.get_mut(&name).unwrap().on_message_received(dest, msg, src)
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_message_received(dest, msg, src, self.depth)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
-                self.nodes.get_mut(&name).unwrap().on_timer_fired(proc, timer)
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_timer_fired(proc, timer, self.depth)
             }
             _ => vec![],
         };

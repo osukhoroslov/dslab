@@ -14,16 +14,25 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(proc_name: String, sim_ctx: Option<Rc<RefCell<SimulationContext>>>, clock_skew: f64) -> Self {
-        let time = if let Some(sim_ctx) = sim_ctx.as_ref() {
-            sim_ctx.borrow().time() + clock_skew
-        } else {
-            0.0
-        };
+    pub fn from_simulation(proc_name: String, sim_ctx: Rc<RefCell<SimulationContext>>, clock_skew: f64) -> Self {
+        let time = sim_ctx.borrow().time() + clock_skew;
         Self {
             proc_name,
             time,
-            sim_ctx,
+            sim_ctx: Some(sim_ctx),
+            actions: Vec::new(),
+        }
+    }
+
+    pub fn from_mc(proc_name: String, state_depth: u64) -> Self {
+        // this ensures every step of model checking
+        // simulation represents 0.1s period
+        // it makes time value look more natual and closer to simulation time
+        let time = state_depth as f64 / 10.0;
+        Self {
+            proc_name,
+            time,
+            sim_ctx: None,
             actions: Vec::new(),
         }
     }
