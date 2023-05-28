@@ -137,6 +137,7 @@ pub struct McStats {
     pub statuses: HashMap<String, u32>,
     /// States that were collected with Collect predicate
     pub collected_states: HashSet<McState>,
+    failure_trace: Vec<McEvent>,
 }
 
 impl McStats {
@@ -421,6 +422,11 @@ pub trait Strategy {
         }
     }
 
+    /// Saves trace which guides system to failure.
+    fn update_summary_failure_trace(&mut self, trace: Vec<McEvent>) {
+        self.summary().failure_trace = trace;
+    }
+
     /// Applies user-defined checking functions to the system state and returns the result of the check.
     fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
         if (self.collect())(state) {
@@ -428,6 +434,7 @@ pub trait Strategy {
         }
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
+            self.update_summary_failure_trace(state.trace.clone());
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
