@@ -13,6 +13,4 @@ if __name__ == '__main__':
     with open(args.save_config, 'w') as f:
         f.write('opendc.experiments.serverless20 {{\n\ttrace-path = {}\n}}\n'.format(args.trace))
     print('running with command', ' '.join([args.opendc_harness, '--class-path', args.opendc_serverless, '-p', '1', '-c', args.save_config, 'Serverless']))
-    begin = time.time()
-    subprocess.run([args.opendc_harness, '--class-path', args.opendc_serverless, '-p', '1', '-c', args.save_config, 'Serverless'], check=True)
-    print(time.time() - begin, ' seconds')
+    subprocess.run([args.opendc_harness, '--class-path', args.opendc_serverless, '-p', '1', '-c', args.save_config, 'Serverless'], check=True, stderr=subprocess.DEVNULL)
