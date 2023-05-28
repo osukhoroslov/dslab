@@ -6,37 +6,24 @@ class DataClass:
         self.data = x
 
 class TestProcess(Process):
-    def __init__(self, node_id: str):
-        self.data = ["elem1", (2, 3), {'key': 'value'}]
-        self._id = node_id
+    def __init__(self):
+        self.data = ["elem1", (2, 3), {'key': 'value'}, set([1, 2, 3])]
         self.messages = [Message('GET', '""')]
         self.inner_member = DataClass()
-
-        self._id = 'new_node_id'
+        self.tmp_value = None
 
     def on_local_message(self, msg: Message, ctx: Context):
-        assert self._id == 'new_node_id'
-        assert self.messages is not None
         assert type(self.messages) == list
         assert type(self.messages[0]) == Message
         assert self.inner_member.data == 42
-        tmp_value = "SHOULD BE DROPPED"
-        if self.data == tmp_value:
-            ctx.send_local(msg)
-
-        if msg.type == 'FIRST_STEP':
-            # we suppose it will be discarded later
-            self.data = tmp_value
-        elif msg.type == 'SECOND_STEP':
-            assert self.data != tmp_value, 'assignments that happened after serialization should be forgottten'
-
-        try:
-            a = self.notexists
-        except AttributeError:
-            return
-        except:
-            raise 'Not a correct exception raised when addressing not-existing member'
-        raise 'No exception raised when addressing not-existing member'
+        assert type(self.data) == list
+        assert type(self.data[0]) == str
+        assert type(self.data[1]) == tuple
+        assert type(self.data[2]) == dict
+        assert type(self.data[3]) == set
+        
+        assert self.tmp_value is None
+        self.tmp_value = 'CREATED AFTER GET_STATE, SO SHOULD BE DROPPED AFTER SET_STATE'
 
     def on_message(self, msg: Message, sender: str, ctx: Context):
         # process messages from server
