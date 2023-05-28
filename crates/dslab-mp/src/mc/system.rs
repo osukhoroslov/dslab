@@ -16,6 +16,7 @@ pub struct McSystem {
     net: Rc<RefCell<McNetwork>>,
     pub(crate) events: PendingEvents,
     depth: u64,
+    trace: Vec<McEvent>,
 }
 
 impl McSystem {
@@ -25,11 +26,13 @@ impl McSystem {
             net,
             events,
             depth: 0,
+            trace: vec![],
         }
     }
 
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
+        self.trace.push(event.clone());
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
         let new_events = match event {
@@ -70,7 +73,7 @@ impl McSystem {
     }
 
     pub fn get_state(&self) -> McState {
-        let mut state = McState::new(self.events.clone(), self.depth);
+        let mut state = McState::new(self.events.clone(), self.depth, self.trace.clone());
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
@@ -83,6 +86,7 @@ impl McSystem {
         }
         self.events = state.events;
         self.depth = state.depth;
+        self.trace = state.trace;
     }
 
     pub fn available_events(&self) -> BTreeSet<McEventId> {
