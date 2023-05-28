@@ -23,17 +23,17 @@ struct EmptyMessage {}
 fn test_set_state() {
     env::set_var("PYTHONPATH", "python");
     let (mut sys, proc_state) = build_system();
-    
-    // check that process stores valid data
-    sys.send_local_message("proc", Message::json("CHECK_STATE", &EmptyMessage{}));
-    sys.step_until_no_events();
 
+    // check that process stores valid data
+    // and update inner state (with `tmp_value` member)
+    sys.send_local_message("proc", Message::json("CHECK_STATE", &EmptyMessage {}));
+    sys.step_until_no_events();
 
     // reset process state to initial
     sys.get_mut_node("node")
         .unwrap()
         .set_process_state("proc", proc_state);
     // check that process stores the same data as right after initialization
-    sys.send_local_message("proc", Message::json("CHECK_STATE", &EmptyMessage{}));
+    sys.send_local_message("proc", Message::json("CHECK_STATE", &EmptyMessage {}));
     sys.step_until_no_events();
 }
