@@ -135,7 +135,7 @@ impl DumbReceiverNode {
     }
 }
 
-impl Process for DumbReceiverNode{
+impl Process for DumbReceiverNode {
     fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
         ctx.send_local(msg);
     }
@@ -628,7 +628,11 @@ fn useless_timer(#[case] strategy_name: String) {
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
-    assert!(if let Err(msg) = result { msg == "invalid order" } else { false });
+    assert!(if let Err(msg) = result {
+        msg == "invalid order"
+    } else {
+        false
+    });
 
     let trace = mc.get_failure_trace();
     assert_eq!(trace.len(), 2);
