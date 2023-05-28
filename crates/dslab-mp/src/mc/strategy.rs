@@ -52,7 +52,8 @@ pub enum VisitedStates {
 /// Model checking execution summary (used in Debug mode).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct McSummary {
-    pub(crate) states: HashMap<String, u32>,
+    pub(crate) statuses: HashMap<String, u32>,
+    failure_trace: Vec<McEvent>,
 }
 
 /// Decides whether to prune the executions originating from the given state.
@@ -316,26 +317,32 @@ pub trait Strategy {
         }
     }
 
-    /// Adds new information to model checking execution summary.
-    fn update_summary(&mut self, status: String) {
+    /// Adds new status to model checking execution summary.
+    fn update_summary_statuses(&mut self, status: String) {
         if let ExecutionMode::Debug = self.execution_mode() {
-            let counter = self.summary().states.entry(status).or_insert(0);
+            let counter = self.summary().statuses.entry(status).or_insert(0);
             *counter += 1;
         }
+    }
+
+    /// Saves trace which guides system to failure.
+    fn update_summary_failure_trace(&mut self, trace: Vec<McEvent>) {
+        self.summary().failure_trace = trace;
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
     fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
+            self.update_summary_failure_trace(state.trace.clone());
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
-            self.update_summary(status);
+            self.update_summary_statuses(status);
             Some(Ok(()))
         } else if let Some(status) = (self.prune())(state) {
             // Execution branch is pruned
-            self.update_summary(status);
+            self.update_summary_statuses(status);
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
