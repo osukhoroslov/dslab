@@ -904,6 +904,7 @@ version = "0.1.0"
 dependencies = [
  "dslab-mp",
  "pyo3",
+ "serde",
 ]
 
 [[package]]
