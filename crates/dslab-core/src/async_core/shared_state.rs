@@ -1,4 +1,4 @@
-//! Shared state and event notification
+//! Shared state and event notification.
 
 use std::any::{Any, TypeId};
 use std::rc::Rc;
@@ -74,9 +74,9 @@ impl<T: EventData> AwaitResultSetter for AwaitEventSharedState<T> {
     }
 }
 
-/// Future represents AwaitResult for event (Ok or Timeout)
+/// Future that represents AwaitResult for event (Ok or Timeout).
 pub struct EventFuture<T: EventData> {
-    /// state with event data
+    /// State with event data.
     pub(crate) state: Rc<RefCell<AwaitEventSharedState<T>>>,
 }
 
@@ -97,9 +97,9 @@ impl<T: EventData> Future for EventFuture<T> {
     }
 }
 
-/// Future that represents timer from simulation
+/// Future that represents timer from simulation.
 pub struct TimerFuture {
-    /// state that should be completed after timer fired
+    /// State that should be completed after timer fired.
     pub(crate) state: Rc<RefCell<AwaitEventSharedState<EmptyData>>>,
 }
 
