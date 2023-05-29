@@ -140,12 +140,12 @@ impl VirtualMachine {
 
     /// Returns VM start duration (the value is taken from the simulation config).
     pub fn start_duration(&self) -> f64 {
-        self.sim_config.vm_start_duration
+        *self.sim_config.vm_start_duration
     }
 
     /// Returns VM stop duration (the value is taken from the simulation config).
     pub fn stop_duration(&self) -> f64 {
-        self.sim_config.vm_stop_duration
+        *self.sim_config.vm_stop_duration
     }
 
     /// Sets VM start time. Can be called multiple times due to VM migration.

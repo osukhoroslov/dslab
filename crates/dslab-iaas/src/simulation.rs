@@ -131,9 +131,9 @@ impl CloudSimulation {
             match dataset_config.dataset_type {
                 VmDatasetType::Azure => {
                     let mut dataset = AzureDatasetReader::new(
-                        sim.sim_config.simulation_length,
-                        sim.sim_config.host_cpu_capacity,
-                        sim.sim_config.host_memory_capacity,
+                        *sim.sim_config.simulation_length,
+                        *sim.sim_config.host_cpu_capacity,
+                        *sim.sim_config.host_memory_capacity,
                     );
                     dataset.parse(
                         format!("{}/vm_types.csv", dataset_config.path),
@@ -142,7 +142,7 @@ impl CloudSimulation {
                     sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
                 }
                 VmDatasetType::Huawei => {
-                    let mut dataset = HuaweiDatasetReader::new(sim.sim_config.simulation_length);
+                    let mut dataset = HuaweiDatasetReader::new(*sim.sim_config.simulation_length);
                     dataset.parse(format!("{}/Huawei-East-1.csv", dataset_config.path));
                     sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
                 }
@@ -339,7 +339,7 @@ impl CloudSimulation {
         self.ctx.emit(
             MigrationRequest { source_host, vm_id },
             target_host,
-            self.sim_config.message_delay,
+            *self.sim_config.message_delay,
         );
     }
 

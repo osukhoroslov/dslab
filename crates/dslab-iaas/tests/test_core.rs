@@ -4,7 +4,7 @@ use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
 use dslab_iaas::core::common::Allocation;
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::{DynamicIntVariable, SimulationConfig};
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
@@ -451,4 +451,35 @@ fn test_batch_request() {
     assert_eq!(cloud_sim.vm_location(vm_ids[0]), Some(h));
     assert_eq!(cloud_sim.vm_location(vm_ids[1]), Some(h));
     assert_eq!(cloud_sim.vm_location(vm_ids[2]), Some(h));
+}
+
+#[test]
+fn test_config_integer_loop() {
+    let lst: DynamicIntVariable<f64> = DynamicIntVariable::from_str("[0.5, 0.7, 0.1]").unwrap();
+    assert_eq!(lst.from.unwrap(), 0.5);
+    assert_eq!(lst.to.unwrap(), 0.7);
+    assert_eq!(lst.step.unwrap(), 0.1);
+
+    let lst: DynamicIntVariable<i32> = DynamicIntVariable::from_str("[6, -100, -2]").unwrap();
+    assert_eq!(lst.from.unwrap(), 6);
+    assert_eq!(lst.to.unwrap(), -100);
+    assert_eq!(lst.step.unwrap(), -2);
+
+    let lst = DynamicIntVariable::<i32>::from_str("[6, -100, -2h]");
+    assert!(lst.is_none());
+
+    let lst = DynamicIntVariable::<i32>::from_str("[6, -100, -2.]");
+    assert!(lst.is_none());
+
+    let lst = DynamicIntVariable::<i32>::from_str("[6, -100]");
+    assert!(lst.is_none());
+
+    let lst = DynamicIntVariable::<i32>::from_str("[6, -100, 67, 88]");
+    assert!(lst.is_none());
+
+    let lst = DynamicIntVariable::<i32>::from_str("-100").unwrap();
+    assert_eq!(lst.value.unwrap(), -100);
+
+    let lst = DynamicIntVariable::<i32>::from_str("-100.");
+    assert!(lst.is_none());
 }

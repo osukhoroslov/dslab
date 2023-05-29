@@ -211,7 +211,7 @@ impl VmMigrator {
                         vm_id: vm.id,
                     },
                     target_host,
-                    self.sim_config.as_ref().unwrap().message_delay,
+                    *self.sim_config.as_ref().unwrap().message_delay,
                 );
 
                 // update source host state
