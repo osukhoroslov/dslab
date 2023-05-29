@@ -7,7 +7,7 @@ class DataClass:
 
 class TestProcess(Process):
     def __init__(self):
-        self.data = ["elem1", (2, 3), {'key': 'value'}, set([1, 2, 3])]
+        self.data = ["elem1", (2, 3), {'key': 'value'}, {1, 2, 3}]
         self.messages = [Message('GET', '""')]
         self.inner_member = DataClass()
         self.tmp_value = None
