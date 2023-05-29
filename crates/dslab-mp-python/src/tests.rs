@@ -30,9 +30,7 @@ fn test_set_state() {
     sys.step_until_no_events();
 
     // reset process state to initial
-    sys.get_mut_node("node")
-        .unwrap()
-        .set_process_state("proc", proc_state);
+    sys.get_mut_node("node").unwrap().set_process_state("proc", proc_state);
     // check that process stores the same data as right after initialization
     sys.send_local_message("proc", Message::json("CHECK_STATE", &EmptyMessage {}));
     sys.step_until_no_events();
