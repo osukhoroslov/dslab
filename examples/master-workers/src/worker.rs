@@ -34,7 +34,7 @@ pub struct TaskCompleted {
 pub struct Worker {
     id: Id,
     compute: Rc<RefCell<Compute>>,
-    disk: Disk,
+    disk: Rc<RefCell<Disk>>,
     net: Rc<RefCell<Network>>,
     master_id: Id,
     tasks: HashMap<u64, TaskInfo>,
@@ -49,7 +49,7 @@ pub struct Worker {
 impl Worker {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
-        disk: Disk,
+        disk: Rc<RefCell<Disk>>,
         net: Rc<RefCell<Network>>,
         master_id: Id,
         ctx: SimulationContext,
@@ -105,7 +105,7 @@ impl Worker {
             let task = self.tasks.get_mut(&task_id).unwrap();
             log_debug!(self.ctx, "downloaded input data for task: {}", task_id);
             task.state = TaskState::Reading;
-            let read_id = self.disk.read(task.req.input_size, self.id);
+            let read_id = self.disk.borrow_mut().read(task.req.input_size, self.id);
             self.reads.insert(read_id, task_id);
         // data transfer corresponds to output upload
         } else if self.uploads.contains_key(&transfer_id) {
@@ -114,6 +114,7 @@ impl Worker {
             log_debug!(self.ctx, "uploaded output data for task: {}", task_id);
             task.state = TaskState::Completed;
             self.disk
+                .borrow_mut()
                 .mark_free(task.req.output_size)
                 .expect("Failed to free disk space");
             self.net
@@ -148,7 +149,7 @@ impl Worker {
         log_debug!(self.ctx, "completed execution of task: {}", task_id);
         let task = self.tasks.get_mut(&task_id).unwrap();
         task.state = TaskState::Writing;
-        let write_id = self.disk.write(task.req.output_size, self.id);
+        let write_id = self.disk.borrow_mut().write(task.req.output_size, self.id);
         self.writes.insert(write_id, task_id);
     }
 
