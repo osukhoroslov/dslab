@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 dslab-mp = { path = "../dslab-mp" }
+serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.pyo3]
 version = "0.16.5"

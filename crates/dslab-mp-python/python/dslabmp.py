@@ -1,6 +1,7 @@
 from __future__ import annotations
 import abc
 import json
+import pickle
 from typing import Any, Dict, List, Tuple, Union
 
 
@@ -53,7 +54,7 @@ class Context(object):
 
     def set_timer(self, timer_name: str, delay: float):
         """
-        Sets a timer that will trigger on_timer callback after the specified delay. 
+        Sets a timer that will trigger on_timer callback after the specified delay.
         If there is an active timer with this name, its delay is overridden.
         """
         if not isinstance(timer_name, str):
@@ -88,20 +89,8 @@ class Context(object):
     def time(self) -> float:
         """
         Returns the current system time.
-        """ 
+        """
         return self._time
-
-
-class StateMember:
-    def __init__(self, t: JSON):
-        self.inner = t
-
-    def serialize(self):
-        return json.dumps(self.inner)
-
-    @staticmethod
-    def deserialize(state):
-        return StateMember(json.loads(state))
 
 
 class Process:
@@ -129,8 +118,7 @@ class Process:
         """
         data = {}
         for name, member in self.__dict__.items():
-            if type(member) is StateMember:
-                data[name] = member.serialize()
+            data[name] = bytes.hex(pickle.dumps(member))
         return json.dumps(data)
 
     def set_state(self, state_encoded: str):
@@ -141,17 +129,4 @@ class Process:
         for name in self.__dict__:
             self.__dict__[name] = None
         for name, member in data.items():
-            self.__dict__[name] = StateMember.deserialize(member)
-
-    def __setattr__(self, name, value):
-        if name in self.__dict__ and type(self.__dict__[name]) is StateMember:
-            self.__dict__[name].inner = value
-        else:
-            self.__dict__[name] = value
-
-    def __getattribute__(self, name):
-        attr_value = object.__getattribute__(self, name)
-        if type(attr_value) is StateMember:
-            return attr_value.inner
-        else:
-            return attr_value
+            self.__dict__[name] = pickle.loads(bytes.fromhex(member))

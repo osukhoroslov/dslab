@@ -1,39 +1,29 @@
-from dslabmp import Context, Message, Process, StateMember
+from dslabmp import Context, Message, Process
 
+
+class DataClass:
+    def __init__(self, x=42):
+        self.data = x
 
 class TestProcess(Process):
-    def __init__(self, node_id: str):
-        self.data = StateMember(["elem1", (2, 3)])
-        self._id = StateMember(node_id)
-
-        # examples of set/get state member
-        self._id = 'new_node_id'
-        self.secret = '''YOU SHOULDN'T SEE IT AFTER RELOAD,
-                         IT IS NOT A STATE MEMBER OF NODE %s''' % self._id
+    def __init__(self):
+        self.data = ["elem1", (2, 3), {'key': 'value'}, {1, 2, 3}]
+        self.messages = [Message('GET', '""')]
+        self.inner_member = DataClass()
+        self.tmp_value = None
 
     def on_local_message(self, msg: Message, ctx: Context):
-        assert self._id == 'new_node_id', 'get/set attributes work bad with state members'
-        tmp_value = "SHOULD BE DROPPED"
-        if self.data == tmp_value:
-            ctx.send_local(msg)
-
-        # we suppose it will be discarded later
-        self.data = tmp_value
-        assert type(self.__dict__[
-                    'data']) == StateMember, 'field "data" must be a StateMember even after assignment'
-
-        if self.secret is None:
-            pass
-        else:
-            ctx.send_local(msg)
-
-        try:
-            a = self.notexists
-        except AttributeError:
-            return
-        except:
-            raise 'Not a correct exception raised when addressing not-existing member'
-        raise 'No exception raised when addressing not-existing member'
+        assert type(self.data) == list
+        assert type(self.data[0]) == str
+        assert type(self.data[1]) == tuple
+        assert type(self.data[2]) == dict
+        assert type(self.data[3]) == set
+        assert type(self.messages) == list
+        assert type(self.messages[0]) == Message
+        assert self.inner_member.data == 42
+        
+        assert self.tmp_value is None
+        self.tmp_value = 'CREATED AFTER GET_STATE, SO SHOULD BE DROPPED AFTER SET_STATE'
 
     def on_message(self, msg: Message, sender: str, ctx: Context):
         # process messages from server
