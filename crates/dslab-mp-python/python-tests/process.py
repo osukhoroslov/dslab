@@ -13,14 +13,14 @@ class TestProcess(Process):
         self.tmp_value = None
 
     def on_local_message(self, msg: Message, ctx: Context):
-        assert type(self.messages) == list
-        assert type(self.messages[0]) == Message
-        assert self.inner_member.data == 42
         assert type(self.data) == list
         assert type(self.data[0]) == str
         assert type(self.data[1]) == tuple
         assert type(self.data[2]) == dict
         assert type(self.data[3]) == set
+        assert type(self.messages) == list
+        assert type(self.messages[0]) == Message
+        assert self.inner_member.data == 42
         
         assert self.tmp_value is None
         self.tmp_value = 'CREATED AFTER GET_STATE, SO SHOULD BE DROPPED AFTER SET_STATE'
