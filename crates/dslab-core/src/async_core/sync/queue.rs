@@ -1,4 +1,4 @@
-//! Queues implementation.
+//! Queue implementation.
 
 use std::{cell::RefCell, collections::VecDeque};
 

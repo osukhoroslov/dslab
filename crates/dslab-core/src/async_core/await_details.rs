@@ -27,7 +27,7 @@ impl<T: EventData> Default for AwaitResult<T> {
 }
 
 impl<T: EventData> AwaitResult<T> {
-    /// Creates a default result.
+    /// Creates a Timeout result with specified source and destination.
     pub(crate) fn timeout_with(src: Id, dest: Id) -> Self {
         Self::Timeout(Event {
             id: 0,

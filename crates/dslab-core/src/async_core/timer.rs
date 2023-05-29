@@ -5,19 +5,19 @@ use std::{cell::RefCell, cmp::Ordering, rc::Rc};
 use super::shared_state::AwaitResultSetter;
 use crate::Id;
 
-/// Timer Identifier
+/// Timer identifier.
 pub type TimerId = u64;
 
 /// Timer will set the given `state` as completed at time.
 #[derive(Clone)]
 pub struct Timer {
-    /// unique identifier of timer
+    /// Unique identifier of timer.
     pub id: TimerId,
-    /// id of simulation component the timer was set to
+    /// Id of simulation component that set the timer.
     pub component_id: Id,
-    /// the time when Timer will be fired
+    /// The time when the timer will be fired.
     pub time: f64,
-    /// state to set completed after timer fired
+    /// State to set completed after the timer is fired.
     pub(crate) state: Rc<RefCell<dyn AwaitResultSetter>>,
 }
 
