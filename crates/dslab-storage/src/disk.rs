@@ -17,10 +17,10 @@ use dslab_core::handler::EventHandler;
 use dslab_core::{context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
-    ThroughputSharingModel,
 };
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use crate::scheduler::{FairScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
 /// Describes a disk operation.
@@ -40,8 +40,6 @@ struct DiskReadActivityCompleted {}
 #[derive(Clone, Serialize)]
 struct DiskWriteActivityCompleted {}
 
-type DiskThroughputModel = FairThroughputSharingModel<DiskActivity>;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /// Disk builder. This is a type for convenient disk setup.
@@ -53,6 +51,8 @@ pub struct DiskBuilder {
     write_throughput_fn: Option<ResourceThroughputFn>,
     read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
     write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    read_concurrent_ops_limit: Option<u64>,
+    write_concurrent_ops_limit: Option<u64>,
 }
 
 impl Default for DiskBuilder {
@@ -66,6 +66,8 @@ impl Default for DiskBuilder {
             write_throughput_fn: None,
             read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
             write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            read_concurrent_ops_limit: None,
+            write_concurrent_ops_limit: None,
         }
     }
 }
@@ -136,21 +138,49 @@ impl DiskBuilder {
         self
     }
 
+    /// Sets read concurrent operations limit.
+    pub fn read_concurrent_ops_limit(mut self, read_concurrent_ops_limit: u64) -> Self {
+        self.read_concurrent_ops_limit.replace(read_concurrent_ops_limit);
+        self
+    }
+
+    /// Sets write concurrent operations limit.
+    pub fn write_concurrent_ops_limit(mut self, write_concurrent_ops_limit: u64) -> Self {
+        self.write_concurrent_ops_limit.replace(write_concurrent_ops_limit);
+        self
+    }
+
     /// Builds disk from given builder and simulation context.
     ///
     /// Panics on invalid or incomplete disk settings.
     pub fn build(self, ctx: SimulationContext) -> Disk {
+        let read_throughput_model =
+            FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
+        let read_ops_scheduler = if let Some(limit) = self.read_concurrent_ops_limit {
+            boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
+                read_throughput_model,
+                limit
+            ))
+        } else {
+            boxed!(FairScheduler::<DiskActivity>::new(read_throughput_model))
+        };
+
+        let write_throughput_model =
+            FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
+        let write_ops_scheduler = if let Some(limit) = self.write_concurrent_ops_limit {
+            boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
+                write_throughput_model,
+                limit
+            ))
+        } else {
+            boxed!(FairScheduler::<DiskActivity>::new(write_throughput_model))
+        };
+
         Disk {
             capacity: self.capacity.unwrap(),
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
-                self.read_throughput_fn.unwrap(),
-                self.read_factor_fn,
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
-                self.write_throughput_fn.unwrap(),
-                self.write_factor_fn,
-            ),
+            read_ops_scheduler,
+            write_ops_scheduler,
             next_request_id: 0,
             next_read_event: u64::MAX,
             next_write_event: u64::MAX,
@@ -170,8 +200,8 @@ impl DiskBuilder {
 pub struct Disk {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) used: u64,
-    pub(in crate::disk) read_throughput_model: DiskThroughputModel,
-    pub(in crate::disk) write_throughput_model: DiskThroughputModel,
+    pub(in crate::disk) read_ops_scheduler: Box<dyn Scheduler<DiskActivity>>,
+    pub(in crate::disk) write_ops_scheduler: Box<dyn Scheduler<DiskActivity>>,
     pub(in crate::disk) next_request_id: u64,
     pub(in crate::disk) next_read_event: u64,
     pub(in crate::disk) next_write_event: u64,
@@ -186,13 +216,13 @@ impl Disk {
     }
 
     fn schedule_next_read_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.peek() {
+        if let Some((time, _)) = self.read_ops_scheduler.peek() {
             self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
         }
     }
 
     fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.write_throughput_model.peek() {
+        if let Some((time, _)) = self.write_ops_scheduler.peek() {
             self.next_write_event = self
                 .ctx
                 .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
@@ -200,7 +230,7 @@ impl Disk {
     }
 
     fn on_read_completed(&mut self) {
-        let (_, activity) = self.read_throughput_model.pop().unwrap();
+        let (_, activity) = self.read_ops_scheduler.pop(&mut self.ctx).unwrap();
         self.ctx.emit_now(
             DataReadCompleted {
                 request_id: activity.request_id,
@@ -212,7 +242,7 @@ impl Disk {
     }
 
     fn on_write_completed(&mut self) {
-        let (_, activity) = self.write_throughput_model.pop().unwrap();
+        let (_, activity) = self.write_ops_scheduler.pop(&mut self.ctx).unwrap();
         self.ctx.emit_now(
             DataWriteCompleted {
                 request_id: activity.request_id,
@@ -242,7 +272,7 @@ impl Storage for Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            self.read_throughput_model.insert(
+            self.read_ops_scheduler.insert(
                 DiskActivity {
                     request_id,
                     requester,
@@ -272,7 +302,7 @@ impl Storage for Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-            self.write_throughput_model.insert(
+            self.write_ops_scheduler.insert(
                 DiskActivity {
                     request_id,
                     requester,

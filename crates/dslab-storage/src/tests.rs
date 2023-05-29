@@ -53,11 +53,19 @@ enum ExpectedEventType {
 
 struct Checker {
     expected_event_type: ExpectedEventType,
+    received_events_count: u64,
 }
 
 impl Checker {
     fn new(expected_event_type: ExpectedEventType) -> Checker {
-        Checker { expected_event_type }
+        Checker {
+            expected_event_type,
+            received_events_count: 0,
+        }
+    }
+
+    fn received_events_count(&self) -> u64 {
+        self.received_events_count
     }
 }
 
@@ -68,41 +76,49 @@ impl EventHandler for Checker {
                 if self.expected_event_type != ExpectedEventType::FileReadCompleted {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             FileReadFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileReadFailed {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             FileWriteCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileWriteCompleted {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             FileWriteFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileWriteFailed {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             DataReadCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataReadCompleted {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             DataReadFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataReadFailed {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             DataWriteCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataWriteCompleted {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
             DataWriteFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataWriteFailed {
                     panic!();
                 }
+                self.received_events_count += 1;
             }
         })
     }
@@ -517,4 +533,36 @@ fn disk_write_after_spaced_marked_free() {
     assert!(disk.borrow().capacity() == DISK_CAPACITY);
     assert!(disk.borrow().used_space() == 99);
     assert!(disk.borrow().free_space() == DISK_CAPACITY - 99);
+}
+
+#[test]
+fn disk_with_limited_concurrency() {
+    let mut sim = Simulation::new(SEED);
+
+    let checker = rc!(refcell!(Checker::new(ExpectedEventType::DataReadCompleted)));
+    let checker_id = sim.add_handler("User", checker.clone());
+
+    let disk = rc!(refcell!(DiskBuilder::simple(
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW,
+    )
+    .read_concurrent_ops_limit(1)
+    .build(sim.create_context("Disk-1"))));
+
+    sim.add_handler("Disk-1", disk.clone());
+
+    disk.borrow_mut().read(100, checker_id);
+    disk.borrow_mut().read(100, checker_id);
+
+    assert_eq!(checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(1.);
+    assert_eq!(checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(1.);
+    assert_eq!(checker.borrow().received_events_count(), 2);
+
+    sim.step_until_no_events();
+    assert_eq!(checker.borrow().received_events_count(), 2);
 }
