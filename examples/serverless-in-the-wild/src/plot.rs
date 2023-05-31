@@ -69,9 +69,10 @@ pub(crate) fn plot_cdf(plot: &str, labels: Vec<String>, mut data: Vec<Vec<f64>>)
         pts.push((0., 0.));
         let n = data[i].len() as f64;
         for (j, p) in data[i].iter().copied().enumerate() {
+            pts.push((p, (j as f64) / n));
             pts.push((p, ((j + 1) as f64) / n));
         }
-        pts.push((100., n));
+        pts.push((100., 1.));
         if labels[i].contains("unloading") || labels[i].contains("keepalive") {
             ctx.draw_series(LineSeries::new(
                 pts,
