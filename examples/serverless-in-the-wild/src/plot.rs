@@ -49,7 +49,7 @@ pub(crate) fn plot_metrics(plot: &str, mut labels: Vec<String>, mut points: Vec<
         .unwrap();
 }
 
-pub(crate) fn plot_cdf(plot: &str, labels: Vec<String>, mut data: Vec<Vec<f64>>) {
+pub(crate) fn plot_cdf(plot: &str, labels: Vec<String>, mut data: Vec<Vec<f64>>, only_two: bool) {
     let root_area = BitMapBackend::new(plot, (1600, 900)).into_drawing_area();
     root_area.fill(&WHITE).unwrap();
     let mut ctx = ChartBuilder::on(&root_area)
@@ -63,7 +63,11 @@ pub(crate) fn plot_cdf(plot: &str, labels: Vec<String>, mut data: Vec<Vec<f64>>)
         .label_style(("sans-serif", 20))
         .draw()
         .unwrap();
+    let mut idx = 0;
     for i in 0..labels.len() {
+        if only_two && !labels[i].contains("10-minute") && !labels[i].contains("4 hours") {
+            continue;
+        }
         data[i].sort_by(|a, b| a.total_cmp(b));
         let mut pts = Vec::new();
         pts.push((0., 0.));
@@ -76,20 +80,21 @@ pub(crate) fn plot_cdf(plot: &str, labels: Vec<String>, mut data: Vec<Vec<f64>>)
         if labels[i].contains("unloading") || labels[i].contains("keepalive") {
             ctx.draw_series(LineSeries::new(
                 pts,
-                Into::<ShapeStyle>::into(Palette99::pick(i)).filled(),
+                Into::<ShapeStyle>::into(Palette99::pick(idx)).filled(),
             ))
             .unwrap()
             .label(labels[i].clone())
-            .legend(move |pos| TriangleMarker::new(pos, 8, Palette99::pick(i)));
+            .legend(move |pos| TriangleMarker::new(pos, 8, Palette99::pick(idx)));
         } else {
             ctx.draw_series(LineSeries::new(
                 pts,
-                Into::<ShapeStyle>::into(Palette99::pick(i)).filled(),
+                Into::<ShapeStyle>::into(Palette99::pick(idx)).filled(),
             ))
             .unwrap()
             .label(labels[i].clone())
-            .legend(move |pos| Circle::new(pos, 8, Into::<ShapeStyle>::into(Palette99::pick(i)).filled()));
+            .legend(move |pos| Circle::new(pos, 8, Into::<ShapeStyle>::into(Palette99::pick(idx)).filled()));
         }
+        idx += 1;
     }
     ctx.configure_series_labels()
         .label_font(("sans-serif", 20))

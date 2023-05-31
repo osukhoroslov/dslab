@@ -135,6 +135,6 @@ fn main() {
         plot_metrics(&plot, policies.clone(), results);
     }
     if let Some(plot) = args.plot_cdf {
-        plot_cdf(&plot, policies, full_results);
+        plot_cdf(&plot, policies, full_results, true);
     }
 }
