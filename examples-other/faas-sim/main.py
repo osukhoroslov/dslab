@@ -102,11 +102,6 @@ def main(data_dir):
     sim.run()
     end = time.time()
     print('simulation time = {:.3f}'.format(end - begin))
-    inv_metrics = sim.env.metrics.extract_dataframe('invocations')
-    print('total invs = {}'.format(len(inv_metrics.index)))
-    print('mean wait = {}'.format(inv_metrics['t_wait'].mean()))
-    print('max wait = {}'.format(inv_metrics['t_wait'].max()))
-    print('nonzero wait in {} invocations'.format((inv_metrics['t_wait'] > 0).sum()))
 
 
 class CustomSimulatorFactory(SimulatorFactory):

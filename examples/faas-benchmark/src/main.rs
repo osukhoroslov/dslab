@@ -122,16 +122,6 @@ fn main() {
     let elapsed = t.elapsed().as_secs_f64();
     let stats = sim.invocation_stats();
     println!(
-        "avg cold = {}, cold cnt = {}, max cold = {}",
-        stats.cold_start_latency.extend(stats.invocations as usize).mean(),
-        stats.cold_start_latency.len(),
-        stats
-            .cold_start_latency
-            .extend(stats.invocations as usize)
-            .max()
-            .unwrap()
-    );
-    println!(
         "processed {} invocations (rps = {:.3}) and {} events in {:.2} seconds ({:.2} events per sec)",
         stats.invocations,
         args.rps,
