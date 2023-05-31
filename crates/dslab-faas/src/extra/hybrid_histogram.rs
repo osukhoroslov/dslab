@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use rand::prelude::*;
 
-use crate::coldstart::ColdStartPolicy;
+use crate::coldstart::{ColdStartPolicy, KeepaliveDecision};
 use crate::container::Container;
 use crate::extra::arima_extra::{arima_forecast, autofit};
 use crate::function::Application;
@@ -192,15 +192,16 @@ impl HybridHistogramPolicy {
 }
 
 impl ColdStartPolicy for HybridHistogramPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> f64 {
-        match self.describe_pattern(container.app_id) {
+    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision {
+        let keepalive = match self.describe_pattern(container.app_id) {
             Pattern::Uncertain => self.range,
             Pattern::Certain => {
                 let tail = 1 + self.get_app(container.app_id).get_tail();
                 (tail as f64) * self.bin_len * (1. + self.hist_margin)
             }
             Pattern::OutOfBounds => self.get_app(container.app_id).arima() * self.arima_margin * 2.,
-        }
+        };
+        KeepaliveDecision::NewWindow(keepalive)
     }
 
     fn prewarm_window(&mut self, app: &Application) -> f64 {

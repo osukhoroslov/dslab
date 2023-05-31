@@ -43,7 +43,7 @@ def create_host():
 
 def create_topology() -> Topology:
     t = Topology()
-    cloud = LANCell([create_host] * 18, FiberToExchange('internet'))
+    cloud = LANCell([create_host] * 100, FiberToExchange('internet'))
     cloud.materialize(t)
     t.init_docker_registry()
     return t
@@ -51,10 +51,14 @@ def create_topology() -> Topology:
 
 def parse_arrival_profile(df, idx, queue):
     points = []
-    for _, row in df.iterrows():
-        t = row['Timestamp [ms]']
-        cnt = row['Invocations']
-        dur = row['Avg Exec time per Invocation']
+    data = df[df.Invocations > 0].values
+    times = data[:, 0] / 1000
+    durs = data[:, 2] / 1000
+    cnts = data[:, 1]
+    for i in range(len(cnts)):
+        cnt = cnts[i]
+        t = times[i]
+        dur = durs[i]
         for _ in range(cnt):
             points.append((t / 1000, idx))
             queue.append(dur / 1000)
@@ -88,6 +92,7 @@ def main(data_dir):
     # and creates workload by simulating function requests
     benchmark = ExampleBenchmark(data_dir)
     queues = benchmark.populate()
+    print('Trace reading finished!')
 
     # a simulation runs until the benchmark process terminates
     sim = Simulation(topology, benchmark)
@@ -180,10 +185,6 @@ class ExampleBenchmark(Benchmark):
         for deployment in deployments:
             yield from env.faas.deploy(deployment)
 
-        # block until replicas become available (scheduling has finished and replicas have been deployed on the node)
-        #logger.info('waiting for replica')
-        #yield env.process(env.faas.poll_available_replica('python-pi'))
- 
         yield from invoke_all(env, deployments, self.__invocations)
 
     def prepare_deployments(self) -> List[FunctionDeployment]:
@@ -228,8 +229,6 @@ class CustomFaasSystem(DefaultFaasSystem):
         t_received = self.env.now
 
         replicas = self.get_replicas(request.name, FunctionState.RUNNING)
-        logger.info('{} rep for load balancer'.format(len(replicas)))
-        logger.info('{} rep total'.format(len(self.replicas[request.name])))
         while not replicas:
             '''
             https://docs.openfaas.com/architecture/autoscaling/#scaling-up-from-zero-replicas
@@ -264,9 +263,6 @@ class CustomFaasSystem(DefaultFaasSystem):
                                         t_exec, id(replica))
 
     def make_new_replica(self, name):
-        logger.info("SCALE UP")
-        logger.info('got {} replicas in total'.format(sum(len(x) for x in self.replicas)))
-        #logger.info('meanwhile, {} pods are alive'.format(sum(len(node.pods) for node in self.env.scheduler.cluster_context.nodes)))
         yield from self.scale_up(name, 1)
 
     def clear_stale_replicas(self, name):
@@ -274,9 +270,7 @@ class CustomFaasSystem(DefaultFaasSystem):
             return
         self.downscale_in_progress[name] = True
         q = self.upscale_queue[name]
-        logger.debug(self.env.now)
-        while len(q) > 0 and q[0] < self.env.now - 60*120 and len(self.get_replicas(name, FunctionState.RUNNING)) > 0:
-            logger.debug("downscaling!")
+        while len(q) > 0 and q[0] < self.env.now - 600 and len(self.get_replicas(name, FunctionState.RUNNING)) > 0:
             q.popleft()
             yield from self.scale_down(name, 1)
         self.downscale_in_progress[name] = False
@@ -312,16 +306,9 @@ class CustomFaasSystem(DefaultFaasSystem):
         env.metrics.log_teardown(replica)
         yield from replica.simulator.teardown(env, replica)
 
-        logger.debug(list(map(lambda x: x.name, node.pods)))
-        logger.debug(node.pods)
-        logger.debug(replica.pod)
         assert replica.pod in node.pods
-        logger.debug('before removal: {}'.format(node.allocatable.memory))
         self.env.cluster.remove_pod_from_node(replica.pod, node)
-        logger.debug('after removal: {}'.format(node.allocatable.memory))
         replica.state = FunctionState.SUSPENDED
-        logger.debug(replica)
-        logger.debug(self.replicas[replica.function.name])
         self.replicas[replica.function.name].remove(replica)
 
         env.metrics.log('allocation', {
@@ -375,9 +362,7 @@ class CustomFaasSystem(DefaultFaasSystem):
             self.functions_definitions[replica.image] += 1
             self.replica_count[replica.fn_name] += 1
 
-            #self.env.cluster.place_pod_on_node(replica.pod, node)
             self.env.metrics.log_function_deploy(replica)
-            # start a new process to simulate starting of pod
             env.process(simulate_function_start(env, replica))
 
 if __name__ == '__main__':

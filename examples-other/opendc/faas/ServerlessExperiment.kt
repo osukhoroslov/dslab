@@ -51,7 +51,10 @@ public class ServerlessExperiment : Experiment("Serverless") {
         val delayInjector = FixedDelayInjector(500)
         val deployer = SimFunctionDeployer(clock, this, createMachineModel(), delayInjector) { FunctionTraceWorkload(traceById.getValue(it.name)) }
         val service =
-            ServerlessService(coroutineContext, clock, meterProvider.get("opendc-serverless"), deployer, routingPolicy, FunctionTerminationPolicyFixed(coroutineContext, clock, timeout = 120 * 60 * 1000))
+            ServerlessService(coroutineContext, clock, meterProvider.get("opendc-serverless"), deployer, routingPolicy, FunctionTerminationPolicyFixed(coroutineContext, clock, timeout = 10 * 60 * 1000))
+
+        System.gc()
+
         val client = service.newClient()
 
         val sim_time = measureTimeMillis {
@@ -92,7 +95,7 @@ public class ServerlessExperiment : Experiment("Serverless") {
 
         return SimMachineModel(
             cpus = List(cpuNode.coreCount) { ProcessingUnit(cpuNode, it, 1000.0) },
-            memory = List(18) { MemoryUnit("Crucial", "MTA18ASF4G72AZ-3G2B1", 4096.0, 4_096) }
+            memory = List(100) { MemoryUnit("Crucial", "MTA18ASF4G72AZ-3G2B1", 4096.0, 4_096) }
         )
     }
 }

@@ -3,7 +3,6 @@ use serde::Serialize;
 #[derive(Clone, Serialize)]
 pub struct ContainerEndEvent {
     pub id: usize,
-    pub expected_count: usize,
 }
 
 #[derive(Clone, Serialize)]

@@ -1,5 +1,5 @@
 # OpenDC Serverless Example
-This is a serverless example from OpenDC 2.0 with minor changes that make it easier to benchmark performance.
+This example implements a benchmark for [OpenDC 2.0 FaaS](https://github.com/atlarge-research/opendc/releases/tag/v2.0). The benchmark shares common scenario with FaaS-Sim benchmark in the sibling directory and with `faas-benchmark` in `examples`. The dataset should be a directory of .csv files that contain function traces in OpenDC format, one file for each function. Refer to `faas-benchmark` if you want to generate data for benchmarks.
 
 ## Running
 1. Get OpenDC 2.0 [source code](https://github.com/atlarge-research/opendc/releases/tag/v2.0).
@@ -8,6 +8,7 @@ This is a serverless example from OpenDC 2.0 with minor changes that make it eas
 val copy = instances.toList()
 copy.forEach(FunctionInstance::close)
 ```
-3. Replace `ServerlessExperiment.kt` with file from this directory.
-4. Generate trace with `generate.py` (benchmark in the paper was generated from frequent-noconcurrency.csv and timer-noconcurrency.csv from [here](https://github.com/JOUNAIDSoufiane/OpenDC-Serverless/tree/master/experiment-analysis/resources/lambda/traces)).
-5. Run experiment with `run.py`.
+3. Replace `opendc-experiments/opendc-experiments-serverless20/src/main/kotlin/org/opendc/experiments/serverless/ServerlessExperiment.kt` with the corresponding file from this directory.
+4. Build it: go to the root directory and run `./gradlew distZip`.
+5. Extract `build/distributions/opendc-2.0.zip`. The resulting directory will contain opendc-harness and experiment jar required for running the benchmark.
+6. Run the benchmark with `run.py`. **Note**: for large benchmark datasets it is advised to set `DEFAULT_JAVA_OPTS="-XX:+UseConcMarkSweepGC -Xmx10g"` in opendc-harness to avoid crashes.

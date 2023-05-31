@@ -1,5 +1,6 @@
-use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+
+use crate::util::{VecMap, VecMapIterator};
 
 #[derive(Default)]
 pub struct ResourceNameResolver {
@@ -72,12 +73,12 @@ impl ResourceRequirement {
 
 #[derive(Clone, Default)]
 pub struct ResourceProvider {
-    resources: HashMap<usize, Resource>,
+    resources: VecMap<Resource>,
 }
 
 impl ResourceProvider {
     pub fn new(mut resources: Vec<Resource>) -> Self {
-        let mut map = HashMap::new();
+        let mut map = VecMap::default();
         for r in resources.drain(..) {
             map.insert(r.id, r);
         }
@@ -86,7 +87,7 @@ impl ResourceProvider {
 
     pub fn new_empty() -> Self {
         Self {
-            resources: HashMap::new(),
+            resources: Default::default(),
         }
     }
 
@@ -116,18 +117,18 @@ impl ResourceProvider {
     }
 
     pub fn get_resource(&self, id: usize) -> Option<&Resource> {
-        self.resources.get(&id)
+        self.resources.get(id)
     }
 }
 
 #[derive(Clone, Default)]
 pub struct ResourceConsumer {
-    resources: HashMap<usize, ResourceRequirement>,
+    resources: VecMap<ResourceRequirement>,
 }
 
 impl ResourceConsumer {
     pub fn new(mut resources: Vec<ResourceRequirement>) -> Self {
-        let mut map = HashMap::new();
+        let mut map = VecMap::default();
         for r in resources.drain(..) {
             map.insert(r.id, r);
         }
@@ -136,11 +137,11 @@ impl ResourceConsumer {
 
     pub fn new_empty() -> Self {
         Self {
-            resources: HashMap::new(),
+            resources: Default::default(),
         }
     }
 
-    pub fn iter(&self) -> Iter<usize, ResourceRequirement> {
+    pub fn iter(&self) -> VecMapIterator<ResourceRequirement> {
         self.resources.iter()
     }
 }

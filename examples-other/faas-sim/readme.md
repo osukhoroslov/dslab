@@ -1,5 +1,5 @@
 # FaaS-Sim Serverless Example
-This example implements a benchmark for [FaaS-Sim](https://github.com/edgerun/faas-sim/tree/master). The benchmark shares common scenario with OpenDC FaaS benchmark in the sibling directory and with `faas-opendc-benchmark` in `examples`. The dataset should be a directory of .csv files that contain function traces in OpenDC format, one file for each function.
+This example implements a benchmark for [FaaS-Sim](https://github.com/edgerun/faas-sim/tree/master). The benchmark shares common scenario with OpenDC FaaS benchmark in the sibling directory and with `faas-benchmark` in `examples`. The dataset should be a directory of .csv files that contain function traces in OpenDC format, one file for each function. Refer to `faas-benchmark` if you want to generate data for benchmarks.
 ## Running
 1. Get FaaS-Sim [source code](https://github.com/edgerun/faas-sim/tree/master).
 2. Install all dependencies from `requirements.txt` and check that the simulator runs. 

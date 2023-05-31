@@ -137,6 +137,7 @@ impl Invoker for NaiveInvoker {
             let fr_ref = fr.borrow();
             let app = fr_ref.get_app(item.app_id).unwrap();
             let decision = try_invoke(app, cm, time);
+            let concurrency_limit = app.get_concurrent_invocations();
             drop(fr_ref);
             match decision {
                 InvokerDecision::Warm(id) => {
@@ -150,11 +151,17 @@ impl Invoker for NaiveInvoker {
                     container.last_change = time;
                     container.status = ContainerStatus::Running;
                     container.start_invocation(item.invocation_id);
+                    if container.invocations.len() == concurrency_limit {
+                        cm.move_container_to_full(id);
+                    }
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, None));
                 }
                 InvokerDecision::Cold((id, delay)) => {
                     stats.update_queueing_time(item.app_id, item.func_id, time - item.time);
                     cm.reserve_container(id, item.invocation_id);
+                    if cm.count_reservations(id) == concurrency_limit {
+                        cm.move_container_to_full(id);
+                    }
                     stats.on_cold_start(item.app_id, item.func_id, time - item.time + delay);
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, Some(delay)));
                 }
@@ -238,12 +245,18 @@ impl Invoker for FIFOInvoker {
                     container.last_change = time;
                     container.status = ContainerStatus::Running;
                     container.start_invocation(item.invocation_id);
+                    if container.invocations.len() == app.get_concurrent_invocations() {
+                        cm.move_container_to_full(id);
+                    }
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, None));
                     self.queue.pop_front();
                 }
                 InvokerDecision::Cold((id, delay)) => {
                     stats.update_queueing_time(item.app_id, item.func_id, time - item.time);
                     cm.reserve_container(id, item.invocation_id);
+                    if cm.count_reservations(id) == app.get_concurrent_invocations() {
+                        cm.move_container_to_full(id);
+                    }
                     stats.on_cold_start(item.app_id, item.func_id, time - item.time + delay);
                     dequeued.push(DequeuedInvocation::new(item.invocation_id, id, Some(delay)));
                     self.queue.pop_front();

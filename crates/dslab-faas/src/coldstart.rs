@@ -18,9 +18,15 @@ impl<T: 'static + ColdStartPolicy> ColdStartConvertHelper for T {
     }
 }
 
+pub enum KeepaliveDecision {
+    NewWindow(f64),
+    OldWindow,
+    TerminateNow,
+}
+
 pub trait ColdStartPolicy: ColdStartConvertHelper {
     /// Maximum allowed idle time until container destruction.
-    fn keepalive_window(&mut self, container: &Container) -> f64;
+    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision;
     /// Prewarm = x > 0 => destroy container, deploy new container after x time units since execution.
     /// Prewarm = 0 => do not destroy container immediately after execution.
     fn prewarm_window(&mut self, app: &Application) -> f64;
@@ -63,17 +69,22 @@ impl FixedTimeColdStartPolicy {
 }
 
 impl ColdStartPolicy for FixedTimeColdStartPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> f64 {
+    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision {
         if !self.reset_keepalive {
             if let Some(t) = self.already_set.get(&(container.host_id, container.id)) {
-                return f64::max(0.0, t - container.last_change); // last_change should be equal to current time
+                if t - container.last_change <= 0.0 {
+                    // last_change should be equal to current time
+                    return KeepaliveDecision::TerminateNow;
+                } else {
+                    return KeepaliveDecision::OldWindow;
+                }
             }
             self.already_set.insert(
                 (container.host_id, container.id),
                 container.last_change + self.keepalive_window,
             );
         }
-        self.keepalive_window
+        KeepaliveDecision::NewWindow(self.keepalive_window)
     }
 
     fn prewarm_window(&mut self, _app: &Application) -> f64 {
