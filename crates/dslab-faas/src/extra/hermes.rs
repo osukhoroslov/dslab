@@ -10,23 +10,26 @@ use crate::scheduler::Scheduler;
 /// Refer to <https://arxiv.org/abs/2111.07226>
 pub struct HermesScheduler {
     high_load_fallback: LeastLoadedScheduler,
+    prefer_warm: bool,
     use_invocation_count: bool,
     avoid_queueing: bool,
 }
 
 impl HermesScheduler {
-    pub fn new(use_invocation_count: bool, avoid_queueing: bool) -> Self {
+    pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
-            high_load_fallback: LeastLoadedScheduler::new(true, use_invocation_count, avoid_queueing),
+            high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
+            prefer_warm,
             use_invocation_count,
             avoid_queueing,
         }
     }
 
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
+        let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
         let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();
         let avoid_queueing = options.get("avoid_queueing").unwrap().parse::<bool>().unwrap();
-        Self::new(use_invocation_count, avoid_queueing)
+        Self::new(prefer_warm, use_invocation_count, avoid_queueing)
     }
 }
 
@@ -72,8 +75,8 @@ impl Scheduler for HermesScheduler {
 
     fn to_string(&self) -> String {
         format!(
-            "HermesScheduler[use_invocation_count={},avoid_queueing={}]",
-            self.use_invocation_count, self.avoid_queueing
+            "HermesScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]",
+            self.prefer_warm, self.use_invocation_count, self.avoid_queueing
         )
     }
 }

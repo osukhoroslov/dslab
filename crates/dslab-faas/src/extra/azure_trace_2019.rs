@@ -107,6 +107,7 @@ fn app_id(id: &str) -> String {
 
 /// Experiment generator will choose `count` random apps with popularity in range
 /// [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+#[derive(Copy, Clone)]
 pub struct AppPreference {
     pub count: usize,
     pub left: f64,
@@ -135,7 +136,7 @@ impl AppPreference {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum DurationGenerator {
     /// Simple duration generator from quantiles.
     Piecewise,
@@ -145,7 +146,7 @@ pub enum DurationGenerator {
     Lognormal,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum StartGenerator {
     /// For each 1-minute bucket select each starting time uniformly at random within that bucket.
     BucketUniform,
@@ -155,6 +156,7 @@ pub enum StartGenerator {
     EmpiricalFit,
 }
 
+#[derive(Clone)]
 pub struct Azure2019TraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,

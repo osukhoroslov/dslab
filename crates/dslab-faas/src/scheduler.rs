@@ -125,7 +125,7 @@ impl Scheduler for LocalityBasedScheduler {
         let mut idx = start_idx;
         let mut allocatable_idx = usize::MAX;
         while !cycle {
-            if hosts[idx].borrow().can_invoke(app, false) {
+            if self.warm_only && hosts[idx].borrow().can_invoke(app, false) {
                 break;
             }
             if hosts[idx].borrow().can_allocate(app.get_resources()) {
