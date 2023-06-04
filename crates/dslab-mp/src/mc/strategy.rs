@@ -10,7 +10,8 @@ use regex::Regex;
 use sugars::boxed;
 
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
-use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
+use crate::mc::events::{McEvent, McEventId};
+use crate::mc::network::DeliveryOptions;
 use crate::mc::state::McState;
 use crate::mc::system::McSystem;
 use crate::message::Message;
