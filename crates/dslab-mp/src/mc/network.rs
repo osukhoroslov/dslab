@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
-use crate::mc::events::{McEvent, McTime};
+use crate::mc::events::McEvent;
+use crate::mc::system::McTime;
 use crate::message::Message;
 use crate::network::Network;
 

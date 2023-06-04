@@ -1,10 +1,9 @@
-use ordered_float::OrderedFloat;
 use serde::Serialize;
 
 use crate::mc::network::DeliveryOptions;
+use crate::mc::system::McTime;
 use crate::message::Message;
 
-pub type McTime = OrderedFloat<f64>;
 pub type McEventId = usize;
 
 #[derive(Serialize, Clone, Eq, Hash, PartialEq, Debug)]

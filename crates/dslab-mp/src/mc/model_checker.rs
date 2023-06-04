@@ -8,13 +8,13 @@ use colored::*;
 use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
-use crate::mc::events::{McEvent, McTime};
+use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
 use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
-use crate::mc::system::McSystem;
+use crate::mc::system::{McSystem, McTime};
 use crate::system::System;
 use crate::util::t;
 

@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use crate::mc::events::{McEventId, McTime};
+use crate::mc::events::McEventId;
+use crate::mc::system::McTime;
 use crate::message::Message;
 
 /// Tracks and enforces dependencies between events.
