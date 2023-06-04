@@ -4,11 +4,15 @@ use std::collections::{BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+use ordered_float::OrderedFloat;
+
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
+
+pub type McTime = OrderedFloat<f64>;
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
