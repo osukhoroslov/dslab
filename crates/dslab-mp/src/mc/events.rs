@@ -1,21 +1,8 @@
 use ordered_float::OrderedFloat;
 use serde::Serialize;
 
+use crate::mc::network::DeliveryOptions;
 use crate::message::Message;
-
-#[derive(Serialize, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum DeliveryOptions {
-    /// Message will be received exactly once without corruption with specified max delay
-    NoFailures(McTime),
-    /// Message will not be received
-    Dropped,
-    /// Message delivery may be subject to some failures
-    PossibleFailures {
-        can_be_dropped: bool,
-        max_dupl_count: u32,
-        can_be_corrupted: bool,
-    },
-}
 
 pub type McTime = OrderedFloat<f64>;
 pub type McEventId = usize;
