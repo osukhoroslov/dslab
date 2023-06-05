@@ -203,7 +203,8 @@ impl GraphWidget {
             std::mem::swap(&mut left_x, &mut right_x);
         }
 
-        for (level, tasks) in by_level.iter() {
+        for (level, mut tasks) in by_level.into_iter() {
+            tasks.sort();
             let x =
                 ((level - min_level) as f64 + 0.5) / (max_level - min_level + 1) as f64 * (left_x - right_x) + right_x;
             let top_y = MIN_NODE_RADIUS * 2.;
