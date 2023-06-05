@@ -299,8 +299,9 @@ impl DagStats {
                     dag.get_task(t)
                         .inputs
                         .iter()
-                        .filter(|data_item| !dag.get_inputs().contains(data_item))
-                        .count() as f64
+                        .filter_map(|&data_item| dag.get_data_item(data_item).producer)
+                        .collect::<HashSet<usize>>()
+                        .len() as f64
                 })
                 .sum::<f64>()
                 / level.len() as f64,
@@ -310,8 +311,9 @@ impl DagStats {
                     dag.get_task(t)
                         .outputs
                         .iter()
-                        .map(|&data_item| dag.get_data_item(data_item).consumers.len())
-                        .sum::<usize>() as f64
+                        .flat_map(|&data_item| dag.get_data_item(data_item).consumers.iter().copied())
+                        .collect::<HashSet<usize>>()
+                        .len() as f64
                 })
                 .sum::<f64>()
                 / level.len() as f64,
