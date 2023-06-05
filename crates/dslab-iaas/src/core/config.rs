@@ -23,7 +23,7 @@ pub trait DynamicVariable: Debug + DynClone {
 clone_trait_object!(DynamicVariable);
 
 /// Represents variable experiment alternatives for integers
-/// Example: [2.0, 4.0, 0.5] means values {2.0, 2.5, 3.0, 3.5} will occur
+/// Example: 2.0,4.0,0.5 means values {2.0, 2.5, 3.0, 3.5} will be passed
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct DynamicIntVariable<T> {
     /// exact value. Has the first priority before loop
@@ -407,8 +407,26 @@ impl SimulationConfig {
             vm_dataset: data.vm_dataset,
             hosts: data.hosts.unwrap_or_default(),
             schedulers: data.schedulers.unwrap_or_default(),
-            dynamic_variables: Vec::new(),
+            dynamic_variables,
         }
+    }
+
+    /// Returns if some test cases are remaining
+    pub fn can_increment(&self) -> bool {
+        if self.dynamic_variables.is_empty() {
+            return false;
+        }
+
+        self.dynamic_variables.get(0).unwrap().can_increment()
+    }
+
+    /// Switch to next test case
+    pub fn increment(&mut self) {
+        if !self.can_increment() {
+            return;
+        }
+
+        self.dynamic_variables.get_mut(0).unwrap().increment();
     }
 }
 

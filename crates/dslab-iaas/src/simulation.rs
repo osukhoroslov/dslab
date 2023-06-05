@@ -32,6 +32,7 @@ use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_type::VmDatasetType;
 use crate::extensions::huawei_dataset_reader::HuaweiDatasetReader;
 
+#[derive(Clone)]
 struct VMSpawnRequest {
     pub resource_consumer: ResourceConsumer,
     pub lifetime: f64,
@@ -42,6 +43,7 @@ struct VMSpawnRequest {
 /// Represents a simulation, provides methods for its configuration and execution.
 ///
 /// It encapsulates all simulation components and provides convenient access to them for the user.
+#[derive(Clone)]
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
     vm_api: Rc<RefCell<VmAPI>>,
@@ -479,6 +481,11 @@ impl CloudSimulation {
     /// Returns the simulation config.
     pub fn sim_config(&self) -> Rc<SimulationConfig> {
         self.sim_config.clone()
+    }
+
+    /// Sets new config value.
+    pub fn set_sim_config(&mut self, config: SimulationConfig) {
+        self.sim_config = rc!(config);
     }
 
     /// Returns the identifier of component by its name.

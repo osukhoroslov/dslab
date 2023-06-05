@@ -19,6 +19,7 @@ use crate::state::SimulationState;
 use crate::Event;
 
 /// Represents a simulation, provides methods for its configuration and execution.
+#[derive(Clone)]
 pub struct Simulation {
     sim_state: Rc<RefCell<SimulationState>>,
     name_to_id: HashMap<String, Id>,

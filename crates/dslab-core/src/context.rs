@@ -11,6 +11,7 @@ use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
 /// A facade for accessing the simulation state and producing events from simulation components.
+#[derive(Clone)]
 pub struct SimulationContext {
     id: Id,
     name: String,

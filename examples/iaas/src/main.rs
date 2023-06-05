@@ -1,6 +1,8 @@
-use log::info;
+use std::rc::Rc;
 
 use clap::Parser;
+use log::info;
+use sugars::rc;
 
 use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::SimulationConfig;
@@ -9,6 +11,7 @@ use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
 use dslab_iaas::custom_component::CustomComponent;
+use dslab_iaas::experiments::{run_experiments, Experiment};
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
 use dslab_iaas::simulation::CloudSimulation;
@@ -179,6 +182,72 @@ fn example_vm_migrator() {
     cloud_sim.step_for_duration(1005.);
 }
 
+pub struct CustomExperiment {
+    pub sim: CloudSimulation,
+}
+
+impl Experiment for CustomExperiment {
+    fn new(sim: CloudSimulation) -> Self
+    where
+        Self: Sized,
+    {
+        Self { sim }
+    }
+
+    fn get_sim(&self) -> Rc<CloudSimulation> {
+        rc!(self.sim.clone())
+    }
+
+    fn set_sim(&mut self, sim: CloudSimulation) {
+        self.sim = sim;
+    }
+
+    fn on_experiment_finish(&mut self) {
+        let end_time = self.sim.current_time();
+        info!("==== New test case ====");
+        info!(
+            "Total energy consumed by host one: {:.2}",
+            self.sim.host_by_name("h1").borrow_mut().get_energy_consumed(end_time)
+        );
+        info!(
+            "Total energy consumed by host two: {:.2}",
+            self.sim.host_by_name("h2").borrow_mut().get_energy_consumed(end_time)
+        );
+    }
+}
+
+fn example_experiments() {
+    let sim = Simulation::new(123);
+    let config = SimulationConfig::from_file("config_with_exp.yaml");
+    let mut cloud_sim = CloudSimulation::new(sim, config);
+
+    cloud_sim.add_host("h1", 30, 30);
+    cloud_sim.add_host("h2", 30, 30);
+    let s1 = cloud_sim.add_scheduler("s1", VMPlacementAlgorithm::single(BestFit::new()));
+    let s2 = cloud_sim.add_scheduler("s2", VMPlacementAlgorithm::single(BestFit::new()));
+
+    // spawn vm_0 - vm_4 on scheduler #1
+    for _ in 0..5 {
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s1);
+    }
+    // spawn vm_5 - vm_9 on scheduler #2
+    for _ in 5..10 {
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s2);
+    }
+
+    // spawn vm_10 - vm_14 on scheduler #1
+    for _ in 10..15 {
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s1);
+    }
+    // spawn vm_15 - vm_19 on scheduler #2
+    for _ in 15..20 {
+        cloud_sim.spawn_vm_now(ResourceConsumer::with_full_load(10, 10), 2.0, None, s2);
+    }
+
+    let exp = CustomExperiment::new(cloud_sim);
+    run_experiments(Box::new(exp));
+}
+
 /// DSLab IaaS Examples
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
@@ -206,5 +275,9 @@ fn main() {
     if example.is_none() || example.unwrap() == "vm-migrator" {
         println!("\n--- VM MIGRATOR ---\n");
         example_vm_migrator();
+    }
+    if example.is_none() || example.unwrap() == "experiments" {
+        println!("\n--- EXPERIMENTS ---\n");
+        example_experiments();
     }
 }

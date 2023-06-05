@@ -43,13 +43,13 @@ fn main() {
     let mut accumulated_cpu_utilization = 0.;
     let mut num_of_iterations = 0;
     loop {
-        cloud_sim.step_for_duration(sim_config.step_duration);
+        cloud_sim.step_for_duration(*sim_config.step_duration);
 
         let mut sum_cpu_load = 0.;
         let mut sum_memory_load = 0.;
         let mut sum_cpu_allocated = 0.;
         let mut sum_memory_allocated = 0.;
-        for i in 1..sim_config.number_of_hosts + 1 {
+        for i in 1..(*sim_config.number_of_hosts + 1) {
             let host_name = format!("h{}", i);
             sum_cpu_load += cloud_sim
                 .host_by_name(&host_name)
@@ -69,15 +69,15 @@ fn main() {
                 "CPU allocation rate: {:.2?}, memory allocation rate: {:.2?},",
                 " CPU load rate: {:.2?}, memory load rate: {:.2?}"
             ),
-            sum_cpu_allocated / (sim_config.host_cpu_capacity * sim_config.number_of_hosts as f64),
-            sum_memory_allocated / (sim_config.host_memory_capacity * sim_config.number_of_hosts as f64),
-            sum_cpu_load / (sim_config.number_of_hosts as f64),
-            sum_memory_load / (sim_config.number_of_hosts as f64)
+            sum_cpu_allocated / (*sim_config.host_cpu_capacity * *sim_config.number_of_hosts as f64),
+            sum_memory_allocated / (*sim_config.host_memory_capacity * *sim_config.number_of_hosts as f64),
+            sum_cpu_load / (*sim_config.number_of_hosts as f64),
+            sum_memory_load / (*sim_config.number_of_hosts as f64)
         );
-        accumulated_cpu_utilization += sum_cpu_load / (sim_config.number_of_hosts as f64);
+        accumulated_cpu_utilization += sum_cpu_load / (*sim_config.number_of_hosts as f64);
         num_of_iterations += 1;
 
-        if cloud_sim.current_time() > sim_config.simulation_length {
+        if cloud_sim.current_time() > *sim_config.simulation_length {
             break;
         }
     }
