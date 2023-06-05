@@ -149,6 +149,11 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(
                                             Checkbox::new("Color by name prefix").lens(AppData::color_by_prefix),
                                         )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Merge resource usages")
+                                                .lens(AppData::timeline_merged_usages),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()

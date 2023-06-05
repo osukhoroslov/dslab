@@ -25,6 +25,7 @@ pub struct AppData {
     pub timeline_uploading: bool,
     pub timeline_cores: bool,
     pub timeline_memory: bool,
+    pub timeline_merged_usages: bool,
     pub graph_levels_from_end: bool,
     pub graph_variable_edge_width: bool,
     pub graph_variable_node_size: bool,
@@ -216,6 +217,7 @@ impl AppData {
             timeline_uploading: true,
             timeline_cores: true,
             timeline_memory: true,
+            timeline_merged_usages: false,
             graph_levels_from_end: false,
             graph_variable_edge_width: false,
             graph_variable_node_size: false,
@@ -236,6 +238,7 @@ pub struct AppDataSettings {
     timeline_uploading: Option<bool>,
     timeline_cores: Option<bool>,
     timeline_memory: Option<bool>,
+    timeline_merged_usages: Option<bool>,
     graph_levels_from_end: Option<bool>,
     graph_variable_edge_width: Option<bool>,
     graph_variable_node_size: Option<bool>,
@@ -257,6 +260,7 @@ impl AppData {
         copy_setting!(timeline_uploading);
         copy_setting!(timeline_cores);
         copy_setting!(timeline_memory);
+        copy_setting!(timeline_merged_usages);
         copy_setting!(graph_levels_from_end);
         copy_setting!(graph_variable_edge_width);
         copy_setting!(graph_variable_node_size);

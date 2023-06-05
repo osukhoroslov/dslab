@@ -67,6 +67,22 @@ impl TimelineWidget {
         height: f64,
         usages: Vec<TimelineResourceBlock>,
         total_resource: u64,
+        data: &AppData,
+    ) {
+        if data.timeline_merged_usages {
+            self.draw_resource_usage_merged(ctx, y, height, usages);
+        } else {
+            self.draw_resource_usage_stable(ctx, y, height, usages, total_resource);
+        }
+    }
+
+    fn draw_resource_usage_stable(
+        &mut self,
+        ctx: &mut PaintCtx,
+        y: f64,
+        height: f64,
+        usages: Vec<TimelineResourceBlock>,
+        total_resource: u64,
     ) {
         if usages.is_empty() {
             return;
@@ -157,6 +173,65 @@ impl TimelineWidget {
         );
         for rect in highlighted_borders.iter() {
             ctx.stroke(rect, &Color::WHITE, 5.);
+        }
+    }
+
+    fn draw_resource_usage_merged(
+        &mut self,
+        ctx: &mut PaintCtx,
+        y: f64,
+        height: f64,
+        usages: Vec<TimelineResourceBlock>,
+    ) {
+        if usages.is_empty() {
+            return;
+        }
+        let mut events: Vec<f64> = Vec::new();
+        for item in usages.iter() {
+            events.push(item.start);
+            events.push(item.end);
+        }
+        events.sort_by(|a, b| a.total_cmp(b));
+        events.dedup();
+        for i in 0..events.len() - 1 {
+            let left = events[i];
+            let right = events[i + 1];
+            let mut cury = y;
+            for usage in usages.iter() {
+                if usage.end <= left || usage.start >= right {
+                    continue;
+                }
+                let current_height = usage.height as f64 * height;
+                let rect = Rect::from_points(
+                    Point::new(self.get_time_x(left), cury),
+                    Point::new(self.get_time_x(right), cury + current_height),
+                );
+                ctx.fill(rect, &usage.color);
+                self.clickable_rectangles.push((rect, usage.task));
+                cury += current_height;
+            }
+        }
+        for i in 0..events.len() - 1 {
+            let left = events[i];
+            let right = events[i + 1];
+            let mut cury = y;
+            for usage in usages.iter() {
+                if usage.end <= left || usage.start >= right {
+                    continue;
+                }
+                let current_height = usage.height as f64 * height;
+                if usage.selected {
+                    ctx.stroke(
+                        Rect::from_points(
+                            Point::new(self.get_time_x(left), cury),
+                            Point::new(self.get_time_x(right), cury + current_height),
+                        ),
+                        &Color::WHITE,
+                        5.,
+                    );
+                }
+                cury += current_height;
+            }
         }
     }
 
@@ -281,7 +356,7 @@ impl Widget<AppData> for TimelineWidget {
                         task_id,
                     ));
                 }
-                self.draw_resource_usage(ctx, y, ROW_STEP, cores, compute.cores as u64);
+                self.draw_resource_usage(ctx, y, ROW_STEP, cores, compute.cores as u64, data);
                 ctx.stroke(
                     Line::new(Point::new(X_PADDING, y), Point::new(size.width - X_PADDING, y)),
                     &Color::WHITE,
@@ -321,7 +396,7 @@ impl Widget<AppData> for TimelineWidget {
                 }
                 let height = MAX_MEMORY_HEIGHT * compute.memory as f64 / max_memory as f64;
                 let height = height.max(ROW_STEP);
-                self.draw_resource_usage(ctx, y, height / compute.memory as f64, memory, compute.memory);
+                self.draw_resource_usage(ctx, y, height / compute.memory as f64, memory, compute.memory, data);
                 ctx.stroke(
                     Line::new(Point::new(X_PADDING, y), Point::new(size.width - X_PADDING, y)),
                     &Color::WHITE,
