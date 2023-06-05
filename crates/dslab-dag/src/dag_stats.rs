@@ -235,8 +235,10 @@ impl DagStats {
                 .collect(),
             predecessor_count,
             successor_count,
-            avg_predecessors: predecessor_count as f64 / level.len() as f64,
-            avg_successors: successor_count as f64 / level.len() as f64,
+            avg_predecessors: level.iter().map(|&t| dag.get_task(t).inputs.len() as f64).sum::<f64>()
+                / level.len() as f64,
+            avg_successors: level.iter().map(|&t| dag.get_task(t).outputs.len() as f64).sum::<f64>()
+                / level.len() as f64,
         }
     }
 }
