@@ -145,6 +145,10 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(Checkbox::new("Memory").lens(AppData::timeline_memory))
                                         .with_spacer(PADDING)
                                         .with_child(Checkbox::new("Uploading").lens(AppData::timeline_uploading))
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Color by name prefix").lens(AppData::color_by_prefix),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()
@@ -189,6 +193,10 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_spacer(PADDING)
                                         .with_child(
                                             Checkbox::new("Show node names").lens(AppData::graph_show_task_names),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Color by name prefix").lens(AppData::color_by_prefix),
                                         )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()

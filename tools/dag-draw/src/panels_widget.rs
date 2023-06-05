@@ -168,7 +168,7 @@ impl PanelsWidget {
                     Point::new(middlex + 5., *downy),
                     false,
                     false,
-                    task_info.color.clone(),
+                    task_info.get_color(data),
                 );
             } else {
                 let mut width = BLOCK_WIDTH / 2. - 10.;
@@ -178,7 +178,7 @@ impl PanelsWidget {
                         Point::new(middlex + 5., *downy + ROW_STEP / 2. + 2.5 + CORE_SIZE / 2.),
                         Point::new(middlex + 5. + width, *downy + ROW_STEP / 2. + 2.5 - CORE_SIZE / 2.),
                     ),
-                    &task_info.color,
+                    &task_info.get_color(data),
                 );
                 ctx.stroke(
                     Rect::from_points(
@@ -284,7 +284,7 @@ impl PanelsWidget {
                 for _ in 0..task_info.cores {
                     ctx.fill(
                         Rect::from_center_size(Point::new(xcore, ycore), Size::new(CORE_SIZE, CORE_SIZE)),
-                        &task_info.color,
+                        &task_info.get_color(data),
                     );
                     xcore += 20.;
                     core_index += 1;
@@ -362,7 +362,7 @@ impl PanelsWidget {
                         Point::new(memoryx, downy - CORE_SIZE / 2.),
                         Point::new(memoryx + memory_width, downy + CORE_SIZE / 2.),
                     ),
-                    &task_info.color,
+                    &task_info.get_color(data),
                 );
 
                 memoryx += memory_width;

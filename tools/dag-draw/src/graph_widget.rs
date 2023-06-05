@@ -332,7 +332,7 @@ impl Widget<AppData> for GraphWidget {
                                             * PI
                                             * 2.,
                                     ),
-                                    &task_info.color,
+                                    &task_info.get_color(data),
                                 );
                             } else {
                                 ctx.fill(
@@ -346,7 +346,7 @@ impl Widget<AppData> for GraphWidget {
                                             * PI
                                             * 2.,
                                     ),
-                                    &task_info.color,
+                                    &task_info.get_color(data),
                                 );
                             }
                         }

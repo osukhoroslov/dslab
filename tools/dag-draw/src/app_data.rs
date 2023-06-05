@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::rc::Rc;
 
-use druid::{Color, Data, Lens};
+use druid::{Data, Lens};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -18,6 +18,7 @@ pub struct AppData {
     pub compute: Rc<RefCell<Vec<Compute>>>,
     pub transfers: Rc<RefCell<Vec<Transfer>>>,
     pub task_info: Rc<RefCell<Vec<Option<TaskInfo>>>>,
+    pub color_by_prefix: bool,
     pub files_limit_str: String,
     pub tasks_limit_str: String,
     pub timeline_downloading: bool,
@@ -35,28 +36,6 @@ pub struct AppData {
 
 impl AppData {
     pub fn from_trace_log(trace_log: TraceLog) -> Self {
-        // some random colors
-        let colors = vec![
-            Color::from_hex_str("3FA7D6").unwrap(),
-            Color::from_hex_str("FAC05E").unwrap(),
-            Color::from_hex_str("59CD90").unwrap(),
-            Color::from_hex_str("F79D84").unwrap(),
-            Color::from_hex_str("619B8A").unwrap(),
-            Color::from_hex_str("FDF5BF").unwrap(),
-            Color::from_hex_str("8BB8A8").unwrap(),
-            Color::from_hex_str("A11692").unwrap(),
-            Color::from_hex_str("4A5899").unwrap(),
-            Color::from_hex_str("DDBEA8").unwrap(),
-        ];
-
-        let mut icolor: usize = 0;
-
-        let mut get_next_color = || -> Color {
-            let color = colors[icolor].clone();
-            icolor = (icolor + 1) % colors.len();
-            color
-        };
-
         let scheduler_files = Rc::new(RefCell::new(Vec::<File>::new()));
         let compute = Rc::new(RefCell::new(Vec::<Compute>::new()));
         let transfers = Rc::new(RefCell::new(Vec::<Transfer>::new()));
@@ -217,7 +196,7 @@ impl AppData {
                 completed,
                 cores,
                 id,
-                color: get_next_color(),
+                name: trace_log.graph.tasks[id].name.clone(),
             });
 
             compute.borrow_mut()[*compute_index.get(&actor).unwrap()].tasks.push(id);
@@ -230,6 +209,7 @@ impl AppData {
             compute,
             transfers,
             task_info: tasks_info,
+            color_by_prefix: false,
             files_limit_str: "10".to_string(),
             tasks_limit_str: "2".to_string(),
             timeline_downloading: true,
@@ -249,6 +229,7 @@ impl AppData {
 
 #[derive(Deserialize)]
 pub struct AppDataSettings {
+    color_by_prefix: Option<bool>,
     files_limit: Option<usize>,
     tasks_limit: Option<usize>,
     timeline_downloading: Option<bool>,
@@ -271,6 +252,7 @@ impl AppData {
             };
         }
 
+        copy_setting!(color_by_prefix);
         copy_setting!(timeline_downloading);
         copy_setting!(timeline_uploading);
         copy_setting!(timeline_cores);

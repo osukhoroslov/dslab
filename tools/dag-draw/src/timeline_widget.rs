@@ -276,7 +276,7 @@ impl Widget<AppData> for TimelineWidget {
                         task_info.scheduled,
                         task_info.completed,
                         task_info.cores as u64,
-                        task_info.color.clone(),
+                        task_info.get_color(data),
                         data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
                         task_id,
                     ));
@@ -314,7 +314,7 @@ impl Widget<AppData> for TimelineWidget {
                         task_info.scheduled,
                         task_info.completed,
                         data.graph.borrow().tasks[task_id].memory,
-                        task_info.color.clone(),
+                        task_info.get_color(data),
                         data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
                         task_id,
                     ));
