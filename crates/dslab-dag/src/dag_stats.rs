@@ -14,12 +14,27 @@ pub struct DagStats {
     pub total_comp_size: f64,
     /// Sum of sizes of all data items.
     pub total_data_size: f64,
+    /// Sum of sizes of all transfers, differs from `total_data_size` if
+    /// one data item is used as input for multiple tasks.
+    pub total_transfer_size: f64,
     /// `total_comp_size / total_data_size`
     pub comp_data_ratio: f64,
     /// Longest path measured in sum of flops of tasks on this path.
     pub critical_path_size: f64,
     /// `total_comp_size / critical_path_size`
     pub parallelism_degree: f64,
+    /// Sum of sizes of all input data items.
+    pub input_data_size: f64,
+    /// Sum of sizes of all output data items.
+    pub output_data_size: f64,
+    /// Size of maximum input data item.
+    pub max_input_size: f64,
+    /// Size of maximum output data item.
+    pub max_output_size: f64,
+    /// Minimum size of largest task input among all tasks.
+    pub min_max_input_size: f64,
+    /// Minimum size of largest task output among all tasks.
+    pub min_max_output_size: f64,
     /// Number of levels.
     pub depth: usize,
     /// Size of the largest level.
@@ -95,9 +110,9 @@ pub struct LevelProfile {
     pub predecessor_count: usize,
     /// Total number of distinct successors.
     pub successor_count: usize,
-    /// `predecessor_count / task_count`
+    /// Average number of task predecessors.
     pub avg_predecessors: f64,
-    /// `successor_count / task_count`
+    /// Average number of task successors.
     pub avg_successors: f64,
 }
 
@@ -112,9 +127,52 @@ impl DagStats {
             max_cores_per_task: dag.get_tasks().iter().map(|t| t.max_cores).max().unwrap(),
             total_comp_size,
             total_data_size,
+            total_transfer_size: dag
+                .get_data_items()
+                .iter()
+                .map(|t| t.size * t.consumers.len().max(1) as f64)
+                .sum(),
             comp_data_ratio: total_comp_size / total_data_size,
             critical_path_size,
             parallelism_degree: total_comp_size / critical_path_size,
+            input_data_size: dag.get_inputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
+            output_data_size: dag.get_outputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
+            max_input_size: dag
+                .get_inputs()
+                .iter()
+                .map(|&i| dag.get_data_item(i).size)
+                .max_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            max_output_size: dag
+                .get_outputs()
+                .iter()
+                .map(|&i| dag.get_data_item(i).size)
+                .max_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            min_max_input_size: dag
+                .get_tasks()
+                .iter()
+                .filter_map(|t| {
+                    t.inputs
+                        .iter()
+                        .filter(|&data_item| dag.get_inputs().contains(data_item))
+                        .map(|&data_item| dag.get_data_item(data_item).size)
+                        .max_by(|a, b| a.total_cmp(b))
+                })
+                .min_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            min_max_output_size: dag
+                .get_tasks()
+                .iter()
+                .filter_map(|t| {
+                    t.outputs
+                        .iter()
+                        .filter(|&data_item| dag.get_outputs().contains(data_item))
+                        .map(|&data_item| dag.get_data_item(data_item).size)
+                        .max_by(|a, b| a.total_cmp(b))
+                })
+                .min_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
             depth: levels.len(),
             width: levels.iter().map(|l| l.len()).max().unwrap(),
             max_parallelism: Self::get_max_parallelism(dag, &levels),
@@ -235,9 +293,27 @@ impl DagStats {
                 .collect(),
             predecessor_count,
             successor_count,
-            avg_predecessors: level.iter().map(|&t| dag.get_task(t).inputs.len() as f64).sum::<f64>()
+            avg_predecessors: level
+                .iter()
+                .map(|&t| {
+                    dag.get_task(t)
+                        .inputs
+                        .iter()
+                        .filter(|data_item| !dag.get_inputs().contains(data_item))
+                        .count() as f64
+                })
+                .sum::<f64>()
                 / level.len() as f64,
-            avg_successors: level.iter().map(|&t| dag.get_task(t).outputs.len() as f64).sum::<f64>()
+            avg_successors: level
+                .iter()
+                .map(|&t| {
+                    dag.get_task(t)
+                        .outputs
+                        .iter()
+                        .map(|&data_item| dag.get_data_item(data_item).consumers.len())
+                        .sum::<usize>() as f64
+                })
+                .sum::<f64>()
                 / level.len() as f64,
         }
     }
