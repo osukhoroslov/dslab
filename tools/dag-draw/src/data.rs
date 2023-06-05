@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use druid::Color;
+use once_cell::sync::Lazy;
 
 use crate::app_data::AppData;
 
@@ -11,6 +15,8 @@ pub struct TaskInfo {
     pub cores: u32,
     pub name: String,
 }
+
+static STRING_HASH: Lazy<Mutex<HashMap<String, usize>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 impl TaskInfo {
     // some random colors
@@ -40,11 +46,12 @@ impl TaskInfo {
     }
 
     fn string_hash(s: &str) -> usize {
-        const BASE: usize = 997;
-        let mut res: usize = 0;
-        for &b in s.as_bytes() {
-            res = res.wrapping_mul(BASE).wrapping_add(b as usize)
+        let mut hashes = STRING_HASH.lock().unwrap();
+        if let Some(hash) = hashes.get(s) {
+            return *hash;
         }
+        let res = hashes.len();
+        hashes.insert(s.to_string(), res);
         res
     }
 }
