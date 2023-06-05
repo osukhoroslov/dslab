@@ -117,8 +117,9 @@ impl PendingEvents {
 mod tests {
     use rand::prelude::IteratorRandom;
 
-    use crate::mc::events::{McEvent, McTime};
+    use crate::mc::events::McEvent;
     use crate::mc::pending_events::PendingEvents;
+    use crate::mc::system::McTime;
 
     #[test]
     fn test_mc_time() {
