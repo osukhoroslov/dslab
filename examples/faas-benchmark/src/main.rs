@@ -50,7 +50,7 @@ fn dump_trace(trace: &dyn Trace, path: &Path) {
         .map(|i| BufWriter::new(File::create(path.join(format!("{}.csv", i))).unwrap()))
         .collect::<Vec<_>>();
     for file in &mut app_files {
-        write!(file, "Timestamp [ms],Invocations, Avg Exec time per Invocation,Provisioned CPU [Mhz],Provisioned Memory [mb], Avg cpu usage per Invocation [Mhz], Avg mem usage per Invocation [mb]\n").unwrap();
+        writeln!(file, "Timestamp [ms],Invocations, Avg Exec time per Invocation,Provisioned CPU [Mhz],Provisioned Memory [mb], Avg cpu usage per Invocation [Mhz], Avg mem usage per Invocation [mb]").unwrap();
     }
     for (timestamp, group) in &trace.request_iter().group_by(|r| (r.time * 1000.0).round() as u64) {
         let mut cnt = vec![0; app_mem.len()];
@@ -66,9 +66,9 @@ fn dump_trace(trace: &dyn Trace, path: &Path) {
             } else {
                 0f64
             };
-            write!(
+            writeln!(
                 app_files[app],
-                "{},{},{},100,{},0,{}\n",
+                "{},{},{},100,{},0,{}",
                 timestamp,
                 cnt[app],
                 (mean * 1000.0).round() as u64,
