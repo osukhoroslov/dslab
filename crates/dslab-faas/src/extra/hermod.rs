@@ -7,15 +7,15 @@ use crate::host::Host;
 use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
-/// Refer to <https://arxiv.org/abs/2111.07226>
-pub struct HermesScheduler {
+/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>
+pub struct HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
     prefer_warm: bool,
     use_invocation_count: bool,
     avoid_queueing: bool,
 }
 
-impl HermesScheduler {
+impl HermodScheduler {
     pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
             high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
@@ -33,7 +33,7 @@ impl HermesScheduler {
     }
 }
 
-impl Scheduler for HermesScheduler {
+impl Scheduler for HermodScheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let mut ans = 0;
         // 0 -> empty, no warm container
@@ -75,7 +75,7 @@ impl Scheduler for HermesScheduler {
 
     fn to_string(&self) -> String {
         format!(
-            "HermesScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]",
+            "HermodScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]",
             self.prefer_warm, self.use_invocation_count, self.avoid_queueing
         )
     }

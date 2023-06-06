@@ -55,9 +55,10 @@ pub(crate) fn plot_results(plot: &str, labels: &[String], rps: &[f64], points: &
                 series.push(vec);
             }
             if !series.is_empty() {
+                let bracket_pos = labels[i].find('[').unwrap_or(labels[i].len());
                 ctx.draw_series(LineSeries::new(series[0].iter().copied(), style).point_size(5))
                     .unwrap()
-                    .label(labels[i].clone())
+                    .label(labels[i][..bracket_pos].to_string())
                     .legend(move |pos| Circle::new(pos, 5, style));
                 for s in &series[1..] {
                     ctx.draw_series(LineSeries::new(s.iter().copied(), style).point_size(5))
