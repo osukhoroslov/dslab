@@ -48,6 +48,7 @@ fn build_system(config: &TestConfig) -> System {
     }
     for proc_name in &proc_names {
         let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
+        // process and node on which it runs have the same name
         sys.add_node(proc_name);
         sys.add_process(proc_name, boxed!(proc), proc_name);
     }
@@ -221,38 +222,32 @@ fn check(sys: &System, config: &TestConfig, all_sent_messages: HashSet<String>) 
 fn test_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let text = "0:Hello";
-    let msg = Message::json("SEND", &BroadcastMessage { text });
-    let sent_messages = HashSet::from_iter([text.to_owned()]);
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     sys.step_until_no_events();
-    check(&sys, config, sent_messages)
+    check(&sys, config, HashSet::from([text.to_string()]))
 }
 
 fn test_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let text = "0:Hello";
-    let msg = Message::json("SEND", &BroadcastMessage { text });
-    let sent_messages = HashSet::from_iter([text.to_owned()]);
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     // let 2 messages to deliver (sender and one other process)
     sys.steps(2);
     // crash source node
     sys.crash_node("0");
     sys.step_until_no_events();
-    check(&sys, config, sent_messages)
+    check(&sys, config, HashSet::from([text.to_string()]))
 }
 
 fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let text = "0:Hello";
-    let msg = Message::json("SEND", &BroadcastMessage { text });
-    let sent_messages = HashSet::from_iter([text.to_owned()]);
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     // let 1 message to deliver (sender only)
     sys.step();
     sys.crash_node("0");
     sys.step_until_no_events();
-    check(&sys, config, sent_messages)
+    check(&sys, config, HashSet::from([text.to_string()]))
 }
 
 fn test_two_crashes(config: &TestConfig) -> TestResult {
@@ -262,14 +257,12 @@ fn test_two_crashes(config: &TestConfig) -> TestResult {
         sys.network().disconnect_node(&n.to_string());
     }
     let text = "0:Hello";
-    let msg = Message::json("SEND", &BroadcastMessage { text });
-    let sent_messages = HashSet::from_iter([text.to_owned()]);
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("0");
     sys.crash_node("1");
     sys.step_until_no_events();
-    check(&sys, config, sent_messages)
+    check(&sys, config, HashSet::from([text.to_string()]))
 }
 
 fn test_two_crashes2(config: &TestConfig) -> TestResult {
@@ -278,38 +271,31 @@ fn test_two_crashes2(config: &TestConfig) -> TestResult {
     sys.network().drop_outgoing("1");
     sys.network().drop_outgoing("2");
     let text = "0:Hello";
-    let msg = Message::json("SEND", &BroadcastMessage { text });
-    let sent_messages = HashSet::from_iter([text.to_owned()]);
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     sys.steps(config.proc_count.pow(2));
     sys.crash_node("1");
     sys.crash_node("2");
     sys.step_until_no_events();
-    check(&sys, config, sent_messages)
+    check(&sys, config, HashSet::from([text.to_string()]))
 }
 
 fn test_causal_order(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     sys.network().set_delays(100., 200.);
     let texts = ["0:Hello", "1:How?", "0:Fine!"];
-    let msg = Message::json("SEND", &BroadcastMessage { text: texts[0] });
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text: texts[0] }));
     while sys.event_log("1").is_empty() {
         sys.step();
     }
     sys.network().set_delays(10., 20.);
-    let msg = Message::json("SEND", &BroadcastMessage { text: texts[1] });
-    sys.send_local_message("1", msg);
-
+    sys.send_local_message("1", Message::json("SEND", &BroadcastMessage { text: texts[1] }));
     while sys.event_log("0").len() < 3 {
         sys.step();
     }
-
     sys.network().set_delay(1.);
-    let msg = Message::json("SEND", &BroadcastMessage { text: texts[2] });
-    sys.send_local_message("0", msg);
+    sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text: texts[2] }));
     sys.step_until_no_events();
-    let sent_messages = HashSet::from_iter(texts.into_iter().map(|s| s.to_owned()));
+    let sent_messages = HashSet::from_iter(texts.into_iter().map(String::from));
     check(&sys, config, sent_messages)
 }
 
@@ -325,13 +311,12 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         while victim2 == victim1 {
             victim2 = format!("{}", rand.gen_range(0..config.proc_count));
         }
-        let mut sent_texts = HashSet::new();
+        let mut sent_messages = HashSet::new();
         for i in 0..10 {
-            let user = rand.gen_range(0..config.proc_count).to_string();
-            let text = format!("{}:{}", user, i);
-            let msg = Message::json("SEND", &BroadcastMessage { text: &text });
-            sent_texts.insert(text);
-            sys.send_local_message(&user, msg.clone());
+            let sender = format!("{}", rand.gen_range(0..config.proc_count));
+            let text = format!("{}:{}", sender, i);
+            sys.send_local_message(&sender, Message::json("SEND", &BroadcastMessage { text: &text }));
+            sent_messages.insert(text);
             if i % 2 == 0 {
                 sys.network().set_delays(10., 20.);
             } else {
@@ -354,7 +339,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         sys.crash_node(&victim1);
         sys.crash_node(&victim2);
         sys.step_until_no_events();
-        check(&sys, config, sent_texts)?;
+        check(&sys, config, sent_messages)?;
     }
     Ok(true)
 }
@@ -372,8 +357,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
         let mut run_config = *config;
         run_config.proc_count = node_count;
         let mut sys = build_system(&run_config);
-        let msg = Message::json("SEND", &BroadcastMessage { text: "0:Hello!" });
-        sys.send_local_message("0", msg.clone());
+        sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text: "0:Hello!" }));
         sys.step_until_no_events();
         msg_counts.push(sys.network().network_message_count());
     }
@@ -404,7 +388,7 @@ struct Args {
     debug: bool,
 
     /// Random seed used in tests
-    #[clap(long, short, default_value = "123")]
+    #[clap(long, short, default_value = "2023")]
     seed: u64,
 
     /// Number of processes
