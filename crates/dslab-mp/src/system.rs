@@ -91,9 +91,6 @@ impl System {
 
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
-        for proc in node.borrow().process_names() {
-            self.proc_nodes.remove(&proc);
-        }
         self.sim.remove_handler(node_name);
         node.borrow_mut().crash();
 
@@ -111,6 +108,9 @@ impl System {
         let node = self.nodes.get(node_name).unwrap();
         node.borrow_mut().recover();
         self.sim.add_handler(node_name, node.clone());
+
+        // remove previous process-node mappings to enable recreating these processes
+        self.proc_nodes.retain(|_, node| node.borrow().name != node_name);
 
         self.logger.borrow_mut().log(LogEntry::NodeRecovered {
             time: self.sim.time(),
@@ -168,6 +168,10 @@ impl System {
             .unwrap_or_default()
     }
 
+    pub fn local_outbox(&self, proc: &str) -> Vec<Message> {
+        self.proc_nodes[proc].borrow().local_outbox(proc)
+    }
+
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {
         self.proc_nodes[proc].borrow().event_log(proc)
     }
@@ -186,6 +190,10 @@ impl System {
 
     pub fn proc_node_name(&self, proc: &str) -> String {
         self.proc_nodes[proc].borrow().name().to_owned()
+    }
+
+    pub fn proc_node_is_crashed(&self, proc: &str) -> bool {
+        self.proc_nodes[proc].borrow().is_crashed()
     }
 
     // Simulation ------------------------------------------------------------------------------------------------------

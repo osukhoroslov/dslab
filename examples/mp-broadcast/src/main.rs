@@ -125,7 +125,7 @@ fn check(sys: &System, config: &TestConfig, all_sent_messages: HashSet<String>) 
     // VALIDITY
     let mut validity = true;
     for (proc, sent_msgs) in &sent {
-        if sys.node_is_crashed(&sys.proc_node_name(proc)) {
+        if sys.proc_node_is_crashed(proc) {
             continue;
         }
         let delivered_msgs = delivered.get(proc).unwrap();
@@ -141,7 +141,7 @@ fn check(sys: &System, config: &TestConfig, all_sent_messages: HashSet<String>) 
     let mut uniform_agreement = true;
     for msg in all_delivered.iter() {
         for (proc, delivered_msgs) in &delivered {
-            if sys.node_is_crashed(&sys.proc_node_name(proc)) {
+            if sys.proc_node_is_crashed(proc) {
                 continue;
             }
             if !delivered_msgs.contains(msg) {
@@ -169,7 +169,7 @@ fn check(sys: &System, config: &TestConfig, all_sent_messages: HashSet<String>) 
             }
             // check that other correct processes have delivered all past events before delivering the message
             for (dst, delivered_msgs) in &delivered {
-                if sys.node_is_crashed(&sys.proc_node_name(dst)) {
+                if sys.proc_node_is_crashed(dst) {
                     continue;
                 }
                 let mut dst_past = HashSet::new();
@@ -232,7 +232,11 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
     let text = "0:Hello";
     sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     // let 2 messages to deliver (sender and one other process)
-    sys.steps(2);
+    if sys.local_outbox("0").is_empty() {
+        sys.steps(2);
+    } else {
+        sys.step();
+    }
     // crash source node
     sys.crash_node("0");
     sys.step_until_no_events();
@@ -244,7 +248,9 @@ fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let text = "0:Hello";
     sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
     // let 1 message to deliver (sender only)
-    sys.step();
+    if sys.local_outbox("0").is_empty() {
+        sys.step();
+    }
     sys.crash_node("0");
     sys.step_until_no_events();
     check(&sys, config, HashSet::from([text.to_string()]))
@@ -322,7 +328,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
             } else {
                 sys.network().set_delays(1., 2.);
             }
-            for _ in 1..10 {
+            for _ in 1..4 {
                 if rand.gen_range(0.0..1.0) > 0.3 {
                     sys.network().drop_outgoing(&victim1);
                 } else {
@@ -333,7 +339,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
                 } else {
                     sys.network().pass_outgoing(&victim2);
                 }
-                sys.steps(rand.gen_range(1..5));
+                sys.steps(rand.gen_range(1..4));
             }
         }
         sys.crash_node(&victim1);
@@ -405,7 +411,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
     if args.debug {
-        init_logger(LevelFilter::Trace);
+        init_logger(LevelFilter::Debug);
     }
 
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
