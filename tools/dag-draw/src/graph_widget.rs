@@ -377,7 +377,7 @@ impl Widget<AppData> for GraphWidget {
                         paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id].pos, true, true);
                     }
                 }
-                NodeType::Input(_) => {
+                NodeType::Input(id) => {
                     ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
                     ctx.stroke(
                         Circle::new(self.nodes[task_id].pos, radius),
@@ -394,10 +394,10 @@ impl Widget<AppData> for GraphWidget {
                             true,
                         );
                     } else {
-                        paint_text(ctx, "input", 18., self.nodes[task_id].pos, true, true);
+                        paint_text(ctx, &format!("in{}", id), 18., self.nodes[task_id].pos, true, true);
                     }
                 }
-                NodeType::Output(_) => {
+                NodeType::Output(id) => {
                     ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
                     ctx.stroke(
                         Circle::new(self.nodes[task_id].pos, radius),
@@ -414,7 +414,7 @@ impl Widget<AppData> for GraphWidget {
                             true,
                         );
                     } else {
-                        paint_text(ctx, "output", 18., self.nodes[task_id].pos, true, true);
+                        paint_text(ctx, &format!("out{}", id), 18., self.nodes[task_id].pos, true, true);
                     }
                 }
             }
