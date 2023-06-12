@@ -180,7 +180,7 @@ impl Default for Logger {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum LogEntry {
     NodeStarted {
         time: f64,

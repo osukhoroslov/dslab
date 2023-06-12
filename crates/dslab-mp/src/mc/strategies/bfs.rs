@@ -1,6 +1,7 @@
 //! Implementation of model checking BFS search strategy.
 
 use std::collections::VecDeque;
+use crate::logger::LogEntry;
 use crate::mc::error::McError;
 
 use crate::mc::events::McEvent;
@@ -17,7 +18,7 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
-    failure_trace: Vec<McEvent>,
+    failure_trace: Vec<LogEntry>,
 }
 
 impl Bfs {
@@ -99,7 +100,7 @@ impl Strategy for Bfs {
         &mut self.summary
     }
 
-    fn failure_trace(&mut self) -> &mut Vec<McEvent> {
+    fn failure_trace(&mut self) -> &mut Vec<LogEntry> {
         &mut self.failure_trace
     }
 }

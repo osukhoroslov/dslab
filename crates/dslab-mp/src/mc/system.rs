@@ -6,6 +6,8 @@ use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
+use crate::logger::LogEntry;
+
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
@@ -19,7 +21,7 @@ pub struct McSystem {
     net: Rc<RefCell<McNetwork>>,
     pub(crate) events: PendingEvents,
     depth: u64,
-    trace: Vec<McEvent>,
+    trace: Vec<LogEntry>,
 }
 
 impl McSystem {
@@ -35,7 +37,7 @@ impl McSystem {
 
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
-        self.trace.push(event.clone());
+        self.trace.push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
         let new_events = match event {
