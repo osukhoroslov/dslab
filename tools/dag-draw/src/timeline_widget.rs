@@ -236,15 +236,14 @@ impl TimelineWidget {
     }
 
     fn transfer_selected(&self, transfer: &Transfer, data: &AppData) -> bool {
-        if data.selected_task.is_none() || data.graph.borrow().tasks.len() <= data.selected_task.unwrap() {
-            return false;
-        }
-        let task = &data.graph.borrow().tasks[data.selected_task.unwrap()];
-        if task.inputs.iter().any(|&x| x == transfer.data_item_id) {
-            return true;
-        }
-        if task.outputs.iter().any(|&x| x == transfer.data_item_id) {
-            return true;
+        if let Some(NodeType::Task(task_id)) = data.selected_node {
+            let task = &data.graph.borrow().tasks[task_id];
+            if task.inputs.iter().any(|&x| x == transfer.data_item_id) {
+                return true;
+            }
+            if task.outputs.iter().any(|&x| x == transfer.data_item_id) {
+                return true;
+            }
         }
         false
     }
@@ -253,17 +252,17 @@ impl TimelineWidget {
 impl Widget<AppData> for TimelineWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _: &Env) {
         if let Event::MouseDown(e) = event {
-            data.selected_task = None;
+            data.selected_node = None;
             for (rect, task) in self.clickable_rectangles.iter() {
                 if rect.contains(e.pos) {
-                    data.selected_task = Some(*task);
+                    data.selected_node = Some(NodeType::Task(*task));
                     break;
                 }
             }
-            if let Some(task_id) = data.selected_task {
-                data.selected_task_info = get_text_task_info(data, task_id);
+            if let Some(node_type) = data.selected_node {
+                data.selected_node_info = get_text_node_info(data, node_type);
             } else {
-                data.selected_task_info = String::new();
+                data.selected_node_info = String::new();
             }
             ctx.request_paint();
         }
@@ -352,7 +351,7 @@ impl Widget<AppData> for TimelineWidget {
                         task_info.completed,
                         task_info.cores as u64,
                         task_info.get_color(data),
-                        data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
+                        data.selected_node == Some(NodeType::Task(task_id)),
                         task_id,
                     ));
                 }
@@ -390,7 +389,7 @@ impl Widget<AppData> for TimelineWidget {
                         task_info.completed,
                         data.graph.borrow().tasks[task_id].memory,
                         task_info.get_color(data),
-                        data.selected_task.is_some() && data.selected_task.unwrap() == task_id,
+                        data.selected_node == Some(NodeType::Task(task_id)),
                         task_id,
                     ));
                 }

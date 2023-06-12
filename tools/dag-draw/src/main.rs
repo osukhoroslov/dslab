@@ -71,8 +71,8 @@ fn main() {
 fn make_layout() -> impl Widget<AppData> {
     let get_task_info_label = || {
         Scroll::new(
-            Label::new(|data: &AppData, _env: &_| match data.selected_task {
-                Some(x) => get_text_task_info(data, x),
+            Label::new(|data: &AppData, _env: &_| match data.selected_node {
+                Some(x) => get_text_node_info(data, x),
                 None => String::new(),
             })
             .with_line_break_mode(LineBreaking::WordWrap),

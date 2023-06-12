@@ -10,6 +10,13 @@ use dslab_dag::trace_log::{Graph, TraceLog};
 
 use crate::data::*;
 
+#[derive(Clone, Copy, Data, PartialEq, Eq)]
+pub enum NodeType {
+    Task(usize),
+    Input(usize),
+    Output(usize),
+}
+
 #[derive(Clone, Data, Lens)]
 pub struct AppData {
     pub slider: f64,
@@ -30,8 +37,8 @@ pub struct AppData {
     pub graph_variable_edge_width: bool,
     pub graph_variable_node_size: bool,
     pub graph_show_task_names: bool,
-    pub selected_task: Option<usize>,
-    pub selected_task_info: String,
+    pub selected_node: Option<NodeType>,
+    pub selected_node_info: String,
     pub graph: Rc<RefCell<Graph>>,
 }
 
@@ -222,8 +229,8 @@ impl AppData {
             graph_variable_edge_width: false,
             graph_variable_node_size: false,
             graph_show_task_names: false,
-            selected_task: None,
-            selected_task_info: "".to_string(),
+            selected_node: None,
+            selected_node_info: "".to_string(),
             graph: Rc::new(RefCell::new(trace_log.graph)),
         }
     }

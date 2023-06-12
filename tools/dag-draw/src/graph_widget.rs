@@ -15,13 +15,6 @@ const MAX_EDGE_WIDTH: f64 = 10.;
 
 const BACKGROUND: Color = Color::rgb8(0x29, 0x29, 0x29);
 
-#[derive(Clone, Copy)]
-enum NodeType {
-    Task,
-    Input,
-    Output,
-}
-
 #[derive(Clone)]
 struct Node {
     node_type: NodeType,
@@ -34,6 +27,7 @@ pub struct GraphWidget {
     nodes: Vec<Node>,
     edges: Vec<(usize, usize, f64)>,
     last_mouse_position: Option<Point>,
+    selected_node_ind: Option<usize>,
 }
 
 impl GraphWidget {
@@ -42,6 +36,7 @@ impl GraphWidget {
             nodes: Vec::new(),
             edges: Vec::new(),
             last_mouse_position: None,
+            selected_node_ind: None,
         }
     }
 
@@ -49,9 +44,9 @@ impl GraphWidget {
         let graph = data.graph.borrow();
 
         self.nodes.clear();
-        for task in graph.tasks.iter() {
+        for (task_id, task) in graph.tasks.iter().enumerate() {
             self.nodes.push(Node {
-                node_type: NodeType::Task,
+                node_type: NodeType::Task(task_id),
                 name: task.name.clone(),
                 pos: Point::new(0., 0.),
                 radius: MIN_NODE_RADIUS,
@@ -74,7 +69,7 @@ impl GraphWidget {
             .into_iter()
             .map(|input| {
                 self.nodes.push(Node {
-                    node_type: NodeType::Input,
+                    node_type: NodeType::Input(input),
                     name: graph.data_items[input].name.clone(),
                     pos: Point::new(0., 0.),
                     radius: MIN_NODE_RADIUS,
@@ -86,7 +81,7 @@ impl GraphWidget {
             .into_iter()
             .map(|output| {
                 self.nodes.push(Node {
-                    node_type: NodeType::Output,
+                    node_type: NodeType::Output(output),
                     name: graph.data_items[output].name.clone(),
                     pos: Point::new(0., 0.),
                     radius: MIN_NODE_RADIUS,
@@ -167,21 +162,21 @@ impl GraphWidget {
         for (&level, tasks) in by_level.iter_mut() {
             tasks.retain(|&task| {
                 let target_level = match self.nodes[task].node_type {
-                    NodeType::Input => {
+                    NodeType::Input(_) => {
                         if data.graph_levels_from_end {
                             max_level
                         } else {
                             min_level
                         }
                     }
-                    NodeType::Output => {
+                    NodeType::Output(_) => {
                         if data.graph_levels_from_end {
                             min_level
                         } else {
                             max_level
                         }
                     }
-                    NodeType::Task => level,
+                    NodeType::Task(_) => level,
                 };
                 if target_level != level {
                     to_add.push((task, target_level));
@@ -239,28 +234,36 @@ impl Widget<AppData> for GraphWidget {
         match event {
             Event::MouseDown(e) => {
                 // select task
-                data.selected_task = None;
-                for task_id in (0..self.nodes.len()).rev() {
-                    if self.nodes[task_id].pos.distance(e.pos) < self.nodes[task_id].radius {
-                        data.selected_task = Some(task_id);
+                data.selected_node = None;
+                self.selected_node_ind = None;
+                for node_id in (0..self.nodes.len()).rev() {
+                    let radius = if data.graph_variable_node_size {
+                        self.nodes[node_id].radius
+                    } else {
+                        MIN_NODE_RADIUS
+                    };
+                    if self.nodes[node_id].pos.distance(e.pos) < radius {
+                        data.selected_node = Some(self.nodes[node_id].node_type);
+                        self.selected_node_ind = Some(node_id);
                         break;
                     }
                 }
-                if let Some(task_id) = data.selected_task {
-                    data.selected_task_info = get_text_task_info(data, task_id);
+                if let Some(node_type) = data.selected_node {
+                    data.selected_node_info = get_text_node_info(data, node_type);
                     self.last_mouse_position = Some(e.pos);
                 } else {
-                    data.selected_task_info = String::new();
+                    data.selected_node_info = String::new();
                 }
 
                 ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 self.last_mouse_position = None;
+                self.selected_node_ind = None;
             }
             Event::MouseMove(e) => {
                 if e.buttons.contains(MouseButton::Left) && self.last_mouse_position.is_some() {
-                    self.nodes[data.selected_task.unwrap()].pos += e.pos - self.last_mouse_position.unwrap();
+                    self.nodes[self.selected_node_ind.unwrap()].pos += e.pos - self.last_mouse_position.unwrap();
                     self.last_mouse_position = Some(e.pos);
                     ctx.request_paint();
                 }
@@ -317,8 +320,13 @@ impl Widget<AppData> for GraphWidget {
                 MIN_NODE_RADIUS
             };
             ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
+            let stroke_width = if data.selected_node == Some(self.nodes[task_id].node_type) {
+                5.
+            } else {
+                1.
+            };
             match self.nodes[task_id].node_type {
-                NodeType::Task => {
+                NodeType::Task(_) => {
                     if let Some(task_info) = &data.task_info.borrow()[task_id] {
                         if task_info.scheduled < time {
                             if time < task_info.started {
@@ -354,11 +362,7 @@ impl Widget<AppData> for GraphWidget {
                     ctx.stroke(
                         Circle::new(self.nodes[task_id].pos, radius),
                         &Color::WHITE,
-                        if data.selected_task.is_some() && data.selected_task.unwrap() == task_id {
-                            5.
-                        } else {
-                            1.
-                        },
+                        stroke_width,
                     );
                     if data.graph_show_task_names {
                         paint_text(
@@ -373,9 +377,13 @@ impl Widget<AppData> for GraphWidget {
                         paint_text(ctx, &task_id.to_string(), 20., self.nodes[task_id].pos, true, true);
                     }
                 }
-                NodeType::Input => {
+                NodeType::Input(_) => {
                     ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
-                    ctx.stroke(Circle::new(self.nodes[task_id].pos, radius), &Color::WHITE, 1.);
+                    ctx.stroke(
+                        Circle::new(self.nodes[task_id].pos, radius),
+                        &Color::WHITE,
+                        stroke_width,
+                    );
                     if data.graph_show_task_names {
                         paint_text(
                             ctx,
@@ -389,9 +397,13 @@ impl Widget<AppData> for GraphWidget {
                         paint_text(ctx, "input", 18., self.nodes[task_id].pos, true, true);
                     }
                 }
-                NodeType::Output => {
+                NodeType::Output(_) => {
                     ctx.fill(Circle::new(self.nodes[task_id].pos, radius), &BACKGROUND);
-                    ctx.stroke(Circle::new(self.nodes[task_id].pos, radius), &Color::WHITE, 1.);
+                    ctx.stroke(
+                        Circle::new(self.nodes[task_id].pos, radius),
+                        &Color::WHITE,
+                        stroke_width,
+                    );
                     if data.graph_show_task_names {
                         paint_text(
                             ctx,
@@ -407,21 +419,5 @@ impl Widget<AppData> for GraphWidget {
                 }
             }
         }
-
-        // // input
-        // }
-
-        // // output
-        //     ctx.fill(
-        //         Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
-        //         &BACKGROUND,
-        //     );
-        //     ctx.stroke(
-        //         Circle::new(self.nodes[self.nodes.len() - 1], MIN_NODE_RADIUS),
-        //         &Color::WHITE,
-        //         1.,
-        //     );
-        //     paint_text(ctx, "output", 18., self.nodes[self.nodes.len() - 1], true, true);
-        // }
     }
 }
