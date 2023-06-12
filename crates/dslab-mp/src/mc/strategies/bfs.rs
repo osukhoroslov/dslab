@@ -2,6 +2,7 @@
 
 use std::collections::VecDeque;
 
+use crate::mc::events::McEvent;
 use crate::mc::state::McState;
 use crate::mc::strategy::{
     CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
@@ -18,6 +19,7 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
+    failure_trace: Vec<McEvent>
 }
 
 impl Bfs {
@@ -55,6 +57,7 @@ impl Strategy for Bfs {
             states_queue: VecDeque::default(),
             stats: McStats::default(),
             visited: config.visited_states,
+            failure_trace: vec![],
         }
     }
 
@@ -97,5 +100,9 @@ impl Strategy for Bfs {
 
     fn stats(&mut self) -> &mut McStats {
         &mut self.stats
+    }
+
+    fn failure_trace(&mut self) -> &mut Vec<McEvent> {
+        &mut self.failure_trace
     }
 }

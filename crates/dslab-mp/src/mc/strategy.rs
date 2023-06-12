@@ -138,7 +138,6 @@ pub struct McStats {
     pub statuses: HashMap<String, u32>,
     /// States that were collected with Collect predicate
     pub collected_states: HashSet<McState>,
-    pub(crate) failure_trace: Vec<McEvent>,
 }
 
 impl McStats {
@@ -424,8 +423,8 @@ pub trait Strategy {
     }
 
     /// Saves trace which guides system to failure.
-    fn update_summary_failure_trace(&mut self, trace: Vec<McEvent>) {
-        self.summary().failure_trace = trace;
+    fn update_failure_trace(&mut self, trace: Vec<McEvent>) {
+        *self.failure_trace() = trace;
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
@@ -435,7 +434,7 @@ pub trait Strategy {
         }
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
-            self.update_summary_failure_trace(state.trace.clone());
+            self.update_failure_trace(state.trace.clone());
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
@@ -478,4 +477,7 @@ pub trait Strategy {
 
     /// Returns the model checking execution stats.
     fn stats(&mut self) -> &mut McStats;
+
+    /// Returns the failure trace in state graph.
+    fn failure_trace(&mut self) -> &mut Vec<McEvent>;
 }
