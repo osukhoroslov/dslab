@@ -2,9 +2,11 @@
 
 use serde::Serialize;
 
+use crate::logger::LogEntry;
+use crate::message::Message;
+
 use crate::mc::network::DeliveryOptions;
 use crate::mc::system::McTime;
-use crate::message::Message;
 
 /// Identifier of McEvent.
 pub type McEventId = usize;
@@ -86,6 +88,40 @@ impl McEvent {
                 },
             }),
             _ => None,
+        }
+    }
+}
+
+impl McEvent {
+    pub fn to_log_entry(&self) -> LogEntry {
+        match self {
+            Self::MessageReceived {
+                msg,
+                src,
+                dest,
+                options: _,
+            } => LogEntry::McMessageReceived {
+                msg: msg.clone(),
+                src: src.clone(),
+                dest: dest.clone(),
+            },
+            Self::TimerFired {
+                proc,
+                timer,
+                timer_delay: _,
+            } => LogEntry::McTimerFired {
+                proc: proc.clone(),
+                timer: timer.clone(),
+            },
+            Self::TimerCancelled { proc, timer } => LogEntry::McTimerCancelled {
+                proc: proc.clone(),
+                timer: timer.clone(),
+            },
+            Self::MessageDropped { msg, src, dest } => LogEntry::McMessageDropped {
+                msg: msg.clone(),
+                src: src.clone(),
+                dest: dest.clone(),
+            },
         }
     }
 }
