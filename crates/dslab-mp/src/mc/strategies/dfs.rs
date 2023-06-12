@@ -2,7 +2,6 @@
 
 use crate::logger::LogEntry;
 use crate::mc::error::McError;
-use crate::mc::events::McEvent;
 use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
