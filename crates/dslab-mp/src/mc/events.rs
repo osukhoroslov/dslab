@@ -12,22 +12,22 @@ pub type McEventId = usize;
 /// Special events used in model checking instead of standard events.
 #[derive(Serialize, Clone, Eq, Hash, PartialEq, Debug)]
 pub enum McEvent {
-    /// The event of receiving non-local message by some process.
+    /// The event of receiving a non-local message by a process.
     MessageReceived {
         /// The message itself.
         msg: Message,
 
-        /// The process where the message sent from.
+        /// The name of the process that sent the message.
         src: String,
 
-        /// Destination process of the message.
+        /// The name of the process that received the message.
         dest: String,
 
         /// Network delivery options for the message.
         options: DeliveryOptions,
     },
 
-    /// The event of the timer expiration.
+    /// The event of a timer expiration.
     TimerFired {
         /// The process to which the timer belongs to.
         proc: String,
@@ -35,11 +35,11 @@ pub enum McEvent {
         /// The timer name.
         timer: String,
 
-        /// Timer duration.
+        /// The timer duration.
         timer_delay: McTime,
     },
 
-    /// The event of timer cancellation.
+    /// The event of cancelling a timer.
     TimerCancelled {
         /// The process to which the timer belongs to.
         proc: String,
@@ -48,15 +48,15 @@ pub enum McEvent {
         timer: String,
     },
 
-    /// The event of message drop. Created by model checking algorithm.
+    /// The event of dropping a message. Created by the model checking strategy.
     MessageDropped {
         /// The dropped message itself.
         msg: Message,
 
-        /// The process where the message sent from.
+        /// The name of the process that sent the message.
         src: String,
 
-        /// Destination process of the message.
+        /// The name of the process the message was sent to.
         dest: String,
     },
 }
