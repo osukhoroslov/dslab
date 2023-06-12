@@ -16,9 +16,9 @@ pub struct DagStats {
     pub total_data_size: f64,
     /// Sum of sizes of all transfers, differs from `total_data_size` if
     /// one data item is used as input for multiple tasks.
-    pub total_transfer_size: f64,
-    /// `total_comp_size / total_data_size`
-    pub comp_data_ratio: f64,
+    pub total_transfers_size: f64,
+    /// `total_comp_size / total_transfers_size`
+    pub comp_transfers_ratio: f64,
     /// Longest path measured in sum of flops of tasks on this path.
     pub critical_path_size: f64,
     /// `total_comp_size / critical_path_size`
@@ -120,6 +120,11 @@ impl DagStats {
     pub fn new(dag: &DAG) -> Self {
         let total_comp_size = dag.get_tasks().iter().map(|t| t.flops).sum();
         let total_data_size = dag.get_data_items().iter().map(|t| t.size).sum();
+        let total_transfers_size = dag
+            .get_data_items()
+            .iter()
+            .map(|t| t.size * t.consumers.len().max(1) as f64)
+            .sum();
         let levels = Self::get_levels(dag);
         let critical_path_size = Self::get_critical_path_size(dag, &levels);
         DagStats {
@@ -127,12 +132,8 @@ impl DagStats {
             max_cores_per_task: dag.get_tasks().iter().map(|t| t.max_cores).max().unwrap(),
             total_comp_size,
             total_data_size,
-            total_transfer_size: dag
-                .get_data_items()
-                .iter()
-                .map(|t| t.size * t.consumers.len().max(1) as f64)
-                .sum(),
-            comp_data_ratio: total_comp_size / total_data_size,
+            total_transfers_size,
+            comp_transfers_ratio: total_comp_size / total_transfers_size,
             critical_path_size,
             parallelism_degree: total_comp_size / critical_path_size,
             input_data_size: dag.get_inputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
