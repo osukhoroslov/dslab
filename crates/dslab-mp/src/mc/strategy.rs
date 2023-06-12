@@ -8,6 +8,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::mc::error::McError;
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;
@@ -71,7 +72,7 @@ pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
     /// Launches the strategy execution.
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, McError>;
 
     /// Callback which in called whenever a new system state is discovered.
     fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;

@@ -3,6 +3,7 @@
 //! Module for testing message passing code with model checking technique.
 
 mod dependency;
+pub mod error;
 pub mod events;
 pub mod model_checker;
 mod network;

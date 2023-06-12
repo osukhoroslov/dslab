@@ -7,6 +7,7 @@ use std::rc::Rc;
 use colored::*;
 
 use crate::events::{MessageReceived, TimerFired};
+use crate::mc::error::McError;
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
@@ -63,16 +64,11 @@ impl ModelChecker {
     }
 
     /// Runs model checking and returns the result on completion.
-    pub fn run(&mut self) -> Result<McSummary, String> {
+    pub fn run(&mut self) -> Result<McSummary, McError> {
         t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
             .to_string()
             .yellow());
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
-    }
-
-    /// Return trace in state graph which guides system to failure.
-    pub fn get_failure_trace(&mut self) -> Vec<McEvent> {
-        self.strategy.failure_trace().clone()
     }
 }

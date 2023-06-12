@@ -1,5 +1,6 @@
 //! Implementation of model checking DFS search strategy.
 
+use crate::mc::error::McError;
 use crate::mc::events::McEvent;
 use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
@@ -48,13 +49,13 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, McError> {
         let state = system.get_state();
 
         let res = self.dfs(system, state);
         match res {
             Ok(()) => Ok(self.summary.clone()),
-            Err(err) => Err(err),
+            Err(err) => Err(McError::new(err, self.failure_trace().clone())),
         }
     }
 
