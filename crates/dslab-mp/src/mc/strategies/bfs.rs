@@ -19,7 +19,7 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-    failure_trace: Vec<McEvent>
+    failure_trace: Vec<McEvent>,
 }
 
 impl Bfs {
