@@ -16,6 +16,7 @@ use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
 use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
 use crate::mc::system::{McSystem, McTime};
+use crate::mc::trace_handler::TraceHandler;
 use crate::system::System;
 use crate::util::t;
 
@@ -36,6 +37,8 @@ impl ModelChecker {
         let sim = sys.sim();
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
+
+        let trace_handler = TraceHandler::default();
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
@@ -64,7 +67,7 @@ impl ModelChecker {
         }
 
         Self {
-            system: McSystem::new(nodes, mc_net, events),
+            system: McSystem::new(nodes, mc_net, events, Rc::new(RefCell::new(trace_handler))),
             strategy,
         }
     }
