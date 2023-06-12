@@ -7,8 +7,8 @@ use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
+use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::error::McError;
-use dslab_mp::mc::events::McEvent::{MessageReceived, TimerFired};
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
@@ -640,8 +640,8 @@ fn useless_timer(#[case] strategy_name: String) {
 
     let trace = msg.trace();
     assert_eq!(trace.len(), 2);
-    assert!(matches!(trace[0].clone(), MessageReceived { .. }));
-    assert!(matches!(trace[1].clone(), TimerFired { .. }));
+    assert!(matches!(trace[0].clone(), LogEntry::McMessageReceived { .. }));
+    assert!(matches!(trace[1].clone(), LogEntry::McTimerFired { .. }));
 }
 
 #[rstest]

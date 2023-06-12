@@ -8,6 +8,7 @@ use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use sugars::boxed;
+use crate::logger::LogEntry;
 
 use crate::mc::error::McError;
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
@@ -424,7 +425,7 @@ pub trait Strategy {
     }
 
     /// Saves trace which guides system to failure.
-    fn update_failure_trace(&mut self, trace: Vec<McEvent>) {
+    fn update_failure_trace(&mut self, trace: Vec<LogEntry>) {
         *self.failure_trace() = trace;
     }
 
@@ -480,5 +481,5 @@ pub trait Strategy {
     fn stats(&mut self) -> &mut McStats;
 
     /// Returns the failure trace in state graph.
-    fn failure_trace(&mut self) -> &mut Vec<McEvent>;
+    fn failure_trace(&mut self) -> &mut Vec<LogEntry>;
 }
