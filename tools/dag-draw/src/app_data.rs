@@ -2,12 +2,20 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::rc::Rc;
 
-use druid::{Color, Data, Lens};
+use druid::{Data, Lens};
+use serde::Deserialize;
 use serde_json::Value;
 
 use dslab_dag::trace_log::{Graph, TraceLog};
 
 use crate::data::*;
+
+#[derive(Clone, Copy, Data, PartialEq, Eq)]
+pub enum NodeType {
+    Task(usize),
+    Input(usize),
+    Output(usize),
+}
 
 #[derive(Clone, Data, Lens)]
 pub struct AppData {
@@ -17,41 +25,25 @@ pub struct AppData {
     pub compute: Rc<RefCell<Vec<Compute>>>,
     pub transfers: Rc<RefCell<Vec<Transfer>>>,
     pub task_info: Rc<RefCell<Vec<Option<TaskInfo>>>>,
+    pub color_by_prefix: bool,
     pub files_limit_str: String,
     pub tasks_limit_str: String,
     pub timeline_downloading: bool,
     pub timeline_uploading: bool,
     pub timeline_cores: bool,
     pub timeline_memory: bool,
-    pub selected_task: Option<usize>,
-    pub selected_task_info: String,
+    pub timeline_merged_usages: bool,
+    pub graph_levels_from_end: bool,
+    pub graph_variable_edge_width: bool,
+    pub graph_variable_node_size: bool,
+    pub graph_show_task_names: bool,
+    pub selected_node: Option<NodeType>,
+    pub selected_node_info: String,
     pub graph: Rc<RefCell<Graph>>,
 }
 
 impl AppData {
     pub fn from_trace_log(trace_log: TraceLog) -> Self {
-        // some random colors
-        let colors = vec![
-            Color::from_hex_str("3FA7D6").unwrap(),
-            Color::from_hex_str("FAC05E").unwrap(),
-            Color::from_hex_str("59CD90").unwrap(),
-            Color::from_hex_str("F79D84").unwrap(),
-            Color::from_hex_str("619B8A").unwrap(),
-            Color::from_hex_str("FDF5BF").unwrap(),
-            Color::from_hex_str("8BB8A8").unwrap(),
-            Color::from_hex_str("A11692").unwrap(),
-            Color::from_hex_str("4A5899").unwrap(),
-            Color::from_hex_str("DDBEA8").unwrap(),
-        ];
-
-        let mut icolor: usize = 0;
-
-        let mut get_next_color = || -> Color {
-            let color = colors[icolor].clone();
-            icolor = (icolor + 1) % colors.len();
-            color
-        };
-
         let scheduler_files = Rc::new(RefCell::new(Vec::<File>::new()));
         let compute = Rc::new(RefCell::new(Vec::<Compute>::new()));
         let transfers = Rc::new(RefCell::new(Vec::<Transfer>::new()));
@@ -212,7 +204,7 @@ impl AppData {
                 completed,
                 cores,
                 id,
-                color: get_next_color(),
+                name: trace_log.graph.tasks[id].name.clone(),
             });
 
             compute.borrow_mut()[*compute_index.get(&actor).unwrap()].tasks.push(id);
@@ -225,15 +217,67 @@ impl AppData {
             compute,
             transfers,
             task_info: tasks_info,
+            color_by_prefix: false,
             files_limit_str: "10".to_string(),
             tasks_limit_str: "2".to_string(),
             timeline_downloading: true,
             timeline_uploading: true,
             timeline_cores: true,
             timeline_memory: true,
-            selected_task: None,
-            selected_task_info: "".to_string(),
+            timeline_merged_usages: false,
+            graph_levels_from_end: false,
+            graph_variable_edge_width: false,
+            graph_variable_node_size: false,
+            graph_show_task_names: false,
+            selected_node: None,
+            selected_node_info: "".to_string(),
             graph: Rc::new(RefCell::new(trace_log.graph)),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct AppDataSettings {
+    color_by_prefix: Option<bool>,
+    files_limit: Option<usize>,
+    tasks_limit: Option<usize>,
+    timeline_downloading: Option<bool>,
+    timeline_uploading: Option<bool>,
+    timeline_cores: Option<bool>,
+    timeline_memory: Option<bool>,
+    timeline_merged_usages: Option<bool>,
+    graph_levels_from_end: Option<bool>,
+    graph_variable_edge_width: Option<bool>,
+    graph_variable_node_size: Option<bool>,
+    graph_show_task_names: Option<bool>,
+}
+
+impl AppData {
+    pub fn apply_settings(&mut self, settings: &AppDataSettings) {
+        macro_rules! copy_setting {
+            ($setting:ident) => {
+                if let Some(x) = settings.$setting {
+                    self.$setting = x;
+                }
+            };
+        }
+
+        copy_setting!(color_by_prefix);
+        copy_setting!(timeline_downloading);
+        copy_setting!(timeline_uploading);
+        copy_setting!(timeline_cores);
+        copy_setting!(timeline_memory);
+        copy_setting!(timeline_merged_usages);
+        copy_setting!(graph_levels_from_end);
+        copy_setting!(graph_variable_edge_width);
+        copy_setting!(graph_variable_node_size);
+        copy_setting!(graph_show_task_names);
+
+        if let Some(x) = settings.files_limit {
+            self.files_limit_str = x.to_string();
+        }
+        if let Some(x) = settings.tasks_limit {
+            self.tasks_limit_str = x.to_string();
         }
     }
 }

@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::fmt::Write;
 
 use druid::piet::{FontFamily, Text, TextLayout, TextLayoutBuilder};
@@ -6,7 +5,7 @@ use druid::widget::prelude::*;
 use druid::Color;
 use druid::Point;
 
-use crate::app_data::AppData;
+use crate::app_data::*;
 
 pub fn paint_colored_text(
     ctx: &mut PaintCtx,
@@ -79,75 +78,39 @@ pub fn draw_upload(ctx: &mut PaintCtx, pos: Point) {
     draw_arrow(ctx, pos, false);
 }
 
-pub fn get_text_task_info(data: &AppData, task_id: usize) -> String {
-    if task_id == data.graph.borrow().tasks.len() {
-        // input
-        let mut inputs: BTreeSet<usize> = BTreeSet::new();
-        for task in data.graph.borrow().tasks.iter() {
-            for &data_item in task.inputs.iter() {
-                inputs.insert(data_item);
+pub fn get_text_node_info(data: &AppData, node_type: NodeType) -> String {
+    match node_type {
+        NodeType::Task(task_id) => {
+            let task_info = &data.task_info.borrow()[task_id];
+            let task = &data.graph.borrow().tasks[task_id];
+
+            let mut result = String::new();
+            write!(result, "Task: {}\n\n", task.name).unwrap();
+            if task_info.is_some() {
+                write!(
+                    result,
+                    "Total time: {:.3}\n\n",
+                    task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
+                )
+                .unwrap();
             }
-        }
-        for task in data.graph.borrow().tasks.iter() {
-            for data_item in task.outputs.iter() {
-                inputs.remove(data_item);
-            }
-        }
-        return format!(
-            "Inputs: {}\n\n",
-            inputs
+            let inputs: Vec<String> = task
+                .inputs
                 .iter()
                 .map(|&i| data.graph.borrow().data_items[i].name.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-    } else if task_id == data.graph.borrow().tasks.len() + 1 {
-        // output
-        let mut outputs: BTreeSet<usize> = BTreeSet::new();
-        for task in data.graph.borrow().tasks.iter() {
-            for &data_item in task.outputs.iter() {
-                outputs.insert(data_item);
-            }
-        }
-        for task in data.graph.borrow().tasks.iter() {
-            for data_item in task.inputs.iter() {
-                outputs.remove(data_item);
-            }
-        }
-        return format!(
-            "Outputs: {}\n\n",
-            outputs
+                .collect();
+            let outputs: Vec<String> = task
+                .outputs
                 .iter()
                 .map(|&i| data.graph.borrow().data_items[i].name.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+                .collect();
+            write!(result, "Inputs: {}\n\n", inputs.join(", ")).unwrap();
+            write!(result, "Outputs: {}\n\n", outputs.join(", ")).unwrap();
+            result
+        }
+        NodeType::Input(data_item_id) | NodeType::Output(data_item_id) => {
+            let data_item = &data.graph.borrow().data_items[data_item_id];
+            format!("DataItem: {}\n\nSize: {:.3}", data_item.name, data_item.size)
+        }
     }
-
-    let task_info = &data.task_info.borrow()[task_id];
-    let task = &data.graph.borrow().tasks[task_id];
-
-    let mut result = String::new();
-    write!(result, "Task: {}\n\n", task.name).unwrap();
-    if task_info.is_some() {
-        write!(
-            result,
-            "Total time: {:.3}\n\n",
-            task_info.as_ref().unwrap().completed - task_info.as_ref().unwrap().scheduled
-        )
-        .unwrap();
-    }
-    let inputs: Vec<String> = task
-        .inputs
-        .iter()
-        .map(|&i| data.graph.borrow().data_items[i].name.clone())
-        .collect();
-    let outputs: Vec<String> = task
-        .outputs
-        .iter()
-        .map(|&i| data.graph.borrow().data_items[i].name.clone())
-        .collect();
-    write!(result, "Inputs: {}\n\n", inputs.join(", ")).unwrap();
-    write!(result, "Outputs: {}\n\n", outputs.join(", ")).unwrap();
-    result
 }

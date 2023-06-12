@@ -6,8 +6,9 @@ mod panels_widget;
 mod poly;
 mod timeline_widget;
 
-use std::env;
+use std::path::PathBuf;
 
+use clap::Parser;
 use druid::kurbo::Insets;
 use druid::widget::{
     Axis, Checkbox, CrossAxisAlignment, Flex, Label, LineBreaking, Scroll, Slider, Tabs, TabsEdge, TabsTransition,
@@ -18,7 +19,7 @@ use druid::{AppLauncher, Size, WidgetExt, WindowDesc};
 
 use dslab_dag::trace_log::TraceLog;
 
-use crate::app_data::AppData;
+use crate::app_data::{AppData, AppDataSettings};
 use crate::draw_utils::*;
 use crate::graph_widget::GraphWidget;
 use crate::panels_widget::PanelsWidget;
@@ -26,20 +27,34 @@ use crate::timeline_widget::TimelineWidget;
 
 pub const PADDING: f64 = 8.0;
 
-fn main() {
-    let trace_log: TraceLog = serde_json::from_str(
-        &std::fs::read_to_string(match env::args().collect::<Vec<_>>().get(1) {
-            Some(x) => x.clone(),
-            None => {
-                eprintln!("Usage: cargo run -- /path/to/trace.json");
-                std::process::exit(1);
-            }
-        })
-        .unwrap(),
-    )
-    .unwrap();
+#[derive(Parser)]
+struct Args {
+    /// Path to json file with traces.
+    #[arg(short, long)]
+    trace: PathBuf,
 
-    let app_data = AppData::from_trace_log(trace_log);
+    /// Path to json file with viewer settings to override default ones.
+    #[arg(short, long)]
+    settings: Option<PathBuf>,
+}
+
+fn main() {
+    let args = Args::parse();
+    let trace_log: TraceLog = serde_json::from_str(
+        &std::fs::read_to_string(&args.trace).unwrap_or_else(|_| panic!("Can't read trace from {:?}", &args.trace)),
+    )
+    .unwrap_or_else(|_| panic!("Can't parse trace from {:?}", &args.trace));
+    let settings: Option<AppDataSettings> = args.settings.map(|s| {
+        serde_json::from_str(
+            &std::fs::read_to_string(&s).unwrap_or_else(|_| panic!("Can't read settings from {:?}", &s)),
+        )
+        .unwrap_or_else(|_| panic!("Can't parse settings from {:?}", &args.trace))
+    });
+
+    let mut app_data = AppData::from_trace_log(trace_log);
+    if let Some(settings) = settings {
+        app_data.apply_settings(&settings);
+    }
 
     let window = WindowDesc::new(make_layout)
         .window_size(Size {
@@ -56,8 +71,8 @@ fn main() {
 fn make_layout() -> impl Widget<AppData> {
     let get_task_info_label = || {
         Scroll::new(
-            Label::new(|data: &AppData, _env: &_| match data.selected_task {
-                Some(x) => get_text_task_info(data, x),
+            Label::new(|data: &AppData, _env: &_| match data.selected_node {
+                Some(x) => get_text_node_info(data, x),
                 None => String::new(),
             })
             .with_line_break_mode(LineBreaking::WordWrap),
@@ -130,6 +145,15 @@ fn make_layout() -> impl Widget<AppData> {
                                         .with_child(Checkbox::new("Memory").lens(AppData::timeline_memory))
                                         .with_spacer(PADDING)
                                         .with_child(Checkbox::new("Uploading").lens(AppData::timeline_uploading))
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Color by name prefix").lens(AppData::color_by_prefix),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Merge resource usages")
+                                                .lens(AppData::timeline_merged_usages),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()
@@ -159,6 +183,26 @@ fn make_layout() -> impl Widget<AppData> {
                             Flex::column()
                                 .with_flex_child(
                                     Flex::column()
+                                        .with_child(
+                                            Checkbox::new("Levels from the end").lens(AppData::graph_levels_from_end),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Variable edge width")
+                                                .lens(AppData::graph_variable_edge_width),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Variable node size").lens(AppData::graph_variable_node_size),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Show node names").lens(AppData::graph_show_task_names),
+                                        )
+                                        .with_spacer(PADDING)
+                                        .with_child(
+                                            Checkbox::new("Color by name prefix").lens(AppData::color_by_prefix),
+                                        )
                                         .cross_axis_alignment(CrossAxisAlignment::Start)
                                         .expand_width()
                                         .expand_height()

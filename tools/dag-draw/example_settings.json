@@ -1,0 +1,12 @@
+{
+    "files_limit": 10,
+    "tasks_limit": 2,
+    "timeline_downloading": true,
+    "timeline_uploading": true,
+    "timeline_cores": true,
+    "timeline_memory": true,
+    "graph_levels_from_end": false,
+    "graph_variable_edge_width": false,
+    "graph_variable_node_size": false,
+    "graph_show_task_names": false
+}
