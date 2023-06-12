@@ -231,11 +231,16 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let text = "0:Hello";
     sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
-    // let 2 messages to deliver (sender and one other process)
-    if sys.local_outbox("0").is_empty() {
-        sys.steps(2);
-    } else {
+    // run until the message is received by one other process
+    let mut received = false;
+    while !received {
         sys.step();
+        for n in 1..config.proc_count {
+            if sys.received_message_count(&n.to_string()) == 1 {
+                received = true;
+                break;
+            }
+        }
     }
     // crash source node
     sys.crash_node("0");
@@ -246,11 +251,10 @@ fn test_sender_crash(config: &TestConfig) -> TestResult {
 fn test_sender_crash2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let text = "0:Hello";
+    // let the message to be received only by the sender itself by disconnecting it
+    sys.network().disconnect_node("0");
     sys.send_local_message("0", Message::json("SEND", &BroadcastMessage { text }));
-    // let 1 message to deliver (sender only)
-    if sys.local_outbox("0").is_empty() {
-        sys.step();
-    }
+    sys.step();
     sys.crash_node("0");
     sys.step_until_no_events();
     check(&sys, config, HashSet::from([text.to_string()]))
