@@ -13,7 +13,7 @@ use dslab_core::Id;
 use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
@@ -57,12 +57,12 @@ pub struct CloudSimulation {
     batch_buffer: Vec<VMSpawnRequest>,
     sim: Simulation,
     ctx: SimulationContext,
-    sim_config: Rc<SimulationConfig>,
+    sim_config: Rc<ConfigData>,
 }
 
 impl CloudSimulation {
     /// Creates a simulation with specified config.
-    pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
+    pub fn new(mut sim: Simulation, sim_config: ConfigData) -> Self {
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         sim.add_handler("monitoring", monitoring.clone());
 
@@ -127,15 +127,15 @@ impl CloudSimulation {
         }
 
         // Spawn VM from specifyed dataset
-        if sim.sim_config.vm_dataset.is_some() {
-            let dataset_config = sim.sim_config.vm_dataset.as_ref().unwrap();
+        if sim.sim_config.trace.is_some() {
+            let dataset_config = sim.sim_config.trace.as_ref().unwrap();
 
-            match dataset_config.dataset_type {
+            match dataset_config.r#type {
                 VmDatasetType::Azure => {
                     let mut dataset = AzureDatasetReader::new(
                         *sim.sim_config.simulation_length,
-                        *sim.sim_config.host_cpu_capacity,
-                        *sim.sim_config.host_memory_capacity,
+                        sim.sim_config.hosts.get(0).unwrap().cpus as f64,
+                        sim.sim_config.hosts.get(0).unwrap().memory as f64,
                     );
                     dataset.parse(
                         format!("{}/vm_types.csv", dataset_config.path),
@@ -479,17 +479,67 @@ impl CloudSimulation {
     }
 
     /// Returns the simulation config.
-    pub fn sim_config(&self) -> Rc<SimulationConfig> {
+    pub fn sim_config(&self) -> Rc<ConfigData> {
         self.sim_config.clone()
     }
 
     /// Sets new config value.
-    pub fn set_sim_config(&mut self, config: SimulationConfig) {
+    pub fn set_sim_config(&mut self, config: ConfigData) {
         self.sim_config = rc!(config);
     }
 
     /// Returns the identifier of component by its name.
     pub fn lookup_id(&self, name: &str) -> Id {
         self.sim.lookup_id(name)
+    }
+
+    /// Returns average host CPU load among current simulation hosts
+    pub fn average_cpu_load(&mut self) -> f64 {
+        let mut sum_cpu_load = 0.;
+
+        let time = self.current_time();
+        for host in self.hosts.values() {
+            sum_cpu_load += host.borrow().get_cpu_load(time);
+        }
+
+        sum_cpu_load / (self.hosts.len() as f64)
+    }
+
+    /// Returns average host RAM load among current simulation hosts
+    pub fn average_memory_load(&mut self) -> f64 {
+        let mut sum_memory_load = 0.;
+
+        let time = self.current_time();
+        for host in self.hosts.values() {
+            sum_memory_load += host.borrow().get_memory_load(time);
+        }
+
+        sum_memory_load / (self.hosts.len() as f64)
+    }
+
+    /// Returns CPU allocation rate (% of overall CPU used) among current simulation hosts
+    pub fn cpu_allocation_rate(&mut self) -> f64 {
+        let mut sum_cpu_allocated = 0.;
+        let mut sum_cpu_total = 0.;
+
+        for host in self.hosts.values() {
+            sum_cpu_allocated += host.borrow().get_cpu_allocated();
+            sum_cpu_total += host.borrow().get_cpu_capacity() as f64;
+        }
+
+        sum_cpu_allocated / sum_cpu_total
+    }
+
+    /// Returns RAM allocation rate (% of overall RAM used) among current simulation hosts
+    pub fn memory_allocation_rate(&mut self) -> f64 {
+        let mut sum_memory_allocated = 0.;
+        let mut sum_memory_total = 0.;
+
+        for host in self.hosts.values() {
+            sum_memory_allocated += host.borrow().get_memory_allocated();
+            sum_memory_total += host.borrow().get_memory_capacity() as f64;
+        }
+
+        sum_memory_allocated / sum_memory_total
     }
 }

@@ -6,7 +6,7 @@ use std::rc::Rc;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::load_model::{ConstantLoadModel, LoadModel};
 
 /// Status of virtual machine.
@@ -92,7 +92,7 @@ pub struct VirtualMachine {
     start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
-    sim_config: Rc<SimulationConfig>,
+    sim_config: Rc<ConfigData>,
 }
 
 impl Serialize for VirtualMachine {
@@ -113,7 +113,7 @@ impl VirtualMachine {
         allocation_start_time: f64,
         lifetime: f64,
         resource_consumer: ResourceConsumer,
-        sim_config: Rc<SimulationConfig>,
+        sim_config: Rc<ConfigData>,
     ) -> Self {
         Self {
             id,

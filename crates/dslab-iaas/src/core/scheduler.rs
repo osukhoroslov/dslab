@@ -10,7 +10,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
 use crate::core::common::Allocation;
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
@@ -41,7 +41,7 @@ pub struct Scheduler {
     placement_store_id: u32,
     vm_placement_algorithm: VMPlacementAlgorithm,
     ctx: SimulationContext,
-    sim_config: Rc<SimulationConfig>,
+    sim_config: Rc<ConfigData>,
 }
 
 impl Scheduler {
@@ -53,7 +53,7 @@ impl Scheduler {
         placement_store_id: u32,
         vm_placement_algorithm: VMPlacementAlgorithm,
         ctx: SimulationContext,
-        sim_config: Rc<SimulationConfig>,
+        sim_config: Rc<ConfigData>,
     ) -> Self {
         Self {
             id: ctx.id(),

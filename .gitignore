@@ -8,9 +8,7 @@ target/
 .idea/
 
 # Traces
-examples/iaas-traces/vm_instances.csv
-examples/iaas-traces/vm_types.csv
-examples/iaas-traces/Huawei-East-1.csv
+examples/iaas-traces/*.csv
 
 # Maven
 examples-other/vetand_cloudsim_benchmark/target

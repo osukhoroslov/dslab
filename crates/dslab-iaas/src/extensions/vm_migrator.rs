@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::events::allocation::MigrationRequest;
 use crate::core::monitoring::Monitoring;
 use crate::core::vm::VmStatus;
@@ -32,7 +32,7 @@ pub struct VmMigrator {
     underload_threshold: f64,
     monitoring: Option<Rc<RefCell<Monitoring>>>,
     vm_api: Option<Rc<RefCell<VmAPI>>>,
-    sim_config: Option<Rc<SimulationConfig>>,
+    sim_config: Option<Rc<ConfigData>>,
     ctx: SimulationContext,
 }
 
@@ -45,7 +45,7 @@ impl VmMigrator {
         interval: f64,
         monitoring: Rc<RefCell<Monitoring>>,
         vm_api: Rc<RefCell<VmAPI>>,
-        sim_config: Rc<SimulationConfig>,
+        sim_config: Rc<ConfigData>,
     ) {
         self.interval = interval;
         self.monitoring = Some(monitoring);

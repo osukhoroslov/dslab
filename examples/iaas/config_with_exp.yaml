@@ -1,8 +1,0 @@
-send_stats_period: 5
-message_delay: 0.1
-allocation_retry_period: 1.0
-vm_start_duration: 1.0,10.0,1.0
-vm_stop_duration: 0.5
-allow_vm_overcommit: false
-network_throughput: 10
-simulation_length: 20

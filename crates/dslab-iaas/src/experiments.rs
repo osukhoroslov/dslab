@@ -1,63 +1,38 @@
 //! Tools for launching experiments with multiple environment configurations
 
-use std::ops::Deref;
-use std::rc::Rc;
-
-use sugars::rc;
+use dslab_core::Simulation;
 
 use crate::core::config::SimulationConfig;
 use crate::simulation::CloudSimulation;
 
 /// Callback on test case finish, can be used to save or display single experiment run results
-pub trait Experiment {
-    fn new(sim: CloudSimulation) -> Self
-    where
-        Self: Sized;
-
-    fn set_sim(&mut self, sim: CloudSimulation);
-
-    fn get_sim(&self) -> Rc<CloudSimulation>;
-
-    fn on_experiment_finish(&mut self);
+pub trait OnTestCaseFinishedCallback {
+    fn on_experiment_finish(&self, _sim: &mut CloudSimulation)
+    {
+        // custom callback
+    }
 }
 
-pub struct DefaultExperiment {
-    pub sim: CloudSimulation,
+pub struct Experiment {
+    pub final_callback: Box<dyn OnTestCaseFinishedCallback>,
+    pub config: SimulationConfig,
 }
 
-impl Experiment for DefaultExperiment {
-    fn new(sim: CloudSimulation) -> Self
+impl Experiment {
+    pub fn new(final_callback: Box<dyn OnTestCaseFinishedCallback>, config: SimulationConfig) -> Self
     where
         Self: Sized,
     {
-        Self { sim }
+        Self { final_callback, config }
     }
 
-    fn get_sim(&self) -> Rc<CloudSimulation> {
-        rc!(self.sim.clone())
-    }
-
-    fn set_sim(&mut self, sim: CloudSimulation) {
-        self.sim = sim;
-    }
-
-    fn on_experiment_finish(&mut self) {
-        // Custom callback
-    }
-}
-
-pub fn run_experiments(mut experiment: Box<dyn Experiment>) {
-    let sim = experiment.get_sim().deref().clone();
-    let mut config: SimulationConfig = sim.sim_config().deref().clone();
-
-    while config.can_increment() {
-        let mut test_case = sim.clone();
-        test_case.set_sim_config(config.clone());
-        config.increment();
-
-        test_case.step_for_duration(*config.simulation_length);
-
-        experiment.set_sim(test_case);
-        experiment.on_experiment_finish();
+    pub fn start(&mut self) {
+        while self.config.can_increment() {
+            let sim = Simulation::new(123);
+            let mut cloud_sim = CloudSimulation::new(sim, self.config.clone().data);
+            cloud_sim.step_for_duration(*self.config.data.simulation_length);
+            self.final_callback.on_experiment_finish(&mut cloud_sim);
+            self.config.increment();
+        }
     }
 }

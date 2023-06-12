@@ -11,7 +11,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
 use crate::core::common::{Allocation, AllocationVerdict};
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest, VmCreateRequest,
@@ -39,7 +39,7 @@ pub struct PlacementStore {
     schedulers: HashSet<u32>,
     vm_api: Rc<RefCell<VmAPI>>,
     ctx: SimulationContext,
-    sim_config: SimulationConfig,
+    sim_config: ConfigData,
 }
 
 impl PlacementStore {
@@ -48,7 +48,7 @@ impl PlacementStore {
         allow_vm_overcommit: bool,
         vm_api: Rc<RefCell<VmAPI>>,
         ctx: SimulationContext,
-        sim_config: SimulationConfig,
+        sim_config: ConfigData,
     ) -> Self {
         Self {
             allow_vm_overcommit,

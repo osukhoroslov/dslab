@@ -16,7 +16,7 @@ use dslab_core::{log_debug, log_trace};
 use dslab_models::power::host::{HostPowerModel, HostState};
 
 use crate::core::common::AllocationVerdict;
-use crate::core::config::SimulationConfig;
+use crate::core::config::ConfigData;
 use crate::core::energy_meter::EnergyMeter;
 use crate::core::events::allocation::{
     AllocationFailed, AllocationReleaseRequest, AllocationReleased, MigrationRequest, VmCreateRequest,
@@ -65,7 +65,7 @@ pub struct HostManager {
     slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
-    sim_config: Rc<SimulationConfig>,
+    sim_config: Rc<ConfigData>,
 }
 
 impl HostManager {
@@ -82,7 +82,7 @@ impl HostManager {
         power_model: HostPowerModel,
         slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
-        sim_config: Rc<SimulationConfig>,
+        sim_config: Rc<ConfigData>,
     ) -> Self {
         Self {
             id: ctx.id(),
@@ -208,6 +208,16 @@ impl HostManager {
             memory_used += vm.memory_usage as f64 * vm.get_memory_load(time);
         }
         memory_used / self.memory_total as f64
+    }
+
+    /// Returns host CPU capacity.
+    pub fn get_cpu_capacity(&self) -> u32 {
+        self.cpu_total
+    }
+
+    /// Returns host RAM capacity.
+    pub fn get_memory_capacity(&self) -> u64 {
+        self.memory_total
     }
 
     /// Returns the current power consumption.

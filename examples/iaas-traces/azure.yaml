@@ -5,15 +5,14 @@ vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 3600
-number_of_hosts: 150
+simulation_length: 3600,10000,1000
 host_cpu_capacity: 64
 host_memory_capacity: 128
 step_duration: 500
 
 #Vms
-vm_dataset:
-    dataset_type: Azure
+trace:
+    type: Azure
     path: .
 
 # Hosts
