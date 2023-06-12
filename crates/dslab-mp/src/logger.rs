@@ -158,6 +158,18 @@ impl Logger {
                 t!(format!("{:>9.3} - network reset, all problems healed", time).green());
             }
             LogEntry::ProcessStateUpdated { .. } => {}
+            LogEntry::McMessageDropped { msg, src, dest } => {
+                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
+            }
+            LogEntry::McMessageReceived { msg, src, dest } => {
+                t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
+            }
+            LogEntry::McTimerCancelled { proc, timer } => {
+                t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
+            }
+            LogEntry::McTimerFired { proc, timer } => {
+                t!(format!("{:>10} !-- {:<10} <-- timer fired", proc, timer).yellow());
+            }
         }
     }
 }
@@ -193,6 +205,24 @@ pub enum LogEntry {
         node: String,
         proc: String,
         msg: Message,
+    },
+    McMessageDropped {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McTimerCancelled {
+        proc: String,
+        timer: String,
+    },
+    McTimerFired {
+        proc: String,
+        timer: String,
     },
     MessageSent {
         time: f64,
