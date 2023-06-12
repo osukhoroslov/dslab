@@ -167,7 +167,10 @@ impl McNode {
                 ProcessEvent::LocalMessageSent { msg } => {
                     proc_entry.local_outbox.push(msg.clone());
 
-                    let log_entry = LogEntry::McLocalMessageSent { msg, proc: proc.clone() };
+                    let log_entry = LogEntry::McLocalMessageSent {
+                        msg,
+                        proc: proc.clone(),
+                    };
                     self.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } => {
@@ -181,7 +184,10 @@ impl McNode {
                         // event_id is 0 since it is not used in model checking
                         proc_entry.pending_timers.insert(name.clone(), 0);
 
-                        let log_entry = LogEntry::McTimerSet { proc: proc.clone(), timer: name };
+                        let log_entry = LogEntry::McTimerSet {
+                            proc: proc.clone(),
+                            timer: name,
+                        };
                         self.trace_handler.borrow_mut().push(log_entry);
                     }
                 }
@@ -193,7 +199,10 @@ impl McNode {
                     };
                     new_events.push(event);
 
-                    let log_entry = LogEntry::McTimerCancelled { proc: proc.clone(), timer: name };
+                    let log_entry = LogEntry::McTimerCancelled {
+                        proc: proc.clone(),
+                        timer: name,
+                    };
                     self.trace_handler.borrow_mut().push(log_entry);
                 }
                 _ => {}
