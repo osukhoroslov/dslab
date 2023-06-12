@@ -5,8 +5,9 @@ use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
-use dslab_core::Simulation;
+use dslab_core::{cast, Simulation};
 
+use crate::events::MessageReceived;
 use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
@@ -91,17 +92,40 @@ impl System {
 
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
+        // remove the handler to discard all events sent to this node
         self.sim.remove_handler(node_name);
         node.borrow_mut().crash();
-
-        // cancel pending events from the crashed node
-        let node_id = self.sim.lookup_id(node_name);
-        self.sim.cancel_events(|e| e.src == node_id);
 
         self.logger.borrow_mut().log(LogEntry::NodeCrashed {
             time: self.sim.time(),
             node: node_name.to_string(),
         });
+
+        // cancel pending events (i.e. undelivered messages) from the crashed node
+        let node_id = self.sim.lookup_id(node_name);
+        let cancelled = self.sim.cancel_and_get_events(|e| e.src == node_id);
+        for event in cancelled {
+            cast!(match event.data {
+                MessageReceived {
+                    id,
+                    msg,
+                    src,
+                    src_node,
+                    dest,
+                    dest_node,
+                } => {
+                    self.logger.borrow_mut().log(LogEntry::MessageDropped {
+                        time: self.sim.time(),
+                        msg_id: id.to_string(),
+                        msg,
+                        src_proc: src,
+                        src_node,
+                        dest_proc: dest,
+                        dest_node,
+                    });
+                }
+            })
+        }
     }
 
     pub fn recover_node(&mut self, node_name: &str) {

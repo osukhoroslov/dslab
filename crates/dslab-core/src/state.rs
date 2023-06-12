@@ -173,6 +173,26 @@ impl SimulationState {
         }
     }
 
+    pub fn cancel_and_get_events<F>(&mut self, pred: F) -> Vec<Event>
+    where
+        F: Fn(&Event) -> bool,
+    {
+        let mut events = Vec::new();
+        for event in self.events.iter() {
+            if pred(event) {
+                self.canceled_events.insert(event.id);
+                events.push(event.clone());
+            }
+        }
+        for event in self.ordered_events.iter() {
+            if pred(event) {
+                self.canceled_events.insert(event.id);
+                events.push(event.clone());
+            }
+        }
+        events
+    }
+
     /// This function does not check events from `ordered_events`.
     pub fn cancel_heap_events<F>(&mut self, pred: F)
     where
