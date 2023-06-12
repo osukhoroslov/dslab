@@ -325,14 +325,13 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         for i in 0..10 {
             let sender = format!("{}", rand.gen_range(0..config.proc_count));
             let text = format!("{}:{}", sender, i);
-            sys.send_local_message(&sender, Message::json("SEND", &BroadcastMessage { text: &text }));
-            sent_messages.insert(text);
+            sent_messages.insert(text.clone());
             if i % 2 == 0 {
                 sys.network().set_delays(10., 20.);
             } else {
                 sys.network().set_delays(1., 2.);
             }
-            for _ in 1..4 {
+            for j in 0..8 {
                 if rand.gen_range(0.0..1.0) > 0.3 {
                     sys.network().drop_outgoing(&victim1);
                 } else {
@@ -343,7 +342,11 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
                 } else {
                     sys.network().pass_outgoing(&victim2);
                 }
-                sys.steps(rand.gen_range(1..4));
+                if j == 0 {
+                    sys.send_local_message(&sender, Message::json("SEND", &BroadcastMessage { text: &text }));
+                } else {
+                    sys.step();
+                }
             }
         }
         sys.crash_node(&victim1);
