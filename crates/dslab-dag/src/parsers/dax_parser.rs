@@ -45,7 +45,7 @@ impl DAG {
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for job in dax.jobs.iter() {
             let task_id = dag.add_task(
-                &job.name,
+                &format!("{}_{}", job.name, job.id),
                 job.runtime * config.reference_speed,
                 0, // task memory consumption is not present in DAX files
                 1, // cores info is not present in DAX files
