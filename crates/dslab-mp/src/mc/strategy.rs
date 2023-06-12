@@ -9,6 +9,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use sugars::boxed;
 
+use crate::mc::error::McError;
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;

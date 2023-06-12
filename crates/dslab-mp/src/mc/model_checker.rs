@@ -8,6 +8,7 @@ use colored::*;
 use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
+use crate::mc::error::McError;
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
@@ -95,10 +96,5 @@ impl ModelChecker {
             total_stats.combine(stats);
         }
         Ok(total_stats)
-    }
-
-    /// Returns trace in state graph which guides system to failure.
-    pub fn get_failure_trace(&mut self) -> Vec<McEvent> {
-        self.strategy.failure_trace().clone()
     }
 }

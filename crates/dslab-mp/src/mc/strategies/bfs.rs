@@ -1,6 +1,7 @@
 //! Implementation of model checking BFS search strategy.
 
 use std::collections::VecDeque;
+use crate::mc::error::McError;
 
 use crate::mc::events::McEvent;
 use crate::mc::state::McState;
@@ -65,7 +66,7 @@ impl Strategy for Bfs {
         let res = self.bfs(system);
         match res {
             Ok(()) => Ok(self.stats.clone()),
-            Err(err) => Err(err),
+            Err(err) => Err(McError::new(err, self.failure_trace().clone())),
         }
     }
 

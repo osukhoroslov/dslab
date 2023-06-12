@@ -7,6 +7,7 @@ use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
+use dslab_mp::mc::error::McError;
 use dslab_mp::mc::events::McEvent::{MessageReceived, TimerFired};
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
@@ -360,7 +361,11 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
 
     let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
-    assert!(if let Err(msg) = result { msg == "broken" } else { false });
+    assert!(if let Err(msg) = result {
+        msg.str() == "broken"
+    } else {
+        false
+    });
 }
 
 #[rstest]
@@ -374,7 +379,7 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("nothing left to do to reach the goal".to_string());
+    let expected = Err(McError::new("nothing left to do to reach the goal".to_string(), vec![]));
     assert_eq!(result, expected);
 }
 
@@ -455,7 +460,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("nothing left to do to reach the goal".to_string());
+    let expected = Err(McError::new("nothing left to do to reach the goal".to_string(), vec![]));
     assert_eq!(result, expected);
 }
 
@@ -506,7 +511,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("too many messages".to_string());
+    let expected = Err(McError::new("too many messages".to_string(), vec![]));
     assert_eq!(result, expected);
 }
 
@@ -628,13 +633,12 @@ fn useless_timer(#[case] strategy_name: String) {
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
-    assert!(if let Err(msg) = result {
-        msg == "invalid order"
-    } else {
-        false
-    });
+    assert!(result.is_err());
 
-    let trace = mc.get_failure_trace();
+    let msg = result.err().unwrap();
+    assert_eq!(msg.str(), "invalid order");
+
+    let trace = msg.trace();
     assert_eq!(trace.len(), 2);
     assert!(matches!(trace[0].clone(), MessageReceived { .. }));
     assert!(matches!(trace[1].clone(), TimerFired { .. }));
