@@ -1,5 +1,6 @@
 //! Implementation of model checking DFS search strategy.
 
+use crate::mc::events::McEvent;
 use crate::mc::state::McState;
 use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
 use crate::mc::system::McSystem;
@@ -12,6 +13,7 @@ pub struct Dfs {
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
+    failure_trace: Vec<McEvent>,
 }
 
 impl Dfs {
@@ -25,6 +27,7 @@ impl Dfs {
             execution_mode,
             summary: McSummary::default(),
             visited,
+            failure_trace: vec![],
         }
     }
 }
@@ -81,5 +84,9 @@ impl Strategy for Dfs {
 
     fn summary(&mut self) -> &mut McSummary {
         &mut self.summary
+    }
+
+    fn failure_trace(&mut self) -> &mut Vec<McEvent> {
+        &mut self.failure_trace
     }
 }
