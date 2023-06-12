@@ -505,13 +505,20 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     });
 
     let mut sys = build_ping_system();
-    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    let msg = Message::new("PING", "some_data");
+    sys.send_local_message("process1", msg.clone());
     sys.network().set_dupl_rate(0.5);
 
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err(McError::new("too many messages".to_string(), vec![]));
+    let expected_log_event = LogEntry::McMessageReceived {
+        msg,
+        src: "process1".to_string(),
+        dest: "process2".to_string(),
+    };
+    let expected_trace = vec![expected_log_event.clone(), expected_log_event];
+    let expected = Err(McError::new("too many messages".to_string(), expected_trace));
     assert_eq!(result, expected);
 }
 
