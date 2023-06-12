@@ -170,6 +170,15 @@ impl Logger {
             LogEntry::McTimerFired { proc, timer } => {
                 t!(format!("{:>10} !-- {:<10} <-- timer fired", proc, timer).yellow());
             }
+            LogEntry::McLocalMessageSent { msg, proc } => {
+                t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
+            }
+            LogEntry::McMessageSent { msg, src, dest } => {
+                t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
+            }
+            LogEntry::McTimerSet { proc, timer } => {
+                t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
+            }
         }
     }
 }
@@ -205,24 +214,6 @@ pub enum LogEntry {
         node: String,
         proc: String,
         msg: Message,
-    },
-    McMessageDropped {
-        msg: Message,
-        src: String,
-        dest: String,
-    },
-    McMessageReceived {
-        msg: Message,
-        src: String,
-        dest: String,
-    },
-    McTimerCancelled {
-        proc: String,
-        timer: String,
-    },
-    McTimerFired {
-        proc: String,
-        timer: String,
     },
     MessageSent {
         time: f64,
@@ -344,5 +335,36 @@ pub enum LogEntry {
         node: String,
         proc: String,
         state: String,
+    },
+    McLocalMessageSent {
+        msg: Message,
+        proc: String,
+    },
+    McMessageDropped {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageSent {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McTimerCancelled {
+        proc: String,
+        timer: String,
+    },
+    McTimerFired {
+        proc: String,
+        timer: String,
+    },
+    McTimerSet {
+        proc: String,
+        timer: String,
     },
 }

@@ -512,12 +512,21 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected_log_event = LogEntry::McMessageReceived {
-        msg,
+    let expected_message_received_event = LogEntry::McMessageReceived {
+        msg: msg.clone(),
         src: "process1".to_string(),
         dest: "process2".to_string(),
     };
-    let expected_trace = vec![expected_log_event.clone(), expected_log_event];
+    let expected_local_message_sent_event = LogEntry::McLocalMessageSent {
+        msg,
+        proc: "process2".to_string(),
+    };
+    let expected_trace = vec![
+        expected_message_received_event.clone(),
+        expected_local_message_sent_event.clone(),
+        expected_message_received_event,
+        expected_local_message_sent_event,
+    ];
     let expected = Err(McError::new("too many messages".to_string(), expected_trace));
     assert_eq!(result, expected);
 }
@@ -646,9 +655,9 @@ fn useless_timer(#[case] strategy_name: String) {
     assert_eq!(msg.str(), "invalid order");
 
     let trace = msg.trace();
-    assert_eq!(trace.len(), 2);
+    assert_eq!(trace.len(), 4);
     assert!(matches!(trace[0].clone(), LogEntry::McMessageReceived { .. }));
-    assert!(matches!(trace[1].clone(), LogEntry::McTimerFired { .. }));
+    assert!(matches!(trace[2].clone(), LogEntry::McTimerFired { .. }));
 }
 
 #[rstest]

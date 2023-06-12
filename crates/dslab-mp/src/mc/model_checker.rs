@@ -38,14 +38,14 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let trace_handler = TraceHandler::default();
+        let trace_handler = Rc::new(RefCell::new(TraceHandler::default()));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
             let node = sys.get_node(&node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(node.processes(), mc_net.clone(), node.clock_skew()),
+                McNode::new(node.processes(), mc_net.clone(), trace_handler.clone(), node.clock_skew()),
             );
         }
 
@@ -67,7 +67,7 @@ impl ModelChecker {
         }
 
         Self {
-            system: McSystem::new(nodes, mc_net, events, Rc::new(RefCell::new(trace_handler))),
+            system: McSystem::new(nodes, mc_net, events, trace_handler),
             strategy,
         }
     }
