@@ -7,8 +7,8 @@ use std::hash::{Hash, Hasher};
 use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use crate::logger::LogEntry;
 
+use crate::logger::LogEntry;
 use crate::mc::error::McError;
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{McEvent, McEventId};
