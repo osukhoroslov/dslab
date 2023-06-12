@@ -125,11 +125,13 @@ impl Node {
     }
 
     pub fn crash(&mut self) {
-        self.processes.clear();
         self.is_crashed = true;
     }
 
     pub fn recover(&mut self) {
+        // processes are cleared on recover instead of the crash
+        // to allow working with processes after the crash (i.e. examine event log)
+        self.processes.clear();
         self.is_crashed = false;
     }
 
@@ -160,6 +162,10 @@ impl Node {
         } else {
             None
         }
+    }
+
+    pub fn local_outbox(&self, proc: &str) -> Vec<Message> {
+        self.processes[proc].local_outbox.clone()
     }
 
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {

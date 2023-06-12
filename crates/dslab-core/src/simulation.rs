@@ -630,6 +630,38 @@ impl Simulation {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
+    /// Cancels events that satisfy the given predicate function and returns them.
+    ///
+    /// Note that already processed events cannot be cancelled.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use dslab_core::{Event, Simulation, SimulationContext};
+    ///
+    /// #[derive(Clone, Serialize)]
+    /// pub struct SomeEvent {
+    /// }
+    ///
+    /// let mut sim = Simulation::new(123);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// let cancelled = sim.cancel_and_get_events(|e| e.id < 2);
+    /// assert_eq!(cancelled.len(), 2);
+    /// sim.step();
+    /// assert_eq!(sim.time(), 3.0);
+    /// ```
+    pub fn cancel_and_get_events<F>(&mut self, pred: F) -> Vec<Event>
+    where
+        F: Fn(&Event) -> bool,
+    {
+        self.sim_state.borrow_mut().cancel_and_get_events(pred)
+    }
+
     /// Returns a copy of pending events sorted by time.
     ///
     /// Currently used for model checking in dslab-mp.

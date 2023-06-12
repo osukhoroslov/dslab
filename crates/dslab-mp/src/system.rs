@@ -5,8 +5,9 @@ use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
-use dslab_core::Simulation;
+use dslab_core::{cast, Simulation};
 
+use crate::events::MessageReceived;
 use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
@@ -91,26 +92,49 @@ impl System {
 
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
-        for proc in node.borrow().process_names() {
-            self.proc_nodes.remove(&proc);
-        }
+        // remove the handler to discard all events sent to this node
         self.sim.remove_handler(node_name);
         node.borrow_mut().crash();
-
-        // cancel pending events from the crashed node
-        let node_id = self.sim.lookup_id(node_name);
-        self.sim.cancel_events(|e| e.src == node_id);
 
         self.logger.borrow_mut().log(LogEntry::NodeCrashed {
             time: self.sim.time(),
             node: node_name.to_string(),
         });
+
+        // cancel pending events (i.e. undelivered messages) from the crashed node
+        let node_id = self.sim.lookup_id(node_name);
+        let cancelled = self.sim.cancel_and_get_events(|e| e.src == node_id);
+        for event in cancelled {
+            cast!(match event.data {
+                MessageReceived {
+                    id,
+                    msg,
+                    src,
+                    src_node,
+                    dest,
+                    dest_node,
+                } => {
+                    self.logger.borrow_mut().log(LogEntry::MessageDropped {
+                        time: self.sim.time(),
+                        msg_id: id.to_string(),
+                        msg,
+                        src_proc: src,
+                        src_node,
+                        dest_proc: dest,
+                        dest_node,
+                    });
+                }
+            })
+        }
     }
 
     pub fn recover_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
         node.borrow_mut().recover();
         self.sim.add_handler(node_name, node.clone());
+
+        // remove previous process-node mappings to enable recreating these processes
+        self.proc_nodes.retain(|_, node| node.borrow().name != node_name);
 
         self.logger.borrow_mut().log(LogEntry::NodeRecovered {
             time: self.sim.time(),
@@ -168,6 +192,10 @@ impl System {
             .unwrap_or_default()
     }
 
+    pub fn local_outbox(&self, proc: &str) -> Vec<Message> {
+        self.proc_nodes[proc].borrow().local_outbox(proc)
+    }
+
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {
         self.proc_nodes[proc].borrow().event_log(proc)
     }
@@ -186,6 +214,10 @@ impl System {
 
     pub fn proc_node_name(&self, proc: &str) -> String {
         self.proc_nodes[proc].borrow().name().to_owned()
+    }
+
+    pub fn proc_node_is_crashed(&self, proc: &str) -> bool {
+        self.proc_nodes[proc].borrow().is_crashed()
     }
 
     // Simulation ------------------------------------------------------------------------------------------------------
