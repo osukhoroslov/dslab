@@ -149,27 +149,31 @@ impl DagStats {
                 .map(|&i| dag.get_data_item(i).size)
                 .max_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
-            min_max_input_size: dag
-                .get_tasks()
+            min_max_input_size: levels[0]
                 .iter()
-                .filter_map(|t| {
-                    t.inputs
+                .map(|&t| {
+                    dag.get_task(t)
+                        .inputs
                         .iter()
                         .filter(|&data_item| dag.get_inputs().contains(data_item))
                         .map(|&data_item| dag.get_data_item(data_item).size)
                         .max_by(|a, b| a.total_cmp(b))
+                        .unwrap_or_default()
                 })
                 .min_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
-            min_max_output_size: dag
-                .get_tasks()
+            min_max_output_size: levels
+                .last()
+                .unwrap()
                 .iter()
-                .filter_map(|t| {
-                    t.outputs
+                .map(|&t| {
+                    dag.get_task(t)
+                        .outputs
                         .iter()
                         .filter(|&data_item| dag.get_outputs().contains(data_item))
                         .map(|&data_item| dag.get_data_item(data_item).size)
                         .max_by(|a, b| a.total_cmp(b))
+                        .unwrap_or_default()
                 })
                 .min_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),

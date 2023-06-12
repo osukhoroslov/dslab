@@ -22,6 +22,7 @@ use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
+use crate::makespan_lower_bound::get_makespan_lower_bound;
 use crate::resource::Resource;
 use crate::run_stats::RunStats;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
@@ -712,6 +713,17 @@ impl DAGRunner {
             }
             log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
         }
+    }
+
+    pub fn get_makespan_lower_bound(&self) -> f64 {
+        get_makespan_lower_bound(
+            &self.dag,
+            System {
+                resources: &self.resources,
+                network: &self.network.borrow(),
+            },
+            self.id,
+        )
     }
 }
 

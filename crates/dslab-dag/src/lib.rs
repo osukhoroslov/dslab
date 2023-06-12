@@ -5,6 +5,7 @@ pub mod dag_simulation;
 pub mod dag_stats;
 pub mod data_item;
 pub mod experiment;
+pub mod makespan_lower_bound;
 pub mod network;
 pub mod parsers;
 pub mod resource;
