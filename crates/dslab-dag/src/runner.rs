@@ -22,7 +22,7 @@ use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
-use crate::makespan_lower_bound::get_makespan_lower_bound;
+use crate::lower_bound::makespan_lower_bound;
 use crate::resource::Resource;
 use crate::run_stats::RunStats;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
@@ -225,6 +225,52 @@ impl DAGRunner {
         self.process_actions();
     }
 
+    /// Returns true if the DAG execution is completed and false otherwise.
+    pub fn is_completed(&self) -> bool {
+        self.dag.is_completed() && self.data_transfers.is_empty()
+    }
+
+    /// Checks that all DAG tasks are completed.
+    pub fn validate_completed(&self) {
+        if !self.is_completed() {
+            let mut states: Vec<String> = Vec::new();
+            for task_state in TaskState::iter() {
+                let cnt = self
+                    .dag
+                    .get_tasks()
+                    .iter()
+                    .filter(|task| task.state == task_state)
+                    .count();
+                if cnt != 0 {
+                    states.push(format!("{} {:?}", cnt, task_state));
+                }
+            }
+            log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
+        }
+    }
+
+    /// Returns trace log.
+    pub fn trace_log(&self) -> &TraceLog {
+        &self.trace_log
+    }
+
+    /// Returns run stats.
+    pub fn run_stats(&self) -> &RunStats {
+        &self.run_stats
+    }
+
+    /// Returns makespan lower bound.
+    pub fn makespan_lower_bound(&self) -> f64 {
+        makespan_lower_bound(
+            &self.dag,
+            System {
+                resources: &self.resources,
+                network: &self.network.borrow(),
+            },
+            self.id,
+        )
+    }
+
     fn validate_input(&self) -> bool {
         if self.dag.get_tasks().iter().map(|task| task.min_cores).max()
             > self.resources.iter().map(|r| r.compute.borrow().cores_total()).max()
@@ -248,15 +294,6 @@ impl DAGRunner {
             }));
         }
         self.trace_log.log_dag(&self.dag);
-    }
-
-    /// Returns trace log.
-    pub fn trace_log(&self) -> &TraceLog {
-        &self.trace_log
-    }
-
-    pub fn run_stats(&self) -> &RunStats {
-        &self.run_stats
     }
 
     fn process_schedule_action(
@@ -679,10 +716,6 @@ impl DAGRunner {
         self.check_and_log_completed();
     }
 
-    pub fn is_completed(&self) -> bool {
-        self.dag.is_completed() && self.data_transfers.is_empty()
-    }
-
     fn check_and_log_completed(&mut self) {
         if self.is_completed() {
             self.run_stats.finalize(
@@ -694,36 +727,6 @@ impl DAGRunner {
             );
             log_info!(self.ctx, "finished DAG execution");
         }
-    }
-
-    /// Checks that all DAG tasks are completed.
-    pub fn validate_completed(&self) {
-        if !self.is_completed() {
-            let mut states: Vec<String> = Vec::new();
-            for task_state in TaskState::iter() {
-                let cnt = self
-                    .dag
-                    .get_tasks()
-                    .iter()
-                    .filter(|task| task.state == task_state)
-                    .count();
-                if cnt != 0 {
-                    states.push(format!("{} {:?}", cnt, task_state));
-                }
-            }
-            log_error!(self.ctx, "DAG is not completed, currently {} tasks", states.join(", "));
-        }
-    }
-
-    pub fn get_makespan_lower_bound(&self) -> f64 {
-        get_makespan_lower_bound(
-            &self.dag,
-            System {
-                resources: &self.resources,
-                network: &self.network.borrow(),
-            },
-            self.id,
-        )
     }
 }
 

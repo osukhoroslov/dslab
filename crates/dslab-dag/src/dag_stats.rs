@@ -14,33 +14,35 @@ pub struct DagStats {
     pub total_comp_size: f64,
     /// Sum of sizes of all data items.
     pub total_data_size: f64,
-    /// Sum of sizes of all transfers, differs from `total_data_size` if
-    /// one data item is used as input for multiple tasks.
+    /// Sum of sizes of all data transfers
+    /// (differs from `total_data_size` if some data items are read by multiple tasks).
     pub total_transfers_size: f64,
-    /// `total_comp_size / total_transfers_size`
-    pub comp_transfers_ratio: f64,
-    /// Longest path measured in sum of flops of tasks on this path.
-    pub critical_path_size: f64,
-    /// `total_comp_size / critical_path_size`
-    pub parallelism_degree: f64,
-    /// Sum of sizes of all input data items.
+    /// Sum of sizes of all DAG input data items
+    /// (i.e. data items not produced by the tasks).
     pub input_data_size: f64,
-    /// Sum of sizes of all output data items.
+    /// Sum of sizes of all DAG output data items
+    /// (i.e. data items not consumed by the tasks).
     pub output_data_size: f64,
-    /// Size of maximum input data item.
+    /// Maximum size of DAG input data item.
     pub max_input_size: f64,
-    /// Size of maximum output data item.
+    /// Maximum size of DAG output data item.
     pub max_output_size: f64,
-    /// Minimum size of largest task input among all tasks.
+    /// Minimum of maximum task input size among all entry tasks (first level).
     pub min_max_input_size: f64,
-    /// Minimum size of largest task output among all tasks.
+    /// Minimum of maximum task output size among all exit tasks (last level).
     pub min_max_output_size: f64,
+    /// Computation-to-communication ratio computed as `total_comp_size / total_transfers_size`.
+    pub comp_transfers_ratio: f64,
+    /// Longest path in the DAG measured in sum of flops of tasks on this path.
+    pub critical_path_size: f64,
+    /// Parallelism degree computed as `total_comp_size / critical_path_size`.
+    pub parallelism_degree: f64,
     /// Number of levels.
     pub depth: usize,
-    /// Size of the largest level.
+    /// Size of the largest level (number of tasks).
     pub width: usize,
-    /// Maximum number of tasks executed at the same time when executing
-    /// on one resource with infinite number of cores.
+    /// Maximum number of tasks that can be executed in parallel
+    /// (obtained by running the DAG on a single resource with infinite number of cores).
     pub max_parallelism: usize,
     /// Stats for each level.
     pub level_profiles: Vec<LevelProfile>,
@@ -100,11 +102,11 @@ pub struct LevelProfile {
     pub level: usize,
     /// Total number of tasks.
     pub task_count: usize,
-    /// Stats about task size.
+    /// Stats about task sizes.
     pub task_comp_size: SequenceStats,
-    /// Stats about input size for one task.
+    /// Stats about task input sizes.
     pub task_input_size: SequenceStats,
-    /// Stats about output size for one task.
+    /// Stats about task output sizes.
     pub task_output_size: SequenceStats,
     /// Total number of distinct predecessors.
     pub predecessor_count: usize,
@@ -133,9 +135,6 @@ impl DagStats {
             total_comp_size,
             total_data_size,
             total_transfers_size,
-            comp_transfers_ratio: total_comp_size / total_transfers_size,
-            critical_path_size,
-            parallelism_degree: total_comp_size / critical_path_size,
             input_data_size: dag.get_inputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
             output_data_size: dag.get_outputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
             max_input_size: dag
@@ -178,6 +177,9 @@ impl DagStats {
                 })
                 .min_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
+            comp_transfers_ratio: total_comp_size / total_transfers_size,
+            critical_path_size,
+            parallelism_degree: total_comp_size / critical_path_size,
             depth: levels.len(),
             width: levels.iter().map(|l| l.len()).max().unwrap(),
             max_parallelism: Self::get_max_parallelism(dag, &levels),
