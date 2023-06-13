@@ -1,6 +1,6 @@
 //! Scheduler implementations.
 
-mod common;
+pub mod common;
 pub mod dls;
 pub mod dynamic_list;
 pub mod heft;

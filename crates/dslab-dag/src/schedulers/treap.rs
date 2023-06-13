@@ -200,6 +200,12 @@ impl Treap {
     }
 }
 
+impl Default for Treap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::Rng;
