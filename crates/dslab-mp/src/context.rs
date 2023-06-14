@@ -24,14 +24,10 @@ impl Context {
         }
     }
 
-    pub fn from_mc(proc_name: String, state_depth: u64) -> Self {
-        // this ensures every step of model checking
-        // simulation represents 0.1s period
-        // it makes time value look more natual and closer to simulation time
-        let time = state_depth as f64 / 10.0;
+    pub fn create(proc_name: String, time: f64, clock_skew: f64) -> Self {
         Self {
             proc_name,
-            time,
+            time: time + clock_skew,
             sim_ctx: None,
             actions: Vec::new(),
         }

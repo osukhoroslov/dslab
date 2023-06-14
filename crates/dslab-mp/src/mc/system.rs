@@ -27,20 +27,21 @@ impl McSystem {
 
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
+        let event_time = Self::get_approximate_event_time(self.depth);
         let new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
-                    .on_message_received(dest, msg, src, self.depth)
+                    .on_message_received(dest, msg, src, event_time)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
-                    .on_timer_fired(proc, timer, self.depth)
+                    .on_timer_fired(proc, timer, event_time)
             }
             _ => vec![],
         };
@@ -72,5 +73,11 @@ impl McSystem {
 
     pub fn depth(&self) -> u64 {
         self.depth
+    }
+
+    fn get_approximate_event_time(depth: u64) -> f64 {
+        // every step of system execution in model checking advances the time by 0.1s
+        // this makes the time value look more natural and closer to the time in simulation
+        depth as f64 / 10.0
     }
 }

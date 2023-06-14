@@ -120,6 +120,10 @@ impl Node {
         self.clock_skew = clock_skew;
     }
 
+    pub(crate) fn get_clock_skew(&self) -> f64 {
+        self.clock_skew
+    }
+
     pub fn is_crashed(&self) -> bool {
         self.is_crashed
     }
