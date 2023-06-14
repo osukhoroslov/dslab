@@ -615,5 +615,9 @@ fn context_time(#[case] clock_skew: f64) {
     println!("{:#?}", result);
     assert!(result.is_ok());
     assert_eq!(goal_data.borrow().len(), 1);
-    assert_eq!(str::parse::<f64>(&goal_data.borrow()[0]).unwrap(), 0.1 + clock_skew);
+    assert_eq!(
+        str::parse::<f64>(&goal_data.borrow()[0]).unwrap(),
+        0.1 + clock_skew,
+        "expected timestamp formula 0.1 * depth + clock_skew"
+    );
 }
