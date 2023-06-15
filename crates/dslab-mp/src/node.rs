@@ -147,7 +147,7 @@ impl Node {
         self.processes.keys().cloned().collect()
     }
 
-    pub fn set_process_state(&mut self, proc: &str, state: Box<dyn ProcessState>) {
+    pub fn set_process_state(&mut self, proc: &str, state: Rc<dyn ProcessState>) {
         self.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
     }
 

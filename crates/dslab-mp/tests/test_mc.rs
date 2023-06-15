@@ -67,12 +67,12 @@ impl Process for CollectorNode {
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 
-    fn state(&self) -> Box<dyn ProcessState> {
-        boxed!(self.cnt.to_string())
+    fn state(&self) -> Rc<dyn ProcessState> {
+        rc!(self.cnt.to_string())
     }
 
-    fn set_state(&mut self, state: Box<dyn ProcessState>) {
-        let data = *state.downcast::<StringProcessState>().unwrap();
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+        let data = (*state.downcast_rc::<StringProcessState>().unwrap()).clone();
         self.cnt = data.parse::<u64>().unwrap();
     }
 }
@@ -113,11 +113,11 @@ impl Process for PostponedReceiverNode {
         }
     }
 
-    fn state(&self) -> Box<dyn ProcessState> {
-        boxed!(self.clone())
+    fn state(&self) -> Rc<dyn ProcessState> {
+        rc!(self.clone())
     }
 
-    fn set_state(&mut self, state: Box<dyn ProcessState>) {
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
         let postponed_state = (*state).as_any().downcast_ref::<Self>().unwrap();
         self.timer_fired = postponed_state.timer_fired;
         self.message = postponed_state.message.clone();
