@@ -1,4 +1,4 @@
-/// This file contains functions responsible for parsing Azure functions invocations 2021 trace and generating experiments using it.
+/// Functions for parsing Azure Functions 2021 trace and generating experiments using it.
 /// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md
 use std::collections::HashMap;
 use std::path::Path;
@@ -8,7 +8,7 @@ use csv::ReaderBuilder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use crate::extra::azure_trace::{ApplicationRecord, AzureTrace, FunctionRecord};
+use crate::extra::azure_trace_2019::{ApplicationRecord, AzureTrace, FunctionRecord};
 use crate::trace::RequestData;
 
 pub enum MemoryGenerator {
@@ -19,7 +19,7 @@ pub enum MemoryGenerator {
     PrefittedBurr,
 }
 
-pub struct AzureInvocationsTraceConfig {
+pub struct Azure2021TraceConfig {
     /// Simulation time period in seconds.
     pub time_period: f64,
     /// This option allows skipping a number of seconds from the start of the trace.
@@ -31,13 +31,13 @@ pub struct AzureInvocationsTraceConfig {
     pub concurrency_level: usize,
     /// This option sets the seed used to initialize random generator.
     pub random_seed: u64,
-    /// This options sets name for the memory resource.
+    /// This option sets name for the memory resource.
     pub memory_name: String,
     /// Cold start latency, currently it's the same for all apps.
     pub cold_start_latency: f64,
 }
 
-impl Default for AzureInvocationsTraceConfig {
+impl Default for Azure2021TraceConfig {
     fn default() -> Self {
         Self {
             time_period: 3600.,
@@ -56,8 +56,8 @@ fn burr_sample<R: Rng>(c: f64, k: f64, lambda: f64, rng: &mut R) -> f64 {
     lambda * ((1. - u).powf(-1. / k) - 1.).powf(1. / c)
 }
 
-/// This function parses Azure invocations trace and generates experiment.
-pub fn process_azure_invocations_trace(path: &Path, config: AzureInvocationsTraceConfig) -> AzureTrace {
+/// This function parses Azure Function 2021 trace and generates experiment.
+pub fn process_azure_2021_trace(path: &Path, config: Azure2021TraceConfig) -> AzureTrace {
     let mut gen = Pcg64::seed_from_u64(config.random_seed);
     let mut file = ReaderBuilder::new().from_path(path).unwrap();
     // data: (id, app id)

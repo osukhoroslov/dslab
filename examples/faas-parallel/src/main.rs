@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::Parser;
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
-use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
+use dslab_faas::extra::azure_trace_2019::{process_azure_2019_trace, AppPreference, Azure2019TraceConfig};
 use dslab_faas::parallel::{parallel_simulation, ParallelConfig, ParallelHostConfig};
 
 #[derive(Parser, Debug)]
@@ -15,12 +15,12 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let trace_config = AzureTraceConfig {
+    let trace_config = Azure2019TraceConfig {
         time_period: 60 * 20,
         app_preferences: vec![AppPreference::new(60, 0.45, 0.55)],
         ..Default::default()
     };
-    let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
+    let trace = Box::new(process_azure_2019_trace(Path::new(&args.trace), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
