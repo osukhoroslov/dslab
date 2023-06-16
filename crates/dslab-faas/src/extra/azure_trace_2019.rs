@@ -168,7 +168,7 @@ pub struct Azure2019TraceConfig {
     pub concurrency_level: usize,
     /// This option sets the seed used to initialize random generator.
     pub random_seed: u64,
-    /// This options sets name for the memory resource.
+    /// This option sets name for the memory resource.
     pub memory_name: String,
     /// This option forces trace generator to use given amount of memory for all apps.
     pub force_fixed_memory: Option<u64>,
