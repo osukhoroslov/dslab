@@ -2125,6 +2125,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "mp-kv-replication"
+version = "0.1.0"
+dependencies = [
+ "assertables",
+ "byteorder",
+ "clap 3.2.23",
+ "decorum",
+ "dslab-core",
+ "dslab-mp",
+ "dslab-mp-python",
+ "env_logger 0.9.3",
+ "log 0.4.17",
+ "md5",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "serde",
+ "serde_json",
+ "sugars",
+]
+
+[[package]]
 name = "mp-membership"
 version = "0.1.0"
 dependencies = [

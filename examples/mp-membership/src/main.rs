@@ -304,7 +304,7 @@ fn test_network_partition_recover(config: &TestConfig) -> TestResult {
     step_until_stabilized(&mut sys, group2.into_iter().map(String::from).collect())?;
 
     // network is recovered
-    sys.network().reset_network();
+    sys.network().reset();
     step_until_stabilized(&mut sys, group.into_iter().map(String::from).collect())
 }
 

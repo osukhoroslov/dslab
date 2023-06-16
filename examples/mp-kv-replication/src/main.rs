@@ -84,6 +84,7 @@ fn build_system(config: &TestConfig) -> System {
         let proc = config
             .proc_factory
             .build((proc_name.clone(), proc_names.clone()), config.seed);
+        // process and node on which it runs have the same name
         let node_name = proc_name.clone();
         sys.add_node(&node_name);
         sys.add_process(&proc_name, boxed!(proc), &node_name);
@@ -260,7 +261,7 @@ fn test_replicas_check(config: &TestConfig) -> TestResult {
 
     // disconnect each replica and check the stored value
     for replica in replicas.iter() {
-        sys.network().disconnect_node(&sys.proc_node_name(replica));
+        sys.network().disconnect_node(replica);
         check_get(&mut sys, replica, &key, 1, Some(&value), 100)?;
     }
     Ok(true)
@@ -327,16 +328,16 @@ fn test_stale_replica(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &replicas[0], &key, &value, 3, 100)?;
 
     // disconnect the last replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().disconnect_node(&replicas[2]);
 
     // update key from the first replica with quorum 2
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[0], &key, &value2, 2, 100)?;
 
     // disconnect the first replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
     // connect the last replica
-    sys.network().connect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().connect_node(&replicas[2]);
 
     // read key from the second replica with quorum 2
     // should update the last replica via read repair or anti-entropy
@@ -344,7 +345,7 @@ fn test_stale_replica(config: &TestConfig) -> TestResult {
 
     // step for a while and check whether the last replica got the recent value
     sys.steps(100);
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().disconnect_node(&replicas[2]);
     check_get(&mut sys, &replicas[2], &key, 1, Some(&value2), 100)
 }
 
@@ -360,22 +361,22 @@ fn test_stale_replica_delete(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &replicas[0], &key, &value, 3, 100)?;
 
     // disconnect the last replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().disconnect_node(&replicas[2]);
 
     // update key from the first replica with quorum 2
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[0], &key, &value2, 2, 100)?;
 
     // disconnect the first replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
     // connect the last replica
-    sys.network().connect_node(&sys.proc_node_name(&replicas[2]));
+    sys.network().connect_node(&replicas[2]);
 
     // delete key from the last replica (should return the last-written value)
     check_delete(&mut sys, &replicas[2], &key, 2, Some(&value2), 100)?;
 
     // connect the first replica
-    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().connect_node(&replicas[0]);
 
     // get key from the first replica (should return None)
     check_get(&mut sys, &replicas[0], &key, 2, None, 100)
@@ -396,7 +397,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
     // disconnect each replica and update key from it with quorum 1
     let mut new_values = Vec::new();
     for replica in replicas.iter() {
-        sys.network().disconnect_node(&sys.proc_node_name(replica));
+        sys.network().disconnect_node(replica);
         let value2 = random_string(8, &mut rand);
         check_put(&mut sys, replica, &key, &value2, 1, 100)?;
         new_values.push(value2);
@@ -409,7 +410,7 @@ fn test_diverged_replicas(config: &TestConfig) -> TestResult {
                 break;
             }
         }
-        sys.network().connect_node(&sys.proc_node_name(replica));
+        sys.network().connect_node(replica);
     }
 
     // read key from the first replica with quorum 3
@@ -427,14 +428,14 @@ fn test_sloppy_quorum_read(config: &TestConfig) -> TestResult {
     let non_replicas = key_non_replicas(&key, &sys);
 
     // disconnect the first replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
 
     // put key from the second replica with quorum 2
     let value = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[1], &key, &value, 2, 100)?;
 
     // disconnect the second replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[1]));
+    sys.network().disconnect_node(&replicas[1]);
 
     // read key from the last non-replica with quorum 2 (should use sloppy quorum)
     // since non-replicas do not store any value, the last replica's value should win
@@ -455,7 +456,7 @@ fn test_sloppy_quorum_write(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &procs[0], &key, &value, 3, 100)?;
 
     // temporarily disconnect the first replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
 
     // update key from the second replica with quorum 3 (should use sloppy quorum)
     let value2 = random_string(8, &mut rand);
@@ -465,11 +466,11 @@ fn test_sloppy_quorum_write(config: &TestConfig) -> TestResult {
     check_get(&mut sys, &replicas[2], &key, 3, Some(&value2), 100)?;
 
     // reconnect the first replica and let it receive the update
-    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().connect_node(&replicas[0]);
     sys.steps(100);
 
     // check if the first replica got update
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
     check_get(&mut sys, &replicas[0], &key, 1, Some(&value2), 100)
 }
 
@@ -487,19 +488,19 @@ fn test_sloppy_quorum_tricky(config: &TestConfig) -> TestResult {
     check_put(&mut sys, &procs[0], &key, &value, 3, 100)?;
 
     // temporarily disconnect the first replica
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().disconnect_node(&replicas[0]);
 
     // update key from the second replica with quorum 3 (should use sloppy quorum)
     let value2 = random_string(8, &mut rand);
     check_put(&mut sys, &replicas[1], &key, &value2, 3, 100)?;
 
     // disconnect all members of the previous sloppy quorum
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[1]));
-    sys.network().disconnect_node(&sys.proc_node_name(&replicas[2]));
-    sys.network().disconnect_node(&sys.proc_node_name(&non_replicas[0]));
+    sys.network().disconnect_node(&replicas[1]);
+    sys.network().disconnect_node(&replicas[2]);
+    sys.network().disconnect_node(&non_replicas[0]);
 
     // reconnect the first replica
-    sys.network().connect_node(&sys.proc_node_name(&replicas[0]));
+    sys.network().connect_node(&replicas[0]);
 
     // now we have only one node storing the key value:
     // - second replica: value (outdated)
@@ -510,7 +511,7 @@ fn test_sloppy_quorum_tricky(config: &TestConfig) -> TestResult {
     check_get(&mut sys, &non_replicas[2], &key, 2, Some(&value), 100)?;
 
     // reconnect the second replica
-    sys.network().connect_node(&sys.proc_node_name(&replicas[1]));
+    sys.network().connect_node(&replicas[1]);
 
     // read key from the last non-replica with quorum 2
     // (should try to contact the main replicas first and receive the new value)
@@ -580,7 +581,7 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
     check_get(&mut sys, client3, &key, 2, Some(&value3), 100)?;
 
     // heal partition
-    sys.network().reset_network();
+    sys.network().reset();
     sys.steps(100);
 
     // read key from all clients (should return the last-written value)
@@ -590,7 +591,7 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
 
     // check all replicas (should return the last-written value)
     for replica in replicas.iter() {
-        sys.network().disconnect_node(&sys.proc_node_name(replica));
+        sys.network().disconnect_node(replica);
         check_get(&mut sys, replica, &key, 1, Some(&value3), 100)?;
     }
     Ok(true)
@@ -628,7 +629,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
     if args.debug {
-        init_logger(LevelFilter::Trace);
+        init_logger(LevelFilter::Debug);
     }
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
 
