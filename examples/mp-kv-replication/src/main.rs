@@ -164,13 +164,13 @@ fn random_string(length: usize, rand: &mut Pcg64) -> String {
 }
 
 fn key_replicas(key: &str, sys: &System) -> Vec<String> {
-    let proc_count = sys.process_names().len() as u32;
+    let proc_count = sys.process_names().len();
     let mut replicas = Vec::new();
     let hash = md5::compute(key);
     let hash128 = LittleEndian::read_u128(&hash.0);
-    let mut replica = (hash128 % proc_count as u128) as u32;
+    let mut replica = (hash128 % proc_count as u128) as usize;
     for _ in 0..3 {
-        replicas.push(format!("{}", replica));
+        replicas.push(replica.to_string());
         replica += 1;
         if replica == proc_count {
             replica = 0;
