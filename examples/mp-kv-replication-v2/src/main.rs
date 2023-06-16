@@ -52,8 +52,8 @@ struct PutRespMessage<'a> {
 
 #[derive(Copy, Clone)]
 struct TestConfig<'a> {
-    process_factory: &'a PyProcessFactory,
-    process_count: u32,
+    proc_factory: &'a PyProcessFactory,
+    proc_count: u32,
     seed: u64,
 }
 
@@ -67,19 +67,18 @@ fn init_logger(level: LevelFilter) {
 fn build_system(config: &TestConfig) -> System {
     let mut sys = System::new(config.seed);
     sys.network().set_delays(0.01, 0.1);
-    let mut process_names = Vec::new();
-    for n in 0..config.process_count {
-        process_names.push(format!("{}", n));
+    let mut proc_names = Vec::new();
+    for n in 0..config.proc_count {
+        proc_names.push(format!("{}", n));
     }
-    for process_name in process_names.iter() {
-        let process = config
-            .process_factory
-            .build((process_name, process_names.clone()), config.seed);
-        let node_name = process_name;
-        sys.add_node(node_name);
-        sys.add_process(process_name, Box::new(process), process_name);
+    for proc_name in proc_names.iter() {
+        let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
+        // process and node on which it runs have the same name
+        let node_name = proc_name.clone();
+        sys.add_node(&node_name);
+        sys.add_process(proc_name, Box::new(proc), &node_name);
         let clock_skew = sys.gen_range(0.0..1.0);
-        sys.set_node_clock_skew(node_name, clock_skew);
+        sys.set_node_clock_skew(&node_name, clock_skew);
     }
     sys
 }
@@ -203,15 +202,15 @@ fn random_string(length: usize, rand: &mut Pcg64) -> String {
 }
 
 fn key_replicas(key: &str, sys: &System) -> Vec<String> {
-    let process_count = sys.process_names().len();
+    let proc_count = sys.process_names().len();
     let mut replicas = Vec::new();
     let hash = md5::compute(key);
     let hash128 = LittleEndian::read_u128(&hash.0);
-    let mut replica = (hash128 % process_count as u128) as usize;
+    let mut replica = (hash128 % proc_count as u128) as usize;
     for _ in 0..3 {
         replicas.push(replica.to_string());
         replica += 1;
-        if replica == process_count {
+        if replica == proc_count {
             replica = 0;
         }
     }
@@ -494,7 +493,7 @@ fn test_partitioned_clients(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     check_put(&mut sys, &procs[0], &key, &value, None, 3, 100)?;
 
-    // partition processes into two parts
+    // partition network into two parts
     let part1: Vec<&str> = vec![non_replica1, non_replica2, replica1];
     let part2: Vec<&str> = vec![non_replica3, replica2, replica3];
     sys.network().make_partition(&part1, &part2);
@@ -542,30 +541,30 @@ fn test_shopping_cart_1(config: &TestConfig) -> TestResult {
     let proc_1 = &non_replicas[0];
     let proc_2 = &non_replicas[1];
 
-    // proc_1: + milk
+    // proc_1: put [milk]
     let mut cart1 = vec!["milk"];
     let (values, ctx1) = check_put(&mut sys, proc_1, &key, &cart1.join(","), None, 2, 100)?;
     assume_eq!(values.len(), 1, "Expected single value")?;
     cart1 = values[0].split(',').collect();
 
-    // proc_2: + eggs
+    // proc_2: put [eggs]
     let mut cart2 = vec!["eggs"];
     let (values, ctx2) = check_put(&mut sys, proc_2, &key, &cart2.join(","), None, 2, 100)?;
     assume_eq!(values.len(), 1, "Expected single value")?;
     cart2 = values[0].split(',').collect();
 
-    // proc_1: + flour
+    // proc_1: put [flour]
     cart1.push("flour");
     let (values, ctx1) = check_put(&mut sys, proc_1, &key, &cart1.join(","), Some(ctx1), 2, 100)?;
     assume_eq!(values.len(), 1, "Expected single value")?;
     cart1 = values[0].split(',').collect();
 
-    // proc_2: + ham
+    // proc_2: put [ham]
     cart2.push("ham");
     let (values, _) = check_put(&mut sys, proc_2, &key, &cart2.join(","), Some(ctx2), 2, 100)?;
     assume_eq!(values.len(), 1, "Expected single value")?;
 
-    // proc_1: + flour
+    // proc_1: put [flour]
     cart1.push("bacon");
     let (values, _) = check_put(&mut sys, proc_1, &key, &cart1.join(","), Some(ctx1), 2, 100)?;
     assume_eq!(values.len(), 1, "Expected single value")?;
@@ -594,18 +593,18 @@ fn test_shopping_cart_2(config: &TestConfig) -> TestResult {
     let proc_2 = &non_replicas[1];
     let proc_3 = &non_replicas[2];
 
-    // proc_1: [beer, snacks]
+    // proc_1: put [beer, snacks]
     let cart0 = vec!["beer", "snacks"];
     let (_, ctx) = check_put(&mut sys, proc_1, &key, &cart0.join(","), None, 3, 100)?;
 
-    // partition processes into two parts
+    // partition network into two parts
     let part1: Vec<&str> = vec![proc_1, proc_2, replica1];
     let part2: Vec<&str> = vec![proc_3, replica2, replica3];
     sys.network().make_partition(&part1, &part2);
 
     // partition 1 -----------------------------------------------------------------------------------------------------
 
-    // proc_1: + milk
+    // proc_1: put [milk]
     let mut cart1 = cart0.clone();
     cart1.push("milk");
     check_put(&mut sys, proc_1, &key, &cart1.join(","), Some(ctx), 2, 100)?;
@@ -669,7 +668,7 @@ fn test_shopping_xcart_1(config: &TestConfig) -> TestResult {
     let cart0 = vec!["beer", "snacks"];
     let (_, ctx) = check_put(&mut sys, proc_1, &key, &cart0.join(","), None, 3, 100)?;
 
-    // partition nodes into two parts
+    // partition network into two parts
     let part1: Vec<&str> = vec![proc_1, proc_2, replica1];
     let part2: Vec<&str> = vec![proc_3, replica2, replica3];
     sys.network().make_partition(&part1, &part2);
@@ -738,19 +737,19 @@ fn test_shopping_xcart_2(config: &TestConfig) -> TestResult {
     let cart0 = vec!["lemonade", "snacks", "beer"];
     let (_, ctx) = check_put(&mut sys, proc_1, &key, &cart0.join(","), None, 3, 100)?;
 
-    // partition processes into two parts
+    // partition network into two parts
     let part1: Vec<&str> = vec![proc_1, proc_2, replica1];
     let part2: Vec<&str> = vec![proc_3, replica2, replica3];
     sys.network().make_partition(&part1, &part2);
 
     // partition 1 -----------------------------------------------------------------------------------------------------
 
-    // proc_1: remove lemonade, put milk
+    // proc_1: remove [lemonade], put [milk]
     let mut cart1 = cart0.clone();
     cart1.remove(0);
     cart1.push("milk");
     check_put(&mut sys, proc_1, &key, &cart1.join(","), Some(ctx), 2, 100)?;
-    // proc_2: read, + eggs
+    // proc_2: read, put [eggs]
     let (values, ctx) = check_get(&mut sys, proc_2, &key, 2, Some(vec![&cart1.join(",")]), 100)?;
     let mut cart2: Vec<_> = values[0].split(',').collect();
     cart2.push("eggs");
@@ -760,7 +759,7 @@ fn test_shopping_xcart_2(config: &TestConfig) -> TestResult {
 
     // partition 2 -----------------------------------------------------------------------------------------------------
 
-    // proc_3: read, remove [snacks, beer], put [cheese, wine], put snacks (back)
+    // proc_3: read, remove [snacks, beer], put [cheese, wine], put [snacks] (back)
     let (values, ctx) = check_get(&mut sys, proc_3, &key, 2, Some(vec![&cart0.join(",")]), 100)?;
     let mut cart3: Vec<_> = values[0].split(',').collect();
     cart3.clear();
@@ -811,9 +810,9 @@ struct Args {
     #[clap(long, short)]
     debug: bool,
 
-    /// Number of processes used in tests
+    /// Number of processes
     #[clap(long, short, default_value = "6")]
-    process_count: u32,
+    proc_count: u32,
 
     /// Random seed used in tests
     #[clap(long, short, default_value = "123")]
@@ -829,10 +828,11 @@ fn main() {
     }
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
-    let process_factory = PyProcessFactory::new(&args.solution_path, "StorageProcess");
+
+    let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
     let config = TestConfig {
-        process_factory: &process_factory,
-        process_count: args.process_count,
+        proc_factory: &proc_factory,
+        proc_count: args.proc_count,
         seed: args.seed,
     };
 

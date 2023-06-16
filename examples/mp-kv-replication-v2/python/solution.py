@@ -3,7 +3,7 @@ from dslabmp import Context, Message, Process
 from typing import List
 
 
-class StorageProcess(Process):
+class StorageNode(Process):
     def __init__(self, node_id: str, nodes: List[str]):
         self._id = node_id
         self._nodes = nodes
