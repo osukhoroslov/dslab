@@ -5,29 +5,35 @@ use dslab_faas::trace::Trace;
 
 use crate::common::Instance;
 use crate::estimator::{Estimation, Estimator};
-use crate::path_cover_estimator::path_cover;
 
 #[cxx::bridge]
 pub mod external {
     unsafe extern "C++" {
-        include!("dslab-faas-estimators/include/lp_lower_cplex.hpp");
+        include!("dslab-faas-estimators/include/benders.hpp");
 
-        pub fn lp_lower_bound(arrival: &[u64], duration: &[u64], app: &[u64], app_coldstart: &[u64], keepalive: u64, init_estimate: u64) -> u64;
+        pub fn benders(arrival: &[u64], duration: &[u64], app: &[u64], app_coldstart: &[u64], app_resources: &[Vec<u64>], host_resources: &[Vec<u64>], keepalive: u64, iterations: u64, max_cuts: u64) -> u64;
     }
 }
 
-pub struct LpLowerEstimator {
+#[derive(Copy, Clone, Default)]
+pub struct BendersConfig {
+    pub iterations: u64,
+    pub max_cuts: u64,
+}
+
+pub struct BendersLowerEstimator {
     keepalive: f64,
     round_mul: f64,
+    config: BendersConfig,
 }
 
-impl LpLowerEstimator {
-    pub fn new(keepalive: f64, round_mul: f64) -> Self {
-        Self { keepalive, round_mul }
+impl BendersLowerEstimator {
+    pub fn new(keepalive: f64, round_mul: f64, config: BendersConfig) -> Self {
+        Self { keepalive, round_mul, config }
     }
 }
 
-impl Estimator for LpLowerEstimator {
+impl Estimator for BendersLowerEstimator {
     type EstimationType = f64;
 
     fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
@@ -81,8 +87,9 @@ impl Estimator for LpLowerEstimator {
 
         let init_estimate = u64::MAX;//path_cover(&instance, true);
         let tmp = instance.req_app.iter().map(|x| *x as u64).collect::<Vec<_>>();
-        let obj = external::lp_lower_bound(&instance.req_start, &instance.req_dur, &tmp, &instance.app_coldstart, instance.keepalive, init_estimate);
         
+        let obj = external::benders(&instance.req_start, &instance.req_dur, &tmp, &instance.app_coldstart, &instance.apps, &instance.hosts, instance.keepalive,
+                                    self.config.iterations, self.config.max_cuts);
         Estimation::LowerBound((obj as f64) / self.round_mul)
     }
 }

@@ -95,7 +95,7 @@ uint64_t lp_lower_bound(
     size_t n = arrival.size();
     assert(n == duration.size());
     assert(n == app.size());
-    std::vector<std::vector<MPVariable*>> seq_var(n);
+    std::vector<std::vector<MPVariable*>> same(n);
     std::vector<std::vector<size_t>> can(n);
     std::vector<MPVariable*> first(n);
     std::vector<MPVariable*> start(n);
@@ -115,36 +115,40 @@ uint64_t lp_lower_bound(
     for (size_t i = 0; i < n; i++) {
         first[i] = solver->MakeBoolVar("");
         obj->SetCoefficient(first[i], app_coldstart[app[i]] / scale);
-        start[i] = solver->MakeNumVar(arrival[i]/scale, (arrival[i] + app_coldstart[app[i]]) / scale, "");
+        //start[i] = solver->MakeNumVar(arrival[i]/scale, (arrival[i] + app_coldstart[app[i]]) / scale, "");
+        start[i] = solver->MakeNumVar(arrival[i]/scale, horizon, "");
         obj->SetCoefficient(start[i], 1);
         if (init_estimate + 1 != 0) {
             obj_estimate->SetCoefficient(start[i], 1);
             obj_estimate->SetCoefficient(first[i], app_coldstart[app[i]] / scale);
         }
         for (size_t j = 0; j < i; j++) {
-            if (app[i] == app[j] && arrival[j] + duration[j] < arrival[i] + app_coldstart[app[i]] &&
-                    arrival[j] + duration[j] + 2 * app_coldstart[app[i]] + keepalive > arrival[i]) {
+            if (app[i] == app[j] && arrival[j] + duration[j] < arrival[i] + app_coldstart[app[i]]) { //&&
+                    //arrival[j] + duration[j] + 2 * app_coldstart[app[i]] + keepalive > arrival[i])
                 can[i].push_back(j);
-                seq_var[i].push_back(solver->MakeBoolVar(""));
+                same[i].push_back(solver->MakeBoolVar(""));
                 auto lb = solver->MakeRowConstraint(-infinity, bigM - duration[j] / scale);
                 lb->SetCoefficient(start[i], -1);
                 lb->SetCoefficient(start[j], 1);
                 lb->SetCoefficient(first[j], app_coldstart[app[j]] / scale);
-                lb->SetCoefficient(seq_var[i].back(), bigM);
+                lb->SetCoefficient(same[i].back(), bigM);
                 auto ub = solver->MakeRowConstraint(-bigM - duration[j] / scale - keepalive / scale, infinity);
                 ub->SetCoefficient(start[i], -1);
                 ub->SetCoefficient(start[j], 1);
                 ub->SetCoefficient(first[j], app_coldstart[app[j]] / scale);
-                ub->SetCoefficient(seq_var[i].back(), -bigM);
+                ub->SetCoefficient(same[i].back(), -bigM);
             }
         }
-        auto c = solver->MakeRowConstraint(1, 1);
-        c->SetCoefficient(first[i], 1);
-        for (auto v: seq_var[i]) {
-            c->SetCoefficient(v, 1);
+        auto from = solver->MakeRowConstraint(1, infinity);
+        auto to = solver->MakeRowConstraint(0, bigM);
+        from->SetCoefficient(first[i], 1);
+        to->SetCoefficient(first[i], bigM);
+        for (auto v: same[i]) {
+            from->SetCoefficient(v, 1);
+            to->SetCoefficient(v, 1);
         }
     }
-    for (size_t i = 0; i < n; i++) {
+    /*for (size_t i = 0; i < n; i++) {
         auto c = solver->MakeRowConstraint(0, 1);
         for (size_t j = i + 1; j < n; j++) {
             if (app[i] != app[j])
@@ -155,13 +159,14 @@ uint64_t lp_lower_bound(
                 c->SetCoefficient(seq_var[j][pos], 1);
             }
         }
-    }
+    }*/
     //std::cerr << "TOTAL VARS = " << solver->NumVariables() << std::endl;
     obj->SetMinimization();
     MPSolverParameters params{};
     params.SetDoubleParam(params.RELATIVE_MIP_GAP, 1.0 / (2 * base_horizon));
     const auto status = solver->Solve(params);
     assert(status == MPSolver::OPTIMAL);
+    std::cout << "EXEC TIME = " << std::fixed << double(solver->wall_time()) / 1000.0 << std::endl;
     //std::cerr << "RAW OBJ = " << std::fixed << obj->Value() << std::endl;
     //std::cerr << "OBJ = " << int64_t(obj->Value() * scale) << std::endl;
     //uint64_t cpsat = lp_lower_bound_cp_sat(arrival, duration, app, app_coldstart, keepalive);

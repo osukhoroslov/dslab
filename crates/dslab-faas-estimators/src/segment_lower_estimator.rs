@@ -72,7 +72,7 @@ impl Estimator for SegmentLowerEstimator {
         instance.req_start = Vec::new();
         let mut raw_items = Vec::<(u64, u64, usize)>::new();
         for item in trace.request_iter() {
-            raw_items.push(((item.time * self.round_mul).round() as u64, (item.duration * self.round_mul).round() as u64, item.id as usize));
+            raw_items.push(((item.time * self.round_mul).round() as u64, (item.duration * self.round_mul).ceil() as u64, item.id as usize));
         }
         raw_items.sort();
         for item in raw_items.drain(..) {
@@ -94,8 +94,9 @@ impl Estimator for SegmentLowerEstimator {
             if nxt[i] != usize::MAX {
                 delta = delta.min(instance.req_start[nxt[i]].max(instance.req_start[i] + instance.req_dur[i]) - instance.req_start[i] - instance.req_dur[i]);
             }
-            events.push((instance.req_start[i], i, true));
-            events.push((instance.req_start[i] + instance.req_dur[i] + delta, i, false));
+            delta = 0;
+            events.push((instance.req_start[i], i, -1));
+            events.push((instance.req_start[i] + instance.req_dur[i] + delta, i, 1));
         }
         events.sort();
         let mut segments = Vec::new();
@@ -112,7 +113,7 @@ impl Estimator for SegmentLowerEstimator {
                 ptr2 += 1;
             }
             for evt in &events[ptr..ptr2] {
-                if evt.2 {
+                if evt.2 == -1 {
                     cover[evt.1].0 = segments.len();
                     active.insert(evt.1);
                 } else {

@@ -5,29 +5,28 @@ use dslab_faas::trace::Trace;
 
 use crate::common::Instance;
 use crate::estimator::{Estimation, Estimator};
-use crate::path_cover_estimator::path_cover;
 
-#[cxx::bridge]
-pub mod external {
-    unsafe extern "C++" {
-        include!("dslab-faas-estimators/include/lp_lower_cplex.hpp");
+struct State {
 
-        pub fn lp_lower_bound(arrival: &[u64], duration: &[u64], app: &[u64], app_coldstart: &[u64], keepalive: u64, init_estimate: u64) -> u64;
-    }
-}
+};
 
-pub struct LpLowerEstimator {
+pub struct GAEstimator {
     keepalive: f64,
     round_mul: f64,
+    mutation_prob: f64,
 }
 
-impl LpLowerEstimator {
+impl GALowerEstimator {
     pub fn new(keepalive: f64, round_mul: f64) -> Self {
-        Self { keepalive, round_mul }
+        Self { 
+            keepalive, 
+            round_mul,
+            mutation_prob: 0.1,  
+        }
     }
 }
 
-impl Estimator for LpLowerEstimator {
+impl Estimator for GALowerEstimator {
     type EstimationType = f64;
 
     fn estimate(&mut self, config: &Config, trace: &dyn Trace) -> Estimation<Self::EstimationType> {
@@ -70,7 +69,7 @@ impl Estimator for LpLowerEstimator {
         instance.req_start = Vec::new();
         let mut raw_items = Vec::<(u64, u64, usize)>::new();
         for item in trace.request_iter() {
-            raw_items.push(((item.time * self.round_mul).round() as u64, (item.duration * self.round_mul).ceil() as u64, item.id as usize));
+            raw_items.push(((item.time * self.round_mul).round() as u64, (item.duration * self.round_mul).round() as u64, item.id as usize));
         }
         raw_items.sort();
         for item in raw_items.drain(..) {
@@ -79,10 +78,8 @@ impl Estimator for LpLowerEstimator {
             instance.req_start.push(item.0);
         }
 
-        let init_estimate = u64::MAX;//path_cover(&instance, true);
-        let tmp = instance.req_app.iter().map(|x| *x as u64).collect::<Vec<_>>();
-        let obj = external::lp_lower_bound(&instance.req_start, &instance.req_dur, &tmp, &instance.app_coldstart, instance.keepalive, init_estimate);
-        
-        Estimation::LowerBound((obj as f64) / self.round_mul)
+        let obj = run_ga(instance);
+
+        Estimation::UpperBound((obj as f64) / self.round_mul)
     }
 }

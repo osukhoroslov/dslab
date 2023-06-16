@@ -1,3 +1,4 @@
+pub mod benders_estimator;
 pub mod common;
 pub mod estimator;
 pub mod local_search_estimator;
