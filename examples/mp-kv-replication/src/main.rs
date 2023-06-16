@@ -628,6 +628,7 @@ fn main() {
         init_logger(LevelFilter::Debug);
     }
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
+    env::set_var("PYTHONHASHSEED", args.seed.to_string());
 
     let process_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
     let config = TestConfig {
