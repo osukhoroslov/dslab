@@ -1,4 +1,5 @@
-/// This file contains functions responsible for parsing Azure functions trace and generating experiments using it.
+/// Functions responsible for parsing Azure Functions 2019 trace and generating experiments using it.
+/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::read_dir;
@@ -151,7 +152,7 @@ pub enum StartGenerator {
     PoissonFit,
 }
 
-pub struct AzureTraceConfig {
+pub struct Azure2019TraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,
     /// This option allows skipping an integer number of minutes from the start of the trace.
@@ -167,7 +168,7 @@ pub struct AzureTraceConfig {
     pub concurrency_level: usize,
     /// This option sets the seed used to initialize random generator.
     pub random_seed: u64,
-    /// This options sets name for the memory resource.
+    /// This option sets name for the memory resource.
     pub memory_name: String,
     /// This option forces trace generator to use given amount of memory for all apps.
     pub force_fixed_memory: Option<u64>,
@@ -178,7 +179,7 @@ pub struct AzureTraceConfig {
     pub rps: Option<f64>,
 }
 
-impl Default for AzureTraceConfig {
+impl Default for Azure2019TraceConfig {
     fn default() -> Self {
         Self {
             time_period: 60,
@@ -196,8 +197,8 @@ impl Default for AzureTraceConfig {
     }
 }
 
-/// This function parses Azure trace and generates experiment.
-pub fn process_azure_trace(path: &Path, config: AzureTraceConfig) -> AzureTrace {
+/// This function parses Azure Functions 2019 trace and generates experiment.
+pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> AzureTrace {
     for pref in config.app_preferences.iter() {
         if let Err(e) = pref.validate() {
             panic!("{}", e);

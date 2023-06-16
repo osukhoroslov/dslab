@@ -10,8 +10,8 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
-use dslab_faas::extra::azure_trace::{
-    process_azure_trace, AppPreference, AzureTraceConfig, DurationGenerator, StartGenerator,
+use dslab_faas::extra::azure_trace_2019::{
+    process_azure_2019_trace, AppPreference, Azure2019TraceConfig, DurationGenerator, StartGenerator,
 };
 use dslab_faas::extra::resolvers::{extra_coldstart_policy_resolver, extra_scheduler_resolver};
 use dslab_faas::parallel::parallel_simulation_raw;
@@ -49,7 +49,7 @@ fn main() {
     let rps_vec = (1..15).map(|x| x as f64).collect::<Vec<f64>>();
     let mut points = vec![Vec::with_capacity(rps_vec.len()); schedulers.len()];
     for rps in rps_vec.iter() {
-        let trace_config = AzureTraceConfig {
+        let trace_config = Azure2019TraceConfig {
             time_period: 60,
             duration_generator: DurationGenerator::PrefittedLognormal,
             start_generator: StartGenerator::PoissonFit,
@@ -58,7 +58,7 @@ fn main() {
             rps: Some(*rps),
             ..Default::default()
         };
-        let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
+        let trace = Box::new(process_azure_2019_trace(Path::new(&args.trace), trace_config));
         println!(
             "trace processed successfully, got {} invocations at {} RPS",
             trace.trace_records.len(),

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use dslab_faas::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use dslab_faas::config::{ConfigParamResolvers, RawConfig};
-use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig};
+use dslab_faas::extra::azure_trace_2019::{process_azure_2019_trace, AppPreference, Azure2019TraceConfig};
 use dslab_faas::extra::hybrid_histogram::HybridHistogramPolicy;
 use dslab_faas::parallel::parallel_simulation_raw;
 use dslab_faas::stats::SampleMetric;
@@ -61,13 +61,13 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let trace_config = AzureTraceConfig {
+    let trace_config = Azure2019TraceConfig {
         time_period: 8 * 60,
         app_preferences: vec![AppPreference::new(68, 0.45, 0.55)],
         concurrency_level: 16,
         ..Default::default()
     };
-    let trace = Box::new(process_azure_trace(Path::new(&args.trace), trace_config));
+    let trace = Box::new(process_azure_2019_trace(Path::new(&args.trace), trace_config));
     println!(
         "trace processed successfully, {} invocations",
         trace.trace_records.len()
