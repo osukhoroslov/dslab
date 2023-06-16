@@ -9,7 +9,7 @@ use env_logger::Builder;
 use log::LevelFilter;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use rand_pcg::Pcg64;
+use rand_pcg::{Lcg128Xsl64, Pcg64};
 use serde::{Deserialize, Serialize};
 use sugars::boxed;
 
@@ -103,14 +103,19 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
         if measure_max_size {
             proc.set_max_size_freq(1000000);
         }
-        let node_name = format!("{}", n);
+        // process and node on which it runs have the same name
+        let node_name = proc_name.clone();
         sys.add_node(&node_name);
         sys.add_process(&proc_name, boxed!(proc), &node_name);
     }
     sys
 }
 
-fn add_node_with_process(name: &str, sys: &mut System, config: &TestConfig) {
+fn random_proc(sys: &System, rand: &mut Lcg128Xsl64) -> String {
+    sys.process_names().choose(rand).unwrap().clone()
+}
+
+fn add_node(name: &str, sys: &mut System, config: &TestConfig) {
     let proc_name = name.to_string();
     let mut proc_names = sys.process_names();
     proc_names.push(proc_name.clone());
@@ -207,7 +212,7 @@ fn step_until_stabilized(
     sys: &mut System,
     procs: &[String],
     expected_keys: u64,
-    steps_per_iter: u32,
+    steps_per_iter: u64,
     max_steps: u64,
 ) -> TestResult {
     let mut stabilized = false;
@@ -221,8 +226,8 @@ fn step_until_stabilized(
     }
 
     while !stabilized && steps <= max_steps {
-        sys.steps(steps_per_iter as u64);
-        steps += steps_per_iter as u64;
+        sys.steps(steps_per_iter);
+        steps += steps_per_iter;
         total_count = 0;
         let mut count_changed = false;
         for proc in procs.iter() {
@@ -401,10 +406,10 @@ fn test_deletes(config: &TestConfig) -> TestResult {
 
     // delete each key from one node and check that key is not present from another
     for (k, v) in kv.iter() {
-        let read_proc = sys.process_names().choose(&mut rand).unwrap().clone();
-        let mut delete_proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let read_proc = random_proc(&sys, &mut rand);
+        let mut delete_proc = random_proc(&sys, &mut rand);
         while delete_proc == read_proc {
-            delete_proc = sys.process_names().choose(&mut rand).unwrap().clone();
+            delete_proc = random_proc(&sys, &mut rand);
         }
         check_get(&mut sys, &read_proc, k, Some(v), 100)?;
         check_delete(&mut sys, &delete_proc, k, Some(v), 100)?;
@@ -426,7 +431,7 @@ fn test_memory_overhead(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
@@ -453,14 +458,14 @@ fn test_node_added(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
 
     // add new node to the system
     let added = sys.process_names().len().to_string();
-    add_node_with_process(&added, &mut sys, config);
+    add_node(&added, &mut sys, config);
     send_node_added(&mut sys, &added);
 
     // run the system until key the distribution is stabilized
@@ -480,13 +485,13 @@ fn test_node_removed(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
 
     // remove a node from the system
-    let removed = sys.process_names().choose(&mut rand).unwrap().clone();
+    let removed = random_proc(&sys, &mut rand);
     let count = count_records(&mut sys, &removed)?;
     assume!(count > 0, "Node stores no records, bad distribution")?;
     send_node_removed(&mut sys, &removed);
@@ -508,13 +513,13 @@ fn test_node_removed_after_crash(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
 
     // crash a node and remove it from the system (stored keys are lost)
-    let crashed = sys.process_names().choose(&mut rand).unwrap().clone();
+    let crashed = random_proc(&sys, &mut rand);
     let crashed_keys = dump_keys(&mut sys, &crashed)?;
     assume!(!crashed_keys.is_empty(), "Node stores no records, bad distribution")?;
     for k in crashed_keys {
@@ -541,7 +546,7 @@ fn test_migration(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
@@ -549,7 +554,7 @@ fn test_migration(config: &TestConfig) -> TestResult {
     // add new N nodes to the system
     for i in 0..config.proc_count {
         let added = format!("{}", config.proc_count + i);
-        add_node_with_process(&added, &mut sys, config);
+        add_node(&added, &mut sys, config);
         send_node_added(&mut sys, &added);
         procs.push(added);
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
@@ -579,7 +584,7 @@ fn test_scale_up_down(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
@@ -587,7 +592,7 @@ fn test_scale_up_down(config: &TestConfig) -> TestResult {
     // add new N nodes to the system
     for i in 0..config.proc_count {
         let added = format!("{}", config.proc_count + i);
-        add_node_with_process(&added, &mut sys, config);
+        add_node(&added, &mut sys, config);
         send_node_added(&mut sys, &added);
         procs.push(added);
         step_until_stabilized(&mut sys, &procs, kv.len() as u64, 100, 1000)?;
@@ -596,7 +601,7 @@ fn test_scale_up_down(config: &TestConfig) -> TestResult {
     check(&mut sys, &procs, &kv, false, false)?;
 
     // remove new N nodes
-    for _i in 0..config.proc_count {
+    for _ in 0..config.proc_count {
         let removed = &procs[config.proc_count as usize];
         send_node_removed(&mut sys, removed);
         procs.remove(config.proc_count as usize);
@@ -616,7 +621,7 @@ fn test_distribution(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
@@ -635,7 +640,7 @@ fn test_distribution_node_added(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
@@ -643,7 +648,7 @@ fn test_distribution_node_added(config: &TestConfig) -> TestResult {
 
     // add new node to the system
     let added = sys.process_names().len().to_string();
-    add_node_with_process(&added, &mut sys, config);
+    add_node(&added, &mut sys, config);
     send_node_added(&mut sys, &added);
 
     // run the system until key the distribution is stabilized
@@ -667,14 +672,14 @@ fn test_distribution_node_removed(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
+        let proc = random_proc(&sys, &mut rand);
         check_put(&mut sys, &proc, &k, &v, 100)?;
         kv.insert(k, v);
     }
     let dist_before = key_distribution(&mut sys)?;
 
     // remove a node from the system
-    let removed = sys.process_names().choose(&mut rand).unwrap().clone();
+    let removed = random_proc(&sys, &mut rand);
     let count = count_records(&mut sys, &removed)?;
     assume!(count > 0, "Node stores no records, bad distribution")?;
     send_node_removed(&mut sys, &removed);
@@ -722,7 +727,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
     if args.debug {
-        init_logger(LevelFilter::Trace);
+        init_logger(LevelFilter::Debug);
     }
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
 
