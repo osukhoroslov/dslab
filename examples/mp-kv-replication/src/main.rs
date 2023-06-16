@@ -630,9 +630,9 @@ fn main() {
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
 
-    let process_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
+    let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
     let config = TestConfig {
-        proc_factory: &process_factory,
+        proc_factory: &proc_factory,
         proc_count: args.proc_count,
         seed: args.seed,
     };
