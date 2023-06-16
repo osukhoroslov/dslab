@@ -198,13 +198,17 @@ fn count_records(sys: &mut System, proc: &str) -> Result<u64, String> {
 
 fn send_node_added(sys: &mut System, added: &str) {
     for proc in sys.process_names() {
-        sys.send_local_message(&proc, Message::json("NODE_ADDED", &NodeMessage { id: added }));
+        if !sys.proc_node_is_crashed(&proc) {
+            sys.send_local_message(&proc, Message::json("NODE_ADDED", &NodeMessage { id: added }));
+        }
     }
 }
 
 fn send_node_removed(sys: &mut System, removed: &str) {
     for proc in sys.process_names() {
-        sys.send_local_message(&proc, Message::json("NODE_REMOVED", &NodeMessage { id: removed }));
+        if !sys.proc_node_is_crashed(&proc) {
+            sys.send_local_message(&proc, Message::json("NODE_REMOVED", &NodeMessage { id: removed }));
+        }
     }
 }
 

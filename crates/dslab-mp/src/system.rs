@@ -180,9 +180,14 @@ impl System {
     }
 
     pub fn send_local_message(&mut self, proc: &str, msg: Message) {
-        self.proc_nodes[proc]
-            .borrow_mut()
-            .send_local_message(proc.to_string(), msg);
+        let mut node = self.proc_nodes[proc].borrow_mut();
+        assert!(
+            !node.is_crashed(),
+            "Cannot send local message to process {} on crashed node {}",
+            proc,
+            node.name
+        );
+        node.send_local_message(proc.to_string(), msg);
     }
 
     pub fn read_local_messages(&mut self, proc: &str) -> Vec<Message> {
