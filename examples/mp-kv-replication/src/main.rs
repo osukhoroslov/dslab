@@ -10,7 +10,6 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use serde::{Deserialize, Serialize};
-use sugars::boxed;
 
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
@@ -79,15 +78,12 @@ fn build_system(config: &TestConfig) -> System {
     for n in 0..config.proc_count {
         proc_names.push(format!("{}", n));
     }
-    for n in 0..config.proc_count {
-        let proc_name = proc_names[n as usize].clone();
-        let proc = config
-            .proc_factory
-            .build((proc_name.clone(), proc_names.clone()), config.seed);
+    for proc_name in proc_names.iter() {
+        let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
         // process and node on which it runs have the same name
         let node_name = proc_name.clone();
         sys.add_node(&node_name);
-        sys.add_process(&proc_name, boxed!(proc), &node_name);
+        sys.add_process(proc_name, Box::new(proc), &node_name);
     }
     sys
 }
