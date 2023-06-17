@@ -1,7 +1,7 @@
 //! Implementation of model checking DFS search strategy.
 
 use crate::mc::state::McState;
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
 use crate::mc::system::McSystem;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
@@ -9,6 +9,7 @@ pub struct Dfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
+    collect: CollectFn,
     execution_mode: ExecutionMode,
     summary: McSummary,
     visited: VisitedStates,
@@ -22,6 +23,7 @@ impl Dfs {
             prune,
             goal,
             invariant,
+            collect: Box::new(|_| false),
             execution_mode,
             summary: McSummary::default(),
             visited,
@@ -77,6 +79,10 @@ impl Strategy for Dfs {
 
     fn invariant(&mut self) -> &mut InvariantFn {
         &mut self.invariant
+    }
+
+    fn collect(&mut self) -> &mut CollectFn {
+        &mut self.collect
     }
 
     fn summary(&mut self) -> &mut McSummary {

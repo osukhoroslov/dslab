@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 
 use crate::mc::state::McState;
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
 use crate::mc::system::McSystem;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
@@ -11,6 +11,7 @@ pub struct Bfs {
     prune: PruneFn,
     goal: GoalFn,
     invariant: InvariantFn,
+    collect: CollectFn,
     states_queue: VecDeque<McState>,
     execution_mode: ExecutionMode,
     summary: McSummary,
@@ -25,6 +26,7 @@ impl Bfs {
             prune,
             goal,
             invariant,
+            collect: Box::new(|_| false),
             states_queue: VecDeque::new(),
             execution_mode,
             summary: McSummary::default(),
@@ -89,6 +91,10 @@ impl Strategy for Bfs {
 
     fn invariant(&mut self) -> &mut InvariantFn {
         &mut self.invariant
+    }
+
+    fn collect(&mut self) -> &mut CollectFn {
+        &mut self.collect
     }
 
     fn summary(&mut self) -> &mut McSummary {

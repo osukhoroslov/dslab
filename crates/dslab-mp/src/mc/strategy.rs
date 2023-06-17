@@ -52,7 +52,10 @@ pub enum VisitedStates {
 /// Model checking execution summary (used in Debug mode).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct McSummary {
-    pub(crate) states: HashMap<String, u32>,
+    /// Counters for statuses run achieved
+    pub statuses: HashMap<String, u32>,
+    /// States that were collected for future analysis usage with Collect predicate
+    pub collected_states: HashSet<McState>,
 }
 
 /// Decides whether to prune the executions originating from the given state.
@@ -66,6 +69,10 @@ pub type GoalFn = Box<dyn FnMut(&McState) -> Option<String>>;
 /// Checks if some invariant holds in the given state.
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
 pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
+
+/// Checks if given state should be collected.
+/// Returns true if the state should be collected for output and false otherwise
+pub type CollectFn = Box<dyn FnMut(&McState) -> bool>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
@@ -319,7 +326,7 @@ pub trait Strategy {
     /// Adds new information to model checking execution summary.
     fn update_summary(&mut self, status: String) {
         if let ExecutionMode::Debug = self.execution_mode() {
-            let counter = self.summary().states.entry(status).or_insert(0);
+            let counter = self.summary().statuses.entry(status).or_insert(0);
             *counter += 1;
         }
     }
@@ -345,6 +352,11 @@ pub trait Strategy {
         }
     }
 
+    /// Set collect predicate.
+    fn set_collect(&mut self, collect: CollectFn) {
+        *self.collect() = collect;
+    }
+
     /// Returns the used execution mode.
     fn execution_mode(&self) -> &ExecutionMode;
 
@@ -359,6 +371,9 @@ pub trait Strategy {
 
     /// Returns the invariant function.
     fn invariant(&mut self) -> &mut InvariantFn;
+
+    /// Returns the collect function.
+    fn collect(&mut self) -> &mut CollectFn;
 
     /// Returns the model checking execution summary.
     fn summary(&mut self) -> &mut McSummary;
