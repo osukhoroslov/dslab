@@ -20,8 +20,8 @@ pub struct MseCpuPowerModel {
 impl MseCpuPowerModel {
     /// Creates a MSE power model.
     ///
-    /// * `max_power` - The maximum power consumption in W (at 100% utilization).
-    /// * `min_power` - The minimum power consumption in W (at 0% utilization).
+    /// * `max_power` - The maximum power consumption in Watts (at 100% utilization).
+    /// * `min_power` - The minimum power consumption in Watts (at 0% utilization).
     /// * `r` - The calibration parameter set to minimize the MSE.
     pub fn new(max_power: f64, min_power: f64, r_param: f64) -> Self {
         Self {
@@ -34,7 +34,7 @@ impl MseCpuPowerModel {
 }
 
 impl CpuPowerModel for MseCpuPowerModel {
-    fn get_power(&self, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
         self.min_power + self.factor * (2. * utilization - utilization.powf(self.r_param))
     }
 }

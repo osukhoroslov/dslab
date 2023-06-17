@@ -23,8 +23,8 @@ pub struct AsymptoticCpuPowerModel {
 impl AsymptoticCpuPowerModel {
     /// Creates an asymptotic power model.
     ///
-    /// * `max_power` - The maximum power consumption in W (at 100% utilization).
-    /// * `min_power` - The minimum power consumption in W (at 0% utilization).
+    /// * `max_power` - The maximum power consumption in Watts (at 100% utilization).
+    /// * `min_power` - The minimum power consumption in Watts (at 0% utilization).
     /// * `tau` - The utilization level at which the server attains asymptotic power consumption.
     pub fn new(max_power: f64, min_power: f64, tau: f64) -> Self {
         Self {
@@ -37,7 +37,7 @@ impl AsymptoticCpuPowerModel {
 }
 
 impl CpuPowerModel for AsymptoticCpuPowerModel {
-    fn get_power(&self, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
         self.min_power + self.factor * (1. + utilization - E.powf(-utilization / self.tau)) / 2.
     }
 }

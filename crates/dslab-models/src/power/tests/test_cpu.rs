@@ -1,16 +1,20 @@
 //! Tests for CPU power models.
 
+use crate::power::cpu::CpuPowerModel;
 use crate::power::cpu_models::asymptotic::AsymptoticCpuPowerModel;
+use crate::power::cpu_models::constant::ConstantCpuPowerModel;
 use crate::power::cpu_models::cubic::CubicCpuPowerModel;
-use crate::power::cpu_models::dvfs::DVFSCpuPowerModel;
+use crate::power::cpu_models::dvfs::DvfsAwareCpuPowerModel;
 use crate::power::cpu_models::empirical::EmpiricalCpuPowerModel;
+use crate::power::cpu_models::linear::LinearCpuPowerModel;
 use crate::power::cpu_models::mse::MseCpuPowerModel;
 use crate::power::cpu_models::square::SquareCpuPowerModel;
-use crate::power::cpu_models::statefull::StatefullCpuPowerModel;
+use crate::power::cpu_models::state_based::StateBasedCpuPowerModel;
 use crate::power::hdd_models::constant::ConstantHddPowerModel;
 use crate::power::host::HostPowerModel;
 use crate::power::host::HostState;
 use crate::power::memory_models::constant::ConstantMemoryPowerModel;
+use std::collections::HashMap;
 
 #[test]
 fn test_mse_model() {
@@ -106,73 +110,44 @@ fn test_x3550_m3_xeon_x5675() {
 }
 
 #[test]
-fn test_dvfs_model() {
-    let model = HostPowerModel::cpu_only(Box::new(DVFSCpuPowerModel::new(0.4, 1.)));
-
-    let state = HostState::new(
-        /*cpu_util*/ Some(0.4),
-        /*cpu_freq*/ Some(0.7),
-        None,
-        None,
-        None,
-        None,
-        None,
-    );
-    assert!(model.get_power(state.clone()) > 0.59);
-    assert!(model.get_power(state) < 0.6);
+fn test_dvfs_aware_model() {
+    let model = HostPowerModel::cpu_only(Box::new(DvfsAwareCpuPowerModel::new(0.4, 0.4, 0.2)));
+    let state = HostState::cpu_util_freq(0.5, 0.75);
+    assert_eq!(model.get_power(state), 0.675);
 }
 
 #[test]
-fn test_dvfs_with_coefs_model() {
-    let model = HostPowerModel::cpu_only(Box::new(DVFSCpuPowerModel::new_with_coefs(0.4, 1., 0.3, 0.3)));
+fn test_state_based_model() {
+    let mut state_models: HashMap<&str, Box<dyn CpuPowerModel>> = HashMap::new();
+    state_models.insert("C2", Box::new(ConstantCpuPowerModel::new(5.)));
+    state_models.insert("C1", Box::new(ConstantCpuPowerModel::new(10.)));
+    state_models.insert("P1", Box::new(LinearCpuPowerModel::new(20., 40.)));
+    state_models.insert("P2", Box::new(LinearCpuPowerModel::new(40., 60.)));
+    state_models.insert("P3", Box::new(LinearCpuPowerModel::new(60., 100.)));
 
-    let state = HostState::new(
-        /*cpu_util*/ Some(0.4),
-        /*cpu_freq*/ Some(0.7),
-        None,
-        None,
-        None,
-        None,
-        None,
-    );
-    assert!(model.get_power(state.clone()) > 0.6);
-    assert!(model.get_power(state.clone()) < 0.61);
-}
+    let model = HostPowerModel::cpu_only(Box::new(StateBasedCpuPowerModel::new(state_models, "P3")));
 
-#[test]
-fn test_statefull_model() {
-    let default_model = Box::new(MseCpuPowerModel::new(1., 0.4, 1.4));
-    let p1_model = Box::new(SquareCpuPowerModel::new(1., 0.4));
+    // Test when the current CPU state is None (should use default state)
+    let state = HostState::new(/*cpu_util*/ Some(0.5), None, None, None, None, None, None);
+    assert_eq!(model.get_power(state), 80.);
 
-    let mut statefull_model = Box::new(StatefullCpuPowerModel::new(default_model));
-    statefull_model.add_cpu_model("P1".to_string(), p1_model);
+    // Test when the current CPU state is unknown (should use default state)
+    let state = HostState::cpu_util_state(0.4, "C0");
+    assert_eq!(model.get_power(state), 76.);
 
-    let model = HostPowerModel::cpu_only(statefull_model);
+    // Test P-states
+    let state = HostState::cpu_util_state(0.6, "P3");
+    assert_eq!(model.get_power(state), 84.);
+    let state = HostState::cpu_util_state(0.6, "P2");
+    assert_eq!(model.get_power(state), 52.);
+    let state = HostState::cpu_util_state(0.6, "P1");
+    assert_eq!(model.get_power(state), 32.);
 
-    // Test default state
-    let state_c2 = HostState::new(
-        /*cpu_util*/ Some(0.5),
-        None,
-        /*cpu_state*/ Some("C2".to_string()),
-        None,
-        None,
-        None,
-        None,
-    );
-    assert!(model.get_power(state_c2.clone()) > 0.77);
-    assert!(model.get_power(state_c2) < 0.78);
-
-    // Test manually specifyed state
-    let state_p1 = HostState::new(
-        /*cpu_util*/ Some(0.5),
-        None,
-        /*cpu_state*/ Some("P1".to_string()),
-        None,
-        None,
-        None,
-        None,
-    );
-    assert_eq!(model.get_power(state_p1.clone()), 0.55);
+    // Test C-states
+    let state = HostState::cpu_util_state(0., "C1");
+    assert_eq!(model.get_power(state), 10.);
+    let state = HostState::cpu_util_state(0., "C2");
+    assert_eq!(model.get_power(state), 5.);
 }
 
 #[test]

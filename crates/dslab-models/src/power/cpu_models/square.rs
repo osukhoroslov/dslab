@@ -14,8 +14,8 @@ pub struct SquareCpuPowerModel {
 impl SquareCpuPowerModel {
     /// Creates a square power model.
     ///
-    /// * `max_power` - The maximum power consumption in W (at 100% utilization).
-    /// * `min_power` - The minimum power consumption in W (at 0% utilization).
+    /// * `max_power` - The maximum power consumption in Watts (at 100% utilization).
+    /// * `min_power` - The minimum power consumption in Watts (at 0% utilization).
     pub fn new(max_power: f64, min_power: f64) -> Self {
         Self {
             min_power,
@@ -26,7 +26,7 @@ impl SquareCpuPowerModel {
 }
 
 impl CpuPowerModel for SquareCpuPowerModel {
-    fn get_power(&self, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
         self.min_power + self.factor * utilization.powf(2.)
     }
 }

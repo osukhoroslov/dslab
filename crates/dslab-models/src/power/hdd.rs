@@ -19,7 +19,7 @@ pub enum HddState {
 
 /// A model for estimating the power consumption of hard disk drive (HDD) based on its state.
 pub trait HddPowerModel: DynClone {
-    /// Returns the disk power consumption in W.
+    /// Returns the disk power consumption in Watts.
     fn get_power(&self, state: HddState) -> f64;
 }
 

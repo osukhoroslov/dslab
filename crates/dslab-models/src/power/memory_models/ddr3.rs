@@ -11,12 +11,12 @@ use crate::power::memory::MemoryPowerModel;
 /// 3) Read and write activities (RD/WR/Term power, 199.3 mW in paper) - 46%
 /// In addition, we split the third part into two pieces - write (89.1 mW or 20%) and read (110.1 mW or 26%).
 ///
-/// Then we assume that a typical 8GB DDR3 module consumes 3 W of power:
+/// Then we assume that a typical 8GB DDR3 module consumes 3 Watts of power:
 /// https://www.buildcomputers.net/power-consumption-of-pc-components.html
 /// https://www.crucial.com/support/articles-faq-memory/how-much-power-does-memory-use
 ///
 /// The total power consumption then relies on memory amount, e.g. a host with 240 GB of RAM has 30 such modules.
-/// Thus it consumes 90 W of power at maximum utilization.
+/// Thus it consumes 90 Watts of power at maximum utilization.
 #[derive(Clone)]
 pub struct Ddr3MemoryPowerModel {
     static_percentage: f64,

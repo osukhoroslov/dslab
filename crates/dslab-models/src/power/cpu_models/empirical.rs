@@ -4,7 +4,7 @@ use crate::power::cpu::CpuPowerModel;
 
 /// A power model based on measurements of actual power consumption at different utilization levels.
 ///
-/// The model uses 11 measurements corresponding to power consumption in W at utilization levels from 0% to 100%
+/// The model uses 11 measurements corresponding to power consumption in Watts at utilization levels from 0% to 100%
 /// with step 10%, such as measurements reported by the [SPECpower benchmark](https://www.spec.org/power_ssj2008/results/).
 ///
 /// The power consumption is computed using linear interpolation between the closest measurements.
@@ -36,7 +36,7 @@ impl EmpiricalCpuPowerModel {
 }
 
 impl CpuPowerModel for EmpiricalCpuPowerModel {
-    fn get_power(&self, utilization: f64) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
         if utilization % 0.1 == 0. {
             self.measurements[(utilization * 10.) as usize]
         } else {

@@ -11,14 +11,14 @@ pub struct ConstantCpuPowerModel {
 impl ConstantCpuPowerModel {
     /// Creates a constant power model.
     ///
-    /// * `power` - The power consumption in W.
+    /// * `power` - The power consumption in Watts.
     pub fn new(power: f64) -> Self {
         Self { power }
     }
 }
 
 impl CpuPowerModel for ConstantCpuPowerModel {
-    fn get_power(&self, _utilization: f64) -> f64 {
+    fn get_power(&self, _utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
         self.power
     }
 }

@@ -12,7 +12,9 @@ use crate::power::memory::MemoryPowerModel;
 pub struct HostState {
     /// CPU utilization from 0 to 1.
     pub cpu_util: Option<f64>,
-    /// CPU relative frequency from 0 to 1.
+    /// Relative scaling of CPU frequency from 0 to 1,
+    /// where 0 corresponds to the minimum CPU frequency
+    /// and 1 corresponds to the maximum CPU frequency.
     pub cpu_freq: Option<f64>,
     /// CPU state. P-state or C-state.
     pub cpu_state: Option<String>,
@@ -54,6 +56,35 @@ impl HostState {
             cpu_util: Some(cpu_util),
             cpu_freq: None,
             cpu_state: None,
+            memory_util: None,
+            memory_read_util: None,
+            memory_write_util: None,
+            hdd_state: None,
+        }
+    }
+
+    /// Shortcut for building HostState from CPU utilization and frequency only.
+    pub fn cpu_util_freq(cpu_util: f64, cpu_freq: f64) -> Self {
+        Self {
+            cpu_util: Some(cpu_util),
+            cpu_freq: Some(cpu_freq),
+            cpu_state: None,
+            memory_util: None,
+            memory_read_util: None,
+            memory_write_util: None,
+            hdd_state: None,
+        }
+    }
+
+    /// Shortcut for building HostState from CPU utilization and state only.
+    pub fn cpu_util_state<S>(cpu_util: f64, cpu_state: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self {
+            cpu_util: Some(cpu_util),
+            cpu_freq: None,
+            cpu_state: Some(cpu_state.into()),
             memory_util: None,
             memory_read_util: None,
             memory_write_util: None,
@@ -149,16 +180,12 @@ impl HostPowerModel {
         }
     }
 
-    /// Returns the power consumption of a host in W for a given host state.
+    /// Returns the power consumption of a host in Watts for a given host state.
     pub fn get_power(&self, host_state: HostState) -> f64 {
         let mut result = 0.;
         if let Some(model) = &self.cpu_power_model {
-            if let (Some(cpu_util), Some(cpu_freq)) = (host_state.cpu_util, host_state.cpu_freq) {
-                result += model.get_power_with_freq(cpu_util, cpu_freq);
-            } else if let (Some(cpu_state), Some(cpu_util)) = (host_state.cpu_state, host_state.cpu_util) {
-                result += model.get_power_with_state(cpu_util, cpu_state);
-            } else if let Some(cpu_util) = host_state.cpu_util {
-                result += model.get_power(cpu_util);
+            if let Some(cpu_util) = host_state.cpu_util {
+                result += model.get_power(cpu_util, host_state.cpu_freq, host_state.cpu_state);
             }
         }
         if let Some(model) = &self.memory_power_model {

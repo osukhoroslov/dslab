@@ -80,7 +80,7 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            host_power_model: HostPowerModel::cpu_only(Box::new(LinearCpuPowerModel::new(1., 0.4))),
+            host_power_model: HostPowerModel::cpu_only(Box::new(LinearCpuPowerModel::new(0.4, 1.))),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             batch_mode: false,
             batch_buffer: Vec::new(),
