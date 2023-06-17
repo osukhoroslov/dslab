@@ -1,6 +1,6 @@
 use dslab_core::simulation::Simulation;
 
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;
@@ -24,7 +24,7 @@ use dslab_iaas::simulation::CloudSimulation;
 fn check_placements(algorithm: VMPlacementAlgorithm, batch: bool, expected_hosts: Vec<&str>) {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file("test-configs/config_zero_latency.yaml");
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let host_ids = vec![
         cloud_sim.add_host_in_rack("h1", 10, 5, 0),

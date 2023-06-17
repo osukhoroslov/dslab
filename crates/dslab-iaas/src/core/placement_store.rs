@@ -11,7 +11,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
 use crate::core::common::{Allocation, AllocationVerdict};
-use crate::core::config::ConfigData;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest, VmCreateRequest,
@@ -39,7 +39,7 @@ pub struct PlacementStore {
     schedulers: HashSet<u32>,
     vm_api: Rc<RefCell<VmAPI>>,
     ctx: SimulationContext,
-    sim_config: ConfigData,
+    sim_config: SimulationConfig,
 }
 
 impl PlacementStore {
@@ -48,7 +48,7 @@ impl PlacementStore {
         allow_vm_overcommit: bool,
         vm_api: Rc<RefCell<VmAPI>>,
         ctx: SimulationContext,
-        sim_config: ConfigData,
+        sim_config: SimulationConfig,
     ) -> Self {
         Self {
             allow_vm_overcommit,
@@ -124,7 +124,7 @@ impl PlacementStore {
                 self.ctx.emit(
                     VmCreateRequest { vm_id: alloc.id },
                     host_id,
-                    *self.sim_config.message_delay,
+                    self.sim_config.message_delay,
                 );
             }
             for scheduler in self.schedulers.iter() {
@@ -134,7 +134,7 @@ impl PlacementStore {
                         host_ids: host_ids.clone(),
                     },
                     *scheduler,
-                    *self.sim_config.message_delay,
+                    self.sim_config.message_delay,
                 );
             }
         } else {
@@ -146,12 +146,12 @@ impl PlacementStore {
                         host_ids,
                     },
                     scheduler,
-                    *self.sim_config.message_delay,
+                    self.sim_config.message_delay,
                 );
                 self.ctx.emit(
                     AllocationRequest { vm_ids },
                     scheduler,
-                    *self.sim_config.message_delay + *self.sim_config.allocation_retry_period,
+                    self.sim_config.message_delay + self.sim_config.allocation_retry_period,
                 );
             }
         }
@@ -168,7 +168,7 @@ impl PlacementStore {
             self.ctx.emit(
                 AllocationFailed { vm_id, host_id },
                 *scheduler,
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }
@@ -183,7 +183,7 @@ impl PlacementStore {
             self.ctx.emit(
                 AllocationReleased { vm_id, host_id },
                 *scheduler,
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }

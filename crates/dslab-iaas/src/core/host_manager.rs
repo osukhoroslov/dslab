@@ -16,7 +16,7 @@ use dslab_core::{log_debug, log_trace};
 use dslab_models::power::host::{HostPowerModel, HostState};
 
 use crate::core::common::AllocationVerdict;
-use crate::core::config::ConfigData;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::energy_meter::EnergyMeter;
 use crate::core::events::allocation::{
     AllocationFailed, AllocationReleaseRequest, AllocationReleased, MigrationRequest, VmCreateRequest,
@@ -65,7 +65,7 @@ pub struct HostManager {
     slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
-    sim_config: Rc<ConfigData>,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl HostManager {
@@ -82,7 +82,7 @@ impl HostManager {
         power_model: HostPowerModel,
         slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
-        sim_config: Rc<ConfigData>,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
             id: ctx.id(),
@@ -260,7 +260,7 @@ impl HostManager {
                     host_id: self.id,
                 },
                 self.placement_store_id,
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
             false
         }
@@ -270,7 +270,7 @@ impl HostManager {
     fn on_migration_request(&mut self, source_host: u32, vm_id: u32) {
         if self.can_allocate(vm_id) == AllocationVerdict::Success {
             let vm = self.vm_api.borrow().get_vm(vm_id);
-            let migration_duration = (vm.borrow().memory_usage as f64) / (*self.sim_config.network_throughput as f64);
+            let migration_duration = (vm.borrow().memory_usage as f64) / (self.sim_config.network_throughput as f64);
             let start_duration = vm.borrow().start_duration();
 
             self.allocate(self.ctx.time(), vm);
@@ -350,7 +350,7 @@ impl HostManager {
                     host_id: self.id,
                 },
                 self.placement_store_id,
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
         }
     }
@@ -373,16 +373,16 @@ impl HostManager {
                 recently_removed_vms: mem::take(&mut self.recently_removed_vms),
             },
             self.monitoring_id,
-            *self.sim_config.message_delay,
+            self.sim_config.message_delay,
         );
         for (vm_id, status) in self.recent_vm_status_changes.drain() {
             self.ctx.emit(
                 VmStatusChanged { vm_id, status },
                 self.vm_api.borrow().get_id(),
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
         }
-        self.ctx.emit_self(SendHostState {}, *self.sim_config.send_stats_period);
+        self.ctx.emit_self(SendHostState {}, self.sim_config.send_stats_period);
     }
 }
 

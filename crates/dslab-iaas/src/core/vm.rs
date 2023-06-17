@@ -6,7 +6,7 @@ use std::rc::Rc;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 
-use crate::core::config::ConfigData;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::load_model::{ConstantLoadModel, LoadModel};
 
 /// Status of virtual machine.
@@ -92,7 +92,7 @@ pub struct VirtualMachine {
     start_time: f64,
     cpu_load_model: Box<dyn LoadModel>,
     memory_load_model: Box<dyn LoadModel>,
-    sim_config: Rc<ConfigData>,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl Serialize for VirtualMachine {
@@ -113,7 +113,7 @@ impl VirtualMachine {
         allocation_start_time: f64,
         lifetime: f64,
         resource_consumer: ResourceConsumer,
-        sim_config: Rc<ConfigData>,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
             id,
@@ -140,12 +140,12 @@ impl VirtualMachine {
 
     /// Returns VM start duration (the value is taken from the simulation config).
     pub fn start_duration(&self) -> f64 {
-        *self.sim_config.vm_start_duration
+        self.sim_config.vm_start_duration
     }
 
     /// Returns VM stop duration (the value is taken from the simulation config).
     pub fn stop_duration(&self) -> f64 {
-        *self.sim_config.vm_stop_duration
+        self.sim_config.vm_stop_duration
     }
 
     /// Sets VM start time. Can be called multiple times due to VM migration.

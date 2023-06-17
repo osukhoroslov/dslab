@@ -1,7 +1,7 @@
 //! Best Fit with threshold algorithm.
 
 use crate::core::common::{Allocation, AllocationVerdict};
-use crate::core::config::parse_options;
+use crate::core::config::exp_config::parse_options;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_placement_algorithm::SingleVMPlacementAlgorithm;

@@ -1695,6 +1695,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "iaas-experiment"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "csv",
+ "dslab-core",
+ "dslab-iaas",
+ "env_logger 0.8.4",
+ "log 0.4.17",
+ "rand 0.8.5",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "iaas-traces"
 version = "0.1.0"
 dependencies = [

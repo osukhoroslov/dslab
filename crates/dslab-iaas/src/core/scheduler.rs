@@ -10,7 +10,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::log_debug;
 
 use crate::core::common::Allocation;
-use crate::core::config::ConfigData;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
@@ -41,7 +41,7 @@ pub struct Scheduler {
     placement_store_id: u32,
     vm_placement_algorithm: VMPlacementAlgorithm,
     ctx: SimulationContext,
-    sim_config: Rc<ConfigData>,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl Scheduler {
@@ -53,7 +53,7 @@ impl Scheduler {
         placement_store_id: u32,
         vm_placement_algorithm: VMPlacementAlgorithm,
         ctx: SimulationContext,
-        sim_config: Rc<ConfigData>,
+        sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
             id: ctx.id(),
@@ -112,7 +112,7 @@ impl Scheduler {
     fn on_allocation_request(&mut self, vm_ids: Vec<u32>) {
         // check if request is timed out
         let start_time = self.vm_api.borrow().get_vm(vm_ids[0]).borrow().allocation_start_time;
-        if self.ctx.time() > start_time + *self.sim_config.vm_allocation_timeout {
+        if self.ctx.time() > start_time + self.sim_config.vm_allocation_timeout {
             for vm_id in vm_ids {
                 self.ctx.emit(
                     VmStatusChanged {
@@ -120,7 +120,7 @@ impl Scheduler {
                         status: VmStatus::FailedToAllocate,
                     },
                     self.vm_api.borrow().get_id(),
-                    *self.sim_config.message_delay,
+                    self.sim_config.message_delay,
                 );
             }
             return;
@@ -147,12 +147,12 @@ impl Scheduler {
                     host_ids: placements,
                 },
                 self.placement_store_id,
-                *self.sim_config.message_delay,
+                self.sim_config.message_delay,
             );
         } else {
             log_debug!(self.ctx, "failed to place {} vms", vm_ids.len());
             self.ctx
-                .emit_self(AllocationRequest { vm_ids }, *self.sim_config.allocation_retry_period);
+                .emit_self(AllocationRequest { vm_ids }, self.sim_config.allocation_retry_period);
         }
     }
 

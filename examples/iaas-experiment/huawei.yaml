@@ -1,21 +1,23 @@
-send_stats_period: 60
+send_stats_period: 10
 message_delay: 0.1
 allocation_retry_period: 60
 vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 36000
+simulation_length: 86400
+host_cpu_capacity: 64
+host_memory_capacity: 128
 step_duration: 500
 
 #Vms
 trace:
-    type: Azure
+    type: Huawei
     path: .
 
 # Hosts
 hosts:
-  - count: 150
+  - count: 50
     cpus: 64
     memory: 128
     name_prefix: h

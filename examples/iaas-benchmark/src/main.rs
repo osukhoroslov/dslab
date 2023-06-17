@@ -7,7 +7,7 @@ use rand::SeedableRng;
 
 use dslab_core::log_info;
 use dslab_core::simulation::Simulation;
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::first_fit::FirstFit;

@@ -1,38 +1,60 @@
 //! Tools for launching experiments with multiple environment configurations
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use sugars::{rc, refcell};
+
 use dslab_core::Simulation;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::exp_config::ExperimentConfig;
 use crate::simulation::CloudSimulation;
 
-/// Callback on test case finish, can be used to save or display single experiment run results
-pub trait OnTestCaseFinishedCallback {
-    fn on_experiment_finish(&self, _sim: &mut CloudSimulation)
-    {
+/// Callbacks on simulation events
+pub trait SimulationCallbacks {
+    fn on_simulation_start(&mut self, _sim: Rc<RefCell<CloudSimulation>>) {
+        // custom callback
+    }
+
+    fn on_step(&mut self, _sim: Rc<RefCell<CloudSimulation>>) {
+        // custom callback
+    }
+
+    fn on_simulation_finish(&mut self, _sim: Rc<RefCell<CloudSimulation>>) {
         // custom callback
     }
 }
 
 pub struct Experiment {
-    pub final_callback: Box<dyn OnTestCaseFinishedCallback>,
-    pub config: SimulationConfig,
+    pub callbacks: Box<dyn SimulationCallbacks>,
+    pub config: ExperimentConfig,
 }
 
 impl Experiment {
-    pub fn new(final_callback: Box<dyn OnTestCaseFinishedCallback>, config: SimulationConfig) -> Self
+    pub fn new(callbacks: Box<dyn SimulationCallbacks>, config: ExperimentConfig) -> Self
     where
         Self: Sized,
     {
-        Self { final_callback, config }
+        Self { callbacks, config }
     }
 
-    pub fn start(&mut self) {
-        while self.config.can_increment() {
+    pub fn run(&mut self) {
+        loop {
             let sim = Simulation::new(123);
-            let mut cloud_sim = CloudSimulation::new(sim, self.config.clone().data);
-            cloud_sim.step_for_duration(*self.config.data.simulation_length);
-            self.final_callback.on_experiment_finish(&mut cloud_sim);
-            self.config.increment();
+            let current_config = self.config.get();
+            let cloud_sim = rc!(refcell!(CloudSimulation::new(sim, current_config.clone())));
+            self.callbacks.on_simulation_finish(cloud_sim.clone());
+
+            while cloud_sim.borrow_mut().current_time() < current_config.simulation_length {
+                cloud_sim.borrow_mut().steps(1);
+                self.callbacks.on_step(cloud_sim.clone());
+            }
+            self.callbacks.on_simulation_finish(cloud_sim.clone());
+
+            if !self.config.has_next() {
+                break;
+            }
+            self.config.next();
         }
     }
 }

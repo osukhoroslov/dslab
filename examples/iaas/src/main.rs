@@ -2,7 +2,7 @@ use clap::Parser;
 use log::info;
 
 use dslab_core::simulation::Simulation;
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
@@ -24,7 +24,7 @@ fn init_logger() {
 fn example_two_schedulers() {
     let sim = Simulation::new(123);
     let config = SimulationConfig::from_file("config.yaml");
-    let mut cloud_sim = CloudSimulation::new(sim, config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
@@ -68,7 +68,7 @@ fn example_two_schedulers() {
 fn example_single_scheduler_overcommit() {
     let sim = Simulation::new(123);
     let config = SimulationConfig::from_file("config_with_infrastructure.yaml");
-    let mut cloud_sim = CloudSimulation::new(sim, config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, config);
     let scheduler_id = cloud_sim.lookup_id("s");
 
     let mut dataset = StandardDatasetReader::new();
@@ -92,7 +92,7 @@ fn example_single_scheduler_overcommit() {
 fn example_manual_migration() {
     let sim = Simulation::new(123);
     let config = SimulationConfig::from_file("config.yaml");
-    let mut cloud_sim = CloudSimulation::new(sim, config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     let h1 = cloud_sim.add_host("h1", 30, 30);
     let h2 = cloud_sim.add_host("h2", 30, 30);
@@ -148,7 +148,7 @@ impl LoadModel for DecreaseLoadModel {
 fn example_vm_migrator() {
     let sim = Simulation::new(123);
     let config = SimulationConfig::from_file("config_overcommit.yaml");
-    let mut cloud_sim = CloudSimulation::new(sim, config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, config);
 
     for i in 0..10 {
         cloud_sim.add_host(&format!("h{}", i), 50, 50);

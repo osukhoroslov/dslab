@@ -4,7 +4,8 @@ use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
 use dslab_iaas::core::common::Allocation;
-use dslab_iaas::core::config::{DynamicNumericVariable, SimulationConfig};
+use dslab_iaas::core::config::dynamic_variable::DynamicNumericVariable;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
@@ -27,7 +28,7 @@ fn name_wrapper(file_name: &str) -> String {
 fn test_energy_consumption() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 30, 30);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFit::new()));
@@ -46,7 +47,7 @@ fn test_energy_consumption() {
 fn test_first_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
@@ -80,7 +81,7 @@ fn test_first_fit() {
 fn test_best_fit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 80, 80);
@@ -114,7 +115,7 @@ fn test_best_fit() {
 fn test_no_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
@@ -138,7 +139,7 @@ fn test_no_overcommit() {
 fn test_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 200, 10000);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
@@ -162,7 +163,7 @@ fn test_overcommit() {
 fn test_no_memory_overcommit() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 200, 200);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(BestFitThreshold::new(1.0)));
@@ -207,7 +208,7 @@ impl SingleVMPlacementAlgorithm for BadScheduler {
 fn test_wrong_decision() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 100, 100);
     let h2 = cloud_sim.add_host("h2", 100, 100);
@@ -280,7 +281,7 @@ fn test_wrong_decision() {
 fn test_migration_simple() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
@@ -342,7 +343,7 @@ fn test_migration_simple() {
 fn test_double_migration() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_overcommit.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h1 = cloud_sim.add_host("h1", 200, 200);
     let h2 = cloud_sim.add_host("h2", 200, 200);
@@ -381,7 +382,7 @@ fn test_double_migration() {
 fn test_energy_consumption_override() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
     let power_model = HostPowerModel::cpu_only(Box::new(ConstantCpuPowerModel::new(1.)));
     cloud_sim.set_host_power_model(power_model);
 
@@ -405,7 +406,7 @@ fn test_energy_consumption_override() {
 fn test_slatah() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
     cloud_sim.set_slav_metric(Box::new(OverloadTimeFraction::new()));
 
     let h = cloud_sim.add_host("h", 40, 40);
@@ -425,7 +426,7 @@ fn test_slatah() {
 fn test_batch_request() {
     let sim = Simulation::new(123);
     let sim_config = SimulationConfig::from_file(&name_wrapper("config_zero_latency.yaml"));
-    let mut cloud_sim = CloudSimulation::new(sim, sim_config.data);
+    let mut cloud_sim = CloudSimulation::new(sim, sim_config);
 
     let h = cloud_sim.add_host("h", 50, 50);
     let s = cloud_sim.add_scheduler("s", VMPlacementAlgorithm::single(FirstFit::new()));

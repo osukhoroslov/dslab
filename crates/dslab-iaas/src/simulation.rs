@@ -13,7 +13,7 @@ use dslab_core::Id;
 use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 use dslab_models::power::host::HostPowerModel;
 
-use crate::core::config::ConfigData;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
@@ -32,7 +32,6 @@ use crate::extensions::dataset_reader::DatasetReader;
 use crate::extensions::dataset_type::VmDatasetType;
 use crate::extensions::huawei_dataset_reader::HuaweiDatasetReader;
 
-#[derive(Clone)]
 struct VMSpawnRequest {
     pub resource_consumer: ResourceConsumer,
     pub lifetime: f64,
@@ -43,7 +42,6 @@ struct VMSpawnRequest {
 /// Represents a simulation, provides methods for its configuration and execution.
 ///
 /// It encapsulates all simulation components and provides convenient access to them for the user.
-#[derive(Clone)]
 pub struct CloudSimulation {
     monitoring: Rc<RefCell<Monitoring>>,
     vm_api: Rc<RefCell<VmAPI>>,
@@ -57,12 +55,12 @@ pub struct CloudSimulation {
     batch_buffer: Vec<VMSpawnRequest>,
     sim: Simulation,
     ctx: SimulationContext,
-    sim_config: Rc<ConfigData>,
+    sim_config: Rc<SimulationConfig>,
 }
 
 impl CloudSimulation {
     /// Creates a simulation with specified config.
-    pub fn new(mut sim: Simulation, sim_config: ConfigData) -> Self {
+    pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
         let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
         sim.add_handler("monitoring", monitoring.clone());
 
@@ -133,7 +131,7 @@ impl CloudSimulation {
             match dataset_config.r#type {
                 VmDatasetType::Azure => {
                     let mut dataset = AzureDatasetReader::new(
-                        *sim.sim_config.simulation_length,
+                        sim.sim_config.simulation_length,
                         sim.sim_config.hosts.get(0).unwrap().cpus as f64,
                         sim.sim_config.hosts.get(0).unwrap().memory as f64,
                     );
@@ -144,7 +142,7 @@ impl CloudSimulation {
                     sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
                 }
                 VmDatasetType::Huawei => {
-                    let mut dataset = HuaweiDatasetReader::new(*sim.sim_config.simulation_length);
+                    let mut dataset = HuaweiDatasetReader::new(sim.sim_config.simulation_length);
                     dataset.parse(format!("{}/Huawei-East-1.csv", dataset_config.path));
                     sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
                 }
@@ -341,7 +339,7 @@ impl CloudSimulation {
         self.ctx.emit(
             MigrationRequest { source_host, vm_id },
             target_host,
-            *self.sim_config.message_delay,
+            self.sim_config.message_delay,
         );
     }
 
@@ -479,13 +477,8 @@ impl CloudSimulation {
     }
 
     /// Returns the simulation config.
-    pub fn sim_config(&self) -> Rc<ConfigData> {
+    pub fn sim_config(&self) -> Rc<SimulationConfig> {
         self.sim_config.clone()
-    }
-
-    /// Sets new config value.
-    pub fn set_sim_config(&mut self, config: ConfigData) {
-        self.sim_config = rc!(config);
     }
 
     /// Returns the identifier of component by its name.
