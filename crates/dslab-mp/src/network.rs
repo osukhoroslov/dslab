@@ -205,7 +205,7 @@ impl Network {
         });
     }
 
-    pub fn reset_network(&mut self) {
+    pub fn reset(&mut self) {
         self.disabled_links.clear();
         self.drop_incoming.clear();
         self.drop_outgoing.clear();
