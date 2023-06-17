@@ -1,5 +1,7 @@
 use std::cell::RefCell;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::mc::events::{McEvent, McEventId};
@@ -28,20 +30,21 @@ impl McSystem {
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         let event_time = Self::get_approximate_event_time(self.depth);
+        let state_hash = self.get_state_hash();
         let new_events = match event {
             McEvent::MessageReceived { msg, src, dest, .. } => {
                 let name = self.net.borrow().get_proc_node(&dest).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
-                    .on_message_received(dest, msg, src, event_time)
+                    .on_message_received(dest, msg, src, event_time, state_hash)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
-                    .on_timer_fired(proc, timer, event_time)
+                    .on_timer_fired(proc, timer, event_time, state_hash)
             }
             _ => vec![],
         };
@@ -79,5 +82,11 @@ impl McSystem {
         // every step of system execution in model checking advances the time by 0.1s
         // this makes the time value look more natural and closer to the time in simulation
         depth as f64 / 10.0
+    }
+
+    fn get_state_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::default();
+        self.get_state().hash(&mut hasher);
+        hasher.finish()
     }
 }
