@@ -35,7 +35,7 @@ impl ModelChecker {
             let node = sys.get_node(&node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(node.processes(), mc_net.clone(), node.get_clock_skew()),
+                McNode::new(node.processes(), mc_net.clone(), node.clock_skew()),
             );
         }
 

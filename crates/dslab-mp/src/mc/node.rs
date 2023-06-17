@@ -89,7 +89,7 @@ impl McNode {
         ));
         proc_entry.received_message_count += 1;
 
-        let mut proc_ctx = Context::create(proc.to_string(), time, self.clock_skew);
+        let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
@@ -98,7 +98,7 @@ impl McNode {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
-        let mut proc_ctx = Context::create(proc.to_string(), time, self.clock_skew);
+        let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }

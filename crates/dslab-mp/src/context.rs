@@ -24,7 +24,7 @@ impl Context {
         }
     }
 
-    pub fn create(proc_name: String, time: f64, clock_skew: f64) -> Self {
+    pub fn basic(proc_name: String, time: f64, clock_skew: f64) -> Self {
         Self {
             proc_name,
             time: time + clock_skew,

@@ -612,7 +612,6 @@ fn context_time(#[case] clock_skew: f64) {
     sys.send_local_message("process", Message::new("PING", "some_data"));
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
-    println!("{:#?}", result);
     assert!(result.is_ok());
     assert_eq!(goal_data.borrow().len(), 1);
     assert_eq!(
