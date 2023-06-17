@@ -514,7 +514,7 @@ fn test_partitioned_clients(config: &TestConfig) -> TestResult {
     check_get(&mut sys, non_replica3, &key, 2, Some(vec![&value3]), 100)?;
 
     // heal partition
-    sys.network().reset_network();
+    sys.network().reset();
     sys.steps(100);
 
     // read key from all non-replicas
@@ -629,7 +629,7 @@ fn test_shopping_cart_2(config: &TestConfig) -> TestResult {
     check_get(&mut sys, replica2, &key, 2, Some(vec![&cart3.join(",")]), 100)?;
 
     // heal partition --------------------------------------------------------------------------------------------------
-    sys.network().reset_network();
+    sys.network().reset();
     sys.steps(100);
 
     // read key from all non-replica nodes
@@ -700,7 +700,7 @@ fn test_shopping_xcart_1(config: &TestConfig) -> TestResult {
     check_get(&mut sys, replica2, &key, 2, Some(vec![&cart3.join(",")]), 100)?;
 
     // heal partition --------------------------------------------------------------------------------------------------
-    sys.network().reset_network();
+    sys.network().reset();
     sys.steps(100);
 
     // read key from all non-replica nodes
@@ -773,7 +773,7 @@ fn test_shopping_xcart_2(config: &TestConfig) -> TestResult {
     check_get(&mut sys, replica2, &key, 2, Some(vec![&cart3.join(",")]), 100)?;
 
     // heal partition --------------------------------------------------------------------------------------------------
-    sys.network().reset_network();
+    sys.network().reset();
     sys.steps(100);
 
     // read key from all non-replica nodes
