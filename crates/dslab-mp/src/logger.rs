@@ -31,6 +31,10 @@ impl Logger {
         Self { log_file }
     }
 
+    pub fn has_log_file(&self) -> bool {
+        self.log_file.is_some()
+    }
+
     pub fn log(&mut self, event: LogEntry) {
         if let Some(log_file) = self.log_file.as_mut() {
             let serialized = serde_json::to_string(&event).unwrap();
