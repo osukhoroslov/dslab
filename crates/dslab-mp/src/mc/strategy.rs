@@ -34,9 +34,6 @@ pub enum LogContext {
     /// Nothing happened to the message.
     Default,
 
-    /// Message was duplicated.
-    Duplicated,
-
     /// Message data was corrupted.
     Corrupted,
 }
@@ -283,13 +280,6 @@ pub trait Strategy {
         match log_context {
             LogContext::Default => {
                 t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
-            }
-            LogContext::Duplicated => {
-                t!(format!(
-                    "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
-                    "~~~", src, dest, msg
-                )
-                .blue());
             }
             LogContext::Corrupted => {
                 t!(format!("{:?} <-- message corrupted", msg).red());
