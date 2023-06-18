@@ -65,14 +65,26 @@ pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<McNetwork>>,
+    clock_skew: f64,
 }
 
 impl McNode {
-    pub(crate) fn new(processes: HashMap<String, ProcessEntry>, net: Rc<RefCell<McNetwork>>) -> Self {
-        Self { processes, net }
+    pub(crate) fn new(processes: HashMap<String, ProcessEntry>, net: Rc<RefCell<McNetwork>>, clock_skew: f64) -> Self {
+        Self {
+            processes,
+            net,
+            clock_skew,
+        }
     }
 
-    pub fn on_message_received(&mut self, proc: String, msg: Message, from: String) -> Vec<McEvent> {
+    pub fn on_message_received(
+        &mut self,
+        proc: String,
+        msg: Message,
+        from: String,
+        time: f64,
+        random_seed: u64,
+    ) -> Vec<McEvent> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             0.0,
@@ -84,16 +96,16 @@ impl McNode {
         ));
         proc_entry.received_message_count += 1;
 
-        let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
+        let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
-    pub fn on_timer_fired(&mut self, proc: String, timer: String) -> Vec<McEvent> {
+    pub fn on_timer_fired(&mut self, proc: String, timer: String, time: f64, random_seed: u64) -> Vec<McEvent> {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
-        let mut proc_ctx = Context::new(proc.to_string(), None, 0.0);
+        let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }

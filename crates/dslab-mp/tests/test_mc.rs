@@ -151,6 +151,21 @@ impl Process for SpammerNode {
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 }
 
+#[derive(Clone, Default)]
+struct TimerNode {}
+
+impl Process for TimerNode {
+    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) {}
+
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+        ctx.set_timer("timer", 0.1);
+    }
+
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+        ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()))
+    }
+}
+
 fn build_ping_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
@@ -198,6 +213,15 @@ fn build_spammer_delivery_system() -> System {
     sys
 }
 
+fn build_timer_system(clock_skew: f64) -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node");
+    sys.set_node_clock_skew("node", clock_skew);
+    let process = boxed!(TimerNode::default());
+    sys.add_process("process", process, "node");
+    sys
+}
+
 fn create_strategy(
     strategy_name: String,
     prune: PruneFn,
@@ -229,10 +253,10 @@ fn build_one_message_goal() -> GoalFn {
     })
 }
 
-fn build_one_message_get_data_goal(goal_data: Rc<RefCell<Vec<String>>>) -> GoalFn {
+fn build_one_message_get_data_goal(node: String, proc: String, goal_data: Rc<RefCell<Vec<String>>>) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.node_states["node2"]["process2"].local_outbox.len() == 1 {
-            (*goal_data.borrow_mut()).push(state.node_states["node2"]["process2"].local_outbox[0].data.clone());
+        if state.node_states[&node][&proc].local_outbox.len() == 1 {
+            (*goal_data.borrow_mut()).push(state.node_states[&node][&proc].local_outbox[0].data.clone());
             Some("final".to_string())
         } else {
             None
@@ -469,7 +493,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
     let goal_data = rc!(refcell!(vec![]));
-    let goal = build_one_message_get_data_goal(goal_data.clone());
+    let goal = build_one_message_get_data_goal("node2".to_string(), "process2".to_string(), goal_data.clone());
 
     let invariant = boxed!(|_: &McState| Ok(()));
 
@@ -572,4 +596,27 @@ fn many_dropped_messages(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
     assert!(result.is_ok());
+}
+
+#[rstest]
+#[case(0.0)]
+#[case(0.1)]
+fn context_time(#[case] clock_skew: f64) {
+    let prune = boxed!(|_: &McState| None);
+    let goal_data = rc!(refcell!(vec![]));
+    let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
+    let invariant = boxed!(|_: &McState| Ok(()));
+
+    let strategy = create_strategy("dfs".to_string(), prune, goal, invariant, ExecutionMode::Default);
+    let mut sys = build_timer_system(clock_skew);
+    sys.send_local_message("process", Message::new("PING", "some_data"));
+    let mut mc = ModelChecker::new(&sys, strategy);
+    let result = mc.run();
+    assert!(result.is_ok());
+    assert_eq!(goal_data.borrow().len(), 1);
+    assert_eq!(
+        str::parse::<f64>(&goal_data.borrow()[0]).unwrap(),
+        0.1 + clock_skew,
+        "expected timestamp formula: 0.1 * depth + clock_skew"
+    );
 }

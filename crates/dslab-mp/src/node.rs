@@ -120,6 +120,10 @@ impl Node {
         self.clock_skew = clock_skew;
     }
 
+    pub(crate) fn clock_skew(&self) -> f64 {
+        self.clock_skew
+    }
+
     pub fn is_crashed(&self) -> bool {
         self.is_crashed
     }
@@ -200,7 +204,7 @@ impl Node {
             time,
             ProcessEvent::LocalMessageReceived { msg: msg.clone() },
         ));
-        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
+        let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
@@ -227,7 +231,7 @@ impl Node {
             },
         ));
         proc_entry.received_message_count += 1;
-        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
+        let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
@@ -248,7 +252,7 @@ impl Node {
                 proc: proc.clone(),
             });
         }
-        let mut proc_ctx = Context::new(proc.clone(), Some(self.ctx.clone()), self.clock_skew);
+        let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
         proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
