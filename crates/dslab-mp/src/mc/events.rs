@@ -61,6 +61,18 @@ pub enum McEvent {
         /// The name of the process the message was sent to.
         dest: String,
     },
+
+    /// The event of duplicating a message. Created by model checking strategy.
+    MessageDuplicated {
+        /// The duplicated message itself.
+        msg: Message,
+
+        /// The name of the process that sent the message.
+        src: String,
+
+        /// The name of the process the message was sent to.
+        dest: String,
+    },
 }
 
 impl McEvent {
@@ -118,6 +130,11 @@ impl McEvent {
                 timer: timer.clone(),
             },
             Self::MessageDropped { msg, src, dest } => LogEntry::McMessageDropped {
+                msg: msg.clone(),
+                src: src.clone(),
+                dest: dest.clone(),
+            },
+            Self::MessageDuplicated { msg, src, dest } => LogEntry::McMessageDuplicated {
                 msg: msg.clone(),
                 src: src.clone(),
                 dest: dest.clone(),
