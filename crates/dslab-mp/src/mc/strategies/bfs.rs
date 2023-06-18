@@ -3,7 +3,9 @@
 use std::collections::VecDeque;
 
 use crate::mc::state::McState;
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McStats, PruneFn, Strategy, VisitedStates, CollectFn, McResult};
+use crate::mc::strategy::{
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+};
 use crate::mc::system::McSystem;
 
 /// The search strategy based on the [BFS](https://en.wikipedia.org/wiki/Breadth-first_search) algorithm.
