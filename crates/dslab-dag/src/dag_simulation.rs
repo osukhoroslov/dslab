@@ -70,7 +70,9 @@ impl DagSimulation {
                     name: r.name.clone(),
                     compute,
                     speed: r.speed,
+                    cores: r.cores,
                     cores_available: r.cores,
+                    memory: r.memory,
                     memory_available: r.memory,
                 }
             })
