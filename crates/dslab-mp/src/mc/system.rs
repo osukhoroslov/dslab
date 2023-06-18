@@ -56,7 +56,10 @@ impl McSystem {
     }
 
     pub fn send_local_message(&mut self, node: String, proc: String, msg: Message) {
-        let new_events = self.nodes.get_mut(&node).unwrap().on_local_message_received(proc, msg);
+        let event_time = Self::get_approximate_event_time(self.depth);
+        let state_hash = self.get_state_hash();
+
+        let new_events = self.nodes.get_mut(&node).unwrap().on_local_message_received(proc, msg, event_time, state_hash);
         for new_event in new_events {
             self.events.push(new_event);
         }
