@@ -236,9 +236,7 @@ pub trait Strategy {
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
         let duplication_event = match event.clone() {
-            MessageReceived { msg, src, dest, .. } => {
-                MessageDuplicated { msg, src, dest }
-            }
+            MessageReceived { msg, src, dest, .. } => MessageDuplicated { msg, src, dest },
             _ => {
                 panic!("Duplication is only allowed for messages")
             }
