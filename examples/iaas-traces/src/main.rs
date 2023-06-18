@@ -62,16 +62,20 @@ fn simulation_with_traces(sim_config: SimulationConfig, dataset: &mut dyn Datase
     loop {
         cloud_sim.step_for_duration(sim_config.step_duration);
 
+        let cpu_allocation_rate = cloud_sim.cpu_allocation_rate();
+        let memory_allocation_rate = cloud_sim.memory_allocation_rate();
+        let average_cpu_load = cloud_sim.average_cpu_load();
+        let average_memory_load = cloud_sim.average_memory_load();
         log_info!(
             cloud_sim.context(),
             concat!(
                 "CPU allocation rate: {:.2?}, memory allocation rate: {:.2?},",
                 " CPU load rate: {:.2?}, memory load rate: {:.2?}"
             ),
-            cloud_sim.clone().cpu_allocation_rate(),
-            cloud_sim.clone().memory_allocation_rate(),
-            cloud_sim.clone().average_cpu_load(),
-            cloud_sim.clone().average_memory_load()
+            cpu_allocation_rate,
+            memory_allocation_rate,
+            average_cpu_load,
+            average_memory_load
         );
         accumulated_cpu_utilization += cloud_sim.cpu_allocation_rate();
         num_of_iterations += 1;
