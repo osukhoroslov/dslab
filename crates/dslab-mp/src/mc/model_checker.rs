@@ -81,7 +81,9 @@ impl ModelChecker {
 
     /// Runs model checking from a set of starting states after applying callback.
     pub fn run_from_states_with_change<F>(&mut self, states: HashSet<McState>, preliminary_callback: F) -> McResult
-    where F: Fn(&mut McSystem) {
+    where
+        F: Fn(&mut McSystem),
+    {
         let mut total_stats = McStats::default();
         for state in states {
             self.system.set_state(state);
