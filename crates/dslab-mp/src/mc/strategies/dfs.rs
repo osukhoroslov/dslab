@@ -1,7 +1,7 @@
 //! Implementation of model checking DFS search strategy.
 
 use crate::mc::state::McState;
-use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McSummary, PruneFn, Strategy, VisitedStates, CollectFn};
+use crate::mc::strategy::{ExecutionMode, GoalFn, InvariantFn, McStats, PruneFn, Strategy, VisitedStates, CollectFn, McResult};
 use crate::mc::system::McSystem;
 
 /// The search strategy based on the [DFS](https://en.wikipedia.org/wiki/Depth-first_search) algorithm.
@@ -11,7 +11,7 @@ pub struct Dfs {
     invariant: InvariantFn,
     collect: CollectFn,
     execution_mode: ExecutionMode,
-    summary: McSummary,
+    stats: McStats,
     visited: VisitedStates,
 }
 
@@ -25,7 +25,7 @@ impl Dfs {
             invariant,
             collect: Box::new(|_| false),
             execution_mode,
-            summary: McSummary::default(),
+            stats: McStats::default(),
             visited,
         }
     }
@@ -47,12 +47,12 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String> {
+    fn run(&mut self, system: &mut McSystem) -> McResult {
         let state = system.get_state();
 
         let res = self.dfs(system, state);
         match res {
-            Ok(()) => Ok(self.summary.clone()),
+            Ok(()) => Ok(self.stats.clone()),
             Err(err) => Err(err),
         }
     }
@@ -85,7 +85,7 @@ impl Strategy for Dfs {
         &mut self.collect
     }
 
-    fn summary(&mut self) -> &mut McSummary {
-        &mut self.summary
+    fn stats(&mut self) -> &mut McStats {
+        &mut self.stats
     }
 }

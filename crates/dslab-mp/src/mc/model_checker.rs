@@ -1,7 +1,7 @@
 //! Model checker configuration and launching.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use colored::*;
@@ -11,10 +11,13 @@ use crate::mc::events::{McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
-use crate::mc::strategy::{McSummary, Strategy};
+use crate::mc::strategy::Strategy;
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
+
+use super::state::McState;
+use super::strategy::{McResult, McStats};
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
@@ -63,11 +66,29 @@ impl ModelChecker {
     }
 
     /// Runs model checking and returns the result on completion.
-    pub fn run(&mut self) -> Result<McSummary, String> {
+    pub fn run(&mut self) -> McResult {
         t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
             .to_string()
             .yellow());
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
+    }
+
+    /// Runs model checking from a set of starting states.
+    pub fn run_from_states(&mut self, states: HashSet<McState>) -> McResult {
+        self.run_from_states_with_change(states, |_| {})
+    }
+
+    /// Runs model checking from a set of starting states after applying callback.
+    pub fn run_from_states_with_change<F>(&mut self, states: HashSet<McState>, preliminary_callback: F) -> McResult
+    where F: Fn(&mut McSystem) {
+        let mut total_stats = McStats::default();
+        for state in states {
+            self.system.set_state(state);
+            preliminary_callback(&mut self.system);
+            let stats = self.run()?;
+            total_stats.combine(stats);
+        }
+        Ok(total_stats)
     }
 }
