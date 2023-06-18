@@ -60,6 +60,7 @@ impl PendingEvents {
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
+            _ => {}
         };
         self.events.insert(id, event);
         id

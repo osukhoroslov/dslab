@@ -10,7 +10,7 @@ use regex::Regex;
 
 use crate::logger::LogEntry;
 use crate::mc::error::McError;
-use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
+use crate::mc::events::McEvent::{MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;
 use crate::mc::state::McState;
@@ -128,6 +128,7 @@ pub trait Strategy {
             MessageDropped { .. } => {
                 self.apply_event(system, event_id, false, false)?;
             }
+            _ => {}
         }
 
         Ok(())
@@ -234,8 +235,17 @@ pub trait Strategy {
     /// The new event is left in pending events list and the old one is returned.
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         let event = self.take_event(system, event_id);
+        let duplication_event = match event.clone() {
+            MessageReceived { msg, src, dest, .. } => {
+                MessageDuplicated { msg, src, dest }
+            }
+            _ => {
+                panic!("Duplication is only allowed for messages")
+            }
+        };
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, LogContext::Duplicated, system.depth());
+        system.apply_event(duplication_event.clone());
+        self.debug_log(&duplication_event, LogContext::Default, system.depth());
         event
     }
 
@@ -252,12 +262,19 @@ pub trait Strategy {
                 TimerCancelled { proc, timer } => {
                     t!(format!("{:>10} | {:>10} xxx {:<10} <-- timer cancelled", depth, proc, timer).yellow());
                 }
-                MessageDropped { msg, src, dest, .. } => {
+                MessageDropped { msg, src, dest } => {
                     t!(format!(
                         "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
                         depth, src, dest, msg
                     )
                     .red());
+                }
+                MessageDuplicated { msg, src, dest } => {
+                    t!(format!(
+                        "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
+                        "~~~", src, dest, msg
+                    )
+                    .blue());
                 }
             }
         }

@@ -161,6 +161,13 @@ impl Logger {
             LogEntry::McMessageDropped { msg, src, dest } => {
                 t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
             }
+            LogEntry::McMessageDuplicated { msg, src, dest } => {
+                t!(format!(
+                    "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
+                    "~~~", src, dest, msg
+                )
+                .blue());
+            }
             LogEntry::McMessageReceived { msg, src, dest } => {
                 t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
             }
@@ -341,6 +348,11 @@ pub enum LogEntry {
         proc: String,
     },
     McMessageDropped {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageDuplicated {
         msg: Message,
         src: String,
         dest: String,

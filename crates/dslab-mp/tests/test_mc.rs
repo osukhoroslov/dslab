@@ -517,22 +517,30 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
 
     let mut sys = build_ping_system();
     let msg = Message::new("PING", "some_data");
+    let src = "process1".to_string();
+    let dest = "process2".to_string();
     sys.send_local_message("process1", msg.clone());
     sys.network().set_dupl_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
+    let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
+        msg: msg.clone(),
+        src: src.clone(),
+        dest: dest.clone(),
+    };
     let expected_message_received_event = LogEntry::McMessageReceived {
         msg: msg.clone(),
-        src: "process1".to_string(),
-        dest: "process2".to_string(),
+        src,
+        dest: dest.clone(),
     };
     let expected_local_message_sent_event = LogEntry::McLocalMessageSent {
         msg,
-        proc: "process2".to_string(),
+        proc: dest,
     };
     let expected_trace = vec![
+        expected_message_duplicated_event,
         expected_message_received_event.clone(),
         expected_local_message_sent_event.clone(),
         expected_message_received_event,
