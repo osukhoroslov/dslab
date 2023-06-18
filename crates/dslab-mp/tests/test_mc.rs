@@ -524,10 +524,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
         src,
         dest: dest.clone(),
     };
-    let expected_local_message_sent_event = LogEntry::McLocalMessageSent {
-        msg,
-        proc: dest,
-    };
+    let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dest };
     let expected_trace = vec![
         expected_message_duplicated_event,
         expected_message_received_event.clone(),
