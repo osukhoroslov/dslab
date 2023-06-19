@@ -16,6 +16,3 @@ pub mod schedulers;
 pub mod system;
 pub mod task;
 pub mod trace_log;
-
-#[cfg(test)]
-mod tests;
