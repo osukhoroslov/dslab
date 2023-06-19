@@ -131,14 +131,7 @@ impl Experiment {
                 "Can't have empty list of resources: {}",
                 file_name
             );
-            let network = read_network_config(&path);
-            assert!(
-                network.make_network().is_some(),
-                "Unknown network model in {}: {:?}",
-                file_name,
-                network
-            );
-            (file_stem, resources, network)
+            (file_stem, resources, read_network_config(&path))
         });
 
         let schedulers = config

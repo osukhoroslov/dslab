@@ -120,7 +120,7 @@ impl TopologyNetwork {
         let topology = self.topology.borrow();
         let node1 = topology.get_location(node);
         if node1.is_none() {
-            panic!("Invalid host")
+            panic!("Invalid host {}", node);
         }
         *node1.unwrap()
     }

@@ -5,7 +5,6 @@ use std::rc::Rc;
 
 use dslab_compute::multicore::Compute;
 use dslab_core::simulation::Simulation;
-use dslab_network::network::Network;
 
 use crate::dag::DAG;
 use crate::network::NetworkConfig;
@@ -52,12 +51,8 @@ impl DagSimulation {
 
     /// Initializes DAG simulation.
     pub fn init(&mut self, dag: DAG) -> Rc<RefCell<DAGRunner>> {
-        let network = Rc::new(RefCell::new(Network::new(
-            self.network_config
-                .make_network()
-                .expect("Failed to create network model"),
-            self.sim.create_context("net"),
-        )));
+        let net_ctx = self.sim.create_context("net");
+        let network = Rc::new(RefCell::new(self.network_config.make_network(net_ctx)));
         self.sim.add_handler("net", network.clone());
         let resources = self
             .resource_configs
@@ -82,13 +77,14 @@ impl DagSimulation {
             .collect::<Vec<_>>();
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
-            network,
-            resources,
+            network.clone(),
+            resources.clone(),
             self.scheduler.clone(),
             self.config.clone(),
             self.sim.create_context("runner"),
         )));
         let runner_id = self.sim.add_handler("runner", runner.clone());
+        self.network_config.init_network(network, runner_id, &resources);
         let client = self.sim.create_context("client");
         client.emit_now(Start {}, runner_id);
         runner
