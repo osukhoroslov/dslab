@@ -14,6 +14,8 @@ use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_network::topology::Topology;
 use dslab_network::topology_model::TopologyNetwork;
 
+use crate::resource::Resource;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum TopologyType {
     #[serde(rename = "star")]
@@ -66,9 +68,26 @@ impl NetworkConfig {
     pub fn shared(bandwidth: f64, latency: f64) -> Self {
         NetworkConfig::SharedBandwidthNetwork { bandwidth, latency }
     }
-}
 
-impl NetworkConfig {
+    /// Creates network config with TopologyNetwork model
+    ///
+    /// Bandwidth should be in MB/s, latency in μs.
+    pub fn topology(
+        topology_type: TopologyType,
+        local_bandwidth: f64,
+        local_latency: f64,
+        link_bandwidth: f64,
+        link_latency: f64,
+    ) -> Self {
+        NetworkConfig::TopologyNetwork {
+            topology_type,
+            local_bandwidth,
+            local_latency,
+            link_bandwidth,
+            link_latency,
+        }
+    }
+
     /// Creates network model based on stored parameters.
     pub fn make_network(&self, ctx: SimulationContext) -> Network {
         match self {
@@ -101,7 +120,8 @@ impl NetworkConfig {
         }
     }
 
-    pub fn init_network(&self, network: Rc<RefCell<Network>>, runner_id: Id, resource_ids: &[Id]) {
+    /// Adds hosts and links between them in case of TopologyNetwork.
+    pub fn init_network(&self, network: Rc<RefCell<Network>>, runner_id: Id, resources: &[Resource]) {
         if let NetworkConfig::TopologyNetwork {
             topology_type,
             local_bandwidth,
@@ -110,31 +130,33 @@ impl NetworkConfig {
             link_latency,
         } = self
         {
-            let local_latency = local_latency * 1e-6;
-            let link_latency = link_latency * 1e-6;
+            let local_latency = local_latency * 1e-6; // convert to seconds
+            let link_latency = link_latency * 1e-6; // convert to seconds
             let mut network = network.borrow_mut();
 
-            let host_name = |id: Id| -> String { format!("host_{}", id) };
-
-            for id in resource_ids.iter().copied().chain([runner_id]) {
+            for (host_name, id) in resources
+                .iter()
+                .map(|r| (r.name.as_str(), r.id))
+                .chain([("master", runner_id)])
+            {
                 network.add_node(
-                    &host_name(id),
+                    host_name,
                     Box::new(SharedBandwidthNetwork::new(*local_bandwidth, local_latency)),
                 );
-                network.set_location(id, &host_name(id));
+                network.set_location(id, host_name);
             }
 
             match topology_type {
                 TopologyType::Star => {
-                    for id in resource_ids.iter().copied() {
-                        network.add_link(&host_name(runner_id), &host_name(id), *link_bandwidth, link_latency);
+                    for resource in resources.iter() {
+                        network.add_link("master", &resource.name, *link_bandwidth, link_latency);
                     }
                 }
                 TopologyType::FullMesh => {
-                    for id1 in resource_ids.iter().copied().chain([runner_id]) {
-                        for id2 in resource_ids.iter().copied().chain([runner_id]) {
-                            if id1 < id2 {
-                                network.add_link(&host_name(id1), &host_name(id2), *link_bandwidth, link_latency);
+                    for host1 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
+                        for host2 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
+                            if host1 < host2 {
+                                network.add_link(host1, host2, *link_bandwidth, link_latency);
                             }
                         }
                     }

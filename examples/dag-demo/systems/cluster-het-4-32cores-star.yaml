@@ -1,0 +1,24 @@
+resources:
+  - name: node1
+    speed: 10
+    cores: 4
+    memory: 8000
+  - name: node2
+    speed: 20
+    cores: 4
+    memory: 8000
+  - name: node3
+    speed: 15
+    cores: 8
+    memory: 16000
+  - name: node4
+    speed: 5
+    cores: 16
+    memory: 32000
+network:
+  model: TopologyNetwork
+  topology: star
+  local_bandwidth: 100000
+  local_latency: 0
+  link_bandwidth: 1250
+  link_latency: 10

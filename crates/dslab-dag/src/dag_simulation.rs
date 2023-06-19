@@ -75,17 +75,16 @@ impl DagSimulation {
                 }
             })
             .collect::<Vec<_>>();
-        let resource_ids = resources.iter().map(|r| r.id).collect::<Vec<_>>();
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
             network.clone(),
-            resources,
+            resources.clone(),
             self.scheduler.clone(),
             self.config.clone(),
             self.sim.create_context("runner"),
         )));
         let runner_id = self.sim.add_handler("runner", runner.clone());
-        self.network_config.init_network(network, runner_id, &resource_ids);
+        self.network_config.init_network(network, runner_id, &resources);
         let client = self.sim.create_context("client");
         client.emit_now(Start {}, runner_id);
         runner
