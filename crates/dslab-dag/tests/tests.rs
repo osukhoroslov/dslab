@@ -6,18 +6,18 @@ use rand_pcg::Pcg64;
 
 use dslab_compute::multicore::CoresDependency;
 
-use crate::dag::DAG;
-use crate::dag_simulation::DagSimulation;
-use crate::data_item::DataTransferMode;
-use crate::network::NetworkConfig;
-use crate::resource::ResourceConfig;
-use crate::runner::Config;
-use crate::scheduler::Scheduler;
-use crate::schedulers::dls::DlsScheduler;
-use crate::schedulers::heft::HeftScheduler;
-use crate::schedulers::lookahead::LookaheadScheduler;
-use crate::schedulers::peft::PeftScheduler;
-use crate::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_dag::dag::DAG;
+use dslab_dag::dag_simulation::DagSimulation;
+use dslab_dag::data_item::DataTransferMode;
+use dslab_dag::network::NetworkConfig;
+use dslab_dag::resource::ResourceConfig;
+use dslab_dag::runner::Config;
+use dslab_dag::scheduler::Scheduler;
+use dslab_dag::schedulers::dls::DlsScheduler;
+use dslab_dag::schedulers::heft::HeftScheduler;
+use dslab_dag::schedulers::lookahead::LookaheadScheduler;
+use dslab_dag::schedulers::peft::PeftScheduler;
+use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
 
