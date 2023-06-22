@@ -11,7 +11,7 @@ use sugars::boxed;
 
 use crate::logger::LogEntry;
 use crate::mc::error::McError;
-use crate::mc::events::McEvent::{MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired};
+use crate::mc::events::McEvent::{MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;
 use crate::mc::state::McState;
@@ -105,15 +105,6 @@ pub enum ExecutionMode {
     /// Execution with verbose output intended for debugging purposes.
     /// Runs slower than the default mode.
     Debug,
-}
-
-/// Status of the message which is passed to logging.
-pub enum LogContext {
-    /// Nothing happened to the message.
-    Default,
-
-    /// Message data was corrupted.
-    Corrupted,
 }
 
 /// Alternative implementations of storing the previously visited system states
@@ -276,10 +267,10 @@ pub trait Strategy {
         }
 
         if corrupt {
-            event = self.corrupt_msg_data(event, system.depth());
+            event = self.corrupt_msg_data(system, event);
         }
 
-        self.debug_log(&event, LogContext::Default, system.depth());
+        self.debug_log(&event, system.depth());
 
         system.apply_event(event);
 
@@ -310,8 +301,7 @@ pub trait Strategy {
     }
 
     /// Applies corruption to the MessageReceived event data.
-    fn corrupt_msg_data(&self, event: McEvent, search_depth: u64) -> McEvent {
-        self.debug_log(&event, LogContext::Corrupted, search_depth);
+    fn corrupt_msg_data(&self, system: &mut McSystem, event: McEvent) -> McEvent {
         match event {
             MessageReceived {
                 msg,
@@ -323,8 +313,17 @@ pub trait Strategy {
                     static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
                 }
                 let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
+                let corrupted_msg = Message::new(msg.clone().tip, corrupted_data);
+                let corruption_event = MessageCorrupted {
+                    msg,
+                    corrupted_msg: corrupted_msg.clone(),
+                    src: src.clone(),
+                    dest: dest.clone(),
+                };
+                system.apply_event(corruption_event.clone());
+                self.debug_log(&corruption_event, system.depth());
                 MessageReceived {
-                    msg: Message::new(msg.tip, corrupted_data),
+                    msg: corrupted_msg,
                     src,
                     dest,
                     options,
@@ -346,16 +345,16 @@ pub trait Strategy {
         };
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
         system.apply_event(duplication_event.clone());
-        self.debug_log(&duplication_event, LogContext::Default, system.depth());
+        self.debug_log(&duplication_event, system.depth());
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, log_context: LogContext, depth: u64) {
+    fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(depth, msg, src, dest, log_context);
+                    t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
                 }
                 TimerFired { proc, timer, .. } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
@@ -372,23 +371,18 @@ pub trait Strategy {
                 }
                 MessageDuplicated { msg, src, dest } => {
                     t!(format!(
-                        "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
-                        "~~~", src, dest, msg
+                        "{:>10} | {:>10} -=≡ {:<10} {:?} <-- message duplicated",
+                        depth, src, dest, msg
                     )
                     .blue());
                 }
-            }
-        }
-    }
-
-    /// Logs the message according to its log context.
-    fn log_message(&self, depth: u64, msg: &Message, src: &String, dest: &String, log_context: LogContext) {
-        match log_context {
-            LogContext::Default => {
-                t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
-            }
-            LogContext::Corrupted => {
-                t!(format!("{:?} <-- message corrupted", msg).red());
+                MessageCorrupted { msg, corrupted_msg, src, dest } => {
+                    t!(format!(
+                        "{:>10} | {:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
+                        depth, src, dest, msg, corrupted_msg
+                    )
+                    .blue());
+                }
             }
         }
     }

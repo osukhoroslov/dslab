@@ -73,6 +73,21 @@ pub enum McEvent {
         /// The name of the process the message was sent to.
         dest: String,
     },
+
+    /// The event of corrupting a message. Created by model checking strategy.
+    MessageCorrupted {
+        /// The original message.
+        msg: Message,
+
+        /// The message after corruption.
+        corrupted_msg: Message,
+
+        /// The name of the process that sent the message.
+        src: String,
+
+        /// The name of the process the message was sent to.
+        dest: String,
+    },
 }
 
 impl McEvent {
@@ -139,6 +154,12 @@ impl McEvent {
                 src: src.clone(),
                 dest: dest.clone(),
             },
+            Self::MessageCorrupted { msg, corrupted_msg, src, dest } => LogEntry::McMessageCorrupted {
+                msg: msg.clone(),
+                corrupted_msg: corrupted_msg.clone(),
+                src: src.clone(),
+                dest: dest.clone(),
+            }
         }
     }
 }

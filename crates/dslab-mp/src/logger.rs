@@ -158,6 +158,13 @@ impl Logger {
                 t!(format!("{:>9.3} - network reset, all problems healed", time).green());
             }
             LogEntry::ProcessStateUpdated { .. } => {}
+            LogEntry::McMessageCorrupted { msg, corrupted_msg, src, dest } => {
+                t!(format!(
+                    "{:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
+                    src, dest, msg, corrupted_msg
+                )
+                .blue());
+            }
             LogEntry::McMessageDropped { msg, src, dest } => {
                 t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
             }
@@ -346,6 +353,12 @@ pub enum LogEntry {
     McLocalMessageSent {
         msg: Message,
         proc: String,
+    },
+    McMessageCorrupted {
+        msg: Message,
+        corrupted_msg: Message,
+        src: String,
+        dest: String,
     },
     McMessageDropped {
         msg: Message,
