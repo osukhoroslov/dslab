@@ -154,12 +154,17 @@ impl McEvent {
                 src: src.clone(),
                 dest: dest.clone(),
             },
-            Self::MessageCorrupted { msg, corrupted_msg, src, dest } => LogEntry::McMessageCorrupted {
+            Self::MessageCorrupted {
+                msg,
+                corrupted_msg,
+                src,
+                dest,
+            } => LogEntry::McMessageCorrupted {
                 msg: msg.clone(),
                 corrupted_msg: corrupted_msg.clone(),
                 src: src.clone(),
                 dest: dest.clone(),
-            }
+            },
         }
     }
 }

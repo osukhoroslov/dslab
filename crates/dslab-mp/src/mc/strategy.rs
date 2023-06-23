@@ -10,7 +10,9 @@ use regex::Regex;
 
 use crate::logger::LogEntry;
 use crate::mc::error::McError;
-use crate::mc::events::McEvent::{MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired};
+use crate::mc::events::McEvent::{
+    MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired,
+};
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;
 use crate::mc::state::McState;
@@ -270,7 +272,12 @@ pub trait Strategy {
                     )
                     .blue());
                 }
-                MessageCorrupted { msg, corrupted_msg, src, dest } => {
+                MessageCorrupted {
+                    msg,
+                    corrupted_msg,
+                    src,
+                    dest,
+                } => {
                     t!(format!(
                         "{:>10} | {:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
                         depth, src, dest, msg, corrupted_msg

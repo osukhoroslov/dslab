@@ -158,7 +158,12 @@ impl Logger {
                 t!(format!("{:>9.3} - network reset, all problems healed", time).green());
             }
             LogEntry::ProcessStateUpdated { .. } => {}
-            LogEntry::McMessageCorrupted { msg, corrupted_msg, src, dest } => {
+            LogEntry::McMessageCorrupted {
+                msg,
+                corrupted_msg,
+                src,
+                dest,
+            } => {
                 t!(format!(
                     "{:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
                     src, dest, msg, corrupted_msg
