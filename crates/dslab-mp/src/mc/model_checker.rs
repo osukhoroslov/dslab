@@ -11,13 +11,11 @@ use crate::mc::events::{McEvent, McTime};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
-use crate::mc::strategy::Strategy;
+use crate::mc::state::McState;
+use crate::mc::strategy::{McResult, McStats, Strategy};
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
-
-use super::state::McState;
-use super::strategy::{McResult, McStats};
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
