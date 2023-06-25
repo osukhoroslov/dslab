@@ -7,6 +7,7 @@ use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
 use dslab_mp::logger::LogEntry;
+use dslab_mp::logger::LogEntry::McMessageDropped;
 use dslab_mp::mc::error::McError;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
@@ -461,13 +462,22 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
 
     let mut sys = build_ping_system();
-    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    let msg = Message::new("PING", "some_data");
+    sys.send_local_message("process1", msg.clone());
     sys.network().set_drop_rate(0.5);
 
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
-    let expected = Err(McError::new("nothing left to do to reach the goal".to_string(), vec![]));
+    let expected_trace = vec![McMessageDropped {
+        msg,
+        src: "process1".to_string(),
+        dest: "process2".to_string(),
+    }];
+    let expected = Err(McError::new(
+        "nothing left to do to reach the goal".to_string(),
+        expected_trace,
+    ));
     assert_eq!(result, expected);
 }
 
