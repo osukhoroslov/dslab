@@ -346,8 +346,8 @@ pub trait Strategy {
             }
         };
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        system.apply_event(duplication_event.clone());
         self.debug_log(&duplication_event, system.depth());
+        system.apply_event(duplication_event);
         event
     }
 
