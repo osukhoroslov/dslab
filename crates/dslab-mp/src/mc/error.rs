@@ -17,7 +17,7 @@ impl McError {
         self.message.clone()
     }
 
-    pub fn trace(&self) -> Vec<LogEntry> {
-        self.trace.clone()
+    pub fn trace(&self) -> &Vec<LogEntry> {
+        &self.trace
     }
 }
