@@ -54,7 +54,7 @@ pub enum VisitedStates {
 pub struct McStats {
     /// Counters for statuses run achieved
     pub statuses: HashMap<String, u32>,
-    /// States that were collected for future analysis usage with Collect predicate
+    /// States that were collected with Collect predicate
     pub collected_states: HashSet<McState>,
 }
 
@@ -81,7 +81,7 @@ pub type GoalFn = Box<dyn FnMut(&McState) -> Option<String>>;
 pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 
 /// Checks if given state should be collected.
-/// Returns true if the state should be collected for output and false otherwise
+/// Returns true if the state should be collected and false otherwise.
 pub type CollectFn = Box<dyn FnMut(&McState) -> bool>;
 
 /// Result of model checking run - statistics for successful run and error information for failure.
