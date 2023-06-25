@@ -9,7 +9,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use sugars::boxed;
 
-use crate::logger::LogEntry;
 use crate::mc::error::McError;
 use crate::mc::events::McEvent::{
     MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired,
@@ -172,11 +171,11 @@ pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> McResult;
 
     /// Callback which in called whenever a new system state is discovered.
-    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;
+    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), McError>;
 
     /// Explores the possible system states reachable from the current state after processing the given event.
     /// Calls `search_step_impl` for each new discovered state.    
-    fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
+    fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), McError> {
         let event = self.clone_event(system, event_id);
         match event {
             MessageReceived {
@@ -238,7 +237,7 @@ pub trait Strategy {
         msg: Message,
         src: String,
         dest: String,
-    ) -> Result<(), String> {
+    ) -> Result<(), McError> {
         let state = system.get_state();
         self.take_event(system, event_id);
 
@@ -258,7 +257,7 @@ pub trait Strategy {
         event_id: McEventId,
         duplicate: bool,
         corrupt: bool,
-    ) -> Result<(), String> {
+    ) -> Result<(), McError> {
         let state = system.get_state();
 
         let mut event;
@@ -431,14 +430,13 @@ pub trait Strategy {
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
-    fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
+    fn check_state(&mut self, state: &McState) -> Option<Result<(), McError>> {
         if (self.collect())(state) {
             self.stats().collected_states.insert(state.clone());
         }
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
-            *self.failure_trace() = state.trace.clone();
-            Some(Err(err))
+            Some(Err(McError::new(err, state.trace.clone())))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
             self.on_final_state_reached(status);
@@ -449,7 +447,7 @@ pub trait Strategy {
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
-            Some(Err("nothing left to do to reach the goal".to_owned()))
+            Some(Err(McError::new("nothing left to do to reach the goal".to_owned(), state.trace.clone())))
         } else {
             None
         }
@@ -480,7 +478,4 @@ pub trait Strategy {
 
     /// Returns the model checking execution stats.
     fn stats(&mut self) -> &mut McStats;
-
-    /// Returns the failure trace in state graph.
-    fn failure_trace(&mut self) -> &mut Vec<LogEntry>;
 }

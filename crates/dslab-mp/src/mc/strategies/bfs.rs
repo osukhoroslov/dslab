@@ -2,8 +2,6 @@
 
 use std::collections::VecDeque;
 
-use crate::logger::LogEntry;
-
 use crate::mc::error::McError;
 use crate::mc::state::McState;
 use crate::mc::strategy::{
@@ -21,11 +19,10 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-    failure_trace: Vec<LogEntry>,
 }
 
 impl Bfs {
-    fn bfs(&mut self, system: &mut McSystem) -> Result<(), String> {
+    fn bfs(&mut self, system: &mut McSystem) -> Result<(), McError> {
         // Start search from initial state
         self.states_queue.push_back(system.get_state());
 
@@ -59,7 +56,6 @@ impl Strategy for Bfs {
             states_queue: VecDeque::default(),
             stats: McStats::default(),
             visited: config.visited_states,
-            failure_trace: vec![],
         }
     }
 
@@ -67,11 +63,11 @@ impl Strategy for Bfs {
         let res = self.bfs(system);
         match res {
             Ok(()) => Ok(self.stats.clone()),
-            Err(err) => Err(McError::new(err, self.failure_trace().clone())),
+            Err(err) => Err(err),
         }
     }
 
-    fn search_step_impl(&mut self, _system: &mut McSystem, state: McState) -> Result<(), String> {
+    fn search_step_impl(&mut self, _system: &mut McSystem, state: McState) -> Result<(), McError> {
         self.states_queue.push_back(state);
         Ok(())
     }
@@ -102,9 +98,5 @@ impl Strategy for Bfs {
 
     fn stats(&mut self) -> &mut McStats {
         &mut self.stats
-    }
-
-    fn failure_trace(&mut self) -> &mut Vec<LogEntry> {
-        &mut self.failure_trace
     }
 }

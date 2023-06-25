@@ -1,6 +1,5 @@
 //! Implementation of model checking DFS search strategy.
 
-use crate::logger::LogEntry;
 use crate::mc::error::McError;
 use crate::mc::state::McState;
 use crate::mc::strategy::{
@@ -17,11 +16,10 @@ pub struct Dfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-    failure_trace: Vec<LogEntry>,
 }
 
 impl Dfs {
-    fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
+    fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), McError> {
         let available_events = system.available_events();
 
         if let Some(result) = self.check_state(&state) {
@@ -45,7 +43,6 @@ impl Strategy for Dfs {
             execution_mode: config.execution_mode,
             stats: McStats::default(),
             visited: config.visited_states,
-            failure_trace: vec![],
         }
     }
 
@@ -55,11 +52,11 @@ impl Strategy for Dfs {
         let res = self.dfs(system, state);
         match res {
             Ok(()) => Ok(self.stats.clone()),
-            Err(err) => Err(McError::new(err, self.failure_trace().clone())),
+            Err(err) => Err(err),
         }
     }
 
-    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
+    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), McError> {
         self.dfs(system, state)
     }
 
@@ -89,9 +86,5 @@ impl Strategy for Dfs {
 
     fn stats(&mut self) -> &mut McStats {
         &mut self.stats
-    }
-
-    fn failure_trace(&mut self) -> &mut Vec<LogEntry> {
-        &mut self.failure_trace
     }
 }
