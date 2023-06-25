@@ -91,7 +91,7 @@ pub enum McEvent {
 }
 
 impl McEvent {
-    /// Create the clone of self with decreased max_dupl_count.
+    /// Duplicates the MessageReceived event with decreased max_dupl_count.
     pub fn duplicate(&self) -> Option<McEvent> {
         match self {
             McEvent::MessageReceived {
