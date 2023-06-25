@@ -16,8 +16,10 @@ pub trait SimulationCallbacks {
         // custom callback
     }
 
-    fn on_step(&mut self, _sim: Rc<RefCell<CloudSimulation>>) {
+    // if returns false then the simulation is stopped
+    fn on_step(&mut self, _sim: Rc<RefCell<CloudSimulation>>) -> bool {
         // custom callback
+        true
     }
 
     fn on_simulation_finish(&mut self, _sim: Rc<RefCell<CloudSimulation>>) {
@@ -39,22 +41,27 @@ impl Experiment {
     }
 
     pub fn run(&mut self) {
-        loop {
+        while let (Some(current_config), current_state) = self.config.get() {
+            println!();
+            println!();
+            println!("==== New test case ====");
+            println!("{}", current_state);
+            println!("=======================");
+            println!();
+            println!();
+
             let sim = Simulation::new(123);
-            let current_config = self.config.get();
             let cloud_sim = rc!(refcell!(CloudSimulation::new(sim, current_config.clone())));
-            self.callbacks.on_simulation_finish(cloud_sim.clone());
+            self.callbacks.on_simulation_start(cloud_sim.clone());
 
             while cloud_sim.borrow_mut().current_time() < current_config.simulation_length {
                 cloud_sim.borrow_mut().steps(1);
-                self.callbacks.on_step(cloud_sim.clone());
+                let proceed = self.callbacks.on_step(cloud_sim.clone());
+                if !proceed {
+                    break;
+                }
             }
             self.callbacks.on_simulation_finish(cloud_sim.clone());
-
-            if !self.config.has_next() {
-                break;
-            }
-            self.config.next();
         }
     }
 }

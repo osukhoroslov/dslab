@@ -39,7 +39,7 @@ impl SimulationCallbacks for SimulationControlCallbacks {
         self.step = 0;
     }
 
-    fn on_step(&mut self, sim: Rc<RefCell<CloudSimulation>>) {
+    fn on_step(&mut self, sim: Rc<RefCell<CloudSimulation>>) -> bool {
         self.step += 1;
         if self.step % 10000 == 0 {
             let average_cpu_load = sim.borrow_mut().average_cpu_load();
@@ -52,11 +52,12 @@ impl SimulationCallbacks for SimulationControlCallbacks {
                 average_memory_load
             );
         }
+
+        true
     }
 
     fn on_simulation_finish(&mut self, sim: Rc<RefCell<CloudSimulation>>) {
         let end_time = sim.borrow_mut().current_time();
-        log_info!(sim.borrow().context(), "==== New test case ====");
         log_info!(
             sim.borrow().context(),
             "Total energy consumed by host one: {:.2}",
