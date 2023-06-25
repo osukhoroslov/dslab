@@ -359,8 +359,8 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
     let mut mc = ModelChecker::new(&build_ping_system(), strategy);
     let result = mc.run();
-    assert!(if let Err(msg) = result {
-        msg.str() == "broken"
+    assert!(if let Err(err) = result {
+        err.message() == "broken"
     } else {
         false
     });
@@ -671,10 +671,10 @@ fn useless_timer(#[case] strategy_name: String) {
     let result = mc.run();
     assert!(result.is_err());
 
-    let msg = result.err().unwrap();
-    assert_eq!(msg.str(), "invalid order");
+    let err = result.err().unwrap();
+    assert_eq!(err.message(), "invalid order");
 
-    let trace = msg.trace();
+    let trace = err.trace();
     assert_eq!(trace.len(), 4);
     assert!(matches!(trace[0].clone(), LogEntry::McMessageReceived { .. }));
     assert!(matches!(trace[2].clone(), LogEntry::McTimerFired { .. }));
