@@ -347,7 +347,10 @@ pub trait Strategy {
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
-            Some(Err(McError::new("nothing left to do to reach the goal".to_owned(), state.trace.clone())))
+            Some(Err(McError::new(
+                "nothing left to do to reach the goal".to_owned(),
+                state.trace.clone(),
+            )))
         } else {
             None
         }
