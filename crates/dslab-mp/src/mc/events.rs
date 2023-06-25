@@ -117,9 +117,7 @@ impl McEvent {
             _ => None,
         }
     }
-}
 
-impl McEvent {
     pub fn to_log_entry(&self) -> LogEntry {
         match self {
             Self::MessageReceived {
