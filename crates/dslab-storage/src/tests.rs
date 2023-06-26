@@ -547,7 +547,7 @@ fn disk_with_limited_concurrency() {
         DISK_READ_BW,
         DISK_WRITE_BW,
     )
-    .read_concurrent_ops_limit(1)
+    .concurrent_read_ops_limit(1)
     .build(sim.create_context("Disk-1"))));
 
     sim.add_handler("Disk-1", disk.clone());
