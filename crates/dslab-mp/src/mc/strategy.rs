@@ -49,10 +49,23 @@ pub enum VisitedStates {
     Partial(HashSet<u64>),
 }
 
-/// Model checking execution summary (used in Debug mode).
+/// Model checking execution statistics.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct McSummary {
-    pub(crate) states: HashMap<String, u32>,
+pub struct McStats {
+    /// Counters for statuses run achieved
+    pub statuses: HashMap<String, u32>,
+    /// States that were collected with Collect predicate
+    pub collected_states: HashSet<McState>,
+}
+
+impl McStats {
+    pub(crate) fn combine(&mut self, other: McStats) {
+        self.collected_states.extend(other.collected_states.into_iter());
+        for (state, cnt) in other.statuses {
+            let entry = self.statuses.entry(state).or_insert(0);
+            *entry += cnt;
+        }
+    }
 }
 
 /// Decides whether to prune the executions originating from the given state.
@@ -67,10 +80,17 @@ pub type GoalFn = Box<dyn FnMut(&McState) -> Option<String>>;
 /// Returns Err(error) if the invariant is broken and Ok otherwise.
 pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 
+/// Checks if given state should be collected.
+/// Returns true if the state should be collected and false otherwise.
+pub type CollectFn = Box<dyn FnMut(&McState) -> bool>;
+
+/// Result of model checking run - statistics for successful run and error information for failure.
+pub type McResult = Result<McStats, String>;
+
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
     /// Launches the strategy execution.
-    fn run(&mut self, system: &mut McSystem) -> Result<McSummary, String>;
+    fn run(&mut self, system: &mut McSystem) -> McResult;
 
     /// Callback which in called whenever a new system state is discovered.
     fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;
@@ -316,26 +336,29 @@ pub trait Strategy {
         }
     }
 
-    /// Adds new information to model checking execution summary.
-    fn update_summary(&mut self, status: String) {
+    /// Adds new information to model checking execution statistics.
+    fn on_final_state_reached(&mut self, status: String) {
         if let ExecutionMode::Debug = self.execution_mode() {
-            let counter = self.summary().states.entry(status).or_insert(0);
+            let counter = self.stats().statuses.entry(status).or_insert(0);
             *counter += 1;
         }
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
     fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
+        if (self.collect())(state) {
+            self.stats().collected_states.insert(state.clone());
+        }
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
             Some(Err(err))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
-            self.update_summary(status);
+            self.on_final_state_reached(status);
             Some(Ok(()))
         } else if let Some(status) = (self.prune())(state) {
             // Execution branch is pruned
-            self.update_summary(status);
+            self.on_final_state_reached(status);
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
@@ -343,6 +366,11 @@ pub trait Strategy {
         } else {
             None
         }
+    }
+
+    /// Set collect predicate.
+    fn set_collect(&mut self, collect: CollectFn) {
+        *self.collect() = collect;
     }
 
     /// Returns the used execution mode.
@@ -360,6 +388,9 @@ pub trait Strategy {
     /// Returns the invariant function.
     fn invariant(&mut self) -> &mut InvariantFn;
 
-    /// Returns the model checking execution summary.
-    fn summary(&mut self) -> &mut McSummary;
+    /// Returns the collect function.
+    fn collect(&mut self) -> &mut CollectFn;
+
+    /// Returns the model checking execution stats.
+    fn stats(&mut self) -> &mut McStats;
 }

@@ -243,9 +243,9 @@ fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {
     })
 }
 
-fn build_one_message_goal() -> GoalFn {
-    boxed!(|state: &McState| {
-        if state.node_states["node2"]["process2"].local_outbox.len() == 1 {
+fn build_n_messages_goal(node: String, process: String, n: usize) -> GoalFn {
+    boxed!(move |state: &McState| {
+        if state.node_states[&node][&process].local_outbox.len() == n {
             Some("final".to_string())
         } else {
             None
@@ -348,7 +348,7 @@ fn one_state_no_goal(#[case] strategy_name: String) {
 fn two_states_one_message_ok(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
-    let goal = build_one_message_goal();
+    let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
 
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
@@ -415,7 +415,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
 #[case("bfs")]
 fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
-    let goal = build_one_message_goal();
+    let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
     let invariant = boxed!(|_: &McState| Ok(()));
 
     let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
@@ -619,4 +619,40 @@ fn context_time(#[case] clock_skew: f64) {
         0.1 + clock_skew,
         "expected timestamp formula: 0.1 * depth + clock_skew"
     );
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn collect_mode(#[case] strategy_name: String) {
+    let mut sys: System = build_postponed_delivery_system();
+    sys.send_local_message("process2", Message::new("WAKEUP", ""));
+
+    // first stage: either process wakes or it doesn't: collect both states
+    let invariant = boxed!(|_: &McState| Ok(()));
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_reached_depth_goal(1);
+    let mut strategy = create_strategy(strategy_name.clone(), prune, goal, invariant, ExecutionMode::Default);
+    strategy.set_collect(boxed!(|_: &McState| true));
+    let mut mc = ModelChecker::new(&sys, strategy);
+    let run_stats = mc.run().expect("run failed but shouldn't");
+    let states = run_stats.collected_states;
+    assert_eq!(states.len(), 2);
+
+    // second stage: deliver a message from client
+    // result is 2 local messages: 1 after timer wakeup and 1 after receiving message
+    let invariant = boxed!(|_: &McState| Ok(()));
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
+    let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
+    let mut mc = ModelChecker::new(&sys, strategy);
+
+    let res = mc.run_from_states_with_change(states, |sys| {
+        sys.send_local_message(
+            "node1".to_string(),
+            "process1".to_string(),
+            Message::new("PING", "some_data_1"),
+        );
+    });
+    assert!(res.is_ok());
 }

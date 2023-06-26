@@ -9,6 +9,7 @@ use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
+use crate::message::Message;
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
@@ -49,6 +50,20 @@ impl McSystem {
             _ => vec![],
         };
 
+        for new_event in new_events {
+            self.events.push(new_event);
+        }
+    }
+
+    pub fn send_local_message(&mut self, node: String, proc: String, msg: Message) {
+        let event_time = Self::get_approximate_event_time(self.depth);
+        let state_hash = self.get_state_hash();
+
+        let new_events = self
+            .nodes
+            .get_mut(&node)
+            .unwrap()
+            .on_local_message_received(proc, msg, event_time, state_hash);
         for new_event in new_events {
             self.events.push(new_event);
         }
