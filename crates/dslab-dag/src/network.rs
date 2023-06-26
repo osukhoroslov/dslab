@@ -13,6 +13,7 @@ use dslab_network::network::Network;
 use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_network::topology::Topology;
 use dslab_network::topology_model::TopologyNetwork;
+use dslab_network::topology_structures::Link;
 
 use crate::resource::Resource;
 
@@ -149,14 +150,19 @@ impl NetworkConfig {
             match topology_type {
                 TopologyType::Star => {
                     for resource in resources.iter() {
-                        network.add_link("master", &resource.name, *link_bandwidth, link_latency);
+                        network.add_link(
+                            "master",
+                            &resource.name,
+                            Link::shared(*link_bandwidth, link_latency),
+                            true,
+                        );
                     }
                 }
                 TopologyType::FullMesh => {
                     for host1 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
                         for host2 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
                             if host1 < host2 {
-                                network.add_link(host1, host2, *link_bandwidth, link_latency);
+                                network.add_link(host1, host2, Link::shared(*link_bandwidth, link_latency), true);
                             }
                         }
                     }

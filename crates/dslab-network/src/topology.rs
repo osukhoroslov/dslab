@@ -6,6 +6,7 @@ use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
 use crate::model::*;
+use crate::topology_resolver::TopologyResolveType;
 use crate::topology_resolver::TopologyResolver;
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
@@ -20,11 +21,17 @@ pub struct Topology {
     bandwidth_cache: HashMap<(NodeId, NodeId), f64>,
     latency_cache: HashMap<(NodeId, NodeId), f64>,
     path_cache: HashMap<(NodeId, NodeId), Vec<LinkID>>,
+    resolve_type: TopologyResolveType,
 }
 
 impl Topology {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn with_resolve_type(mut self, resolve_type: TopologyResolveType) -> Self {
+        self.resolve_type = resolve_type;
+        self
     }
 
     fn get_node_id(&self, node_name: &str) -> usize {
@@ -41,16 +48,18 @@ impl Topology {
         self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 
-    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, bandwidth: f64, latency: f64) {
-        assert!(bandwidth > 0.0, "Link bandwidth must be > 0");
+    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, link: Link, bidirectional: bool) {
+        assert!(link.bandwidth > 0.0, "Link bandwidth must be > 0");
         let node1 = self.get_node_id(node1_name);
         let node2 = self.get_node_id(node2_name);
         self.check_node_exists(node1);
         self.check_node_exists(node2);
         let link_id = self.links.len();
-        self.links.push(Link::new(latency, bandwidth));
+        self.links.push(link);
         self.node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
-        self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
+        if bidirectional {
+            self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
+        }
         self.on_topology_change();
     }
 
@@ -72,7 +81,7 @@ impl Topology {
 
     // Init topology resolver to perform calculations
     pub fn init(&mut self) {
-        self.resolver = Some(TopologyResolver::new());
+        self.resolver = Some(TopologyResolver::new(self.resolve_type));
         self.resolve_topology();
     }
 
@@ -146,10 +155,6 @@ impl Topology {
 
     pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkID>> {
         if let Some(path) = self.path_cache.get(&(*src, *dst)) {
-            return Some(path.clone());
-        }
-
-        if let Some(path) = self.path_cache.get(&(*dst, *src)) {
             return Some(path.clone());
         }
 

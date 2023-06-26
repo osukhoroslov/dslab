@@ -8,7 +8,7 @@ use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 use crate::topology::Topology;
-use crate::topology_structures::{LinkID, NodeId};
+use crate::topology_structures::{LinkID, LinkType, NodeId};
 
 #[derive(Debug)]
 struct DataTransfer {}
@@ -18,11 +18,15 @@ struct LinkUsage {
     link_id: usize,
     transfers_count: usize,
     left_bandwidth: f64,
+    link_type: LinkType,
 }
 
 impl LinkUsage {
     fn get_path_bandwidth(&self) -> f64 {
-        self.left_bandwidth / self.transfers_count as f64
+        match self.link_type {
+            LinkType::Shared => self.left_bandwidth / self.transfers_count as f64,
+            LinkType::Fatpipe => self.left_bandwidth,
+        }
     }
 }
 
@@ -230,6 +234,7 @@ impl TopologyNetwork {
                 link_id: *link_id,
                 transfers_count: cur_transfers.len(),
                 left_bandwidth: topology.get_link(link_id).unwrap().bandwidth,
+                link_type: topology.get_link(link_id).unwrap().link_type,
             };
             transfers_through_link[*link_id] = cur_transfers;
             self.link_data[*link_id] = Some(link);
@@ -287,7 +292,10 @@ impl TopologyNetwork {
                         }
                         let mut link_usage = self.link_data[link].take().unwrap();
                         link_usage.transfers_count -= 1;
-                        link_usage.left_bandwidth -= bandwidth;
+                        match link_usage.link_type {
+                            LinkType::Shared => link_usage.left_bandwidth -= bandwidth,
+                            LinkType::Fatpipe => {}
+                        }
                         self.link_data[link] = Some(link_usage);
                     }
                 }
@@ -320,6 +328,7 @@ impl TopologyNetwork {
                 link_id,
                 transfers_count: transfers.len(),
                 left_bandwidth: topology.get_link(&link_id).unwrap().bandwidth,
+                link_type: topology.get_link(&link_id).unwrap().link_type,
             };
             current_link_usage.push(link.clone());
             self.link_data[link_id] = Some(link);
@@ -360,7 +369,10 @@ impl TopologyNetwork {
                         }
                         let mut link_usage = self.link_data[link].take().unwrap();
                         link_usage.transfers_count -= 1;
-                        link_usage.left_bandwidth -= bandwidth;
+                        match link_usage.link_type {
+                            LinkType::Shared => link_usage.left_bandwidth -= bandwidth,
+                            LinkType::Fatpipe => {}
+                        }
                         self.link_data[link] = Some(link_usage);
                     }
                 }
