@@ -157,23 +157,23 @@ impl DiskBuilder {
         let read_throughput_model =
             FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
         let read_ops_scheduler = if let Some(limit) = self.concurrent_read_ops_limit {
-            boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
+            boxed!(FairScheduler::new_with_concurrent_ops_limit(
                 read_throughput_model,
                 limit
             ))
         } else {
-            boxed!(FairScheduler::<DiskActivity>::new(read_throughput_model))
+            boxed!(FairScheduler::new(read_throughput_model))
         };
 
         let write_throughput_model =
             FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
         let write_ops_scheduler = if let Some(limit) = self.concurrent_write_ops_limit {
-            boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
+            boxed!(FairScheduler::new_with_concurrent_ops_limit(
                 write_throughput_model,
                 limit
             ))
         } else {
-            boxed!(FairScheduler::<DiskActivity>::new(write_throughput_model))
+            boxed!(FairScheduler::new(write_throughput_model))
         };
 
         Disk {
@@ -200,8 +200,8 @@ impl DiskBuilder {
 pub struct Disk {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) used: u64,
-    pub(in crate::disk) read_ops_scheduler: Box<dyn Scheduler<DiskActivity>>,
-    pub(in crate::disk) write_ops_scheduler: Box<dyn Scheduler<DiskActivity>>,
+    pub(in crate::disk) read_ops_scheduler: Box<dyn Scheduler>,
+    pub(in crate::disk) write_ops_scheduler: Box<dyn Scheduler>,
     pub(in crate::disk) next_request_id: u64,
     pub(in crate::disk) next_read_event: u64,
     pub(in crate::disk) next_write_event: u64,
