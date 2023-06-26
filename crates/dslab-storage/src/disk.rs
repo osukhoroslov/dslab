@@ -51,8 +51,8 @@ pub struct DiskBuilder {
     write_throughput_fn: Option<ResourceThroughputFn>,
     read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
     write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    read_concurrent_ops_limit: Option<u64>,
-    write_concurrent_ops_limit: Option<u64>,
+    concurrent_read_ops_limit: Option<u64>,
+    concurrent_write_ops_limit: Option<u64>,
 }
 
 impl Default for DiskBuilder {
@@ -66,8 +66,8 @@ impl Default for DiskBuilder {
             write_throughput_fn: None,
             read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
             write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
-            read_concurrent_ops_limit: None,
-            write_concurrent_ops_limit: None,
+            concurrent_read_ops_limit: None,
+            concurrent_write_ops_limit: None,
         }
     }
 }
@@ -138,15 +138,15 @@ impl DiskBuilder {
         self
     }
 
-    /// Sets read concurrent operations limit.
-    pub fn read_concurrent_ops_limit(mut self, read_concurrent_ops_limit: u64) -> Self {
-        self.read_concurrent_ops_limit.replace(read_concurrent_ops_limit);
+    /// Sets concurrent read operations limit.
+    pub fn concurrent_read_ops_limit(mut self, concurrent_read_ops_limit: u64) -> Self {
+        self.concurrent_read_ops_limit.replace(concurrent_read_ops_limit);
         self
     }
 
-    /// Sets write concurrent operations limit.
-    pub fn write_concurrent_ops_limit(mut self, write_concurrent_ops_limit: u64) -> Self {
-        self.write_concurrent_ops_limit.replace(write_concurrent_ops_limit);
+    /// Sets concurrent write operations limit.
+    pub fn concurrent_write_ops_limit(mut self, concurrent_write_ops_limit: u64) -> Self {
+        self.concurrent_write_ops_limit.replace(concurrent_write_ops_limit);
         self
     }
 
@@ -156,7 +156,7 @@ impl DiskBuilder {
     pub fn build(self, ctx: SimulationContext) -> Disk {
         let read_throughput_model =
             FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
-        let read_ops_scheduler = if let Some(limit) = self.read_concurrent_ops_limit {
+        let read_ops_scheduler = if let Some(limit) = self.concurrent_read_ops_limit {
             boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
                 read_throughput_model,
                 limit
@@ -167,7 +167,7 @@ impl DiskBuilder {
 
         let write_throughput_model =
             FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
-        let write_ops_scheduler = if let Some(limit) = self.write_concurrent_ops_limit {
+        let write_ops_scheduler = if let Some(limit) = self.concurrent_write_ops_limit {
             boxed!(FairScheduler::<DiskActivity>::new_with_concurrent_ops_limit(
                 write_throughput_model,
                 limit
