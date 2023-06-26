@@ -20,6 +20,10 @@ const ALGORITHMS: &[&str] = &[
     "DLS",
     "HEFT",
     "Lookahead",
+    "Lookahead[depth=0]",
+    "Lookahead[depth=1]",
+    "Lookahead[depth=2]",
+    "Lookahead[depth=3]",
     "PEFT",
     "DynamicList[task=CompSize,resource=Speed,cores=MaxCores]",
     "DynamicList[task=CompSize,resource=Speed,cores=Efficiency90]",
@@ -99,6 +103,8 @@ fn main() {
         fs::create_dir_all("traces").expect("Failed to create traces dir");
     }
 
+    let scheduler_width = ALGORITHMS.iter().map(|alg| alg.len()).max().unwrap();
+
     println!("\nDAG: {} ({} tasks)", args.dag, dag.get_tasks().len());
     println!("System: {}\n", args.system);
     for algorithm in ALGORITHMS.iter() {
@@ -124,11 +130,17 @@ fn main() {
         if trace_path.is_some() {
             runner.borrow_mut().enable_trace_log(true);
         }
+        let now = std::time::Instant::now();
         sim.step_until_no_events();
         runner.borrow().validate_completed();
         if let Some(trace_path) = trace_path {
             runner.borrow().trace_log().save_to_file(&trace_path).unwrap();
         }
-        println!("{:<20}{:.2}", algorithm, sim.time());
+        println!(
+            "{:>scheduler_width$}  {: >8.2}  {: >8.2?}",
+            algorithm,
+            sim.time(),
+            now.elapsed()
+        );
     }
 }

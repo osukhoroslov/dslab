@@ -14,12 +14,14 @@ use crate::system::System;
 
 pub struct LookaheadScheduler {
     data_transfer_strategy: DataTransferStrategy,
+    depth: usize,
 }
 
 impl LookaheadScheduler {
     pub fn new() -> Self {
         Self {
             data_transfer_strategy: DataTransferStrategy::Eager,
+            depth: usize::MAX,
         }
     }
 
@@ -28,6 +30,7 @@ impl LookaheadScheduler {
             data_transfer_strategy: params
                 .get("data_transfer_strategy")
                 .unwrap_or(DataTransferStrategy::Eager),
+            depth: params.get("depth").unwrap_or(usize::MAX),
         }
     }
 
@@ -117,14 +120,28 @@ impl LookaheadScheduler {
                     ScheduledTask::new(start_time, finish_time, task_id),
                 ));
 
+                let mut depth = vec![usize::MAX; task_ids.len()];
+                for &task in task_ids.iter() {
+                    if scheduled[task] {
+                        depth[task] = 0;
+                    } else if depth[task] == usize::MAX {
+                        // a task can have zero scheduled predecessors, then depth is 1
+                        depth[task] = 1;
+                    }
+                    for (child, _weight) in task_successors(task, dag) {
+                        depth[child] = depth[child].min(depth[task] + 1);
+                    }
+                }
+
                 let unscheduled_tasks = task_ids
                     .iter()
                     .cloned()
                     .filter(|&task| !scheduled[task])
+                    .filter(|&task| depth[task] <= self.depth)
                     .collect::<Vec<usize>>();
                 let mut makespan = finish_time + output_time;
 
-                for &child in unscheduled_tasks.iter() {
+                for child in unscheduled_tasks.into_iter() {
                     let (resource, cores, start, finish) = {
                         let task = child;
 
