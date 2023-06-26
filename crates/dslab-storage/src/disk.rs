@@ -20,7 +20,7 @@ use dslab_models::throughput_sharing::{
 };
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
-use crate::scheduler::{FairScheduler, Scheduler};
+use crate::scheduler::{FifoScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
 /// Describes a disk operation.
@@ -157,23 +157,23 @@ impl DiskBuilder {
         let read_throughput_model =
             FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
         let read_ops_scheduler = if let Some(limit) = self.concurrent_read_ops_limit {
-            boxed!(FairScheduler::new_with_concurrent_ops_limit(
+            boxed!(FifoScheduler::new_with_concurrent_ops_limit(
                 read_throughput_model,
                 limit
             ))
         } else {
-            boxed!(FairScheduler::new(read_throughput_model))
+            boxed!(FifoScheduler::new(read_throughput_model))
         };
 
         let write_throughput_model =
             FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
         let write_ops_scheduler = if let Some(limit) = self.concurrent_write_ops_limit {
-            boxed!(FairScheduler::new_with_concurrent_ops_limit(
+            boxed!(FifoScheduler::new_with_concurrent_ops_limit(
                 write_throughput_model,
                 limit
             ))
         } else {
-            boxed!(FairScheduler::new(write_throughput_model))
+            boxed!(FifoScheduler::new(write_throughput_model))
         };
 
         Disk {

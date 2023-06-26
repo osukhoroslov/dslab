@@ -29,7 +29,7 @@ pub trait Scheduler {
 /// Implementation of a fair [`Scheduler`].
 /// Schedules operations to the throughput model in FIFO order.
 /// User can provide a limit to concurrent operations count.
-pub struct FairScheduler {
+pub struct FifoScheduler {
     throughput_model: FairThroughputSharingModel<DiskActivity>,
     concurrent_ops_limit: Option<u64>,
 
@@ -37,7 +37,7 @@ pub struct FairScheduler {
     pending_ops: VecDeque<(DiskActivity, f64)>,
 }
 
-impl FairScheduler {
+impl FifoScheduler {
     /// Creates fair scheduler with given throughput model and no limit on concurrent operations count.
     pub fn new(throughput_model: FairThroughputSharingModel<DiskActivity>) -> Self {
         Self {
@@ -68,7 +68,7 @@ impl FairScheduler {
     }
 }
 
-impl Scheduler for FairScheduler {
+impl Scheduler for FifoScheduler {
     fn insert(&mut self, item: DiskActivity, volume: f64, ctx: &mut SimulationContext) {
         if let Some(limit) = self.concurrent_ops_limit {
             if self.scheduled_ops_count >= limit {
