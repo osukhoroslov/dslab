@@ -6,7 +6,7 @@ use assertables::{assume, assume_eq};
 use clap::Parser;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{InvariantFn, GoalFn, PruneFn};
+use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn};
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
@@ -390,7 +390,7 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
         // check that delivered messages have expected type and data
         for msg in delivered.iter() {
             // assuming all messages have the same type
-            if msg.tip != messages_expected.iter().next().unwrap().tip {
+            if msg.tip != messages_expected.first().unwrap().tip {
                 return Err(format!("Wrong message type {}", msg.tip));
             }
             if !msg_count.contains_key(&msg.data) {
@@ -497,8 +497,10 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         &sys,
         mc_prune_too_many_messages_sent(4),
         mc_goal_got_two_messages(),
-        mc_invariant_combined(vec![mc_invariant_depth(20),
-        mc_invariant_received_messages(messages, config.clone())]),
+        mc_invariant_combined(vec![
+            mc_invariant_depth(20),
+            mc_invariant_received_messages(messages, config),
+        ]),
     );
     let res = mc.run();
     assume!(
@@ -525,7 +527,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         &sys,
         mc_prune_depth(5),
         mc_goal_got_two_messages(),
-        mc_invariant_received_messages(messages, config.clone()),
+        mc_invariant_received_messages(messages, config),
     );
     let res = mc.run();
     assume!(
@@ -625,7 +627,11 @@ fn main() {
             );
         }
         tests.add("[AT MOST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
-        tests.add("[AT MOST ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
+        tests.add(
+            "[AT MOST ONCE] MODEL CHECKING UNRELIABLE",
+            test_mc_unreliable_network,
+            config,
+        );
     }
 
     // At least once
@@ -656,7 +662,11 @@ fn main() {
             );
         }
         tests.add("[AT LEAST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
-        tests.add("[AT LEAST ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
+        tests.add(
+            "[AT LEAST ONCE] MODEL CHECKING UNRELIABLE",
+            test_mc_unreliable_network,
+            config,
+        );
     }
 
     // Exactly once
@@ -687,7 +697,11 @@ fn main() {
             );
         }
         tests.add("[EXACTLY ONCE] MODEL CHECKING", test_mc_reliable_network, config);
-        tests.add("[EXACTLY ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
+        tests.add(
+            "[EXACTLY ONCE] MODEL CHECKING UNRELIABLE",
+            test_mc_unreliable_network,
+            config,
+        );
     }
 
     // EXACTLY ONCE ORDERED
@@ -726,8 +740,16 @@ fn main() {
                 config,
             );
         }
-        tests.add("[EXACTLY ONCE ORDERED] MODEL CHECKING", test_mc_reliable_network, config);
-        tests.add("[EXACTLY ONCE ORDERED] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
+        tests.add(
+            "[EXACTLY ONCE ORDERED] MODEL CHECKING",
+            test_mc_reliable_network,
+            config,
+        );
+        tests.add(
+            "[EXACTLY ONCE ORDERED] MODEL CHECKING UNRELIABLE",
+            test_mc_unreliable_network,
+            config,
+        );
     }
 
     if args.test.is_none() {

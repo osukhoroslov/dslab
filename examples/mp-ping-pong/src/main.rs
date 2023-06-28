@@ -251,11 +251,11 @@ fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant
 
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
-    let data = format!(r#"{{"value": 0}}"#);
-    let data2 = format!(r#"{{"value": 1}}"#);
+    let data = r#"{{"value": 0}}"#.to_string();
+    let data2 = r#"{{"value": 1}}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
-    system.send_local_message("client", Message::new("PING", &data.clone()));
-    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.send_local_message("client", Message::new("PING", &data));
+    system.send_local_message("client", Message::new("PING", &data2));
     let mut mc = create_model_checker(
         &system,
         mc_prune_too_many_messages_sent(4),
@@ -275,11 +275,11 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
-    let data = format!(r#"{{"value": 0}}"#);
-    let data2 = format!(r#"{{"value": 1}}"#);
+    let data = r#"{{"value": 0}}"#.to_string();
+    let data2 = r#"{{"value": 1}}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
-    system.send_local_message("client", Message::new("PING", &data.clone()));
-    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.send_local_message("client", Message::new("PING", &data));
+    system.send_local_message("client", Message::new("PING", &data2));
     system.network().borrow_mut().set_drop_rate(0.3);
     let mut mc = create_model_checker(
         &system,
