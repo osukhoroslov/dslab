@@ -4,6 +4,9 @@ use std::io::Write;
 
 use assertables::{assume, assume_eq};
 use clap::Parser;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategy::{InvariantFn, GoalFn, PruneFn};
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
@@ -365,6 +368,173 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
     Ok(true)
 }
 
+fn mc_goal_got_two_messages() -> GoalFn {
+    boxed!(|state| {
+        if state.node_states["receiver-node"]["receiver"].local_outbox.len() == 2 {
+            Some("receiver processed two messages".to_owned())
+        } else {
+            None
+        }
+    })
+}
+
+fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestConfig) -> InvariantFn {
+    boxed!(move |state| {
+        let mut msg_count = HashMap::new();
+        let mut expected_msg_count = HashMap::new();
+        for msg in &messages_expected {
+            msg_count.insert(msg.data.clone(), 0);
+            *expected_msg_count.entry(&msg.data).or_insert(0) += 1;
+        }
+        let delivered = &state.node_states["receiver-node"]["receiver"].local_outbox;
+        // check that delivered messages have expected type and data
+        for msg in delivered.iter() {
+            // assuming all messages have the same type
+            if msg.tip != messages_expected.iter().next().unwrap().tip {
+                return Err(format!("Wrong message type {}", msg.tip));
+            }
+            if !msg_count.contains_key(&msg.data) {
+                return Err(format!("Wrong message data: {}", msg.data));
+            }
+            *msg_count.get_mut(&msg.data).unwrap() += 1;
+        }
+        // check delivered message count according to expected guarantees
+        for (data, count) in msg_count {
+            let expected_count = expected_msg_count[&data];
+            if config.reliable && count < expected_count && state.events.available_events_num() == 0 {
+                println!("{:?}", state);
+                return Err(format!(
+                    "Message {} is not delivered (observed count {} < expected count {})",
+                    data, count, expected_count
+                ));
+            }
+            if config.once && count > expected_count {
+                return Err(format!(
+                    "Message {} is delivered more than once (observed count {} > expected count {})",
+                    data, count, expected_count
+                ));
+            }
+        }
+        // check message delivery order
+        if config.ordered {
+            let mut next_idx = 0;
+            for i in 0..delivered.len() {
+                let msg = &delivered[i];
+                let mut matched = false;
+                while !matched && next_idx < messages_expected.len() {
+                    if msg.data == messages_expected[next_idx].data {
+                        matched = true;
+                    } else {
+                        next_idx += 1;
+                    }
+                }
+                if !matched {
+                    return Err(format!(
+                        "Order violation: {} after {}",
+                        msg.data,
+                        &delivered[i - 1].data
+                    ));
+                }
+            }
+        }
+        Ok(())
+    })
+}
+
+fn mc_invariant_depth(depth: u64) -> InvariantFn {
+    boxed!(move |state| {
+        if state.depth > depth {
+            Err("state depth exceeds allowed depth".to_owned())
+        } else {
+            Ok(())
+        }
+    })
+}
+
+fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
+    boxed!(move |state| {
+        for rule in &mut rules {
+            rule(state)?;
+        }
+        Ok(())
+    })
+}
+
+fn mc_prune_depth(depth: u64) -> PruneFn {
+    boxed!(move |state| { mc_invariant_depth(depth)(state).err() })
+}
+
+fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
+    boxed!(move |state| {
+        if state.node_states["sender-node"]["sender"].sent_message_count > allowed {
+            Some("too many messages sent from client".to_owned())
+        } else if state.node_states["receiver-node"]["receiver"].sent_message_count > allowed {
+            Some("too many messages sent from server".to_owned())
+        } else {
+            None
+        }
+    })
+}
+
+fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
+    let strategy = Dfs::new(prune, goal, invariant, dslab_mp::mc::strategy::ExecutionMode::Default);
+    ModelChecker::new(system, boxed!(strategy))
+}
+
+fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config, false);
+    let message_count = 2;
+    let texts = generate_message_texts(&mut sys, message_count);
+    let mut messages = Vec::new();
+    for text in texts {
+        let msg = Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text));
+        sys.send_local_message("sender", msg.clone());
+        messages.push(msg);
+    }
+    let messages = messages;
+    let config = *config;
+    let mut mc = create_model_checker(
+        &sys,
+        mc_prune_too_many_messages_sent(4),
+        mc_goal_got_two_messages(),
+        mc_invariant_combined(vec![mc_invariant_depth(20),
+        mc_invariant_received_messages(messages, config.clone())]),
+    );
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    Ok(true)
+}
+
+fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config, false);
+    sys.network().set_drop_rate(0.1);
+    let message_count = 2;
+    let texts = generate_message_texts(&mut sys, message_count);
+    let mut messages = Vec::new();
+    for text in texts {
+        let msg = Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text));
+        sys.send_local_message("sender", msg.clone());
+        messages.push(msg);
+    }
+    let messages = messages;
+    let config = *config;
+    let mut mc = create_model_checker(
+        &sys,
+        mc_prune_depth(5),
+        mc_goal_got_two_messages(),
+        mc_invariant_received_messages(messages, config.clone()),
+    );
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Guarantees Homework Tests
@@ -454,6 +624,8 @@ fn main() {
                 config,
             );
         }
+        tests.add("[AT MOST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
+        tests.add("[AT MOST ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
     }
 
     // At least once
@@ -483,6 +655,8 @@ fn main() {
                 config,
             );
         }
+        tests.add("[AT LEAST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
+        tests.add("[AT LEAST ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
     }
 
     // Exactly once
@@ -512,6 +686,8 @@ fn main() {
                 config,
             );
         }
+        tests.add("[EXACTLY ONCE] MODEL CHECKING", test_mc_reliable_network, config);
+        tests.add("[EXACTLY ONCE] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
     }
 
     // EXACTLY ONCE ORDERED
@@ -550,6 +726,8 @@ fn main() {
                 config,
             );
         }
+        tests.add("[EXACTLY ONCE ORDERED] MODEL CHECKING", test_mc_reliable_network, config);
+        tests.add("[EXACTLY ONCE ORDERED] MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
     }
 
     if args.test.is_none() {
