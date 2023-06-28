@@ -1,6 +1,8 @@
 mod basic;
 mod retry;
 
+use std::borrow::BorrowMut;
+use std::collections::HashSet;
 use std::env;
 use std::io::Write;
 
@@ -10,6 +12,9 @@ use env_logger::Builder;
 use log::LevelFilter;
 use sugars::boxed;
 
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn};
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 use dslab_mp::system::System;
@@ -179,6 +184,117 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn mc_goal_got_two_messages() -> GoalFn {
+    boxed!(|state| {
+        if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
+            Some("client processed two messages".to_owned())
+        } else {
+            None
+        }
+    })
+}
+
+fn mc_invariant_received_messages(messages_expected: HashSet<String>) -> InvariantFn {
+    boxed!(move |state| {
+        let mut messages_got = HashSet::<String>::default();
+        for message in &state.node_states["client-node"]["client"].local_outbox {
+            if !messages_got.insert(message.data.clone()) {
+                return Err(format!("message {:?} was duplicated", message));
+            }
+            if !messages_expected.contains(&message.data) {
+                return Err(format!("message {:?} is not expected", message));
+            }
+        }
+        Ok(())
+    })
+}
+
+fn mc_invariant_depth(depth: u64) -> InvariantFn {
+    boxed!(move |state| {
+        if state.depth > depth {
+            Err("state depth exceeds allowed depth".to_owned())
+        } else {
+            Ok(())
+        }
+    })
+}
+
+fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
+    boxed!(move |state| {
+        for rule in &mut rules {
+            rule(state)?;
+        }
+        Ok(())
+    })
+}
+
+fn mc_prune_depth(depth: u64) -> PruneFn {
+    boxed!(move |state| { mc_invariant_depth(depth)(state).err() })
+}
+
+fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
+    boxed!(move |state| {
+        if state.node_states["client-node"]["client"].sent_message_count > allowed {
+            Some("too many messages sent from client".to_owned())
+        } else if state.node_states["server-node"]["server"].sent_message_count > allowed {
+            Some("too many messages sent from server".to_owned())
+        } else {
+            None
+        }
+    })
+}
+
+fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
+    let strategy = Dfs::new(prune, goal, invariant, dslab_mp::mc::strategy::ExecutionMode::Default);
+    ModelChecker::new(system, boxed!(strategy))
+}
+
+fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
+    let mut system = build_system(config);
+    let data = format!(r#"{{"value": 0}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
+    system.send_local_message("client", Message::new("PING", &data.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    let mut mc = create_model_checker(
+        &system,
+        mc_prune_too_many_messages_sent(4),
+        mc_goal_got_two_messages(),
+        mc_invariant_combined(vec![
+            mc_invariant_received_messages(messages_expected),
+            mc_invariant_depth(20),
+        ]),
+    );
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    Ok(true)
+}
+
+fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
+    let mut system = build_system(config);
+    let data = format!(r#"{{"value": 0}}"#);
+    let data2 = format!(r#"{{"value": 1}}"#);
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
+    system.send_local_message("client", Message::new("PING", &data.clone()));
+    system.send_local_message("client", Message::new("PING", &data2.clone()));
+    system.network().borrow_mut().set_drop_rate(0.3);
+    let mut mc = create_model_checker(
+        &system,
+        mc_prune_depth(7),
+        mc_goal_got_two_messages(),
+        mc_invariant_received_messages(messages_expected),
+    );
+    let res = mc.run();
+    assume!(
+        res.is_ok(),
+        format!("model checher found error: {}", res.as_ref().err().unwrap())
+    )?;
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Ping-Pong Tests
@@ -222,7 +338,13 @@ fn main() {
     tests.add("DROP PING 2", test_drop_ping2, config.clone());
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
-    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config);
+    tests.add(
+        "10 UNIQUE RESULTS UNRELIABLE",
+        test_10results_unique_unreliable,
+        config.clone(),
+    );
+    tests.add("MODEL CHECKING", test_mc_reliable_network, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
 
     if args.test.is_none() {
         tests.run();
