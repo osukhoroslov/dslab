@@ -7,7 +7,6 @@ use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
 use dslab_mp::logger::LogEntry;
-use dslab_mp::logger::LogEntry::McMessageDropped;
 use dslab_mp::mc::error::McError;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
@@ -332,6 +331,54 @@ fn build_no_events_left_with_counter_goal(count_goal_states: Rc<RefCell<i32>>) -
     })
 }
 
+fn two_nodes_started_trace() -> Vec<LogEntry> {
+    vec![
+        LogEntry::NodeStarted {
+            time: 0.0,
+            node: "node1".to_string(),
+            node_id: 1,
+        },
+        LogEntry::NodeStarted {
+            time: 0.0,
+            node: "node2".to_string(),
+            node_id: 2,
+        },
+        LogEntry::ProcessStarted {
+            time: 0.0,
+            node: "node1".to_string(),
+            proc: "process1".to_string(),
+        },
+        LogEntry::ProcessStarted {
+            time: 0.0,
+            node: "node2".to_string(),
+            proc: "process2".to_string(),
+        },
+    ]
+}
+
+fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
+    let mut trace = two_nodes_started_trace();
+    trace.extend(vec![
+        LogEntry::LocalMessageReceived {
+            time: 0.0,
+            msg_id: "node1-process1-0".to_string(),
+            node: "node1".to_string(),
+            proc: "process1".to_string(),
+            msg: msg.clone(),
+        },
+        LogEntry::MessageSent {
+            time: 0.0,
+            msg_id: "0".to_string(),
+            src_node: "node1".to_string(),
+            src_proc: "process1".to_string(),
+            dest_node: "node2".to_string(),
+            dest_proc: "process2".to_string(),
+            msg,
+        },
+    ]);
+    trace
+}
+
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
@@ -379,7 +426,10 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&build_ping_system(), strategy);
     let result = mc.run();
 
-    let expected = Err(McError::new("nothing left to do to reach the goal".to_string(), vec![]));
+    let expected = Err(McError::new(
+        "nothing left to do to reach the goal".to_string(),
+        two_nodes_started_trace(),
+    ));
     assert_eq!(result, expected);
 }
 
@@ -469,11 +519,13 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
-    let expected_trace = vec![McMessageDropped {
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    expected_trace.push(LogEntry::McMessageDropped {
         msg,
         src: "process1".to_string(),
         dest: "process2".to_string(),
-    }];
+    });
+
     let expected = Err(McError::new(
         "nothing left to do to reach the goal".to_string(),
         expected_trace,
@@ -535,6 +587,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&sys, strategy);
     let result = mc.run();
 
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
@@ -546,13 +599,13 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
         dest: dest.clone(),
     };
     let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dest };
-    let expected_trace = vec![
+    expected_trace.extend(vec![
         expected_message_duplicated_event,
         expected_message_received_event.clone(),
         expected_local_message_sent_event.clone(),
         expected_message_received_event,
         expected_local_message_sent_event,
-    ];
+    ]);
     let expected = Err(McError::new("too many messages".to_string(), expected_trace));
     assert_eq!(result, expected);
 }
@@ -685,9 +738,9 @@ fn useless_timer(#[case] strategy_name: String) {
     assert_eq!(err.message(), "invalid order");
 
     let trace = err.trace();
-    assert_eq!(trace.len(), 4);
-    assert!(matches!(trace[0].clone(), LogEntry::McMessageReceived { .. }));
-    assert!(matches!(trace[2].clone(), LogEntry::McTimerFired { .. }));
+    assert_eq!(trace.len(), 12);
+    assert!(matches!(trace[8].clone(), LogEntry::McMessageReceived { .. }));
+    assert!(matches!(trace[10].clone(), LogEntry::McTimerFired { .. }));
 }
 
 #[rstest]

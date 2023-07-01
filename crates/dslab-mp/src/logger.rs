@@ -12,11 +12,12 @@ use crate::{message::Message, util::t};
 
 pub struct Logger {
     log_file: Option<File>,
+    trace: Vec<LogEntry>,
 }
 
 impl Logger {
     pub fn new() -> Self {
-        Self { log_file: None }
+        Self { log_file: None, trace: vec![] }
     }
 
     pub fn with_log_file(log_path: &Path) -> Self {
@@ -28,7 +29,7 @@ impl Logger {
                 .open(log_path)
                 .unwrap(),
         );
-        Self { log_file }
+        Self { log_file, trace: vec![] }
     }
 
     pub fn has_log_file(&self) -> bool {
@@ -41,6 +42,8 @@ impl Logger {
             log_file.write_all(serialized.as_bytes()).unwrap();
             log_file.write_all("\n".as_bytes()).unwrap();
         }
+
+        self.trace.push(event.clone());
 
         match event {
             LogEntry::NodeStarted { time, node, .. } => {
@@ -199,6 +202,10 @@ impl Logger {
                 t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
             }
         }
+    }
+
+    pub fn trace(&self) -> Vec<LogEntry> {
+        self.trace.clone()
     }
 }
 

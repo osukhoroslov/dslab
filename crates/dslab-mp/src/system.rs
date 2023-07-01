@@ -49,6 +49,10 @@ impl System {
         }
     }
 
+    pub fn trace(&self) -> Vec<LogEntry> {
+        self.logger.borrow().trace()
+    }
+
     // Network ---------------------------------------------------------------------------------------------------------
 
     pub fn network(&self) -> RefMut<Network> {

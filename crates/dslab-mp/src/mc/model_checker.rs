@@ -32,7 +32,7 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let trace_handler = Rc::new(RefCell::new(TraceHandler::default()));
+        let trace_handler = Rc::new(RefCell::new(TraceHandler::new(sys.trace())));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
