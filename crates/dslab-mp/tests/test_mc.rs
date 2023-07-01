@@ -426,9 +426,11 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let mut mc = ModelChecker::new(&build_ping_system(), strategy);
     let result = mc.run();
 
+    let mut expected_trace = two_nodes_started_trace();
+    expected_trace.push(LogEntry::McStarted {});
     let expected = Err(McError::new(
         "nothing left to do to reach the goal".to_string(),
-        two_nodes_started_trace(),
+        expected_trace,
     ));
     assert_eq!(result, expected);
 }
@@ -520,11 +522,14 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let result = mc.run();
 
     let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
-    expected_trace.push(LogEntry::McMessageDropped {
-        msg,
-        src: "process1".to_string(),
-        dest: "process2".to_string(),
-    });
+    expected_trace.extend(vec![
+        LogEntry::McStarted {},
+        LogEntry::McMessageDropped {
+            msg,
+            src: "process1".to_string(),
+            dest: "process2".to_string(),
+        },
+    ]);
 
     let expected = Err(McError::new(
         "nothing left to do to reach the goal".to_string(),
@@ -600,6 +605,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     };
     let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dest };
     expected_trace.extend(vec![
+        LogEntry::McStarted {},
         expected_message_duplicated_event,
         expected_message_received_event.clone(),
         expected_local_message_sent_event.clone(),
@@ -738,9 +744,9 @@ fn useless_timer(#[case] strategy_name: String) {
     assert_eq!(err.message(), "invalid order");
 
     let trace = err.trace();
-    assert_eq!(trace.len(), 12);
-    assert!(matches!(trace[8].clone(), LogEntry::McMessageReceived { .. }));
-    assert!(matches!(trace[10].clone(), LogEntry::McTimerFired { .. }));
+    assert_eq!(trace.len(), 13);
+    assert!(matches!(trace[9].clone(), LogEntry::McMessageReceived { .. }));
+    assert!(matches!(trace[11].clone(), LogEntry::McTimerFired { .. }));
 }
 
 #[rstest]

@@ -17,7 +17,10 @@ pub struct Logger {
 
 impl Logger {
     pub fn new() -> Self {
-        Self { log_file: None, trace: vec![] }
+        Self {
+            log_file: None,
+            trace: vec![],
+        }
     }
 
     pub fn with_log_file(log_path: &Path) -> Self {
@@ -29,7 +32,10 @@ impl Logger {
                 .open(log_path)
                 .unwrap(),
         );
-        Self { log_file, trace: vec![] }
+        Self {
+            log_file,
+            trace: vec![],
+        }
     }
 
     pub fn has_log_file(&self) -> bool {
@@ -201,6 +207,9 @@ impl Logger {
             LogEntry::McTimerSet { proc, timer } => {
                 t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
             }
+            LogEntry::McStarted { .. } => {
+                t!("MODEL CHECKING STARTED");
+            }
         }
     }
 
@@ -362,6 +371,7 @@ pub enum LogEntry {
         proc: String,
         state: String,
     },
+    McStarted {},
     McLocalMessageSent {
         msg: Message,
         proc: String,
