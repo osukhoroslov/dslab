@@ -1,11 +1,14 @@
 use crate::logger::LogEntry;
 
-#[derive(Default)]
 pub struct TraceHandler {
     trace: Vec<LogEntry>,
 }
 
 impl TraceHandler {
+    pub fn new(trace: Vec<LogEntry>) -> Self {
+        Self{ trace }
+    }
+
     pub fn push(&mut self, entry: LogEntry) {
         self.trace.push(entry);
     }
