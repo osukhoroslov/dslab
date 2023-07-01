@@ -8,6 +8,7 @@ use colored::*;
 use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
+use crate::logger::LogEntry;
 use crate::mc::error::McError;
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
@@ -38,7 +39,9 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let trace_handler = Rc::new(RefCell::new(TraceHandler::new(sys.trace())));
+        let mut trace = sys.trace();
+        trace.push(LogEntry::McStarted {});
+        let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
