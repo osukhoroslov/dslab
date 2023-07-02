@@ -7,6 +7,7 @@ use std::hash::{Hash, Hasher};
 use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
+use sugars::boxed;
 
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
@@ -14,6 +15,75 @@ use crate::mc::state::McState;
 use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
+
+/// Helps to specify a Strategy instance with given predicates and execution mode
+pub struct StrategyConfiguration {
+    pub(crate) prune: PruneFn,
+    pub(crate) goal: GoalFn,
+    pub(crate) invariant: InvariantFn,
+    pub(crate) collect: CollectFn,
+    pub(crate) execution_mode: ExecutionMode,
+}
+
+impl Default for StrategyConfiguration {
+    fn default() -> Self {
+        Self {
+            prune: boxed!(default_prune),
+            goal: boxed!(default_goal),
+            invariant: boxed!(default_invariant),
+            collect: boxed!(default_collect),
+            execution_mode: ExecutionMode::Default,
+        }
+    }
+}
+
+impl StrategyConfiguration {
+    /// Set prune function
+    pub fn prune(mut self, prune: PruneFn) -> Self {
+        self.prune = prune;
+        self
+    }
+
+    /// Set invariant function
+    pub fn invariant(mut self, invariant: InvariantFn) -> Self {
+        self.invariant = invariant;
+        self
+    }
+
+    /// Set goal function
+    pub fn goal(mut self, goal: GoalFn) -> Self {
+        self.goal = goal;
+        self
+    }
+
+    /// Set collect function
+    pub fn collect(mut self, collect: CollectFn) -> Self {
+        self.collect = collect;
+        self
+    }
+
+    /// Set execution mode
+    pub fn execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
+        self.execution_mode = execution_mode;
+        self
+    }
+}
+
+pub(crate) fn default_prune(_: &McState) -> Option<String> {
+    None
+}
+
+pub(crate) fn default_goal(_: &McState) -> Option<String> {
+    None
+}
+
+pub(crate) fn default_invariant(_: &McState) -> Result<(), String> {
+    Ok(())
+}
+
+pub(crate) fn default_collect(_: &McState) -> bool {
+    false
+}
 
 /// Defines the mode in which the model checking algorithm is executing.
 #[derive(Clone, PartialEq)]
@@ -24,6 +94,10 @@ pub enum ExecutionMode {
     /// Execution with verbose output intended for debugging purposes.
     /// Runs slower than the default mode.
     Debug,
+
+    /// Execution with verbose output as in debug but without caching.
+    /// Runs slower than the debug mode.
+    Full,
 }
 
 /// Status of the message which is passed to logging.
@@ -47,6 +121,9 @@ pub enum VisitedStates {
     /// Stores the hashes of visited states and checks for equality of state hashes
     /// (faster, requires less memory, but may have false positives due to collisions).
     Partial(HashSet<u64>),
+
+    /// Do not stores data at all
+    Empty,
 }
 
 /// Model checking execution statistics.
@@ -307,6 +384,7 @@ pub trait Strategy {
         match log_mode {
             ExecutionMode::Debug => VisitedStates::Full(HashSet::default()),
             ExecutionMode::Default => VisitedStates::Partial(HashSet::default()),
+            ExecutionMode::Full => VisitedStates::Empty,
         }
     }
 
@@ -319,6 +397,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.contains(&h.finish())
             }
+            VisitedStates::Empty => false,
         }
     }
 
@@ -333,6 +412,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.insert(h.finish());
             }
+            VisitedStates::Empty => {}
         }
     }
 
@@ -375,6 +455,9 @@ pub trait Strategy {
 
     /// Returns the used execution mode.
     fn execution_mode(&self) -> &ExecutionMode;
+
+    /// Configures execution mode.
+    fn set_execution_mode(&mut self, execution_mode: ExecutionMode);
 
     /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;

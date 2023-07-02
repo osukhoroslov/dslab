@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use colored::*;
+use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
 use crate::mc::events::{McEvent, McTime};
@@ -17,6 +18,8 @@ use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
 
+use super::strategy::StrategyConfiguration;
+
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
     system: McSystem,
@@ -26,7 +29,16 @@ pub struct ModelChecker {
 impl ModelChecker {
     /// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
+    pub fn new<S: Strategy + Default + 'static>(sys: &System, strategy_config: StrategyConfiguration) -> Self {
+        // Setup strategy which specifies rules for state exploration
+        let mut strategy = boxed!(S::default());
+        *strategy.prune() = strategy_config.prune;
+        *strategy.goal() = strategy_config.goal;
+        *strategy.invariant() = strategy_config.invariant;
+        *strategy.collect() = strategy_config.collect;
+        strategy.set_execution_mode(strategy_config.execution_mode);
+
+        // Setup environment for model checker
         let sim = sys.sim();
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));

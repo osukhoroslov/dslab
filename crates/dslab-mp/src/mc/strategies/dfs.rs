@@ -1,8 +1,11 @@
 //! Implementation of model checking DFS search strategy.
 
+use sugars::boxed;
+
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    default_collect, default_goal, default_invariant, default_prune, CollectFn, ExecutionMode, GoalFn, InvariantFn,
+    McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -17,22 +20,20 @@ pub struct Dfs {
     visited: VisitedStates,
 }
 
-impl Dfs {
-    /// Creates a new Dfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
-        let visited = Self::initialize_visited(&execution_mode);
+impl Default for Dfs {
+    /// Creates a new Dfs instance.
+    fn default() -> Self {
         Self {
-            prune,
-            goal,
-            invariant,
-            collect: Box::new(|_| false),
-            execution_mode,
+            prune: boxed!(default_prune),
+            goal: boxed!(default_goal),
+            invariant: boxed!(default_invariant),
+            collect: boxed!(default_collect),
+            execution_mode: ExecutionMode::Default,
             stats: McStats::default(),
-            visited,
+            visited: VisitedStates::Empty,
         }
     }
 }
-
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
@@ -65,6 +66,11 @@ impl Strategy for Dfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
+    }
+
+    fn set_execution_mode(&mut self, execution_mode: ExecutionMode) {
+        self.execution_mode = execution_mode;
+        *self.visited() = Self::initialize_visited(&self.execution_mode);
     }
 
     fn visited(&mut self) -> &mut VisitedStates {

@@ -2,9 +2,12 @@
 
 use std::collections::VecDeque;
 
+use sugars::boxed;
+
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    default_collect, default_goal, default_invariant, default_prune, CollectFn, ExecutionMode, GoalFn, InvariantFn,
+    McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -20,19 +23,18 @@ pub struct Bfs {
     visited: VisitedStates,
 }
 
-impl Bfs {
-    /// Creates a new Bfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
-        let visited = Self::initialize_visited(&execution_mode);
+impl Default for Bfs {
+    /// Creates a new Bfs instance.
+    fn default() -> Self {
         Self {
-            prune,
-            goal,
-            invariant,
-            collect: Box::new(|_| false),
+            prune: boxed!(default_prune),
+            goal: boxed!(default_goal),
+            invariant: boxed!(default_invariant),
+            collect: boxed!(default_collect),
             states_queue: VecDeque::new(),
-            execution_mode,
+            execution_mode: ExecutionMode::Default,
             stats: McStats::default(),
-            visited,
+            visited: VisitedStates::Empty,
         }
     }
 }
@@ -77,6 +79,11 @@ impl Strategy for Bfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
+    }
+
+    fn set_execution_mode(&mut self, execution_mode: ExecutionMode) {
+        self.execution_mode = execution_mode;
+        *self.visited() = Self::initialize_visited(&self.execution_mode);
     }
 
     fn visited(&mut self) -> &mut VisitedStates {
