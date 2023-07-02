@@ -866,6 +866,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sugars",
+ "threadpool",
 ]
 
 [[package]]

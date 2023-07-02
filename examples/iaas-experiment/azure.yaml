@@ -1,16 +1,12 @@
+threads_count: 4
 send_stats_period: 60
-message_delay:
-  - 0.1
-  - 100.
+message_delay: 0.1
 allocation_retry_period: 60
 vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length:
-  - 1000
-  - 2000
-  - 3000
+simulation_length: 1000
 step_duration: 500
 
 #Vms
@@ -28,4 +24,6 @@ hosts:
 # Schedulers
 schedulers:
   - name: s
-    algorithm: BestFit
+    algorithm:
+      - WorstFit
+      - BestFit

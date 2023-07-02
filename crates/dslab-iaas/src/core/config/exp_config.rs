@@ -2,17 +2,50 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Debug;
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use sugars::{rc, refcell};
 
-use crate::core::config::dynamic_variable::{DynamicNumericVariable, DynamicVariable, NumericParam};
+use crate::core::config::dynamic_variable::{
+    DynamicNumericVariable, DynamicStringVariable, DynamicVariable, NumericParam, StringParam,
+};
 use crate::core::config::sim_config::{HostConfig, SchedulerConfig, SimulationConfig, VmDatasetConfig};
+
+/// Represents scheduler(s) configuration.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct SchedulerConfigRaw {
+    /// Scheduler name. Should be set if count = 1
+    pub name: Option<String>,
+    /// Scheduler name prefix. Full name is produced by appending instance number to the prefix.
+    /// Should be set if count > 1
+    pub name_prefix: Option<String>,
+    /// VM placement algorithm for this scheduler
+    pub algorithm: StringParam,
+    /// number of such schedulers
+    pub count: Option<u32>,
+}
+
+/// Represents scheduler(s) configuration.
+#[derive(Debug, PartialEq, Clone)]
+pub struct SchedulerConfigState {
+    /// Scheduler name. Should be set if count = 1
+    pub name: Option<String>,
+    /// Scheduler name prefix. Full name is produced by appending instance number to the prefix.
+    /// Should be set if count > 1
+    pub name_prefix: Option<String>,
+    /// VM placement algorithm for this scheduler
+    pub algorithm: Rc<RefCell<DynamicStringVariable>>,
+    /// number of such schedulers
+    pub count: Option<u32>,
+}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ConfigDataRaw {
+    /// number of threads to execute different test cases in parallel
+    pub threads_count: Option<usize>,
     /// periodically send statistics from host to monitoring
     pub send_stats_period: Option<NumericParam<f64>>,
     /// message trip time from any host to any direction
@@ -38,7 +71,7 @@ pub struct ConfigDataRaw {
     /// cloud physical hosts
     pub hosts: Option<Vec<HostConfig>>,
     /// cloud schedulers
-    pub schedulers: Option<Vec<SchedulerConfig>>,
+    pub schedulers: Option<Vec<SchedulerConfigRaw>>,
 }
 
 /// Represents simulation configuration.
@@ -69,16 +102,20 @@ pub struct ConfigState {
     /// cloud physical hosts
     pub hosts: Vec<HostConfig>,
     /// cloud schedulers
-    pub schedulers: Vec<SchedulerConfig>,
+    pub schedulers: Rc<RefCell<Vec<SchedulerConfigState>>>,
 }
 
 /// Represents simulation configuration.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ExperimentConfig {
+    /// number of threads to execute different test cases in parallel
+    pub threads_count: usize,
     /// config value
     pub current_state: ConfigState,
     /// dynamic variables which will result in multiple test cases
     pub dynamic_variables: Vec<Rc<RefCell<dyn DynamicVariable>>>,
+    /// if the next state is first
+    pub initial_state: bool,
     /// if there is one more state to process
     pub has_next: bool,
 }
@@ -86,47 +123,67 @@ pub struct ExperimentConfig {
 impl ExperimentConfig {
     /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
-        let current_state: ConfigDataRaw = serde_yaml::from_str(
+        let current_state_raw: ConfigDataRaw = serde_yaml::from_str(
             &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
         )
         .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));
 
         let send_stats_period = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "send_stats_period".to_string(),
-            current_state.send_stats_period.unwrap_or(NumericParam::Value(0.5))
+            current_state_raw.send_stats_period.unwrap_or(NumericParam::Value(0.5))
         )));
         let message_delay = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "message_delay".to_string(),
-            current_state.message_delay.unwrap_or(NumericParam::Value(0.2))
+            current_state_raw.message_delay.unwrap_or(NumericParam::Value(0.2))
         )));
         let allocation_retry_period = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "allocation_retry_period".to_string(),
-            current_state.allocation_retry_period.unwrap_or(NumericParam::Value(1.))
+            current_state_raw
+                .allocation_retry_period
+                .unwrap_or(NumericParam::Value(1.))
         )));
         let vm_start_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "vm_start_duration".to_string(),
-            current_state.vm_start_duration.unwrap_or(NumericParam::Value(1.))
+            current_state_raw.vm_start_duration.unwrap_or(NumericParam::Value(1.))
         )));
         let vm_stop_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "vm_stop_duration".to_string(),
-            current_state.vm_stop_duration.unwrap_or(NumericParam::Value(0.5))
+            current_state_raw.vm_stop_duration.unwrap_or(NumericParam::Value(0.5))
         )));
         let network_throughput = rc!(refcell!(DynamicNumericVariable::<u64>::from_param(
             "network_throughput".to_string(),
-            current_state.network_throughput.unwrap_or(NumericParam::Value(1))
+            current_state_raw.network_throughput.unwrap_or(NumericParam::Value(1))
         )));
         let simulation_length = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "simulation_length".to_string(),
-            current_state.simulation_length.unwrap_or(NumericParam::Value(0.))
+            current_state_raw.simulation_length.unwrap_or(NumericParam::Value(0.))
         )));
         let step_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "step_duration".to_string(),
-            current_state.step_duration.unwrap_or(NumericParam::Value(500.))
+            current_state_raw.step_duration.unwrap_or(NumericParam::Value(500.))
         )));
         let vm_allocation_timeout = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
             "vm_allocation_timeout".to_string(),
-            current_state.vm_allocation_timeout.unwrap_or(NumericParam::Value(50.))
+            current_state_raw
+                .vm_allocation_timeout
+                .unwrap_or(NumericParam::Value(50.))
         )));
+
+        let mut algorithms: Vec<Rc<RefCell<DynamicStringVariable>>> = Vec::new();
+        let mut schedulers: Vec<SchedulerConfigState> = Vec::new();
+        for scheduler in current_state_raw.schedulers.unwrap_or_default() {
+            let algorithm = rc!(refcell!(DynamicStringVariable::from_param(
+                "algorithm".to_string(),
+                scheduler.algorithm
+            )));
+            schedulers.push(SchedulerConfigState {
+                name: scheduler.name,
+                name_prefix: scheduler.name_prefix,
+                algorithm: algorithm.clone(),
+                count: scheduler.count,
+            });
+            algorithms.push(algorithm);
+        }
 
         let current_state = ConfigState {
             send_stats_period,
@@ -134,14 +191,14 @@ impl ExperimentConfig {
             allocation_retry_period,
             vm_start_duration,
             vm_stop_duration,
-            allow_vm_overcommit: current_state.allow_vm_overcommit.unwrap_or(false),
+            allow_vm_overcommit: current_state_raw.allow_vm_overcommit.unwrap_or(false),
             network_throughput,
             simulation_length,
             step_duration,
             vm_allocation_timeout,
-            trace: current_state.trace,
-            hosts: current_state.hosts.unwrap_or_default(),
-            schedulers: current_state.schedulers.unwrap_or_default(),
+            trace: current_state_raw.trace,
+            hosts: current_state_raw.hosts.unwrap_or_default(),
+            schedulers: rc!(refcell!(schedulers)),
         };
 
         let mut dynamic_variables = Vec::<Rc<RefCell<dyn DynamicVariable>>>::new();
@@ -172,24 +229,44 @@ impl ExperimentConfig {
         if current_state.vm_allocation_timeout.borrow().is_dynamic() {
             dynamic_variables.push(current_state.vm_allocation_timeout.clone());
         }
+        for algorithm in algorithms {
+            if algorithm.borrow().is_dynamic() {
+                dynamic_variables.push(algorithm.clone());
+            }
+        }
 
         Self {
+            threads_count: current_state_raw.threads_count.unwrap_or(1),
             current_state,
             dynamic_variables,
+            initial_state: true,
             has_next: true,
         }
     }
 
     /// Returns if some test cases are remaining
     fn has_next(&self) -> bool {
-        self.has_next
+        for i in 0..self.dynamic_variables.len() + 1 {
+            if i == self.dynamic_variables.len() {
+                return false;
+            }
+
+            if self.dynamic_variables[i].borrow().has_next() {
+                return true;
+            }
+        }
+        false
     }
 
     /// Switch to next test case
     fn next(&mut self) {
+        if self.initial_state {
+            self.initial_state = false;
+            return;
+        }
+
         for i in 0..self.dynamic_variables.len() + 1 {
             if i == self.dynamic_variables.len() {
-                self.has_next = false;
                 return;
             }
 
@@ -203,43 +280,51 @@ impl ExperimentConfig {
     }
 
     /// Get current config state for external usage
-    fn current_state(&self) -> String {
-        let mut result: String = "".to_string();
+    pub fn get(&mut self) -> Option<SimulationConfig> {
+        if !self.has_next() {
+            return None;
+        }
+        self.next();
+
+        let mut schedulers: Vec<SchedulerConfig> = Vec::new();
+        for scheduler in &*self.current_state.schedulers.borrow() {
+            schedulers.push(SchedulerConfig {
+                name: scheduler.name.clone(),
+                name_prefix: scheduler.name_prefix.clone(),
+                algorithm: (**scheduler.algorithm.borrow()).to_string(),
+                count: scheduler.count,
+            });
+        }
+
+        Some(SimulationConfig {
+            send_stats_period: **self.current_state.send_stats_period.borrow(),
+            message_delay: **self.current_state.message_delay.borrow(),
+            allocation_retry_period: **self.current_state.allocation_retry_period.borrow(),
+            vm_start_duration: **self.current_state.vm_start_duration.borrow(),
+            vm_stop_duration: **self.current_state.vm_stop_duration.borrow(),
+            allow_vm_overcommit: self.current_state.allow_vm_overcommit,
+            network_throughput: **self.current_state.network_throughput.borrow(),
+            simulation_length: **self.current_state.simulation_length.borrow(),
+            step_duration: **self.current_state.step_duration.borrow(),
+            vm_allocation_timeout: **self.current_state.vm_allocation_timeout.borrow(),
+            trace: self.current_state.trace.clone(),
+            hosts: self.current_state.hosts.clone(),
+            schedulers,
+        })
+    }
+}
+
+/// Print experiment current state with dynamic variables values
+impl fmt::Debug for ExperimentConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = f.debug_struct("Experiment state");
         for variable in &self.dynamic_variables {
             let name = variable.borrow().name();
             let value = variable.borrow().value();
-            result = format!("{} {}={}", result, name, value);
-        }
-        result
-    }
-
-    /// Get current config state for external usage
-    pub fn get(&mut self) -> (Option<SimulationConfig>, String) {
-        if !self.has_next() {
-            return (None, "".to_string());
+            result.field(&name, &value);
         }
 
-        let result = (
-            Some(SimulationConfig {
-                send_stats_period: **self.current_state.send_stats_period.borrow(),
-                message_delay: **self.current_state.message_delay.borrow(),
-                allocation_retry_period: **self.current_state.allocation_retry_period.borrow(),
-                vm_start_duration: **self.current_state.vm_start_duration.borrow(),
-                vm_stop_duration: **self.current_state.vm_stop_duration.borrow(),
-                allow_vm_overcommit: self.current_state.allow_vm_overcommit,
-                network_throughput: **self.current_state.network_throughput.borrow(),
-                simulation_length: **self.current_state.simulation_length.borrow(),
-                step_duration: **self.current_state.step_duration.borrow(),
-                vm_allocation_timeout: **self.current_state.vm_allocation_timeout.borrow(),
-                trace: self.current_state.trace.clone(),
-                hosts: self.current_state.hosts.clone(),
-                schedulers: self.current_state.schedulers.clone(),
-            }),
-            self.current_state(),
-        );
-
-        self.next();
-        result
+        result.finish()
     }
 }
 

@@ -129,3 +129,83 @@ impl<T: FromStr + Copy + std::fmt::Display + std::cmp::PartialOrd<T> + Default +
         self.values.len() > 1
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringParam {
+    Value(String),
+    Values(Vec<String>),
+}
+
+/// Represents variable experiment alternatives for strings
+/// Can contain single string values and list of values
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct DynamicStringVariable {
+    /// current step
+    pub current: usize,
+    /// all test cases taken into account
+    pub values: Vec<String>,
+    // varable config name
+    pub name: String,
+}
+
+impl DynamicStringVariable {
+    pub fn from_param(name: String, config: StringParam) -> Self {
+        match config {
+            StringParam::Value(value) => Self {
+                current: 0,
+                values: vec![value],
+                name,
+            },
+            StringParam::Values(values) => Self {
+                current: 0,
+                values,
+                name,
+            },
+        }
+    }
+}
+
+impl std::ops::Deref for DynamicStringVariable {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.values[self.current]
+    }
+}
+
+impl DynamicVariable for DynamicStringVariable {
+    /// Increment config variable
+    fn next(&mut self) {
+        if !self.has_next() {
+            return;
+        }
+
+        self.current += 1;
+    }
+
+    /// Reset this variable to initial value
+    fn reset(&mut self) {
+        self.current = 0;
+    }
+
+    /// Returns true if variable can be incremented and produce next test case
+    fn has_next(&self) -> bool {
+        self.current + 1 < self.values.len()
+    }
+
+    /// returns variable name to display it`s current state in logs
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    /// returns variable name to display it`s current state in logs
+    fn value(&self) -> String {
+        self.values[self.current].to_string()
+    }
+
+    /// returns if this variable has several different values
+    fn is_dynamic(&self) -> bool {
+        self.values.len() > 1
+    }
+}

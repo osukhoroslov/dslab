@@ -24,6 +24,7 @@ struct Args {
     config: String,
 }
 
+#[derive(Clone)]
 pub struct SimulationControlCallbacks {
     pub step: u32,
 }
