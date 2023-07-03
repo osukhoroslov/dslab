@@ -74,10 +74,9 @@ fn run_link_test(
     topology.add_node("host2", Box::new(ConstantBandwidthNetwork::new(100.0, 0.0)));
 
     if bidirectional {
-        topology.add_link("host1", "host2", link, true);
+        topology.add_link("host1", "host2", link);
     } else {
-        topology.add_link("host1", "host2", link, false);
-        topology.add_link("host2", "host1", link, false);
+        topology.add_full_duplex_link("host1", "host2", link);
     }
 
     topology.init();
@@ -158,7 +157,7 @@ fn test_links() {
                     );
                     assert_float_eq(
                         run_link_test(
-                            Link::fatpipe(100., 0.),
+                            Link::non_shared(100., 0.),
                             true,
                             full_mesh_optimization,
                             resolve_type,
@@ -170,7 +169,7 @@ fn test_links() {
                     );
                     assert_float_eq(
                         run_link_test(
-                            Link::fatpipe(100., 0.),
+                            Link::non_shared(100., 0.),
                             false,
                             full_mesh_optimization,
                             resolve_type,

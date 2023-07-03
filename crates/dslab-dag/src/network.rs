@@ -150,11 +150,10 @@ impl NetworkConfig {
             match topology_type {
                 TopologyType::Star => {
                     for resource in resources.iter() {
-                        network.add_link(
+                        network.add_full_duplex_link(
                             "master",
                             &resource.name,
                             Link::shared(*link_bandwidth, link_latency),
-                            true,
                         );
                     }
                 }
@@ -162,7 +161,7 @@ impl NetworkConfig {
                     for host1 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
                         for host2 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
                             if host1 < host2 {
-                                network.add_link(host1, host2, Link::shared(*link_bandwidth, link_latency), true);
+                                network.add_full_duplex_link(host1, host2, Link::shared(*link_bandwidth, link_latency));
                             }
                         }
                     }

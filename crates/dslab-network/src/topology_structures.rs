@@ -8,16 +8,16 @@ pub type NodeLinksMap = BTreeMap<NodeId, BTreeMap<NodeId, LinkID>>;
 pub const INVALID_NODE_ID: usize = usize::MAX;
 
 #[derive(Copy, Clone, Debug)]
-pub enum LinkType {
+pub enum BandwidthSharingPolicy {
     Shared,
-    Fatpipe,
+    NonShared,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Link {
     pub bandwidth: f64,
     pub latency: f64,
-    pub link_type: LinkType,
+    pub link_type: BandwidthSharingPolicy,
 }
 
 impl Link {
@@ -25,15 +25,15 @@ impl Link {
         Self {
             bandwidth,
             latency,
-            link_type: LinkType::Shared,
+            link_type: BandwidthSharingPolicy::Shared,
         }
     }
 
-    pub fn fatpipe(bandwidth: f64, latency: f64) -> Self {
+    pub fn non_shared(bandwidth: f64, latency: f64) -> Self {
         Self {
             bandwidth,
             latency,
-            link_type: LinkType::Fatpipe,
+            link_type: BandwidthSharingPolicy::NonShared,
         }
     }
 }

@@ -8,7 +8,7 @@ use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 use crate::topology::Topology;
-use crate::topology_structures::{LinkID, LinkType, NodeId};
+use crate::topology_structures::{BandwidthSharingPolicy, LinkID, NodeId};
 
 #[derive(Debug)]
 struct DataTransfer {}
@@ -18,14 +18,14 @@ struct LinkUsage {
     link_id: usize,
     transfers_count: usize,
     left_bandwidth: f64,
-    link_type: LinkType,
+    link_type: BandwidthSharingPolicy,
 }
 
 impl LinkUsage {
     fn get_path_bandwidth(&self) -> f64 {
         match self.link_type {
-            LinkType::Shared => self.left_bandwidth / self.transfers_count as f64,
-            LinkType::Fatpipe => self.left_bandwidth,
+            BandwidthSharingPolicy::Shared => self.left_bandwidth / self.transfers_count as f64,
+            BandwidthSharingPolicy::NonShared => self.left_bandwidth,
         }
     }
 }
@@ -293,8 +293,8 @@ impl TopologyNetwork {
                         let mut link_usage = self.link_data[link].take().unwrap();
                         link_usage.transfers_count -= 1;
                         match link_usage.link_type {
-                            LinkType::Shared => link_usage.left_bandwidth -= bandwidth,
-                            LinkType::Fatpipe => {}
+                            BandwidthSharingPolicy::Shared => link_usage.left_bandwidth -= bandwidth,
+                            BandwidthSharingPolicy::NonShared => {}
                         }
                         self.link_data[link] = Some(link_usage);
                     }
@@ -370,8 +370,8 @@ impl TopologyNetwork {
                         let mut link_usage = self.link_data[link].take().unwrap();
                         link_usage.transfers_count -= 1;
                         match link_usage.link_type {
-                            LinkType::Shared => link_usage.left_bandwidth -= bandwidth,
-                            LinkType::Fatpipe => {}
+                            BandwidthSharingPolicy::Shared => link_usage.left_bandwidth -= bandwidth,
+                            BandwidthSharingPolicy::NonShared => {}
                         }
                         self.link_data[link] = Some(link_usage);
                     }

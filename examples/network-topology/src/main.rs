@@ -93,11 +93,11 @@ fn main() {
     topology.add_node("receiver_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
     topology.add_node("sender_3", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
     // network links
-    topology.add_link("sender_1", "switch_1", Link::shared(100.0, 1.0), true);
-    topology.add_link("sender_2", "switch_1", Link::shared(90.0, 1.0), true);
-    topology.add_link("switch_1", "switch_2", Link::shared(50.0, 1.0), true);
-    topology.add_link("switch_2", "receiver_1", Link::shared(90.0, 1.0), true);
-    topology.add_link("switch_2", "receiver_2", Link::shared(10.0, 1.0), true);
+    topology.add_link("sender_1", "switch_1", Link::shared(100.0, 1.0));
+    topology.add_link("sender_2", "switch_1", Link::shared(90.0, 1.0));
+    topology.add_link("switch_1", "switch_2", Link::shared(50.0, 1.0));
+    topology.add_link("switch_2", "receiver_1", Link::shared(90.0, 1.0));
+    topology.add_link("switch_2", "receiver_2", Link::shared(10.0, 1.0));
     // init topology
     topology.init();
 

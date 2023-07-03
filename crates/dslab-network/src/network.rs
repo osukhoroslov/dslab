@@ -46,8 +46,18 @@ impl Network {
         self.topology.borrow_mut().add_node(node_id, local_network)
     }
 
-    pub fn add_link(&mut self, node1: &str, node2: &str, link: Link, bidirectional: bool) {
-        self.topology.borrow_mut().add_link(node1, node2, link, bidirectional);
+    pub fn add_link(&mut self, node1: &str, node2: &str, link: Link) {
+        self.topology.borrow_mut().add_link(node1, node2, link);
+        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
+    }
+
+    pub fn add_unidirectional_link(&mut self, node1: &str, node2: &str, link: Link) {
+        self.topology.borrow_mut().add_unidirectional_link(node1, node2, link);
+        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
+    }
+
+    pub fn add_full_duplex_link(&mut self, node1: &str, node2: &str, link: Link) {
+        self.topology.borrow_mut().add_full_duplex_link(node1, node2, link);
         self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
     }
 

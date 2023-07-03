@@ -16,7 +16,6 @@ pub fn make_full_mesh_topology(host_count: usize) -> Topology {
                 &format!("host_{}", i),
                 &format!("host_{}", j),
                 Link::shared(1000., 1e-4),
-                true,
             );
         }
     }
@@ -32,7 +31,7 @@ pub fn make_star_topology(host_count: usize) -> Topology {
     for i in 0..host_count {
         let host_name = format!("host_{}", i);
         topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
-        topology.add_link(&host_name, &switch_name, Link::shared(1000., 1e-4), true);
+        topology.add_link(&host_name, &switch_name, Link::shared(1000., 1e-4));
     }
     topology
 }
@@ -51,13 +50,12 @@ pub fn make_tree_topology(star_count: usize, hosts_per_star: usize) -> Topology 
             &root_switch_name,
             &switch_name,
             Link::shared(downlink_bw * hosts_per_star as f64, 1e-4),
-            true,
         );
 
         for j in 0..hosts_per_star {
             let host_name = format!("host_{}_{}", i, j);
             topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
-            topology.add_link(&host_name, &switch_name, Link::shared(downlink_bw, 1e-4), true);
+            topology.add_link(&host_name, &switch_name, Link::shared(downlink_bw, 1e-4));
         }
     }
     topology
@@ -81,16 +79,11 @@ pub fn make_fat_tree_topology(l2_switch_count: usize, l1_switch_count: usize, ho
         for j in 0..hosts_per_switch {
             let host_name = format!("host_{}_{}", i, j);
             topology.add_node(&host_name, Box::new(SharedBandwidthNetwork::new(1e+5, 0.)));
-            topology.add_link(&switch_name, &host_name, Link::shared(downlink_bw, 1e-4), true);
+            topology.add_link(&switch_name, &host_name, Link::shared(downlink_bw, 1e-4));
         }
 
         for j in 0..l2_switch_count {
-            topology.add_link(
-                &switch_name,
-                &format!("l2_switch_{}", j),
-                Link::shared(uplink_bw, 1e-4),
-                true,
-            );
+            topology.add_link(&switch_name, &format!("l2_switch_{}", j), Link::shared(uplink_bw, 1e-4));
         }
     }
     topology

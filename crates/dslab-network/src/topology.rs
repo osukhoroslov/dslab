@@ -48,7 +48,7 @@ impl Topology {
         self.node_links_map.insert(new_node_id, BTreeMap::new());
     }
 
-    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, link: Link, bidirectional: bool) {
+    fn add_link_internal(&mut self, node1_name: &str, node2_name: &str, link: Link, bidirectional: bool) {
         assert!(link.bandwidth > 0.0, "Link bandwidth must be > 0");
         let node1 = self.get_node_id(node1_name);
         let node2 = self.get_node_id(node2_name);
@@ -60,6 +60,21 @@ impl Topology {
         if bidirectional {
             self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
         }
+    }
+
+    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
+        self.add_link_internal(node1_name, node2_name, link, true);
+        self.on_topology_change();
+    }
+
+    pub fn add_unidirectional_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
+        self.add_link_internal(node1_name, node2_name, link, false);
+        self.on_topology_change();
+    }
+
+    pub fn add_full_duplex_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
+        self.add_link_internal(node1_name, node2_name, link, false);
+        self.add_link_internal(node2_name, node1_name, link, false);
         self.on_topology_change();
     }
 
