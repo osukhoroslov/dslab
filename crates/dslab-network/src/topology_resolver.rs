@@ -9,6 +9,7 @@ pub enum TopologyResolveType {
     FloydWarshall,
 }
 
+/// Resolver for calculating paths between each pair of nodes.
 #[derive(Default)]
 pub struct TopologyResolver {
     resolve_type: TopologyResolveType,
@@ -23,6 +24,7 @@ impl TopologyResolver {
         }
     }
 
+    /// Calculates paths between all possible pair of nodes and saves them.
     pub fn resolve_topology(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
         self.parent_path = vec![vec![INVALID_NODE_ID; nodes.len()]; nodes.len()];
 
@@ -37,6 +39,7 @@ impl TopologyResolver {
         }
     }
 
+    /// Builds path from `src` to `dst`. [TopologyResolver::resolve_topology] must be called before that.
     pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkID>> {
         let mut path = Vec::new();
         let mut cur_node = *dst;
