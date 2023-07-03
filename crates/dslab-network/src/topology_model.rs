@@ -89,6 +89,7 @@ impl Transfer {
     }
 }
 
+/// Represents network with topology.
 pub struct TopologyNetwork {
     topology: Rc<RefCell<Topology>>,
     current_transfers: BTreeMap<usize, Transfer>,

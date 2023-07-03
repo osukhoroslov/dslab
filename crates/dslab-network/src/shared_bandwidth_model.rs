@@ -5,6 +5,7 @@ use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSha
 
 use crate::model::*;
 
+/// Network with throughtput shared equally between all current transfers.
 pub struct SharedBandwidthNetwork {
     bandwidth: f64,
     latency: f64,
