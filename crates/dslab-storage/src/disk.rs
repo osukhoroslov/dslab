@@ -10,7 +10,6 @@
 use serde::Serialize;
 use sugars::boxed;
 
-use dslab_core::cast;
 use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
@@ -19,7 +18,7 @@ use dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
 };
 
-use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use crate::events::{DataReadFailed, DataWriteFailed};
 use crate::scheduler::{FifoScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
@@ -35,10 +34,15 @@ pub struct DiskActivity {
 }
 
 #[derive(Clone, Serialize)]
-struct DiskReadActivityCompleted {}
+pub(crate) enum DiskActivityKind {
+    Read,
+    Write,
+}
 
 #[derive(Clone, Serialize)]
-struct DiskWriteActivityCompleted {}
+pub(crate) struct DiskActivityCompleted {
+    pub kind: DiskActivityKind,
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -156,34 +160,22 @@ impl DiskBuilder {
     pub fn build(self, ctx: SimulationContext) -> Disk {
         let read_throughput_model =
             FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
-        let read_ops_scheduler = if let Some(limit) = self.concurrent_read_ops_limit {
-            boxed!(FifoScheduler::new_with_concurrent_ops_limit(
-                read_throughput_model,
-                limit
-            ))
-        } else {
-            boxed!(FifoScheduler::new(read_throughput_model))
-        };
 
         let write_throughput_model =
             FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
-        let write_ops_scheduler = if let Some(limit) = self.concurrent_write_ops_limit {
-            boxed!(FifoScheduler::new_with_concurrent_ops_limit(
-                write_throughput_model,
-                limit
-            ))
-        } else {
-            boxed!(FifoScheduler::new(write_throughput_model))
-        };
+
+        let scheduler = boxed!(FifoScheduler::new(
+            read_throughput_model,
+            self.concurrent_read_ops_limit,
+            write_throughput_model,
+            self.concurrent_write_ops_limit,
+        ));
 
         Disk {
             capacity: self.capacity.unwrap(),
             used: 0,
-            read_ops_scheduler,
-            write_ops_scheduler,
+            scheduler,
             next_request_id: 0,
-            next_read_event: u64::MAX,
-            next_write_event: u64::MAX,
             ctx,
         }
     }
@@ -200,11 +192,9 @@ impl DiskBuilder {
 pub struct Disk {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) used: u64,
-    pub(in crate::disk) read_ops_scheduler: Box<dyn Scheduler>,
-    pub(in crate::disk) write_ops_scheduler: Box<dyn Scheduler>,
+    pub(in crate::disk) scheduler: Box<dyn Scheduler>,
+
     pub(in crate::disk) next_request_id: u64,
-    pub(in crate::disk) next_read_event: u64,
-    pub(in crate::disk) next_write_event: u64,
     pub(in crate::disk) ctx: SimulationContext,
 }
 
@@ -213,44 +203,6 @@ impl Disk {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
-    }
-
-    fn schedule_next_read_event(&mut self) {
-        if let Some((time, _)) = self.read_ops_scheduler.peek() {
-            self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
-        }
-    }
-
-    fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.write_ops_scheduler.peek() {
-            self.next_write_event = self
-                .ctx
-                .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
-        }
-    }
-
-    fn on_read_completed(&mut self) {
-        let (_, activity) = self.read_ops_scheduler.pop(&mut self.ctx).unwrap();
-        self.ctx.emit_now(
-            DataReadCompleted {
-                request_id: activity.request_id,
-                size: activity.size,
-            },
-            activity.requester,
-        );
-        self.schedule_next_read_event();
-    }
-
-    fn on_write_completed(&mut self) {
-        let (_, activity) = self.write_ops_scheduler.pop(&mut self.ctx).unwrap();
-        self.ctx.emit_now(
-            DataWriteCompleted {
-                request_id: activity.request_id,
-                size: activity.size,
-            },
-            activity.requester,
-        );
-        self.schedule_next_write_event();
     }
 }
 
@@ -272,7 +224,8 @@ impl Storage for Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            self.read_ops_scheduler.insert(
+            self.scheduler.submit(
+                DiskActivityKind::Read,
                 DiskActivity {
                     request_id,
                     requester,
@@ -281,8 +234,6 @@ impl Storage for Disk {
                 size as f64,
                 &mut self.ctx,
             );
-            self.ctx.cancel_event(self.next_read_event);
-            self.schedule_next_read_event();
         }
         request_id
     }
@@ -302,7 +253,8 @@ impl Storage for Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-            self.write_ops_scheduler.insert(
+            self.scheduler.submit(
+                DiskActivityKind::Write,
                 DiskActivity {
                     request_id,
                     requester,
@@ -311,8 +263,6 @@ impl Storage for Disk {
                 size as f64,
                 &mut self.ctx,
             );
-            self.ctx.cancel_event(self.next_write_event);
-            self.schedule_next_write_event();
         }
         request_id
     }
@@ -352,13 +302,6 @@ impl Storage for Disk {
 
 impl EventHandler for Disk {
     fn on(&mut self, event: Event) {
-        cast!(match event.data {
-            DiskReadActivityCompleted {} => {
-                self.on_read_completed();
-            }
-            DiskWriteActivityCompleted {} => {
-                self.on_write_completed();
-            }
-        })
+        self.scheduler.notify_on_event(event, &mut self.ctx);
     }
 }
