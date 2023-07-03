@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
+use std::str::FromStr;
 
 use dslab_core::context::SimulationContext;
 use dslab_core::log_warn;
@@ -12,9 +13,29 @@ use crate::schedulers::common::*;
 use crate::schedulers::treap::Treap;
 use crate::system::System;
 
+pub enum DepthMode {
+    Global,
+    Local,
+    LocalAndNextRank,
+}
+
+impl FromStr for DepthMode {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Global" => Ok(DepthMode::Global),
+            "Local" => Ok(DepthMode::Local),
+            "LocalAndNextRank" => Ok(DepthMode::LocalAndNextRank),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct LookaheadScheduler {
     data_transfer_strategy: DataTransferStrategy,
     depth: usize,
+    depth_mode: DepthMode,
 }
 
 impl LookaheadScheduler {
@@ -22,6 +43,7 @@ impl LookaheadScheduler {
         Self {
             data_transfer_strategy: DataTransferStrategy::Eager,
             depth: usize::MAX,
+            depth_mode: DepthMode::Global,
         }
     }
 
@@ -31,6 +53,7 @@ impl LookaheadScheduler {
                 .get("data_transfer_strategy")
                 .unwrap_or(DataTransferStrategy::Eager),
             depth: params.get("depth").unwrap_or(usize::MAX),
+            depth_mode: params.get("depth_mode").unwrap_or(DepthMode::Global),
         }
     }
 
@@ -63,7 +86,7 @@ impl LookaheadScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
-        for &task_id in task_ids.iter() {
+        for (i, &task_id) in task_ids.iter().enumerate() {
             let mut best_makespan = f64::MAX;
             let mut best_start = -1.;
             let mut best_finish = -1.;
@@ -122,14 +145,28 @@ impl LookaheadScheduler {
 
                 let mut depth = vec![usize::MAX; task_ids.len()];
                 for &task in task_ids.iter() {
-                    if scheduled[task] {
+                    if task == task_id {
                         depth[task] = 0;
-                    } else if depth[task] == usize::MAX {
-                        // a task can have zero scheduled predecessors, then depth is 1
-                        depth[task] = 1;
+                    } else {
+                        match self.depth_mode {
+                            DepthMode::Global => {
+                                if scheduled[task] {
+                                    depth[task] = 0;
+                                } else if depth[task] == usize::MAX {
+                                    // a task can have zero scheduled predecessors, then depth is 1
+                                    depth[task] = 1;
+                                }
+                            }
+                            DepthMode::Local => {}
+                            DepthMode::LocalAndNextRank => {
+                                if i + 1 < task_ids.len() && task == task_ids[i + 1] {
+                                    depth[task] = 0;
+                                }
+                            }
+                        }
                     }
                     for (child, _weight) in task_successors(task, dag) {
-                        depth[child] = depth[child].min(depth[task] + 1);
+                        depth[child] = depth[child].min(depth[task].saturating_add(1));
                     }
                 }
 
@@ -138,6 +175,13 @@ impl LookaheadScheduler {
                     .cloned()
                     .filter(|&task| !scheduled[task])
                     .filter(|&task| depth[task] <= self.depth)
+                    .filter(|&task| {
+                        dag.get_task(task)
+                            .inputs
+                            .iter()
+                            .filter_map(|&i| dag.get_data_item(i).producer)
+                            .all(|pred| depth[pred] <= self.depth)
+                    })
                     .collect::<Vec<usize>>();
                 let mut makespan = finish_time + output_time;
 
