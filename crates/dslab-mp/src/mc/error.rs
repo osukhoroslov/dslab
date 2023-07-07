@@ -1,8 +1,8 @@
-//! Implementation of model checking error struct
+//! Model checking error.
 
 use crate::logger::LogEntry;
 
-/// Model checking error struct
+/// Stores information about an error found by model checking.
 #[derive(Debug, Default, PartialEq)]
 pub struct McError {
     message: String,
@@ -10,19 +10,19 @@ pub struct McError {
 }
 
 impl McError {
-    /// Create new model checking error
+    /// Creates new model checking error.
     pub fn new(message: String, trace: Vec<LogEntry>) -> Self {
         Self { message, trace }
     }
 }
 
 impl McError {
-    /// Get model checking error message
+    /// Returns the error message.
     pub fn message(&self) -> String {
         self.message.clone()
     }
 
-    /// Get trace which led system to the error
+    /// Returns the execution trace which led the system to erroneous state.
     pub fn trace(&self) -> &Vec<LogEntry> {
         &self.trace
     }
