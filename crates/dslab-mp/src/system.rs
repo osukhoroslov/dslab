@@ -50,7 +50,7 @@ impl System {
     }
 
     pub fn trace(&self) -> Vec<LogEntry> {
-        self.logger.borrow().trace()
+        self.logger.borrow().trace().clone()
     }
 
     // Network ---------------------------------------------------------------------------------------------------------
