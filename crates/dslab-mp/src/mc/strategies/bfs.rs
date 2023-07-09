@@ -2,12 +2,9 @@
 
 use std::collections::VecDeque;
 
-use sugars::boxed;
-
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    default_collect, default_goal, default_invariant, default_prune, CollectFn, ExecutionMode, GoalFn, InvariantFn,
-    McResult, McStats, PruneFn, Strategy, VisitedStates,
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -21,22 +18,6 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-}
-
-impl Default for Bfs {
-    /// Creates a new Bfs instance.
-    fn default() -> Self {
-        Self {
-            prune: boxed!(default_prune),
-            goal: boxed!(default_goal),
-            invariant: boxed!(default_invariant),
-            collect: boxed!(default_collect),
-            states_queue: VecDeque::new(),
-            execution_mode: ExecutionMode::Default,
-            stats: McStats::default(),
-            visited: VisitedStates::Empty,
-        }
-    }
 }
 
 impl Bfs {
@@ -64,6 +45,19 @@ impl Bfs {
 }
 
 impl Strategy for Bfs {
+    fn build(config: crate::mc::strategy::StrategyConfig) -> Self {
+        Bfs {
+            prune: config.prune,
+            goal: config.goal,
+            invariant: config.invariant,
+            collect: config.collect,
+            execution_mode: config.execution_mode,
+            states_queue: VecDeque::default(),
+            stats: McStats::default(),
+            visited: config.visited_states,
+        }
+    }
+
     fn run(&mut self, system: &mut McSystem) -> McResult {
         let res = self.bfs(system);
         match res {
@@ -79,11 +73,6 @@ impl Strategy for Bfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
-    }
-
-    fn set_execution_mode(&mut self, execution_mode: ExecutionMode) {
-        self.execution_mode = execution_mode;
-        *self.visited() = Self::initialize_visited(&self.execution_mode);
     }
 
     fn visited(&mut self) -> &mut VisitedStates {

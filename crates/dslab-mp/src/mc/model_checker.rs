@@ -13,12 +13,10 @@ use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
-use crate::mc::strategy::{McResult, McStats, Strategy};
+use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
-
-use super::strategy::StrategyConfiguration;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
@@ -29,14 +27,9 @@ pub struct ModelChecker {
 impl ModelChecker {
     /// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    pub fn new<S: Strategy + Default + 'static>(sys: &System, strategy_config: StrategyConfiguration) -> Self {
+    pub fn new<S: Strategy + 'static>(sys: &System, strategy_config: StrategyConfig) -> Self {
         // Setup strategy which specifies rules for state exploration
-        let mut strategy = boxed!(S::default());
-        *strategy.prune() = strategy_config.prune;
-        *strategy.goal() = strategy_config.goal;
-        *strategy.invariant() = strategy_config.invariant;
-        *strategy.collect() = strategy_config.collect;
-        strategy.set_execution_mode(strategy_config.execution_mode);
+        let strategy = boxed!(S::build(strategy_config));
 
         // Setup environment for model checker
         let sim = sys.sim();

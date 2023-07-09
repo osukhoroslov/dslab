@@ -1,11 +1,8 @@
 //! Implementation of model checking DFS search strategy.
 
-use sugars::boxed;
-
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    default_collect, default_goal, default_invariant, default_prune, CollectFn, ExecutionMode, GoalFn, InvariantFn,
-    McResult, McStats, PruneFn, Strategy, VisitedStates,
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -20,20 +17,6 @@ pub struct Dfs {
     visited: VisitedStates,
 }
 
-impl Default for Dfs {
-    /// Creates a new Dfs instance.
-    fn default() -> Self {
-        Self {
-            prune: boxed!(default_prune),
-            goal: boxed!(default_goal),
-            invariant: boxed!(default_invariant),
-            collect: boxed!(default_collect),
-            execution_mode: ExecutionMode::Default,
-            stats: McStats::default(),
-            visited: VisitedStates::Empty,
-        }
-    }
-}
 impl Dfs {
     fn dfs(&mut self, system: &mut McSystem, state: McState) -> Result<(), String> {
         let available_events = system.available_events();
@@ -50,6 +33,18 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
+    fn build(config: crate::mc::strategy::StrategyConfig) -> Self {
+        Dfs {
+            prune: config.prune,
+            goal: config.goal,
+            invariant: config.invariant,
+            collect: config.collect,
+            execution_mode: config.execution_mode,
+            stats: McStats::default(),
+            visited: config.visited_states,
+        }
+    }
+
     fn run(&mut self, system: &mut McSystem) -> McResult {
         let state = system.get_state();
 
@@ -66,11 +61,6 @@ impl Strategy for Dfs {
 
     fn execution_mode(&self) -> &ExecutionMode {
         &self.execution_mode
-    }
-
-    fn set_execution_mode(&mut self, execution_mode: ExecutionMode) {
-        self.execution_mode = execution_mode;
-        *self.visited() = Self::initialize_visited(&self.execution_mode);
     }
 
     fn visited(&mut self) -> &mut VisitedStates {

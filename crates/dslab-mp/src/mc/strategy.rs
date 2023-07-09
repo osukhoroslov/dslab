@@ -16,16 +16,17 @@ use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
 
-/// Helps to specify a Strategy instance with given predicates and execution mode
-pub struct StrategyConfiguration {
+/// Configuration of model checking strategy.
+pub struct StrategyConfig {
     pub(crate) prune: PruneFn,
     pub(crate) goal: GoalFn,
     pub(crate) invariant: InvariantFn,
     pub(crate) collect: CollectFn,
     pub(crate) execution_mode: ExecutionMode,
+    pub(crate) visited_states: VisitedStates,
 }
 
-impl Default for StrategyConfiguration {
+impl Default for StrategyConfig {
     fn default() -> Self {
         Self {
             prune: boxed!(default_prune),
@@ -33,38 +34,45 @@ impl Default for StrategyConfiguration {
             invariant: boxed!(default_invariant),
             collect: boxed!(default_collect),
             execution_mode: ExecutionMode::Default,
+            visited_states: VisitedStates::Disabled,
         }
     }
 }
 
-impl StrategyConfiguration {
-    /// Set prune function
+impl StrategyConfig {
+    /// Sets prune function.
     pub fn prune(mut self, prune: PruneFn) -> Self {
         self.prune = prune;
         self
     }
 
-    /// Set invariant function
+    /// Sets invariant function.
     pub fn invariant(mut self, invariant: InvariantFn) -> Self {
         self.invariant = invariant;
         self
     }
 
-    /// Set goal function
+    /// Sets goal function.
     pub fn goal(mut self, goal: GoalFn) -> Self {
         self.goal = goal;
         self
     }
 
-    /// Set collect function
+    /// Sets collect function.
     pub fn collect(mut self, collect: CollectFn) -> Self {
         self.collect = collect;
         self
     }
 
-    /// Set execution mode
+    /// Sets execution mode.
     pub fn execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
         self.execution_mode = execution_mode;
+        self
+    }
+
+    /// Sets visited states cache.
+    pub fn visited_states(mut self, visited_states: VisitedStates) -> Self {
+        self.visited_states = visited_states;
         self
     }
 }
@@ -94,10 +102,6 @@ pub enum ExecutionMode {
     /// Execution with verbose output intended for debugging purposes.
     /// Runs slower than the default mode.
     Debug,
-
-    /// Execution with verbose output as in debug but without caching.
-    /// Runs slower than the debug mode.
-    Full,
 }
 
 /// Status of the message which is passed to logging.
@@ -122,8 +126,8 @@ pub enum VisitedStates {
     /// (faster, requires less memory, but may have false positives due to collisions).
     Partial(HashSet<u64>),
 
-    /// Do not stores data at all
-    Empty,
+    /// Does not store any data about the previously visited system states.
+    Disabled,
 }
 
 /// Model checking execution statistics.
@@ -166,6 +170,11 @@ pub type McResult = Result<McStats, String>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
+    /// Builds a new strategy instance.
+    fn build(config: StrategyConfig) -> Self
+    where
+        Self: Sized;
+
     /// Launches the strategy execution.
     fn run(&mut self, system: &mut McSystem) -> McResult;
 
@@ -376,18 +385,6 @@ pub trait Strategy {
         }
     }
 
-    /// Determines the way of checking if the state was visited before.
-    fn initialize_visited(log_mode: &ExecutionMode) -> VisitedStates
-    where
-        Self: Sized,
-    {
-        match log_mode {
-            ExecutionMode::Debug => VisitedStates::Full(HashSet::default()),
-            ExecutionMode::Default => VisitedStates::Partial(HashSet::default()),
-            ExecutionMode::Full => VisitedStates::Empty,
-        }
-    }
-
     /// Checks if the system state was visited before.
     fn have_visited(&mut self, state: &McState) -> bool {
         match self.visited() {
@@ -397,7 +394,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.contains(&h.finish())
             }
-            VisitedStates::Empty => false,
+            VisitedStates::Disabled => false,
         }
     }
 
@@ -412,7 +409,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.insert(h.finish());
             }
-            VisitedStates::Empty => {}
+            VisitedStates::Disabled => {}
         }
     }
 
@@ -455,9 +452,6 @@ pub trait Strategy {
 
     /// Returns the used execution mode.
     fn execution_mode(&self) -> &ExecutionMode;
-
-    /// Configures execution mode.
-    fn set_execution_mode(&mut self, execution_mode: ExecutionMode);
 
     /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;
