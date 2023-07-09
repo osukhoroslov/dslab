@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    StrategyConfig, CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -45,7 +45,7 @@ impl Bfs {
 }
 
 impl Strategy for Bfs {
-    fn build(config: crate::mc::strategy::StrategyConfig) -> Self {
+    fn build(config: StrategyConfig) -> Self {
         Bfs {
             prune: config.prune,
             goal: config.goal,

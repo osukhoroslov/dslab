@@ -2,7 +2,7 @@
 
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    StrategyConfig, CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -33,7 +33,7 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
-    fn build(config: crate::mc::strategy::StrategyConfig) -> Self {
+    fn build(config: StrategyConfig) -> Self {
         Dfs {
             prune: config.prune,
             goal: config.goal,
