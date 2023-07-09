@@ -235,13 +235,7 @@ fn build_mc_from_config(sys: &System, strategy_name: String, config: StrategyCon
     }
 }
 
-fn build_default_model_checker(
-    sys: &System,
-    strategy_name: String,
-    prune: PruneFn,
-    goal: GoalFn,
-    invariant: InvariantFn,
-) -> ModelChecker {
+fn build_mc(sys: &System, strategy_name: String, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
     let config = build_strategy_config(prune, goal, invariant);
     build_mc_from_config(sys, strategy_name, config)
 }
@@ -315,7 +309,7 @@ fn one_state_ok(#[case] strategy_name: String) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = build_default_model_checker(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 1);
@@ -329,7 +323,7 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
     let goal = boxed!(|_: &McState| Some("final".to_string()));
     let invariant = boxed!(|_: &McState| Err("broken".to_string()));
 
-    let mut mc = build_default_model_checker(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
     assert!(if let Err(msg) = result { msg == "broken" } else { false });
 }
@@ -342,7 +336,7 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let goal = boxed!(|_: &McState| None);
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let mut mc = build_default_model_checker(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     let expected = Err("nothing left to do to reach the goal".to_string());
@@ -362,7 +356,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String) {
 
     let mut sys = build_ping_system();
     sys.send_local_message("process1", Message::new("PING", "some_data"));
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
 
     let result = mc.run();
     assert!(result.is_ok());
@@ -383,7 +377,7 @@ fn two_states_one_message_pruned(#[case] strategy_name: String) {
     let mut sys = build_ping_system();
     sys.send_local_message("process1", Message::new("PING", "some_data"));
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 1);
@@ -404,7 +398,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_drop_rate(0.5);
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     assert!(result.is_ok());
@@ -423,7 +417,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_drop_rate(0.5);
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     let expected = Err("nothing left to do to reach the goal".to_string());
@@ -446,7 +440,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_dupl_rate(0.5);
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     assert!(result.is_ok());
@@ -474,7 +468,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("PING", "some_data"));
     sys.network().set_dupl_rate(0.5);
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     let expected = Err("too many messages".to_string());
@@ -496,7 +490,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"));
     sys.network().set_corrupt_rate(0.5);
 
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
     assert!(result.is_ok());
@@ -523,7 +517,6 @@ fn visited_states(#[case] strategy_name: String) {
     let mut mc = build_mc_from_config(&sys, strategy_name, config);
     let result = mc.run();
     assert!(result.is_ok());
-    println!("{:?}", result);
     assert_eq!(*count_states.borrow(), 5);
 }
 
@@ -584,7 +577,7 @@ fn many_dropped_messages(#[case] strategy_name: String) {
     sys.send_local_message("process1", Message::new("START", "start spamming!!!"));
 
     sys.network().drop_outgoing("node1");
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
     assert!(result.is_ok());
 }
@@ -600,7 +593,7 @@ fn context_time(#[case] clock_skew: f64) {
 
     let mut sys = build_timer_system(clock_skew);
     sys.send_local_message("process", Message::new("PING", "some_data"));
-    let mut mc = build_default_model_checker(&sys, "dfs".to_string(), prune, goal, invariant);
+    let mut mc = build_mc(&sys, "dfs".to_string(), prune, goal, invariant);
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(goal_data.borrow().len(), 1);
@@ -634,7 +627,7 @@ fn collect_mode(#[case] strategy_name: String) {
     let invariant = boxed!(|_: &McState| Ok(()));
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
-    let mut mc = build_default_model_checker(&sys, strategy_name, prune, goal, invariant);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
 
     let res = mc.run_from_states_with_change(states, |sys| {
         sys.send_local_message(

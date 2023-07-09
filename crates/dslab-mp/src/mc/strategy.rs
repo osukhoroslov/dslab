@@ -34,7 +34,7 @@ impl Default for StrategyConfig {
             invariant: boxed!(default_invariant),
             collect: boxed!(default_collect),
             execution_mode: ExecutionMode::Default,
-            visited_states: VisitedStates::Disabled,
+            visited_states: VisitedStates::Partial(HashSet::default()),
         }
     }
 }
