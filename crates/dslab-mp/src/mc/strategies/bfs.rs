@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    StrategyConfig, CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
