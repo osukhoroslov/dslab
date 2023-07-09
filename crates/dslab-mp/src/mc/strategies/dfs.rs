@@ -2,7 +2,7 @@
 
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -15,22 +15,6 @@ pub struct Dfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-}
-
-impl Dfs {
-    /// Creates a new Dfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
-        let visited = Self::initialize_visited(&execution_mode);
-        Self {
-            prune,
-            goal,
-            invariant,
-            collect: Box::new(|_| false),
-            execution_mode,
-            stats: McStats::default(),
-            visited,
-        }
-    }
 }
 
 impl Dfs {
@@ -49,6 +33,18 @@ impl Dfs {
 }
 
 impl Strategy for Dfs {
+    fn build(config: StrategyConfig) -> Self {
+        Dfs {
+            prune: config.prune,
+            goal: config.goal,
+            invariant: config.invariant,
+            collect: config.collect,
+            execution_mode: config.execution_mode,
+            stats: McStats::default(),
+            visited: config.visited_states,
+        }
+    }
+
     fn run(&mut self, system: &mut McSystem) -> McResult {
         let state = system.get_state();
 

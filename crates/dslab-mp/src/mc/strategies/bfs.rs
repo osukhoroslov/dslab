@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 use crate::mc::state::McState;
 use crate::mc::strategy::{
-    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, VisitedStates,
+    CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
 };
 use crate::mc::system::McSystem;
 
@@ -18,23 +18,6 @@ pub struct Bfs {
     execution_mode: ExecutionMode,
     stats: McStats,
     visited: VisitedStates,
-}
-
-impl Bfs {
-    /// Creates a new Bfs instance with specified user-defined functions and execution mode.
-    pub fn new(prune: PruneFn, goal: GoalFn, invariant: InvariantFn, execution_mode: ExecutionMode) -> Self {
-        let visited = Self::initialize_visited(&execution_mode);
-        Self {
-            prune,
-            goal,
-            invariant,
-            collect: Box::new(|_| false),
-            states_queue: VecDeque::new(),
-            execution_mode,
-            stats: McStats::default(),
-            visited,
-        }
-    }
 }
 
 impl Bfs {
@@ -62,6 +45,19 @@ impl Bfs {
 }
 
 impl Strategy for Bfs {
+    fn build(config: StrategyConfig) -> Self {
+        Bfs {
+            prune: config.prune,
+            goal: config.goal,
+            invariant: config.invariant,
+            collect: config.collect,
+            execution_mode: config.execution_mode,
+            states_queue: VecDeque::default(),
+            stats: McStats::default(),
+            visited: config.visited_states,
+        }
+    }
+
     fn run(&mut self, system: &mut McSystem) -> McResult {
         let res = self.bfs(system);
         match res {

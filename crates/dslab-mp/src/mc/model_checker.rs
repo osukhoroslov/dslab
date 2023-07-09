@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use colored::*;
+use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
 use crate::mc::events::{McEvent, McTime};
@@ -12,7 +13,7 @@ use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
-use crate::mc::strategy::{McResult, McStats, Strategy};
+use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
 use crate::mc::system::McSystem;
 use crate::system::System;
 use crate::util::t;
@@ -26,7 +27,11 @@ pub struct ModelChecker {
 impl ModelChecker {
     /// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    pub fn new(sys: &System, strategy: Box<dyn Strategy>) -> Self {
+    pub fn new<S: Strategy + 'static>(sys: &System, strategy_config: StrategyConfig) -> Self {
+        // Setup strategy which specifies rules for state exploration
+        let strategy = boxed!(S::build(strategy_config));
+
+        // Setup environment for model checker
         let sim = sys.sim();
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));

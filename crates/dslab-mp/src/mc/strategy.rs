@@ -7,6 +7,7 @@ use std::hash::{Hash, Hasher};
 use colored::*;
 use lazy_static::lazy_static;
 use regex::Regex;
+use sugars::boxed;
 
 use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
 use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
@@ -14,6 +15,83 @@ use crate::mc::state::McState;
 use crate::mc::system::McSystem;
 use crate::message::Message;
 use crate::util::t;
+
+/// Configuration of model checking strategy.
+pub struct StrategyConfig {
+    pub(crate) prune: PruneFn,
+    pub(crate) goal: GoalFn,
+    pub(crate) invariant: InvariantFn,
+    pub(crate) collect: CollectFn,
+    pub(crate) execution_mode: ExecutionMode,
+    pub(crate) visited_states: VisitedStates,
+}
+
+impl Default for StrategyConfig {
+    fn default() -> Self {
+        Self {
+            prune: boxed!(default_prune),
+            goal: boxed!(default_goal),
+            invariant: boxed!(default_invariant),
+            collect: boxed!(default_collect),
+            execution_mode: ExecutionMode::Default,
+            visited_states: VisitedStates::Partial(HashSet::default()),
+        }
+    }
+}
+
+impl StrategyConfig {
+    /// Sets prune function.
+    pub fn prune(mut self, prune: PruneFn) -> Self {
+        self.prune = prune;
+        self
+    }
+
+    /// Sets invariant function.
+    pub fn invariant(mut self, invariant: InvariantFn) -> Self {
+        self.invariant = invariant;
+        self
+    }
+
+    /// Sets goal function.
+    pub fn goal(mut self, goal: GoalFn) -> Self {
+        self.goal = goal;
+        self
+    }
+
+    /// Sets collect function.
+    pub fn collect(mut self, collect: CollectFn) -> Self {
+        self.collect = collect;
+        self
+    }
+
+    /// Sets execution mode.
+    pub fn execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
+        self.execution_mode = execution_mode;
+        self
+    }
+
+    /// Sets visited states cache.
+    pub fn visited_states(mut self, visited_states: VisitedStates) -> Self {
+        self.visited_states = visited_states;
+        self
+    }
+}
+
+pub(crate) fn default_prune(_: &McState) -> Option<String> {
+    None
+}
+
+pub(crate) fn default_goal(_: &McState) -> Option<String> {
+    None
+}
+
+pub(crate) fn default_invariant(_: &McState) -> Result<(), String> {
+    Ok(())
+}
+
+pub(crate) fn default_collect(_: &McState) -> bool {
+    false
+}
 
 /// Defines the mode in which the model checking algorithm is executing.
 #[derive(Clone, PartialEq)]
@@ -47,6 +125,9 @@ pub enum VisitedStates {
     /// Stores the hashes of visited states and checks for equality of state hashes
     /// (faster, requires less memory, but may have false positives due to collisions).
     Partial(HashSet<u64>),
+
+    /// Does not store any data about the previously visited system states.
+    Disabled,
 }
 
 /// Model checking execution statistics.
@@ -89,6 +170,11 @@ pub type McResult = Result<McStats, String>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
+    /// Builds a new strategy instance.
+    fn build(config: StrategyConfig) -> Self
+    where
+        Self: Sized;
+
     /// Launches the strategy execution.
     fn run(&mut self, system: &mut McSystem) -> McResult;
 
@@ -299,17 +385,6 @@ pub trait Strategy {
         }
     }
 
-    /// Determines the way of checking if the state was visited before.
-    fn initialize_visited(log_mode: &ExecutionMode) -> VisitedStates
-    where
-        Self: Sized,
-    {
-        match log_mode {
-            ExecutionMode::Debug => VisitedStates::Full(HashSet::default()),
-            ExecutionMode::Default => VisitedStates::Partial(HashSet::default()),
-        }
-    }
-
     /// Checks if the system state was visited before.
     fn have_visited(&mut self, state: &McState) -> bool {
         match self.visited() {
@@ -319,6 +394,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.contains(&h.finish())
             }
+            VisitedStates::Disabled => false,
         }
     }
 
@@ -333,6 +409,7 @@ pub trait Strategy {
                 state.hash(&mut h);
                 hashes.insert(h.finish());
             }
+            VisitedStates::Disabled => {}
         }
     }
 
