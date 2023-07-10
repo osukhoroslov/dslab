@@ -60,6 +60,7 @@ pub struct DiskBuilder {
     write_throughput_fn: Option<ResourceThroughputFn>,
     read_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
     write_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
+    concurrent_ops_limit: Option<u64>,
     concurrent_read_ops_limit: Option<u64>,
     concurrent_write_ops_limit: Option<u64>,
 }
@@ -75,6 +76,7 @@ impl Default for DiskBuilder {
             write_throughput_fn: None,
             read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
             write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            concurrent_ops_limit: None,
             concurrent_read_ops_limit: None,
             concurrent_write_ops_limit: None,
         }
@@ -147,6 +149,12 @@ impl DiskBuilder {
         self
     }
 
+    /// Sets concurrent operations limit.
+    pub fn concurrent_ops_limit(mut self, concurrent_ops_limit: u64) -> Self {
+        self.concurrent_ops_limit.replace(concurrent_ops_limit);
+        self
+    }
+
     /// Sets concurrent read operations limit.
     pub fn concurrent_read_ops_limit(mut self, concurrent_read_ops_limit: u64) -> Self {
         self.concurrent_read_ops_limit.replace(concurrent_read_ops_limit);
@@ -171,8 +179,9 @@ impl DiskBuilder {
 
         let scheduler = boxed!(FifoScheduler::new(
             read_throughput_model,
-            self.concurrent_read_ops_limit,
             write_throughput_model,
+            self.concurrent_ops_limit,
+            self.concurrent_read_ops_limit,
             self.concurrent_write_ops_limit,
         ));
 
@@ -235,7 +244,6 @@ impl Storage for Disk {
                     op_type: DiskOperationType::Read,
                     size,
                 },
-                size as f64,
                 &mut self.ctx,
             );
         }
@@ -264,7 +272,6 @@ impl Storage for Disk {
                     op_type: DiskOperationType::Write,
                     size,
                 },
-                size as f64,
                 &mut self.ctx,
             );
         }
