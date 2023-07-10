@@ -1,7 +1,7 @@
 dags:
-  - ../dag-demo/dags
+  - ../../examples/dag-demo/dags
 systems:
-  - ../dag-demo/systems
+  - ../../examples/dag-demo/systems
 data_transfer_mode: Direct
 schedulers:
   - Simple
