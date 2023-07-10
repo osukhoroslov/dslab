@@ -13,38 +13,43 @@ use sugars::boxed;
 use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::{context::SimulationContext, log_debug, log_error};
+use dslab_core::{cast, context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
 };
 
-use crate::events::{DataReadFailed, DataWriteFailed};
+use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::scheduler::{FifoScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
 /// Describes a disk operation.
 #[derive(Clone)]
-pub struct DiskActivity {
+pub struct DiskOperation {
     /// Request Id.
     pub request_id: u64,
     /// Requester.
     pub requester: Id,
+    /// Operation type.
+    pub op_type: DiskOperationType,
     /// Size.
     pub size: u64,
 }
 
 #[derive(Clone, Serialize)]
-pub(crate) enum DiskActivityKind {
+/// Type of disk operation.
+pub enum DiskOperationType {
+    /// Reading data from disk.
     Read,
+    /// Writing data to disk.
     Write,
 }
 
 #[derive(Clone, Serialize)]
-pub(crate) struct DiskActivityCompleted {
-    pub kind: DiskActivityKind,
+pub(crate) struct DiskOperationCompleted {
+    pub request_id: u64,
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Disk builder. This is a type for convenient disk setup.
 ///
@@ -53,8 +58,8 @@ pub struct DiskBuilder {
     capacity: Option<u64>,
     read_throughput_fn: Option<ResourceThroughputFn>,
     write_throughput_fn: Option<ResourceThroughputFn>,
-    read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    read_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
+    write_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
     concurrent_read_ops_limit: Option<u64>,
     concurrent_write_ops_limit: Option<u64>,
 }
@@ -131,13 +136,13 @@ impl DiskBuilder {
     }
 
     /// Sets throughput factor function for read operations.
-    pub fn read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
+    pub fn read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>) -> Self {
         self.read_factor_fn = read_factor_fn;
         self
     }
 
     /// Sets throughput factor function for write operations.
-    pub fn write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
+    pub fn write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>) -> Self {
         self.write_factor_fn = write_factor_fn;
         self
     }
@@ -181,7 +186,7 @@ impl DiskBuilder {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Represents a disk.
 ///
@@ -193,7 +198,6 @@ pub struct Disk {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) used: u64,
     pub(in crate::disk) scheduler: Box<dyn Scheduler>,
-
     pub(in crate::disk) next_request_id: u64,
     pub(in crate::disk) ctx: SimulationContext,
 }
@@ -225,10 +229,10 @@ impl Storage for Disk {
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
             self.scheduler.submit(
-                DiskActivityKind::Read,
-                DiskActivity {
+                DiskOperation {
                     request_id,
                     requester,
+                    op_type: DiskOperationType::Read,
                     size,
                 },
                 size as f64,
@@ -254,10 +258,10 @@ impl Storage for Disk {
         } else {
             self.used += size;
             self.scheduler.submit(
-                DiskActivityKind::Write,
-                DiskActivity {
+                DiskOperation {
                     request_id,
                     requester,
+                    op_type: DiskOperationType::Write,
                     size,
                 },
                 size as f64,
@@ -302,6 +306,30 @@ impl Storage for Disk {
 
 impl EventHandler for Disk {
     fn on(&mut self, event: Event) {
-        self.scheduler.notify_on_event(event, &mut self.ctx);
+        cast!(match event.data {
+            DiskOperationCompleted { request_id } => {
+                let operation = self.scheduler.complete(request_id, &mut self.ctx);
+                match operation.op_type {
+                    DiskOperationType::Read => {
+                        self.ctx.emit_now(
+                            DataReadCompleted {
+                                request_id: operation.request_id,
+                                size: operation.size,
+                            },
+                            operation.requester,
+                        );
+                    }
+                    DiskOperationType::Write => {
+                        self.ctx.emit_now(
+                            DataWriteCompleted {
+                                request_id: operation.request_id,
+                                size: operation.size,
+                            },
+                            operation.requester,
+                        );
+                    }
+                }
+            }
+        })
     }
 }

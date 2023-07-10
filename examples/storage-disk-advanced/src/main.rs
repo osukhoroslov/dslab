@@ -15,7 +15,7 @@ use dslab_core::simulation::Simulation;
 use dslab_core::{log_error, log_info};
 
 use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, ActivityFactorFn};
-use dslab_storage::disk::{Disk, DiskActivity, DiskBuilder};
+use dslab_storage::disk::{Disk, DiskBuilder, DiskOperation};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use dslab_storage::storage::Storage;
 
@@ -84,8 +84,8 @@ fn run_simulation(disk_builder: DiskBuilder) {
 
 struct ExampleActivityFactorFn {}
 
-impl ActivityFactorFn<DiskActivity> for ExampleActivityFactorFn {
-    fn get_factor(&mut self, item: &DiskActivity, ctx: &mut SimulationContext) -> f64 {
+impl ActivityFactorFn<DiskOperation> for ExampleActivityFactorFn {
+    fn get_factor(&mut self, item: &DiskOperation, ctx: &mut SimulationContext) -> f64 {
         if item.size < 100 {
             1.
         } else {

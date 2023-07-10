@@ -76,51 +76,44 @@ impl EventHandler for Checker {
                 if self.expected_event_type != ExpectedEventType::FileReadCompleted {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             FileReadFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileReadFailed {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             FileWriteCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileWriteCompleted {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             FileWriteFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::FileWriteFailed {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             DataReadCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataReadCompleted {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             DataReadFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataReadFailed {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             DataWriteCompleted { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataWriteCompleted {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
             DataWriteFailed { .. } => {
                 if self.expected_event_type != ExpectedEventType::DataWriteFailed {
                     panic!();
                 }
-                self.received_events_count += 1;
             }
-        })
+        });
+        self.received_events_count += 1;
     }
 }
 
