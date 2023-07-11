@@ -39,7 +39,7 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let mut trace = sys.trace();
+        let mut trace = sys.logger().trace().clone();
         trace.push(LogEntry::McStarted {});
         let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
 
