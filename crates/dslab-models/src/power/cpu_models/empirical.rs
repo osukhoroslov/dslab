@@ -36,7 +36,7 @@ impl EmpiricalCpuPowerModel {
 }
 
 impl CpuPowerModel for EmpiricalCpuPowerModel {
-    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<usize>) -> f64 {
         if utilization % 0.1 == 0. {
             self.measurements[(utilization * 10.) as usize]
         } else {

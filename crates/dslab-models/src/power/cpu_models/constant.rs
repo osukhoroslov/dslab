@@ -18,7 +18,7 @@ impl ConstantCpuPowerModel {
 }
 
 impl CpuPowerModel for ConstantCpuPowerModel {
-    fn get_power(&self, _utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
+    fn get_power(&self, _utilization: f64, _frequency: Option<f64>, _state: Option<usize>) -> f64 {
         self.power
     }
 }

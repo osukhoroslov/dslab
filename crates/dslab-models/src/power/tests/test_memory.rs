@@ -1,53 +1,87 @@
 //! Tests for memory power models.
 
-use crate::power::host::HostPowerModel;
-use crate::power::host::HostState;
+use approx::{assert_abs_diff_eq, assert_relative_eq};
+
+use crate::power::host::{HostPowerModelBuilder, HostState};
 use crate::power::memory_models::constant::ConstantMemoryPowerModel;
 use crate::power::memory_models::ddr3::Ddr3MemoryPowerModel;
 
 #[test]
 fn test_constant_model() {
-    let model = HostPowerModel::memory_only(Box::new(ConstantMemoryPowerModel::new(0.5)));
+    let model = HostPowerModelBuilder::new()
+        .memory(Box::new(ConstantMemoryPowerModel::new(0.5)))
+        .build();
 
-    assert_eq!(model.get_power(HostState::memory(0.)), 0.5);
-    assert_eq!(model.get_power(HostState::memory(1e-5)), 0.5);
-    assert_eq!(model.get_power(HostState::memory(0.5)), 0.5);
-    assert_eq!(model.get_power(HostState::memory(1.)), 0.5);
+    let mut state = HostState {
+        memory_util: Some(0.),
+        ..Default::default()
+    };
+    assert_eq!(model.get_power(state), 0.5);
+    state.memory_util = Some(1e-5);
+    assert_eq!(model.get_power(state), 0.5);
+    state.memory_util = Some(0.5);
+    assert_eq!(model.get_power(state), 0.5);
+    state.memory_util = Some(1.);
+    assert_eq!(model.get_power(state), 0.5);
 
-    let state = HostState::new(None, None, None, None, Some(1.), Some(1.), None);
+    let state = HostState {
+        memory_read_util: Some(1.),
+        memory_write_util: Some(1.),
+        ..Default::default()
+    };
     assert_eq!(model.get_power(state), 0.5);
 }
 
 #[test]
 fn test_ddr3_model() {
-    let model = HostPowerModel::memory_only(Box::new(Ddr3MemoryPowerModel::new(240.)));
+    let model = HostPowerModelBuilder::new()
+        .memory(Box::new(Ddr3MemoryPowerModel::new(240.)))
+        .build();
 
-    assert!(model.get_power(HostState::memory(0.)) > 23.4);
-    assert!(model.get_power(HostState::memory(0.)) < 23.41);
+    let mut state = HostState {
+        memory_util: Some(0.),
+        ..Default::default()
+    };
+    assert_relative_eq!(model.get_power(state), 23.4);
 
-    assert!(model.get_power(HostState::memory(1e-5)) > 23.4);
-    assert!(model.get_power(HostState::memory(1e-5)) < 23.41);
+    state.memory_util = Some(0.1);
+    assert_abs_diff_eq!(model.get_power(state), 30.06);
 
-    assert!(model.get_power(HostState::memory(0.5)) > 56.69);
-    assert!(model.get_power(HostState::memory(0.5)) < 56.71);
+    state.memory_util = Some(0.5);
+    assert_abs_diff_eq!(model.get_power(state), 56.7);
 
-    assert!(model.get_power(HostState::memory(1.)) > 89.9);
-    assert!(model.get_power(HostState::memory(1.)) < 90.1);
+    state.memory_util = Some(1.);
+    assert_abs_diff_eq!(model.get_power(state), 90.);
 
-    let mut state = HostState::new(None, None, None, None, Some(0.), Some(0.), None);
-    assert!(model.get_power(state.clone()) > 23.4);
-    assert!(model.get_power(state.clone()) < 23.41);
+    let state = HostState {
+        memory_read_util: Some(0.),
+        memory_write_util: Some(0.),
+        ..Default::default()
+    };
+    assert_relative_eq!(model.get_power(state), 23.4);
 
-    state = HostState::new(None, None, None, Some(0.5), Some(0.4), Some(0.8), None);
-    assert!(model.get_power(state.clone()) > 62.27);
-    assert!(model.get_power(state.clone()) < 62.29);
+    let state = HostState {
+        memory_util: Some(0.5),
+        memory_read_util: Some(0.4),
+        memory_write_util: Some(0.8),
+        ..Default::default()
+    };
+    assert_abs_diff_eq!(model.get_power(state), 62.28);
 }
 
 #[test]
-fn test_micron_model_custom_memory() {
+fn test_ddr3_custom_model() {
     let model = Box::new(Ddr3MemoryPowerModel::custom_model(240., 32., 8.));
     assert_eq!(model.modules_count(), 8);
 
-    let host_model = HostPowerModel::memory_only(model);
-    assert_eq!(host_model.get_power(HostState::memory(0.)), 16.64);
+    let host_model = HostPowerModelBuilder::new().memory(model).build();
+
+    let mut state = HostState {
+        memory_util: Some(0.),
+        ..Default::default()
+    };
+    assert_abs_diff_eq!(host_model.get_power(state), 16.64);
+
+    state.memory_util = Some(0.5);
+    assert_abs_diff_eq!(host_model.get_power(state), 40.32);
 }

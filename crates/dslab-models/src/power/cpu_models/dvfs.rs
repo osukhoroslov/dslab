@@ -39,7 +39,7 @@ impl DvfsAwareCpuPowerModel {
 }
 
 impl CpuPowerModel for DvfsAwareCpuPowerModel {
-    fn get_power(&self, utilization: f64, frequency: Option<f64>, _state: Option<String>) -> f64 {
+    fn get_power(&self, utilization: f64, frequency: Option<f64>, _state: Option<usize>) -> f64 {
         // If the frequency is not available, assume 1.0 value
         let frequency = frequency.unwrap_or(1.);
         self.static_power + self.util_coef * utilization + self.freq_coef * utilization * frequency

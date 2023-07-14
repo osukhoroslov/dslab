@@ -17,6 +17,7 @@ impl LinearCpuPowerModel {
     /// * `min_power` - The minimum power consumption in Watts (at 0% utilization).
     /// * `max_power` - The maximum power consumption in Watts (at 100% utilization).
     pub fn new(min_power: f64, max_power: f64) -> Self {
+        assert!(max_power > min_power, "max_power should be greater than min_power");
         Self {
             min_power,
             max_power,
@@ -26,7 +27,7 @@ impl LinearCpuPowerModel {
 }
 
 impl CpuPowerModel for LinearCpuPowerModel {
-    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<String>) -> f64 {
+    fn get_power(&self, utilization: f64, _frequency: Option<f64>, _state: Option<usize>) -> f64 {
         self.min_power + self.factor * utilization
     }
 }

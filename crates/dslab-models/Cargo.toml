@@ -5,6 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
+approx = "0.5.1"
 dyn-clone = "1.0"
 dslab-core = { path = "../dslab-core" }
 rand = "0.8.4"
