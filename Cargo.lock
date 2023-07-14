@@ -82,6 +82,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "approx"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "arima"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -677,7 +686,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "281759d3c8a14f5c3f0c49363be56810fcd7f910422f97f2db850c2920fde5cf"
 dependencies = [
- "approx",
+ "approx 0.3.2",
  "num-traits",
  "serde",
  "serde_derive",
@@ -895,6 +904,7 @@ dependencies = [
 name = "dslab-models"
 version = "0.1.0"
 dependencies = [
+ "approx 0.5.1",
  "dslab-core",
  "dyn-clone",
  "rand 0.8.5",
