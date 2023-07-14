@@ -60,7 +60,12 @@ impl PendingEvents {
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
-            _ => {}
+            McEvent::MessageDuplicated { .. } => {
+                self.directives.insert(id);
+            }
+            McEvent::MessageCorrupted { .. } => {
+                self.directives.insert(id);
+            }
         };
         self.events.insert(id, event);
         id
