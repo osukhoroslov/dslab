@@ -214,7 +214,7 @@ impl HostManager {
     pub fn get_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
-        self.power_model.get_power(HostState::cpu(cpu_util))
+        self.power_model.get_power(HostState::cpu_util(cpu_util))
     }
 
     /// Returns the total energy consumption.

@@ -1,17 +1,23 @@
 //! Host power model.
 
 use crate::power::cpu::CpuPowerModel;
-use crate::power::cpu_models::constant::ConstantCpuPowerModel;
 use crate::power::hdd::{HddPowerModel, HddState};
 use crate::power::memory::MemoryPowerModel;
 
 /// Stores host state properties essential to compute the current host power consumption.
 ///
+/// By default all properties are empty (None).
 /// If both `memory_read_util` and `memory_write_util` are set, they are used instead of `memory_util`.
-#[derive(Clone)]
+#[derive(Default, Clone, Copy)]
 pub struct HostState {
     /// CPU utilization from 0 to 1.
     pub cpu_util: Option<f64>,
+    /// Relative scaling of CPU frequency from 0 to 1,
+    /// where 0 corresponds to the minimum CPU frequency
+    /// and 1 corresponds to the maximum CPU frequency.
+    pub cpu_freq: Option<f64>,
+    /// CPU power management state, specified as an index in `[0, num states)` range.
+    pub cpu_state: Option<usize>,
     /// Memory utilization from 0 to 1.
     pub memory_util: Option<f64>,
     /// Memory read utilization from 0 to 1.
@@ -23,53 +29,29 @@ pub struct HostState {
 }
 
 impl HostState {
-    /// Creates HostState with specified properties.
-    pub fn new(
-        cpu_util: Option<f64>,
-        memory_util: Option<f64>,
-        memory_read_util: Option<f64>,
-        memory_write_util: Option<f64>,
-        hdd_state: Option<HddState>,
-    ) -> Self {
-        Self {
-            cpu_util,
-            memory_util,
-            memory_read_util,
-            memory_write_util,
-            hdd_state,
-        }
-    }
-
-    /// Shortcut for building HostState from CPU utilization only.
-    pub fn cpu(cpu_util: f64) -> Self {
+    /// Creates HostState with specified CPU utilization.
+    pub fn cpu_util(cpu_util: f64) -> Self {
         Self {
             cpu_util: Some(cpu_util),
-            memory_util: None,
-            memory_read_util: None,
-            memory_write_util: None,
-            hdd_state: None,
+            ..Default::default()
         }
     }
 
-    /// Shortcut for building HostState from memory utilization only.
-    pub fn memory(memory_util: f64) -> Self {
+    /// Creates HostState with specified CPU utilization and frequency.
+    pub fn cpu_util_freq(cpu_util: f64, cpu_freq: f64) -> Self {
         Self {
-            cpu_util: None,
-            memory_util: Some(memory_util),
-            memory_read_util: None,
-            memory_write_util: None,
-            hdd_state: None,
+            cpu_util: Some(cpu_util),
+            cpu_freq: Some(cpu_freq),
+            ..Default::default()
         }
     }
 
-    /// Shortcut for building HostState from HDD state only.
-    pub fn hdd(hdd_state: HddState) -> Self {
+    /// Creates HostState with specified CPU utilization and state.
+    pub fn cpu_util_state(cpu_util: f64, cpu_state: usize) -> Self {
         Self {
-            cpu_util: None,
-            memory_util: None,
-            memory_read_util: None,
-            memory_write_util: None,
-            hdd_state: Some(hdd_state),
+            cpu_util: Some(cpu_util),
+            cpu_state: Some(cpu_state),
+            ..Default::default()
         }
     }
 }
@@ -77,71 +59,28 @@ impl HostState {
 /// A model for estimating the power consumption of a physical host.
 ///
 /// The host power consumption is modeled using the following parts:
-/// - CPU power consumption estimated using the provided CPU power model
+/// - CPU power consumption estimated using the provided CPU power model and idle power value
 /// - memory power consumption estimated using the provided memory power model
 /// - hard disk drive power consumption estimated using the provided HDD power model
 /// - consumption of other host components modeled as a fixed value
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct HostPowerModel {
     cpu_power_model: Option<Box<dyn CpuPowerModel>>,
+    cpu_idle_power: Option<f64>,
     memory_power_model: Option<Box<dyn MemoryPowerModel>>,
     hard_drive_power_model: Option<Box<dyn HddPowerModel>>,
     other_power: f64,
 }
 
 impl HostPowerModel {
-    /// Creates the host power model.
-    pub fn new(
-        cpu_power_model: Box<dyn CpuPowerModel>,
-        memory_power_model: Box<dyn MemoryPowerModel>,
-        hard_drive_power_model: Box<dyn HddPowerModel>,
-        other_power: f64,
-    ) -> Self {
-        Self {
-            cpu_power_model: Some(cpu_power_model),
-            memory_power_model: Some(memory_power_model),
-            hard_drive_power_model: Some(hard_drive_power_model),
-            other_power,
-        }
-    }
-
-    /// Creates the host power model using only the CPU power consumption part.
-    pub fn cpu_only(cpu_power_model: Box<dyn CpuPowerModel>) -> Self {
-        Self {
-            cpu_power_model: Some(cpu_power_model),
-            memory_power_model: None,
-            hard_drive_power_model: None,
-            other_power: 0.,
-        }
-    }
-
-    /// Creates the host power model using only the memory power consumption part.
-    pub fn memory_only(memory_power_model: Box<dyn MemoryPowerModel>) -> Self {
-        Self {
-            memory_power_model: Some(memory_power_model),
-            cpu_power_model: None,
-            hard_drive_power_model: None,
-            other_power: 0.,
-        }
-    }
-
-    /// Creates the host power model using only the HDD power consumption part.
-    pub fn hdd_only(hard_drive_power_model: Box<dyn HddPowerModel>) -> Self {
-        Self {
-            memory_power_model: None,
-            cpu_power_model: None,
-            hard_drive_power_model: Some(hard_drive_power_model),
-            other_power: 0.,
-        }
-    }
-
-    /// Returns the power consumption of a host in W for a given host state.
+    /// Returns the power consumption of a host in Watts for a given host state.
     pub fn get_power(&self, host_state: HostState) -> f64 {
         let mut result = 0.;
-        if let Some(model) = &self.cpu_power_model {
-            if let Some(cpu_util) = host_state.cpu_util {
-                result += model.get_power(cpu_util);
-            }
+        let cpu_util = host_state.cpu_util.unwrap_or(0.);
+        if cpu_util == 0. && self.cpu_idle_power.is_some() {
+            result += self.cpu_idle_power.unwrap();
+        } else if let Some(model) = &self.cpu_power_model {
+            result += model.get_power(cpu_util, host_state.cpu_freq, host_state.cpu_state);
         }
         if let Some(model) = &self.memory_power_model {
             if let (Some(memory_read_util), Some(memory_write_util)) =
@@ -162,8 +101,61 @@ impl HostPowerModel {
     }
 }
 
-impl Default for HostPowerModel {
-    fn default() -> Self {
-        Self::cpu_only(Box::new(ConstantCpuPowerModel::new(0.)))
+/// Helper for building the host power model.
+#[derive(Default)]
+pub struct HostPowerModelBuilder {
+    cpu_power_model: Option<Box<dyn CpuPowerModel>>,
+    cpu_idle_power: Option<f64>,
+    memory_power_model: Option<Box<dyn MemoryPowerModel>>,
+    hard_drive_power_model: Option<Box<dyn HddPowerModel>>,
+    other_power: f64,
+}
+
+impl HostPowerModelBuilder {
+    /// Creates the builder with default settings
+    /// (all inner power models are None, other power consumption is 0).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the CPU power model.
+    pub fn cpu(mut self, model: Box<dyn CpuPowerModel>) -> Self {
+        self.cpu_power_model = Some(model);
+        self
+    }
+
+    /// Sets the CPU power consumption in idle state (0% utilization).
+    pub fn cpu_idle(mut self, value: f64) -> Self {
+        self.cpu_idle_power = Some(value);
+        self
+    }
+
+    /// Sets the memory power model.
+    pub fn memory(mut self, model: Box<dyn MemoryPowerModel>) -> Self {
+        self.memory_power_model = Some(model);
+        self
+    }
+
+    /// Sets the HDD power model.
+    pub fn hard_drive(mut self, model: Box<dyn HddPowerModel>) -> Self {
+        self.hard_drive_power_model = Some(model);
+        self
+    }
+
+    /// Sets the power consumption of other host components.
+    pub fn other(mut self, value: f64) -> Self {
+        self.other_power = value;
+        self
+    }
+
+    /// Builds the host power model.
+    pub fn build(self) -> HostPowerModel {
+        HostPowerModel {
+            cpu_power_model: self.cpu_power_model,
+            cpu_idle_power: self.cpu_idle_power,
+            memory_power_model: self.memory_power_model,
+            hard_drive_power_model: self.hard_drive_power_model,
+            other_power: self.other_power,
+        }
     }
 }

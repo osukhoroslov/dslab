@@ -11,7 +11,7 @@ pub struct ConstantMemoryPowerModel {
 impl ConstantMemoryPowerModel {
     /// Creates a constant power model.
     ///
-    /// * `power` - The power consumption in W.
+    /// * `power` - The power consumption in Watts.
     pub fn new(power: f64) -> Self {
         Self { power }
     }

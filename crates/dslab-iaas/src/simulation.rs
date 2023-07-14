@@ -11,7 +11,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::simulation::Simulation;
 use dslab_core::Id;
 use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
-use dslab_models::power::host::HostPowerModel;
+use dslab_models::power::host::{HostPowerModel, HostPowerModelBuilder};
 
 use crate::core::config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
@@ -80,7 +80,9 @@ impl CloudSimulation {
             hosts: BTreeMap::new(),
             schedulers: HashMap::new(),
             components: HashMap::new(),
-            host_power_model: HostPowerModel::cpu_only(Box::new(LinearCpuPowerModel::new(1., 0.4))),
+            host_power_model: HostPowerModelBuilder::new()
+                .cpu(Box::new(LinearCpuPowerModel::new(0.4, 1.)))
+                .build(),
             slav_metric: Box::new(OverloadTimeFraction::new()),
             batch_mode: false,
             batch_buffer: Vec::new(),
