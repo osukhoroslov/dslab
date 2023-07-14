@@ -122,6 +122,11 @@ pub enum VisitedStates {
     Disabled,
 }
 
+pub enum StepType {
+    Add,
+    Apply,
+}
+
 /// Model checking execution statistics.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct McStats {
@@ -185,7 +190,9 @@ pub trait Strategy {
                 options,
             } => {
                 match options {
-                    DeliveryOptions::NoFailures(..) => self.apply_event(system, event_id, false, false)?,
+                    DeliveryOptions::NoFailures(..) => {
+                        self.search_step(system, event_id, false, false, StepType::Apply)?
+                    }
                     DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
@@ -198,30 +205,30 @@ pub trait Strategy {
                         }
 
                         // Default (normal / corrupt)
-                        self.apply_event(system, event_id, false, false)?;
+                        self.search_step(system, event_id, false, false, StepType::Apply)?;
                         if can_be_corrupted {
-                            self.apply_event(system, event_id, false, true)?;
+                            self.search_step(system, event_id, false, true, StepType::Apply)?;
                         }
 
                         // Duplicate (normal / corrupt one)
                         if max_dupl_count > 0 {
-                            self.apply_event(system, event_id, true, false)?;
+                            self.search_step(system, event_id, true, false, StepType::Apply)?;
                             if can_be_corrupted {
-                                self.apply_event(system, event_id, true, true)?;
+                                self.search_step(system, event_id, true, true, StepType::Apply)?;
                             }
                         }
                     }
                 }
             }
             TimerFired { .. } => {
-                self.apply_event(system, event_id, false, false)?;
+                self.search_step(system, event_id, false, false, StepType::Apply)?;
             }
             TimerCancelled { proc, timer } => {
                 system.events.cancel_timer(proc, timer);
-                self.apply_event(system, event_id, false, false)?;
+                self.search_step(system, event_id, false, false, StepType::Apply)?;
             }
             MessageDropped { .. } => {
-                self.apply_event(system, event_id, false, false)?;
+                self.search_step(system, event_id, false, false, StepType::Apply)?;
             }
             _ => {}
         }
@@ -243,7 +250,7 @@ pub trait Strategy {
 
         let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
-        self.apply_event(system, drop_event_id, false, false)?;
+        self.search_step(system, drop_event_id, false, false, StepType::Apply)?;
         system.set_state(state);
 
         Ok(())
@@ -251,12 +258,13 @@ pub trait Strategy {
 
     /// Applies (possibly modified) event to the system, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
-    fn apply_event(
+    fn search_step(
         &mut self,
         system: &mut McSystem,
         event_id: McEventId,
         duplicate: bool,
         corrupt: bool,
+        step_type: StepType,
     ) -> Result<(), McError> {
         let state = system.get_state();
 
@@ -273,7 +281,14 @@ pub trait Strategy {
 
         self.debug_log(&event, system.depth());
 
-        system.apply_event(event);
+        match step_type {
+            StepType::Add => {
+                self.add_event(system, event);
+            }
+            StepType::Apply => {
+                system.apply_event(event);
+            }
+        }
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
