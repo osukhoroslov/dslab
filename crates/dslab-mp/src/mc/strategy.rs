@@ -123,8 +123,8 @@ pub enum VisitedStates {
 }
 
 pub enum StepType {
-    Add,
-    Apply,
+    Add(Vec<McEvent>),
+    Apply(McEventId),
 }
 
 /// Model checking execution statistics.
@@ -191,7 +191,7 @@ pub trait Strategy {
             } => {
                 match options {
                     DeliveryOptions::NoFailures(..) => {
-                        self.search_step(system, event_id, false, false, StepType::Apply)?
+                        self.search_step(system, false, false, StepType::Apply(event_id))?
                     }
                     DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
                     DeliveryOptions::PossibleFailures {
@@ -205,30 +205,30 @@ pub trait Strategy {
                         }
 
                         // Default (normal / corrupt)
-                        self.search_step(system, event_id, false, false, StepType::Apply)?;
+                        self.search_step(system, false, false, StepType::Apply(event_id))?;
                         if can_be_corrupted {
-                            self.search_step(system, event_id, false, true, StepType::Apply)?;
+                            self.search_step(system, false, true, StepType::Apply(event_id))?;
                         }
 
                         // Duplicate (normal / corrupt one)
                         if max_dupl_count > 0 {
-                            self.search_step(system, event_id, true, false, StepType::Apply)?;
+                            self.search_step(system, true, false, StepType::Apply(event_id))?;
                             if can_be_corrupted {
-                                self.search_step(system, event_id, true, true, StepType::Apply)?;
+                                self.search_step(system, true, true, StepType::Apply(event_id))?;
                             }
                         }
                     }
                 }
             }
             TimerFired { .. } => {
-                self.search_step(system, event_id, false, false, StepType::Apply)?;
+                self.search_step(system, false, false, StepType::Apply(event_id))?;
             }
             TimerCancelled { proc, timer } => {
                 system.events.cancel_timer(proc, timer);
-                self.search_step(system, event_id, false, false, StepType::Apply)?;
+                self.search_step(system, false, false, StepType::Apply(event_id))?;
             }
             MessageDropped { .. } => {
-                self.search_step(system, event_id, false, false, StepType::Apply)?;
+                self.search_step(system, false, false, StepType::Apply(event_id))?;
             }
             _ => {}
         }
@@ -250,42 +250,43 @@ pub trait Strategy {
 
         let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
-        self.search_step(system, drop_event_id, false, false, StepType::Apply)?;
+        self.search_step(system, false, false, StepType::Apply(drop_event_id))?;
         system.set_state(state);
 
         Ok(())
     }
 
-    /// Applies (possibly modified) event to the system, calls `search_step_impl` with the produced state
+    /// Makes search step according to `step_type`, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
     fn search_step(
         &mut self,
         system: &mut McSystem,
-        event_id: McEventId,
         duplicate: bool,
         corrupt: bool,
         step_type: StepType,
     ) -> Result<(), McError> {
         let state = system.get_state();
 
-        let mut event;
-        if duplicate {
-            event = self.duplicate_event(system, event_id);
-        } else {
-            event = self.take_event(system, event_id);
-        }
-
-        if corrupt {
-            event = self.corrupt_msg_data(system, event);
-        }
-
-        self.debug_log(&event, system.depth());
-
         match step_type {
-            StepType::Add => {
-                self.add_event(system, event);
+            StepType::Add(events) => {
+                for event in events {
+                    self.add_event(system, event);
+                }
             }
-            StepType::Apply => {
+            StepType::Apply(event_id) => {
+                let mut event;
+                if duplicate {
+                    event = self.duplicate_event(system, event_id);
+                } else {
+                    event = self.take_event(system, event_id);
+                }
+
+                if corrupt {
+                    event = self.corrupt_msg_data(system, event);
+                }
+
+                self.debug_log(&event, system.depth());
+
                 system.apply_event(event);
             }
         }
