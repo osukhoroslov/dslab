@@ -67,6 +67,9 @@ pub enum McEvent {
         /// The duplicated message itself.
         msg: Message,
 
+        /// The original message id.
+        msg_id: McEventId,
+
         /// The name of the process that sent the message.
         src: String,
 
@@ -78,6 +81,9 @@ pub enum McEvent {
     MessageCorrupted {
         /// The original message.
         msg: Message,
+
+        /// The original message id.
+        msg_id: McEventId,
 
         /// The message after corruption.
         corrupted_msg: Message,
@@ -118,6 +124,15 @@ impl McEvent {
         }
     }
 
+    pub fn disable_duplications(&mut self) {
+        if let McEvent::MessageReceived {
+                options: DeliveryOptions::PossibleFailures { max_dupl_count, .. },
+                ..
+            } = self {
+            *max_dupl_count = 0;
+        }
+    }
+
     pub fn to_log_entry(&self) -> LogEntry {
         match self {
             Self::MessageReceived {
@@ -147,7 +162,7 @@ impl McEvent {
                 src: src.clone(),
                 dest: dest.clone(),
             },
-            Self::MessageDuplicated { msg, src, dest } => LogEntry::McMessageDuplicated {
+            Self::MessageDuplicated { msg, src, dest, .. } => LogEntry::McMessageDuplicated {
                 msg: msg.clone(),
                 src: src.clone(),
                 dest: dest.clone(),
@@ -157,6 +172,7 @@ impl McEvent {
                 corrupted_msg,
                 src,
                 dest,
+                ..
             } => LogEntry::McMessageCorrupted {
                 msg: msg.clone(),
                 corrupted_msg: corrupted_msg.clone(),

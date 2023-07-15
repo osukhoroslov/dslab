@@ -179,7 +179,7 @@ pub trait Strategy {
     fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), McError>;
 
     /// Explores the possible system states reachable from the current state after processing the given event.
-    /// Calls `search_step_impl` for each new discovered state.    
+    /// Calls `search_step_impl` for each new discovered state.
     fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), McError> {
         let event = self.clone_event(system, event_id);
         match event {
@@ -190,9 +190,7 @@ pub trait Strategy {
                 options,
             } => {
                 match options {
-                    DeliveryOptions::NoFailures(..) => {
-                        self.search_step(system, false, false, StepType::Apply(event_id))?
-                    }
+                    DeliveryOptions::NoFailures(..) => self.search_step(system, StepType::Apply(event_id))?,
                     DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
@@ -201,36 +199,40 @@ pub trait Strategy {
                     } => {
                         // Drop
                         if can_be_dropped {
-                            self.process_drop_event(system, event_id, msg, src, dest)?;
+                            self.process_drop_event(system, event_id, msg.clone(), src.clone(), dest.clone())?;
                         }
 
-                        // Default (normal / corrupt)
-                        self.search_step(system, false, false, StepType::Apply(event_id))?;
+                        self.search_step(system, StepType::Apply(event_id))?;
                         if can_be_corrupted {
-                            self.search_step(system, false, true, StepType::Apply(event_id))?;
+                            let corruption_event = MessageCorrupted {
+                                msg: msg.clone(),
+                                msg_id: event_id,
+                                corrupted_msg: msg.clone(),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                            };
+                            self.search_step(system, StepType::Add(vec![corruption_event]))?;
                         }
 
-                        // Duplicate (normal / corrupt one)
                         if max_dupl_count > 0 {
-                            self.search_step(system, true, false, StepType::Apply(event_id))?;
-                            if can_be_corrupted {
-                                self.search_step(system, true, true, StepType::Apply(event_id))?;
-                            }
+                            let duplication_event = MessageDuplicated {
+                                msg,
+                                msg_id: event_id,
+                                src,
+                                dest,
+                            };
+                            self.search_step(system, StepType::Add(vec![duplication_event]))?;
                         }
                     }
                 }
             }
-            TimerFired { .. } => {
-                self.search_step(system, false, false, StepType::Apply(event_id))?;
-            }
             TimerCancelled { proc, timer } => {
                 system.events.cancel_timer(proc, timer);
-                self.search_step(system, false, false, StepType::Apply(event_id))?;
+                self.search_step(system, StepType::Apply(event_id))?;
             }
-            MessageDropped { .. } => {
-                self.search_step(system, false, false, StepType::Apply(event_id))?;
+            _ => {
+                self.search_step(system, StepType::Apply(event_id))?;
             }
-            _ => {}
         }
 
         Ok(())
@@ -250,7 +252,7 @@ pub trait Strategy {
 
         let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
 
-        self.search_step(system, false, false, StepType::Apply(drop_event_id))?;
+        self.search_step(system, StepType::Apply(drop_event_id))?;
         system.set_state(state);
 
         Ok(())
@@ -261,8 +263,6 @@ pub trait Strategy {
     fn search_step(
         &mut self,
         system: &mut McSystem,
-        duplicate: bool,
-        corrupt: bool,
         step_type: StepType,
     ) -> Result<(), McError> {
         let state = system.get_state();
@@ -274,15 +274,21 @@ pub trait Strategy {
                 }
             }
             StepType::Apply(event_id) => {
-                let mut event;
-                if duplicate {
-                    event = self.duplicate_event(system, event_id);
-                } else {
-                    event = self.take_event(system, event_id);
-                }
+                let mut event = self.take_event(system, event_id);
 
-                if corrupt {
-                    event = self.corrupt_msg_data(system, event);
+                match &mut event {
+                    MessageDuplicated { msg_id, .. } => {
+                        let dupl_event = self.duplicate_event(system, *msg_id);
+                        self.add_event(system, dupl_event);
+                    }
+                    MessageCorrupted {
+                        msg_id, corrupted_msg, ..
+                    } => {
+                        let msg = self.take_event(system, *msg_id);
+                        let corrupted = self.corrupt_msg_data(msg, corrupted_msg);
+                        system.events.push_with_fixed_id(corrupted, *msg_id);
+                    }
+                    _ => {}
                 }
 
                 self.debug_log(&event, system.depth());
@@ -318,8 +324,8 @@ pub trait Strategy {
     }
 
     /// Applies corruption to the MessageReceived event data.
-    fn corrupt_msg_data(&self, system: &mut McSystem, event: McEvent) -> McEvent {
-        match event {
+    fn corrupt_msg_data(&self, mut event: McEvent, corrupted_msg: &mut Message) -> McEvent {
+        match &mut event {
             MessageReceived {
                 msg,
                 src,
@@ -330,20 +336,17 @@ pub trait Strategy {
                     static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
                 }
                 let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                let corrupted_msg = Message::new(msg.clone().tip, corrupted_data);
-                let corruption_event = MessageCorrupted {
-                    msg,
-                    corrupted_msg: corrupted_msg.clone(),
+                *corrupted_msg = Message::new(msg.clone().tip, corrupted_data);
+
+                if let DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = options {
+                    *can_be_corrupted = false;
+                }
+
+                MessageReceived {
+                    msg: corrupted_msg.clone(),
                     src: src.clone(),
                     dest: dest.clone(),
-                };
-                system.apply_event(corruption_event.clone());
-                self.debug_log(&corruption_event, system.depth());
-                MessageReceived {
-                    msg: corrupted_msg,
-                    src,
-                    dest,
-                    options,
+                    options: options.clone(),
                 }
             }
             _ => event,
@@ -353,16 +356,11 @@ pub trait Strategy {
     /// Duplicates event from pending events list by id.
     /// The new event is left in pending events list and the old one is returned.
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
-        let event = self.take_event(system, event_id);
-        let duplication_event = match event.clone() {
-            MessageReceived { msg, src, dest, .. } => MessageDuplicated { msg, src, dest },
-            _ => {
-                panic!("Duplication is only allowed for messages")
-            }
-        };
+        let mut event = self.take_event(system, event_id);
+
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&duplication_event, system.depth());
-        system.apply_event(duplication_event);
+
+        event.disable_duplications();
         event
     }
 
@@ -386,7 +384,7 @@ pub trait Strategy {
                     )
                     .red());
                 }
-                MessageDuplicated { msg, src, dest } => {
+                MessageDuplicated { msg, src, dest, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} -=≡ {:<10} {:?} <-- message duplicated",
                         depth, src, dest, msg
@@ -398,6 +396,7 @@ pub trait Strategy {
                     corrupted_msg,
                     src,
                     dest,
+                    ..
                 } => {
                     t!(format!(
                         "{:>10} | {:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
