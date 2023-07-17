@@ -5,7 +5,6 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core" }
 dslab-compute = { path = "../../crates/dslab-compute" }
 dslab-network = { path = "../../crates/dslab-network" }
 dslab-dag = { path = "../../crates/dslab-dag" }

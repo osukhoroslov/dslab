@@ -625,7 +625,6 @@ version = "0.1.0"
 dependencies = [
  "clap 4.2.1",
  "dslab-compute",
- "dslab-core",
  "dslab-dag",
  "dslab-network",
  "env_logger 0.10.0",
@@ -659,9 +658,7 @@ version = "0.1.0"
 dependencies = [
  "clap 4.2.1",
  "dslab-compute",
- "dslab-core",
  "dslab-dag",
- "dslab-network",
  "env_logger 0.9.3",
  "log 0.4.17",
  "rand 0.8.5",
@@ -1090,7 +1087,6 @@ name = "faas-parallel-example"
 version = "0.0.1"
 dependencies = [
  "clap 4.2.1",
- "dslab-core",
  "dslab-faas",
 ]
 
@@ -1099,7 +1095,6 @@ name = "faas-scheduling-experiment"
 version = "0.0.1"
 dependencies = [
  "clap 4.2.1",
- "dslab-core",
  "dslab-faas",
  "plotters",
  "serde",
@@ -2093,7 +2088,6 @@ name = "mp-broadcast"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.23",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2111,7 +2105,6 @@ version = "0.1.0"
 dependencies = [
  "assertables",
  "clap 3.2.23",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2129,7 +2122,6 @@ dependencies = [
  "byteorder",
  "clap 3.2.23",
  "decorum",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2148,7 +2140,6 @@ dependencies = [
  "assertables",
  "byteorder",
  "clap 3.2.23",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2167,7 +2158,6 @@ dependencies = [
  "assertables",
  "clap 3.2.23",
  "decorum",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2185,7 +2175,6 @@ version = "0.1.0"
 dependencies = [
  "assertables",
  "clap 3.2.23",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -2203,7 +2192,6 @@ version = "0.1.0"
 dependencies = [
  "assertables",
  "clap 3.2.23",
- "dslab-core",
  "dslab-mp",
  "dslab-mp-python",
  "env_logger 0.9.3",
@@ -3440,7 +3428,6 @@ name = "serverless-in-the-wild"
 version = "0.0.1"
 dependencies = [
  "clap 4.2.1",
- "dslab-core",
  "dslab-faas",
  "plotters",
  "serde",
@@ -3594,7 +3581,6 @@ name = "storage-disk-example"
 version = "0.1.0"
 dependencies = [
  "dslab-core",
- "dslab-models",
  "dslab-storage",
  "env_logger 0.10.0",
  "log 0.4.17",
@@ -3768,7 +3754,6 @@ name = "throughput-model-comparison"
 version = "0.1.0"
 dependencies = [
  "dslab-core",
- "dslab-faas",
  "dslab-models",
  "num 0.4.0",
  "rand 0.8.5",

@@ -5,7 +5,6 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core" }
 dslab-mp = { path = "../../crates/dslab-mp" }
 dslab-mp-python = { path = "../../crates/dslab-mp-python" }
 clap = { version = "3.2.17", features = ["cargo", "derive"] }

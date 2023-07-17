@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use dslab_core::SimulationContext;
 use sugars::boxed;
 
+use dslab_core::SimulationContext;
 use dslab_models::throughput_sharing::ThroughputSharingModel;
 
 struct Activity<T> {
