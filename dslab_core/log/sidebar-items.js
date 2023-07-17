@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_colored","log_unhandled_event"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["extra_coldstart_policy_resolver","extra_scheduler_resolver"]};

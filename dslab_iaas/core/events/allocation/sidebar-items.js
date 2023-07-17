@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AllocationCommitFailed","AllocationCommitRequest","AllocationCommitSucceeded","AllocationFailed","AllocationReleaseRequest","AllocationReleased","AllocationRequest","MigrationRequest","VmCreateRequest"]};

@@ -1,0 +1,88 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="DSLab Simulation Core"><title>dslab_core - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="dslab_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../dslab_core/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../dslab_core/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate dslab_core</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.1.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#reexports">Re-exports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#constants">Constants</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">dslab_core</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/dslab_core/lib.rs.html#1-18">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="dslab-simulation-core"><a href="#dslab-simulation-core">DSLab Simulation Core</a></h2>
+<p>A compact library for discrete-event simulation. </p>
+<p>This library provides a generic discrete-event simulation engine. It can be used to implement arbitrary simulations consisting of user-defined <em>components</em> producing and consuming user-defined <em>events</em>. It serves as a foundation for other parts of DSLab framework. Being generic and versatile, it can also be used outside DSLab and distributed systems domain.</p>
+<p>The simulation is configured and managed via <a href="simulation/struct.Simulation.html" title="struct dslab_core::simulation::Simulation"><code>Simulation</code></a>, which includes methods for registering simulation components, stepping through the simulation, obtaining the current simulation time, etc. The library manages simulation state, which includes clock, event queue and random number generator. The latter is initialized with user-defined seed to ensure deterministic execution and reproduction of results. </p>
+<p>It is possible to use any user-defined Rust types as simulation components. The components access simulation state and produce events via <a href="context/struct.SimulationContext.html" title="struct dslab_core::context::SimulationContext"><code>SimulationContext</code></a>. Each component typically uses a unique simulation context, which allows to differentiate events produced by different components. To be able to consume events, the component should implement the <a href="handler/trait.EventHandler.html" title="trait dslab_core::handler::EventHandler"><code>EventHandler</code></a> trait, which is invoked to pass events to the component. Each simulation component is registered with unique name and identifier, which can be used for specifying the event source or destination, logging purposes, etc.</p>
+<p>The simulation represents a sequence of events. Each event has a unique identifier, timestamp, source, destination and user-defined payload. The library supports using arbitrary data types (implementing Clone and Serialize traits) as event payloads, the structure of payload is opaque to the library. The events are processed by retrieving the next event from the queue ordered by event timestamps, advancing the simulation clock to the event time and invoking the EventHandler implementation of component specified as the event destination. When processing the event, the component can create and emit new events with arbitrary future timestamps via its SimulationContext. The new events are placed in the event queue for further processing. It is also possible to cancel the previously emitted events before they are processed.</p>
+<p>The library also provides convenient facilities for logging of events or arbitrary messages during the simulation with inclusion of component names, logging levels, etc.</p>
+<h3 id="examples"><a href="#examples">Examples</a></h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>std::cell::RefCell;
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>serde::Serialize;
+<span class="kw">use </span>dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
+
+<span class="comment">// Event data types (should implement Serialize)
+</span><span class="attr">#[derive(Clone, Serialize)]
+</span><span class="kw">pub struct </span>Ping {
+    info: f64,
+}
+
+<span class="attr">#[derive(Clone, Serialize)]
+</span><span class="kw">pub struct </span>Pong {
+    info: f64,
+}
+
+<span class="comment">// Simulation component types (here we have a single one - Process) 
+</span><span class="kw">pub struct </span>Process {
+    <span class="comment">// generally components store the context,
+    // without it they cannot emit events
+    </span>ctx: SimulationContext,
+}
+
+<span class="kw">impl </span>Process {
+    <span class="kw">pub fn </span>new(ctx: SimulationContext) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ ctx }
+    }
+
+    <span class="kw">fn </span>send_ping(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dst: Id) {
+        <span class="kw">let </span>info = <span class="self">self</span>.ctx.time() + <span class="number">0.5</span>;
+        <span class="comment">// emit Ping event to another process with delay 0.5
+        // info contains the expected event delivery time
+        </span><span class="self">self</span>.ctx.emit(Ping { info }, dst, <span class="number">0.5</span>);
+    }
+}
+
+<span class="comment">// To be able to consume events, the component should implement EventHandler trait
+</span><span class="kw">impl </span>EventHandler <span class="kw">for </span>Process {
+    <span class="comment">// this method is invoked to deliver an event to the component 
+    </span><span class="kw">fn </span>on(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: Event) {
+        <span class="comment">// use cast! macro for convenient matching of event data types
+        </span><span class="macro">cast!</span>(<span class="kw">match </span>event.data {
+            Ping { info } =&gt; {
+                <span class="comment">// check that the current time equals the time in info
+                </span><span class="macro">assert_eq!</span>(<span class="self">self</span>.ctx.time(), info);
+                <span class="kw">let </span>info = <span class="self">self</span>.ctx.time() + <span class="number">1.2</span>;
+                <span class="comment">// emit Pong event back to another process with delay 1.2
+                // info contains the expected event delivery time
+                </span><span class="self">self</span>.ctx.emit(Pong { info }, event.src, <span class="number">1.2</span>);
+            }
+            Pong { info } =&gt; {
+                <span class="comment">// check that the current time equals the time in info
+                </span><span class="macro">assert_eq!</span>(<span class="self">self</span>.ctx.time(), info);
+            }
+        })
+    }
+}
+
+<span class="comment">// Simulation setup and execution
+</span><span class="kw">fn </span>main() {
+    <span class="comment">// create simulation with random seed
+    </span><span class="kw">let </span><span class="kw-2">mut </span>sim = Simulation::new(<span class="number">123</span>);
+    <span class="comment">// create pinger, a Process component instance
+    </span><span class="kw">let </span>pinger = Rc::new(RefCell::new(Process::new(sim.create_context(<span class="string">&quot;pinger&quot;</span>))));
+    <span class="comment">// register event handler for pinger
+    </span><span class="kw">let </span>_pinger_id = sim.add_handler(<span class="string">&quot;pinger&quot;</span>, pinger.clone());
+    <span class="comment">// create ponger, another Process component instance
+    </span><span class="kw">let </span>ponger = Rc::new(RefCell::new(Process::new(sim.create_context(<span class="string">&quot;ponger&quot;</span>))));
+    <span class="comment">// register event handler for ponger
+    </span><span class="kw">let </span>ponger_id = sim.add_handler(<span class="string">&quot;ponger&quot;</span>, ponger.clone());
+    <span class="comment">// it is fine to call component methods directly instead of sending them events
+    // here we ask pinger to send a Ping event to ponger
+    </span>pinger.borrow_mut().send_ping(ponger_id);
+    <span class="comment">// run simulation until there are no pending events
+    </span>sim.step_until_no_events();
+    <span class="comment">// check current simulation time, should be equal to the time of last event
+    </span><span class="macro">assert_eq!</span>(sim.time(), <span class="number">1.7</span>)
+}</code></pre></div>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2><ul class="item-table"><li><div class="item-name" id="reexport.colored"><code>pub use colored;</code></div></li><li><div class="item-name" id="reexport.Id"><code>pub use component::<a class="type" href="component/type.Id.html" title="type dslab_core::component::Id">Id</a>;</code></div></li><li><div class="item-name" id="reexport.SimulationContext"><code>pub use context::<a class="struct" href="context/struct.SimulationContext.html" title="struct dslab_core::context::SimulationContext">SimulationContext</a>;</code></div></li><li><div class="item-name" id="reexport.Event"><code>pub use event::<a class="struct" href="event/struct.Event.html" title="struct dslab_core::event::Event">Event</a>;</code></div></li><li><div class="item-name" id="reexport.EventHandler"><code>pub use handler::<a class="trait" href="handler/trait.EventHandler.html" title="trait dslab_core::handler::EventHandler">EventHandler</a>;</code></div></li><li><div class="item-name" id="reexport.Simulation"><code>pub use simulation::<a class="struct" href="simulation/struct.Simulation.html" title="struct dslab_core::simulation::Simulation">Simulation</a>;</code></div></li></ul><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="component/index.html" title="mod dslab_core::component">component</a></div><div class="desc docblock-short">Simulation components.</div></li><li><div class="item-name"><a class="mod" href="context/index.html" title="mod dslab_core::context">context</a></div><div class="desc docblock-short">Accessing simulation from components.</div></li><li><div class="item-name"><a class="mod" href="event/index.html" title="mod dslab_core::event">event</a></div><div class="desc docblock-short">Simulation events.</div></li><li><div class="item-name"><a class="mod" href="handler/index.html" title="mod dslab_core::handler">handler</a></div><div class="desc docblock-short">Event handling.</div></li><li><div class="item-name"><a class="mod" href="log/index.html" title="mod dslab_core::log">log</a></div><div class="desc docblock-short">Logging facilities.</div></li><li><div class="item-name"><a class="mod" href="simulation/index.html" title="mod dslab_core::simulation">simulation</a></div><div class="desc docblock-short">Simulation configuration and execution.</div></li></ul><h2 id="macros" class="small-section-header"><a href="#macros">Macros</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.cast.html" title="macro dslab_core::cast">cast</a></div><div class="desc docblock-short">Enables the use of pattern matching syntax for processing different types of events
+by downcasting the event payload from <a href="event/trait.EventData.html" title="trait dslab_core::event::EventData"><code>EventData</code></a> to user-defined types.</div></li><li><div class="item-name"><a class="macro" href="macro.log_debug.html" title="macro dslab_core::log_debug">log_debug</a></div><div class="desc docblock-short">Logs a message at the debug level.</div></li><li><div class="item-name"><a class="macro" href="macro.log_error.html" title="macro dslab_core::log_error">log_error</a></div><div class="desc docblock-short">Logs a message at the error level.</div></li><li><div class="item-name"><a class="macro" href="macro.log_info.html" title="macro dslab_core::log_info">log_info</a></div><div class="desc docblock-short">Logs a message at the info level.</div></li><li><div class="item-name"><a class="macro" href="macro.log_trace.html" title="macro dslab_core::log_trace">log_trace</a></div><div class="desc docblock-short">Logs a message at the trace level.</div></li><li><div class="item-name"><a class="macro" href="macro.log_warn.html" title="macro dslab_core::log_warn">log_warn</a></div><div class="desc docblock-short">Logs a message at the warn level.</div></li></ul><h2 id="constants" class="small-section-header"><a href="#constants">Constants</a></h2><ul class="item-table"><li><div class="item-name"><a class="constant" href="constant.EPSILON.html" title="constant dslab_core::EPSILON">EPSILON</a></div><div class="desc docblock-short">Epsilon to compare floating point values for equality.</div></li></ul></section></div></main></body></html>

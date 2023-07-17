@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["power","throughput_sharing"]};

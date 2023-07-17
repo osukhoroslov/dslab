@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["default_idle_deployer_resolver"],"struct":["BasicDeployer"],"trait":["IdleDeployer"]};
