@@ -1,3 +1,5 @@
+//! Network with arbitrary topology in terms of nodes and links.
+
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
@@ -8,7 +10,7 @@ use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 use crate::topology::Topology;
-use crate::topology_structures::{BandwidthSharingPolicy, LinkID, NodeId};
+use crate::topology_structures::{BandwidthSharingPolicy, LinkId, NodeId};
 
 #[derive(Debug)]
 struct DataTransfer {}
@@ -66,11 +68,11 @@ struct Transfer {
     last_update_time: f64,
     throughput: f64,
     data: Data,
-    path: Vec<LinkID>,
+    path: Vec<LinkId>,
 }
 
 impl Transfer {
-    fn new(size: f64, data: Data, path: Vec<LinkID>, time: f64) -> Transfer {
+    fn new(size: f64, data: Data, path: Vec<LinkId>, time: f64) -> Transfer {
         Transfer {
             size_left: size,
             data,
@@ -102,6 +104,7 @@ pub struct TopologyNetwork {
 }
 
 impl TopologyNetwork {
+    /// Creates new network.
     pub fn new(topology: Rc<RefCell<Topology>>) -> TopologyNetwork {
         TopologyNetwork {
             topology,
@@ -130,7 +133,7 @@ impl TopologyNetwork {
         *node1.unwrap()
     }
 
-    fn get_path(&self, from: Id, to: Id) -> Option<Vec<LinkID>> {
+    fn get_path(&self, from: Id, to: Id) -> Option<Vec<LinkId>> {
         let node1 = self.get_location(from);
         let node2 = self.get_location(to);
         self.topology.borrow_mut().get_path(&node1, &node2)
@@ -214,7 +217,7 @@ impl TopologyNetwork {
         let affected_links = affected_transfers
             .iter()
             .flat_map(|transfer| self.current_transfers[transfer].path.iter().cloned())
-            .collect::<HashSet<LinkID>>();
+            .collect::<HashSet<LinkId>>();
 
         let transfers_through_link = &mut self.tmp_transfers_through_link;
 

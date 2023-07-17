@@ -1,3 +1,5 @@
+//! Topology interface.
+
 use std::collections::{BTreeMap, HashMap};
 
 use indexmap::IndexMap;
@@ -8,7 +10,7 @@ use dslab_core::context::SimulationContext;
 use crate::model::*;
 use crate::topology_resolver::TopologyResolveType;
 use crate::topology_resolver::TopologyResolver;
-use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
+use crate::topology_structures::{Link, LinkId, Node, NodeId, NodeLinksMap};
 
 /// Represents a network topology consisting of nodes connected with links.
 #[derive(Default)]
@@ -21,15 +23,17 @@ pub struct Topology {
     resolver: Option<TopologyResolver>,
     bandwidth_cache: HashMap<(NodeId, NodeId), f64>,
     latency_cache: HashMap<(NodeId, NodeId), f64>,
-    path_cache: HashMap<(NodeId, NodeId), Vec<LinkID>>,
+    path_cache: HashMap<(NodeId, NodeId), Vec<LinkId>>,
     resolve_type: TopologyResolveType,
 }
 
 impl Topology {
+    /// Creates new empty topology.
     pub fn new() -> Self {
         Default::default()
     }
 
+    /// Sets new resolve type for topology.
     pub fn with_resolve_type(mut self, resolve_type: TopologyResolveType) -> Self {
         self.resolve_type = resolve_type;
         self
@@ -42,6 +46,7 @@ impl Topology {
         panic!("Node with name {} doesn't exists", node_name)
     }
 
+    /// Adds new node to the topology.
     pub fn add_node(&mut self, node_name: &str, local_network: Box<dyn NetworkModel>) {
         let new_node_id = self.nodes.len();
         self.nodes_name_map.insert(node_name.to_string(), new_node_id);
@@ -107,18 +112,18 @@ impl Topology {
         self.resolve_topology();
     }
 
-    /// Sets actor location to a given node.
+    /// Sets the location of the simulation component `id` to the node `node_name`.
     pub fn set_location(&mut self, id: Id, node_name: &str) {
         let node_id = self.get_node_id(node_name);
         self.component_nodes.insert(id, node_id);
     }
 
-    /// Returns actor location.
+    /// Returns the location (node name) of the simulation component.
     pub fn get_location(&self, id: Id) -> Option<&NodeId> {
         self.component_nodes.get(&id)
     }
 
-    /// Returns `true` if two actors are located on one node.
+    /// Returns `true` if two simulation components are located on the same node.
     pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
         let node1 = self.get_location(id1);
         let node2 = self.get_location(id2);
@@ -135,11 +140,12 @@ impl Topology {
         self.nodes_name_map.keys().cloned().collect()
     }
 
-    pub fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
+    /// Returns node information.
+    fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
         self.nodes.get(*id)
     }
 
-    pub fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
+    fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.nodes.get_mut(*id)
     }
 
@@ -167,27 +173,15 @@ impl Topology {
         self.get_node_info(node).unwrap().local_network.latency(src, dst)
     }
 
-    pub fn get_link(&self, link_id: &LinkID) -> Option<&Link> {
+    pub(crate) fn get_link(&self, link_id: &LinkId) -> Option<&Link> {
         self.links.get(*link_id)
-    }
-
-    pub fn get_link_between(&self, src: &NodeId, dst: &NodeId) -> Option<&Link> {
-        let link_id = self.node_links_map.get(src).unwrap().get(dst);
-        match link_id {
-            None => None,
-            Some(link_id) => self.links.get(*link_id),
-        }
-    }
-
-    pub fn get_node_links_map(&self) -> &NodeLinksMap {
-        &self.node_links_map
     }
 
     /// Returns the path from node `src` to node `dst`.
     ///
     /// The path is calculated by [`TopologyResolver`](crate::topology_resolver::TopologyResolver)
     /// as the shortest path from `src` to `dst` measured by total latency.
-    pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkID>> {
+    pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkId>> {
         if let Some(path) = self.path_cache.get(&(*src, *dst)) {
             return Some(path.clone());
         }
@@ -255,7 +249,7 @@ impl Topology {
         0.0
     }
 
-    pub fn get_links_count(&self) -> usize {
+    pub(crate) fn get_links_count(&self) -> usize {
         self.links.len()
     }
 

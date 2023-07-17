@@ -1,3 +1,6 @@
+#![warn(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 pub mod constant_bandwidth_model;
 pub mod model;
 pub mod network;

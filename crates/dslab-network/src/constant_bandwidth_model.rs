@@ -1,3 +1,5 @@
+//! Network model without congestion where each transfer gets the full bandwidth.
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
@@ -10,6 +12,7 @@ pub struct ConstantBandwidthNetwork {
 }
 
 impl ConstantBandwidthNetwork {
+    /// Creates new network.
     pub fn new(bandwidth: f64, latency: f64) -> ConstantBandwidthNetwork {
         ConstantBandwidthNetwork { bandwidth, latency }
     }

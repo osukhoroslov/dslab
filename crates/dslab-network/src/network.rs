@@ -1,3 +1,5 @@
+//! Network model.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -12,6 +14,7 @@ use crate::model::*;
 use crate::topology::Topology;
 use crate::topology_structures::Link;
 
+/// Simulation component acting as a network.
 pub struct Network {
     network_model: Rc<RefCell<dyn NetworkModel>>,
     topology: Rc<RefCell<Topology>>,
@@ -20,6 +23,7 @@ pub struct Network {
 }
 
 impl Network {
+    /// Creates new network without a topology.
     pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>, ctx: SimulationContext) -> Self {
         Self {
             network_model,
@@ -29,6 +33,7 @@ impl Network {
         }
     }
 
+    /// Creates new network with a topology.
     pub fn new_with_topology(
         network_model: Rc<RefCell<dyn NetworkModel>>,
         topology: Rc<RefCell<Topology>>,
