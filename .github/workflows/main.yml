@@ -41,6 +41,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: clippy
+
       - name: Cache cargo artifacts
         id: cache-cargo
         uses: actions/cache@v3
