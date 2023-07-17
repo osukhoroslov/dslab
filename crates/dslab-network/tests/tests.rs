@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use rstest::rstest;
 use serde::Serialize;
 
 use dslab_core::cast;
@@ -124,63 +125,59 @@ fn run_link_test(
     sim.time()
 }
 
-#[test]
-fn test_links() {
-    for full_mesh_optimization in [false, true] {
-        for resolve_type in [TopologyResolveType::Dijkstra, TopologyResolveType::FloydWarshall] {
-            for lr_transfers in 1..=5 {
-                for rl_transfers in 1..=5 {
-                    println!("Testing full_mesh_optimization={full_mesh_optimization:?}, {resolve_type:?}, transfers: {lr_transfers}, {rl_transfers}");
-                    assert_float_eq(
-                        run_link_test(
-                            Link::shared(100., 0.),
-                            true,
-                            full_mesh_optimization,
-                            resolve_type,
-                            lr_transfers,
-                            rl_transfers,
-                        ),
-                        10. * (lr_transfers + rl_transfers) as f64,
-                        EPSILON,
-                    );
-                    assert_float_eq(
-                        run_link_test(
-                            Link::shared(100., 0.),
-                            false,
-                            full_mesh_optimization,
-                            resolve_type,
-                            lr_transfers,
-                            rl_transfers,
-                        ),
-                        10. * lr_transfers.max(rl_transfers) as f64,
-                        EPSILON,
-                    );
-                    assert_float_eq(
-                        run_link_test(
-                            Link::non_shared(100., 0.),
-                            true,
-                            full_mesh_optimization,
-                            resolve_type,
-                            lr_transfers,
-                            rl_transfers,
-                        ),
-                        10.,
-                        EPSILON,
-                    );
-                    assert_float_eq(
-                        run_link_test(
-                            Link::non_shared(100., 0.),
-                            false,
-                            full_mesh_optimization,
-                            resolve_type,
-                            lr_transfers,
-                            rl_transfers,
-                        ),
-                        10.,
-                        EPSILON,
-                    );
-                }
-            }
-        }
-    }
+#[rstest]
+fn test_links(
+    #[values(false, true)] full_mesh_optimization: bool,
+    #[values(TopologyResolveType::Dijkstra, TopologyResolveType::FloydWarshall)] resolve_type: TopologyResolveType,
+    #[values(1, 2, 3, 4, 5)] lr_transfers: usize,
+    #[values(1, 2, 3, 4, 5)] rl_transfers: usize,
+) {
+    assert_float_eq(
+        run_link_test(
+            Link::shared(100., 0.),
+            true,
+            full_mesh_optimization,
+            resolve_type,
+            lr_transfers,
+            rl_transfers,
+        ),
+        10. * (lr_transfers + rl_transfers) as f64,
+        EPSILON,
+    );
+    assert_float_eq(
+        run_link_test(
+            Link::shared(100., 0.),
+            false,
+            full_mesh_optimization,
+            resolve_type,
+            lr_transfers,
+            rl_transfers,
+        ),
+        10. * lr_transfers.max(rl_transfers) as f64,
+        EPSILON,
+    );
+    assert_float_eq(
+        run_link_test(
+            Link::non_shared(100., 0.),
+            true,
+            full_mesh_optimization,
+            resolve_type,
+            lr_transfers,
+            rl_transfers,
+        ),
+        10.,
+        EPSILON,
+    );
+    assert_float_eq(
+        run_link_test(
+            Link::non_shared(100., 0.),
+            false,
+            full_mesh_optimization,
+            resolve_type,
+            lr_transfers,
+            rl_transfers,
+        ),
+        10.,
+        EPSILON,
+    );
 }
