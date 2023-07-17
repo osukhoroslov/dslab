@@ -9,7 +9,7 @@ pub enum TopologyResolveType {
     FloydWarshall,
 }
 
-/// Resolver for calculating paths between each pair of nodes.
+/// Calculates the paths between pairs of nodes in [`TopologyNetwork`](crate::topology_model::TopologyNetwork).
 #[derive(Default)]
 pub struct TopologyResolver {
     resolve_type: TopologyResolveType,
@@ -24,7 +24,8 @@ impl TopologyResolver {
         }
     }
 
-    /// Calculates paths between all possible pair of nodes and saves them.
+    /// Calculates the paths between all pairs of nodes and stores them 
+    /// for use in [`get_path`](TopologyResolver::get_path).
     pub fn resolve_topology(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
         self.parent_path = vec![vec![INVALID_NODE_ID; nodes.len()]; nodes.len()];
 
@@ -39,7 +40,9 @@ impl TopologyResolver {
         }
     }
 
-    /// Builds path from `src` to `dst`. [TopologyResolver::resolve_topology] must be called before that.
+    /// Returns a path from `src` to `dst`.
+    ///
+    /// Can be used only after calling [`resolve_topology`](TopologyResolver::resolve_topology).
     pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkID>> {
         let mut path = Vec::new();
         let mut cur_node = *dst;

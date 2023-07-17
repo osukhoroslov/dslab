@@ -89,7 +89,7 @@ impl Transfer {
     }
 }
 
-/// Represents network with topology.
+/// Models network with arbitrary topology in terms of nodes and links.
 pub struct TopologyNetwork {
     topology: Rc<RefCell<Topology>>,
     current_transfers: BTreeMap<usize, Transfer>,

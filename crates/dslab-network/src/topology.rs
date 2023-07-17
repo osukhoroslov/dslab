@@ -10,7 +10,7 @@ use crate::topology_resolver::TopologyResolveType;
 use crate::topology_resolver::TopologyResolver;
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap};
 
-/// Represent topology for [crate::topology_model::TopologyNetwork].
+/// Represents a network topology consisting of nodes connected with links.
 #[derive(Default)]
 pub struct Topology {
     nodes_name_map: IndexMap<String, NodeId>,
@@ -99,7 +99,9 @@ impl Topology {
         }
     }
 
-    // Inits topology resolver to perform calculations.
+    /// Performs initialization of topology, such as computing the paths between all nodes.
+    ///
+    /// Must be called after all nodes and links are added.
     pub fn init(&mut self) {
         self.resolver = Some(TopologyResolver::new(self.resolve_type));
         self.resolve_topology();
@@ -123,12 +125,12 @@ impl Topology {
         node1.is_some() && node2.is_some() && node1.unwrap() == node2.unwrap()
     }
 
-    /// Returns number of nodes.
+    /// Returns the number of nodes.
     pub fn get_nodes_count(&self) -> usize {
         self.nodes.len()
     }
 
-    /// Returns list of node names.
+    /// Returns the list of node names.
     pub fn get_nodes(&self) -> Vec<String> {
         self.nodes_name_map.keys().cloned().collect()
     }
@@ -159,7 +161,7 @@ impl Topology {
             .send_data(data, ctx)
     }
 
-    /// Returns latency between two actors on the same node.
+    /// Returns the latency between two simulation components on the same node.
     pub fn get_local_latency(&self, src: Id, dst: Id) -> f64 {
         let node = self.get_location(src).unwrap();
         self.get_node_info(node).unwrap().local_network.latency(src, dst)
@@ -181,7 +183,10 @@ impl Topology {
         &self.node_links_map
     }
 
-    /// Calculates shortest path from `src` to `dst` measured by total latency.
+    /// Returns the path from node `src` to node `dst`.
+    ///
+    /// The path is calculated by [`TopologyResolver`](crate::topology_resolver::TopologyResolver) 
+    /// as the shortest path from `src` to `dst` measured by total latency.
     pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkID>> {
         if let Some(path) = self.path_cache.get(&(*src, *dst)) {
             return Some(path.clone());
@@ -199,7 +204,10 @@ impl Topology {
         None
     }
 
-    /// Calculates total latency on a path built by [Topology::get_path].
+    /// Returns the network latency from node `src` to node `dst`.
+    ///
+    /// This corresponds to the total latency on the path from node `src` to node `dst`
+    /// which is calculated by [`get_path`](Topology::get_path).
     pub fn get_latency(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
         if let Some(latency) = self.latency_cache.get(&(*src, *dst)) {
             return *latency;
@@ -217,7 +225,10 @@ impl Topology {
         f64::INFINITY
     }
 
-    /// Calculates minimum link bandwidth on a path built by [Topology::get_path].
+    /// Returns the network bandwidth from node `src` to node `dst`.
+    ///
+    /// This corresponds to the minimum link bandwidth on the path from node `src` to node `dst`
+    /// which is calculated by [`get_path`](Topology::get_path).
     pub fn get_bandwidth(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
         if let Some(bandwidth) = self.bandwidth_cache.get(&(*src, *dst)) {
             return *bandwidth;
