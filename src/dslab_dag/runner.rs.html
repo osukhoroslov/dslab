@@ -1209,7 +1209,7 @@
                 }
                 <span class="kw">let </span>task_id = task_ids.remove(<span class="kw-2">&amp;</span>action_id).unwrap();
                 <span class="kw">let </span>task = <span class="self">self</span>.dag.get_task(task_id);
-                <span class="kw">let </span><span class="kw-2">mut </span>resource = <span class="kw-2">&amp;mut </span><span class="self">self</span>.resources[resource_idx];
+                <span class="kw">let </span>resource = <span class="kw-2">&amp;mut </span><span class="self">self</span>.resources[resource_idx];
                 <span class="kw">if </span>task.memory &gt; resource.memory_available {
                     <span class="kw">continue</span>;
                 }

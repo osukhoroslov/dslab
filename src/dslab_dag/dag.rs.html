@@ -333,7 +333,7 @@
 
     <span class="doccomment">/// Updates task state to a provided value, updating dependent data item states if needed.
     </span><span class="kw">pub fn </span>update_task_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, task_id: usize, state: TaskState) {
-        <span class="kw">let </span><span class="kw-2">mut </span>task = <span class="self">self</span>.tasks.get_mut(task_id).unwrap();
+        <span class="kw">let </span>task = <span class="self">self</span>.tasks.get_mut(task_id).unwrap();
         task.state = state;
         <span class="kw">if </span>task.state != TaskState::Ready {
             <span class="self">self</span>.ready_tasks.remove(<span class="kw-2">&amp;</span>task_id);
@@ -348,11 +348,11 @@
 
     <span class="doccomment">/// Updates data item state to a provided value, updating dependent task states if needed.
     </span><span class="kw">pub fn </span>update_data_item_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data_id: usize, state: DataItemState) {
-        <span class="kw">let </span><span class="kw-2">mut </span>data_item = <span class="self">self</span>.data_items.get_mut(data_id).unwrap();
+        <span class="kw">let </span>data_item = <span class="self">self</span>.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         <span class="kw">if </span>data_item.state == DataItemState::Ready {
             <span class="kw">for </span>t <span class="kw">in </span>data_item.consumers.iter() {
-                <span class="kw">let </span><span class="kw-2">mut </span>consumer = <span class="self">self</span>.tasks.get_mut(<span class="kw-2">*</span>t).unwrap();
+                <span class="kw">let </span>consumer = <span class="self">self</span>.tasks.get_mut(<span class="kw-2">*</span>t).unwrap();
                 consumer.ready_inputs += <span class="number">1</span>;
                 <span class="kw">if </span>consumer.ready_inputs == consumer.inputs.len() {
                     <span class="kw">if </span>consumer.state == TaskState::Pending {
