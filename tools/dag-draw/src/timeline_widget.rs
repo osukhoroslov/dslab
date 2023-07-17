@@ -116,8 +116,7 @@ impl TimelineWidget {
                 for mut seg in usage_resources[usage_id].iter().cloned() {
                     if let Some(prev) = available_resources
                         .range((Unbounded, Excluded(seg)))
-                        .rev()
-                        .next()
+                        .next_back()
                         .cloned()
                     {
                         if prev.1 == seg.0 {
