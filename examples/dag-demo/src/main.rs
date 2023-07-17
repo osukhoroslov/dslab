@@ -21,7 +21,6 @@ const ALGORITHMS: &[&str] = &[
     "HEFT",
     "Lookahead[depth=0]",
     "Lookahead[depth=1,depth_mode=Local]",
-    "Lookahead[depth=1,depth_mode=LocalAndNextRank]",
     "Lookahead[depth=1]",
     "Lookahead[depth=2]",
     "Lookahead[depth=3]",

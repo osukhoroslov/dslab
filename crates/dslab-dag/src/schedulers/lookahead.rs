@@ -16,7 +16,6 @@ use crate::system::System;
 pub enum DepthMode {
     Global,
     Local,
-    LocalAndNextRank,
 }
 
 impl FromStr for DepthMode {
@@ -26,7 +25,6 @@ impl FromStr for DepthMode {
         match s {
             "Global" => Ok(DepthMode::Global),
             "Local" => Ok(DepthMode::Local),
-            "LocalAndNextRank" => Ok(DepthMode::LocalAndNextRank),
             _ => Err(()),
         }
     }
@@ -86,7 +84,7 @@ impl LookaheadScheduler {
 
         let mut result: Vec<(f64, Action)> = Vec::new();
 
-        for (i, &task_id) in task_ids.iter().enumerate() {
+        for &task_id in task_ids.iter() {
             let mut best_makespan = f64::MAX;
             let mut best_start = -1.;
             let mut best_finish = -1.;
@@ -156,11 +154,6 @@ impl LookaheadScheduler {
                             }
                         }
                         DepthMode::Local => {}
-                        DepthMode::LocalAndNextRank => {
-                            if i + 1 < task_ids.len() && task == task_ids[i + 1] {
-                                depth[task] = 0;
-                            }
-                        }
                     }
                     for (child, _weight) in task_successors(task, dag) {
                         depth[child] = depth[child].min(depth[task].saturating_add(1));
