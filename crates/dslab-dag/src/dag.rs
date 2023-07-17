@@ -142,7 +142,7 @@ impl DAG {
 
     /// Updates task state to a provided value, updating dependent data item states if needed.
     pub fn update_task_state(&mut self, task_id: usize, state: TaskState) {
-        let mut task = self.tasks.get_mut(task_id).unwrap();
+        let task = self.tasks.get_mut(task_id).unwrap();
         task.state = state;
         if task.state != TaskState::Ready {
             self.ready_tasks.remove(&task_id);
@@ -157,11 +157,11 @@ impl DAG {
 
     /// Updates data item state to a provided value, updating dependent task states if needed.
     pub fn update_data_item_state(&mut self, data_id: usize, state: DataItemState) {
-        let mut data_item = self.data_items.get_mut(data_id).unwrap();
+        let data_item = self.data_items.get_mut(data_id).unwrap();
         data_item.state = state;
         if data_item.state == DataItemState::Ready {
             for t in data_item.consumers.iter() {
-                let mut consumer = self.tasks.get_mut(*t).unwrap();
+                let consumer = self.tasks.get_mut(*t).unwrap();
                 consumer.ready_inputs += 1;
                 if consumer.ready_inputs == consumer.inputs.len() {
                     if consumer.state == TaskState::Pending {
