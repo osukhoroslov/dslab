@@ -1,3 +1,5 @@
+//! Network model where the bandwidth is shared fairly among all current transfers.
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
@@ -14,6 +16,7 @@ pub struct SharedBandwidthNetwork {
 }
 
 impl SharedBandwidthNetwork {
+    /// Creates new network.
     pub fn new(bandwidth: f64, latency: f64) -> SharedBandwidthNetwork {
         SharedBandwidthNetwork {
             bandwidth,

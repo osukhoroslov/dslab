@@ -1,10 +1,15 @@
+//! Helper for calculating shortest paths in topology network.
+
 use std::collections::{HashMap, HashSet};
 
-use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
+use crate::topology_structures::{Link, LinkId, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
 
+/// Algorithm for calculating all pairs of shortest paths.
 #[derive(PartialEq, Default, Copy, Clone, Debug)]
 pub enum TopologyResolveType {
+    /// [Dijksta's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)
     Dijkstra,
+    /// [Floyd–Warshall algorithm](https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm)
     #[default]
     FloydWarshall,
 }
@@ -17,6 +22,7 @@ pub struct TopologyResolver {
 }
 
 impl TopologyResolver {
+    /// Creates new resolver.
     pub fn new(resolve_type: TopologyResolveType) -> Self {
         Self {
             resolve_type,
@@ -43,7 +49,7 @@ impl TopologyResolver {
     /// Returns a path from `src` to `dst`.
     ///
     /// Can be used only after calling [`resolve_topology`](TopologyResolver::resolve_topology).
-    pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkID>> {
+    pub fn get_path(&self, src: &NodeId, dst: &NodeId, node_links_map: &NodeLinksMap) -> Option<Vec<LinkId>> {
         let mut path = Vec::new();
         let mut cur_node = *dst;
         while cur_node != *src {
