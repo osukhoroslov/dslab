@@ -29,10 +29,7 @@ jobs:
           override: true
 
       - name: Build docs
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --workspace --lib --no-deps
+        run: cargo doc --workspace --lib --no-deps
 
       - name: Deploy docs
         uses: peaceiris/actions-gh-pages@v3
