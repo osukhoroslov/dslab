@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install needed packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libpango1.0-dev
+          version: 1.0
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
