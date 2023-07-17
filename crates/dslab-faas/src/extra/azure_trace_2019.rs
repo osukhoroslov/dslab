@@ -400,7 +400,7 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
                         total += cnt;
                     }
                     if total > 0 {
-                        let mut entry = poisson_data.entry(id).or_default();
+                        let entry = poisson_data.entry(id).or_default();
                         entry.0 += total;
                         entry.1 += bound;
                     }

@@ -457,7 +457,7 @@ impl DAGRunner {
                 }
                 let task_id = task_ids.remove(&action_id).unwrap();
                 let task = self.dag.get_task(task_id);
-                let mut resource = &mut self.resources[resource_idx];
+                let resource = &mut self.resources[resource_idx];
                 if task.memory > resource.memory_available {
                     continue;
                 }

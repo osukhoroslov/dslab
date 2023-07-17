@@ -97,7 +97,7 @@ impl Host {
 
     pub fn invoke(&mut self, id: usize, time: f64) -> InvokerDecision {
         let mut ir = self.invocation_registry.borrow_mut();
-        let mut invocation = &mut ir[id];
+        let invocation = &mut ir[id];
         invocation.host_id = Some(self.id);
         self.container_manager.inc_active_invocations();
         let status = self.invoker.invoke(
@@ -155,7 +155,7 @@ impl Host {
         container.status = ContainerStatus::Running;
         container.start_invocation(id);
         let mut ir = self.invocation_registry.borrow_mut();
-        let mut invocation = &mut ir[id];
+        let invocation = &mut ir[id];
         invocation.start_time = Some(time);
         invocation.status = InvocationStatus::Running;
         invocation.container_id = Some(cont_id);
@@ -191,7 +191,7 @@ impl Host {
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();
         let function_registry = fr.borrow();
-        let mut invocation = &mut invocation_registry[id];
+        let invocation = &mut invocation_registry[id];
         invocation.finish_time = Some(time);
         invocation.status = InvocationStatus::Finished;
         let func_id = invocation.func_id;
@@ -244,7 +244,7 @@ impl Host {
         }
         for req in reqs.drain(..) {
             let mut ir = self.invocation_registry.borrow_mut();
-            let mut invocation = &mut ir[req.id];
+            let invocation = &mut ir[req.id];
             invocation.container_id = Some(req.container_id);
             if req.delay.is_none() {
                 invocation.status = InvocationStatus::Running;

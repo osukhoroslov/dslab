@@ -327,7 +327,7 @@ impl Node {
     }
 
     fn log_process_state(&mut self, proc: &str) {
-        let mut proc_entry = self.processes.get_mut(proc).unwrap();
+        let proc_entry = self.processes.get_mut(proc).unwrap();
         let state = format!("{:?}", proc_entry.proc_impl.state());
         if state != proc_entry.last_state {
             proc_entry.last_state = state.clone();

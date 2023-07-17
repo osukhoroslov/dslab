@@ -1,0 +1,38 @@
+name: rustdoc
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  rustdoc:
+    name: Build and deploy docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install needed packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libpango1.0-dev libatk1.0-dev libgtk-3-dev
+          version: 1.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Build docs
+        run: cargo doc --workspace --lib --no-deps
+
+      - name: Deploy docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./target/doc
