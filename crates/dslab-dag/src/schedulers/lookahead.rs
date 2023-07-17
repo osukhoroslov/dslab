@@ -14,7 +14,9 @@ use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub enum DepthMode {
+    /// Consider all unsheduled tasks when evaluating task assignment.
     Global,
+    /// Consider only children of then current task, which also do not have other dependencies.
     Local,
 }
 
@@ -149,7 +151,7 @@ impl LookaheadScheduler {
                             if scheduled[task] {
                                 depth[task] = 0;
                             } else if depth[task] == usize::MAX {
-                                // a task can have zero scheduled predecessors, then depth is 1
+                                // a task can have zero predecessors, then depth should be 1
                                 depth[task] = 1;
                             }
                         }
