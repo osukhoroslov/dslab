@@ -144,24 +144,21 @@ impl LookaheadScheduler {
                 ));
 
                 let mut depth = vec![usize::MAX; task_ids.len()];
+                depth[task_id] = 0;
                 for &task in task_ids.iter() {
-                    if task == task_id {
-                        depth[task] = 0;
-                    } else {
-                        match self.depth_mode {
-                            DepthMode::Global => {
-                                if scheduled[task] {
-                                    depth[task] = 0;
-                                } else if depth[task] == usize::MAX {
-                                    // a task can have zero scheduled predecessors, then depth is 1
-                                    depth[task] = 1;
-                                }
+                    match self.depth_mode {
+                        DepthMode::Global => {
+                            if scheduled[task] {
+                                depth[task] = 0;
+                            } else if depth[task] == usize::MAX {
+                                // a task can have zero scheduled predecessors, then depth is 1
+                                depth[task] = 1;
                             }
-                            DepthMode::Local => {}
-                            DepthMode::LocalAndNextRank => {
-                                if i + 1 < task_ids.len() && task == task_ids[i + 1] {
-                                    depth[task] = 0;
-                                }
+                        }
+                        DepthMode::Local => {}
+                        DepthMode::LocalAndNextRank => {
+                            if i + 1 < task_ids.len() && task == task_ids[i + 1] {
+                                depth[task] = 0;
                             }
                         }
                     }
@@ -170,19 +167,23 @@ impl LookaheadScheduler {
                     }
                 }
 
-                let unscheduled_tasks = task_ids
-                    .iter()
-                    .cloned()
-                    .filter(|&task| !scheduled[task])
-                    .filter(|&task| depth[task] <= self.depth)
-                    .filter(|&task| {
-                        dag.get_task(task)
+                let mut unscheduled_tasks = Vec::new();
+                for &task in task_ids.iter() {
+                    if !scheduled[task]
+                        && depth[task] <= self.depth
+                        && dag
+                            .get_task(task)
                             .inputs
                             .iter()
                             .filter_map(|&i| dag.get_data_item(i).producer)
                             .all(|pred| depth[pred] <= self.depth)
-                    })
-                    .collect::<Vec<usize>>();
+                    {
+                        unscheduled_tasks.push(task);
+                    } else {
+                        depth[task] = usize::MAX;
+                    }
+                }
+
                 let mut makespan = finish_time + output_time;
 
                 for child in unscheduled_tasks.into_iter() {
