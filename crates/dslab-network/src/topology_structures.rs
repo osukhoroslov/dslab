@@ -17,7 +17,7 @@ pub enum BandwidthSharingPolicy {
 pub struct Link {
     pub bandwidth: f64,
     pub latency: f64,
-    pub link_type: BandwidthSharingPolicy,
+    pub sharing_policy: BandwidthSharingPolicy,
 }
 
 impl Link {
@@ -25,7 +25,7 @@ impl Link {
         Self {
             bandwidth,
             latency,
-            link_type: BandwidthSharingPolicy::Shared,
+            sharing_policy: BandwidthSharingPolicy::Shared,
         }
     }
 
@@ -33,7 +33,7 @@ impl Link {
         Self {
             bandwidth,
             latency,
-            link_type: BandwidthSharingPolicy::NonShared,
+            sharing_policy: BandwidthSharingPolicy::NonShared,
         }
     }
 }
