@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["InvokerDecision"],"fn":["default_invoker_resolver"],"struct":["DequeuedInvocation","FIFOInvoker","NaiveInvoker"],"trait":["Invoker"]};

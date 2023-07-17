@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["best_fit","best_fit_threshold","cosine_similarity","delta_perp_distance","dot_product","first_fit","norm_diff","rack_anti_affinity","weighted_dot_product","worst_fit"]};

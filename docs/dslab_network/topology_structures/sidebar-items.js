@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["INVALID_NODE_ID"],"enum":["BandwidthSharingPolicy"],"struct":["Link","Node"],"type":["LinkID","NodeId","NodeLinksMap"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["load_model_resolver"],"struct":["ConstantLoadModel"],"trait":["LoadModel"]};

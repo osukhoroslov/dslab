@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CoresDependency","FailReason"],"struct":["Allocation","AllocationFailed","AllocationRequest","AllocationSuccess","CompFailed","CompFinished","CompRequest","CompStarted","Compute","DeallocationFailed","DeallocationRequest","DeallocationSuccess"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["asymptotic","constant","cubic","dvfs","empirical","linear","mse","square","state_based"]};

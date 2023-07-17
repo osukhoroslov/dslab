@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["parallel_simulation","parallel_simulation_n_workers","parallel_simulation_raw","parallel_simulation_raw_n_workers","parallel_simulation_yaml","parallel_simulation_yaml_n_workers"],"struct":["ParallelConfig","ParallelHostConfig"]};
