@@ -53,11 +53,19 @@ enum ExpectedEventType {
 
 struct Checker {
     expected_event_type: ExpectedEventType,
+    received_events_count: u64,
 }
 
 impl Checker {
     fn new(expected_event_type: ExpectedEventType) -> Checker {
-        Checker { expected_event_type }
+        Checker {
+            expected_event_type,
+            received_events_count: 0,
+        }
+    }
+
+    fn received_events_count(&self) -> u64 {
+        self.received_events_count
     }
 }
 
@@ -104,7 +112,8 @@ impl EventHandler for Checker {
                     panic!();
                 }
             }
-        })
+        });
+        self.received_events_count += 1;
     }
 }
 
@@ -517,4 +526,111 @@ fn disk_write_after_spaced_marked_free() {
     assert!(disk.borrow().capacity() == DISK_CAPACITY);
     assert!(disk.borrow().used_space() == 99);
     assert!(disk.borrow().free_space() == DISK_CAPACITY - 99);
+}
+
+#[test]
+fn disk_with_total_ops_limit() {
+    let mut sim = Simulation::new(SEED);
+
+    let write_checker = rc!(refcell!(Checker::new(ExpectedEventType::DataWriteCompleted)));
+    let write_checker_id = sim.add_handler("Writer", write_checker.clone());
+
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::DataReadCompleted)));
+    let read_checker_id = sim.add_handler("Reader", read_checker.clone());
+
+    let disk = rc!(refcell!(DiskBuilder::simple(
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW,
+    )
+    .concurrent_ops_limit(1)
+    .build(sim.create_context("Disk-1"))));
+
+    sim.add_handler("Disk-1", disk.clone());
+
+    disk.borrow_mut().write(50, write_checker_id);
+    disk.borrow_mut().read(100, read_checker_id);
+    disk.borrow_mut().write(50, write_checker_id);
+    disk.borrow_mut().read(100, read_checker_id);
+
+    assert_eq!(write_checker.borrow().received_events_count(), 0);
+    assert_eq!(read_checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 1);
+    assert_eq!(read_checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 1);
+    assert_eq!(read_checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 1);
+    assert_eq!(read_checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 2);
+
+    sim.step_until_no_events();
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 2);
+}
+
+#[test]
+fn disk_with_read_write_ops_limit() {
+    let mut sim = Simulation::new(SEED);
+
+    let write_checker = rc!(refcell!(Checker::new(ExpectedEventType::DataWriteCompleted)));
+    let write_checker_id = sim.add_handler("Writer", write_checker.clone());
+
+    let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::DataReadCompleted)));
+    let read_checker_id = sim.add_handler("Reader", read_checker.clone());
+
+    let disk = rc!(refcell!(DiskBuilder::simple(
+        DISK_CAPACITY,
+        DISK_READ_BW,
+        DISK_WRITE_BW,
+    )
+    .concurrent_read_ops_limit(1)
+    .concurrent_write_ops_limit(1)
+    .build(sim.create_context("Disk-1"))));
+
+    sim.add_handler("Disk-1", disk.clone());
+
+    disk.borrow_mut().write(50, write_checker_id);
+    disk.borrow_mut().read(100, read_checker_id);
+    disk.borrow_mut().write(50, write_checker_id);
+    disk.borrow_mut().read(100, read_checker_id);
+
+    assert_eq!(write_checker.borrow().received_events_count(), 0);
+    assert_eq!(read_checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 1);
+    assert_eq!(read_checker.borrow().received_events_count(), 0);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 1);
+
+    sim.step_for_duration(0.5);
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 2);
+
+    sim.step_until_no_events();
+    assert_eq!(write_checker.borrow().received_events_count(), 2);
+    assert_eq!(read_checker.borrow().received_events_count(), 2);
 }

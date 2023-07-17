@@ -10,39 +10,46 @@
 use serde::Serialize;
 use sugars::boxed;
 
-use dslab_core::cast;
 use dslab_core::component::Id;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::{context::SimulationContext, log_debug, log_error};
+use dslab_core::{cast, context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
-    ThroughputSharingModel,
 };
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
+use crate::scheduler::{FifoScheduler, Scheduler};
 use crate::storage::{Storage, StorageInfo};
 
 /// Describes a disk operation.
 #[derive(Clone)]
-pub struct DiskActivity {
+pub struct DiskOperation {
     /// Request Id.
     pub request_id: u64,
     /// Requester.
     pub requester: Id,
+    /// Operation type.
+    pub op_type: DiskOperationType,
     /// Size.
     pub size: u64,
 }
 
 #[derive(Clone, Serialize)]
-struct DiskReadActivityCompleted {}
+/// Type of disk operation.
+pub enum DiskOperationType {
+    /// Reading data from disk.
+    Read,
+    /// Writing data to disk.
+    Write,
+}
 
 #[derive(Clone, Serialize)]
-struct DiskWriteActivityCompleted {}
+pub(crate) struct DiskOperationCompleted {
+    pub request_id: u64,
+}
 
-type DiskThroughputModel = FairThroughputSharingModel<DiskActivity>;
-
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Disk builder. This is a type for convenient disk setup.
 ///
@@ -51,8 +58,11 @@ pub struct DiskBuilder {
     capacity: Option<u64>,
     read_throughput_fn: Option<ResourceThroughputFn>,
     write_throughput_fn: Option<ResourceThroughputFn>,
-    read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
-    write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>,
+    read_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
+    write_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>,
+    concurrent_ops_limit: Option<u64>,
+    concurrent_read_ops_limit: Option<u64>,
+    concurrent_write_ops_limit: Option<u64>,
 }
 
 impl Default for DiskBuilder {
@@ -66,6 +76,9 @@ impl Default for DiskBuilder {
             write_throughput_fn: None,
             read_factor_fn: boxed!(ConstantFactorFn::new(1.)),
             write_factor_fn: boxed!(ConstantFactorFn::new(1.)),
+            concurrent_ops_limit: None,
+            concurrent_read_ops_limit: None,
+            concurrent_write_ops_limit: None,
         }
     }
 }
@@ -125,14 +138,32 @@ impl DiskBuilder {
     }
 
     /// Sets throughput factor function for read operations.
-    pub fn read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
+    pub fn read_factor_fn(mut self, read_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>) -> Self {
         self.read_factor_fn = read_factor_fn;
         self
     }
 
     /// Sets throughput factor function for write operations.
-    pub fn write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskActivity>>) -> Self {
+    pub fn write_factor_fn(mut self, write_factor_fn: Box<dyn ActivityFactorFn<DiskOperation>>) -> Self {
         self.write_factor_fn = write_factor_fn;
+        self
+    }
+
+    /// Sets concurrent operations limit.
+    pub fn concurrent_ops_limit(mut self, concurrent_ops_limit: u64) -> Self {
+        self.concurrent_ops_limit.replace(concurrent_ops_limit);
+        self
+    }
+
+    /// Sets concurrent read operations limit.
+    pub fn concurrent_read_ops_limit(mut self, concurrent_read_ops_limit: u64) -> Self {
+        self.concurrent_read_ops_limit.replace(concurrent_read_ops_limit);
+        self
+    }
+
+    /// Sets concurrent write operations limit.
+    pub fn concurrent_write_ops_limit(mut self, concurrent_write_ops_limit: u64) -> Self {
+        self.concurrent_write_ops_limit.replace(concurrent_write_ops_limit);
         self
     }
 
@@ -140,26 +171,31 @@ impl DiskBuilder {
     ///
     /// Panics on invalid or incomplete disk settings.
     pub fn build(self, ctx: SimulationContext) -> Disk {
+        let read_throughput_model =
+            FairThroughputSharingModel::new(self.read_throughput_fn.unwrap(), self.read_factor_fn);
+
+        let write_throughput_model =
+            FairThroughputSharingModel::new(self.write_throughput_fn.unwrap(), self.write_factor_fn);
+
+        let scheduler = boxed!(FifoScheduler::new(
+            read_throughput_model,
+            write_throughput_model,
+            self.concurrent_ops_limit,
+            self.concurrent_read_ops_limit,
+            self.concurrent_write_ops_limit,
+        ));
+
         Disk {
             capacity: self.capacity.unwrap(),
             used: 0,
-            read_throughput_model: FairThroughputSharingModel::new(
-                self.read_throughput_fn.unwrap(),
-                self.read_factor_fn,
-            ),
-            write_throughput_model: FairThroughputSharingModel::new(
-                self.write_throughput_fn.unwrap(),
-                self.write_factor_fn,
-            ),
+            scheduler,
             next_request_id: 0,
-            next_read_event: u64::MAX,
-            next_write_event: u64::MAX,
             ctx,
         }
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Represents a disk.
 ///
@@ -170,11 +206,8 @@ impl DiskBuilder {
 pub struct Disk {
     pub(in crate::disk) capacity: u64,
     pub(in crate::disk) used: u64,
-    pub(in crate::disk) read_throughput_model: DiskThroughputModel,
-    pub(in crate::disk) write_throughput_model: DiskThroughputModel,
+    pub(in crate::disk) scheduler: Box<dyn Scheduler>,
     pub(in crate::disk) next_request_id: u64,
-    pub(in crate::disk) next_read_event: u64,
-    pub(in crate::disk) next_write_event: u64,
     pub(in crate::disk) ctx: SimulationContext,
 }
 
@@ -183,44 +216,6 @@ impl Disk {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
         request_id
-    }
-
-    fn schedule_next_read_event(&mut self) {
-        if let Some((time, _)) = self.read_throughput_model.peek() {
-            self.next_read_event = self.ctx.emit_self(DiskReadActivityCompleted {}, time - self.ctx.time());
-        }
-    }
-
-    fn schedule_next_write_event(&mut self) {
-        if let Some((time, _)) = self.write_throughput_model.peek() {
-            self.next_write_event = self
-                .ctx
-                .emit_self(DiskWriteActivityCompleted {}, time - self.ctx.time());
-        }
-    }
-
-    fn on_read_completed(&mut self) {
-        let (_, activity) = self.read_throughput_model.pop().unwrap();
-        self.ctx.emit_now(
-            DataReadCompleted {
-                request_id: activity.request_id,
-                size: activity.size,
-            },
-            activity.requester,
-        );
-        self.schedule_next_read_event();
-    }
-
-    fn on_write_completed(&mut self) {
-        let (_, activity) = self.write_throughput_model.pop().unwrap();
-        self.ctx.emit_now(
-            DataWriteCompleted {
-                request_id: activity.request_id,
-                size: activity.size,
-            },
-            activity.requester,
-        );
-        self.schedule_next_write_event();
     }
 }
 
@@ -242,17 +237,15 @@ impl Storage for Disk {
             log_error!(self.ctx, "Failed reading: {}", error,);
             self.ctx.emit_now(DataReadFailed { request_id, error }, requester);
         } else {
-            self.read_throughput_model.insert(
-                DiskActivity {
+            self.scheduler.submit(
+                DiskOperation {
                     request_id,
                     requester,
+                    op_type: DiskOperationType::Read,
                     size,
                 },
-                size as f64,
                 &mut self.ctx,
             );
-            self.ctx.cancel_event(self.next_read_event);
-            self.schedule_next_read_event();
         }
         request_id
     }
@@ -272,17 +265,15 @@ impl Storage for Disk {
             self.ctx.emit_now(DataWriteFailed { request_id, error }, requester);
         } else {
             self.used += size;
-            self.write_throughput_model.insert(
-                DiskActivity {
+            self.scheduler.submit(
+                DiskOperation {
                     request_id,
                     requester,
+                    op_type: DiskOperationType::Write,
                     size,
                 },
-                size as f64,
                 &mut self.ctx,
             );
-            self.ctx.cancel_event(self.next_write_event);
-            self.schedule_next_write_event();
         }
         request_id
     }
@@ -323,11 +314,28 @@ impl Storage for Disk {
 impl EventHandler for Disk {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            DiskReadActivityCompleted {} => {
-                self.on_read_completed();
-            }
-            DiskWriteActivityCompleted {} => {
-                self.on_write_completed();
+            DiskOperationCompleted { request_id } => {
+                let operation = self.scheduler.complete(request_id, &mut self.ctx);
+                match operation.op_type {
+                    DiskOperationType::Read => {
+                        self.ctx.emit_now(
+                            DataReadCompleted {
+                                request_id: operation.request_id,
+                                size: operation.size,
+                            },
+                            operation.requester,
+                        );
+                    }
+                    DiskOperationType::Write => {
+                        self.ctx.emit_now(
+                            DataWriteCompleted {
+                                request_id: operation.request_id,
+                                size: operation.size,
+                            },
+                            operation.requester,
+                        );
+                    }
+                }
             }
         })
     }
