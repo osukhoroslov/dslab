@@ -7,14 +7,34 @@ pub type NodeLinksMap = BTreeMap<NodeId, BTreeMap<NodeId, LinkID>>;
 
 pub const INVALID_NODE_ID: usize = usize::MAX;
 
+#[derive(Copy, Clone, Debug)]
+pub enum BandwidthSharingPolicy {
+    Shared,
+    NonShared,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Link {
-    pub latency: f64,
     pub bandwidth: f64,
+    pub latency: f64,
+    pub sharing_policy: BandwidthSharingPolicy,
 }
 
 impl Link {
-    pub fn new(latency: f64, bandwidth: f64) -> Self {
-        Self { latency, bandwidth }
+    pub fn shared(bandwidth: f64, latency: f64) -> Self {
+        Self {
+            bandwidth,
+            latency,
+            sharing_policy: BandwidthSharingPolicy::Shared,
+        }
+    }
+
+    pub fn non_shared(bandwidth: f64, latency: f64) -> Self {
+        Self {
+            bandwidth,
+            latency,
+            sharing_policy: BandwidthSharingPolicy::NonShared,
+        }
     }
 }
 

@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::topology_structures::{Link, LinkID, Node, NodeId, NodeLinksMap, INVALID_NODE_ID};
 
-#[derive(PartialEq, Default)]
-enum TopologyResolveType {
+#[derive(PartialEq, Default, Copy, Clone, Debug)]
+pub enum TopologyResolveType {
     Dijkstra,
     #[default]
     FloydWarshall,
@@ -16,8 +16,11 @@ pub struct TopologyResolver {
 }
 
 impl TopologyResolver {
-    pub fn new() -> TopologyResolver {
-        Default::default()
+    pub fn new(resolve_type: TopologyResolveType) -> Self {
+        Self {
+            resolve_type,
+            parent_path: Vec::new(),
+        }
     }
 
     pub fn resolve_topology(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
