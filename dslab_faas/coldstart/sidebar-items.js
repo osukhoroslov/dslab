@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["default_coldstart_policy_resolver"],"struct":["FixedTimeColdStartPolicy"],"trait":["ColdStartConvertHelper","ColdStartPolicy"]};

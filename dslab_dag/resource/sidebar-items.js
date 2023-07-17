@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["read_resource_configs"],"struct":["Resource","ResourceConfig"]};

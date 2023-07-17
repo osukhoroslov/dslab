@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["process_opendc_trace"],"struct":["FunctionSample","OpenDCRequestIter","OpenDCTrace","OpenDCTraceConfig"],"type":["FunctionTrace"]};

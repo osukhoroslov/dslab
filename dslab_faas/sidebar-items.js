@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["coldstart","config","container","controller","cpu","deployer","event","extra","function","host","invocation","invoker","parallel","resource","scheduler","simulation","stats","trace","util"]};

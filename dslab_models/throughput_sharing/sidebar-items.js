@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["make_constant_throughput_fn","make_uniform_factor_fn"],"struct":["ConstantFactorFn","EmpiricalFactorFn","FairThroughputSharingModel","RandomizedFactorFn","SlowFairThroughputSharingModel"],"trait":["ActivityFactorFn","ThroughputSharingModel"],"type":["ResourceThroughputFn"]};

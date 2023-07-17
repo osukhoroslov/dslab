@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["makespan_lower_bound"]};

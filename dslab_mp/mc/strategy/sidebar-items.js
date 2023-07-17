@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ExecutionMode","LogContext","VisitedStates"],"struct":["McStats","StrategyConfig"],"trait":["Strategy"],"type":["CollectFn","GoalFn","InvariantFn","McResult","PruneFn"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ContainerEndEvent","ContainerStartEvent","IdleDeployEvent","InvocationEndEvent","InvocationStartEvent","SimulationEndEvent"]};

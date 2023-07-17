@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["VMPlacementAlgorithm"],"fn":["placement_algorithm_resolver"],"trait":["MultiVMPlacementAlgorithm","SingleVMPlacementAlgorithm"]};

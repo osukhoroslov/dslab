@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["default_cpu_policy_resolver"],"struct":["ContendedCpuPolicy","Cpu","IgnoredCpuPolicy","IsolatedCpuPolicy","WorkItem"],"trait":["CpuPolicy"]};

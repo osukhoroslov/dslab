@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["CoresCriterion","ResourceCriterion","TaskCriterion"],"struct":["CoresCriterionIter","DynamicListScheduler","DynamicListStrategy","ResourceCriterionIter","TaskCriterionIter"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["allocation","monitoring","vm","vm_api"]};

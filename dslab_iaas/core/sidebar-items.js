@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["common","config","energy_meter","events","host_manager","load_model","monitoring","placement_store","resource_pool","scheduler","slav_metric","vm","vm_api","vm_placement_algorithm","vm_placement_algorithms"]};

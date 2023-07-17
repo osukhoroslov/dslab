@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["default_scheduler_resolver"],"struct":["ApplicationHasher","BasicScheduler","LeastLoadedScheduler","LocalityBasedScheduler","RandomScheduler","RoundRobinScheduler"],"trait":["Scheduler"]};
