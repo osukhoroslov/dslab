@@ -5,7 +5,7 @@ use dslab_core::context::SimulationContext;
 
 // NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
 
-/// Represent some data which can be sent through the network.
+/// Represents some data transferred over the network.
 #[derive(Clone, Debug, Serialize)]
 pub struct Data {
     pub id: usize,
@@ -13,7 +13,7 @@ pub struct Data {
     pub dest: Id,
     /// Size of the data in MB.
     pub size: f64,
-    /// Actor to notify when the transfer completes.
+    /// Simulation component to notify when the data transfer completes.
     pub notification_dest: Id,
 }
 

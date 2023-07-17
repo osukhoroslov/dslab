@@ -3,7 +3,7 @@ use dslab_core::context::SimulationContext;
 
 use crate::model::*;
 
-/// Network with constant throughput regardless of number of current transfers.
+/// Network model without congestion where each transfer gets the full bandwidth.
 pub struct ConstantBandwidthNetwork {
     bandwidth: f64,
     latency: f64,

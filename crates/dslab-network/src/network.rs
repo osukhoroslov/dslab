@@ -42,7 +42,7 @@ impl Network {
         }
     }
 
-    /// Adds new node to underlying topology.
+    /// Adds new network node.
     pub fn add_node(&mut self, node_id: &str, local_network: Box<dyn NetworkModel>) {
         self.topology.borrow_mut().add_node(node_id, local_network)
     }
@@ -65,27 +65,29 @@ impl Network {
         self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
     }
 
-    /// See [Topology::init].
+    /// See [`Topology::init`].
     pub fn init_topology(&mut self) {
         self.topology.borrow_mut().init();
     }
 
-    /// See [Topology::set_location].
+    /// See [`Topology::set_location`].
     pub fn set_location(&mut self, id: Id, node_name: &str) {
         self.topology.borrow_mut().set_location(id, node_name)
     }
 
-    /// See [Topology::check_same_node].
+    /// See [`Topology::check_same_node`].
     pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
         self.topology.borrow().check_same_node(id1, id2)
     }
 
-    /// See [Topology::get_nodes].
+    /// See [`Topology::get_nodes`].
     pub fn get_nodes(&self) -> Vec<String> {
         self.topology.borrow().get_nodes()
     }
 
-    /// Sends given message from `src` to `dest`. Size is assumed to be zero.
+    /// Sends a message from node `src` to node `dest`.
+    ///
+    /// The message size is assumed to be zero, so the message delivery time is determined only by the network latency.
     pub fn send_msg(&mut self, message: String, src: Id, dest: Id) -> usize {
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
@@ -98,7 +100,9 @@ impl Network {
         msg_id
     }
 
-    /// Sends event from `src` to `dest`. Size is assumed to be zero.
+    /// Sends an event from node `src` to node `dest`.
+    ///
+    /// The event size is assumed to be zero, so the event delay is determined only by the network latency.
     pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dest: Id) {
         log_debug!(self.ctx, "{} sent event to {}", src, dest);
 
@@ -110,7 +114,7 @@ impl Network {
         self.ctx.emit_as(data, src, dest, latency);
     }
 
-    /// Starts data transfer from `src` to `dest`.
+    /// Starts a data transfer from node `src` to node `dest`.
     pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
         let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let data = Data {
@@ -124,7 +128,7 @@ impl Network {
         data_id
     }
 
-    /// Returns bandwidth between `src` and `dest`.
+    /// Returns the network bandwidth from node `src` to node `dest`.
     pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
         self.network_model.borrow().bandwidth(src, dest)
     }
