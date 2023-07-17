@@ -144,7 +144,7 @@ impl Topology {
     }
 
     /// Callback for receiving local data.
-    pub fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
+    pub(crate) fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         let node = *self.get_location(data.dest).unwrap();
         self.get_node_info_mut(&node)
             .unwrap()
@@ -153,7 +153,7 @@ impl Topology {
     }
 
     /// Sends data.
-    pub fn local_send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
+    pub(crate) fn local_send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
         let node = *self.get_location(data.dest).unwrap();
         self.get_node_info_mut(&node)
             .unwrap()
@@ -185,7 +185,7 @@ impl Topology {
 
     /// Returns the path from node `src` to node `dst`.
     ///
-    /// The path is calculated by [`TopologyResolver`](crate::topology_resolver::TopologyResolver) 
+    /// The path is calculated by [`TopologyResolver`](crate::topology_resolver::TopologyResolver)
     /// as the shortest path from `src` to `dst` measured by total latency.
     pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkID>> {
         if let Some(path) = self.path_cache.get(&(*src, *dst)) {

@@ -24,7 +24,7 @@ impl TopologyResolver {
         }
     }
 
-    /// Calculates the paths between all pairs of nodes and stores them 
+    /// Calculates the paths between all pairs of nodes and stores them
     /// for use in [`get_path`](TopologyResolver::get_path).
     pub fn resolve_topology(&mut self, nodes: &[Node], links: &[Link], node_links_map: &NodeLinksMap) {
         self.parent_path = vec![vec![INVALID_NODE_ID; nodes.len()]; nodes.len()];
