@@ -50,19 +50,7 @@ jobs:
           components: clippy
 
       - name: Cache cargo artifacts
-        id: cache-cargo
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-cargo-artifacts
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+        uses: Swatinem/rust-cache@v2
 
       - name: Build
         run: cargo build --verbose
