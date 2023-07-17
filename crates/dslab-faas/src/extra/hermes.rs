@@ -7,7 +7,7 @@ use crate::host::Host;
 use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
-/// Refer to https://arxiv.org/abs/2111.07226
+/// Refer to <https://arxiv.org/abs/2111.07226>
 pub struct HermesScheduler {
     high_load_fallback: LeastLoadedScheduler,
     use_invocation_count: bool,

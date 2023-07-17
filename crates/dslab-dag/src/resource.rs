@@ -48,7 +48,7 @@ struct Resources {
 /// Reads resource configurations from YAML file.
 ///
 /// Configuration file example:
-/// https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml
+/// <https://github.com/osukhoroslov/dslab/blob/main/examples/dag-demo/systems/cluster-het-4-32cores.yaml>
 pub fn read_resource_configs<P: AsRef<Path>>(file: P) -> Vec<ResourceConfig> {
     let resources: Resources = serde_yaml::from_str(
         &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),

@@ -2,8 +2,7 @@
 
 use crate::power::memory::MemoryPowerModel;
 
-/// A power model for DDR3 SDRAM based on the technical note from Micron:
-/// https://www.micron.com/-/media/client/global/documents/products/technical-note/dram/tn41_01ddr3_power.pdf
+/// A power model for DDR3 SDRAM based on [the technical note from Micron](https://www.micron.com/-/media/client/global/documents/products/technical-note/dram/tn41_01ddr3_power.pdf).
 ///
 /// Based on this document we assume that the power consumption of a typical DDR3 module consists of:
 /// 1) Static power consumption (background power, 113.5 mW in the document) - 26% of maximum consumption
@@ -12,8 +11,8 @@ use crate::power::memory::MemoryPowerModel;
 /// In addition, we split the third part into two pieces - write (89.1 mW or 20%) and read (110.1 mW or 26%).
 ///
 /// Then we assume that a typical 8GB DDR3 module consumes 3 Watts of power:
-/// https://www.buildcomputers.net/power-consumption-of-pc-components.html
-/// https://www.crucial.com/support/articles-faq-memory/how-much-power-does-memory-use
+/// - <https://www.buildcomputers.net/power-consumption-of-pc-components.html>
+/// - <https://www.crucial.com/support/articles-faq-memory/how-much-power-does-memory-use>
 ///
 /// The total power consumption then relies on memory amount, e.g. a host with 240 GB of RAM has 30 such modules.
 /// Thus it consumes 90 Watts of power at maximum utilization.

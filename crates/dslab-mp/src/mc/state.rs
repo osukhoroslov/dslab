@@ -6,8 +6,8 @@ use std::hash::{Hash, Hasher};
 use crate::mc::node::McNodeState;
 use crate::mc::pending_events::PendingEvents;
 
-/// Stores comprehensive information about the state of [`McSystem`](crate::mc::system::McSystem).
-/// Used to preserve and restore particular situations in [`McSystem`](crate::mc::system::McSystem).
+/// Stores comprehensive information about the state of the checked system.
+/// Used to preserve and restore particular situations in the system.
 #[derive(Debug, Clone)]
 pub struct McState {
     /// States of nodes in the system.
