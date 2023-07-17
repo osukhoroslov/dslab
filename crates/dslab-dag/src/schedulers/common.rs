@@ -82,19 +82,16 @@ pub fn evaluate_assignment(
             .map(|&id| dag.get_data_item(id))
             .filter(|&data_item| data_item.producer.is_some())
             .map(|data_item| (data_item.producer.unwrap(), data_item.size))
-            .map(|(task, weight)| {
-                if task_location[&task] == resources[resource].id && data_transfer_mode == &DataTransferMode::Direct {
-                    task_finish_times[task]
-                } else {
-                    task_finish_times[task]
-                        + weight
-                            * data_transfer_mode.net_time(
-                                network,
-                                task_location[&task],
-                                resources[resource].id,
-                                ctx.id(),
-                            )
+            .map(|(task, weight)| match task_location.get(&task) {
+                Some(location) => {
+                    if *location == resources[resource].id && data_transfer_mode == &DataTransferMode::Direct {
+                        task_finish_times[task]
+                    } else {
+                        task_finish_times[task]
+                            + weight * data_transfer_mode.net_time(network, *location, resources[resource].id, ctx.id())
+                    }
                 }
+                None => 0.,
             })
             .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.),

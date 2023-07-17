@@ -16,7 +16,7 @@ use crate::system::System;
 pub enum DepthMode {
     /// Consider all unsheduled tasks when evaluating task assignment.
     Global,
-    /// Consider only children of then current task, which also do not have other dependencies.
+    /// Consider only children of the current task when evaluating an assignment.
     Local,
 }
 
@@ -164,18 +164,8 @@ impl LookaheadScheduler {
 
                 let mut unscheduled_tasks = Vec::new();
                 for &task in task_ids.iter() {
-                    if !scheduled[task]
-                        && depth[task] <= self.depth
-                        && dag
-                            .get_task(task)
-                            .inputs
-                            .iter()
-                            .filter_map(|&i| dag.get_data_item(i).producer)
-                            .all(|pred| depth[pred] <= self.depth)
-                    {
+                    if !scheduled[task] && depth[task] <= self.depth {
                         unscheduled_tasks.push(task);
-                    } else {
-                        depth[task] = usize::MAX;
                     }
                 }
 
