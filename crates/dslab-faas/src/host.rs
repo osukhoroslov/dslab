@@ -191,7 +191,7 @@ impl Host {
             container.last_change = time;
             container.status = ContainerStatus::Idle;
             let immut_container = self.container_manager.get_container(id).unwrap();
-            let decision = self.coldstart.borrow_mut().keepalive_window(immut_container);
+            let decision = self.coldstart.borrow_mut().keepalive_decision(immut_container);
             match decision {
                 KeepaliveDecision::NewWindow(keepalive) => {
                     self.new_container_end_event(id, keepalive);
@@ -251,7 +251,7 @@ impl Host {
                 self.new_container_end_event(cont_id, 0.0);
             } else {
                 let immut_container = self.container_manager.get_container(cont_id).unwrap();
-                let decision = self.coldstart.borrow_mut().keepalive_window(immut_container);
+                let decision = self.coldstart.borrow_mut().keepalive_decision(immut_container);
                 match decision {
                     KeepaliveDecision::NewWindow(keepalive) => {
                         if let Some(id) = immut_container.end_event {

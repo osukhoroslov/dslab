@@ -50,10 +50,14 @@ pub struct ContainerManager {
     active_invocations: usize,
     host_id: usize,
     resources: ResourceProvider,
+    /// A map of containers by id.
     containers: FxIndexMap<usize, Container>,
+    /// A set of running containers for each app that can accomodate one more invocation.
     free_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
+    /// A set of running containers for each app that can't accomodate any more invocations.
     full_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
     container_counter: Counter,
+    /// A set of invocations that will start on each non-running container that is being deployed.
     reservations: FxIndexMap<usize, Vec<usize>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
@@ -105,6 +109,8 @@ impl ContainerManager {
         &mut self.containers
     }
 
+    /// Returns an iterator over running containers that can accomodate one more invocation of given app.
+    /// If `allow_deploying` is true, also returns containers that are being deployed.
     pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
         let limit = app.get_concurrent_invocations();
         if let Some(set) = self.free_containers_by_app.get(app.id) {
@@ -119,6 +125,7 @@ impl ContainerManager {
         PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit, allow_deploying)
     }
 
+    /// Tries to deploy a new container for given app.
     pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(usize, f64)> {
         if self.resources.can_allocate(app.get_resources()) {
             let id = self.deploy_container(app, time);
@@ -127,10 +134,12 @@ impl ContainerManager {
         None
     }
 
+    /// Reserves a deploying container for a new invocation.
     pub fn reserve_container(&mut self, id: usize, request: usize) {
         self.reservations.entry(id).or_default().push(request);
     }
 
+    /// Counts reserved invocations for a deploying container.
     pub fn count_reservations(&self, id: usize) -> usize {
         self.reservations.get(&id).map(|x| x.len()).unwrap_or_default()
     }
@@ -146,6 +155,7 @@ impl ContainerManager {
         self.resources.release(&container.resources);
     }
 
+    /// Moves a container to free if it was full.
     pub fn try_move_container_to_free(&mut self, id: usize) {
         let app_id = self.containers.get(&id).unwrap().app_id;
         let was = self.full_containers_by_app.get_mut(app_id).remove(&id);
@@ -161,6 +171,7 @@ impl ContainerManager {
         self.full_containers_by_app.get_mut(app_id).insert(id);
     }
 
+    /// Deploys a new container for given application.
     fn deploy_container(&mut self, app: &Application, time: f64) -> usize {
         let cont_id = self.container_counter.increment();
         let container = Container {

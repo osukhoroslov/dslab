@@ -19,14 +19,18 @@ impl<T: 'static + ColdStartPolicy> ColdStartConvertHelper for T {
 }
 
 pub enum KeepaliveDecision {
+    /// A new keepalive window `w` is chosen for the container.
+    /// The container will be deallocated after `w` time units.
     NewWindow(f64),
+    /// Nothing changes, the container will be deallocated after the old keepalive window passes.
     OldWindow,
+    /// The container must be terminated right now.
     TerminateNow,
 }
 
 pub trait ColdStartPolicy: ColdStartConvertHelper {
-    /// Maximum allowed idle time until container destruction.
-    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision;
+    /// Sets delay before container deallocation.
+    fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision;
     /// Prewarm = x > 0 => destroy container, deploy new container after x time units since execution.
     /// Prewarm = 0 => do not destroy container immediately after execution.
     fn prewarm_window(&mut self, app: &Application) -> f64;
@@ -41,8 +45,8 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
 pub struct FixedTimeColdStartPolicy {
     keepalive_window: f64,
     prewarm_window: f64,
-    /// If true, the simulator resets keepalive to `keepalive_window` after each invocation.
-    /// Otherwise keepalive is set only after the first invocation.
+    /// If true, keepalive time is reset to new `keepalive_window` after each invocation of the policy.
+    /// Otherwise keepalive is set only after the first invocation. False by default.
     reset_keepalive: bool,
     already_set: HashMap<(usize, usize), f64>,
 }
@@ -69,7 +73,7 @@ impl FixedTimeColdStartPolicy {
 }
 
 impl ColdStartPolicy for FixedTimeColdStartPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision {
+    fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision {
         if !self.reset_keepalive {
             if let Some(t) = self.already_set.get(&(container.host_id, container.id)) {
                 if t - container.last_change <= 0.0 {

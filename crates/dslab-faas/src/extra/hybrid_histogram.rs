@@ -194,7 +194,7 @@ impl HybridHistogramPolicy {
 }
 
 impl ColdStartPolicy for HybridHistogramPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> KeepaliveDecision {
+    fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision {
         if let Some(t) = self.already_set.get(&(container.host_id, container.id)) {
             if t - container.last_change <= 0.0 {
                 // last_change should be equal to current time
