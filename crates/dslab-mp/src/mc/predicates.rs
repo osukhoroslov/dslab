@@ -59,7 +59,9 @@ pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
 pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
     boxed!(move |state| {
         if state.depth > depth {
-            Some(format!("state depth exceeds maximum depth {depth} that is under consideration"))
+            Some(format!(
+                "state depth exceeds maximum depth {depth} that is under consideration"
+            ))
         } else {
             None
         }
