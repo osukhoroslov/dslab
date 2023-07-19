@@ -15,6 +15,7 @@ use crate::mc::events::McEvent::{
 };
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::DeliveryOptions;
+use crate::mc::predicates;
 use crate::mc::state::McState;
 use crate::mc::system::McSystem;
 use crate::message::Message;
@@ -33,10 +34,10 @@ pub struct StrategyConfig {
 impl Default for StrategyConfig {
     fn default() -> Self {
         Self {
-            prune: boxed!(default_prune),
-            goal: boxed!(default_goal),
-            invariant: boxed!(default_invariant),
-            collect: boxed!(default_collect),
+            prune: boxed!(predicates::default_prune),
+            goal: boxed!(predicates::default_goal),
+            invariant: boxed!(predicates::default_invariant),
+            collect: boxed!(predicates::default_collect),
             execution_mode: ExecutionMode::Default,
             visited_states: VisitedStates::Partial(HashSet::default()),
         }
@@ -79,22 +80,6 @@ impl StrategyConfig {
         self.visited_states = visited_states;
         self
     }
-}
-
-pub(crate) fn default_prune(_: &McState) -> Option<String> {
-    None
-}
-
-pub(crate) fn default_goal(_: &McState) -> Option<String> {
-    None
-}
-
-pub(crate) fn default_invariant(_: &McState) -> Result<(), String> {
-    Ok(())
-}
-
-pub(crate) fn default_collect(_: &McState) -> bool {
-    false
 }
 
 /// Defines the mode in which the model checking algorithm is executing.

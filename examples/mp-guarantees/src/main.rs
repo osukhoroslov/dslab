@@ -5,8 +5,9 @@ use std::io::Write;
 use assertables::{assume, assume_eq};
 use clap::Parser;
 use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates;
 use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn};
+use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
@@ -370,16 +371,6 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
 
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
-fn mc_goal_got_two_messages() -> GoalFn {
-    boxed!(|state: &McState| {
-        if state.node_states["receiver-node"]["receiver"].local_outbox.len() == 2 {
-            Some("receiver produced two local messages".to_owned())
-        } else {
-            None
-        }
-    })
-}
-
 fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestConfig) -> InvariantFn {
     boxed!(move |state| {
         let mut msg_count = HashMap::new();
@@ -443,46 +434,6 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
     })
 }
 
-fn mc_invariant_depth(depth: u64) -> InvariantFn {
-    boxed!(move |state| {
-        if state.depth > depth {
-            Err(format!("state depth exceeds maximum allowed depth {depth}"))
-        } else {
-            Ok(())
-        }
-    })
-}
-
-fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
-    boxed!(move |state| {
-        for rule in &mut rules {
-            rule(state)?;
-        }
-        Ok(())
-    })
-}
-
-fn mc_prune_depth(depth: u64) -> PruneFn {
-    boxed!(move |state| { mc_invariant_depth(depth)(state).err() })
-}
-
-fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
-    boxed!(move |state| {
-        if state.node_states["sender-node"]["sender"].sent_message_count > allowed {
-            Some("too many messages sent by sender".to_owned())
-        } else if state.node_states["receiver-node"]["receiver"].sent_message_count > allowed {
-            Some("too many messages sent by receiver".to_owned())
-        } else {
-            None
-        }
-    })
-}
-
-fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
-    let strategy = Dfs::new(prune, goal, invariant, ExecutionMode::Default);
-    ModelChecker::new(system, boxed!(strategy))
-}
-
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let message_count = 2;
@@ -493,16 +444,18 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         sys.send_local_message("sender", msg.clone());
         messages.push(msg);
     }
-    let config = *config;
-    let mut mc = create_model_checker(
-        &sys,
-        mc_prune_too_many_messages_sent(4),
-        mc_goal_got_two_messages(),
-        mc_invariant_combined(vec![
-            mc_invariant_depth(20),
+    let strategy_config = StrategyConfig::default()
+        .prune(predicates::mc_prune_sent_messages_limit(4))
+        .goal(predicates::mc_goal_got_n_local_messages(
+            "receiver-node".to_string(),
+            "receiver".to_string(),
+            2,
+        ))
+        .invariant(predicates::mc_invariant_combined(vec![
+            predicates::mc_invariant_state_depth(20),
             mc_invariant_received_messages(messages, *config),
-        ]),
-    );
+        ]));
+    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run();
     assume!(
         res.is_ok(),
@@ -524,12 +477,15 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     }
     let messages = messages;
     let config = *config;
-    let mut mc = create_model_checker(
-        &sys,
-        mc_prune_depth(5),
-        mc_goal_got_two_messages(),
-        mc_invariant_received_messages(messages, config),
-    );
+    let strategy_config = StrategyConfig::default()
+        .prune(predicates::mc_prune_state_depth(5))
+        .goal(predicates::mc_goal_got_n_local_messages(
+            "receiver-node".to_string(),
+            "receiver".to_string(),
+            2,
+        ))
+        .invariant(mc_invariant_received_messages(messages, config));
+    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run();
     assume!(
         res.is_ok(),
