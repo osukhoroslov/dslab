@@ -4,16 +4,16 @@ use std::io::Write;
 
 use assertables::{assume, assume_eq};
 use clap::Parser;
-use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates;
-use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use sugars::boxed;
 
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates;
+use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
