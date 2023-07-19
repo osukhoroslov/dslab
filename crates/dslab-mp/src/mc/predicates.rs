@@ -37,7 +37,7 @@ pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
 pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalFn {
     boxed!(move |state| {
         if state.node_states[&node][&proc].local_outbox.len() == n as usize {
-            Some(format!("{} produced {} local messages", proc, n))
+            Some(format!("{proc} produced {n} local messages"))
         } else {
             None
         }
@@ -72,7 +72,7 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
         for (node_name, node) in state.node_states.iter() {
             for (proc_name, proc) in node.iter() {
                 if proc.sent_message_count > max_allowed_messages {
-                    return Some(format!("too many messages sent by {}:{}", node_name, proc_name));
+                    return Some(format!("too many messages sent by {node_name}:{proc_name}"));
                 }
             }
         }
