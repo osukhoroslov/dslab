@@ -184,10 +184,12 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+// MODEL CHECKING ------------------------------------------------------------------------------------------------------
+
 fn mc_goal_got_two_messages() -> GoalFn {
     boxed!(|state| {
         if state.node_states["client-node"]["client"].local_outbox.len() == 2 {
-            Some("client processed two messages".to_owned())
+            Some("client produced two local messages".to_owned())
         } else {
             None
         }
@@ -235,9 +237,9 @@ fn mc_prune_depth(depth: u64) -> PruneFn {
 fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
     boxed!(move |state| {
         if state.node_states["client-node"]["client"].sent_message_count > allowed {
-            Some("too many messages sent from client".to_owned())
+            Some("too many messages sent by client".to_owned())
         } else if state.node_states["server-node"]["server"].sent_message_count > allowed {
-            Some("too many messages sent from server".to_owned())
+            Some("too many messages sent by server".to_owned())
         } else {
             None
         }
@@ -245,7 +247,7 @@ fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
 }
 
 fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
-    let strategy = Dfs::new(prune, goal, invariant, dslab_mp::mc::strategy::ExecutionMode::Default);
+    let strategy = Dfs::new(prune, goal, invariant, ExecutionMode::Default);
     ModelChecker::new(system, boxed!(strategy))
 }
 
@@ -268,7 +270,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let res = mc.run();
     assume!(
         res.is_ok(),
-        format!("model checher found error: {}", res.as_ref().err().unwrap())
+        format!("model checker found error: {}", res.err().unwrap())
     )?;
     Ok(true)
 }
@@ -290,7 +292,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let res = mc.run();
     assume!(
         res.is_ok(),
-        format!("model checher found error: {}", res.as_ref().err().unwrap())
+        format!("model checker found error: {}", res.err().unwrap())
     )?;
     Ok(true)
 }

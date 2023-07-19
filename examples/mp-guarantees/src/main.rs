@@ -368,10 +368,12 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
     Ok(true)
 }
 
+// MODEL CHECKING ------------------------------------------------------------------------------------------------------
+
 fn mc_goal_got_two_messages() -> GoalFn {
-    boxed!(|state| {
+    boxed!(|state: &McState| {
         if state.node_states["receiver-node"]["receiver"].local_outbox.len() == 2 {
-            Some("receiver processed two messages".to_owned())
+            Some("receiver produced two local messages".to_owned())
         } else {
             None
         }
@@ -444,7 +446,7 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
 fn mc_invariant_depth(depth: u64) -> InvariantFn {
     boxed!(move |state| {
         if state.depth > depth {
-            Err("state depth exceeds allowed depth".to_owned())
+            Err(format!("state depth exceeds maximum allowed depth {depth}"))
         } else {
             Ok(())
         }
@@ -467,9 +469,9 @@ fn mc_prune_depth(depth: u64) -> PruneFn {
 fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
     boxed!(move |state| {
         if state.node_states["sender-node"]["sender"].sent_message_count > allowed {
-            Some("too many messages sent from client".to_owned())
+            Some("too many messages sent by sender".to_owned())
         } else if state.node_states["receiver-node"]["receiver"].sent_message_count > allowed {
-            Some("too many messages sent from server".to_owned())
+            Some("too many messages sent by receiver".to_owned())
         } else {
             None
         }
@@ -477,7 +479,7 @@ fn mc_prune_too_many_messages_sent(allowed: u64) -> PruneFn {
 }
 
 fn create_model_checker(system: &System, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
-    let strategy = Dfs::new(prune, goal, invariant, dslab_mp::mc::strategy::ExecutionMode::Default);
+    let strategy = Dfs::new(prune, goal, invariant, ExecutionMode::Default);
     ModelChecker::new(system, boxed!(strategy))
 }
 
@@ -491,7 +493,6 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         sys.send_local_message("sender", msg.clone());
         messages.push(msg);
     }
-    let messages = messages;
     let config = *config;
     let mut mc = create_model_checker(
         &sys,
@@ -499,13 +500,13 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         mc_goal_got_two_messages(),
         mc_invariant_combined(vec![
             mc_invariant_depth(20),
-            mc_invariant_received_messages(messages, config),
+            mc_invariant_received_messages(messages, *config),
         ]),
     );
     let res = mc.run();
     assume!(
         res.is_ok(),
-        format!("model checher found error: {}", res.as_ref().err().unwrap())
+        format!("model checker found error: {}", res.err().unwrap())
     )?;
     Ok(true)
 }
@@ -532,7 +533,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let res = mc.run();
     assume!(
         res.is_ok(),
-        format!("model checher found error: {}", res.as_ref().err().unwrap())
+        format!("model checher found error: {}", res.err().unwrap())
     )?;
     Ok(true)
 }
