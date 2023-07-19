@@ -1,7 +1,6 @@
 mod basic;
 mod retry;
 
-use std::borrow::BorrowMut;
 use std::collections::HashSet;
 use std::env;
 use std::io::Write;
@@ -238,7 +237,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data));
     system.send_local_message("client", Message::new("PING", &data2));
-    system.network().borrow_mut().set_drop_rate(0.3);
+    system.network().set_drop_rate(0.3);
     let strategy_config = StrategyConfig::default()
         .prune(predicates::mc_prune_state_depth(7))
         .goal(predicates::mc_goal_got_n_local_messages(
