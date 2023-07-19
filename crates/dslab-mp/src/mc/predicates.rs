@@ -48,7 +48,7 @@ pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalF
 pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
     boxed!(move |state| {
         if state.depth > depth {
-            Err("state depth exceeds allowed depth".to_owned())
+            Err(format!("state depth exceeds maximum allowed depth {depth}"))
         } else {
             Ok(())
         }
@@ -59,7 +59,7 @@ pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
 pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
     boxed!(move |state| {
         if state.depth > depth {
-            Some("state depth exceeds allowed depth".to_owned())
+            Some(format!("state depth exceeds maximum depth {depth} that is under consideration"))
         } else {
             None
         }
