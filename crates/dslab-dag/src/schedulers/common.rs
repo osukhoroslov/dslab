@@ -91,6 +91,8 @@ pub fn evaluate_assignment(
                             + weight * data_transfer_mode.net_time(network, *location, resources[resource].id, ctx.id())
                     }
                 }
+                // If the task has unscheduled parents (e.g. evaluation of children tasks in Lookahead),
+                // we ignore delays due to these parents, which makes start_time rather optimistic.
                 None => 0.,
             })
             .max_by(|a, b| a.total_cmp(b))

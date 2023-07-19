@@ -14,7 +14,7 @@ use crate::schedulers::treap::Treap;
 use crate::system::System;
 
 pub enum DepthMode {
-    /// Consider all unsheduled tasks when evaluating task assignment.
+    /// Consider all unscheduled tasks when evaluating task assignment.
     Global,
     /// Consider only children of the current task when evaluating an assignment.
     Local,

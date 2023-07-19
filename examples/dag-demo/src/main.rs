@@ -19,12 +19,12 @@ const ALGORITHMS: &[&str] = &[
     "Simple",
     "DLS",
     "HEFT",
-    "Lookahead[depth=0]",
-    "Lookahead[depth=1,depth_mode=Local]",
-    "Lookahead[depth=1]",
-    "Lookahead[depth=2]",
-    "Lookahead[depth=3]",
-    "Lookahead",
+    "Lookahead[depth=0]",                  // Identical to HEFT
+    "Lookahead[depth=1,depth_mode=Local]", // Original Lookahead version considering only task's children
+    "Lookahead[depth=1]",                  // Lookahead version considering all ready unscheduled tasks (depth=1)
+    "Lookahead[depth=2]",                  // Lookahead version considering all unscheduled tasks with depth 2
+    "Lookahead[depth=3]",                  // Lookahead version considering all unscheduled tasks with depth 3
+    "Lookahead",                           // Lookahead version considering all unscheduled tasks
     "PEFT",
     "DynamicList[task=CompSize,resource=Speed,cores=MaxCores]",
     "DynamicList[task=CompSize,resource=Speed,cores=Efficiency90]",
@@ -104,7 +104,7 @@ fn main() {
         fs::create_dir_all("traces").expect("Failed to create traces dir");
     }
 
-    let scheduler_width = ALGORITHMS.iter().map(|alg| alg.len()).max().unwrap();
+    let algorithm_width = ALGORITHMS.iter().map(|alg| alg.len()).max().unwrap();
 
     println!("\nDAG: {} ({} tasks)", args.dag, dag.get_tasks().len());
     println!("System: {}\n", args.system);
@@ -138,7 +138,7 @@ fn main() {
             runner.borrow().trace_log().save_to_file(&trace_path).unwrap();
         }
         println!(
-            "{:>scheduler_width$}  {: >8.2}  {: >8.2?}",
+            "{:>algorithm_width$}  {: >8.2}  {: >8.2?}",
             algorithm,
             sim.time(),
             now.elapsed()
