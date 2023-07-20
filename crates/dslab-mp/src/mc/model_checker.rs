@@ -88,7 +88,7 @@ impl ModelChecker {
         self.strategy.run(&mut self.system)
     }
 
-    /// Runs model checking and returns the result on completion.
+    /// Runs model checking after applying callback.
     pub fn run_with_change<F>(&mut self, preliminary_callback: F) -> McResult
     where
         F: Fn(&mut McSystem),

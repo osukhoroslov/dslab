@@ -1,4 +1,4 @@
-//! Predicates that can be used for configuration in model checker
+//! Standard predicate implementations that can be used in model checking strategy.
 
 use std::collections::HashSet;
 
@@ -25,7 +25,7 @@ pub(crate) fn default_collect(_: &McState) -> bool {
     false
 }
 
-/// Chains invariants using AND predicate.
+/// Combines multiple invariant functions by returning `Ok` iff all invariants are satisfied.
 pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
     boxed!(move |state: &McState| {
         for rule in &mut rules {
@@ -47,7 +47,7 @@ pub fn mc_goal_combined(mut goals: Vec<GoalFn>) -> GoalFn {
     })
 }
 
-/// Checks if n messages were received by a given process.
+/// Checks if the given process produced `n` local messages.
 pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalFn {
     boxed!(move |state: &McState| {
         if state.node_states[&node][&proc].local_outbox.len() == n as usize {
@@ -69,7 +69,7 @@ pub fn mc_goal_nothing_left_to_do() -> GoalFn {
     })
 }
 
-/// Checks if state is located deeper that allowed
+/// Checks that state depth does not exceed the given value.
 pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
     boxed!(move |state: &McState| {
         if state.depth > depth {
@@ -80,7 +80,7 @@ pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
     })
 }
 
-/// Checks if state is located deep enough to skip it during model checking run
+/// Prunes states with depth exceeding the given value.
 pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
     boxed!(move |state: &McState| {
         if state.depth > depth {
@@ -93,13 +93,13 @@ pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
     })
 }
 
-/// Checks that every process have not sent more that allowed number of messages
+/// Prunes states where some process has sent more messages than the given value.
 pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
     boxed!(move |state: &McState| {
         for (node_name, node) in state.node_states.iter() {
             for (proc_name, proc) in node.iter() {
                 if proc.sent_message_count > max_allowed_messages {
-                    return Some(format!("too many messages sent by {node_name}:{proc_name}"));
+                    return Some(format!("too many messages sent by {proc_name}"));
                 }
             }
         }
@@ -107,7 +107,8 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
     })
 }
 
-/// Verifies that set of messages received by process matches with expectations
+/// Verifies that the set of local messages delivered by a process matches exactly the expected messages.
+/// Message duplications or unexpected messages are not allowed. 
 pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
     boxed!(move |state: &McState| {
         if state.events.available_events_num() > 0 {
@@ -117,7 +118,7 @@ pub fn mc_invariant_received_messages(node: String, proc: String, messages_expec
         let local_outbox = &state.node_states[&node][&proc].local_outbox;
         if local_outbox.len() != messages_expected.len() {
             return Err(format!(
-                "{node}:{proc} received {} messages but {} expected",
+                "{proc} received {} messages but {} expected",
                 local_outbox.len(),
                 messages_expected.len()
             ));
