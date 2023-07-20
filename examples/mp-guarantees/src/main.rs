@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::Write;
 
@@ -102,11 +102,15 @@ fn send_messages(sys: &mut System, message_count: usize, run_simulation: bool) -
 
 fn check_delivered_message_type(delivered: &[Message], sent: &[Message]) -> Result<HashMap<String, i32>, String> {
     let mut msg_count = HashMap::default();
+    let mut expected_msg_count: HashSet<String> = HashSet::default();
+    for msg in sent.iter() {
+        expected_msg_count.insert(msg.data.clone());
+    }
     for msg in delivered.iter() {
         // assuming all messages have the same type
         assume_eq!(msg.tip, sent[0].tip, format!("Wrong message type {}", msg.tip))?;
         assume!(
-            msg_count.contains_key(&msg.data),
+            expected_msg_count.contains(&msg.data),
             format!("Wrong message data: {}", msg.data)
         )?;
         *msg_count.entry(msg.data.clone()).or_insert(0) += 1;
@@ -457,19 +461,25 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.1);
-    let messages = send_messages(&mut sys, 2, false);
-    let messages = messages;
+    let messages: Vec<Message> = generate_message_texts(&mut sys, 2)
+        .into_iter()
+        .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
+        .collect();
     let config = *config;
     let strategy_config = StrategyConfig::default()
+        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(predicates::mc_prune_state_depth(5))
-        .goal(predicates::mc_goal_got_n_local_messages(
-            "receiver-node".to_string(),
-            "receiver".to_string(),
-            2,
-        ))
-        .invariant(mc_invariant_received_messages(messages, config));
+        .goal(predicates::mc_goal_combined(vec![
+            predicates::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
+            predicates::mc_goal_nothing_left_to_do(),
+        ]))
+        .invariant(mc_invariant_received_messages(messages.clone(), config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
-    let res = mc.run();
+    let res = mc.run_with_change(move |sys| {
+        for message in messages.clone() {
+            sys.send_local_message("sender-node".to_string(), "sender".to_string(), message);
+        }
+    });
     assume!(
         res.is_ok(),
         format!("model checher found error: {}", res.err().unwrap())

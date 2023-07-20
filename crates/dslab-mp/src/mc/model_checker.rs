@@ -88,6 +88,15 @@ impl ModelChecker {
         self.strategy.run(&mut self.system)
     }
 
+    /// Runs model checking and returns the result on completion.
+    pub fn run_with_change<F>(&mut self, preliminary_callback: F) -> McResult
+    where
+        F: Fn(&mut McSystem),
+    {
+        preliminary_callback(&mut self.system);
+        self.run()
+    }
+
     /// Runs model checking from a set of initial states.
     pub fn run_from_states(&mut self, states: HashSet<McState>) -> McResult {
         self.run_from_states_with_change(states, |_| {})

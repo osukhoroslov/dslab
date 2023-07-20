@@ -35,11 +35,34 @@ pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
     })
 }
 
+/// Chains goals using OR predicate.
+pub fn mc_goal_combined(mut goals: Vec<GoalFn>) -> GoalFn {
+    boxed!(move |state| {
+        for goal in &mut goals {
+            if let Some(status) = goal(state) {
+                return Some(status);
+            }
+        }
+        None
+    })
+}
+
 /// Checks if n messages were received by a given process.
 pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalFn {
     boxed!(move |state| {
         if state.node_states[&node][&proc].local_outbox.len() == n as usize {
             Some(format!("{proc} produced {n} local messages"))
+        } else {
+            None
+        }
+    })
+}
+
+/// Checks if current state has no more active events.
+pub fn mc_goal_nothing_left_to_do() -> GoalFn {
+    boxed!(|state| {
+        if state.events.available_events_num() == 0 {
+            Some("final state reached".to_string())
         } else {
             None
         }
