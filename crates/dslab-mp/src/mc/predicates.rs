@@ -27,7 +27,7 @@ pub(crate) fn default_collect(_: &McState) -> bool {
 
 /// Chains invariants using AND predicate.
 pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         for rule in &mut rules {
             rule(state)?;
         }
@@ -37,7 +37,7 @@ pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
 
 /// Chains goals using OR predicate.
 pub fn mc_goal_combined(mut goals: Vec<GoalFn>) -> GoalFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         for goal in &mut goals {
             if let Some(status) = goal(state) {
                 return Some(status);
@@ -49,7 +49,7 @@ pub fn mc_goal_combined(mut goals: Vec<GoalFn>) -> GoalFn {
 
 /// Checks if n messages were received by a given process.
 pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         if state.node_states[&node][&proc].local_outbox.len() == n as usize {
             Some(format!("{proc} produced {n} local messages"))
         } else {
@@ -60,7 +60,7 @@ pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalF
 
 /// Checks if current state has no more active events.
 pub fn mc_goal_nothing_left_to_do() -> GoalFn {
-    boxed!(|state| {
+    boxed!(|state: &McState| {
         if state.events.available_events_num() == 0 {
             Some("final state reached".to_string())
         } else {
@@ -71,7 +71,7 @@ pub fn mc_goal_nothing_left_to_do() -> GoalFn {
 
 /// Checks if state is located deeper that allowed
 pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         if state.depth > depth {
             Err(format!("state depth exceeds maximum allowed depth {depth}"))
         } else {
@@ -82,7 +82,7 @@ pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
 
 /// Checks if state is located deep enough to skip it during model checking run
 pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         if state.depth > depth {
             Some(format!(
                 "state depth exceeds maximum depth {depth} that is under consideration"
@@ -95,7 +95,7 @@ pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
 
 /// Checks that every process have not sent more that allowed number of messages
 pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         for (node_name, node) in state.node_states.iter() {
             for (proc_name, proc) in node.iter() {
                 if proc.sent_message_count > max_allowed_messages {
@@ -109,7 +109,7 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
 
 /// Verifies that set of messages received by process matches with expectations
 pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
-    boxed!(move |state| {
+    boxed!(move |state: &McState| {
         if state.events.available_events_num() > 0 {
             return Ok(());
         }
