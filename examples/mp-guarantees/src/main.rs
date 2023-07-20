@@ -119,16 +119,16 @@ fn check_delivered_message_type(delivered: &[Message], sent: &[Message]) -> Resu
 }
 
 fn check_message_delivery_reliable(
-    msg_count: &HashMap<String, i32>,
+    delivered_msg_count: &HashMap<String, i32>,
     expected_msg_count: &HashMap<String, i32>,
 ) -> TestResult {
-    for (data, count) in msg_count {
+    for (data, delivered_count) in delivered_msg_count {
         let expected_count = expected_msg_count[data];
         assume!(
-            *count >= expected_count,
+            *delivered_count >= expected_count,
             format!(
                 "Message {} is not delivered (observed count {} < expected count {})",
-                data, count, expected_count
+                data, delivered_count, expected_count
             )
         )?;
     }
@@ -410,23 +410,21 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
 
 fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestConfig) -> InvariantFn {
     boxed!(move |state| {
-        let mut msg_count = HashMap::new();
         let mut expected_msg_count = HashMap::new();
         for msg in &messages_expected {
-            msg_count.insert(msg.data.clone(), 0);
             *expected_msg_count.entry(msg.data.clone()).or_insert(0) += 1;
         }
         let delivered = &state.node_states["receiver-node"]["receiver"].local_outbox;
 
         // check that delivered messages have expected type and data
-        let msg_count = check_delivered_message_type(delivered, &messages_expected)?;
+        let delivered_msg_count = check_delivered_message_type(delivered, &messages_expected)?;
 
         // check delivered message count according to expected guarantees
         if config.reliable && state.events.available_events_num() == 0 {
-            check_message_delivery_reliable(&msg_count, &expected_msg_count)?;
+            check_message_delivery_reliable(&delivered_msg_count, &expected_msg_count)?;
         }
         if config.once {
-            check_message_delivery_once(&msg_count, &expected_msg_count)?;
+            check_message_delivery_once(&delivered_msg_count, &expected_msg_count)?;
         }
         if config.ordered {
             check_message_delivery_ordered(delivered, &messages_expected)?;
@@ -445,7 +443,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             "receiver".to_string(),
             2,
         ))
-        .invariant(predicates::mc_invariant_combined(vec![
+        .invariant(predicates::mc_all_invariants(vec![
             predicates::mc_invariant_state_depth(20),
             mc_invariant_received_messages(messages, *config),
         ]));
@@ -465,15 +463,14 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .into_iter()
         .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
         .collect();
-    let config = *config;
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(predicates::mc_prune_state_depth(7))
-        .goal(predicates::mc_goal_combined(vec![
+        .goal(predicates::mc_any_goal(vec![
             predicates::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
             predicates::mc_goal_nothing_left_to_do(),
         ]))
-        .invariant(mc_invariant_received_messages(messages.clone(), config));
+        .invariant(mc_invariant_received_messages(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
         for message in messages.clone() {
@@ -482,7 +479,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     });
     assume!(
         res.is_ok(),
-        format!("model checher found error: {}", res.err().unwrap())
+        format!("model checker found error: {}", res.err().unwrap())
     )?;
     Ok(true)
 }

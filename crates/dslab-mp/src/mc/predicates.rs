@@ -26,7 +26,7 @@ pub(crate) fn default_collect(_: &McState) -> bool {
 }
 
 /// Combines multiple invariant functions by returning `Ok` iff all invariants are satisfied.
-pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
+pub fn mc_all_invariants(mut rules: Vec<InvariantFn>) -> InvariantFn {
     boxed!(move |state: &McState| {
         for rule in &mut rules {
             rule(state)?;
@@ -35,8 +35,8 @@ pub fn mc_invariant_combined(mut rules: Vec<InvariantFn>) -> InvariantFn {
     })
 }
 
-/// Chains goals using OR predicate.
-pub fn mc_goal_combined(mut goals: Vec<GoalFn>) -> GoalFn {
+/// Combines multiple goal functions by returning `Ok` iff at least one goal is reached.
+pub fn mc_any_goal(mut goals: Vec<GoalFn>) -> GoalFn {
     boxed!(move |state: &McState| {
         for goal in &mut goals {
             if let Some(status) = goal(state) {
@@ -96,7 +96,7 @@ pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
 /// Prunes states where some process has sent more messages than the given value.
 pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
     boxed!(move |state: &McState| {
-        for (node_name, node) in state.node_states.iter() {
+        for (_, node) in state.node_states.iter() {
             for (proc_name, proc) in node.iter() {
                 if proc.sent_message_count > max_allowed_messages {
                     return Some(format!("too many messages sent by {proc_name}"));

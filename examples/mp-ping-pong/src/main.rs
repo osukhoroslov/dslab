@@ -201,7 +201,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             "client".to_string(),
             2,
         ))
-        .invariant(predicates::mc_invariant_combined(vec![
+        .invariant(predicates::mc_all_invariants(vec![
             predicates::mc_invariant_received_messages(
                 "client-node".to_string(),
                 "client".to_string(),
