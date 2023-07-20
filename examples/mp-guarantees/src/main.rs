@@ -100,15 +100,8 @@ fn send_messages(sys: &mut System, message_count: usize) -> Vec<Message> {
     messages
 }
 
-fn check_guarantees(sys: &mut System, sent: &[Message], config: &TestConfig) -> TestResult {
-    let mut msg_count = HashMap::new();
-    let mut expected_msg_count = HashMap::new();
-    for msg in sent {
-        msg_count.insert(msg.data.clone(), 0);
-        *expected_msg_count.entry(&msg.data).or_insert(0) += 1;
-    }
-    let delivered = sys.read_local_messages("receiver");
-    // check that delivered messages have expected type and data
+fn check_delivered_message_type(delivered: &[Message], sent: &[Message]) -> Result<HashMap<String, i32>, String> {
+    let mut msg_count = HashMap::default();
     for msg in delivered.iter() {
         // assuming all messages have the same type
         assume_eq!(msg.tip, sent[0].tip, format!("Wrong message type {}", msg.tip))?;
@@ -116,44 +109,84 @@ fn check_guarantees(sys: &mut System, sent: &[Message], config: &TestConfig) -> 
             msg_count.contains_key(&msg.data),
             format!("Wrong message data: {}", msg.data)
         )?;
-        *msg_count.get_mut(&msg.data).unwrap() += 1;
+        *msg_count.entry(msg.data.clone()).or_insert(0) += 1;
     }
-    // check delivered message count according to expected guarantees
+    Ok(msg_count)
+}
+
+fn check_message_delivery_reliable(
+    msg_count: &HashMap<String, i32>,
+    expected_msg_count: &HashMap<String, i32>,
+) -> TestResult {
     for (data, count) in msg_count {
-        let expected_count = expected_msg_count[&data];
+        let expected_count = expected_msg_count[data];
         assume!(
-            count >= expected_count || !config.reliable,
+            *count >= expected_count,
             format!(
                 "Message {} is not delivered (observed count {} < expected count {})",
                 data, count, expected_count
             )
         )?;
+    }
+    Ok(true)
+}
+
+fn check_message_delivery_once(
+    msg_count: &HashMap<String, i32>,
+    expected_msg_count: &HashMap<String, i32>,
+) -> TestResult {
+    for (data, count) in msg_count {
+        let expected_count = expected_msg_count[data];
         assume!(
-            count <= expected_count || !config.once,
+            *count <= expected_count,
             format!(
                 "Message {} is delivered more than once (observed count {} > expected count {})",
                 data, count, expected_count
             )
         )?;
     }
-    // check message delivery order
-    if config.ordered {
-        let mut next_idx = 0;
-        for i in 0..delivered.len() {
-            let msg = &delivered[i];
-            let mut matched = false;
-            while !matched && next_idx < sent.len() {
-                if msg.data == sent[next_idx].data {
-                    matched = true;
-                } else {
-                    next_idx += 1;
-                }
+    Ok(true)
+}
+
+fn check_message_delivery_ordered(delivered: &[Message], sent: &[Message]) -> TestResult {
+    let mut next_idx = 0;
+    for i in 0..delivered.len() {
+        let msg = &delivered[i];
+        let mut matched = false;
+        while !matched && next_idx < sent.len() {
+            if msg.data == sent[next_idx].data {
+                matched = true;
+            } else {
+                next_idx += 1;
             }
-            assume!(
-                matched,
-                format!("Order violation: {} after {}", msg.data, &delivered[i - 1].data)
-            )?;
         }
+        assume!(
+            matched,
+            format!("Order violation: {} after {}", msg.data, &delivered[i - 1].data)
+        )?;
+    }
+    Ok(true)
+}
+
+fn check_guarantees(sys: &mut System, sent: &[Message], config: &TestConfig) -> TestResult {
+    let mut expected_msg_count = HashMap::new();
+    for msg in sent {
+        *expected_msg_count.entry(msg.data.clone()).or_insert(0) += 1;
+    }
+    let delivered = sys.read_local_messages("receiver");
+
+    // check that delivered messages have expected type and data
+    let msg_count = check_delivered_message_type(&delivered, sent)?;
+
+    // check delivered message count according to expected guarantees
+    if config.reliable {
+        check_message_delivery_reliable(&msg_count, &expected_msg_count)?;
+    }
+    if config.once {
+        check_message_delivery_once(&msg_count, &expected_msg_count)?;
+    }
+    if config.ordered {
+        check_message_delivery_ordered(&delivered, sent)?;
     }
     Ok(true)
 }
@@ -377,58 +410,22 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
         let mut expected_msg_count = HashMap::new();
         for msg in &messages_expected {
             msg_count.insert(msg.data.clone(), 0);
-            *expected_msg_count.entry(&msg.data).or_insert(0) += 1;
+            *expected_msg_count.entry(msg.data.clone()).or_insert(0) += 1;
         }
         let delivered = &state.node_states["receiver-node"]["receiver"].local_outbox;
+
         // check that delivered messages have expected type and data
-        for msg in delivered.iter() {
-            // assuming all messages have the same type
-            if msg.tip != messages_expected.first().unwrap().tip {
-                return Err(format!("Wrong message type {}", msg.tip));
-            }
-            if !msg_count.contains_key(&msg.data) {
-                return Err(format!("Wrong message data: {}", msg.data));
-            }
-            *msg_count.get_mut(&msg.data).unwrap() += 1;
-        }
+        let msg_count = check_delivered_message_type(delivered, &messages_expected)?;
+
         // check delivered message count according to expected guarantees
-        for (data, count) in msg_count {
-            let expected_count = expected_msg_count[&data];
-            if config.reliable && count < expected_count && state.events.available_events_num() == 0 {
-                println!("{:?}", state);
-                return Err(format!(
-                    "Message {} is not delivered (observed count {} < expected count {})",
-                    data, count, expected_count
-                ));
-            }
-            if config.once && count > expected_count {
-                return Err(format!(
-                    "Message {} is delivered more than once (observed count {} > expected count {})",
-                    data, count, expected_count
-                ));
-            }
+        if config.reliable && state.events.available_events_num() == 0 {
+            check_message_delivery_reliable(&msg_count, &expected_msg_count)?;
         }
-        // check message delivery order
+        if config.once {
+            check_message_delivery_once(&msg_count, &expected_msg_count)?;
+        }
         if config.ordered {
-            let mut next_idx = 0;
-            for i in 0..delivered.len() {
-                let msg = &delivered[i];
-                let mut matched = false;
-                while !matched && next_idx < messages_expected.len() {
-                    if msg.data == messages_expected[next_idx].data {
-                        matched = true;
-                    } else {
-                        next_idx += 1;
-                    }
-                }
-                if !matched {
-                    return Err(format!(
-                        "Order violation: {} after {}",
-                        msg.data,
-                        &delivered[i - 1].data
-                    ));
-                }
-            }
+            check_message_delivery_ordered(delivered, &messages_expected)?;
         }
         Ok(())
     })
