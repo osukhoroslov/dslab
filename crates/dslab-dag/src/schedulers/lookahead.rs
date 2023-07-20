@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
+use std::str::FromStr;
 
 use dslab_core::context::SimulationContext;
 use dslab_core::log_warn;
@@ -12,14 +13,37 @@ use crate::schedulers::common::*;
 use crate::schedulers::treap::Treap;
 use crate::system::System;
 
+pub enum DepthMode {
+    /// Consider all unscheduled tasks when evaluating task assignment.
+    Global,
+    /// Consider only children of the current task when evaluating an assignment.
+    Local,
+}
+
+impl FromStr for DepthMode {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Global" => Ok(DepthMode::Global),
+            "Local" => Ok(DepthMode::Local),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct LookaheadScheduler {
     data_transfer_strategy: DataTransferStrategy,
+    depth: usize,
+    depth_mode: DepthMode,
 }
 
 impl LookaheadScheduler {
     pub fn new() -> Self {
         Self {
             data_transfer_strategy: DataTransferStrategy::Eager,
+            depth: usize::MAX,
+            depth_mode: DepthMode::Global,
         }
     }
 
@@ -28,6 +52,8 @@ impl LookaheadScheduler {
             data_transfer_strategy: params
                 .get("data_transfer_strategy")
                 .unwrap_or(DataTransferStrategy::Eager),
+            depth: params.get("depth").unwrap_or(usize::MAX),
+            depth_mode: params.get("depth_mode").unwrap_or(DepthMode::Global),
         }
     }
 
@@ -117,14 +143,35 @@ impl LookaheadScheduler {
                     ScheduledTask::new(start_time, finish_time, task_id),
                 ));
 
-                let unscheduled_tasks = task_ids
-                    .iter()
-                    .cloned()
-                    .filter(|&task| !scheduled[task])
-                    .collect::<Vec<usize>>();
+                let mut depth = vec![usize::MAX; task_ids.len()];
+                depth[task_id] = 0;
+                for &task in task_ids.iter() {
+                    match self.depth_mode {
+                        DepthMode::Global => {
+                            if scheduled[task] {
+                                depth[task] = 0;
+                            } else if depth[task] == usize::MAX {
+                                // a task can have zero predecessors, then depth should be 1
+                                depth[task] = 1;
+                            }
+                        }
+                        DepthMode::Local => {}
+                    }
+                    for (child, _weight) in task_successors(task, dag) {
+                        depth[child] = depth[child].min(depth[task].saturating_add(1));
+                    }
+                }
+
+                let mut unscheduled_tasks = Vec::new();
+                for &task in task_ids.iter() {
+                    if !scheduled[task] && depth[task] <= self.depth {
+                        unscheduled_tasks.push(task);
+                    }
+                }
+
                 let mut makespan = finish_time + output_time;
 
-                for &child in unscheduled_tasks.iter() {
+                for child in unscheduled_tasks.into_iter() {
                     let (resource, cores, start, finish) = {
                         let task = child;
 
