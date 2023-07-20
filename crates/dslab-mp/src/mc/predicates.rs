@@ -1,5 +1,7 @@
 //! Predicates that can be used for configuration in model checker
 
+use std::collections::HashSet;
+
 use sugars::boxed;
 
 use crate::mc::state::McState;
@@ -79,5 +81,29 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
             }
         }
         None
+    })
+}
+
+/// Verifies that set of messages received by process matches with expectations
+pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
+    boxed!(move |state| {
+        let mut messages_got = HashSet::<String>::default();
+        let local_outbox = &state.node_states[&node][&proc].local_outbox;
+        if local_outbox.len() != messages_expected.len() {
+            return Err(format!(
+                "{node}:{proc} received {} messages but {} expected",
+                local_outbox.len(),
+                messages_expected.len()
+            ));
+        }
+        for message in local_outbox {
+            if !messages_got.insert(message.data.clone()) {
+                return Err(format!("message {:?} was duplicated", message));
+            }
+            if !messages_expected.contains(&message.data) {
+                return Err(format!("message {:?} is not expected", message));
+            }
+        }
+        Ok(())
     })
 }

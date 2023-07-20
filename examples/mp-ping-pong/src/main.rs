@@ -14,7 +14,7 @@ use sugars::boxed;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates;
 use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
+use dslab_mp::mc::strategy::StrategyConfig;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 use dslab_mp::system::System;
@@ -186,21 +186,6 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
 
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
-fn mc_invariant_received_messages(messages_expected: HashSet<String>) -> InvariantFn {
-    boxed!(move |state| {
-        let mut messages_got = HashSet::<String>::default();
-        for message in &state.node_states["client-node"]["client"].local_outbox {
-            if !messages_got.insert(message.data.clone()) {
-                return Err(format!("message {:?} was duplicated", message));
-            }
-            if !messages_expected.contains(&message.data) {
-                return Err(format!("message {:?} is not expected", message));
-            }
-        }
-        Ok(())
-    })
-}
-
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
     let data = r#"{{"value": 0}}"#.to_string();
@@ -217,7 +202,11 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             2,
         ))
         .invariant(predicates::mc_invariant_combined(vec![
-            mc_invariant_received_messages(messages_expected),
+            predicates::mc_invariant_received_messages(
+                "client-node".to_string(),
+                "client".to_string(),
+                messages_expected,
+            ),
             predicates::mc_invariant_state_depth(20),
         ]));
 
@@ -245,7 +234,11 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
             "client".to_string(),
             2,
         ))
-        .invariant(mc_invariant_received_messages(messages_expected));
+        .invariant(predicates::mc_invariant_received_messages(
+            "client-node".to_string(),
+            "client".to_string(),
+            messages_expected,
+        ));
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
 
     let res = mc.run();
