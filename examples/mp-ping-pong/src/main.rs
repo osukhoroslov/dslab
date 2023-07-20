@@ -188,8 +188,8 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
 
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
-    let data = r#"{{"value": 0}}"#.to_string();
-    let data2 = r#"{{"value": 1}}"#.to_string();
+    let data = r#"{"value": 0}"#.to_string();
+    let data2 = r#"{"value": 1}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data));
     system.send_local_message("client", Message::new("PING", &data2));
@@ -221,8 +221,8 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut system = build_system(config);
-    let data = r#"{{"value": 0}}"#.to_string();
-    let data2 = r#"{{"value": 1}}"#.to_string();
+    let data = r#"{"value": 0}"#.to_string();
+    let data2 = r#"{"value": 1}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.send_local_message("client", Message::new("PING", &data));
     system.send_local_message("client", Message::new("PING", &data2));

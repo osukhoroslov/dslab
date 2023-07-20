@@ -87,6 +87,9 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
 /// Verifies that set of messages received by process matches with expectations
 pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
     boxed!(move |state| {
+        if state.events.available_events_num() > 0 {
+            return Ok(());
+        }
         let mut messages_got = HashSet::<String>::default();
         let local_outbox = &state.node_states[&node][&proc].local_outbox;
         if local_outbox.len() != messages_expected.len() {
