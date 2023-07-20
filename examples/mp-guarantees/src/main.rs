@@ -81,7 +81,7 @@ fn generate_message_texts(sys: &mut System, message_count: usize) -> Vec<String>
     }
 }
 
-fn send_messages(sys: &mut System, message_count: usize) -> Vec<Message> {
+fn send_messages(sys: &mut System, message_count: usize, run_simulation: bool) -> Vec<Message> {
     let texts = generate_message_texts(sys, message_count);
     let mut messages = Vec::new();
     for text in texts {
@@ -92,7 +92,7 @@ fn send_messages(sys: &mut System, message_count: usize) -> Vec<Message> {
         } else {
             sys.gen_range(0..7)
         };
-        if steps > 0 {
+        if run_simulation && steps > 0 {
             sys.steps(steps);
         }
         messages.push(msg);
@@ -294,7 +294,7 @@ fn check_overhead(
 
 fn test_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    let messages = send_messages(&mut sys, 5);
+    let messages = send_messages(&mut sys, 5, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)?;
     // we expect no more than 5 messages from sender in ideal network conditions
@@ -307,7 +307,7 @@ fn test_normal(config: &TestConfig) -> TestResult {
 
 fn test_normal_non_unique(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    let messages = send_messages(&mut sys, 10);
+    let messages = send_messages(&mut sys, 10, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)?;
     // we expect no more than 10 messages from sender in ideal network conditions
@@ -321,7 +321,7 @@ fn test_normal_non_unique(config: &TestConfig) -> TestResult {
 fn test_delayed(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_delays(1., 3.);
-    let messages = send_messages(&mut sys, 5);
+    let messages = send_messages(&mut sys, 5, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
 }
@@ -329,7 +329,7 @@ fn test_delayed(config: &TestConfig) -> TestResult {
 fn test_duplicated(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_dupl_rate(0.3);
-    let messages = send_messages(&mut sys, 5);
+    let messages = send_messages(&mut sys, 5, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
 }
@@ -338,7 +338,7 @@ fn test_delayed_duplicated(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_delays(1., 3.);
     sys.network().set_dupl_rate(0.3);
-    let messages = send_messages(&mut sys, 5);
+    let messages = send_messages(&mut sys, 5, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
 }
@@ -346,7 +346,7 @@ fn test_delayed_duplicated(config: &TestConfig) -> TestResult {
 fn test_dropped(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.3);
-    let messages = send_messages(&mut sys, 5);
+    let messages = send_messages(&mut sys, 5, true);
     sys.step_until_no_events();
     check_guarantees(&mut sys, &messages, config)
 }
@@ -361,7 +361,7 @@ fn test_chaos_monkey(config: &TestConfig) -> TestResult {
         sys.network().set_delays(1., 3.);
         sys.network().set_dupl_rate(0.3);
         sys.network().set_drop_rate(0.3);
-        let messages = send_messages(&mut sys, 10);
+        let messages = send_messages(&mut sys, 10, true);
         sys.step_until_no_events();
         let res = check_guarantees(&mut sys, &messages, &run_config);
         res.as_ref()?;
@@ -377,7 +377,7 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
             sys.network().set_dupl_rate(0.3);
             sys.network().set_drop_rate(0.3);
         }
-        let messages = send_messages(&mut sys, message_count);
+        let messages = send_messages(&mut sys, message_count, true);
         sys.step_until_no_events();
         let res = check_guarantees(&mut sys, &messages, config);
         res.as_ref()?;
@@ -433,14 +433,7 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
 
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
-    let message_count = 2;
-    let texts = generate_message_texts(&mut sys, message_count);
-    let mut messages = Vec::new();
-    for text in texts {
-        let msg = Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text));
-        sys.send_local_message("sender", msg.clone());
-        messages.push(msg);
-    }
+    let messages = send_messages(&mut sys, 2, false);
     let strategy_config = StrategyConfig::default()
         .prune(predicates::mc_prune_sent_messages_limit(4))
         .goal(predicates::mc_goal_got_n_local_messages(
@@ -464,14 +457,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.1);
-    let message_count = 2;
-    let texts = generate_message_texts(&mut sys, message_count);
-    let mut messages = Vec::new();
-    for text in texts {
-        let msg = Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text));
-        sys.send_local_message("sender", msg.clone());
-        messages.push(msg);
-    }
+    let messages = send_messages(&mut sys, 2, false);
     let messages = messages;
     let config = *config;
     let strategy_config = StrategyConfig::default()
