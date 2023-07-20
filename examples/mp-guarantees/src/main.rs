@@ -468,7 +468,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let config = *config;
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
-        .prune(predicates::mc_prune_state_depth(5))
+        .prune(predicates::mc_prune_state_depth(7))
         .goal(predicates::mc_goal_combined(vec![
             predicates::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
             predicates::mc_goal_nothing_left_to_do(),
