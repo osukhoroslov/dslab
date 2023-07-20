@@ -276,7 +276,55 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::{BTreeSet, HashMap};
+<span class="kw">use </span>std::str::FromStr;
 
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 <span class="kw">use </span>dslab_core::log_warn;
@@ -290,14 +338,37 @@
 <span class="kw">use </span><span class="kw">crate</span>::schedulers::treap::Treap;
 <span class="kw">use </span><span class="kw">crate</span>::system::System;
 
+<span class="kw">pub enum </span>DepthMode {
+    <span class="doccomment">/// Consider all unscheduled tasks when evaluating task assignment.
+    </span>Global,
+    <span class="doccomment">/// Consider only children of the current task when evaluating an assignment.
+    </span>Local,
+}
+
+<span class="kw">impl </span>FromStr <span class="kw">for </span>DepthMode {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= ();
+
+    <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="kw">match </span>s {
+            <span class="string">&quot;Global&quot; </span>=&gt; <span class="prelude-val">Ok</span>(DepthMode::Global),
+            <span class="string">&quot;Local&quot; </span>=&gt; <span class="prelude-val">Ok</span>(DepthMode::Local),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(()),
+        }
+    }
+}
+
 <span class="kw">pub struct </span>LookaheadScheduler {
     data_transfer_strategy: DataTransferStrategy,
+    depth: usize,
+    depth_mode: DepthMode,
 }
 
 <span class="kw">impl </span>LookaheadScheduler {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             data_transfer_strategy: DataTransferStrategy::Eager,
+            depth: usize::MAX,
+            depth_mode: DepthMode::Global,
         }
     }
 
@@ -306,6 +377,8 @@
             data_transfer_strategy: params
                 .get(<span class="string">&quot;data_transfer_strategy&quot;</span>)
                 .unwrap_or(DataTransferStrategy::Eager),
+            depth: params.get(<span class="string">&quot;depth&quot;</span>).unwrap_or(usize::MAX),
+            depth_mode: params.get(<span class="string">&quot;depth_mode&quot;</span>).unwrap_or(DepthMode::Global),
         }
     }
 
@@ -395,14 +468,35 @@
                     ScheduledTask::new(start_time, finish_time, task_id),
                 ));
 
-                <span class="kw">let </span>unscheduled_tasks = task_ids
-                    .iter()
-                    .cloned()
-                    .filter(|<span class="kw-2">&amp;</span>task| !scheduled[task])
-                    .collect::&lt;Vec&lt;usize&gt;&gt;();
+                <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="macro">vec!</span>[usize::MAX; task_ids.len()];
+                depth[task_id] = <span class="number">0</span>;
+                <span class="kw">for </span><span class="kw-2">&amp;</span>task <span class="kw">in </span>task_ids.iter() {
+                    <span class="kw">match </span><span class="self">self</span>.depth_mode {
+                        DepthMode::Global =&gt; {
+                            <span class="kw">if </span>scheduled[task] {
+                                depth[task] = <span class="number">0</span>;
+                            } <span class="kw">else if </span>depth[task] == usize::MAX {
+                                <span class="comment">// a task can have zero predecessors, then depth should be 1
+                                </span>depth[task] = <span class="number">1</span>;
+                            }
+                        }
+                        DepthMode::Local =&gt; {}
+                    }
+                    <span class="kw">for </span>(child, _weight) <span class="kw">in </span>task_successors(task, dag) {
+                        depth[child] = depth[child].min(depth[task].saturating_add(<span class="number">1</span>));
+                    }
+                }
+
+                <span class="kw">let </span><span class="kw-2">mut </span>unscheduled_tasks = Vec::new();
+                <span class="kw">for </span><span class="kw-2">&amp;</span>task <span class="kw">in </span>task_ids.iter() {
+                    <span class="kw">if </span>!scheduled[task] &amp;&amp; depth[task] &lt;= <span class="self">self</span>.depth {
+                        unscheduled_tasks.push(task);
+                    }
+                }
+
                 <span class="kw">let </span><span class="kw-2">mut </span>makespan = finish_time + output_time;
 
-                <span class="kw">for </span><span class="kw-2">&amp;</span>child <span class="kw">in </span>unscheduled_tasks.iter() {
+                <span class="kw">for </span>child <span class="kw">in </span>unscheduled_tasks.into_iter() {
                     <span class="kw">let </span>(resource, cores, start, finish) = {
                         <span class="kw">let </span>task = child;
 

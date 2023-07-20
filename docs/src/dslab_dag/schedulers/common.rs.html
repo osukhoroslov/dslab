@@ -317,7 +317,6 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
 <span class="kw">use </span>std::ops::Bound::{Excluded, Included, Unbounded};
@@ -402,19 +401,18 @@
             .map(|<span class="kw-2">&amp;</span>id| dag.get_data_item(id))
             .filter(|<span class="kw-2">&amp;</span>data_item| data_item.producer.is_some())
             .map(|data_item| (data_item.producer.unwrap(), data_item.size))
-            .map(|(task, weight)| {
-                <span class="kw">if </span>task_location[<span class="kw-2">&amp;</span>task] == resources[resource].id &amp;&amp; data_transfer_mode == <span class="kw-2">&amp;</span>DataTransferMode::Direct {
-                    task_finish_times[task]
-                } <span class="kw">else </span>{
-                    task_finish_times[task]
-                        + weight
-                            * data_transfer_mode.net_time(
-                                network,
-                                task_location[<span class="kw-2">&amp;</span>task],
-                                resources[resource].id,
-                                ctx.id(),
-                            )
+            .map(|(task, weight)| <span class="kw">match </span>task_location.get(<span class="kw-2">&amp;</span>task) {
+                <span class="prelude-val">Some</span>(location) =&gt; {
+                    <span class="kw">if </span><span class="kw-2">*</span>location == resources[resource].id &amp;&amp; data_transfer_mode == <span class="kw-2">&amp;</span>DataTransferMode::Direct {
+                        task_finish_times[task]
+                    } <span class="kw">else </span>{
+                        task_finish_times[task]
+                            + weight * data_transfer_mode.net_time(network, <span class="kw-2">*</span>location, resources[resource].id, ctx.id())
+                    }
                 }
+                <span class="comment">// If the task has unscheduled parents (e.g. evaluation of children tasks in Lookahead),
+                // we ignore delays due to these parents, which makes start_time rather optimistic.
+                </span><span class="prelude-val">None </span>=&gt; <span class="number">0.</span>,
             })
             .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(<span class="number">0.</span>),

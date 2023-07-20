@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LookaheadScheduler"]};
+window.SIDEBAR_ITEMS = {"enum":["DepthMode"],"struct":["LookaheadScheduler"]};
