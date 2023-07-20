@@ -108,7 +108,7 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
 }
 
 /// Verifies that the set of local messages delivered by a process matches exactly the expected messages.
-/// Message duplications or unexpected messages are not allowed. 
+/// Message duplications or unexpected messages are not allowed.
 pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
     boxed!(move |state: &McState| {
         if state.events.available_events_num() > 0 {
