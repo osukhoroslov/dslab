@@ -97,7 +97,10 @@ pub trait Strategy {
                         let src = src.clone();
                         let dest = dest.clone();
 
-                        // Message drop (prefer to explore it before the normal delivery)
+                        // Normal delivery
+                        self.search_step(system, EventOrId::Id(event_id))?;
+
+                        // Message drop
                         if can_be_dropped {
                             let drop_event = MessageDropped {
                                 msg: msg.clone(),
@@ -107,9 +110,6 @@ pub trait Strategy {
                             };
                             self.search_step(system, EventOrId::Event(drop_event))?;
                         }
-
-                        // Normal delivery
-                        self.search_step(system, EventOrId::Id(event_id))?;
 
                         // Message corruption
                         if can_be_corrupted {
