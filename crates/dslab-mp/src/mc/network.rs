@@ -14,8 +14,6 @@ const DUPL_COUNT: u32 = 2;
 pub enum DeliveryOptions {
     /// Message will be received exactly once without corruption with specified max delay
     NoFailures(McTime),
-    /// Message will not be received
-    Dropped,
     /// Message delivery may be subject to some failures
     PossibleFailures {
         can_be_dropped: bool,
@@ -79,7 +77,12 @@ impl McNetwork {
                 },
             }
         } else {
-            McEvent::MessageDropped { msg, src, dest }
+            McEvent::MessageDropped {
+                msg,
+                src,
+                dest,
+                receive_event_id: None,
+            }
         }
     }
 }

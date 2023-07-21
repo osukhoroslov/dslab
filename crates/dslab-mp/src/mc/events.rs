@@ -60,6 +60,11 @@ pub enum McEvent {
 
         /// The name of the process the message was sent to.
         dest: String,
+
+        /// The id of original MessageReceived event.
+        ///
+        /// Can be `None` if the message is dropped unconditionally.
+        receive_event_id: Option<McEventId>,
     },
 
     /// The event of duplicating a message. Created by model checking strategy.
@@ -67,23 +72,20 @@ pub enum McEvent {
         /// The duplicated message itself.
         msg: Message,
 
-        /// The original message id.
-        msg_id: McEventId,
-
         /// The name of the process that sent the message.
         src: String,
 
         /// The name of the process the message was sent to.
         dest: String,
+
+        /// The id of original MessageReceived event.
+        receive_event_id: McEventId,
     },
 
     /// The event of corrupting a message. Created by model checking strategy.
     MessageCorrupted {
         /// The original message.
         msg: Message,
-
-        /// The original message id.
-        msg_id: McEventId,
 
         /// The message after corruption.
         corrupted_msg: Message,
@@ -93,6 +95,9 @@ pub enum McEvent {
 
         /// The name of the process the message was sent to.
         dest: String,
+
+        /// The id of original MessageReceived event.
+        receive_event_id: McEventId,
     },
 }
 
@@ -126,9 +131,10 @@ impl McEvent {
 
     pub fn disable_duplications(&mut self) {
         if let McEvent::MessageReceived {
-                options: DeliveryOptions::PossibleFailures { max_dupl_count, .. },
-                ..
-            } = self {
+            options: DeliveryOptions::PossibleFailures { max_dupl_count, .. },
+            ..
+        } = self
+        {
             *max_dupl_count = 0;
         }
     }
@@ -157,7 +163,7 @@ impl McEvent {
                 proc: proc.clone(),
                 timer: timer.clone(),
             },
-            Self::MessageDropped { msg, src, dest } => LogEntry::McMessageDropped {
+            Self::MessageDropped { msg, src, dest, .. } => LogEntry::McMessageDropped {
                 msg: msg.clone(),
                 src: src.clone(),
                 dest: dest.clone(),

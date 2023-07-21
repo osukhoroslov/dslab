@@ -551,7 +551,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     let result = mc.run();
 
     assert!(result.is_ok());
-    assert_eq!(*count_states.borrow(), 11);
+    assert_eq!(*count_states.borrow(), 9);
     assert_eq!(*count_goal_states.borrow(), 3);
 }
 
