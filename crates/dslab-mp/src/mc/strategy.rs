@@ -41,9 +41,11 @@ pub enum VisitedStates {
     Partial(HashSet<u64>),
 }
 
-pub enum StepType {
-    Add(Vec<McEvent>),
-    Apply(McEventId),
+/// Holds either [`McEvent`] or [`McEventId`].
+#[allow(missing_docs)]
+pub enum EventOrId {
+    Event(McEvent),
+    Id(McEventId),
 }
 
 /// Model checking execution summary (used in Debug mode).
@@ -75,7 +77,7 @@ pub trait Strategy {
     /// Explores the possible system states reachable from the current state after processing the given event.
     /// Calls `search_step_impl` for each new discovered state.
     fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), McError> {
-        let event = self.clone_event(system, event_id);
+        let event = system.events.get(event_id).unwrap();
         match event {
             MessageReceived {
                 msg,
@@ -83,113 +85,100 @@ pub trait Strategy {
                 dest,
                 options,
             } => {
-                match options {
-                    DeliveryOptions::NoFailures(..) => self.search_step(system, StepType::Apply(event_id))?,
-                    DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
+                match *options {
+                    DeliveryOptions::NoFailures(..) => self.search_step(system, EventOrId::Id(event_id))?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
                         max_dupl_count,
                         can_be_corrupted,
                     } => {
-                        // Drop
+                        // Clone needed data here to avoid cloning normal events without failures
+                        let msg = msg.clone();
+                        let src = src.clone();
+                        let dest = dest.clone();
+
+                        // Message drop (prefer to explore it before the normal delivery)
                         if can_be_dropped {
-                            self.process_drop_event(system, event_id, msg.clone(), src.clone(), dest.clone())?;
+                            let drop_event = MessageDropped {
+                                msg: msg.clone(),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: Some(event_id),
+                            };
+                            self.search_step(system, EventOrId::Event(drop_event))?;
                         }
 
-                        self.search_step(system, StepType::Apply(event_id))?;
+                        // Normal delivery
+                        self.search_step(system, EventOrId::Id(event_id))?;
+
+                        // Message corruption
                         if can_be_corrupted {
                             let corruption_event = MessageCorrupted {
                                 msg: msg.clone(),
-                                msg_id: event_id,
                                 corrupted_msg: msg.clone(),
                                 src: src.clone(),
                                 dest: dest.clone(),
+                                receive_event_id: event_id,
                             };
-                            self.search_step(system, StepType::Add(vec![corruption_event]))?;
+                            self.search_step(system, EventOrId::Event(corruption_event))?;
                         }
 
+                        // Message duplication
                         if max_dupl_count > 0 {
                             let duplication_event = MessageDuplicated {
-                                msg,
-                                msg_id: event_id,
-                                src,
-                                dest,
+                                msg: msg.clone(),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: event_id,
                             };
-                            self.search_step(system, StepType::Add(vec![duplication_event]))?;
+                            self.search_step(system, EventOrId::Event(duplication_event))?;
                         }
                     }
                 }
             }
             TimerCancelled { proc, timer } => {
-                system.events.cancel_timer(proc, timer);
-                self.search_step(system, StepType::Apply(event_id))?;
+                system.events.cancel_timer(proc.clone(), timer.clone());
+                self.search_step(system, EventOrId::Id(event_id))?
             }
-            _ => {
-                self.search_step(system, StepType::Apply(event_id))?;
-            }
+            _ => self.search_step(system, EventOrId::Id(event_id))?,
         }
-
-        Ok(())
-    }
-
-    /// Processes event dropping.
-    fn process_drop_event(
-        &mut self,
-        system: &mut McSystem,
-        event_id: McEventId,
-        msg: Message,
-        src: String,
-        dest: String,
-    ) -> Result<(), McError> {
-        let state = system.get_state();
-        self.take_event(system, event_id);
-
-        let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
-
-        self.search_step(system, StepType::Apply(drop_event_id))?;
-        system.set_state(state);
 
         Ok(())
     }
 
     /// Makes search step according to `step_type`, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
-    fn search_step(
-        &mut self,
-        system: &mut McSystem,
-        step_type: StepType,
-    ) -> Result<(), McError> {
+    fn search_step(&mut self, system: &mut McSystem, event: EventOrId) -> Result<(), McError> {
         let state = system.get_state();
 
-        match step_type {
-            StepType::Add(events) => {
-                for event in events {
-                    self.add_event(system, event);
-                }
+        let mut event = match event {
+            EventOrId::Event(event) => event,
+            EventOrId::Id(event_id) => self.take_event(system, event_id),
+        };
+
+        match &mut event {
+            MessageDropped { receive_event_id, .. } => {
+                receive_event_id.map(|id| self.take_event(system, id));
             }
-            StepType::Apply(event_id) => {
-                let mut event = self.take_event(system, event_id);
-
-                match &mut event {
-                    MessageDuplicated { msg_id, .. } => {
-                        let dupl_event = self.duplicate_event(system, *msg_id);
-                        self.add_event(system, dupl_event);
-                    }
-                    MessageCorrupted {
-                        msg_id, corrupted_msg, ..
-                    } => {
-                        let msg = self.take_event(system, *msg_id);
-                        let corrupted = self.corrupt_msg_data(msg, corrupted_msg);
-                        system.events.push_with_fixed_id(corrupted, *msg_id);
-                    }
-                    _ => {}
-                }
-
-                self.debug_log(&event, system.depth());
-
-                system.apply_event(event);
+            MessageDuplicated { receive_event_id, .. } => {
+                let dupl_event = self.duplicate_event(system, *receive_event_id);
+                self.add_event(system, dupl_event);
             }
+            MessageCorrupted {
+                receive_event_id,
+                corrupted_msg,
+                ..
+            } => {
+                let msg = self.take_event(system, *receive_event_id);
+                let corrupted = self.corrupt_msg_data(msg, corrupted_msg);
+                system.events.push_with_fixed_id(corrupted, *receive_event_id);
+            }
+            _ => {}
         }
+
+        self.debug_log(&event, system.depth());
+
+        system.apply_event(event);
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
@@ -205,11 +194,6 @@ pub trait Strategy {
     /// Takes the event from pending events by id.
     fn take_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
         system.events.pop(event_id)
-    }
-
-    /// Clones the event from pending events by id.
-    fn clone_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
-        system.events.get(event_id).unwrap().clone()
     }
 
     /// Adds the event to pending events list.
@@ -271,7 +255,7 @@ pub trait Strategy {
                 TimerCancelled { proc, timer } => {
                     t!(format!("{:>10} | {:>10} xxx {:<10} <-- timer cancelled", depth, proc, timer).yellow());
                 }
-                MessageDropped { msg, src, dest } => {
+                MessageDropped { msg, src, dest, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
                         depth, src, dest, msg
