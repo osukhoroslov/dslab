@@ -232,9 +232,9 @@ pub trait Strategy {
                         // Message duplication
                         if max_dupl_count > 0 {
                             let duplication_event = MessageDuplicated {
-                                msg: msg.clone(),
-                                src: src.clone(),
-                                dest: dest.clone(),
+                                msg,
+                                src,
+                                dest,
                                 receive_event_id: event_id,
                             };
                             self.search_step(system, EventOrId::Event(duplication_event))?;
