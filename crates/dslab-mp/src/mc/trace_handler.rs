@@ -6,7 +6,7 @@ pub struct TraceHandler {
 
 impl TraceHandler {
     pub fn new(trace: Vec<LogEntry>) -> Self {
-        Self{ trace }
+        Self { trace }
     }
 
     pub fn push(&mut self, entry: LogEntry) {
