@@ -167,6 +167,21 @@ impl Logger {
                 t!(format!("{:>9.3} - network reset, all problems healed", time).green());
             }
             LogEntry::ProcessStateUpdated { .. } => {}
+            LogEntry::McStarted { .. } => {
+                t!("MODEL CHECKING STARTED");
+            }
+            LogEntry::McLocalMessageSent { msg, proc } => {
+                t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
+            }
+            LogEntry::McMessageSent { msg, src, dest } => {
+                t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
+            }
+            LogEntry::McMessageReceived { msg, src, dest } => {
+                t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
+            }
+            LogEntry::McMessageDropped { msg, src, dest } => {
+                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
+            }
             LogEntry::McMessageCorrupted {
                 msg,
                 corrupted_msg,
@@ -179,9 +194,6 @@ impl Logger {
                 )
                 .blue());
             }
-            LogEntry::McMessageDropped { msg, src, dest } => {
-                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
-            }
             LogEntry::McMessageDuplicated { msg, src, dest } => {
                 t!(format!(
                     "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
@@ -189,26 +201,14 @@ impl Logger {
                 )
                 .blue());
             }
-            LogEntry::McMessageReceived { msg, src, dest } => {
-                t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
-            }
-            LogEntry::McTimerCancelled { proc, timer } => {
-                t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
+            LogEntry::McTimerSet { proc, timer } => {
+                t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
             }
             LogEntry::McTimerFired { proc, timer } => {
                 t!(format!("{:>10} !-- {:<10} <-- timer fired", proc, timer).yellow());
             }
-            LogEntry::McLocalMessageSent { msg, proc } => {
-                t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
-            }
-            LogEntry::McMessageSent { msg, src, dest } => {
-                t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
-            }
-            LogEntry::McTimerSet { proc, timer } => {
-                t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
-            }
-            LogEntry::McStarted { .. } => {
-                t!("MODEL CHECKING STARTED");
+            LogEntry::McTimerCancelled { proc, timer } => {
+                t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
             }
         }
     }
@@ -376,18 +376,7 @@ pub enum LogEntry {
         msg: Message,
         proc: String,
     },
-    McMessageCorrupted {
-        msg: Message,
-        corrupted_msg: Message,
-        src: String,
-        dest: String,
-    },
-    McMessageDropped {
-        msg: Message,
-        src: String,
-        dest: String,
-    },
-    McMessageDuplicated {
+    McMessageSent {
         msg: Message,
         src: String,
         dest: String,
@@ -397,12 +386,23 @@ pub enum LogEntry {
         src: String,
         dest: String,
     },
-    McMessageSent {
+    McMessageDropped {
         msg: Message,
         src: String,
         dest: String,
     },
-    McTimerCancelled {
+    McMessageCorrupted {
+        msg: Message,
+        corrupted_msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageDuplicated {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McTimerSet {
         proc: String,
         timer: String,
     },
@@ -410,7 +410,7 @@ pub enum LogEntry {
         proc: String,
         timer: String,
     },
-    McTimerSet {
+    McTimerCancelled {
         proc: String,
         timer: String,
     },
