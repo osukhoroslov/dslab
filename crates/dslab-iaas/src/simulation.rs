@@ -109,14 +109,14 @@ impl CloudSimulation {
 
         // Add schedulers from config
         for scheduler_config in sim.sim_config.schedulers.clone() {
-            let count = scheduler_config.count.unwrap_or(1);
+            let count = scheduler_config.count;
             if count == 1 {
                 let name = scheduler_config.name.unwrap();
                 let alg = placement_algorithm_resolver(scheduler_config.algorithm);
                 sim.add_scheduler(&name, alg);
             } else {
-                let prefix = scheduler_config.name_prefix.unwrap();
-                for i in 0..scheduler_config.count.unwrap_or(1) {
+                let prefix = scheduler_config.name.unwrap();
+                for i in 0..scheduler_config.count {
                     let name = format!("{}{}", prefix, i + 1);
                     let alg = placement_algorithm_resolver(scheduler_config.algorithm.clone());
                     sim.add_scheduler(&name, alg);

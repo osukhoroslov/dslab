@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sugars::{rc, refcell};
 
 use crate::core::config::dynamic_variable::{
-    DynamicNumericVariable, DynamicStringVariable, DynamicVariable, NumericParam, StringParam,
+    DynamicNumericVariable, DynamicStringVariable, DynamicDatasetVariable, DynamicVariable, NumericParam, StringParam,
 };
 use crate::core::config::sim_config::{HostConfig, SchedulerConfig, SimulationConfig, VmDatasetConfig};
 
@@ -25,7 +25,7 @@ pub struct SchedulerConfigRaw {
     /// VM placement algorithm for this scheduler
     pub algorithm: StringParam,
     /// number of such schedulers
-    pub count: Option<u32>,
+    pub count: Option<NumericParam<u32>>,
 }
 
 /// Represents scheduler(s) configuration.
@@ -39,13 +39,11 @@ pub struct SchedulerConfigState {
     /// VM placement algorithm for this scheduler
     pub algorithm: Rc<RefCell<DynamicStringVariable>>,
     /// number of such schedulers
-    pub count: Option<u32>,
+    pub count: Rc<RefCell<DynamicNumericVariable<u32>>>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ConfigDataRaw {
-    /// number of threads to execute different test cases in parallel
-    pub threads_count: Option<usize>,
     /// periodically send statistics from host to monitoring
     pub send_stats_period: Option<NumericParam<f64>>,
     /// message trip time from any host to any direction
@@ -67,7 +65,7 @@ pub struct ConfigDataRaw {
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<NumericParam<f64>>,
     /// Dataset of virtual machines
-    pub trace: Option<VmDatasetConfig>,
+    pub trace: Option<StringParam>,
     /// cloud physical hosts
     pub hosts: Option<Vec<HostConfig>>,
     /// cloud schedulers
@@ -98,18 +96,16 @@ pub struct ConfigState {
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Rc<RefCell<DynamicNumericVariable<f64>>>,
     /// Dataset of virtual machines
-    pub trace: Option<VmDatasetConfig>,
+    pub trace: Option<Rc<RefCell<DynamicDatasetVariable>>>,
     /// cloud physical hosts
     pub hosts: Vec<HostConfig>,
     /// cloud schedulers
-    pub schedulers: Rc<RefCell<Vec<SchedulerConfigState>>>,
+    pub schedulers: Vec<SchedulerConfigState>,
 }
 
 /// Represents simulation configuration.
 #[derive(Clone)]
 pub struct ExperimentConfig {
-    /// number of threads to execute different test cases in parallel
-    pub threads_count: usize,
     /// config value
     pub current_state: ConfigState,
     /// dynamic variables which will result in multiple test cases
@@ -169,20 +165,36 @@ impl ExperimentConfig {
                 .unwrap_or(NumericParam::Value(50.))
         )));
 
+        let mut trace: Option<Rc<RefCell<DynamicDatasetVariable>>> = None;
+        if current_state_raw.trace.is_some() {
+            trace = Some(rc!(refcell!(DynamicDatasetVariable::from_param(
+                "trace".to_string(),
+                current_state_raw.trace.unwrap(),
+            ))));
+            
+        }
+
         let mut algorithms: Vec<Rc<RefCell<DynamicStringVariable>>> = Vec::new();
+        let mut scheduler_counts: Vec<Rc<RefCell<DynamicNumericVariable<u32>>>> = Vec::new();
         let mut schedulers: Vec<SchedulerConfigState> = Vec::new();
         for scheduler in current_state_raw.schedulers.unwrap_or_default() {
             let algorithm = rc!(refcell!(DynamicStringVariable::from_param(
                 "algorithm".to_string(),
                 scheduler.algorithm
             )));
+            let count = rc!(refcell!(DynamicNumericVariable::<u32>::from_param(
+                "count".to_string(),
+                scheduler.count.unwrap_or(NumericParam::Value(1)),
+            )));
+
             schedulers.push(SchedulerConfigState {
                 name: scheduler.name,
                 name_prefix: scheduler.name_prefix,
                 algorithm: algorithm.clone(),
-                count: scheduler.count,
+                count: count.clone(),
             });
             algorithms.push(algorithm);
+            scheduler_counts.push(count);
         }
 
         let current_state = ConfigState {
@@ -196,9 +208,9 @@ impl ExperimentConfig {
             simulation_length,
             step_duration,
             vm_allocation_timeout,
-            trace: current_state_raw.trace,
+            trace,
             hosts: current_state_raw.hosts.unwrap_or_default(),
-            schedulers: rc!(refcell!(schedulers)),
+            schedulers,
         };
 
         let mut dynamic_variables = Vec::<Rc<RefCell<dyn DynamicVariable>>>::new();
@@ -229,14 +241,21 @@ impl ExperimentConfig {
         if current_state.vm_allocation_timeout.borrow().is_dynamic() {
             dynamic_variables.push(current_state.vm_allocation_timeout.clone());
         }
+        if current_state.trace.is_some() && current_state.trace.clone().unwrap().borrow().is_dynamic() {
+            dynamic_variables.push(current_state.trace.clone().unwrap());
+        }
         for algorithm in algorithms {
             if algorithm.borrow().is_dynamic() {
                 dynamic_variables.push(algorithm.clone());
             }
         }
+        for count in scheduler_counts {
+            if count.borrow().is_dynamic() {
+                dynamic_variables.push(count.clone());
+            }
+        }
 
         Self {
-            threads_count: current_state_raw.threads_count.unwrap_or(1),
             current_state,
             dynamic_variables,
             initial_state: true,
@@ -265,16 +284,11 @@ impl ExperimentConfig {
             return;
         }
 
-        for i in 0..self.dynamic_variables.len() + 1 {
-            if i == self.dynamic_variables.len() {
-                return;
-            }
-
+        for i in 0..self.dynamic_variables.len() {
             if self.dynamic_variables[i].borrow().has_next() {
                 self.dynamic_variables[i].borrow_mut().next();
                 return;
             }
-
             self.dynamic_variables[i].borrow_mut().reset();
         }
     }
@@ -287,13 +301,18 @@ impl ExperimentConfig {
         self.next();
 
         let mut schedulers: Vec<SchedulerConfig> = Vec::new();
-        for scheduler in &*self.current_state.schedulers.borrow() {
+        for scheduler in &*self.current_state.schedulers {
             schedulers.push(SchedulerConfig {
                 name: scheduler.name.clone(),
                 name_prefix: scheduler.name_prefix.clone(),
                 algorithm: (**scheduler.algorithm.borrow()).to_string(),
-                count: scheduler.count,
+                count: **scheduler.count.borrow(),
             });
+        }
+
+        let mut trace: Option<VmDatasetConfig> = None;
+        if self.current_state.trace.is_some() {
+            trace = Some((**self.current_state.trace.clone().unwrap().borrow()).clone());
         }
 
         Some(SimulationConfig {
@@ -307,7 +326,7 @@ impl ExperimentConfig {
             simulation_length: **self.current_state.simulation_length.borrow(),
             step_duration: **self.current_state.step_duration.borrow(),
             vm_allocation_timeout: **self.current_state.vm_allocation_timeout.borrow(),
-            trace: self.current_state.trace.clone(),
+            trace,
             hosts: self.current_state.hosts.clone(),
             schedulers,
         })

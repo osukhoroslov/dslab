@@ -20,8 +20,24 @@ fn init_logger() {
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
+    /// Path to simulation config
     #[clap(short, long)]
     config: String,
+
+    /// Number of threads to use (default - use all available cores)
+    #[clap(short, long, default_value_t = std::thread::available_parallelism().unwrap().get())]
+    threads: usize,
+
+    /// Parallel mode on
+    #[clap(short, long, default_value_t = false)]
+    parallel_mode: bool,
+}
+
+fn number_of_threads(threads: usize, parallel_mode: bool) -> Option<usize> {
+    if !parallel_mode {
+        return None;
+    }
+    Some(threads)
 }
 
 #[derive(Clone)]
@@ -85,7 +101,11 @@ fn main() {
     let simulation_start = Instant::now();
 
     let sim_config = ExperimentConfig::from_file(&args.config);
-    let mut exp = Experiment::new(Box::new(SimulationControlCallbacks::new()), sim_config);
+    let mut exp = Experiment::new(
+        Box::new(SimulationControlCallbacks::new()),
+        sim_config,
+        number_of_threads(args.threads, args.parallel_mode),
+    );
     exp.run();
 
     println!("Simulation process time {:.2?}", simulation_start.elapsed());

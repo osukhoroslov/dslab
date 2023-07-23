@@ -1,4 +1,4 @@
-threads_count: 4
+threads_count: 1
 send_stats_period: 60
 message_delay: 0.1
 allocation_retry_period: 60
@@ -6,13 +6,11 @@ vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 1000
+simulation_length: 3000
 step_duration: 500
 
 #Vms
-trace:
-    type: Azure
-    path: .
+trace: type=azure,path=.
 
 # Hosts
 hosts:
@@ -25,5 +23,5 @@ hosts:
 schedulers:
   - name: s
     algorithm:
-      - WorstFit
       - BestFit
+      - FirstFit

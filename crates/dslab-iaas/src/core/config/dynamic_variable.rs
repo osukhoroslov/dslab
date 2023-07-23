@@ -6,6 +6,8 @@ use std::str::FromStr;
 use dyn_clone::{clone_trait_object, DynClone};
 use serde::{Deserialize, Serialize};
 
+use crate::core::config::sim_config::VmDatasetConfig;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum NumericParam<T> {
@@ -140,41 +142,41 @@ pub enum StringParam {
 /// Represents variable experiment alternatives for strings
 /// Can contain single string values and list of values
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct DynamicStringVariable {
+pub struct DynamicCustomVariable<T> {
     /// current step
     pub current: usize,
     /// all test cases taken into account
-    pub values: Vec<String>,
+    pub values: Vec<T>,
     // varable config name
     pub name: String,
 }
 
-impl DynamicStringVariable {
-    pub fn from_param(name: String, config: StringParam) -> Self {
+impl<T: FromStr> DynamicCustomVariable<T> {
+    pub fn from_param(name: String, config: StringParam) -> Self where <T as FromStr>::Err: std::fmt::Debug {
         match config {
             StringParam::Value(value) => Self {
                 current: 0,
-                values: vec![value],
+                values: vec![T::from_str(&value).unwrap()],
                 name,
             },
             StringParam::Values(values) => Self {
                 current: 0,
-                values,
+                values: values.iter().map(|x| T::from_str(x).unwrap()).collect(),
                 name,
             },
         }
     }
 }
 
-impl std::ops::Deref for DynamicStringVariable {
-    type Target = String;
+impl<T> std::ops::Deref for DynamicCustomVariable<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.values[self.current]
     }
 }
 
-impl DynamicVariable for DynamicStringVariable {
+impl<T: std::fmt::Debug + std::clone::Clone + std::fmt::Display> DynamicVariable for DynamicCustomVariable<T> {
     /// Increment config variable
     fn next(&mut self) {
         if !self.has_next() {
@@ -209,3 +211,6 @@ impl DynamicVariable for DynamicStringVariable {
         self.values.len() > 1
     }
 }
+
+pub type DynamicStringVariable = DynamicCustomVariable<String>;
+pub type DynamicDatasetVariable = DynamicCustomVariable<VmDatasetConfig>;
