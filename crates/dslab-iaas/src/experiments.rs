@@ -58,7 +58,11 @@ impl Experiment {
     where
         Self: Sized,
     {
-        Self { callbacks, config, threads }
+        Self {
+            callbacks,
+            config,
+            threads,
+        }
     }
 
     pub fn run(&mut self) {

@@ -152,7 +152,10 @@ pub struct DynamicCustomVariable<T> {
 }
 
 impl<T: FromStr> DynamicCustomVariable<T> {
-    pub fn from_param(name: String, config: StringParam) -> Self where <T as FromStr>::Err: std::fmt::Debug {
+    pub fn from_param(name: String, config: StringParam) -> Self
+    where
+        <T as FromStr>::Err: std::fmt::Debug,
+    {
         match config {
             StringParam::Value(value) => Self {
                 current: 0,

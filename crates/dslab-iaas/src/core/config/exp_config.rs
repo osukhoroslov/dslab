@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sugars::{rc, refcell};
 
 use crate::core::config::dynamic_variable::{
-    DynamicNumericVariable, DynamicStringVariable, DynamicDatasetVariable, DynamicVariable, NumericParam, StringParam,
+    DynamicDatasetVariable, DynamicNumericVariable, DynamicStringVariable, DynamicVariable, NumericParam, StringParam,
 };
 use crate::core::config::sim_config::{HostConfig, SchedulerConfig, SimulationConfig, VmDatasetConfig};
 
@@ -171,7 +171,6 @@ impl ExperimentConfig {
                 "trace".to_string(),
                 current_state_raw.trace.unwrap(),
             ))));
-            
         }
 
         let mut algorithms: Vec<Rc<RefCell<DynamicStringVariable>>> = Vec::new();
