@@ -165,7 +165,7 @@ pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 pub type CollectFn = Box<dyn FnMut(&McState) -> bool>;
 
 /// Result of model checking run - statistics for successful run and error information for failure.
-pub type McResult = Result<McStats, String>;
+pub type McResult = Result<McStats, McError>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {

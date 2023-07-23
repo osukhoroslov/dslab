@@ -715,13 +715,11 @@ fn useless_timer(#[case] strategy_name: String) {
         Ok(())
     });
 
-    let strategy = create_strategy(strategy_name, prune, goal, invariant, ExecutionMode::Default);
-
     let mut sys = build_dumb_delivery_system_with_useless_timer();
     sys.send_local_message("process1", Message::new("PING", "some_data_1"));
     sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
 
-    let mut mc = ModelChecker::new(&sys, strategy);
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
     assert!(result.is_err());
 

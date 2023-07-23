@@ -9,7 +9,6 @@ use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
 use crate::logger::LogEntry;
-use crate::mc::error::McError;
 use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
