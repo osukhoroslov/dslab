@@ -221,7 +221,7 @@ pub trait Strategy {
                         if can_be_corrupted {
                             let corruption_event = MessageCorrupted {
                                 msg: msg.clone(),
-                                corrupted_msg: msg.clone(),
+                                corrupted_msg: self.corrupt_message(msg.clone()),
                                 src: src.clone(),
                                 dest: dest.clone(),
                                 receive_event_id: event_id,
@@ -275,8 +275,8 @@ pub trait Strategy {
                 corrupted_msg,
                 ..
             } => {
-                let msg = self.take_event(system, *receive_event_id);
-                let corrupted = self.corrupt_msg_data(msg, corrupted_msg);
+                let original_event = self.take_event(system, *receive_event_id);
+                let corrupted = self.create_corrupted_receive(original_event, corrupted_msg.clone());
                 system.events.push_with_fixed_id(corrupted, *receive_event_id);
             }
             _ => {}
@@ -307,33 +307,32 @@ pub trait Strategy {
         system.events.push(event)
     }
 
-    /// Applies corruption to the MessageReceived event data.
-    fn corrupt_msg_data(&self, mut event: McEvent, corrupted_msg: &mut Message) -> McEvent {
-        match &mut event {
+    /// Applies corruption to the Message.
+    fn corrupt_message(&self, mut msg: Message) -> Message {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
+        }
+        msg.data = RE.replace_all(&msg.data, "\"\"").to_string();
+        msg
+    }
+
+    /// Creates MessageReceived event with corrupted msg.
+    fn create_corrupted_receive(&self, event: McEvent, corrupted_msg: Message) -> McEvent {
+        if let MessageReceived {
+            src, dest, mut options, ..
+        } = event
+        {
+            if let DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = &mut options {
+                *can_be_corrupted = false;
+            }
             MessageReceived {
-                msg,
+                msg: corrupted_msg,
                 src,
                 dest,
                 options,
-            } => {
-                lazy_static! {
-                    static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
-                }
-                let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                *corrupted_msg = Message::new(msg.clone().tip, corrupted_data);
-
-                if let DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = options {
-                    *can_be_corrupted = false;
-                }
-
-                MessageReceived {
-                    msg: corrupted_msg.clone(),
-                    src: src.clone(),
-                    dest: dest.clone(),
-                    options: options.clone(),
-                }
             }
-            _ => event,
+        } else {
+            panic!("Unexpected event type")
         }
     }
 
