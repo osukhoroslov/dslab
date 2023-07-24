@@ -16,9 +16,7 @@ resources:
     cores: 16
     memory: 32000
 network:
-  model: TopologyNetwork
+  model: TopologyAware
   topology: star
-  local_bandwidth: 100000
-  local_latency: 0
   link_bandwidth: 1250
   link_latency: 10

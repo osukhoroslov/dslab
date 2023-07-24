@@ -8,12 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::Id;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use dslab_network::network::Network;
-use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
-use dslab_network::topology::Topology;
-use dslab_network::topology_model::TopologyNetwork;
-use dslab_network::topology_structures::Link;
+use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel, TopologyAwareNetworkModel};
+use dslab_network::{Link, Network};
 
 use crate::resource::Resource;
 
@@ -29,25 +25,21 @@ pub enum TopologyType {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "model")]
 pub enum NetworkConfig {
-    ConstantBandwidthNetwork {
+    ConstantBandwidth {
         /// Network bandwidth in MB/s.
         bandwidth: f64,
         /// Network latency in μs.
         latency: f64,
     },
-    SharedBandwidthNetwork {
+    SharedBandwidth {
         /// Network bandwidth in MB/s.
         bandwidth: f64,
         /// Network latency in μs.
         latency: f64,
     },
-    TopologyNetwork {
+    TopologyAware {
         #[serde(rename = "topology")]
         topology_type: TopologyType,
-        /// Local node bandwidth in MB/s.
-        local_bandwidth: f64,
-        /// Local latency in μs.
-        local_latency: f64,
         /// Links bandwidth in MB/s.
         link_bandwidth: f64,
         /// Links latency in μs.
@@ -56,34 +48,26 @@ pub enum NetworkConfig {
 }
 
 impl NetworkConfig {
-    /// Creates network config with ConstantBandwidthNetwork model.
+    /// Creates network config with [`ConstantBandwidthNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     pub fn constant(bandwidth: f64, latency: f64) -> Self {
-        NetworkConfig::ConstantBandwidthNetwork { bandwidth, latency }
+        NetworkConfig::ConstantBandwidth { bandwidth, latency }
     }
 
-    /// Creates network config with SharedBandwidthNetwork model
+    /// Creates network config with [`SharedBandwidthNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     pub fn shared(bandwidth: f64, latency: f64) -> Self {
-        NetworkConfig::SharedBandwidthNetwork { bandwidth, latency }
+        NetworkConfig::SharedBandwidth { bandwidth, latency }
     }
 
-    /// Creates network config with TopologyNetwork model
+    /// Creates network config with [`TopologyAwareNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
-    pub fn topology(
-        topology_type: TopologyType,
-        local_bandwidth: f64,
-        local_latency: f64,
-        link_bandwidth: f64,
-        link_latency: f64,
-    ) -> Self {
-        NetworkConfig::TopologyNetwork {
+    pub fn topology(topology_type: TopologyType, link_bandwidth: f64, link_latency: f64) -> Self {
+        NetworkConfig::TopologyAware {
             topology_type,
-            local_bandwidth,
-            local_latency,
             link_bandwidth,
             link_latency,
         }
@@ -92,60 +76,55 @@ impl NetworkConfig {
     /// Creates network model based on stored parameters.
     pub fn make_network(&self, ctx: SimulationContext) -> Network {
         match self {
-            NetworkConfig::ConstantBandwidthNetwork { bandwidth, latency } => {
+            NetworkConfig::ConstantBandwidth { bandwidth, latency } => {
                 Network::new(
-                    Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
+                    Box::new(ConstantBandwidthNetworkModel::new(
                         *bandwidth,     // keep MB/s since data item sizes are in MB
                         latency * 1e-6, // convert to seconds
-                    ))),
+                    )),
                     ctx,
                 )
             }
-            NetworkConfig::SharedBandwidthNetwork { bandwidth, latency } => {
+            NetworkConfig::SharedBandwidth { bandwidth, latency } => {
                 Network::new(
-                    Rc::new(RefCell::new(SharedBandwidthNetwork::new(
+                    Box::new(SharedBandwidthNetworkModel::new(
                         *bandwidth,     // keep MB/s since data item sizes are in MB
                         latency * 1e-6, // convert to seconds
-                    ))),
+                    )),
                     ctx,
                 )
             }
-            NetworkConfig::TopologyNetwork { .. } => {
-                let topology = Rc::new(RefCell::new(Topology::new()));
-                Network::new_with_topology(
-                    Rc::new(RefCell::new(TopologyNetwork::new(topology.clone()))),
-                    topology,
-                    ctx,
-                )
-            }
+            NetworkConfig::TopologyAware { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
         }
     }
 
-    /// Adds hosts and links between them in case of TopologyNetwork.
+    /// Adds network nodes and links (in case of topology-aware network model).
     pub fn init_network(&self, network: Rc<RefCell<Network>>, runner_id: Id, resources: &[Resource]) {
-        if let NetworkConfig::TopologyNetwork {
+        let mut network = network.borrow_mut();
+
+        // Add nodes
+        for (host_name, id) in resources
+            .iter()
+            .map(|r| (r.name.as_str(), r.id))
+            .chain([("master", runner_id)])
+        {
+            network.add_node(
+                host_name,
+                // since local transfers are not used,
+                // we don't care about the local model parameters
+                Box::new(ConstantBandwidthNetworkModel::new(100000., 0.)),
+            );
+            network.set_location(id, host_name);
+        }
+
+        // Add links
+        if let NetworkConfig::TopologyAware {
             topology_type,
-            local_bandwidth,
-            local_latency,
             link_bandwidth,
             link_latency,
         } = self
         {
-            let local_latency = local_latency * 1e-6; // convert to seconds
             let link_latency = link_latency * 1e-6; // convert to seconds
-            let mut network = network.borrow_mut();
-
-            for (host_name, id) in resources
-                .iter()
-                .map(|r| (r.name.as_str(), r.id))
-                .chain([("master", runner_id)])
-            {
-                network.add_node(
-                    host_name,
-                    Box::new(SharedBandwidthNetwork::new(*local_bandwidth, local_latency)),
-                );
-                network.set_location(id, host_name);
-            }
 
             match topology_type {
                 TopologyType::Star => {

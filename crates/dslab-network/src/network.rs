@@ -1,99 +1,253 @@
-//! Network model.
+//! Simulation component representing a network.
 
+use indexmap::IndexMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use serde::Serialize;
+
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
-use dslab_core::event::{Event, EventData};
+use dslab_core::event::{Event, EventData, EventId};
 use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug};
 
-use crate::model::*;
-use crate::topology::Topology;
-use crate::topology_structures::Link;
+use crate::routing::{RoutingAlgorithm, ShortestPathFloydWarshall};
+use crate::{DataTransfer, DataTransferCompleted, Link, LinkId, NetworkModel, Node, NodeId, Topology};
 
-/// Simulation component acting as a network.
+/// Represents a message sent between two simulation components over the network.
+#[derive(Clone, Serialize)]
+pub struct Message {
+    /// Unique message id.
+    pub id: usize,
+    /// Simulation component which is sending the message.
+    pub src: Id,
+    /// Simulation component which is receiving the message.
+    pub dest: Id,
+    /// Contents of the message.
+    pub data: String,
+}
+
+/// Event signalling the message delivery.
+#[derive(Clone, Serialize)]
+pub struct MessageDelivered {
+    /// Delivered message.
+    pub msg: Message,
+}
+
+#[derive(Clone, Serialize)]
+struct StartDataTransfer {
+    dt: DataTransfer,
+}
+
+/// Simulation component representing a network.
+///
+/// This is the main entry point for all network operations, which relies internally on the supplied network model.
 pub struct Network {
-    network_model: Rc<RefCell<dyn NetworkModel>>,
     topology: Rc<RefCell<Topology>>,
+    nodes_name_map: IndexMap<String, NodeId>,
+    network_model: Box<dyn NetworkModel>,
+    local_models: HashMap<NodeId, Box<dyn NetworkModel>>,
+    locations: HashMap<Id, NodeId>,
     id_counter: AtomicUsize,
+    topology_initialized: bool,
     ctx: SimulationContext,
 }
 
 impl Network {
-    /// Creates new network without a topology.
-    pub fn new(network_model: Rc<RefCell<dyn NetworkModel>>, ctx: SimulationContext) -> Self {
-        Self {
-            network_model,
-            topology: Rc::new(RefCell::new(Topology::new())),
-            id_counter: AtomicUsize::new(1),
-            ctx,
-        }
+    /// Creates a new network with supplied network model.
+    ///
+    /// Uses [`ShortestPathFloydWarshall`] as default routing algorithm.
+    pub fn new(model: Box<dyn NetworkModel>, ctx: SimulationContext) -> Self {
+        Self::with_routing(Box::new(ShortestPathFloydWarshall::default()), model, ctx)
     }
 
-    /// Creates new network with a topology.
-    pub fn new_with_topology(
-        network_model: Rc<RefCell<dyn NetworkModel>>,
-        topology: Rc<RefCell<Topology>>,
+    /// Creates a new network with supplied routing algorithm and network model.
+    pub fn with_routing(
+        routing: Box<dyn RoutingAlgorithm>,
+        mut model: Box<dyn NetworkModel>,
         ctx: SimulationContext,
     ) -> Self {
+        let topology = Rc::new(RefCell::new(Topology::new()));
+        if model.is_topology_aware() {
+            model.init(topology.clone(), routing);
+        }
         Self {
-            network_model,
             topology,
+            nodes_name_map: IndexMap::new(),
+            network_model: model,
+            local_models: HashMap::new(),
+            locations: HashMap::new(),
             id_counter: AtomicUsize::new(1),
+            topology_initialized: false,
             ctx,
         }
     }
 
-    /// Adds new network node.
-    pub fn add_node(&mut self, node_id: &str, local_network: Box<dyn NetworkModel>) {
-        self.topology.borrow_mut().add_node(node_id, local_network)
-    }
+    // Topology --------------------------------------------------------------------------------------------------------
 
-    /// See [Topology::add_link].
-    pub fn add_link(&mut self, node1: &str, node2: &str, link: Link) {
-        self.topology.borrow_mut().add_link(node1, node2, link);
-        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
-    }
-
-    /// See [Topology::add_unidirectional_link].
-    pub fn add_unidirectional_link(&mut self, node1: &str, node2: &str, link: Link) {
-        self.topology.borrow_mut().add_unidirectional_link(node1, node2, link);
-        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
-    }
-
-    /// See [Topology::add_full_duplex_link].
-    pub fn add_full_duplex_link(&mut self, node1: &str, node2: &str, link: Link) {
-        self.topology.borrow_mut().add_full_duplex_link(node1, node2, link);
-        self.network_model.borrow_mut().recalculate_operations(&mut self.ctx);
-    }
-
-    /// See [`Topology::init`].
-    pub fn init_topology(&mut self) {
-        self.topology.borrow_mut().init();
-    }
-
-    /// See [`Topology::set_location`].
-    pub fn set_location(&mut self, id: Id, node_name: &str) {
-        self.topology.borrow_mut().set_location(id, node_name)
-    }
-
-    /// See [`Topology::check_same_node`].
-    pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
-        self.topology.borrow().check_same_node(id1, id2)
-    }
-
-    /// See [`Topology::get_nodes`].
-    pub fn get_nodes(&self) -> Vec<String> {
-        self.topology.borrow().get_nodes()
-    }
-
-    /// Sends a message from node `src` to node `dest`.
+    /// Adds a new network node.
     ///
-    /// The message size is assumed to be zero, so the message delivery time is determined only by the network latency.
+    /// The supplied `local_model` is used to model the intra-node communications.
+    pub fn add_node<S>(&mut self, name: S, local_model: Box<dyn NetworkModel>) -> NodeId
+    where
+        S: Into<String>,
+    {
+        let name = name.into();
+        let node_id = self.topology.borrow_mut().add_node(Node { name: name.clone() });
+        self.nodes_name_map.insert(name, node_id);
+        self.local_models.insert(node_id, local_model);
+        node_id
+    }
+
+    /// Returns the node id by its name.
+    pub fn get_node_id(&self, node: &str) -> usize {
+        *self
+            .nodes_name_map
+            .get(node)
+            .unwrap_or_else(|| panic!("Node {} is not found", node))
+    }
+
+    /// Returns the list of network nodes.
+    pub fn get_nodes(&self) -> Vec<String> {
+        self.nodes_name_map.keys().cloned().collect()
+    }
+
+    /// Adds a new bidirectional link between two nodes.
+    pub fn add_link(&mut self, node1: &str, node2: &str, link: Link) -> LinkId {
+        let link_id = self
+            .topology
+            .borrow_mut()
+            .add_link(self.get_node_id(node1), self.get_node_id(node2), link);
+        if self.topology_initialized {
+            self.network_model.on_topology_change(&mut self.ctx);
+        }
+        link_id
+    }
+
+    /// Adds a new unidirectional link between two nodes.
+    pub fn add_unidirectional_link(&mut self, node_from: &str, node_to: &str, link: Link) -> LinkId {
+        let link_id = self.topology.borrow_mut().add_unidirectional_link(
+            self.get_node_id(node_from),
+            self.get_node_id(node_to),
+            link,
+        );
+        if self.topology_initialized {
+            self.network_model.on_topology_change(&mut self.ctx);
+        }
+        link_id
+    }
+
+    /// Adds two unidirectional links with the same parameters between two nodes in opposite directions.
+    ///
+    /// This allows to model the full-duplex communication links.
+    pub fn add_full_duplex_link(&mut self, node1: &str, node2: &str, link: Link) -> (LinkId, LinkId) {
+        let (uplink_id, downlink_id) =
+            self.topology
+                .borrow_mut()
+                .add_full_duplex_link(self.get_node_id(node1), self.get_node_id(node2), link);
+        if self.topology_initialized {
+            self.network_model.on_topology_change(&mut self.ctx);
+        }
+        (uplink_id, downlink_id)
+    }
+
+    /// Performs initialization of network topology, such as computing the paths between the nodes.
+    ///
+    /// Must be called after all links are added and before submitting any operations.
+    pub fn init_topology(&mut self) {
+        self.network_model.on_topology_change(&mut self.ctx);
+        self.topology_initialized = true;
+    }
+
+    // Component location ----------------------------------------------------------------------------------------------
+
+    /// Sets the location of the simulation component `id` to the node `node`.
+    pub fn set_location(&mut self, id: Id, node: &str) {
+        self.locations.insert(id, self.get_node_id(node));
+    }
+
+    /// Returns the location (node id) of the simulation component if it is set.
+    pub fn get_location_opt(&self, id: Id) -> Option<NodeId> {
+        self.locations.get(&id).cloned()
+    }
+
+    /// Returns the location (node id) of the simulation component.
+    ///
+    /// Panics if the component location is not set.
+    pub fn get_location(&self, id: Id) -> NodeId {
+        self.get_location_opt(id)
+            .unwrap_or_else(|| panic!("Component {} has unknown location", id))
+    }
+
+    // Bandwidth and latency -------------------------------------------------------------------------------------------
+
+    /// Returns the network bandwidth between two simulation components.
+    pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
+        let src_node_id = self.get_location(src);
+        let dest_node_id = self.get_location(dest);
+        if src_node_id == dest_node_id {
+            self.local_models[&src_node_id].bandwidth(src_node_id, src_node_id)
+        } else {
+            self.network_model.bandwidth(src_node_id, dest_node_id)
+        }
+    }
+
+    /// Returns the network latency between two simulation components.
+    pub fn latency(&self, src: Id, dest: Id) -> f64 {
+        let src_node_id = self.get_location(src);
+        let dest_node_id = self.get_location(dest);
+        if src_node_id == dest_node_id {
+            self.local_models[&src_node_id].latency(src_node_id, src_node_id)
+        } else {
+            self.network_model.latency(src_node_id, dest_node_id)
+        }
+    }
+
+    // Operations ------------------------------------------------------------------------------------------------------
+
+    /// Starts a data transfer between two simulation components, returns unique transfer id.
+    ///
+    /// The network locations of these components must be previously registered via [`Self::set_location`].
+    /// The transfer completion time is calculated by the underlying network model.
+    /// The [`DataTransferCompleted`] event is sent to `notification_dest` on the transfer completion.
+    pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
+        let src_node_id = self.get_location(src);
+        let dest_node_id = self.get_location(dest);
+        let transfer_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let dt = DataTransfer {
+            id: transfer_id,
+            src,
+            src_node_id,
+            dest,
+            dest_node_id,
+            size,
+            notification_dest,
+        };
+        log_debug!(
+            self.ctx,
+            "new data transfer {} from {} to {} of size {}",
+            dt.id,
+            dt.src,
+            dt.dest,
+            dt.size
+        );
+        // The fixed part of data transfer time (latency) is modeled by the delayed StartDataTransfer event.
+        // The remaining part is calculated by the underlying network model (see handling of StartDataTransfer event).
+        let delay = self.latency(src, dest);
+        self.ctx.emit_self(StartDataTransfer { dt }, delay);
+        transfer_id
+    }
+
+    /// Sends a message between two simulation components, returns unique message id.
+    ///
+    /// The network locations of these components must be previously registered via [`Self::set_location`].
+    /// The message delivery time is equal to the network latency, assuming the message data has a small size.
+    /// The [`MessageDelivered`] event is sent to `dest` on the message delivery.
     pub fn send_msg(&mut self, message: String, src: Id, dest: Id) -> usize {
+        log_debug!(self.ctx, "{} sent message '{}' to {}", src, message, dest);
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
@@ -101,122 +255,50 @@ impl Network {
             dest,
             data: message,
         };
-        self.ctx.emit_self_now(MessageSend { message: msg });
+        let delay = self.latency(src, dest);
+        self.ctx.emit(MessageDelivered { msg }, dest, delay);
         msg_id
     }
 
-    /// Sends an event from node `src` to node `dest`.
+    /// Sends an event between two simulation components, returns unique event id.
     ///
-    /// The event size is assumed to be zero, so the event delay is determined only by the network latency.
-    pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dest: Id) {
+    /// The network locations of these components must be previously registered via [`Self::set_location`].
+    /// The event delivery time is equal to the network latency, assuming the event data has a small size.
+    pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dest: Id) -> EventId {
         log_debug!(self.ctx, "{} sent event to {}", src, dest);
-
-        let latency = if self.check_same_node(src, dest) {
-            self.topology.borrow().get_local_latency(src, dest)
-        } else {
-            self.network_model.borrow().latency(src, dest)
-        };
-        self.ctx.emit_as(data, src, dest, latency);
-    }
-
-    /// Starts a data transfer from node `src` to node `dest`.
-    pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
-        let data_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
-        let data = Data {
-            id: data_id,
-            src,
-            dest,
-            size,
-            notification_dest,
-        };
-        self.ctx.emit_self_now(DataTransferRequest { data });
-        data_id
-    }
-
-    /// Returns the network bandwidth from node `src` to node `dest`.
-    pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
-        self.network_model.borrow().bandwidth(src, dest)
+        let delay = self.latency(src, dest);
+        self.ctx.emit_as(data, src, dest, delay)
     }
 }
 
 impl EventHandler for Network {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            MessageSend { message } => {
-                log_debug!(
-                    self.ctx,
-                    "{} sent message '{}' to {}",
-                    message.src,
-                    message.data,
-                    message.dest.clone()
-                );
-
-                let latency = if self.check_same_node(message.src, message.dest) {
-                    self.topology.borrow().get_local_latency(message.src, message.dest)
+            StartDataTransfer { dt } => {
+                let model = if dt.src_node_id == dt.dest_node_id {
+                    self.local_models.get_mut(&dt.src_node_id).unwrap()
                 } else {
-                    self.network_model.borrow().latency(message.src, message.dest)
+                    &mut self.network_model
                 };
-                let message_recieve_event = MessageReceive { message };
-                self.ctx.emit_self(message_recieve_event, latency);
+                model.start_transfer(dt, &mut self.ctx);
             }
-            MessageReceive { message } => {
-                log_debug!(
-                    self.ctx,
-                    "{} received message '{}' from {}",
-                    message.dest,
-                    message.data,
-                    message.src
-                );
-                self.ctx.emit_now(
-                    MessageDelivery {
-                        message: message.clone(),
-                    },
-                    message.dest,
-                );
-            }
-            DataTransferRequest { data } => {
-                log_debug!(
-                    self.ctx,
-                    "new data transfer {} from {} to {} of size {}",
-                    data.id,
-                    data.src,
-                    data.dest,
-                    data.size
-                );
-                let latency = if self.check_same_node(data.src, data.dest) {
-                    self.topology.borrow().get_local_latency(data.src, data.dest)
-                } else {
-                    self.network_model.borrow().latency(data.src, data.dest)
-                };
-                self.ctx.emit_self(StartDataTransfer { data }, latency);
-            }
-            StartDataTransfer { data } => {
-                if !self.check_same_node(data.src, data.dest) {
-                    self.network_model.borrow_mut().send_data(data, &mut self.ctx);
-                } else {
-                    self.topology.borrow_mut().local_send_data(data, &mut self.ctx)
-                }
-            }
-            DataReceive { data } => {
+            DataTransferCompleted { dt } => {
                 log_debug!(
                     self.ctx,
                     "completed data transfer {} from {} to {} of size {}",
-                    data.id,
-                    data.src,
-                    data.dest,
-                    data.size
+                    dt.id,
+                    dt.src,
+                    dt.dest,
+                    dt.size
                 );
-                if !self.check_same_node(data.src, data.dest) {
-                    self.network_model
-                        .borrow_mut()
-                        .receive_data(data.clone(), &mut self.ctx);
+                let model = if dt.src_node_id == dt.dest_node_id {
+                    self.local_models.get_mut(&dt.src_node_id).unwrap()
                 } else {
-                    self.topology
-                        .borrow_mut()
-                        .local_receive_data(data.clone(), &mut self.ctx)
-                }
-                self.ctx
-                    .emit_now(DataTransferCompleted { data: data.clone() }, data.notification_dest);
+                    &mut self.network_model
+                };
+                model.on_transfer_completion(dt.clone(), &mut self.ctx);
+                let notification_dest = dt.notification_dest;
+                self.ctx.emit_now(DataTransferCompleted { dt }, notification_dest);
             }
         })
     }

@@ -1,100 +1,77 @@
-//! Describes network trait.
+//! Network model interface.
 
 use serde::Serialize;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
-// NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
+use crate::routing::RoutingAlgorithm;
+use crate::{NodeId, Topology};
 
-/// Represents some data transferred over the network.
+/// Represents a data transfer between two simulation components located on a network.
 #[derive(Clone, Debug, Serialize)]
-pub struct Data {
-    /// Unique id.
+pub struct DataTransfer {
+    /// Unique transfer id.
     pub id: usize,
-    /// Source of data.
+    /// Simulation component which is sending the data.
     pub src: Id,
-    /// Destination.
+    /// Node id of data sender.
+    pub src_node_id: NodeId,
+    /// Simulation component which is receiving the data.
     pub dest: Id,
-    /// Size of the data in MB.
+    /// Node id of data receiver.
+    pub dest_node_id: NodeId,
+    /// Data size.
     pub size: f64,
-    /// Simulation component to notify when the data transfer completes.
+    /// Simulation component to notify when the transfer is completed.
     pub notification_dest: Id,
 }
 
-/// Represents message in the network.
-#[derive(Clone, Serialize)]
-pub struct Message {
-    /// Unique id.
-    pub id: usize,
-    /// Source of data.
-    pub src: Id,
-    /// Destination.
-    pub dest: Id,
-    /// Contents of the message.
-    pub data: String,
-}
-
-// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Clone, Serialize)]
-pub(crate) struct MessageSend {
-    pub(crate) message: Message,
-}
-
-#[derive(Clone, Serialize)]
-pub(crate) struct MessageReceive {
-    pub(crate) message: Message,
-}
-
-#[derive(Clone, Serialize)]
-pub(crate) struct DataTransferRequest {
-    pub(crate) data: Data,
-}
-
-#[derive(Clone, Serialize)]
-pub(crate) struct StartDataTransfer {
-    pub(crate) data: Data,
-}
-
-#[derive(Clone, Serialize)]
-pub(crate) struct DataReceive {
-    pub(crate) data: Data,
-}
-
-/// Event describing delivered message.
-#[derive(Clone, Serialize)]
-pub struct MessageDelivery {
-    /// Message.
-    pub message: Message,
-}
-
-/// Event describing completed data transfer.
+/// Event signalling the completion of data transfer.
 #[derive(Clone, Serialize)]
 pub struct DataTransferCompleted {
-    /// Data.
-    pub data: Data,
+    /// Completed data transfer.
+    pub dt: DataTransfer,
 }
 
-// NETWORK MODEL TEMPLATE ///////////////////////////////////////////////////////////////////////////////////
+/// Network model interface.
+///
+/// The main functions of the network model:
+/// - Provide bandwidth and latency between network nodes,
+/// - Calculate data transfer completion times and emit [`DataTransferCompleted`] events.
+///
+/// A topology-aware model uses information about the network topology (links connecting the nodes)
+/// and relies on a routing algorithm to compute paths between the nodes.
+pub trait NetworkModel {
+    /// Returns true is the model is topology-aware.
+    fn is_topology_aware(&self) -> bool;
 
-/// Trait describing a struct which can operate with data.
-pub trait DataOperation {
-    /// Sends data.
-    fn send_data(&mut self, data: Data, ctx: &mut SimulationContext);
-    /// Callback for receiving data.
-    fn receive_data(&mut self, data: Data, ctx: &mut SimulationContext);
-    /// Recalculates all operations after any change in the list of ongoing transfers.
-    fn recalculate_operations(&mut self, ctx: &mut SimulationContext);
+    /// Performs initialization of topology-aware model.
+    ///
+    /// This method is used for passing network topology and routing algorithm.
+    fn init(&mut self, _topology: Rc<RefCell<Topology>>, _routing: Box<dyn RoutingAlgorithm>) {}
+
+    /// Returns the network bandwidth from node `src` to node `dest`.
+    fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64;
+
+    /// Returns the network latency from node `src` to node `dest`.
+    fn latency(&self, src: NodeId, dest: NodeId) -> f64;
+
+    /// Starts data transfer.
+    ///
+    /// Must calculate the transfer completion time and emit the [`DataTransferCompleted`] event at this time.
+    /// The event must be emitted via the passed simulation context using [`SimulationContext::emit_self`].
+    fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext);
+
+    /// Callback for notifying the model about data transfer completion.
+    ///
+    /// This is necessary since the model itself does not receive the [`DataTransferCompleted`] event.
+    fn on_transfer_completion(&mut self, dt: DataTransfer, ctx: &mut SimulationContext);
+
+    /// Callback for notifying topology-aware model about the topology change.
+    ///
+    /// This is necessary since the topology change may require recalculation of transfer completion times.
+    fn on_topology_change(&mut self, ctx: &mut SimulationContext);
 }
-
-/// Trait describing a struct which can provide latency and bandwidth between two simulation components.
-pub trait NetworkConfiguration {
-    /// Returns the latency between two simulation components.
-    fn latency(&self, src: Id, dst: Id) -> f64;
-    /// Returns the bandwidth between two simulation components.
-    fn bandwidth(&self, src: Id, dst: Id) -> f64;
-}
-
-/// Trait describing a struct which can represent a network.
-pub trait NetworkModel: DataOperation + NetworkConfiguration {}

@@ -10,8 +10,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug};
-use dslab_network::model::*;
-use dslab_network::network::Network;
+use dslab_network::{DataTransfer, DataTransferCompleted, Network};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 use dslab_storage::storage::Storage;
@@ -97,9 +96,9 @@ impl Worker {
         self.tasks.insert(task.req.id, task);
     }
 
-    fn on_data_transfer_completed(&mut self, data: Data) {
+    fn on_data_transfer_completed(&mut self, dt: DataTransfer) {
         // data transfer corresponds to input download
-        let transfer_id = data.id;
+        let transfer_id = dt.id;
         if self.downloads.contains_key(&transfer_id) {
             let task_id = self.downloads.remove(&transfer_id).unwrap();
             let task = self.tasks.get_mut(&task_id).unwrap();
@@ -193,8 +192,8 @@ impl EventHandler for Worker {
                     output_size,
                 });
             }
-            DataTransferCompleted { data } => {
-                self.on_data_transfer_completed(data);
+            DataTransferCompleted { dt } => {
+                self.on_data_transfer_completed(dt);
             }
             DataReadCompleted { request_id, size: _ } => {
                 self.on_data_read_completed(request_id);

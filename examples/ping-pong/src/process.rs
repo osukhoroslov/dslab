@@ -7,7 +7,7 @@ use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::{Event, EventData};
 use dslab_core::handler::EventHandler;
-use dslab_network::network::Network;
+use dslab_network::Network;
 
 #[derive(Clone, Serialize)]
 pub struct Start {}

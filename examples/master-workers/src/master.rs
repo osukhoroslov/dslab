@@ -13,7 +13,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug, log_info, log_trace};
-use dslab_network::network::Network;
+use dslab_network::Network;
 
 use crate::common::Start;
 use crate::task::*;

@@ -12,12 +12,9 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_info};
-use dslab_network::model::DataTransferCompleted;
-use dslab_network::network::Network;
-use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
-use dslab_network::topology::Topology;
-use dslab_network::topology_model::TopologyNetwork;
-use dslab_network::topology_structures::Link;
+
+use dslab_network::models::{SharedBandwidthNetworkModel, TopologyAwareNetworkModel};
+use dslab_network::{DataTransferCompleted, Link, Network};
 
 #[derive(Clone, Serialize)]
 pub struct Start {
@@ -44,7 +41,7 @@ impl EventHandler for DataSender {
                     .borrow_mut()
                     .transfer_data(self.ctx.id(), receiver_id, size, receiver_id);
             }
-            DataTransferCompleted { data: _ } => {
+            DataTransferCompleted { dt: _ } => {
                 log_info!(self.ctx, "Sender: data transfer completed");
             }
         })
@@ -65,11 +62,11 @@ impl DataReceiver {
 impl EventHandler for DataReceiver {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            DataTransferCompleted { data } => {
-                let new_size = 1000.0 - data.size;
+            DataTransferCompleted { dt } => {
+                let new_size = 1000.0 - dt.size;
                 self.net
                     .borrow_mut()
-                    .transfer_data(self.ctx.id(), data.src, new_size, data.src);
+                    .transfer_data(self.ctx.id(), dt.src, new_size, dt.src);
                 log_info!(self.ctx, "Receiver: data transfer completed");
             }
         })
@@ -83,27 +80,24 @@ fn main() {
 
     let mut sim = Simulation::new(123);
 
-    let mut topology = Topology::new();
-    // network nodes
-    topology.add_node("sender_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("sender_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("switch_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("switch_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("receiver_1", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("receiver_2", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("sender_3", Box::new(SharedBandwidthNetwork::new(100.0, 0.0)));
-    // network links
-    topology.add_link("sender_1", "switch_1", Link::shared(100.0, 1.0));
-    topology.add_link("sender_2", "switch_1", Link::shared(90.0, 1.0));
-    topology.add_link("switch_1", "switch_2", Link::shared(50.0, 1.0));
-    topology.add_link("switch_2", "receiver_1", Link::shared(90.0, 1.0));
-    topology.add_link("switch_2", "receiver_2", Link::shared(10.0, 1.0));
-    // init topology
-    topology.init();
+    let mut network = Network::new(Box::new(TopologyAwareNetworkModel::new()), sim.create_context("net"));
 
-    let topology_rc = rc!(refcell!(topology));
-    let network_model = rc!(refcell!(TopologyNetwork::new(topology_rc.clone())));
-    let network = Network::new_with_topology(network_model, topology_rc.clone(), sim.create_context("net"));
+    // network nodes
+    network.add_node("sender_1", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("sender_2", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("switch_1", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("switch_2", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("receiver_1", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("receiver_2", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("sender_3", Box::new(SharedBandwidthNetworkModel::new(100.0, 0.0)));
+    // network links
+    network.add_link("sender_1", "switch_1", Link::shared(100.0, 1.0));
+    network.add_link("sender_2", "switch_1", Link::shared(90.0, 1.0));
+    network.add_link("switch_1", "switch_2", Link::shared(50.0, 1.0));
+    network.add_link("switch_2", "receiver_1", Link::shared(90.0, 1.0));
+    network.add_link("switch_2", "receiver_2", Link::shared(10.0, 1.0));
+    // init topology
+    network.init_topology();
 
     let network_rc = rc!(refcell!(network));
     sim.add_handler("net", network_rc.clone());
@@ -117,14 +111,14 @@ fn main() {
 
     let receiver_1 = DataReceiver::new(network_rc.clone(), sim.create_context("receiver_1"));
     let receiver_1_id = sim.add_handler("receiver_1", rc!(refcell!(receiver_1)));
-    let receiver_2 = DataReceiver::new(network_rc, sim.create_context("receiver_2"));
+    let receiver_2 = DataReceiver::new(network_rc.clone(), sim.create_context("receiver_2"));
     let receiver_2_id = sim.add_handler("receiver_2", rc!(refcell!(receiver_2)));
 
-    topology_rc.borrow_mut().set_location(sender_1_id, "sender_1");
-    topology_rc.borrow_mut().set_location(sender_2_id, "sender_2");
-    topology_rc.borrow_mut().set_location(sender_3_id, "sender_3");
-    topology_rc.borrow_mut().set_location(receiver_1_id, "receiver_1");
-    topology_rc.borrow_mut().set_location(receiver_2_id, "receiver_2");
+    network_rc.borrow_mut().set_location(sender_1_id, "sender_1");
+    network_rc.borrow_mut().set_location(sender_2_id, "sender_2");
+    network_rc.borrow_mut().set_location(sender_3_id, "sender_3");
+    network_rc.borrow_mut().set_location(receiver_1_id, "receiver_1");
+    network_rc.borrow_mut().set_location(receiver_2_id, "receiver_2");
 
     let client = sim.create_context("client");
 

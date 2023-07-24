@@ -4,7 +4,7 @@ use std::ops::Bound::{Excluded, Included, Unbounded};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::Id;
-use dslab_network::network::Network;
+use dslab_network::Network;
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
