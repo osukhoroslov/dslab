@@ -100,22 +100,19 @@ fn send_messages(sys: &mut System, message_count: usize, run_simulation: bool) -
     messages
 }
 
-fn check_delivered_message_type(delivered: &[Message], sent: &[Message]) -> Result<HashMap<String, i32>, String> {
-    let mut msg_count = HashMap::default();
-    let mut expected_msg_count: HashSet<String> = HashSet::default();
-    for msg in sent.iter() {
-        expected_msg_count.insert(msg.data.clone());
-    }
+fn check_delivered_messages(delivered: &[Message], expected_msg_count: &HashMap<String, i32>, expected_tip: &String) -> Result<HashMap<String, i32>, String> {
+    assert!(!expected_msg_count.is_empty());
+    let mut delivered_msg_count = HashMap::default();
     for msg in delivered.iter() {
         // assuming all messages have the same type
-        assume_eq!(msg.tip, sent[0].tip, format!("Wrong message type {}", msg.tip))?;
+        assume_eq!(msg.tip, *expected_tip, format!("Wrong message type {}", msg.tip))?;
         assume!(
-            expected_msg_count.contains(&msg.data),
+            expected_msg_count.contains_key(&msg.data),
             format!("Wrong message data: {}", msg.data)
         )?;
-        *msg_count.entry(msg.data.clone()).or_insert(0) += 1;
+        *delivered_msg_count.entry(msg.data.clone()).or_insert(0) += 1;
     }
-    Ok(msg_count)
+    Ok(delivered_msg_count)
 }
 
 fn check_message_delivery_reliable(
@@ -180,14 +177,14 @@ fn check_guarantees(sys: &mut System, sent: &[Message], config: &TestConfig) -> 
     let delivered = sys.read_local_messages("receiver");
 
     // check that delivered messages have expected type and data
-    let msg_count = check_delivered_message_type(&delivered, sent)?;
+    let delivered_msg_count = check_delivered_messages(&delivered, &expected_msg_count, &sent[0].tip)?;
 
     // check delivered message count according to expected guarantees
     if config.reliable {
-        check_message_delivery_reliable(&msg_count, &expected_msg_count)?;
+        check_message_delivery_reliable(&delivered_msg_count, &expected_msg_count)?;
     }
     if config.once {
-        check_message_delivery_once(&msg_count, &expected_msg_count)?;
+        check_message_delivery_once(&delivered_msg_count, &expected_msg_count)?;
     }
     if config.ordered {
         check_message_delivery_ordered(&delivered, sent)?;
@@ -417,7 +414,7 @@ fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestC
         let delivered = &state.node_states["receiver-node"]["receiver"].local_outbox;
 
         // check that delivered messages have expected type and data
-        let delivered_msg_count = check_delivered_message_type(delivered, &messages_expected)?;
+        let delivered_msg_count = check_delivered_messages(delivered, &expected_msg_count, &messages_expected[0].tip)?;
 
         // check delivered message count according to expected guarantees
         if config.reliable && state.events.available_events_num() == 0 {
@@ -469,7 +466,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .prune(predicates::mc_prune_state_depth(7))
         .goal(predicates::mc_any_goal(vec![
             predicates::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
-            predicates::mc_goal_nothing_left_to_do(),
+            predicates::mc_goal_no_events(),
         ]))
         .invariant(mc_invariant_received_messages(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
