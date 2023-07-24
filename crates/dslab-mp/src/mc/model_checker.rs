@@ -91,7 +91,7 @@ impl ModelChecker {
     /// Runs model checking after applying callback.
     pub fn run_with_change<F>(&mut self, preliminary_callback: F) -> McResult
     where
-        F: Fn(&mut McSystem),
+        F: FnOnce(&mut McSystem),
     {
         preliminary_callback(&mut self.system);
         self.run()

@@ -473,7 +473,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .invariant(mc_invariant_received_messages(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
-        for message in messages.clone() {
+        for message in messages {
             sys.send_local_message("sender-node".to_string(), "sender".to_string(), message);
         }
     });

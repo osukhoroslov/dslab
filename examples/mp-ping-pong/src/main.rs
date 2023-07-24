@@ -187,12 +187,10 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
 fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
-    let mut system = build_system(config);
+    let system = build_system(config);
     let data = r#"{"value": 0}"#.to_string();
     let data2 = r#"{"value": 1}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
-    system.send_local_message("client", Message::new("PING", &data));
-    system.send_local_message("client", Message::new("PING", &data2));
 
     let strategy_config = StrategyConfig::default()
         .prune(predicates::mc_prune_sent_messages_limit(4))
@@ -211,7 +209,10 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         ]));
 
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
-    let res = mc.run();
+    let res = mc.run_with_change(|system| {
+        system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data));
+        system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data2));
+    });
     assume!(
         res.is_ok(),
         format!("model checker found error: {}", res.err().unwrap())
@@ -220,12 +221,10 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 }
 
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
-    let mut system = build_system(config);
+    let system = build_system(config);
     let data = r#"{"value": 0}"#.to_string();
     let data2 = r#"{"value": 1}"#.to_string();
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
-    system.send_local_message("client", Message::new("PING", &data));
-    system.send_local_message("client", Message::new("PING", &data2));
     system.network().set_drop_rate(0.3);
     let strategy_config = StrategyConfig::default()
         .prune(predicates::mc_prune_state_depth(7))
@@ -241,7 +240,10 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         ));
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
 
-    let res = mc.run();
+    let res = mc.run_with_change(|system| {
+        system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data));
+        system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data2));
+    });
     assume!(
         res.is_ok(),
         format!("model checker found error: {}", res.err().unwrap())
