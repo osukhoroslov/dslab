@@ -59,7 +59,7 @@ pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalF
 }
 
 /// Checks if current state has no more active events.
-pub fn mc_goal_nothing_left_to_do() -> GoalFn {
+pub fn mc_goal_no_events() -> GoalFn {
     boxed!(|state: &McState| {
         if state.events.available_events_num() == 0 {
             Some("final state reached".to_string())
