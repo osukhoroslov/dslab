@@ -252,7 +252,7 @@ pub trait Strategy {
         Ok(())
     }
 
-    /// Makes search step according to `step_type`, calls `search_step_impl` with the produced state
+    /// Applies the specified event to the system, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
     fn search_step(&mut self, system: &mut McSystem, event: EventOrId) -> Result<(), McError> {
         let state = system.get_state();
