@@ -1,5 +1,7 @@
 //! DAG task.
 
+use std::collections::BTreeSet;
+
 use strum_macros::EnumIter;
 
 use dslab_compute::multicore::CoresDependency;
@@ -19,6 +21,24 @@ pub enum TaskState {
     Running,
     /// Task is completed.
     Done,
+}
+
+#[derive(Clone, Debug, Default)]
+pub enum ResourceRestriction {
+    #[default]
+    Everywhere,
+    Only(BTreeSet<usize>),
+    Except(BTreeSet<usize>),
+}
+
+impl ResourceRestriction {
+    pub fn is_allowed_on(&self, resource_id: usize) -> bool {
+        match self {
+            ResourceRestriction::Everywhere => true,
+            ResourceRestriction::Only(set) => set.contains(&resource_id),
+            ResourceRestriction::Except(set) => !set.contains(&resource_id),
+        }
+    }
 }
 
 /// Represents a DAG task.
@@ -41,6 +61,7 @@ pub struct Task {
     pub inputs: Vec<usize>,
     pub outputs: Vec<usize>,
     pub(crate) ready_inputs: usize,
+    pub resource_restriction: ResourceRestriction,
 }
 
 impl Task {
@@ -64,6 +85,7 @@ impl Task {
             inputs: Vec::new(),
             outputs: Vec::new(),
             ready_inputs: 0,
+            resource_restriction: ResourceRestriction::default(),
         }
     }
 
@@ -75,5 +97,9 @@ impl Task {
     /// Adds task output.
     pub fn add_output(&mut self, data_item_id: usize) {
         self.outputs.push(data_item_id);
+    }
+
+    pub fn is_allowed_on(&self, resource_id: usize) -> bool {
+        self.resource_restriction.is_allowed_on(resource_id)
     }
 }

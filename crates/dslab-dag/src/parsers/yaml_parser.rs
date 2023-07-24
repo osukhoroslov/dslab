@@ -8,6 +8,7 @@ use dslab_compute::multicore::CoresDependency;
 
 use crate::dag::DAG;
 use crate::parsers::config::ParserConfig;
+use crate::task::ResourceRestriction;
 
 fn one() -> u32 {
     1
@@ -24,6 +25,15 @@ struct DataItem {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", content = "resources")]
+enum YamlResourceRestriction {
+    #[serde(rename = "only")]
+    Only(Vec<usize>),
+    #[serde(rename = "except")]
+    Except(Vec<usize>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Task {
     name: String,
     // expected unit: Gflops
@@ -36,9 +46,10 @@ struct Task {
     #[serde(default = "one")]
     max_cores: u32,
     cores_dependency: Option<Value>,
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     inputs: Vec<String>,
     outputs: Vec<DataItem>,
+    resource_restriction: Option<YamlResourceRestriction>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,7 +66,7 @@ impl DAG {
         let yaml: Yaml = serde_yaml::from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
         )
-        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file.as_ref().display()));
+        .unwrap_or_else(|e| panic!("Can't parse YAML from file {}: {e:?}", file.as_ref().display()));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for data_item in yaml.inputs.iter() {
@@ -78,6 +89,12 @@ impl DAG {
                     _ => CoresDependency::Linear,
                 },
             );
+            if let Some(restriction) = &task.resource_restriction {
+                dag.get_task_mut(task_id).resource_restriction = match restriction {
+                    YamlResourceRestriction::Only(v) => ResourceRestriction::Only(v.iter().copied().collect()),
+                    YamlResourceRestriction::Except(v) => ResourceRestriction::Except(v.iter().copied().collect()),
+                }
+            }
             for output in task.outputs.iter() {
                 data_items.insert(
                     output.name.clone(),

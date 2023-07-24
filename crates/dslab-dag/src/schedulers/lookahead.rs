@@ -67,6 +67,9 @@ impl LookaheadScheduler {
             let mut best_resource = 0;
             let mut best_cores: Vec<u32> = Vec::new();
             for resource in 0..resources.len() {
+                if !dag.get_task(task_id).is_allowed_on(resource) {
+                    continue;
+                }
                 let res = evaluate_assignment(
                     task_id,
                     resource,
@@ -133,6 +136,9 @@ impl LookaheadScheduler {
                         let mut best_resource = 0;
                         let mut best_cores: Vec<u32> = Vec::new();
                         for resource in 0..resources.len() {
+                            if !dag.get_task(child).is_allowed_on(resource) {
+                                continue;
+                            }
                             let res = evaluate_assignment(
                                 task,
                                 resource,
