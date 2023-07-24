@@ -106,12 +106,11 @@ pub struct TopologyAwareNetworkModel {
     full_mesh_optimization: bool,
 }
 
-impl TopologyAwareNetworkModel {
-    /// Creates a new network model.
-    pub fn new() -> TopologyAwareNetworkModel {
+impl Default for TopologyAwareNetworkModel {
+    fn default() -> Self {
         TopologyAwareNetworkModel {
             topology: Rc::new(RefCell::new(Topology::default())),
-            routing: Box::new(ShortestPathFloydWarshall::default()),
+            routing: Box::<ShortestPathFloydWarshall>::default(),
             current_transfers: BTreeMap::new(),
             transfers_through_link: Vec::new(),
             tmp_transfers_through_link: Vec::new(),
@@ -120,6 +119,13 @@ impl TopologyAwareNetworkModel {
             link_data: Vec::new(),
             full_mesh_optimization: false,
         }
+    }
+}
+
+impl TopologyAwareNetworkModel {
+    /// Creates a new network model.
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Enables optimization which greatly improves simulation times

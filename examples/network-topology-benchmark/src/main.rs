@@ -68,10 +68,7 @@ fn main() {
 fn run_benchmark(args: &Args, topology: Topology) {
     let mut sim = Simulation::new(SIMULATION_SEED);
 
-    let full_mesh_optimization = match topology {
-        Topology::FullMesh => true,
-        _ => false,
-    };
+    let full_mesh_optimization = matches!(topology, Topology::FullMesh);
     let mut network = Network::new(
         Box::new(TopologyAwareNetworkModel::new().with_full_mesh_optimization(full_mesh_optimization)),
         sim.create_context("net"),
