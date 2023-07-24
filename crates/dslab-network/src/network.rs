@@ -61,7 +61,7 @@ impl Network {
     ///
     /// Uses [`ShortestPathFloydWarshall`] as default routing algorithm.
     pub fn new(model: Box<dyn NetworkModel>, ctx: SimulationContext) -> Self {
-        Self::with_routing(Box::new(ShortestPathFloydWarshall::default()), model, ctx)
+        Self::with_routing(Box::<ShortestPathFloydWarshall>::default(), model, ctx)
     }
 
     /// Creates a new network with supplied routing algorithm and network model.
