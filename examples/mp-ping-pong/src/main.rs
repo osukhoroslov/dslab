@@ -12,7 +12,7 @@ use log::LevelFilter;
 use sugars::boxed;
 
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates;
+use dslab_mp::mc::predicates::{goals, invariants, prunes};
 use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::StrategyConfig;
 use dslab_mp::message::Message;
@@ -193,19 +193,19 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
 
     let strategy_config = StrategyConfig::default()
-        .prune(predicates::mc_prune_sent_messages_limit(4))
-        .goal(predicates::mc_goal_got_n_local_messages(
+        .prune(prunes::mc_prune_sent_messages_limit(4))
+        .goal(goals::mc_goal_got_n_local_messages(
             "client-node".to_string(),
             "client".to_string(),
             2,
         ))
-        .invariant(predicates::mc_all_invariants(vec![
-            predicates::mc_invariant_received_messages(
+        .invariant(invariants::mc_all_invariants(vec![
+            invariants::mc_invariant_received_messages(
                 "client-node".to_string(),
                 "client".to_string(),
                 messages_expected,
             ),
-            predicates::mc_invariant_state_depth(20),
+            invariants::mc_invariant_state_depth(20),
         ]));
 
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
@@ -237,13 +237,13 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.network().set_drop_rate(0.3);
     let strategy_config = StrategyConfig::default()
-        .prune(predicates::mc_prune_state_depth(7))
-        .goal(predicates::mc_goal_got_n_local_messages(
+        .prune(prunes::mc_prune_state_depth(7))
+        .goal(goals::mc_goal_got_n_local_messages(
             "client-node".to_string(),
             "client".to_string(),
             2,
         ))
-        .invariant(predicates::mc_invariant_received_messages(
+        .invariant(invariants::mc_invariant_received_messages(
             "client-node".to_string(),
             "client".to_string(),
             messages_expected,

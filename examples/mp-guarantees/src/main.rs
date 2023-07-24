@@ -11,7 +11,7 @@ use rand_pcg::Pcg64;
 use sugars::boxed;
 
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates;
+use dslab_mp::mc::predicates::{goals, invariants, prunes};
 use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
@@ -438,14 +438,14 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let messages = send_messages(&mut sys, 2, false);
     let strategy_config = StrategyConfig::default()
-        .prune(predicates::mc_prune_sent_messages_limit(4))
-        .goal(predicates::mc_goal_got_n_local_messages(
+        .prune(prunes::mc_prune_sent_messages_limit(4))
+        .goal(goals::mc_goal_got_n_local_messages(
             "receiver-node".to_string(),
             "receiver".to_string(),
             2,
         ))
-        .invariant(predicates::mc_all_invariants(vec![
-            predicates::mc_invariant_state_depth(20),
+        .invariant(invariants::mc_all_invariants(vec![
+            invariants::mc_invariant_state_depth(20),
             mc_invariant_received_messages(messages, *config),
         ]));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
@@ -467,10 +467,10 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .collect();
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
-        .prune(predicates::mc_prune_state_depth(7))
-        .goal(predicates::mc_any_goal(vec![
-            predicates::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
-            predicates::mc_goal_no_events(),
+        .prune(prunes::mc_prune_state_depth(7))
+        .goal(goals::mc_any_goal(vec![
+            goals::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
+            goals::mc_goal_no_events(),
         ]))
         .invariant(mc_invariant_received_messages(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
