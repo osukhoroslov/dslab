@@ -97,6 +97,17 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Model checker configuration and launching.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -107,13 +118,15 @@
 <span class="kw">use </span>sugars::boxed;
 
 <span class="kw">use </span><span class="kw">crate</span>::events::{MessageReceived, TimerFired};
-<span class="kw">use </span><span class="kw">crate</span>::mc::events::{McEvent, McTime};
+<span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
+<span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent;
 <span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
 <span class="kw">use </span><span class="kw">crate</span>::mc::node::McNode;
 <span class="kw">use </span><span class="kw">crate</span>::mc::pending_events::PendingEvents;
 <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
 <span class="kw">use </span><span class="kw">crate</span>::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
-<span class="kw">use </span><span class="kw">crate</span>::mc::system::McSystem;
+<span class="kw">use </span><span class="kw">crate</span>::mc::system::{McSystem, McTime};
+<span class="kw">use </span><span class="kw">crate</span>::mc::trace_handler::TraceHandler;
 <span class="kw">use </span><span class="kw">crate</span>::system::System;
 <span class="kw">use </span><span class="kw">crate</span>::util::t;
 
@@ -135,12 +148,21 @@
 
         <span class="kw">let </span>mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
+        <span class="kw">let </span><span class="kw-2">mut </span>trace = sys.logger().trace().clone();
+        trace.push(LogEntry::McStarted {});
+        <span class="kw">let </span>trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
+
         <span class="kw">let </span><span class="kw-2">mut </span>nodes: HashMap&lt;String, McNode&gt; = HashMap::new();
         <span class="kw">for </span>node <span class="kw">in </span>sys.nodes() {
             <span class="kw">let </span>node = sys.get_node(<span class="kw-2">&amp;</span>node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(node.processes(), mc_net.clone(), node.clock_skew()),
+                McNode::new(
+                    node.processes(),
+                    mc_net.clone(),
+                    trace_handler.clone(),
+                    node.clock_skew(),
+                ),
             );
         }
 
@@ -162,7 +184,7 @@
         }
 
         <span class="self">Self </span>{
-            system: McSystem::new(nodes, mc_net, events),
+            system: McSystem::new(nodes, mc_net, events, trace_handler),
             strategy,
         }
     }

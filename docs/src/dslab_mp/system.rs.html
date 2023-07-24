@@ -304,6 +304,10 @@
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell, RefMut};
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::Path;
@@ -353,6 +357,10 @@
             proc_nodes: HashMap::new(),
             logger,
         }
+    }
+
+    <span class="kw">pub fn </span>logger(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;Logger&gt; {
+        <span class="self">self</span>.logger.borrow_mut()
     }
 
     <span class="comment">// Network ---------------------------------------------------------------------------------------------------------

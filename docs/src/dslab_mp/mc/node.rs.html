@@ -176,17 +176,56 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
-<span class="kw">use </span><span class="kw">crate</span>::mc::events::{McEvent, McTime};
-<span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
+<span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
 <span class="kw">use </span><span class="kw">crate</span>::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 <span class="kw">use </span><span class="kw">crate</span>::process::ProcessState;
+
+<span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent;
+<span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
+<span class="kw">use </span><span class="kw">crate</span>::mc::system::McTime;
+<span class="kw">use </span><span class="kw">crate</span>::mc::trace_handler::TraceHandler;
 
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>ProcessEntryState {
@@ -243,14 +282,21 @@
 <span class="kw">pub struct </span>McNode {
     processes: HashMap&lt;String, ProcessEntry&gt;,
     net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
+    trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
     clock_skew: f64,
 }
 
 <span class="kw">impl </span>McNode {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(processes: HashMap&lt;String, ProcessEntry&gt;, net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;, clock_skew: f64) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
+        processes: HashMap&lt;String, ProcessEntry&gt;,
+        net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
+        trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
+        clock_skew: f64,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             processes,
             net,
+            trace_handler,
             clock_skew,
         }
     }
@@ -321,12 +367,24 @@
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             <span class="kw">match </span>action {
                 ProcessEvent::MessageSent { msg, src, dest } =&gt; {
-                    <span class="kw">let </span>event = <span class="self">self</span>.net.borrow_mut().send_message(msg, src, dest);
+                    <span class="kw">let </span>event = <span class="self">self
+                        </span>.net
+                        .borrow_mut()
+                        .send_message(msg.clone(), src.clone(), dest.clone());
                     new_events.push(event);
                     proc_entry.sent_message_count += <span class="number">1</span>;
+
+                    <span class="kw">let </span>log_entry = LogEntry::McMessageSent { msg, src, dest };
+                    <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::LocalMessageSent { msg } =&gt; {
-                    proc_entry.local_outbox.push(msg);
+                    proc_entry.local_outbox.push(msg.clone());
+
+                    <span class="kw">let </span>log_entry = LogEntry::McLocalMessageSent {
+                        msg,
+                        proc: proc.clone(),
+                    };
+                    <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } =&gt; {
                     <span class="kw">if </span>behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(<span class="kw-2">&amp;</span>name) {
@@ -337,16 +395,28 @@
                         };
                         new_events.push(event);
                         <span class="comment">// event_id is 0 since it is not used in model checking
-                        </span>proc_entry.pending_timers.insert(name, <span class="number">0</span>);
+                        </span>proc_entry.pending_timers.insert(name.clone(), <span class="number">0</span>);
+
+                        <span class="kw">let </span>log_entry = LogEntry::McTimerSet {
+                            proc: proc.clone(),
+                            timer: name,
+                        };
+                        <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
                     }
                 }
                 ProcessEvent::TimerCancelled { name } =&gt; {
                     proc_entry.pending_timers.remove(<span class="kw-2">&amp;</span>name);
                     <span class="kw">let </span>event = McEvent::TimerCancelled {
-                        timer: name,
+                        timer: name.clone(),
                         proc: proc.clone(),
                     };
                     new_events.push(event);
+
+                    <span class="kw">let </span>log_entry = LogEntry::McTimerCancelled {
+                        proc: proc.clone(),
+                        timer: name,
+                    };
+                    <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
                 }
                 <span class="kw">_ </span>=&gt; {}
             }

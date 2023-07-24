@@ -471,6 +471,15 @@
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Main logic and configuration of model checking strategy.
 
 </span><span class="kw">use </span>std::collections::hash_map::DefaultHasher;
@@ -482,8 +491,12 @@
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>sugars::boxed;
 
-<span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
-<span class="kw">use </span><span class="kw">crate</span>::mc::events::{DeliveryOptions, McEvent, McEventId};
+<span class="kw">use </span><span class="kw">crate</span>::mc::error::McError;
+<span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent::{
+    MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired,
+};
+<span class="kw">use </span><span class="kw">crate</span>::mc::events::{McEvent, McEventId};
+<span class="kw">use </span><span class="kw">crate</span>::mc::network::DeliveryOptions;
 <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
 <span class="kw">use </span><span class="kw">crate</span>::mc::system::McSystem;
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
@@ -577,18 +590,6 @@
     </span>Debug,
 }
 
-<span class="doccomment">/// Status of the message which is passed to logging.
-</span><span class="kw">pub enum </span>LogContext {
-    <span class="doccomment">/// Nothing happened to the message.
-    </span>Default,
-
-    <span class="doccomment">/// Message was duplicated.
-    </span>Duplicated,
-
-    <span class="doccomment">/// Message data was corrupted.
-    </span>Corrupted,
-}
-
 <span class="doccomment">/// Alternative implementations of storing the previously visited system states
 /// and checking if the state was visited.
 </span><span class="kw">pub enum </span>VisitedStates {
@@ -601,6 +602,13 @@
 
     <span class="doccomment">/// Does not store any data about the previously visited system states.
     </span>Disabled,
+}
+
+<span class="doccomment">/// Holds either [`McEvent`] or [`McEventId`].
+</span><span class="attr">#[allow(missing_docs)]
+</span><span class="kw">pub enum </span>EventOrId {
+    Event(McEvent),
+    Id(McEventId),
 }
 
 <span class="doccomment">/// Model checking execution statistics.
@@ -639,7 +647,7 @@
 </span><span class="kw">pub type </span>CollectFn = Box&lt;<span class="kw">dyn </span>FnMut(<span class="kw-2">&amp;</span>McState) -&gt; bool&gt;;
 
 <span class="doccomment">/// Result of model checking run - statistics for successful run and error information for failure.
-</span><span class="kw">pub type </span>McResult = <span class="prelude-ty">Result</span>&lt;McStats, String&gt;;
+</span><span class="kw">pub type </span>McResult = <span class="prelude-ty">Result</span>&lt;McStats, McError&gt;;
 
 <span class="doccomment">/// Trait with common functions for different model checking strategies.
 </span><span class="kw">pub trait </span>Strategy {
@@ -652,12 +660,12 @@
     </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem) -&gt; McResult;
 
     <span class="doccomment">/// Callback which in called whenever a new system state is discovered.
-    </span><span class="kw">fn </span>search_step_impl(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, state: McState) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt;;
+    </span><span class="kw">fn </span>search_step_impl(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, state: McState) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt;;
 
     <span class="doccomment">/// Explores the possible system states reachable from the current state after processing the given event.
-    /// Calls `search_step_impl` for each new discovered state.    
-    </span><span class="kw">fn </span>process_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event_id: McEventId) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-        <span class="kw">let </span>event = <span class="self">self</span>.clone_event(system, event_id);
+    /// Calls `search_step_impl` for each new discovered state.
+    </span><span class="kw">fn </span>process_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event_id: McEventId) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt; {
+        <span class="kw">let </span>event = system.events.get(event_id).unwrap();
         <span class="kw">match </span>event {
             MessageReceived {
                 msg,
@@ -665,93 +673,98 @@
                 dest,
                 options,
             } =&gt; {
-                <span class="kw">match </span>options {
-                    DeliveryOptions::NoFailures(..) =&gt; <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>,
-                    DeliveryOptions::Dropped =&gt; <span class="self">self</span>.process_drop_event(system, event_id, msg, src, dest)<span class="question-mark">?</span>,
+                <span class="kw">match </span><span class="kw-2">*</span>options {
+                    DeliveryOptions::NoFailures(..) =&gt; <span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?</span>,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
                         max_dupl_count,
                         can_be_corrupted,
                     } =&gt; {
-                        <span class="comment">// Drop
+                        <span class="comment">// Clone needed data here to avoid cloning normal events without failures
+                        </span><span class="kw">let </span>msg = msg.clone();
+                        <span class="kw">let </span>src = src.clone();
+                        <span class="kw">let </span>dest = dest.clone();
+
+                        <span class="comment">// Normal delivery
+                        </span><span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?</span>;
+
+                        <span class="comment">// Message drop
                         </span><span class="kw">if </span>can_be_dropped {
-                            <span class="self">self</span>.process_drop_event(system, event_id, msg, src, dest)<span class="question-mark">?</span>;
+                            <span class="kw">let </span>drop_event = MessageDropped {
+                                msg: msg.clone(),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: <span class="prelude-val">Some</span>(event_id),
+                            };
+                            <span class="self">self</span>.search_step(system, EventOrId::Event(drop_event))<span class="question-mark">?</span>;
                         }
 
-                        <span class="comment">// Default (normal / corrupt)
-                        </span><span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-                        <span class="kw">if </span>can_be_corrupted {
-                            <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+                        <span class="comment">// Message corruption
+                        </span><span class="kw">if </span>can_be_corrupted {
+                            <span class="kw">let </span>corruption_event = MessageCorrupted {
+                                msg: msg.clone(),
+                                corrupted_msg: <span class="self">self</span>.corrupt_message(msg.clone()),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: event_id,
+                            };
+                            <span class="self">self</span>.search_step(system, EventOrId::Event(corruption_event))<span class="question-mark">?</span>;
                         }
 
-                        <span class="comment">// Duplicate (normal / corrupt one)
+                        <span class="comment">// Message duplication
                         </span><span class="kw">if </span>max_dupl_count &gt; <span class="number">0 </span>{
-                            <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">true</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-                            <span class="kw">if </span>can_be_corrupted {
-                                <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-                            }
+                            <span class="kw">let </span>duplication_event = MessageDuplicated {
+                                msg,
+                                src,
+                                dest,
+                                receive_event_id: event_id,
+                            };
+                            <span class="self">self</span>.search_step(system, EventOrId::Event(duplication_event))<span class="question-mark">?</span>;
                         }
                     }
                 }
             }
-            TimerFired { .. } =&gt; {
-                <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-            }
             TimerCancelled { proc, timer } =&gt; {
-                system.events.cancel_timer(proc, timer);
-                <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-            }
-            MessageDropped { .. } =&gt; {
-                <span class="self">self</span>.apply_event(system, event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-            }
+                system.events.cancel_timer(proc.clone(), timer.clone());
+                <span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?
+            </span>}
+            <span class="kw">_ </span>=&gt; <span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?</span>,
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Processes event dropping.
-    </span><span class="kw">fn </span>process_drop_event(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        system: <span class="kw-2">&amp;mut </span>McSystem,
-        event_id: McEventId,
-        msg: Message,
-        src: String,
-        dest: String,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-        <span class="kw">let </span>state = system.get_state();
-        <span class="self">self</span>.take_event(system, event_id);
-
-        <span class="kw">let </span>drop_event_id = <span class="self">self</span>.add_event(system, MessageDropped { msg, src, dest });
-
-        <span class="self">self</span>.apply_event(system, drop_event_id, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-        system.set_state(state);
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="doccomment">/// Applies (possibly modified) event to the system, calls `search_step_impl` with the produced state
+    <span class="doccomment">/// Applies the specified event to the system, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
-    </span><span class="kw">fn </span>apply_event(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        system: <span class="kw-2">&amp;mut </span>McSystem,
-        event_id: McEventId,
-        duplicate: bool,
-        corrupt: bool,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    </span><span class="kw">fn </span>search_step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event: EventOrId) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt; {
         <span class="kw">let </span>state = system.get_state();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>event;
-        <span class="kw">if </span>duplicate {
-            event = <span class="self">self</span>.duplicate_event(system, event_id);
-        } <span class="kw">else </span>{
-            event = <span class="self">self</span>.take_event(system, event_id);
+        <span class="kw">let </span><span class="kw-2">mut </span>event = <span class="kw">match </span>event {
+            EventOrId::Event(event) =&gt; event,
+            EventOrId::Id(event_id) =&gt; <span class="self">self</span>.take_event(system, event_id),
+        };
+
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span>event {
+            MessageDropped { receive_event_id, .. } =&gt; {
+                receive_event_id.map(|id| <span class="self">self</span>.take_event(system, id));
+            }
+            MessageDuplicated { receive_event_id, .. } =&gt; {
+                <span class="kw">let </span>dupl_event = <span class="self">self</span>.duplicate_event(system, <span class="kw-2">*</span>receive_event_id);
+                <span class="self">self</span>.add_event(system, dupl_event);
+            }
+            MessageCorrupted {
+                receive_event_id,
+                corrupted_msg,
+                ..
+            } =&gt; {
+                <span class="kw">let </span>original_event = <span class="self">self</span>.take_event(system, <span class="kw-2">*</span>receive_event_id);
+                <span class="kw">let </span>corrupted = <span class="self">self</span>.create_corrupted_receive(original_event, corrupted_msg.clone());
+                system.events.push_with_fixed_id(corrupted, <span class="kw-2">*</span>receive_event_id);
+            }
+            <span class="kw">_ </span>=&gt; {}
         }
 
-        <span class="kw">if </span>corrupt {
-            event = <span class="self">self</span>.corrupt_msg_data(event, system.depth());
-        }
-
-        <span class="self">self</span>.debug_log(<span class="kw-2">&amp;</span>event, LogContext::Default, system.depth());
+        <span class="self">self</span>.debug_log(<span class="kw-2">&amp;</span>event, system.depth());
 
         system.apply_event(event);
 
@@ -771,56 +784,57 @@
         system.events.pop(event_id)
     }
 
-    <span class="doccomment">/// Clones the event from pending events by id.
-    </span><span class="kw">fn </span>clone_event(<span class="kw-2">&amp;</span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event_id: McEventId) -&gt; McEvent {
-        system.events.get(event_id).unwrap().clone()
-    }
-
     <span class="doccomment">/// Adds the event to pending events list.
     </span><span class="kw">fn </span>add_event(<span class="kw-2">&amp;</span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event: McEvent) -&gt; McEventId {
         system.events.push(event)
     }
 
-    <span class="doccomment">/// Applies corruption to the MessageReceived event data.
-    </span><span class="kw">fn </span>corrupt_msg_data(<span class="kw-2">&amp;</span><span class="self">self</span>, event: McEvent, search_depth: u64) -&gt; McEvent {
-        <span class="self">self</span>.debug_log(<span class="kw-2">&amp;</span>event, LogContext::Corrupted, search_depth);
-        <span class="kw">match </span>event {
+    <span class="doccomment">/// Applies corruption to the Message.
+    </span><span class="kw">fn </span>corrupt_message(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>msg: Message) -&gt; Message {
+        <span class="macro">lazy_static! </span>{
+            <span class="kw">static </span><span class="kw-2">ref </span>RE: Regex = Regex::new(<span class="string">r#&quot;&quot;[^&quot;]+&quot;&quot;#</span>).unwrap();
+        }
+        msg.data = RE.replace_all(<span class="kw-2">&amp;</span>msg.data, <span class="string">&quot;\&quot;\&quot;&quot;</span>).to_string();
+        msg
+    }
+
+    <span class="doccomment">/// Creates MessageReceived event with corrupted msg.
+    </span><span class="kw">fn </span>create_corrupted_receive(<span class="kw-2">&amp;</span><span class="self">self</span>, event: McEvent, corrupted_msg: Message) -&gt; McEvent {
+        <span class="kw">if let </span>MessageReceived {
+            src, dest, <span class="kw-2">mut </span>options, ..
+        } = event
+        {
+            <span class="kw">if let </span>DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = <span class="kw-2">&amp;mut </span>options {
+                <span class="kw-2">*</span>can_be_corrupted = <span class="bool-val">false</span>;
+            }
             MessageReceived {
-                msg,
+                msg: corrupted_msg,
                 src,
                 dest,
                 options,
-            } =&gt; {
-                <span class="macro">lazy_static! </span>{
-                    <span class="kw">static </span><span class="kw-2">ref </span>RE: Regex = Regex::new(<span class="string">r#&quot;&quot;[^&quot;]+&quot;&quot;#</span>).unwrap();
-                }
-                <span class="kw">let </span>corrupted_data = RE.replace_all(<span class="kw-2">&amp;</span>msg.data, <span class="string">&quot;\&quot;\&quot;&quot;</span>).to_string();
-                MessageReceived {
-                    msg: Message::new(msg.tip, corrupted_data),
-                    src,
-                    dest,
-                    options,
-                }
             }
-            <span class="kw">_ </span>=&gt; event,
+        } <span class="kw">else </span>{
+            <span class="macro">panic!</span>(<span class="string">&quot;Unexpected event type&quot;</span>)
         }
     }
 
     <span class="doccomment">/// Duplicates event from pending events list by id.
     /// The new event is left in pending events list and the old one is returned.
     </span><span class="kw">fn </span>duplicate_event(<span class="kw-2">&amp;</span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event_id: McEventId) -&gt; McEvent {
-        <span class="kw">let </span>event = <span class="self">self</span>.take_event(system, event_id);
+        <span class="kw">let </span><span class="kw-2">mut </span>event = <span class="self">self</span>.take_event(system, event_id);
+
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        <span class="self">self</span>.debug_log(<span class="kw-2">&amp;</span>event, LogContext::Duplicated, system.depth());
+
+        event.disable_duplications();
         event
     }
 
     <span class="doccomment">/// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    </span><span class="kw">fn </span>debug_log(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>McEvent, log_context: LogContext, depth: u64) {
+    </span><span class="kw">fn </span>debug_log(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>McEvent, depth: u64) {
         <span class="kw">if </span><span class="self">self</span>.execution_mode() == <span class="kw-2">&amp;</span>ExecutionMode::Debug {
             <span class="kw">match </span>event {
                 MessageReceived { msg, src, dest, .. } =&gt; {
-                    <span class="self">self</span>.log_message(depth, msg, src, dest, log_context);
+                    <span class="macro">t!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, depth, dest, src, msg);
                 }
                 TimerFired { proc, timer, .. } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} !-- {:&lt;10} &lt;-- timer fired&quot;</span>, depth, proc, timer).yellow());
@@ -835,25 +849,26 @@
                     )
                     .red());
                 }
-            }
-        }
-    }
-
-    <span class="doccomment">/// Logs the message according to its log context.
-    </span><span class="kw">fn </span>log_message(<span class="kw-2">&amp;</span><span class="self">self</span>, depth: u64, msg: <span class="kw-2">&amp;</span>Message, src: <span class="kw-2">&amp;</span>String, dest: <span class="kw-2">&amp;</span>String, log_context: LogContext) {
-        <span class="kw">match </span>log_context {
-            LogContext::Default =&gt; {
-                <span class="macro">t!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, depth, dest, src, msg);
-            }
-            LogContext::Duplicated =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{:&gt;9} {:&gt;10} -=≡ {:&lt;10} {:?} &lt;-- message duplicated&quot;</span>,
-                    <span class="string">&quot;~~~&quot;</span>, src, dest, msg
-                )
-                .blue());
-            }
-            LogContext::Corrupted =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?} &lt;-- message corrupted&quot;</span>, msg).red());
+                MessageDuplicated { msg, src, dest, .. } =&gt; {
+                    <span class="macro">t!</span>(<span class="macro">format!</span>(
+                        <span class="string">&quot;{:&gt;10} | {:&gt;10} -=≡ {:&lt;10} {:?} &lt;-- message duplicated&quot;</span>,
+                        depth, src, dest, msg
+                    )
+                    .blue());
+                }
+                MessageCorrupted {
+                    msg,
+                    corrupted_msg,
+                    src,
+                    dest,
+                    ..
+                } =&gt; {
+                    <span class="macro">t!</span>(<span class="macro">format!</span>(
+                        <span class="string">&quot;{:&gt;10} | {:&gt;10} -x- {:&lt;10} {:?} ~~&gt; {:?} &lt;-- message corrupted&quot;</span>,
+                        depth, src, dest, msg, corrupted_msg
+                    )
+                    .blue());
+                }
             }
         }
     }
@@ -895,13 +910,13 @@
     }
 
     <span class="doccomment">/// Applies user-defined checking functions to the system state and returns the result of the check.
-    </span><span class="kw">fn </span>check_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>McState) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;(), String&gt;&gt; {
+    </span><span class="kw">fn </span>check_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>McState) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;(), McError&gt;&gt; {
         <span class="kw">if </span>(<span class="self">self</span>.collect())(state) {
             <span class="self">self</span>.stats().collected_states.insert(state.clone());
         }
         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = (<span class="self">self</span>.invariant())(state) {
             <span class="comment">// Invariant is broken
-            </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(err))
+            </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(McError::new(err, state.trace.clone())))
         } <span class="kw">else if let </span><span class="prelude-val">Some</span>(status) = (<span class="self">self</span>.goal())(state) {
             <span class="comment">// Reached final state of the system
             </span><span class="self">self</span>.on_final_state_reached(status);
@@ -912,7 +927,10 @@
             <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(()))
         } <span class="kw">else if </span>state.events.available_events_num() == <span class="number">0 </span>{
             <span class="comment">// exhausted without goal completed
-            </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="string">&quot;nothing left to do to reach the goal&quot;</span>.to_owned()))
+            </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(McError::new(
+                <span class="string">&quot;nothing left to do to reach the goal&quot;</span>.to_owned(),
+                state.trace.clone(),
+            )))
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>}

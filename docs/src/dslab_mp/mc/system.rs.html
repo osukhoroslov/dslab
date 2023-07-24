@@ -105,38 +105,65 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::hash_map::DefaultHasher;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span>ordered_float::OrderedFloat;
+
 <span class="kw">use </span><span class="kw">crate</span>::mc::events::{McEvent, McEventId};
 <span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
 <span class="kw">use </span><span class="kw">crate</span>::mc::node::McNode;
 <span class="kw">use </span><span class="kw">crate</span>::mc::pending_events::PendingEvents;
 <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
+<span class="kw">use </span><span class="kw">crate</span>::mc::trace_handler::TraceHandler;
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
+
+<span class="kw">pub type </span>McTime = OrderedFloat&lt;f64&gt;;
 
 <span class="kw">pub struct </span>McSystem {
     nodes: HashMap&lt;String, McNode&gt;,
     net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) events: PendingEvents,
     depth: u64,
+    trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
 }
 
 <span class="kw">impl </span>McSystem {
-    <span class="kw">pub fn </span>new(nodes: HashMap&lt;String, McNode&gt;, net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;, events: PendingEvents) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(
+        nodes: HashMap&lt;String, McNode&gt;,
+        net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
+        events: PendingEvents,
+        trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             nodes,
             net,
             events,
             depth: <span class="number">0</span>,
+            trace_handler,
         }
     }
 
     <span class="kw">pub fn </span>apply_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: McEvent) {
         <span class="self">self</span>.depth += <span class="number">1</span>;
+        <span class="self">self</span>.trace_handler.borrow_mut().push(event.to_log_entry());
         <span class="kw">let </span>event_time = <span class="self">Self</span>::get_approximate_event_time(<span class="self">self</span>.depth);
         <span class="kw">let </span>state_hash = <span class="self">self</span>.get_state_hash();
         <span class="kw">let </span>new_events = <span class="kw">match </span>event {
@@ -177,7 +204,7 @@
     }
 
     <span class="kw">pub fn </span>get_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; McState {
-        <span class="kw">let </span><span class="kw-2">mut </span>state = McState::new(<span class="self">self</span>.events.clone(), <span class="self">self</span>.depth);
+        <span class="kw">let </span><span class="kw-2">mut </span>state = McState::new(<span class="self">self</span>.events.clone(), <span class="self">self</span>.depth, <span class="self">self</span>.trace_handler.borrow().trace());
         <span class="kw">for </span>(name, node) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
@@ -190,6 +217,7 @@
         }
         <span class="self">self</span>.events = state.events;
         <span class="self">self</span>.depth = state.depth;
+        <span class="self">self</span>.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
     <span class="kw">pub fn </span>available_events(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BTreeSet&lt;McEventId&gt; {

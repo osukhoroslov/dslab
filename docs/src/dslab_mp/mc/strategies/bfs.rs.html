@@ -99,10 +99,12 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of model checking BFS search strategy.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
 
+<span class="kw">use </span><span class="kw">crate</span>::mc::error::McError;
 <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
 <span class="kw">use </span><span class="kw">crate</span>::mc::strategy::{
     CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
@@ -122,7 +124,7 @@
 }
 
 <span class="kw">impl </span>Bfs {
-    <span class="kw">fn </span>bfs(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="kw">fn </span>bfs(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt; {
         <span class="comment">// Start search from initial state
         </span><span class="self">self</span>.states_queue.push_back(system.get_state());
 
@@ -167,7 +169,7 @@
         }
     }
 
-    <span class="kw">fn </span>search_step_impl(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _system: <span class="kw-2">&amp;mut </span>McSystem, state: McState) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="kw">fn </span>search_step_impl(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _system: <span class="kw-2">&amp;mut </span>McSystem, state: McState) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt; {
         <span class="self">self</span>.states_queue.push_back(state);
         <span class="prelude-val">Ok</span>(())
     }
