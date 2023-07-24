@@ -409,7 +409,7 @@ fn test_overhead(config: &TestConfig, guarantee: &str, faulty: bool) -> TestResu
 
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
-fn mc_invariant_received_messages(messages_expected: Vec<Message>, config: TestConfig) -> InvariantFn {
+fn mc_invariant_guarantees(messages_expected: Vec<Message>, config: TestConfig) -> InvariantFn {
     boxed!(move |state| {
         let mut expected_msg_count = HashMap::new();
         for msg in &messages_expected {
@@ -442,7 +442,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         .goal(goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2))
         .invariant(invariants::mc_all_invariants(vec![
             invariants::mc_invariant_state_depth(20),
-            mc_invariant_received_messages(messages, *config),
+            mc_invariant_guarantees(messages, *config),
         ]));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run();
@@ -468,7 +468,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
             goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2),
             goals::mc_goal_no_events(),
         ]))
-        .invariant(mc_invariant_received_messages(messages.clone(), *config));
+        .invariant(mc_invariant_guarantees(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
         for message in messages {
