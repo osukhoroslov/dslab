@@ -3,6 +3,8 @@
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 
+use crate::logger::LogEntry;
+
 use crate::mc::node::McNodeState;
 use crate::mc::pending_events::PendingEvents;
 
@@ -18,15 +20,20 @@ pub struct McState {
 
     /// Depth of the state in the state graph (i.e. the number of events happened since the initial state).
     pub depth: u64,
+
+    /// Sequence of events corresponding to a system execution leading to this state
+    /// (i.e. a path in the state graph from the initial state to this state).
+    pub trace: Vec<LogEntry>,
 }
 
 impl McState {
-    /// Creates a new state with the specified events in the system and the depth.
-    pub fn new(events: PendingEvents, depth: u64) -> Self {
+    /// Creates a new state with the specified events in the system, depth and trace.
+    pub fn new(events: PendingEvents, depth: u64, trace: Vec<LogEntry>) -> Self {
         Self {
             node_states: BTreeMap::new(),
             events,
             depth,
+            trace,
         }
     }
 }

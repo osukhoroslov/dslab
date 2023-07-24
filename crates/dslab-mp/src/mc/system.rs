@@ -4,32 +4,45 @@ use std::collections::{BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+use ordered_float::OrderedFloat;
+
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
+use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
+
+pub type McTime = OrderedFloat<f64>;
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: Rc<RefCell<McNetwork>>,
     pub(crate) events: PendingEvents,
     depth: u64,
+    trace_handler: Rc<RefCell<TraceHandler>>,
 }
 
 impl McSystem {
-    pub fn new(nodes: HashMap<String, McNode>, net: Rc<RefCell<McNetwork>>, events: PendingEvents) -> Self {
+    pub fn new(
+        nodes: HashMap<String, McNode>,
+        net: Rc<RefCell<McNetwork>>,
+        events: PendingEvents,
+        trace_handler: Rc<RefCell<TraceHandler>>,
+    ) -> Self {
         Self {
             nodes,
             net,
             events,
             depth: 0,
+            trace_handler,
         }
     }
 
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
+        self.trace_handler.borrow_mut().push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
         let new_events = match event {
@@ -70,7 +83,7 @@ impl McSystem {
     }
 
     pub fn get_state(&self) -> McState {
-        let mut state = McState::new(self.events.clone(), self.depth);
+        let mut state = McState::new(self.events.clone(), self.depth, self.trace_handler.borrow().trace());
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
@@ -83,6 +96,7 @@ impl McSystem {
         }
         self.events = state.events;
         self.depth = state.depth;
+        self.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
     pub fn available_events(&self) -> BTreeSet<McEventId> {

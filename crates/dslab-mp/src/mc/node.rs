@@ -4,11 +4,15 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::context::Context;
-use crate::mc::events::{McEvent, McTime};
-use crate::mc::network::McNetwork;
+use crate::logger::LogEntry;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
+
+use crate::mc::events::McEvent;
+use crate::mc::network::McNetwork;
+use crate::mc::system::McTime;
+use crate::mc::trace_handler::TraceHandler;
 
 #[derive(Debug, Clone)]
 pub struct ProcessEntryState {
@@ -65,14 +69,21 @@ pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<McNetwork>>,
+    trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
 }
 
 impl McNode {
-    pub(crate) fn new(processes: HashMap<String, ProcessEntry>, net: Rc<RefCell<McNetwork>>, clock_skew: f64) -> Self {
+    pub(crate) fn new(
+        processes: HashMap<String, ProcessEntry>,
+        net: Rc<RefCell<McNetwork>>,
+        trace_handler: Rc<RefCell<TraceHandler>>,
+        clock_skew: f64,
+    ) -> Self {
         Self {
             processes,
             net,
+            trace_handler,
             clock_skew,
         }
     }
@@ -143,12 +154,24 @@ impl McNode {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src, dest } => {
-                    let event = self.net.borrow_mut().send_message(msg, src, dest);
+                    let event = self
+                        .net
+                        .borrow_mut()
+                        .send_message(msg.clone(), src.clone(), dest.clone());
                     new_events.push(event);
                     proc_entry.sent_message_count += 1;
+
+                    let log_entry = LogEntry::McMessageSent { msg, src, dest };
+                    self.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
-                    proc_entry.local_outbox.push(msg);
+                    proc_entry.local_outbox.push(msg.clone());
+
+                    let log_entry = LogEntry::McLocalMessageSent {
+                        msg,
+                        proc: proc.clone(),
+                    };
+                    self.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } => {
                     if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
@@ -159,16 +182,28 @@ impl McNode {
                         };
                         new_events.push(event);
                         // event_id is 0 since it is not used in model checking
-                        proc_entry.pending_timers.insert(name, 0);
+                        proc_entry.pending_timers.insert(name.clone(), 0);
+
+                        let log_entry = LogEntry::McTimerSet {
+                            proc: proc.clone(),
+                            timer: name,
+                        };
+                        self.trace_handler.borrow_mut().push(log_entry);
                     }
                 }
                 ProcessEvent::TimerCancelled { name } => {
                     proc_entry.pending_timers.remove(&name);
                     let event = McEvent::TimerCancelled {
-                        timer: name,
+                        timer: name.clone(),
                         proc: proc.clone(),
                     };
                     new_events.push(event);
+
+                    let log_entry = LogEntry::McTimerCancelled {
+                        proc: proc.clone(),
+                        timer: name,
+                    };
+                    self.trace_handler.borrow_mut().push(log_entry);
                 }
                 _ => {}
             }

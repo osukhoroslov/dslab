@@ -49,6 +49,10 @@ impl System {
         }
     }
 
+    pub fn logger(&self) -> RefMut<Logger> {
+        self.logger.borrow_mut()
+    }
+
     // Network ---------------------------------------------------------------------------------------------------------
 
     pub fn network(&self) -> RefMut<Network> {

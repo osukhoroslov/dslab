@@ -8,13 +8,15 @@ use colored::*;
 use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
-use crate::mc::events::{McEvent, McTime};
+use crate::logger::LogEntry;
+use crate::mc::events::McEvent;
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
 use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
-use crate::mc::system::McSystem;
+use crate::mc::system::{McSystem, McTime};
+use crate::mc::trace_handler::TraceHandler;
 use crate::system::System;
 use crate::util::t;
 
@@ -36,12 +38,21 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
+        let mut trace = sys.logger().trace().clone();
+        trace.push(LogEntry::McStarted {});
+        let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
+
         let mut nodes: HashMap<String, McNode> = HashMap::new();
         for node in sys.nodes() {
             let node = sys.get_node(&node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(node.processes(), mc_net.clone(), node.clock_skew()),
+                McNode::new(
+                    node.processes(),
+                    mc_net.clone(),
+                    trace_handler.clone(),
+                    node.clock_skew(),
+                ),
             );
         }
 
@@ -63,7 +74,7 @@ impl ModelChecker {
         }
 
         Self {
-            system: McSystem::new(nodes, mc_net, events),
+            system: McSystem::new(nodes, mc_net, events, trace_handler),
             strategy,
         }
     }

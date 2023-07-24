@@ -2,6 +2,7 @@
 
 use std::collections::VecDeque;
 
+use crate::mc::error::McError;
 use crate::mc::state::McState;
 use crate::mc::strategy::{
     CollectFn, ExecutionMode, GoalFn, InvariantFn, McResult, McStats, PruneFn, Strategy, StrategyConfig, VisitedStates,
@@ -21,7 +22,7 @@ pub struct Bfs {
 }
 
 impl Bfs {
-    fn bfs(&mut self, system: &mut McSystem) -> Result<(), String> {
+    fn bfs(&mut self, system: &mut McSystem) -> Result<(), McError> {
         // Start search from initial state
         self.states_queue.push_back(system.get_state());
 
@@ -66,7 +67,7 @@ impl Strategy for Bfs {
         }
     }
 
-    fn search_step_impl(&mut self, _system: &mut McSystem, state: McState) -> Result<(), String> {
+    fn search_step_impl(&mut self, _system: &mut McSystem, state: McState) -> Result<(), McError> {
         self.states_queue.push_back(state);
         Ok(())
     }

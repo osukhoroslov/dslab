@@ -1,11 +1,26 @@
 use std::cell::RefMut;
 use std::collections::{HashMap, HashSet};
 
-use crate::mc::events::{DeliveryOptions, McEvent, McTime};
+use serde::Serialize;
+
+use crate::mc::events::McEvent;
+use crate::mc::system::McTime;
 use crate::message::Message;
 use crate::network::Network;
 
 const DUPL_COUNT: u32 = 2;
+
+#[derive(Serialize, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum DeliveryOptions {
+    /// Message will be received exactly once without corruption with specified max delay
+    NoFailures(McTime),
+    /// Message delivery may be subject to some failures
+    PossibleFailures {
+        can_be_dropped: bool,
+        max_dupl_count: u32,
+        can_be_corrupted: bool,
+    },
+}
 
 pub struct McNetwork {
     corrupt_rate: f64,
@@ -62,7 +77,12 @@ impl McNetwork {
                 },
             }
         } else {
-            McEvent::MessageDropped { msg, src, dest }
+            McEvent::MessageDropped {
+                msg,
+                src,
+                dest,
+                receive_event_id: None,
+            }
         }
     }
 }

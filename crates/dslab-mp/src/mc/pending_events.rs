@@ -60,6 +60,12 @@ impl PendingEvents {
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
+            McEvent::MessageDuplicated { .. } => {
+                self.directives.insert(id);
+            }
+            McEvent::MessageCorrupted { .. } => {
+                self.directives.insert(id);
+            }
         };
         self.events.insert(id, event);
         id
@@ -117,8 +123,9 @@ impl PendingEvents {
 mod tests {
     use rand::prelude::IteratorRandom;
 
-    use crate::mc::events::{McEvent, McTime};
+    use crate::mc::events::McEvent;
     use crate::mc::pending_events::PendingEvents;
+    use crate::mc::system::McTime;
 
     #[test]
     fn test_mc_time() {

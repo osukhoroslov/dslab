@@ -12,11 +12,15 @@ use crate::{message::Message, util::t};
 
 pub struct Logger {
     log_file: Option<File>,
+    trace: Vec<LogEntry>,
 }
 
 impl Logger {
     pub fn new() -> Self {
-        Self { log_file: None }
+        Self {
+            log_file: None,
+            trace: vec![],
+        }
     }
 
     pub fn with_log_file(log_path: &Path) -> Self {
@@ -28,7 +32,10 @@ impl Logger {
                 .open(log_path)
                 .unwrap(),
         );
-        Self { log_file }
+        Self {
+            log_file,
+            trace: vec![],
+        }
     }
 
     pub fn has_log_file(&self) -> bool {
@@ -41,6 +48,8 @@ impl Logger {
             log_file.write_all(serialized.as_bytes()).unwrap();
             log_file.write_all("\n".as_bytes()).unwrap();
         }
+
+        self.trace.push(event.clone());
 
         match event {
             LogEntry::NodeStarted { time, node, .. } => {
@@ -158,7 +167,54 @@ impl Logger {
                 t!(format!("{:>9.3} - network reset, all problems healed", time).green());
             }
             LogEntry::ProcessStateUpdated { .. } => {}
+            LogEntry::McStarted { .. } => {
+                t!("MODEL CHECKING STARTED");
+            }
+            LogEntry::McLocalMessageSent { msg, proc } => {
+                t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
+            }
+            LogEntry::McMessageSent { msg, src, dest } => {
+                t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
+            }
+            LogEntry::McMessageReceived { msg, src, dest } => {
+                t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
+            }
+            LogEntry::McMessageDropped { msg, src, dest } => {
+                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
+            }
+            LogEntry::McMessageCorrupted {
+                msg,
+                corrupted_msg,
+                src,
+                dest,
+            } => {
+                t!(format!(
+                    "{:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
+                    src, dest, msg, corrupted_msg
+                )
+                .blue());
+            }
+            LogEntry::McMessageDuplicated { msg, src, dest } => {
+                t!(format!(
+                    "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
+                    "~~~", src, dest, msg
+                )
+                .blue());
+            }
+            LogEntry::McTimerSet { proc, timer } => {
+                t!(format!("{:>10} +++ {:<10} <-- timer set", proc, timer));
+            }
+            LogEntry::McTimerFired { proc, timer } => {
+                t!(format!("{:>10} !-- {:<10} <-- timer fired", proc, timer).yellow());
+            }
+            LogEntry::McTimerCancelled { proc, timer } => {
+                t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
+            }
         }
+    }
+
+    pub fn trace(&self) -> &Vec<LogEntry> {
+        &self.trace
     }
 }
 
@@ -168,7 +224,7 @@ impl Default for Logger {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum LogEntry {
     NodeStarted {
         time: f64,
@@ -314,5 +370,48 @@ pub enum LogEntry {
         node: String,
         proc: String,
         state: String,
+    },
+    McStarted {},
+    McLocalMessageSent {
+        msg: Message,
+        proc: String,
+    },
+    McMessageSent {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageReceived {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageDropped {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageCorrupted {
+        msg: Message,
+        corrupted_msg: Message,
+        src: String,
+        dest: String,
+    },
+    McMessageDuplicated {
+        msg: Message,
+        src: String,
+        dest: String,
+    },
+    McTimerSet {
+        proc: String,
+        timer: String,
+    },
+    McTimerFired {
+        proc: String,
+        timer: String,
+    },
+    McTimerCancelled {
+        proc: String,
+        timer: String,
     },
 }

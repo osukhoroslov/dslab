@@ -9,8 +9,12 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use sugars::boxed;
 
-use crate::mc::events::McEvent::{MessageDropped, MessageReceived, TimerCancelled, TimerFired};
-use crate::mc::events::{DeliveryOptions, McEvent, McEventId};
+use crate::mc::error::McError;
+use crate::mc::events::McEvent::{
+    MessageCorrupted, MessageDropped, MessageDuplicated, MessageReceived, TimerCancelled, TimerFired,
+};
+use crate::mc::events::{McEvent, McEventId};
+use crate::mc::network::DeliveryOptions;
 use crate::mc::state::McState;
 use crate::mc::system::McSystem;
 use crate::message::Message;
@@ -104,18 +108,6 @@ pub enum ExecutionMode {
     Debug,
 }
 
-/// Status of the message which is passed to logging.
-pub enum LogContext {
-    /// Nothing happened to the message.
-    Default,
-
-    /// Message was duplicated.
-    Duplicated,
-
-    /// Message data was corrupted.
-    Corrupted,
-}
-
 /// Alternative implementations of storing the previously visited system states
 /// and checking if the state was visited.
 pub enum VisitedStates {
@@ -128,6 +120,13 @@ pub enum VisitedStates {
 
     /// Does not store any data about the previously visited system states.
     Disabled,
+}
+
+/// Holds either [`McEvent`] or [`McEventId`].
+#[allow(missing_docs)]
+pub enum EventOrId {
+    Event(McEvent),
+    Id(McEventId),
 }
 
 /// Model checking execution statistics.
@@ -166,7 +165,7 @@ pub type InvariantFn = Box<dyn FnMut(&McState) -> Result<(), String>>;
 pub type CollectFn = Box<dyn FnMut(&McState) -> bool>;
 
 /// Result of model checking run - statistics for successful run and error information for failure.
-pub type McResult = Result<McStats, String>;
+pub type McResult = Result<McStats, McError>;
 
 /// Trait with common functions for different model checking strategies.
 pub trait Strategy {
@@ -179,12 +178,12 @@ pub trait Strategy {
     fn run(&mut self, system: &mut McSystem) -> McResult;
 
     /// Callback which in called whenever a new system state is discovered.
-    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), String>;
+    fn search_step_impl(&mut self, system: &mut McSystem, state: McState) -> Result<(), McError>;
 
     /// Explores the possible system states reachable from the current state after processing the given event.
-    /// Calls `search_step_impl` for each new discovered state.    
-    fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), String> {
-        let event = self.clone_event(system, event_id);
+    /// Calls `search_step_impl` for each new discovered state.
+    fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), McError> {
+        let event = system.events.get(event_id).unwrap();
         match event {
             MessageReceived {
                 msg,
@@ -192,93 +191,98 @@ pub trait Strategy {
                 dest,
                 options,
             } => {
-                match options {
-                    DeliveryOptions::NoFailures(..) => self.apply_event(system, event_id, false, false)?,
-                    DeliveryOptions::Dropped => self.process_drop_event(system, event_id, msg, src, dest)?,
+                match *options {
+                    DeliveryOptions::NoFailures(..) => self.search_step(system, EventOrId::Id(event_id))?,
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
                         max_dupl_count,
                         can_be_corrupted,
                     } => {
-                        // Drop
+                        // Clone needed data here to avoid cloning normal events without failures
+                        let msg = msg.clone();
+                        let src = src.clone();
+                        let dest = dest.clone();
+
+                        // Normal delivery
+                        self.search_step(system, EventOrId::Id(event_id))?;
+
+                        // Message drop
                         if can_be_dropped {
-                            self.process_drop_event(system, event_id, msg, src, dest)?;
+                            let drop_event = MessageDropped {
+                                msg: msg.clone(),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: Some(event_id),
+                            };
+                            self.search_step(system, EventOrId::Event(drop_event))?;
                         }
 
-                        // Default (normal / corrupt)
-                        self.apply_event(system, event_id, false, false)?;
+                        // Message corruption
                         if can_be_corrupted {
-                            self.apply_event(system, event_id, false, true)?;
+                            let corruption_event = MessageCorrupted {
+                                msg: msg.clone(),
+                                corrupted_msg: self.corrupt_message(msg.clone()),
+                                src: src.clone(),
+                                dest: dest.clone(),
+                                receive_event_id: event_id,
+                            };
+                            self.search_step(system, EventOrId::Event(corruption_event))?;
                         }
 
-                        // Duplicate (normal / corrupt one)
+                        // Message duplication
                         if max_dupl_count > 0 {
-                            self.apply_event(system, event_id, true, false)?;
-                            if can_be_corrupted {
-                                self.apply_event(system, event_id, true, true)?;
-                            }
+                            let duplication_event = MessageDuplicated {
+                                msg,
+                                src,
+                                dest,
+                                receive_event_id: event_id,
+                            };
+                            self.search_step(system, EventOrId::Event(duplication_event))?;
                         }
                     }
                 }
             }
-            TimerFired { .. } => {
-                self.apply_event(system, event_id, false, false)?;
-            }
             TimerCancelled { proc, timer } => {
-                system.events.cancel_timer(proc, timer);
-                self.apply_event(system, event_id, false, false)?;
+                system.events.cancel_timer(proc.clone(), timer.clone());
+                self.search_step(system, EventOrId::Id(event_id))?
             }
-            MessageDropped { .. } => {
-                self.apply_event(system, event_id, false, false)?;
-            }
+            _ => self.search_step(system, EventOrId::Id(event_id))?,
         }
 
         Ok(())
     }
 
-    /// Processes event dropping.
-    fn process_drop_event(
-        &mut self,
-        system: &mut McSystem,
-        event_id: McEventId,
-        msg: Message,
-        src: String,
-        dest: String,
-    ) -> Result<(), String> {
-        let state = system.get_state();
-        self.take_event(system, event_id);
-
-        let drop_event_id = self.add_event(system, MessageDropped { msg, src, dest });
-
-        self.apply_event(system, drop_event_id, false, false)?;
-        system.set_state(state);
-
-        Ok(())
-    }
-
-    /// Applies (possibly modified) event to the system, calls `search_step_impl` with the produced state
+    /// Applies the specified event to the system, calls `search_step_impl` with the produced state
     /// and restores the system state afterwards.
-    fn apply_event(
-        &mut self,
-        system: &mut McSystem,
-        event_id: McEventId,
-        duplicate: bool,
-        corrupt: bool,
-    ) -> Result<(), String> {
+    fn search_step(&mut self, system: &mut McSystem, event: EventOrId) -> Result<(), McError> {
         let state = system.get_state();
 
-        let mut event;
-        if duplicate {
-            event = self.duplicate_event(system, event_id);
-        } else {
-            event = self.take_event(system, event_id);
+        let mut event = match event {
+            EventOrId::Event(event) => event,
+            EventOrId::Id(event_id) => self.take_event(system, event_id),
+        };
+
+        match &mut event {
+            MessageDropped { receive_event_id, .. } => {
+                receive_event_id.map(|id| self.take_event(system, id));
+            }
+            MessageDuplicated { receive_event_id, .. } => {
+                let dupl_event = self.duplicate_event(system, *receive_event_id);
+                self.add_event(system, dupl_event);
+            }
+            MessageCorrupted {
+                receive_event_id,
+                corrupted_msg,
+                ..
+            } => {
+                let original_event = self.take_event(system, *receive_event_id);
+                let corrupted = self.create_corrupted_receive(original_event, corrupted_msg.clone());
+                system.events.push_with_fixed_id(corrupted, *receive_event_id);
+            }
+            _ => {}
         }
 
-        if corrupt {
-            event = self.corrupt_msg_data(event, system.depth());
-        }
-
-        self.debug_log(&event, LogContext::Default, system.depth());
+        self.debug_log(&event, system.depth());
 
         system.apply_event(event);
 
@@ -298,56 +302,57 @@ pub trait Strategy {
         system.events.pop(event_id)
     }
 
-    /// Clones the event from pending events by id.
-    fn clone_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
-        system.events.get(event_id).unwrap().clone()
-    }
-
     /// Adds the event to pending events list.
     fn add_event(&self, system: &mut McSystem, event: McEvent) -> McEventId {
         system.events.push(event)
     }
 
-    /// Applies corruption to the MessageReceived event data.
-    fn corrupt_msg_data(&self, event: McEvent, search_depth: u64) -> McEvent {
-        self.debug_log(&event, LogContext::Corrupted, search_depth);
-        match event {
+    /// Applies corruption to the Message.
+    fn corrupt_message(&self, mut msg: Message) -> Message {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
+        }
+        msg.data = RE.replace_all(&msg.data, "\"\"").to_string();
+        msg
+    }
+
+    /// Creates MessageReceived event with corrupted msg.
+    fn create_corrupted_receive(&self, event: McEvent, corrupted_msg: Message) -> McEvent {
+        if let MessageReceived {
+            src, dest, mut options, ..
+        } = event
+        {
+            if let DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = &mut options {
+                *can_be_corrupted = false;
+            }
             MessageReceived {
-                msg,
+                msg: corrupted_msg,
                 src,
                 dest,
                 options,
-            } => {
-                lazy_static! {
-                    static ref RE: Regex = Regex::new(r#""[^"]+""#).unwrap();
-                }
-                let corrupted_data = RE.replace_all(&msg.data, "\"\"").to_string();
-                MessageReceived {
-                    msg: Message::new(msg.tip, corrupted_data),
-                    src,
-                    dest,
-                    options,
-                }
             }
-            _ => event,
+        } else {
+            panic!("Unexpected event type")
         }
     }
 
     /// Duplicates event from pending events list by id.
     /// The new event is left in pending events list and the old one is returned.
     fn duplicate_event(&self, system: &mut McSystem, event_id: McEventId) -> McEvent {
-        let event = self.take_event(system, event_id);
+        let mut event = self.take_event(system, event_id);
+
         system.events.push_with_fixed_id(event.duplicate().unwrap(), event_id);
-        self.debug_log(&event, LogContext::Duplicated, system.depth());
+
+        event.disable_duplications();
         event
     }
 
     /// Prints the log for particular event if the execution mode is [`Debug`](ExecutionMode::Debug).
-    fn debug_log(&self, event: &McEvent, log_context: LogContext, depth: u64) {
+    fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
                 MessageReceived { msg, src, dest, .. } => {
-                    self.log_message(depth, msg, src, dest, log_context);
+                    t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
                 }
                 TimerFired { proc, timer, .. } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
@@ -362,25 +367,26 @@ pub trait Strategy {
                     )
                     .red());
                 }
-            }
-        }
-    }
-
-    /// Logs the message according to its log context.
-    fn log_message(&self, depth: u64, msg: &Message, src: &String, dest: &String, log_context: LogContext) {
-        match log_context {
-            LogContext::Default => {
-                t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
-            }
-            LogContext::Duplicated => {
-                t!(format!(
-                    "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
-                    "~~~", src, dest, msg
-                )
-                .blue());
-            }
-            LogContext::Corrupted => {
-                t!(format!("{:?} <-- message corrupted", msg).red());
+                MessageDuplicated { msg, src, dest, .. } => {
+                    t!(format!(
+                        "{:>10} | {:>10} -=≡ {:<10} {:?} <-- message duplicated",
+                        depth, src, dest, msg
+                    )
+                    .blue());
+                }
+                MessageCorrupted {
+                    msg,
+                    corrupted_msg,
+                    src,
+                    dest,
+                    ..
+                } => {
+                    t!(format!(
+                        "{:>10} | {:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
+                        depth, src, dest, msg, corrupted_msg
+                    )
+                    .blue());
+                }
             }
         }
     }
@@ -422,13 +428,13 @@ pub trait Strategy {
     }
 
     /// Applies user-defined checking functions to the system state and returns the result of the check.
-    fn check_state(&mut self, state: &McState) -> Option<Result<(), String>> {
+    fn check_state(&mut self, state: &McState) -> Option<Result<(), McError>> {
         if (self.collect())(state) {
             self.stats().collected_states.insert(state.clone());
         }
         if let Err(err) = (self.invariant())(state) {
             // Invariant is broken
-            Some(Err(err))
+            Some(Err(McError::new(err, state.trace.clone())))
         } else if let Some(status) = (self.goal())(state) {
             // Reached final state of the system
             self.on_final_state_reached(status);
@@ -439,7 +445,10 @@ pub trait Strategy {
             Some(Ok(()))
         } else if state.events.available_events_num() == 0 {
             // exhausted without goal completed
-            Some(Err("nothing left to do to reach the goal".to_owned()))
+            Some(Err(McError::new(
+                "nothing left to do to reach the goal".to_owned(),
+                state.trace.clone(),
+            )))
         } else {
             None
         }

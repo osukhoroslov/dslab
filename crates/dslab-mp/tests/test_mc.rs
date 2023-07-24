@@ -7,6 +7,8 @@ use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
 use dslab_mp::context::Context;
+use dslab_mp::logger::LogEntry;
+use dslab_mp::mc::error::McError;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
@@ -126,6 +128,29 @@ impl Process for PostponedReceiverNode {
 }
 
 #[derive(Clone)]
+struct DumbReceiverNode {}
+
+impl DumbReceiverNode {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Process for DumbReceiverNode {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+        ctx.send_local(msg);
+    }
+
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+        ctx.set_timer("timeout", 1.0);
+    }
+
+    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+        ctx.send_local(Message::new("TIMER", "timeout"));
+    }
+}
+
+#[derive(Clone)]
 struct SpammerNode {
     other: String,
     cnt: u64,
@@ -198,6 +223,17 @@ fn build_postponed_delivery_system() -> System {
     sys.add_node("node2");
     let process1 = boxed!(PingMessageNode::new("process2"));
     let process2 = boxed!(PostponedReceiverNode::new());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
+    sys
+}
+
+fn build_dumb_delivery_system_with_useless_timer() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(PingMessageNode::new("process2"));
+    let process2 = boxed!(DumbReceiverNode::new());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -299,6 +335,54 @@ fn build_no_events_left_with_counter_goal(count_goal_states: Rc<RefCell<i32>>) -
     })
 }
 
+fn two_nodes_started_trace() -> Vec<LogEntry> {
+    vec![
+        LogEntry::NodeStarted {
+            time: 0.0,
+            node: "node1".to_string(),
+            node_id: 1,
+        },
+        LogEntry::NodeStarted {
+            time: 0.0,
+            node: "node2".to_string(),
+            node_id: 2,
+        },
+        LogEntry::ProcessStarted {
+            time: 0.0,
+            node: "node1".to_string(),
+            proc: "process1".to_string(),
+        },
+        LogEntry::ProcessStarted {
+            time: 0.0,
+            node: "node2".to_string(),
+            proc: "process2".to_string(),
+        },
+    ]
+}
+
+fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
+    let mut trace = two_nodes_started_trace();
+    trace.extend(vec![
+        LogEntry::LocalMessageReceived {
+            time: 0.0,
+            msg_id: "node1-process1-0".to_string(),
+            node: "node1".to_string(),
+            proc: "process1".to_string(),
+            msg: msg.clone(),
+        },
+        LogEntry::MessageSent {
+            time: 0.0,
+            msg_id: "0".to_string(),
+            src_node: "node1".to_string(),
+            src_proc: "process1".to_string(),
+            dest_node: "node2".to_string(),
+            dest_proc: "process2".to_string(),
+            msg,
+        },
+    ]);
+    trace
+}
+
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
@@ -325,7 +409,11 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
 
     let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
-    assert!(if let Err(msg) = result { msg == "broken" } else { false });
+    assert!(if let Err(err) = result {
+        err.message() == "broken"
+    } else {
+        false
+    });
 }
 
 #[rstest]
@@ -339,7 +427,12 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("nothing left to do to reach the goal".to_string());
+    let mut expected_trace = two_nodes_started_trace();
+    expected_trace.push(LogEntry::McStarted {});
+    let expected = Err(McError::new(
+        "nothing left to do to reach the goal".to_string(),
+        expected_trace,
+    ));
     assert_eq!(result, expected);
 }
 
@@ -414,13 +507,27 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let invariant = boxed!(|_: &McState| Ok(()));
 
     let mut sys = build_ping_system();
-    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    let msg = Message::new("PING", "some_data");
+    sys.send_local_message("process1", msg.clone());
     sys.network().set_drop_rate(0.5);
 
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("nothing left to do to reach the goal".to_string());
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    expected_trace.extend(vec![
+        LogEntry::McStarted {},
+        LogEntry::McMessageDropped {
+            msg,
+            src: "process1".to_string(),
+            dest: "process2".to_string(),
+        },
+    ]);
+
+    let expected = Err(McError::new(
+        "nothing left to do to reach the goal".to_string(),
+        expected_trace,
+    ));
     assert_eq!(result, expected);
 }
 
@@ -444,7 +551,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     let result = mc.run();
 
     assert!(result.is_ok());
-    assert_eq!(*count_states.borrow(), 6);
+    assert_eq!(*count_states.borrow(), 9);
     assert_eq!(*count_goal_states.borrow(), 3);
 }
 
@@ -465,13 +572,36 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     });
 
     let mut sys = build_ping_system();
-    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    let msg = Message::new("PING", "some_data");
+    let src = "process1".to_string();
+    let dest = "process2".to_string();
+    sys.send_local_message("process1", msg.clone());
     sys.network().set_dupl_rate(0.5);
 
     let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
     let result = mc.run();
 
-    let expected = Err("too many messages".to_string());
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
+        msg: msg.clone(),
+        src: src.clone(),
+        dest: dest.clone(),
+    };
+    let expected_message_received_event = LogEntry::McMessageReceived {
+        msg: msg.clone(),
+        src,
+        dest: dest.clone(),
+    };
+    let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dest };
+    expected_trace.extend(vec![
+        LogEntry::McStarted {},
+        expected_message_duplicated_event,
+        expected_message_received_event.clone(),
+        expected_local_message_sent_event.clone(),
+        expected_message_received_event,
+        expected_local_message_sent_event,
+    ]);
+    let expected = Err(McError::new("too many messages".to_string(), expected_trace));
     assert_eq!(result, expected);
 }
 
@@ -558,6 +688,48 @@ fn timer(#[case] strategy_name: String) {
     let result = mc.run();
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 4); // final states for both branches are equal: first timer, then message
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn useless_timer(#[case] strategy_name: String) {
+    let prune = boxed!(|_: &McState| None);
+
+    let goal = build_no_events_left_goal();
+
+    let invariant = boxed!(move |state: &McState| {
+        let proc2_outbox = &state.node_states["node2"]["process2"].local_outbox;
+
+        if state.events.available_events_num() == 0 {
+            if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
+                return Err("invalid order".to_string());
+            }
+            if proc2_outbox.len() == 2 && proc2_outbox[1].tip == "PING" {
+                return Ok(());
+            } else {
+                return Err("wrong set of delivered events".to_string());
+            }
+        }
+
+        Ok(())
+    });
+
+    let mut sys = build_dumb_delivery_system_with_useless_timer();
+    sys.send_local_message("process1", Message::new("PING", "some_data_1"));
+    sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
+
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
+    let result = mc.run();
+    assert!(result.is_err());
+
+    let err = result.err().unwrap();
+    assert_eq!(err.message(), "invalid order");
+
+    let trace = err.trace();
+    assert_eq!(trace.len(), 13);
+    assert!(matches!(trace[9].clone(), LogEntry::McMessageReceived { .. }));
+    assert!(matches!(trace[11].clone(), LogEntry::McTimerFired { .. }));
 }
 
 #[rstest]
