@@ -111,14 +111,18 @@ pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
 /// Message duplications or unexpected messages are not allowed.
 pub fn mc_invariant_received_messages(node: String, proc: String, messages_expected: HashSet<String>) -> InvariantFn {
     boxed!(move |state: &McState| {
-        if state.events.available_events_num() > 0 {
-            return Ok(());
-        }
-        let mut messages_got = HashSet::<String>::default();
         let local_outbox = &state.node_states[&node][&proc].local_outbox;
-        if local_outbox.len() != messages_expected.len() {
+        let mut messages_got = HashSet::<String>::default();
+        if local_outbox.len() > messages_expected.len() {
             return Err(format!(
-                "{proc} received {} messages but {} expected",
+                "{proc} received at least {} messages but only {} expected",
+                local_outbox.len(),
+                messages_expected.len()
+            ));
+        }
+        if local_outbox.len() < messages_expected.len() && state.events.available_events_num() == 0 {
+            return Err(format!(
+                "{proc} received {} messages in total but {} expected",
                 local_outbox.len(),
                 messages_expected.len()
             ));
