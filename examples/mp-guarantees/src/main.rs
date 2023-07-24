@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::io::Write;
 
@@ -100,7 +100,11 @@ fn send_messages(sys: &mut System, message_count: usize, run_simulation: bool) -
     messages
 }
 
-fn check_delivered_messages(delivered: &[Message], expected_msg_count: &HashMap<String, i32>, expected_tip: &String) -> Result<HashMap<String, i32>, String> {
+fn check_delivered_messages(
+    delivered: &[Message],
+    expected_msg_count: &HashMap<String, i32>,
+    expected_tip: &String,
+) -> Result<HashMap<String, i32>, String> {
     assert!(!expected_msg_count.is_empty());
     let mut delivered_msg_count = HashMap::default();
     for msg in delivered.iter() {

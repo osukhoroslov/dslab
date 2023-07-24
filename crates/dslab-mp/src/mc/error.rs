@@ -1,7 +1,6 @@
 //! Model checking error.
 
-use std::fmt::{Display, Debug};
-
+use std::fmt::{Debug, Display};
 
 use crate::logger::LogEntry;
 
