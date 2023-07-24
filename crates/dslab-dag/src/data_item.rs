@@ -63,16 +63,16 @@ pub enum DataTransferMode {
 
 impl DataTransferMode {
     /// Calculates the data transfer time per data unit between the specified resources (src, dest).
-    pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
+    pub fn net_time(&self, network: &Network, src: Id, dest: Id, runner: Id) -> f64 {
         match self {
             DataTransferMode::ViaMasterNode => {
-                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dst)
+                1. / network.bandwidth(src, runner) + 1. / network.bandwidth(runner, dest)
             }
             DataTransferMode::Direct => {
-                if src == dst {
+                if src == dest {
                     0.
                 } else {
-                    1. / network.bandwidth(src, dst)
+                    1. / network.bandwidth(src, dest)
                 }
             }
             DataTransferMode::Manual => 0.,

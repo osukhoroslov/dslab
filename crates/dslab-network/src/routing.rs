@@ -62,13 +62,13 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
         }
     }
 
-    fn get_path(&self, src: NodeId, dst: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
-        if let Some(path) = self.path_cache.borrow().get(&(src, dst)) {
+    fn get_path(&self, src: NodeId, dest: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
+        if let Some(path) = self.path_cache.borrow().get(&(src, dest)) {
             return Some(path.clone());
         }
         let node_links_map = topology.node_links_map();
         let mut path = Vec::new();
-        let mut cur_node = dst;
+        let mut cur_node = dest;
         while cur_node != src {
             if self.parent_path[src][cur_node] == INVALID_NODE_ID {
                 return None;
@@ -78,7 +78,7 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
             cur_node = self.parent_path[src][cur_node];
         }
         path.reverse();
-        self.path_cache.borrow_mut().insert((src, dst), path.clone());
+        self.path_cache.borrow_mut().insert((src, dest), path.clone());
         Some(path)
     }
 }
@@ -137,13 +137,13 @@ impl RoutingAlgorithm for ShortestPathDijkstra {
         }
     }
 
-    fn get_path(&self, src: NodeId, dst: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
-        if let Some(path) = self.path_cache.borrow().get(&(src, dst)) {
+    fn get_path(&self, src: NodeId, dest: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
+        if let Some(path) = self.path_cache.borrow().get(&(src, dest)) {
             return Some(path.clone());
         }
         let node_links_map = topology.node_links_map();
         let mut path = Vec::new();
-        let mut cur_node = dst;
+        let mut cur_node = dest;
         while cur_node != src {
             if self.parent_path[src][cur_node] == INVALID_NODE_ID {
                 return None;
@@ -153,7 +153,7 @@ impl RoutingAlgorithm for ShortestPathDijkstra {
             cur_node = self.parent_path[src][cur_node];
         }
         path.reverse();
-        self.path_cache.borrow_mut().insert((src, dst), path.clone());
+        self.path_cache.borrow_mut().insert((src, dest), path.clone());
         Some(path)
     }
 }
