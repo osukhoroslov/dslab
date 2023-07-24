@@ -194,17 +194,9 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 
     let strategy_config = StrategyConfig::default()
         .prune(prunes::mc_prune_sent_messages_limit(4))
-        .goal(goals::mc_goal_got_n_local_messages(
-            "client-node".to_string(),
-            "client".to_string(),
-            2,
-        ))
+        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
         .invariant(invariants::mc_all_invariants(vec![
-            invariants::mc_invariant_received_messages(
-                "client-node".to_string(),
-                "client".to_string(),
-                messages_expected,
-            ),
+            invariants::mc_invariant_received_messages("client-node", "client", messages_expected),
             invariants::mc_invariant_state_depth(20),
         ]));
 
@@ -238,14 +230,10 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     system.network().set_drop_rate(0.3);
     let strategy_config = StrategyConfig::default()
         .prune(prunes::mc_prune_state_depth(7))
-        .goal(goals::mc_goal_got_n_local_messages(
-            "client-node".to_string(),
-            "client".to_string(),
-            2,
-        ))
+        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
         .invariant(invariants::mc_invariant_received_messages(
-            "client-node".to_string(),
-            "client".to_string(),
+            "client-node",
+            "client",
             messages_expected,
         ));
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);

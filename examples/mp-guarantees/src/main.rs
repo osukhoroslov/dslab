@@ -439,11 +439,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let messages = send_messages(&mut sys, 2, false);
     let strategy_config = StrategyConfig::default()
         .prune(prunes::mc_prune_sent_messages_limit(4))
-        .goal(goals::mc_goal_got_n_local_messages(
-            "receiver-node".to_string(),
-            "receiver".to_string(),
-            2,
-        ))
+        .goal(goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2))
         .invariant(invariants::mc_all_invariants(vec![
             invariants::mc_invariant_state_depth(20),
             mc_invariant_received_messages(messages, *config),
@@ -469,7 +465,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(prunes::mc_prune_state_depth(7))
         .goal(goals::mc_any_goal(vec![
-            goals::mc_goal_got_n_local_messages("receiver-node".to_string(), "receiver".to_string(), 2),
+            goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2),
             goals::mc_goal_no_events(),
         ]))
         .invariant(mc_invariant_received_messages(messages.clone(), *config));

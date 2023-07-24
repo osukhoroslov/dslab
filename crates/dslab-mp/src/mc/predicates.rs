@@ -50,11 +50,12 @@ pub mod invariants {
 
     /// Verifies that the set of local messages delivered by a process matches exactly the expected messages.
     /// Message duplications or unexpected messages are not allowed.
-    pub fn mc_invariant_received_messages(
-        node: String,
-        proc: String,
-        messages_expected: HashSet<String>,
-    ) -> InvariantFn {
+    pub fn mc_invariant_received_messages<S>(node: S, proc: S, messages_expected: HashSet<String>) -> InvariantFn
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        let proc = proc.into();
         boxed!(move |state: &McState| {
             let local_outbox = &state.node_states[&node][&proc].local_outbox;
             let mut messages_got = HashSet::<String>::default();
@@ -105,7 +106,12 @@ pub mod goals {
     }
 
     /// Checks if the given process produced `n` local messages.
-    pub fn mc_goal_got_n_local_messages(node: String, proc: String, n: u64) -> GoalFn {
+    pub fn mc_goal_got_n_local_messages<S>(node: S, proc: S, n: u64) -> GoalFn
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        let proc = proc.into();
         boxed!(move |state: &McState| {
             if state.node_states[&node][&proc].local_outbox.len() == n as usize {
                 Some(format!("{proc} produced {n} local messages"))
