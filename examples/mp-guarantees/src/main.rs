@@ -137,10 +137,10 @@ fn check_message_delivery_reliable(
 }
 
 fn check_message_delivery_once(
-    msg_count: &HashMap<String, i32>,
+    delivered_msg_count: &HashMap<String, i32>,
     expected_msg_count: &HashMap<String, i32>,
 ) -> TestResult {
-    for (data, count) in msg_count {
+    for (data, count) in delivered_msg_count {
         let expected_count = expected_msg_count[data];
         assume!(
             *count <= expected_count,
