@@ -1,11 +1,16 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-pub mod constant_bandwidth_model;
+pub mod link;
 pub mod model;
+pub mod models;
 pub mod network;
-pub mod shared_bandwidth_model;
+pub mod node;
+pub mod routing;
 pub mod topology;
-pub mod topology_model;
-pub mod topology_resolver;
-pub mod topology_structures;
+
+pub use link::{BandwidthSharingPolicy, Link, LinkId};
+pub use model::{DataTransfer, DataTransferCompleted, NetworkModel};
+pub use network::{Message, MessageDelivered, Network};
+pub use node::{Node, NodeId};
+pub use topology::Topology;

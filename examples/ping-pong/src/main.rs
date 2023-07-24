@@ -6,12 +6,11 @@ use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Builder;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
 use dslab_core::simulation::Simulation;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use dslab_network::network::Network;
-use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
+use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
+use dslab_network::Network;
 
 use crate::process::{NetworkProcess, Process, Start};
 
@@ -57,15 +56,17 @@ fn main() {
     let root = sim.create_context("root");
 
     let network_opt = if args.use_network {
-        let network_model = rc!(refcell!(ConstantBandwidthNetwork::new(1000., 0.001)));
-        let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+        let network = rc!(refcell!(Network::new(
+            boxed!(ConstantBandwidthNetworkModel::new(1000., 0.001)),
+            sim.create_context("net")
+        )));
         sim.add_handler("net", network.clone());
         network
             .borrow_mut()
-            .add_node("host1", Box::new(SharedBandwidthNetwork::new(1000., 0.)));
+            .add_node("host1", Box::new(SharedBandwidthNetworkModel::new(1000., 0.)));
         network
             .borrow_mut()
-            .add_node("host2", Box::new(SharedBandwidthNetwork::new(1000., 0.)));
+            .add_node("host2", Box::new(SharedBandwidthNetworkModel::new(1000., 0.)));
         Some(network)
     } else {
         None

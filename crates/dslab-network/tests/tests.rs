@@ -11,13 +11,16 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::EPSILON;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use dslab_network::model::DataTransferCompleted;
-use dslab_network::network::Network;
-use dslab_network::topology::Topology;
-use dslab_network::topology_model::TopologyNetwork;
-use dslab_network::topology_resolver::TopologyResolveType;
-use dslab_network::topology_structures::Link;
+
+use dslab_network::models::{ConstantBandwidthNetworkModel, TopologyAwareNetworkModel};
+use dslab_network::routing::{RoutingAlgorithm, ShortestPathDijkstra, ShortestPathFloydWarshall};
+use dslab_network::{DataTransferCompleted, Link, Network};
+
+#[derive(Clone, Copy)]
+enum RoutingImpl {
+    Dijkstra,
+    FloydWarshall,
+}
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(
@@ -53,7 +56,7 @@ impl EventHandler for Node {
                     .borrow_mut()
                     .transfer_data(self.ctx.id(), receiver_id, size, receiver_id);
             }
-            DataTransferCompleted { data: _ } => {}
+            DataTransferCompleted { dt: _ } => {}
         })
     }
 }
@@ -62,31 +65,31 @@ fn run_link_test(
     link: Link,
     bidirectional: bool,
     full_mesh_optimization: bool,
-    resolve_type: TopologyResolveType,
+    routing: RoutingImpl,
     lr_transfers: usize,
     rl_transfers: usize,
 ) -> f64 {
     // two nodes, one link (or two directional), [lr_transfers] transfers from 1 to 2, [rl_transfers] from 2 to 1
 
     let mut sim = Simulation::new(123);
-    let mut topology = Topology::new().with_resolve_type(resolve_type);
 
-    topology.add_node("host1", Box::new(ConstantBandwidthNetwork::new(100.0, 0.0)));
-    topology.add_node("host2", Box::new(ConstantBandwidthNetwork::new(100.0, 0.0)));
+    let network_model = Box::new(TopologyAwareNetworkModel::new().with_full_mesh_optimization(full_mesh_optimization));
+    let routing: Box<dyn RoutingAlgorithm> = match routing {
+        RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
+        RoutingImpl::FloydWarshall => Box::new(ShortestPathFloydWarshall::default()),
+    };
+    let mut network = Network::with_routing(routing, network_model, sim.create_context("net"));
+
+    network.add_node("host1", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
+    network.add_node("host2", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
 
     if bidirectional {
-        topology.add_link("host1", "host2", link);
+        network.add_link("host1", "host2", link);
     } else {
-        topology.add_full_duplex_link("host1", "host2", link);
+        network.add_full_duplex_link("host1", "host2", link);
     }
 
-    topology.init();
-
-    let topology_rc = Rc::new(RefCell::new(topology));
-    let network_model = Rc::new(RefCell::new(
-        TopologyNetwork::new(topology_rc.clone()).with_full_mesh_optimization(full_mesh_optimization),
-    ));
-    let network = Network::new_with_topology(network_model, topology_rc.clone(), sim.create_context("net"));
+    network.init_topology();
 
     let network_rc = Rc::new(RefCell::new(network));
     sim.add_handler("net", network_rc.clone());
@@ -97,8 +100,8 @@ fn run_link_test(
     let node2 = Node::new(network_rc.clone(), sim.create_context("node2"));
     let node2_id = sim.add_handler("node2", Rc::new(RefCell::new(node2)));
 
-    topology_rc.borrow_mut().set_location(node1_id, "host1");
-    topology_rc.borrow_mut().set_location(node2_id, "host2");
+    network_rc.borrow_mut().set_location(node1_id, "host1");
+    network_rc.borrow_mut().set_location(node2_id, "host2");
 
     let client = sim.create_context("client");
 
@@ -128,7 +131,7 @@ fn run_link_test(
 #[rstest]
 fn test_links(
     #[values(false, true)] full_mesh_optimization: bool,
-    #[values(TopologyResolveType::Dijkstra, TopologyResolveType::FloydWarshall)] resolve_type: TopologyResolveType,
+    #[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] routing: RoutingImpl,
     #[values(1, 2, 3, 4, 5)] lr_transfers: usize,
     #[values(1, 2, 3, 4, 5)] rl_transfers: usize,
 ) {
@@ -137,7 +140,7 @@ fn test_links(
             Link::shared(100., 0.),
             true,
             full_mesh_optimization,
-            resolve_type,
+            routing,
             lr_transfers,
             rl_transfers,
         ),
@@ -149,7 +152,7 @@ fn test_links(
             Link::shared(100., 0.),
             false,
             full_mesh_optimization,
-            resolve_type,
+            routing,
             lr_transfers,
             rl_transfers,
         ),
@@ -161,7 +164,7 @@ fn test_links(
             Link::non_shared(100., 0.),
             true,
             full_mesh_optimization,
-            resolve_type,
+            routing,
             lr_transfers,
             rl_transfers,
         ),
@@ -173,7 +176,7 @@ fn test_links(
             Link::non_shared(100., 0.),
             false,
             full_mesh_optimization,
-            resolve_type,
+            routing,
             lr_transfers,
             rl_transfers,
         ),

@@ -1,259 +1,111 @@
-//! Topology interface.
+//! Network topology.
 
 use std::collections::{BTreeMap, HashMap};
 
-use indexmap::IndexMap;
+use crate::{Link, LinkId, Node, NodeId};
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-
-use crate::model::*;
-use crate::topology_resolver::TopologyResolveType;
-use crate::topology_resolver::TopologyResolver;
-use crate::topology_structures::{Link, LinkId, Node, NodeId, NodeLinksMap};
+/// Stores for each node a map with its neighbors and corresponding outgoing links.
+pub type NodeLinksMap = BTreeMap<NodeId, BTreeMap<NodeId, LinkId>>;
 
 /// Represents a network topology consisting of nodes connected with links.
 #[derive(Default)]
 pub struct Topology {
-    nodes_name_map: IndexMap<String, NodeId>,
     nodes: Vec<Node>,
     links: Vec<Link>,
-    component_nodes: HashMap<Id, NodeId>,
     node_links_map: NodeLinksMap,
-    resolver: Option<TopologyResolver>,
-    bandwidth_cache: HashMap<(NodeId, NodeId), f64>,
-    latency_cache: HashMap<(NodeId, NodeId), f64>,
-    path_cache: HashMap<(NodeId, NodeId), Vec<LinkId>>,
-    resolve_type: TopologyResolveType,
+    bandwidth_cache: HashMap<Vec<LinkId>, f64>,
+    latency_cache: HashMap<Vec<LinkId>, f64>,
 }
 
 impl Topology {
-    /// Creates new empty topology.
+    /// Creates a new empty topology.
     pub fn new() -> Self {
         Default::default()
     }
 
-    /// Sets new resolve type for topology.
-    pub fn with_resolve_type(mut self, resolve_type: TopologyResolveType) -> Self {
-        self.resolve_type = resolve_type;
-        self
+    /// Adds a new node and returns the assigned id.
+    pub fn add_node(&mut self, node: Node) -> NodeId {
+        let node_id = self.nodes.len();
+        self.nodes.push(node);
+        self.node_links_map.insert(node_id, BTreeMap::new());
+        node_id
     }
 
-    fn get_node_id(&self, node_name: &str) -> usize {
-        if let Some(node_id) = self.nodes_name_map.get(node_name) {
-            return *node_id;
+    /// Returns the number of nodes.
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Adds a new bidirectional link between two nodes.
+    pub fn add_link(&mut self, node1: NodeId, node2: NodeId, link: Link) -> LinkId {
+        self.add_link_internal(node1, node2, link, true)
+    }
+
+    /// Adds a new unidirectional link between two nodes.
+    pub fn add_unidirectional_link(&mut self, node_from: NodeId, node_to: NodeId, link: Link) -> LinkId {
+        self.add_link_internal(node_from, node_to, link, false)
+    }
+
+    /// Adds two unidirectional links with the same parameters between two nodes in opposite directions.
+    pub fn add_full_duplex_link(&mut self, node1: NodeId, node2: NodeId, link: Link) -> (LinkId, LinkId) {
+        (
+            self.add_link_internal(node1, node2, link, false),
+            self.add_link_internal(node2, node1, link, false),
+        )
+    }
+
+    /// Returns the link by its id.
+    pub fn link(&self, link_id: LinkId) -> &Link {
+        self.links
+            .get(link_id)
+            .unwrap_or_else(|| panic!("Link {} is not found", link_id))
+    }
+
+    /// Returns the number of links.
+    pub fn link_count(&self) -> usize {
+        self.links.len()
+    }
+
+    /// Returns an immutable reference to the stored [`NodeLinksMap`].
+    pub fn node_links_map(&self) -> &NodeLinksMap {
+        &self.node_links_map
+    }
+
+    /// Returns the network latency of the given path.
+    pub fn get_path_latency(&mut self, path: Vec<LinkId>) -> f64 {
+        if let Some(latency) = self.latency_cache.get(&path) {
+            return *latency;
         }
-        panic!("Node with name {} doesn't exists", node_name)
+        let mut latency = 0.0;
+        for link_id in &path {
+            latency += self.link(*link_id).latency;
+        }
+        self.latency_cache.insert(path, latency);
+        latency
     }
 
-    /// Adds new node to the topology.
-    pub fn add_node(&mut self, node_name: &str, local_network: Box<dyn NetworkModel>) {
-        let new_node_id = self.nodes.len();
-        self.nodes_name_map.insert(node_name.to_string(), new_node_id);
-        self.nodes.push(Node { local_network });
-        self.node_links_map.insert(new_node_id, BTreeMap::new());
+    /// Returns the network bandwidth of the given path.
+    pub fn get_path_bandwidth(&mut self, path: Vec<LinkId>) -> f64 {
+        if let Some(bandwidth) = self.bandwidth_cache.get(&path) {
+            return *bandwidth;
+        }
+        let bandwidth = path
+            .iter()
+            .map(|link_id| self.link(*link_id).bandwidth)
+            .min_by(|a, b| a.total_cmp(b))
+            .unwrap();
+        self.bandwidth_cache.insert(path, bandwidth);
+        bandwidth
     }
 
-    fn add_link_internal(&mut self, node1_name: &str, node2_name: &str, link: Link, bidirectional: bool) {
+    fn add_link_internal(&mut self, node1: NodeId, node2: NodeId, link: Link, bidirectional: bool) -> LinkId {
         assert!(link.bandwidth > 0.0, "Link bandwidth must be > 0");
-        let node1 = self.get_node_id(node1_name);
-        let node2 = self.get_node_id(node2_name);
-        self.check_node_exists(node1);
-        self.check_node_exists(node2);
         let link_id = self.links.len();
         self.links.push(link);
         self.node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
         if bidirectional {
             self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
         }
-    }
-
-    /// Adds new bidirectional link between two nodes.
-    pub fn add_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
-        self.add_link_internal(node1_name, node2_name, link, true);
-        self.on_topology_change();
-    }
-
-    /// Adds new unidirectional link between two nodes.
-    pub fn add_unidirectional_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
-        self.add_link_internal(node1_name, node2_name, link, false);
-        self.on_topology_change();
-    }
-
-    /// Adds two unidirectional links with the same parameters between two nodes in opposite directions.
-    pub fn add_full_duplex_link(&mut self, node1_name: &str, node2_name: &str, link: Link) {
-        self.add_link_internal(node1_name, node2_name, link, false);
-        self.add_link_internal(node2_name, node1_name, link, false);
-        self.on_topology_change();
-    }
-
-    /// Recalculates all paths between nodes.
-    fn on_topology_change(&mut self) {
-        self.bandwidth_cache.clear();
-        self.latency_cache.clear();
-        self.path_cache.clear();
-        self.resolve_topology();
-    }
-
-    fn resolve_topology(&mut self) {
-        match &mut self.resolver {
-            None => (),
-            Some(resolver) => {
-                resolver.resolve_topology(&self.nodes, &self.links, &self.node_links_map);
-            }
-        }
-    }
-
-    /// Performs initialization of topology, such as computing the paths between all nodes.
-    ///
-    /// Must be called after all nodes and links are added.
-    pub fn init(&mut self) {
-        self.resolver = Some(TopologyResolver::new(self.resolve_type));
-        self.resolve_topology();
-    }
-
-    /// Sets the location of the simulation component `id` to the node `node_name`.
-    pub fn set_location(&mut self, id: Id, node_name: &str) {
-        let node_id = self.get_node_id(node_name);
-        self.component_nodes.insert(id, node_id);
-    }
-
-    /// Returns the location (node name) of the simulation component.
-    pub fn get_location(&self, id: Id) -> Option<&NodeId> {
-        self.component_nodes.get(&id)
-    }
-
-    /// Returns `true` if two simulation components are located on the same node.
-    pub fn check_same_node(&self, id1: Id, id2: Id) -> bool {
-        let node1 = self.get_location(id1);
-        let node2 = self.get_location(id2);
-        node1.is_some() && node2.is_some() && node1.unwrap() == node2.unwrap()
-    }
-
-    /// Returns the number of nodes.
-    pub fn get_nodes_count(&self) -> usize {
-        self.nodes.len()
-    }
-
-    /// Returns the list of node names.
-    pub fn get_nodes(&self) -> Vec<String> {
-        self.nodes_name_map.keys().cloned().collect()
-    }
-
-    /// Returns node information.
-    fn get_node_info(&self, id: &NodeId) -> Option<&Node> {
-        self.nodes.get(*id)
-    }
-
-    fn get_node_info_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        self.nodes.get_mut(*id)
-    }
-
-    /// Callback for receiving local data.
-    pub(crate) fn local_receive_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = *self.get_location(data.dest).unwrap();
-        self.get_node_info_mut(&node)
-            .unwrap()
-            .local_network
-            .receive_data(data, ctx)
-    }
-
-    /// Sends data.
-    pub(crate) fn local_send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        let node = *self.get_location(data.dest).unwrap();
-        self.get_node_info_mut(&node)
-            .unwrap()
-            .local_network
-            .send_data(data, ctx)
-    }
-
-    /// Returns the latency between two simulation components on the same node.
-    pub fn get_local_latency(&self, src: Id, dst: Id) -> f64 {
-        let node = self.get_location(src).unwrap();
-        self.get_node_info(node).unwrap().local_network.latency(src, dst)
-    }
-
-    pub(crate) fn get_link(&self, link_id: &LinkId) -> Option<&Link> {
-        self.links.get(*link_id)
-    }
-
-    /// Returns the path from node `src` to node `dst`.
-    ///
-    /// The path is calculated by [`TopologyResolver`](crate::topology_resolver::TopologyResolver)
-    /// as the shortest path from `src` to `dst` measured by total latency.
-    pub fn get_path(&mut self, src: &NodeId, dst: &NodeId) -> Option<Vec<LinkId>> {
-        if let Some(path) = self.path_cache.get(&(*src, *dst)) {
-            return Some(path.clone());
-        }
-
-        if let Some(resolver) = &self.resolver {
-            let path_opt = resolver.get_path(src, dst, &self.node_links_map);
-
-            if let Some(path) = path_opt {
-                self.path_cache.insert((*src, *dst), path.clone());
-                return Some(path);
-            }
-        }
-
-        None
-    }
-
-    /// Returns the network latency from node `src` to node `dst`.
-    ///
-    /// This corresponds to the total latency on the path from node `src` to node `dst`
-    /// which is calculated by [`get_path`](Topology::get_path).
-    pub fn get_latency(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
-        if let Some(latency) = self.latency_cache.get(&(*src, *dst)) {
-            return *latency;
-        }
-
-        if let Some(path) = self.get_path(src, dst) {
-            let mut latency = 0.0;
-            for link_id in &path {
-                latency += self.get_link(link_id).unwrap().latency;
-            }
-            self.latency_cache.insert((*src, *dst), latency);
-            self.latency_cache.insert((*dst, *src), latency);
-            return latency;
-        }
-        f64::INFINITY
-    }
-
-    /// Returns the network bandwidth from node `src` to node `dst`.
-    ///
-    /// This corresponds to the minimum link bandwidth on the path from node `src` to node `dst`
-    /// which is calculated by [`get_path`](Topology::get_path).
-    pub fn get_bandwidth(&mut self, src: &NodeId, dst: &NodeId) -> f64 {
-        if let Some(bandwidth) = self.bandwidth_cache.get(&(*src, *dst)) {
-            return *bandwidth;
-        }
-
-        if let Some(path) = self.get_path(src, dst) {
-            let min_bandwidth_link = path
-                .into_iter()
-                .min_by(|x, y| {
-                    self.get_link(x)
-                        .unwrap()
-                        .bandwidth
-                        .partial_cmp(&self.get_link(y).unwrap().bandwidth)
-                        .unwrap()
-                })
-                .unwrap();
-            let bandwidth = self.get_link(&min_bandwidth_link).unwrap().bandwidth;
-
-            self.bandwidth_cache.insert((*src, *dst), bandwidth);
-            self.bandwidth_cache.insert((*dst, *src), bandwidth);
-
-            return bandwidth;
-        }
-        0.0
-    }
-
-    pub(crate) fn get_links_count(&self) -> usize {
-        self.links.len()
-    }
-
-    fn check_node_exists(&self, node_id: NodeId) {
-        assert!(node_id < self.nodes.len())
+        link_id
     }
 }

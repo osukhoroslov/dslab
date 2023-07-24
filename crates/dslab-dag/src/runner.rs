@@ -16,8 +16,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::{log_debug, log_error, log_info};
-use dslab_network::model::DataTransferCompleted;
-use dslab_network::network::Network;
+use dslab_network::{DataTransferCompleted, Network};
 
 use crate::dag::DAG;
 use crate::data_item::{DataItemState, DataTransferMode};
@@ -748,8 +747,8 @@ impl EventHandler for DAGRunner {
                 let task_id = self.computations.remove(&id).unwrap();
                 self.on_task_completed(task_id);
             }
-            DataTransferCompleted { data } => {
-                self.on_data_transfer_completed(data.id);
+            DataTransferCompleted { dt } => {
+                self.on_data_transfer_completed(dt.id);
             }
         })
     }

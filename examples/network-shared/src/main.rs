@@ -5,7 +5,7 @@ use std::rc::Rc;
 use env_logger::Builder;
 use log::info;
 use serde::Serialize;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
@@ -13,9 +13,9 @@ use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 use dslab_core::simulation::Simulation;
 use dslab_core::{cast, log_info};
-use dslab_network::model::DataTransferCompleted;
-use dslab_network::network::Network;
-use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
+
+use dslab_network::models::SharedBandwidthNetworkModel;
+use dslab_network::{DataTransferCompleted, Network};
 
 #[derive(Clone, Serialize)]
 pub struct Start {
@@ -42,7 +42,7 @@ impl EventHandler for DataTransferRequester {
                     .borrow_mut()
                     .transfer_data(self.ctx.id(), receiver_id, size, receiver_id);
             }
-            DataTransferCompleted { data: _ } => {
+            DataTransferCompleted { dt: _ } => {
                 log_info!(self.ctx, "Sender: data transfer completed");
             }
         })
@@ -63,11 +63,11 @@ impl DataReceiver {
 impl EventHandler for DataReceiver {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            DataTransferCompleted { data } => {
-                let new_size = 1000.0 - data.size;
+            DataTransferCompleted { dt } => {
+                let new_size = 1000.0 - dt.size;
                 self.net
                     .borrow_mut()
-                    .transfer_data(self.ctx.id(), data.src, new_size, data.src);
+                    .transfer_data(self.ctx.id(), dt.src, new_size, dt.src);
                 log_info!(self.ctx, "Receiver: data transfer completed");
             }
         })
@@ -88,8 +88,10 @@ fn main() {
     let sender_id = 1;
     let receiver_id = 2;
 
-    let shared_network_model = rc!(refcell!(SharedBandwidthNetwork::new(10.0, 0.1)));
-    let shared_network = rc!(refcell!(Network::new(shared_network_model, sim.create_context("net"))));
+    let shared_network = rc!(refcell!(Network::new(
+        boxed!(SharedBandwidthNetworkModel::new(10.0, 0.1)),
+        sim.create_context("net")
+    )));
     sim.add_handler("net", shared_network.clone());
 
     if process_simple_send_1 {
@@ -166,7 +168,7 @@ fn main() {
 
         shared_network
             .borrow_mut()
-            .add_node("localhost", Box::new(SharedBandwidthNetwork::new(1000.0, 0.0)));
+            .add_node("localhost", Box::new(SharedBandwidthNetworkModel::new(1000.0, 0.0)));
 
         for i in 1..10 {
             let receiver_name = format!("receiver_{}", i);
@@ -175,7 +177,7 @@ fn main() {
             let receiver_host = format!("host_{}", &receiver_name);
             shared_network
                 .borrow_mut()
-                .add_node(&receiver_host, Box::new(SharedBandwidthNetwork::new(1000.0, 0.0)));
+                .add_node(&receiver_host, Box::new(SharedBandwidthNetworkModel::new(1000.0, 0.0)));
             shared_network.borrow_mut().set_location(receiver_id, &receiver_host);
             distant_receivers.push(receiver_id);
 

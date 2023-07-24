@@ -6,14 +6,23 @@ use std::io::Write;
 use clap::Parser;
 use env_logger::Builder;
 use std::time::Instant;
+use sugars::{rc, refcell};
 
 use dslab_core::Simulation;
-use dslab_network::topology::Topology;
+use dslab_network::models::TopologyAwareNetworkModel;
+use dslab_network::Network;
 
 use system::{build_system, Start};
 use topology::*;
 
 const SIMULATION_SEED: u64 = 123;
+
+enum Topology {
+    FullMesh,
+    Star,
+    Tree,
+    FatTree,
+}
 
 /// Network topology benchmarks
 #[derive(Parser, Debug)]
@@ -44,31 +53,45 @@ fn main() {
     let args = Args::parse();
 
     println!("=== Full Mesh Topology ===");
-    run_benchmark(make_full_mesh_topology(args.host_count), true);
+    run_benchmark(&args, Topology::FullMesh);
 
     println!("=== Star Topology ===");
-    run_benchmark(make_star_topology(args.host_count), false);
+    run_benchmark(&args, Topology::Star);
 
     println!("=== Tree Topology ===");
-    run_benchmark(
-        make_tree_topology(args.star_count, args.host_count / args.star_count),
-        false,
-    );
+    run_benchmark(&args, Topology::Tree);
 
     println!("=== Fat-Tree Topology ===");
-    run_benchmark(
-        make_fat_tree_topology(
+    run_benchmark(&args, Topology::FatTree);
+}
+
+fn run_benchmark(args: &Args, topology: Topology) {
+    let mut sim = Simulation::new(SIMULATION_SEED);
+
+    let full_mesh_optimization = match topology {
+        Topology::FullMesh => true,
+        _ => false,
+    };
+    let mut network = Network::new(
+        Box::new(TopologyAwareNetworkModel::new().with_full_mesh_optimization(full_mesh_optimization)),
+        sim.create_context("net"),
+    );
+    match topology {
+        Topology::FullMesh => make_full_mesh_topology(&mut network, args.host_count),
+        Topology::Star => make_star_topology(&mut network, args.host_count),
+        Topology::Tree => make_tree_topology(&mut network, args.star_count, args.host_count / args.star_count),
+        Topology::FatTree => make_fat_tree_topology(
+            &mut network,
             args.l2_switch_count,
             args.l1_switch_count,
             args.host_count / args.l1_switch_count,
         ),
-        false,
-    );
-}
+    }
+    network.init_topology();
+    let network_rc = rc!(refcell!(network));
+    sim.add_handler("net", network_rc.clone());
 
-fn run_benchmark(topology: Topology, full_mesh_optimization: bool) {
-    let mut sim = Simulation::new(SIMULATION_SEED);
-    let sys = build_system(&mut sim, topology, full_mesh_optimization);
+    let sys = build_system(&mut sim, network_rc);
 
     let client = sim.create_context("client");
 

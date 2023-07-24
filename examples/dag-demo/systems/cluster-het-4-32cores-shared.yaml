@@ -16,6 +16,6 @@ resources:
     cores: 16
     memory: 32000
 network:
-  model: SharedBandwidthNetwork
+  model: SharedBandwidth
   bandwidth: 1000
   latency: 100

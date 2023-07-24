@@ -1,11 +1,12 @@
 use std::io::Write;
 
 use env_logger::Builder;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
 use dslab_core::simulation::Simulation;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-use dslab_network::network::Network;
+
+use dslab_network::models::ConstantBandwidthNetworkModel;
+use dslab_network::Network;
 
 fn main() {
     Builder::from_default_env()
@@ -16,9 +17,8 @@ fn main() {
     let sender_id = 1;
     let receiver_id = 2;
 
-    let constant_network_model = rc!(refcell!(ConstantBandwidthNetwork::new(10.0, 0.1)));
     let constant_network = rc!(refcell!(Network::new(
-        constant_network_model,
+        boxed!(ConstantBandwidthNetworkModel::new(10.0, 0.1)),
         sim.create_context("net")
     )));
     sim.add_handler("net", constant_network.clone());

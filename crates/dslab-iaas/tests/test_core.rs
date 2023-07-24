@@ -1,7 +1,7 @@
 use dslab_core::simulation::Simulation;
 
 use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
-use dslab_models::power::host::{HostPowerModel, HostPowerModelBuilder};
+use dslab_models::power::host::HostPowerModelBuilder;
 
 use dslab_iaas::core::common::Allocation;
 use dslab_iaas::core::config::SimulationConfig;
