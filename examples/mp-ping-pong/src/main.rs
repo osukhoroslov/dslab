@@ -213,11 +213,13 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data));
         system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data2));
     });
-    assume!(
-        res.is_ok(),
-        format!("model checker found error: {}", res.err().unwrap())
-    )?;
-    Ok(true)
+
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
 }
 
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
@@ -244,11 +246,13 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data));
         system.send_local_message("client-node".to_string(), "client".to_string(), Message::new("PING", &data2));
     });
-    assume!(
-        res.is_ok(),
-        format!("model checker found error: {}", res.err().unwrap())
-    )?;
-    Ok(true)
+
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
 }
 
 // CLI -----------------------------------------------------------------------------------------------------------------

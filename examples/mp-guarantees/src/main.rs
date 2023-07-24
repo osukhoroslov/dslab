@@ -449,11 +449,12 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         ]));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run();
-    assume!(
-        res.is_ok(),
-        format!("model checker found error: {}", res.err().unwrap())
-    )?;
-    Ok(true)
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
 }
 
 fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
@@ -477,11 +478,12 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
             sys.send_local_message("sender-node".to_string(), "sender".to_string(), message);
         }
     });
-    assume!(
-        res.is_ok(),
-        format!("model checker found error: {}", res.err().unwrap())
-    )?;
-    Ok(true)
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
 }
 
 // CLI -----------------------------------------------------------------------------------------------------------------
