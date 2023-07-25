@@ -8,8 +8,9 @@ use env_logger::Builder;
 use log::LevelFilter;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use sugars::boxed;
+use sugars::{boxed, rc};
 
+use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates::{goals, invariants, prunes};
 use dslab_mp::mc::strategies::dfs::Dfs;
@@ -483,6 +484,44 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     }
 }
 
+fn test_mc_limit_drop_number(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config, false);
+    sys.network().set_drop_rate(0.1);
+    let messages: Vec<Message> = generate_message_texts(&mut sys, 2)
+        .into_iter()
+        .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
+        .collect();
+    let num_drops_allowed = 3;
+    let strategy_config = StrategyConfig::default()
+        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
+        .prune(prunes::mc_any_prune(vec![
+            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_dropped), num_drops_allowed),
+            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_sent), 2 + num_drops_allowed),
+            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_timer_set), 4),
+        ]))
+        .goal(goals::mc_any_goal(vec![
+            goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2),
+            goals::mc_goal_no_events(),
+        ]))
+        .invariant(invariants::mc_all_invariants(vec![
+            invariants::mc_invariant_state_depth(20),
+            mc_invariant_guarantees(messages.clone(), *config),
+        ]));
+    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+
+    let res = mc.run_with_change(|sys| {
+        for msg in messages {
+            sys.send_local_message("sender-node".to_string(), "sender".to_string(), msg.clone());
+        }
+    });
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Guarantees Homework Tests
@@ -578,6 +617,11 @@ fn main() {
             test_mc_unreliable_network,
             config,
         );
+        tests.add(
+            "[AT MOST ONCE] MODEL CHECKING LIMITED DROPS",
+            test_mc_limit_drop_number,
+            config,
+        );
     }
 
     // At least once
@@ -613,6 +657,11 @@ fn main() {
             test_mc_unreliable_network,
             config,
         );
+        tests.add(
+            "[AT LEAST ONCE] MODEL CHECKING LIMITED DROPS",
+            test_mc_limit_drop_number,
+            config,
+        );
     }
 
     // Exactly once
@@ -646,6 +695,11 @@ fn main() {
         tests.add(
             "[EXACTLY ONCE] MODEL CHECKING UNRELIABLE",
             test_mc_unreliable_network,
+            config,
+        );
+        tests.add(
+            "[EXACTLY ONCE] MODEL CHECKING LIMITED DROPS",
+            test_mc_limit_drop_number,
             config,
         );
     }
@@ -694,6 +748,11 @@ fn main() {
         tests.add(
             "[EXACTLY ONCE ORDERED] MODEL CHECKING UNRELIABLE",
             test_mc_unreliable_network,
+            config,
+        );
+        tests.add(
+            "[EXACTLY ONCE ORDERED] MODEL CHECKING LIMITED DROPS",
+            test_mc_limit_drop_number,
             config,
         );
     }

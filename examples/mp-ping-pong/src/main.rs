@@ -9,8 +9,9 @@ use assertables::assume;
 use clap::Parser;
 use env_logger::Builder;
 use log::LevelFilter;
-use sugars::boxed;
+use sugars::{boxed, rc};
 
+use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates::{goals, invariants, prunes};
 use dslab_mp::mc::strategies::dfs::Dfs;
@@ -259,6 +260,47 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     }
 }
 
+fn test_mc_limit_drop_number(config: &TestConfig) -> TestResult {
+    let sys = build_system(config);
+    sys.network().set_drop_rate(0.1);
+    let data = r#"{"value": 0}"#.to_string();
+    let data2 = r#"{"value": 1}"#.to_string();
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
+    let num_drops_allowed = 3;
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::mc_any_prune(vec![
+            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_dropped), num_drops_allowed),
+            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_sent), 2 + num_drops_allowed),
+        ]))
+        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
+        .invariant(invariants::mc_invariant_received_messages(
+            "client-node",
+            "client",
+            messages_expected,
+        ));
+    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+
+    let res = mc.run_with_change(|system| {
+        system.send_local_message(
+            "client-node".to_string(),
+            "client".to_string(),
+            Message::new("PING", &data),
+        );
+        system.send_local_message(
+            "client-node".to_string(),
+            "client".to_string(),
+            Message::new("PING", &data2),
+        );
+    });
+
+    if let Err(e) = res {
+        println!("{:#?}", e);
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Ping-Pong Tests
@@ -308,7 +350,8 @@ fn main() {
         config.clone(),
     );
     tests.add("MODEL CHECKING", test_mc_reliable_network, config.clone());
-    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config);
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config.clone());
+    tests.add("MODEL CHECKING DROP LIMIT", test_mc_limit_drop_number, config);
 
     if args.test.is_none() {
         tests.run();

@@ -93,7 +93,7 @@ pub mod goals {
     use crate::mc::state::McState;
     use crate::mc::strategy::GoalFn;
 
-    /// Combines multiple goal functions by returning `Ok` iff at least one goal is reached.
+    /// Combines multiple goal functions by returning `Some()` iff at least one goal is reached.
     pub fn mc_any_goal(mut goals: Vec<GoalFn>) -> GoalFn {
         boxed!(move |state: &McState| {
             for goal in &mut goals {
@@ -135,10 +135,25 @@ pub mod goals {
 
 /// Prunes cut exploration branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
+    use std::rc::Rc;
+
     use sugars::boxed;
 
+    use crate::logger::LogEntry;
     use crate::mc::state::McState;
     use crate::mc::strategy::PruneFn;
+
+    /// Combines multiple prune functions by returning `Some()` iff at least one goal is reached.
+    pub fn mc_any_prune(mut prunes: Vec<PruneFn>) -> PruneFn {
+        boxed!(move |state: &McState| {
+            for prune in &mut prunes {
+                if let Some(status) = prune(state) {
+                    return Some(status);
+                }
+            }
+            None
+        })
+    }
 
     /// Prunes states with depth exceeding the given value.
     pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
@@ -164,6 +179,27 @@ pub mod prunes {
                 }
             }
             None
+        })
+    }
+
+    /// Prunes states where event that matches predicate encounters in log more than expected.
+    pub fn mc_prune_events_limit<F>(predicate: Rc<F>, limit: usize) -> PruneFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = state
+                .trace
+                .iter()
+                .filter(|x: &&LogEntry| (*predicate.clone())(x))
+                .count();
+            if event_count > limit {
+                Some(format!(
+                    "event occured {event_count} times but expected at most {limit} times"
+                ))
+            } else {
+                None
+            }
         })
     }
 }

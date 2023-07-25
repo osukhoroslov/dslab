@@ -427,4 +427,16 @@ impl LogEntry {
             }
         }
     }
+
+    pub fn is_mc_message_dropped(&self) -> bool {
+        matches!(self, Self::McMessageDropped { .. })
+    }
+
+    pub fn is_mc_message_sent(&self) -> bool {
+        matches!(self, Self::McMessageSent { .. })
+    }
+
+    pub fn is_mc_timer_set(&self) -> bool {
+        matches!(self, Self::McTimerSet { .. })
+    }
 }
