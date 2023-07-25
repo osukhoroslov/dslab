@@ -73,9 +73,10 @@ impl McSystem {
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
 
-        self.trace_handler
-            .borrow_mut()
-            .push(LogEntry::McLocalMessageReceived { msg: msg.clone(), proc: proc.clone() });
+        self.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
+            msg: msg.clone(),
+            proc: proc.clone(),
+        });
         let new_events = self
             .nodes
             .get_mut(&node)
