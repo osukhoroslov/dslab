@@ -173,6 +173,9 @@ impl Logger {
             LogEntry::McLocalMessageSent { msg, proc } => {
                 t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
             }
+            LogEntry::McLocalMessageReceived { msg, proc } => {
+                t!(format!("{:>10} <<< {:<10} {:?}", "local", proc, msg).cyan());
+            }
             LogEntry::McMessageSent { msg, src, dest } => {
                 t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
             }
@@ -373,6 +376,10 @@ pub enum LogEntry {
     },
     McStarted {},
     McLocalMessageSent {
+        msg: Message,
+        proc: String,
+    },
+    McLocalMessageReceived {
         msg: Message,
         proc: String,
     },
