@@ -415,6 +415,13 @@
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -589,6 +596,9 @@
             }
             LogEntry::McLocalMessageSent { msg, proc } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} &gt;&gt;&gt; {:&lt;10} {:?}&quot;</span>, proc, <span class="string">&quot;local&quot;</span>, msg).green());
+            }
+            LogEntry::McLocalMessageReceived { msg, proc } =&gt; {
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} &lt;&lt;&lt; {:&lt;10} {:?}&quot;</span>, <span class="string">&quot;local&quot;</span>, proc, msg).cyan());
             }
             LogEntry::McMessageSent { msg, src, dest } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} --&gt; {:&lt;10} {:?}&quot;</span>, src, dest, msg));
@@ -790,6 +800,10 @@
     },
     McStarted {},
     McLocalMessageSent {
+        msg: Message,
+        proc: String,
+    },
+    McLocalMessageReceived {
         msg: Message,
         proc: String,
     },

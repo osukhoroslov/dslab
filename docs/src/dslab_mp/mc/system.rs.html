@@ -119,6 +119,11 @@
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::hash_map::DefaultHasher;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
@@ -127,6 +132,7 @@
 
 <span class="kw">use </span>ordered_float::OrderedFloat;
 
+<span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
 <span class="kw">use </span><span class="kw">crate</span>::mc::events::{McEvent, McEventId};
 <span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
 <span class="kw">use </span><span class="kw">crate</span>::mc::node::McNode;
@@ -193,6 +199,10 @@
         <span class="kw">let </span>event_time = <span class="self">Self</span>::get_approximate_event_time(<span class="self">self</span>.depth);
         <span class="kw">let </span>state_hash = <span class="self">self</span>.get_state_hash();
 
+        <span class="self">self</span>.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
+            msg: msg.clone(),
+            proc: proc.clone(),
+        });
         <span class="kw">let </span>new_events = <span class="self">self
             </span>.nodes
             .get_mut(<span class="kw-2">&amp;</span>node)
