@@ -9,7 +9,7 @@ use assertables::assume;
 use clap::Parser;
 use env_logger::Builder;
 use log::LevelFilter;
-use sugars::{boxed, rc};
+use sugars::boxed;
 
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
@@ -260,7 +260,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     }
 }
 
-fn test_mc_limit_drop_number(config: &TestConfig) -> TestResult {
+fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     let sys = build_system(config);
     sys.network().set_drop_rate(0.1);
     let data = r#"{"value": 0}"#.to_string();
@@ -269,8 +269,8 @@ fn test_mc_limit_drop_number(config: &TestConfig) -> TestResult {
     let num_drops_allowed = 3;
     let strategy_config = StrategyConfig::default()
         .prune(prunes::mc_any_prune(vec![
-            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_dropped), num_drops_allowed),
-            prunes::mc_prune_events_limit(rc!(LogEntry::is_mc_message_sent), 2 + num_drops_allowed),
+            prunes::mc_prune_events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
+            prunes::mc_prune_events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
         ]))
         .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
         .invariant(invariants::mc_invariant_received_messages(
@@ -351,7 +351,7 @@ fn main() {
     );
     tests.add("MODEL CHECKING", test_mc_reliable_network, config.clone());
     tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config.clone());
-    tests.add("MODEL CHECKING DROP LIMIT", test_mc_limit_drop_number, config);
+    tests.add("MODEL CHECKING LIMITED DROPS", test_mc_limited_message_drops, config);
 
     if args.test.is_none() {
         tests.run();

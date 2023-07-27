@@ -18,7 +18,7 @@ pub(crate) fn default_collect(_: &McState) -> bool {
     false
 }
 
-/// Invariants control whether state is correct or not.
+/// Invariants check whether state is correct or not.
 pub mod invariants {
     use std::collections::HashSet;
 
@@ -143,7 +143,7 @@ pub mod prunes {
     use crate::mc::state::McState;
     use crate::mc::strategy::PruneFn;
 
-    /// Combines multiple prune functions by returning `Some()` iff at least one goal is reached.
+    /// Combines multiple prune functions by returning `Some()` iff at least one prune is satisfied.
     pub fn mc_any_prune(mut prunes: Vec<PruneFn>) -> PruneFn {
         boxed!(move |state: &McState| {
             for prune in &mut prunes {
@@ -182,17 +182,13 @@ pub mod prunes {
         })
     }
 
-    /// Prunes states where event that matches predicate encounters in log more than expected.
-    pub fn mc_prune_events_limit<F>(predicate: Rc<F>, limit: usize) -> PruneFn
+    /// Prunes states where the number of events matching the predicate is more than the limit.
+    pub fn mc_prune_events_limit<F>(predicate: F, limit: usize) -> PruneFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = state
-                .trace
-                .iter()
-                .filter(|x: &&LogEntry| (*predicate.clone())(x))
-                .count();
+            let event_count = state.trace.iter().filter(|x| predicate(x)).count();
             if event_count > limit {
                 Some(format!(
                     "event occured {event_count} times but expected at most {limit} times"
