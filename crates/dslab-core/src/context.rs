@@ -666,7 +666,6 @@ impl SimulationContext {
         ///
         /// # Examples:
         /// ```rust
-        ///
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
         ///
@@ -706,7 +705,6 @@ impl SimulationContext {
         ///         })
         ///     }
         /// }
-        ///
         ///
         /// let mut sim = Simulation::new(42);
         ///
@@ -748,9 +746,9 @@ impl SimulationContext {
         /// let mut sim = Simulation::new(42);
         /// let mut client = Client { ctx: sim.create_context("client") };
         ///
-        /// // panics because spawning tasks via SimulationContext
-        /// // without being registered is prohibited due to security reasons.
-        /// // Register Client via Simulation::add_handler as in previous example
+        /// // Panics because spawning async tasks by a component without event handler
+        /// // is prohibited due to safety reasons.
+        /// // Register Client via Simulation::add_handler as in the previous example.
         /// client.start(10);
         /// ```
         pub fn spawn(&self, future: impl Future<Output = ()>) {
@@ -762,8 +760,9 @@ impl SimulationContext {
         /// # Example:
         ///
         /// ```rust
-        /// use dslab_core::Simulation;
         /// use futures::{stream::FuturesUnordered, StreamExt};
+        ///
+        /// use dslab_core::Simulation;
         ///
         /// let mut sim = Simulation::new(42);
         ///
@@ -798,11 +797,10 @@ impl SimulationContext {
         }
 
 
-        /// Async wait for any event of type T from src component with timeout.
+        /// Waits for any event of type `T` from component `src` until the specified timeout.  
         ///
         /// # Example
         /// ```rust
-        ///
         /// use serde::Serialize;
         ///
         /// use dslab_core::Simulation;
@@ -855,12 +853,11 @@ impl SimulationContext {
             self.async_wait_for_event_to(src, self.id, timeout).await
         }
 
-        /// Async wait for any event of type T from src component without timeout.
+        /// Waits for any event of type `T` from component `src` without timeout.
         ///
         /// # Example:
         ///
         /// ```rust
-        ///
         /// use serde::Serialize;
         ///
         /// use dslab_core::Simulation;
@@ -897,7 +894,7 @@ impl SimulationContext {
             self.async_handle_event_to::<T>(src, self.id).await
         }
 
-        /// Async handle event from self.
+        /// Waits for an event of type T from self.
         ///
         /// # Example:
         ///
@@ -948,12 +945,12 @@ impl SimulationContext {
         /// use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
         ///
         /// #[derive(Clone, Serialize)]
+        /// struct Start {}
+        ///
+        /// #[derive(Clone, Serialize)]
         /// struct SomeEvent {
         ///     request_id: u64,
         /// }
-        ///
-        /// #[derive(Clone, Serialize)]
-        /// struct Start {}
         ///
         /// struct Client {
         ///     ctx: SimulationContext,
@@ -1020,23 +1017,20 @@ impl SimulationContext {
         ///     event.request_id as DetailsKey
         /// }
         ///
-        ///
-        ///
         /// let mut sim = Simulation::new(42);
         ///
-        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
-        ///
+        /// let root_ctx = sim.create_context("root");
+        /// 
         /// let client_ctx = sim.create_context("client");
         /// let client_id = client_ctx.id();
-        ///
-        /// let root_ctx = sim.create_context("root");
-        ///
         /// let client = Rc::new(RefCell::new(Client {
         ///     ctx: client_ctx,
         ///     root_id: root_ctx.id(),
         ///     actions_finished: RefCell::new(0),
         /// }));
         /// sim.add_handler("client", client.clone());
+        ///
+        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
         ///
         /// root_ctx.emit_now(Start {}, client_id);
         /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);
@@ -1046,8 +1040,6 @@ impl SimulationContext {
         ///
         /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
         /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
-        ///
-        /// ```
         pub async fn async_detailed_wait_for_event<T>(&self, src: Id, details: DetailsKey, timeout: f64) -> AwaitResult<T>
         where
             T: EventData,
@@ -1123,7 +1115,7 @@ impl SimulationContext {
         {
             assert!(
                 self.sim_state.borrow().get_details_getter(TypeId::of::<T>()).is_some(),
-                "simulation does not have details getter for type {}, register it before useing async_detailed getters",
+                "simulation does not have details getter for type {}, register it before using async_detailed getters",
                 type_name::<T>()
             );
 
