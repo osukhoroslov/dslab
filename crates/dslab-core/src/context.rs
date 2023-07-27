@@ -18,8 +18,7 @@ async_enabled! {
     use futures::Future;
 
     use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, EventFuture};
-    use crate::async_core::await_details::AwaitResult;
-    use crate::async_core::await_details::DetailsKey;
+    use crate::async_core::await_details::{AwaitResult, DetailsKey};
 }
 
 /// A facade for accessing the simulation state and producing events from simulation components.
