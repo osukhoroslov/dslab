@@ -335,7 +335,6 @@ impl Simulation {
             self.sim_state.borrow_mut().mark_removed_handler(id);
 
             // cancel pending events related to the removed component
-            let id = self.lookup_id(name.as_ref());
             self.cancel_events(|e| e.src == id || e.dst == id);
 
             // cancel pending timers related to the removed component
@@ -360,8 +359,7 @@ impl Simulation {
             self.handlers[id as usize] = None;
 
             // cancel pending events related to the removed component
-            let id = self.lookup_id(name.as_ref());
-            self.cancel_events(|e| e.src == id || e.dest == id);
+            self.cancel_events(|e| e.src == id || e.dst == id);
 
             debug!(
                 target: "simulation",
@@ -513,9 +511,7 @@ impl Simulation {
 
         fn process_timer(&self) {
             let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
-
             next_timer.state.as_ref().borrow_mut().set_completed();
-
             self.process_task();
         }
 
@@ -557,8 +553,10 @@ impl Simulation {
             self.sim_state.borrow_mut().spawn(future);
         }
 
-        /// Register the function for a type of EventData to get await details to further call
-        /// ctx.async_detailed_handle_event::<T>(from, details)
+        /// Registers a function that extracts [`DetailsKey`] from events of specific type `T`.
+        ///
+        /// This is required step before using the [`SimulationContext::async_detailed_handle_event`]
+        /// function with type `T`.
         ///
         /// # Example
         /// ```rust
@@ -678,7 +676,7 @@ impl Simulation {
                 .register_details_getter_for::<T>(details_getter);
         }
 
-        /// Creates an UnboundedBlockingQueue for "message-passing" data.
+        /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
         ///
         /// # Examples:
         /// ```rust
@@ -695,13 +693,13 @@ impl Simulation {
         ///     payload: u32,
         /// }
         ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {}
+        ///
         /// struct Client {
         ///     ctx: SimulationContext,
         ///     queue: UnboundedBlockingQueue<AnyStruct>,
         /// }
-        ///
-        /// #[derive(Clone, Serialize)]
-        /// struct Start {}
         ///
         /// impl Client {
         ///     fn on_start(&self) {
@@ -733,7 +731,6 @@ impl Simulation {
         ///         })
         ///     }
         /// }
-        ///
         ///
         /// let mut sim = Simulation::new(42);
         ///
