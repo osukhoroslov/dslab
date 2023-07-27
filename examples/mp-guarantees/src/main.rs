@@ -619,7 +619,7 @@ fn main() {
         );
         tests.add(
             "[AT MOST ONCE] MODEL CHECKING LIMITED DROPS",
-            test_mc_limit_drop_number,
+            test_mc_limited_message_drops,
             config,
         );
     }
@@ -699,7 +699,7 @@ fn main() {
         );
         tests.add(
             "[EXACTLY ONCE] MODEL CHECKING LIMITED DROPS",
-            test_mc_limit_drop_number,
+            test_mc_limited_message_drops,
             config,
         );
     }
@@ -752,7 +752,7 @@ fn main() {
         );
         tests.add(
             "[EXACTLY ONCE ORDERED] MODEL CHECKING LIMITED DROPS",
-            test_mc_limit_drop_number,
+            test_mc_limited_message_drops,
             config,
         );
     }

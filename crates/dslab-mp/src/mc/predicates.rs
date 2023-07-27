@@ -135,8 +135,6 @@ pub mod goals {
 
 /// Prunes cut exploration branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
-    use std::rc::Rc;
-
     use sugars::boxed;
 
     use crate::logger::LogEntry;
