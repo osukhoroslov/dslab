@@ -133,7 +133,7 @@ pub mod goals {
     }
 }
 
-/// Prunes cut exploration branches if further analysis is considered unnecessary or computation-heavy.
+/// Prunes cut execution branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
     use sugars::boxed;
 
