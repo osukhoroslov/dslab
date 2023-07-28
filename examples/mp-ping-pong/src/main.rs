@@ -194,11 +194,11 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
 
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::mc_prune_sent_messages_limit(4))
-        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
-        .invariant(invariants::mc_all_invariants(vec![
-            invariants::mc_invariant_received_messages("client-node", "client", messages_expected),
-            invariants::mc_invariant_state_depth(20),
+        .prune(prunes::sent_messages_limit(4))
+        .goal(goals::got_n_local_messages("client-node", "client", 2))
+        .invariant(invariants::all_invariants(vec![
+            invariants::received_messages("client-node", "client", messages_expected),
+            invariants::state_depth(20),
         ]));
 
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
@@ -230,9 +230,9 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     system.network().set_drop_rate(0.3);
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::mc_prune_state_depth(7))
-        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
-        .invariant(invariants::mc_invariant_received_messages(
+        .prune(prunes::state_depth(7))
+        .goal(goals::got_n_local_messages("client-node", "client", 2))
+        .invariant(invariants::received_messages(
             "client-node",
             "client",
             messages_expected,
@@ -268,12 +268,12 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
     let num_drops_allowed = 3;
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::mc_any_prune(vec![
-            prunes::mc_prune_events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
-            prunes::mc_prune_events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
+        .prune(prunes::any_prune(vec![
+            prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
+            prunes::events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
         ]))
-        .goal(goals::mc_goal_got_n_local_messages("client-node", "client", 2))
-        .invariant(invariants::mc_invariant_received_messages(
+        .goal(goals::got_n_local_messages("client-node", "client", 2))
+        .invariant(invariants::received_messages(
             "client-node",
             "client",
             messages_expected,

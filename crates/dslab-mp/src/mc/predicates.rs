@@ -28,7 +28,7 @@ pub mod invariants {
     use crate::mc::strategy::InvariantFn;
 
     /// Combines multiple invariant functions by returning `Ok` iff all invariants are satisfied.
-    pub fn mc_all_invariants(mut rules: Vec<InvariantFn>) -> InvariantFn {
+    pub fn all_invariants(mut rules: Vec<InvariantFn>) -> InvariantFn {
         boxed!(move |state: &McState| {
             for rule in &mut rules {
                 rule(state)?;
@@ -38,7 +38,7 @@ pub mod invariants {
     }
 
     /// Checks that state depth does not exceed the given value.
-    pub fn mc_invariant_state_depth(depth: u64) -> InvariantFn {
+    pub fn state_depth(depth: u64) -> InvariantFn {
         boxed!(move |state: &McState| {
             if state.depth > depth {
                 Err(format!("state depth exceeds maximum allowed depth {depth}"))
@@ -50,7 +50,7 @@ pub mod invariants {
 
     /// Verifies that the set of local messages delivered by a process matches exactly the expected messages.
     /// Message duplications or unexpected messages are not allowed.
-    pub fn mc_invariant_received_messages<S>(node: S, proc: S, messages_expected: HashSet<String>) -> InvariantFn
+    pub fn received_messages<S>(node: S, proc: S, messages_expected: HashSet<String>) -> InvariantFn
     where
         S: Into<String>,
     {
@@ -94,7 +94,7 @@ pub mod goals {
     use crate::mc::strategy::GoalFn;
 
     /// Combines multiple goal functions by returning `Some()` iff at least one goal is reached.
-    pub fn mc_any_goal(mut goals: Vec<GoalFn>) -> GoalFn {
+    pub fn any_goal(mut goals: Vec<GoalFn>) -> GoalFn {
         boxed!(move |state: &McState| {
             for goal in &mut goals {
                 if let Some(status) = goal(state) {
@@ -106,7 +106,7 @@ pub mod goals {
     }
 
     /// Checks if the given process produced `n` local messages.
-    pub fn mc_goal_got_n_local_messages<S>(node: S, proc: S, n: u64) -> GoalFn
+    pub fn got_n_local_messages<S>(node: S, proc: S, n: u64) -> GoalFn
     where
         S: Into<String>,
     {
@@ -122,7 +122,7 @@ pub mod goals {
     }
 
     /// Checks if current state has no more active events.
-    pub fn mc_goal_no_events() -> GoalFn {
+    pub fn no_events() -> GoalFn {
         boxed!(|state: &McState| {
             if state.events.available_events_num() == 0 {
                 Some("final state reached".to_string())
@@ -142,7 +142,7 @@ pub mod prunes {
     use crate::mc::strategy::PruneFn;
 
     /// Combines multiple prune functions by returning `Some()` iff at least one prune is satisfied.
-    pub fn mc_any_prune(mut prunes: Vec<PruneFn>) -> PruneFn {
+    pub fn any_prune(mut prunes: Vec<PruneFn>) -> PruneFn {
         boxed!(move |state: &McState| {
             for prune in &mut prunes {
                 if let Some(status) = prune(state) {
@@ -154,7 +154,7 @@ pub mod prunes {
     }
 
     /// Prunes states with depth exceeding the given value.
-    pub fn mc_prune_state_depth(depth: u64) -> PruneFn {
+    pub fn state_depth(depth: u64) -> PruneFn {
         boxed!(move |state: &McState| {
             if state.depth > depth {
                 Some(format!(
@@ -167,7 +167,7 @@ pub mod prunes {
     }
 
     /// Prunes states where some process has sent more messages than the given value.
-    pub fn mc_prune_sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
+    pub fn sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
         boxed!(move |state: &McState| {
             for (_, node) in state.node_states.iter() {
                 for (proc_name, proc) in node.iter() {
@@ -181,7 +181,7 @@ pub mod prunes {
     }
 
     /// Prunes states where the number of events matching the predicate is more than the limit.
-    pub fn mc_prune_events_limit<F>(predicate: F, limit: usize) -> PruneFn
+    pub fn events_limit<F>(predicate: F, limit: usize) -> PruneFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {

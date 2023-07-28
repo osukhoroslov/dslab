@@ -439,10 +439,10 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let messages = send_messages(&mut sys, 2, false);
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::mc_prune_sent_messages_limit(4))
-        .goal(goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2))
-        .invariant(invariants::mc_all_invariants(vec![
-            invariants::mc_invariant_state_depth(20),
+        .prune(prunes::sent_messages_limit(4))
+        .goal(goals::got_n_local_messages("receiver-node", "receiver", 2))
+        .invariant(invariants::all_invariants(vec![
+            invariants::state_depth(20),
             mc_invariant_guarantees(messages, *config),
         ]));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
@@ -464,10 +464,10 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
         .collect();
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
-        .prune(prunes::mc_prune_state_depth(7))
-        .goal(goals::mc_any_goal(vec![
-            goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2),
-            goals::mc_goal_no_events(),
+        .prune(prunes::state_depth(7))
+        .goal(goals::any_goal(vec![
+            goals::got_n_local_messages("receiver-node", "receiver", 2),
+            goals::no_events(),
         ]))
         .invariant(mc_invariant_guarantees(messages.clone(), *config));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
@@ -494,17 +494,17 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     let num_drops_allowed = 3;
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
-        .prune(prunes::mc_any_prune(vec![
-            prunes::mc_prune_events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
-            prunes::mc_prune_events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
-            prunes::mc_prune_events_limit(LogEntry::is_mc_timer_set, 4),
+        .prune(prunes::any_prune(vec![
+            prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
+            prunes::events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
+            prunes::events_limit(LogEntry::is_mc_timer_set, 4),
         ]))
-        .goal(goals::mc_any_goal(vec![
-            goals::mc_goal_got_n_local_messages("receiver-node", "receiver", 2),
-            goals::mc_goal_no_events(),
+        .goal(goals::any_goal(vec![
+            goals::got_n_local_messages("receiver-node", "receiver", 2),
+            goals::no_events(),
         ]))
-        .invariant(invariants::mc_all_invariants(vec![
-            invariants::mc_invariant_state_depth(20),
+        .invariant(invariants::all_invariants(vec![
+            invariants::state_depth(20),
             mc_invariant_guarantees(messages.clone(), *config),
         ]));
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
