@@ -124,10 +124,10 @@ fn check_message_delivery_reliable(
     delivered_msg_count: &HashMap<String, i32>,
     expected_msg_count: &HashMap<String, i32>,
 ) -> TestResult {
-    for (data, delivered_count) in delivered_msg_count {
-        let expected_count = expected_msg_count[data];
+    for (data, expected_count) in expected_msg_count {
+        let delivered_count = delivered_msg_count.get(data).unwrap_or(&0);
         assume!(
-            *delivered_count >= expected_count,
+            delivered_count >= expected_count,
             format!(
                 "Message {} is not delivered (observed count {} < expected count {})",
                 data, delivered_count, expected_count
@@ -141,13 +141,13 @@ fn check_message_delivery_once(
     delivered_msg_count: &HashMap<String, i32>,
     expected_msg_count: &HashMap<String, i32>,
 ) -> TestResult {
-    for (data, count) in delivered_msg_count {
-        let expected_count = expected_msg_count[data];
+    for (data, delivered_count) in delivered_msg_count {
+        let expected_count = expected_msg_count.get(data).unwrap_or(&0);
         assume!(
-            *count <= expected_count,
+            delivered_count <= expected_count,
             format!(
                 "Message {} is delivered more than once (observed count {} > expected count {})",
-                data, count, expected_count
+                data, delivered_count, expected_count
             )
         )?;
     }
