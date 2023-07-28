@@ -203,16 +203,8 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
 
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
     let res = mc.run_with_change(|system| {
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data),
-        );
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data2),
-        );
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+        system.send_local_message("client-node", "client", Message::new("PING", &data2));
     });
 
     if let Err(e) = res {
@@ -240,16 +232,8 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
 
     let res = mc.run_with_change(|system| {
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data),
-        );
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data2),
-        );
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+        system.send_local_message("client-node", "client", Message::new("PING", &data2));
     });
 
     if let Err(e) = res {
@@ -281,16 +265,8 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
 
     let res = mc.run_with_change(|system| {
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data),
-        );
-        system.send_local_message(
-            "client-node".to_string(),
-            "client".to_string(),
-            Message::new("PING", &data2),
-        );
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+        system.send_local_message("client-node", "client", Message::new("PING", &data2));
     });
 
     if let Err(e) = res {

@@ -473,7 +473,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
         for message in messages {
-            sys.send_local_message("sender-node".to_string(), "sender".to_string(), message);
+            sys.send_local_message("sender-node", "sender", message);
         }
     });
     if let Err(e) = res {
@@ -511,7 +511,7 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
 
     let res = mc.run_with_change(|sys| {
         for msg in messages {
-            sys.send_local_message("sender-node".to_string(), "sender".to_string(), msg.clone());
+            sys.send_local_message("sender-node", "sender", msg.clone());
         }
     });
     if let Err(e) = res {
