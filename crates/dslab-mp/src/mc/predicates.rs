@@ -210,7 +210,6 @@ pub mod prunes {
     }
 }
 
-
 /// Collects select states that should be collected for complex pipelining in MC.
 pub mod collects {
     use sugars::boxed;
@@ -227,5 +226,4 @@ pub mod collects {
         let proc = proc.into();
         boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n as usize)
     }
-
 }
