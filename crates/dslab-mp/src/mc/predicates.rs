@@ -105,6 +105,18 @@ pub mod goals {
         })
     }
 
+    /// Combines multiple goal functions by returning `Some()` iff all goals are reached.
+    pub fn all_goals(mut goals: Vec<GoalFn>) -> GoalFn {
+        boxed!(move |state: &McState| {
+            for goal in &mut goals {
+                if goal(state).is_none() {
+                    return None;
+                }
+            }
+            Some("combied goal reached".to_string())
+        })
+    }
+
     /// Checks if the given process produced `n` local messages.
     pub fn got_n_local_messages<S>(node: S, proc: S, n: u64) -> GoalFn
     where
@@ -196,4 +208,24 @@ pub mod prunes {
             }
         })
     }
+}
+
+
+/// Collects select states that should be collected for complex pipelining in MC.
+pub mod collects {
+    use sugars::boxed;
+
+    use crate::mc::state::McState;
+    use crate::mc::strategy::CollectFn;
+
+    /// Checks if the given process produced `n` local messages.
+    pub fn got_n_local_messages<S>(node: S, proc: S, n: u64) -> CollectFn
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        let proc = proc.into();
+        boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n as usize)
+    }
+
 }
