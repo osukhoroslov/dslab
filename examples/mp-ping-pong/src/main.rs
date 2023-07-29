@@ -301,11 +301,11 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
 
         let res = if i == 0 {
             mc.run_with_change(|system| {
-                system.send_local_message("client-node", "client", Message::new("PING", &message_data));
+                system.send_local_message("client-node", "client", Message::new("PING", message_data));
             })
         } else {
             mc.run_from_states_with_change(collected_states, |system| {
-                system.send_local_message("client-node", "client", Message::new("PING", &message_data));
+                system.send_local_message("client-node", "client", Message::new("PING", message_data));
             })
         };
         match res {

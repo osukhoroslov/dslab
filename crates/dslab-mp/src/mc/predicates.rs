@@ -109,9 +109,7 @@ pub mod goals {
     pub fn all_goals(mut goals: Vec<GoalFn>) -> GoalFn {
         boxed!(move |state: &McState| {
             for goal in &mut goals {
-                if goal(state).is_none() {
-                    return None;
-                }
+                goal(state)?;
             }
             Some("combied goal reached".to_string())
         })
