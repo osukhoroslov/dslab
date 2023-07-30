@@ -4,7 +4,6 @@ use std::time::Instant;
 
 use clap::Parser;
 
-use dslab_core::log_info;
 use dslab_iaas::core::config::exp_config::ExperimentConfig;
 use dslab_iaas::experiments::{Experiment, SimulationCallbacks};
 use dslab_iaas::simulation::CloudSimulation;
@@ -21,23 +20,16 @@ fn init_logger() {
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// Path to simulation config
-    #[clap(short, long)]
+    #[clap(long)]
     config: String,
 
     /// Number of threads to use (default - use all available cores)
-    #[clap(short, long, default_value_t = std::thread::available_parallelism().unwrap().get())]
+    #[clap(long, default_value_t = std::thread::available_parallelism().unwrap().get())]
     threads: usize,
 
-    /// Parallel mode on
-    #[clap(short, long, default_value_t = false)]
-    parallel_mode: bool,
-}
-
-fn number_of_threads(threads: usize, parallel_mode: bool) -> Option<usize> {
-    if !parallel_mode {
-        return None;
-    }
-    Some(threads)
+    /// Path to save simulation trace. If none then stdout is used
+    #[clap(long)]
+    trace_file: Option<String>,
 }
 
 #[derive(Clone)]
@@ -61,12 +53,12 @@ impl SimulationCallbacks for SimulationControlCallbacks {
         if self.step % 10000 == 0 {
             let average_cpu_load = sim.borrow_mut().average_cpu_load();
             let average_memory_load = sim.borrow_mut().average_memory_load();
-            log_info!(
+            sim.borrow().logger().borrow_mut().log_info(
                 sim.borrow().context(),
-                "Step = {}, Average CPU load = {}, average memory load = {}",
-                self.step,
-                average_cpu_load,
-                average_memory_load
+                format!(
+                    "Step = {}, Average CPU load = {}, average memory load = {}",
+                    self.step, average_cpu_load, average_memory_load
+                ),
             );
         }
 
@@ -75,21 +67,25 @@ impl SimulationCallbacks for SimulationControlCallbacks {
 
     fn on_simulation_finish(&mut self, sim: Rc<RefCell<CloudSimulation>>) {
         let end_time = sim.borrow_mut().current_time();
-        log_info!(
+        sim.borrow().logger().borrow_mut().log_info(
             sim.borrow().context(),
-            "Total energy consumed by host one: {:.2}",
-            sim.borrow()
-                .host_by_name("h1")
-                .borrow_mut()
-                .get_energy_consumed(end_time)
+            format!(
+                "Total energy consumed by host one: {:.2}",
+                sim.borrow()
+                    .host_by_name("h1")
+                    .borrow_mut()
+                    .get_energy_consumed(end_time)
+            ),
         );
-        log_info!(
+        sim.borrow().logger().borrow_mut().log_info(
             sim.borrow().context(),
-            "Total energy consumed by host two: {:.2}",
-            sim.borrow()
-                .host_by_name("h2")
-                .borrow_mut()
-                .get_energy_consumed(end_time)
+            format!(
+                "Total energy consumed by host two: {:.2}",
+                sim.borrow()
+                    .host_by_name("h2")
+                    .borrow_mut()
+                    .get_energy_consumed(end_time)
+            ),
         );
     }
 }
@@ -104,7 +100,8 @@ fn main() {
     let mut exp = Experiment::new(
         Box::new(SimulationControlCallbacks::new()),
         sim_config,
-        number_of_threads(args.threads, args.parallel_mode),
+        args.threads,
+        args.trace_file,
     );
     exp.run();
 

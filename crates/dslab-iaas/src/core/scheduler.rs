@@ -7,7 +7,6 @@ use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_debug;
 
 use crate::core::common::Allocation;
 use crate::core::config::sim_config::SimulationConfig;
@@ -16,6 +15,7 @@ use crate::core::events::allocation::{
     AllocationRequest,
 };
 use crate::core::events::vm_api::VmStatusChanged;
+use crate::core::logger::Logger;
 use crate::core::monitoring::Monitoring;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm::VmStatus;
@@ -41,11 +41,13 @@ pub struct Scheduler {
     placement_store_id: u32,
     vm_placement_algorithm: VMPlacementAlgorithm,
     ctx: SimulationContext,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
     sim_config: Rc<SimulationConfig>,
 }
 
 impl Scheduler {
     /// Creates scheduler with specified VM placement algorithm.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         snapshot: ResourcePoolState,
         monitoring: Rc<RefCell<Monitoring>>,
@@ -53,6 +55,7 @@ impl Scheduler {
         placement_store_id: u32,
         vm_placement_algorithm: VMPlacementAlgorithm,
         ctx: SimulationContext,
+        logger: Rc<RefCell<Box<dyn Logger>>>,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
@@ -63,6 +66,7 @@ impl Scheduler {
             placement_store_id,
             vm_placement_algorithm,
             ctx,
+            logger,
             sim_config,
         }
     }
@@ -133,11 +137,13 @@ impl Scheduler {
         // try to find placements using the placement algorithm
         if let Some(placements) = self.compute_placements(&allocations) {
             for (host, alloc) in placements.iter().zip(allocations.iter()) {
-                log_debug!(
-                    self.ctx,
-                    "decided to place vm {} on host {}",
-                    alloc.id,
-                    self.ctx.lookup_name(*host)
+                self.logger.borrow_mut().log_debug(
+                    &self.ctx,
+                    format!(
+                        "decided to place vm {} on host {}",
+                        alloc.id,
+                        self.ctx.lookup_name(*host)
+                    ),
                 );
                 self.pool_state.allocate(alloc, *host);
             }
@@ -150,7 +156,9 @@ impl Scheduler {
                 self.sim_config.message_delay,
             );
         } else {
-            log_debug!(self.ctx, "failed to place {} vms", vm_ids.len());
+            self.logger
+                .borrow_mut()
+                .log_debug(&self.ctx, format!("failed to place {} vms", vm_ids.len()));
             self.ctx
                 .emit_self(AllocationRequest { vm_ids }, self.sim_config.allocation_retry_period);
         }

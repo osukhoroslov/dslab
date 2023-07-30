@@ -10,6 +10,7 @@ target/
 # Traces
 examples/iaas-traces/*.csv
 examples/iaas-experiment/*.csv
+examples/iaas-experiment/*.json
 
 # Maven
 examples-other/vetand_cloudsim_benchmark/target

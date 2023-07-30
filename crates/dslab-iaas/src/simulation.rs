@@ -17,6 +17,7 @@ use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
+use crate::core::logger::{Logger, StdoutLogger};
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::scheduler::Scheduler;
@@ -53,6 +54,7 @@ pub struct CloudSimulation {
     slav_metric: Box<dyn HostSLAVMetric>,
     batch_mode: bool,
     batch_buffer: Vec<VMSpawnRequest>,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -60,8 +62,18 @@ pub struct CloudSimulation {
 
 impl CloudSimulation {
     /// Creates a simulation with specified config.
-    pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
-        let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
+    pub fn new(sim: Simulation, sim_config: SimulationConfig) -> Self {
+        CloudSimulation::new_with_logger(sim, sim_config, Box::new(StdoutLogger::new()))
+    }
+
+    /// Creates a simulation with specified config.
+    pub fn new_with_logger(mut sim: Simulation, sim_config: SimulationConfig, logger: Box<dyn Logger>) -> Self {
+        let logger: Rc<RefCell<Box<dyn Logger>>> = rc!(refcell!(logger));
+
+        let monitoring = rc!(refcell!(Monitoring::new(
+            sim.create_context("monitoring"),
+            logger.clone()
+        )));
         sim.add_handler("monitoring", monitoring.clone());
 
         let vm_api = rc!(refcell!(VmAPI::new(sim.create_context("vm_api"))));
@@ -71,6 +83,7 @@ impl CloudSimulation {
             sim_config.allow_vm_overcommit,
             vm_api.clone(),
             sim.create_context("placement_store"),
+            logger.clone(),
             sim_config.clone(),
         )));
         sim.add_handler("placement_store", placement_store.clone());
@@ -87,6 +100,7 @@ impl CloudSimulation {
             slav_metric: Box::new(OverloadTimeFraction::new()),
             batch_mode: false,
             batch_buffer: Vec::new(),
+            logger,
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -165,6 +179,7 @@ impl CloudSimulation {
             self.host_power_model.clone(),
             self.slav_metric.clone(),
             self.sim.create_context(name),
+            self.logger.clone(),
             self.sim_config.clone(),
         )));
         let id = self.sim.add_handler(name, host.clone());
@@ -206,6 +221,7 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             vm_placement_algorithm,
             self.sim.create_context(name),
+            self.logger.clone(),
             self.sim_config.clone(),
         )));
         let id = self.sim.add_handler(name, scheduler.clone());
@@ -534,5 +550,10 @@ impl CloudSimulation {
         }
 
         sum_memory_allocated / sum_memory_total
+    }
+
+    /// Returns sumulation logger in order to add new log entry or save logs to file
+    pub fn logger(&self) -> Rc<RefCell<Box<dyn Logger>>> {
+        self.logger.clone()
     }
 }

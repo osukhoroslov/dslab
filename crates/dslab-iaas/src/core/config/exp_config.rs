@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use sugars::{rc, refcell};
 
 use crate::core::config::dynamic_variable::{
-    DynamicDatasetVariable, DynamicNumericVariable, DynamicStringVariable, DynamicVariable, NumericParam, StringParam,
+    make_dynamic_custom_variable, make_dynamic_numeric_variable, CustomParam, DynamicVariable, DynamicVariableTrait,
+    NumericParam,
 };
 use crate::core::config::sim_config::{HostConfig, SchedulerConfig, SimulationConfig, VmDatasetConfig};
 
@@ -23,7 +24,7 @@ pub struct SchedulerConfigRaw {
     /// Should be set if count > 1
     pub name_prefix: Option<String>,
     /// VM placement algorithm for this scheduler
-    pub algorithm: StringParam,
+    pub algorithm: CustomParam<String>,
     /// number of such schedulers
     pub count: Option<NumericParam<u32>>,
 }
@@ -37,9 +38,9 @@ pub struct SchedulerConfigState {
     /// Should be set if count > 1
     pub name_prefix: Option<String>,
     /// VM placement algorithm for this scheduler
-    pub algorithm: Rc<RefCell<DynamicStringVariable>>,
+    pub algorithm: Rc<RefCell<DynamicVariable<String>>>,
     /// number of such schedulers
-    pub count: Rc<RefCell<DynamicNumericVariable<u32>>>,
+    pub count: Rc<RefCell<DynamicVariable<u32>>>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -65,7 +66,7 @@ pub struct ConfigDataRaw {
     /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<NumericParam<f64>>,
     /// Dataset of virtual machines
-    pub trace: Option<StringParam>,
+    pub trace: Option<CustomParam<VmDatasetConfig>>,
     /// cloud physical hosts
     pub hosts: Option<Vec<HostConfig>>,
     /// cloud schedulers
@@ -76,27 +77,27 @@ pub struct ConfigDataRaw {
 #[derive(Debug, Clone)]
 pub struct ConfigState {
     /// periodically send statistics from host to monitoring
-    pub send_stats_period: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub send_stats_period: Rc<RefCell<DynamicVariable<f64>>>,
     /// message trip time from any host to any direction
-    pub message_delay: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub message_delay: Rc<RefCell<DynamicVariable<f64>>>,
     /// when allocation request fails then wait for this duration
-    pub allocation_retry_period: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub allocation_retry_period: Rc<RefCell<DynamicVariable<f64>>>,
     /// vm initialization duration
-    pub vm_start_duration: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub vm_start_duration: Rc<RefCell<DynamicVariable<f64>>>,
     /// vm deallocation duration
-    pub vm_stop_duration: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub vm_stop_duration: Rc<RefCell<DynamicVariable<f64>>>,
     /// pack VM by real resource consumption, not SLA
     pub allow_vm_overcommit: bool,
     /// currently used to define VM migration duration
-    pub network_throughput: Rc<RefCell<DynamicNumericVariable<u64>>>,
+    pub network_throughput: Rc<RefCell<DynamicVariable<u64>>>,
     /// length of simulation (for public datasets only)
-    pub simulation_length: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub simulation_length: Rc<RefCell<DynamicVariable<f64>>>,
     /// duration beetween user access the simulation info
-    pub step_duration: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub step_duration: Rc<RefCell<DynamicVariable<f64>>>,
     /// VM becomes failed after this timeout is reached
-    pub vm_allocation_timeout: Rc<RefCell<DynamicNumericVariable<f64>>>,
+    pub vm_allocation_timeout: Rc<RefCell<DynamicVariable<f64>>>,
     /// Dataset of virtual machines
-    pub trace: Option<Rc<RefCell<DynamicDatasetVariable>>>,
+    pub trace: Option<Rc<RefCell<DynamicVariable<VmDatasetConfig>>>>,
     /// cloud physical hosts
     pub hosts: Vec<HostConfig>,
     /// cloud schedulers
@@ -109,7 +110,7 @@ pub struct ExperimentConfig {
     /// config value
     pub current_state: ConfigState,
     /// dynamic variables which will result in multiple test cases
-    pub dynamic_variables: Vec<Rc<RefCell<dyn DynamicVariable>>>,
+    pub dynamic_variables: Vec<Rc<RefCell<dyn DynamicVariableTrait>>>,
     /// if the next state is first
     pub initial_state: bool,
     /// if there is one more state to process
@@ -122,66 +123,66 @@ impl ExperimentConfig {
         let current_state_raw: ConfigDataRaw = serde_yaml::from_str(
             &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
         )
-        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));
+        .unwrap_or_else(|err| panic!("Can't parse YAML from file {}: {}", file_name, err));
 
-        let send_stats_period = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let send_stats_period = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "send_stats_period".to_string(),
             current_state_raw.send_stats_period.unwrap_or(NumericParam::Value(0.5))
         )));
-        let message_delay = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let message_delay = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "message_delay".to_string(),
             current_state_raw.message_delay.unwrap_or(NumericParam::Value(0.2))
         )));
-        let allocation_retry_period = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let allocation_retry_period = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "allocation_retry_period".to_string(),
             current_state_raw
                 .allocation_retry_period
                 .unwrap_or(NumericParam::Value(1.))
         )));
-        let vm_start_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let vm_start_duration = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "vm_start_duration".to_string(),
             current_state_raw.vm_start_duration.unwrap_or(NumericParam::Value(1.))
         )));
-        let vm_stop_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let vm_stop_duration = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "vm_stop_duration".to_string(),
             current_state_raw.vm_stop_duration.unwrap_or(NumericParam::Value(0.5))
         )));
-        let network_throughput = rc!(refcell!(DynamicNumericVariable::<u64>::from_param(
+        let network_throughput = rc!(refcell!(make_dynamic_numeric_variable::<u64>(
             "network_throughput".to_string(),
             current_state_raw.network_throughput.unwrap_or(NumericParam::Value(1))
         )));
-        let simulation_length = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let simulation_length = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "simulation_length".to_string(),
             current_state_raw.simulation_length.unwrap_or(NumericParam::Value(0.))
         )));
-        let step_duration = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let step_duration = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "step_duration".to_string(),
             current_state_raw.step_duration.unwrap_or(NumericParam::Value(500.))
         )));
-        let vm_allocation_timeout = rc!(refcell!(DynamicNumericVariable::<f64>::from_param(
+        let vm_allocation_timeout = rc!(refcell!(make_dynamic_numeric_variable::<f64>(
             "vm_allocation_timeout".to_string(),
             current_state_raw
                 .vm_allocation_timeout
                 .unwrap_or(NumericParam::Value(50.))
         )));
 
-        let mut trace: Option<Rc<RefCell<DynamicDatasetVariable>>> = None;
+        let mut trace: Option<Rc<RefCell<DynamicVariable<VmDatasetConfig>>>> = None;
         if current_state_raw.trace.is_some() {
-            trace = Some(rc!(refcell!(DynamicDatasetVariable::from_param(
+            trace = Some(rc!(refcell!(make_dynamic_custom_variable::<VmDatasetConfig>(
                 "trace".to_string(),
                 current_state_raw.trace.unwrap(),
             ))));
         }
 
-        let mut algorithms: Vec<Rc<RefCell<DynamicStringVariable>>> = Vec::new();
-        let mut scheduler_counts: Vec<Rc<RefCell<DynamicNumericVariable<u32>>>> = Vec::new();
+        let mut algorithms: Vec<Rc<RefCell<DynamicVariable<String>>>> = Vec::new();
+        let mut scheduler_counts: Vec<Rc<RefCell<DynamicVariable<u32>>>> = Vec::new();
         let mut schedulers: Vec<SchedulerConfigState> = Vec::new();
         for scheduler in current_state_raw.schedulers.unwrap_or_default() {
-            let algorithm = rc!(refcell!(DynamicStringVariable::from_param(
+            let algorithm = rc!(refcell!(make_dynamic_custom_variable::<String>(
                 "algorithm".to_string(),
                 scheduler.algorithm
             )));
-            let count = rc!(refcell!(DynamicNumericVariable::<u32>::from_param(
+            let count = rc!(refcell!(make_dynamic_numeric_variable::<u32>(
                 "count".to_string(),
                 scheduler.count.unwrap_or(NumericParam::Value(1)),
             )));
@@ -212,7 +213,7 @@ impl ExperimentConfig {
             schedulers,
         };
 
-        let mut dynamic_variables = Vec::<Rc<RefCell<dyn DynamicVariable>>>::new();
+        let mut dynamic_variables = Vec::<Rc<RefCell<dyn DynamicVariableTrait>>>::new();
         if current_state.send_stats_period.borrow().is_dynamic() {
             dynamic_variables.push(current_state.send_stats_period.clone());
         }
@@ -264,11 +265,7 @@ impl ExperimentConfig {
 
     /// Returns if some test cases are remaining
     fn has_next(&self) -> bool {
-        for i in 0..self.dynamic_variables.len() + 1 {
-            if i == self.dynamic_variables.len() {
-                return false;
-            }
-
+        for i in 0..self.dynamic_variables.len() {
             if self.dynamic_variables[i].borrow().has_next() {
                 return true;
             }

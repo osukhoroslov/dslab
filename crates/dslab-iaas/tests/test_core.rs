@@ -236,7 +236,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::Initializing);
 
     // now host does not exist
-    let random_wrong_id = 47;
+    let random_wrong_id = 8;
     let bad_s2 = cloud_sim.add_scheduler(
         "bad_s2",
         VMPlacementAlgorithm::single(BadScheduler::new(random_wrong_id)),
