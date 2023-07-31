@@ -8,7 +8,6 @@ use dslab_compute::multicore::CoresDependency;
 
 use crate::dag::DAG;
 use crate::parsers::config::ParserConfig;
-use crate::task::ResourceRestriction;
 
 fn one() -> u32 {
     1
@@ -22,15 +21,6 @@ struct DataItem {
     name: String,
     // expected unit: MB
     size: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "resources")]
-enum YamlResourceRestriction {
-    #[serde(rename = "only")]
-    Only(Vec<usize>),
-    #[serde(rename = "except")]
-    Except(Vec<usize>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,7 +39,6 @@ struct Task {
     #[serde(default)]
     inputs: Vec<String>,
     outputs: Vec<DataItem>,
-    resource_restriction: Option<YamlResourceRestriction>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,15 +78,6 @@ impl DAG {
                     _ => CoresDependency::Linear,
                 },
             );
-            if let Some(restriction) = &task.resource_restriction {
-                dag.set_resource_restriction(
-                    task_id,
-                    match restriction {
-                        YamlResourceRestriction::Only(v) => ResourceRestriction::Only(v.iter().copied().collect()),
-                        YamlResourceRestriction::Except(v) => ResourceRestriction::Except(v.iter().copied().collect()),
-                    },
-                )
-            }
             for output in task.outputs.iter() {
                 data_items.insert(
                     output.name.clone(),

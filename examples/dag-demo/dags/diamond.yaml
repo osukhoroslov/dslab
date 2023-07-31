@@ -13,9 +13,6 @@ tasks:
         size: 150
       - name: A-output-1
         size: 200
-    resource_restriction:
-      type: only
-      resources: [0]
   - name: B
     flops: 200
     memory: 500
@@ -45,6 +42,3 @@ tasks:
     outputs:
       - name: result
         size: 300
-    resource_restriction:
-      type: except
-      resources: [0]
