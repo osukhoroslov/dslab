@@ -1,10 +1,7 @@
 //! Topology-aware network model.
 
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
-use std::ops::Deref;
-use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
 
@@ -96,7 +93,7 @@ impl TransferInfo {
 
 /// Topology-aware network model supporting arbitrary network topologies.
 pub struct TopologyAwareNetworkModel {
-    topology: Rc<RefCell<Topology>>,
+    topology: Topology,
     routing: Box<dyn RoutingAlgorithm>,
     current_transfers: BTreeMap<usize, TransferInfo>,
     transfers_through_link: Vec<Vec<usize>>,
@@ -110,7 +107,7 @@ pub struct TopologyAwareNetworkModel {
 impl Default for TopologyAwareNetworkModel {
     fn default() -> Self {
         TopologyAwareNetworkModel {
-            topology: Rc::new(RefCell::new(Topology::default())),
+            topology: Topology::default(),
             routing: Box::<ShortestPathFloydWarshall>::default(),
             current_transfers: BTreeMap::new(),
             transfers_through_link: Vec::new(),
@@ -138,7 +135,7 @@ impl TopologyAwareNetworkModel {
 
     fn get_path(&self, src: NodeId, dest: NodeId) -> Vec<LinkId> {
         self.routing
-            .get_path(src, dest, self.topology.borrow().deref())
+            .get_path(src, dest, &self.topology)
             .unwrap_or_else(|| panic!("No path from {} to {}", src, dest))
     }
 
@@ -200,7 +197,7 @@ impl TopologyAwareNetworkModel {
             return;
         }
 
-        let topology = self.topology.borrow();
+        let topology = &self.topology;
 
         for transfer_id in affected_transfers.iter() {
             let transfer = self.current_transfers.get_mut(transfer_id).unwrap();
@@ -310,7 +307,7 @@ impl TopologyAwareNetworkModel {
     /// Same as [`Self::calc`] with `affected_transfers` equal to the set of all transfers,
     /// but this corner case allows for some optimization.
     fn calc_all(&mut self, ctx: &mut SimulationContext) {
-        let topology = self.topology.borrow();
+        let topology = &self.topology;
 
         for transfer in self.current_transfers.values_mut() {
             transfer.size_left -= transfer.throughput * (ctx.time() - transfer.last_update_time);
@@ -384,7 +381,7 @@ impl TopologyAwareNetworkModel {
     }
 
     fn validate_array_lengths(&mut self) {
-        let topology = self.topology.borrow();
+        let topology = &self.topology;
         self.link_data.resize(topology.link_count(), None);
         self.transfers_through_link.resize(topology.link_count(), Vec::new());
         self.tmp_transfers_through_link
@@ -397,20 +394,20 @@ impl NetworkModel for TopologyAwareNetworkModel {
         true
     }
 
-    fn init(&mut self, topology: Rc<RefCell<Topology>>, routing: Box<dyn RoutingAlgorithm>) {
+    fn init(&mut self, topology: Topology, routing: Box<dyn RoutingAlgorithm>) {
         self.topology = topology;
         self.routing = routing;
-        self.routing.init(self.topology.borrow().deref());
+        self.routing.init(&self.topology);
     }
 
     fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64 {
         let path = self.get_path(src, dest);
-        self.topology.borrow_mut().get_path_bandwidth(&path)
+        self.topology.get_path_bandwidth(&path)
     }
 
     fn latency(&self, src: NodeId, dest: NodeId) -> f64 {
         let path = self.get_path(src, dest);
-        self.topology.borrow_mut().get_path_latency(&path)
+        self.topology.get_path_latency(&path)
     }
 
     fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
@@ -459,9 +456,17 @@ impl NetworkModel for TopologyAwareNetworkModel {
     }
 
     fn on_topology_change(&mut self, ctx: &mut SimulationContext) {
-        self.routing.init(self.topology.borrow().deref());
+        self.routing.init(&self.topology);
         self.validate_array_lengths();
         self.calc_all(ctx);
         self.update_next_event(ctx);
+    }
+
+    fn topology(&self) -> Option<&Topology> {
+        Some(&self.topology)
+    }
+
+    fn topology_mut(&mut self) -> Option<&mut Topology> {
+        Some(&mut self.topology)
     }
 }
