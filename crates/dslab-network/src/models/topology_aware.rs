@@ -133,12 +133,6 @@ impl TopologyAwareNetworkModel {
         self
     }
 
-    fn get_path(&self, src: NodeId, dest: NodeId) -> Vec<LinkId> {
-        self.routing
-            .get_path(src, dest, &self.topology)
-            .unwrap_or_else(|| panic!("No path from {} to {}", src, dest))
-    }
-
     /// Finds the smallest subset of transfers which contains `updated_transfer`
     /// so that the sets of links used by transfers inside and outside this subset don't intersect.
     fn get_affected_transfers(&self, updated_transfer: usize) -> HashSet<usize> {
@@ -401,18 +395,22 @@ impl NetworkModel for TopologyAwareNetworkModel {
     }
 
     fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64 {
-        let path = self.get_path(src, dest);
-        self.topology.get_path_bandwidth(&path)
+        self.topology
+            .get_path_bandwidth(self.routing.get_path_iter(src, dest, &self.topology).unwrap())
     }
 
     fn latency(&self, src: NodeId, dest: NodeId) -> f64 {
-        let path = self.get_path(src, dest);
-        self.topology.get_path_latency(&path)
+        self.topology
+            .get_path_latency(self.routing.get_path_iter(src, dest, &self.topology).unwrap())
     }
 
     fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
         self.validate_array_lengths();
-        let path = self.get_path(dt.src_node_id, dt.dest_node_id);
+        let path = self
+            .routing
+            .get_path_iter(dt.src_node_id, dt.dest_node_id, &self.topology)
+            .unwrap()
+            .collect::<Vec<_>>();
         let id = dt.id;
         assert!(!self.current_transfers.contains_key(&dt.id));
         for &link in path.iter() {
