@@ -23,12 +23,12 @@ pub enum TaskState {
     Done,
 }
 
-/// Restrict task execution to some subset of resources.
+/// Restricts task execution to some subset of resources.
 #[derive(Clone, Debug)]
 pub enum ResourceRestriction {
-    /// Allow execution only on given resources.
+    /// Allows execution only on the given resources.
     Only(BTreeSet<usize>),
-    /// Allow execution everywhere except on given resources.
+    /// Allows execution on any resource except the given resources.
     Except(BTreeSet<usize>),
 }
 
