@@ -754,12 +754,6 @@
 <a href="#754" id="754">754</a>
 <a href="#755" id="755">755</a>
 <a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a>
-<a href="#761" id="761">761</a>
-<a href="#762" id="762">762</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! DAG execution runtime.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -768,7 +762,6 @@
 <span class="kw">use </span>std::time::Instant;
 
 <span class="kw">use </span>serde::Serialize;
-<span class="kw">use </span>serde_json::json;
 
 <span class="kw">use </span>strum::IntoEnumIterator;
 
@@ -790,7 +783,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::{Action, Scheduler, TimeSpan};
 <span class="kw">use </span><span class="kw">crate</span>::system::System;
 <span class="kw">use </span><span class="kw">crate</span>::task::TaskState;
-<span class="kw">use </span><span class="kw">crate</span>::trace_log::TraceLog;
+<span class="kw">use </span><span class="kw">crate</span>::trace_log::{Event <span class="kw">as </span>TraceEvent, Resource <span class="kw">as </span>TraceResource, TraceLog};
 
 <span class="doccomment">/// Represents a DAG execution configuration.
 </span><span class="attr">#[derive(Clone)]
@@ -1048,12 +1041,12 @@
             <span class="kw">return</span>;
         }
         <span class="kw">for </span>resource <span class="kw">in </span><span class="self">self</span>.resources.iter() {
-            <span class="self">self</span>.trace_log.resources.push(<span class="macro">json!</span>({
-                <span class="string">&quot;name&quot;</span>: resource.name.clone(),
-                <span class="string">&quot;speed&quot;</span>: resource.compute.borrow().speed(),
-                <span class="string">&quot;cores&quot;</span>: resource.cores_available,
-                <span class="string">&quot;memory&quot;</span>: resource.memory_available,
-            }));
+            <span class="self">self</span>.trace_log.resources.push(TraceResource {
+                name: resource.name.clone(),
+                speed: resource.compute.borrow().speed(),
+                cores: resource.cores_available,
+                memory: resource.memory_available,
+            });
         }
         <span class="self">self</span>.trace_log.log_dag(<span class="kw-2">&amp;</span><span class="self">self</span>.dag);
     }
@@ -1247,15 +1240,14 @@
                 <span class="kw">if </span><span class="self">self</span>.trace_log_enabled {
                     <span class="self">self</span>.trace_log.log_event(
                         <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
-                        <span class="macro">json!</span>({
-                            <span class="string">&quot;time&quot;</span>: <span class="self">self</span>.ctx.time(),
-                            <span class="string">&quot;type&quot;</span>: <span class="string">&quot;task_scheduled&quot;</span>,
-                            <span class="string">&quot;task_id&quot;</span>: task_id,
-                            <span class="string">&quot;task_name&quot;</span>: task.name.clone(),
-                            <span class="string">&quot;location&quot;</span>: resource.name.clone(),
-                            <span class="string">&quot;cores&quot;</span>: need_cores,
-                            <span class="string">&quot;memory&quot;</span>: task.memory,
-                        }),
+                        TraceEvent::TaskScheduled {
+                            time: <span class="self">self</span>.ctx.time(),
+                            task_id,
+                            task_name: task.name.clone(),
+                            location: resource.name.clone(),
+                            cores: need_cores,
+                            memory: task.memory,
+                        },
                     );
                 }
                 <span class="self">self</span>.dag.update_task_state(task_id, TaskState::Running);
@@ -1291,15 +1283,14 @@
         <span class="kw">if </span><span class="self">self</span>.trace_log_enabled {
             <span class="self">self</span>.trace_log.log_event(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
-                <span class="macro">json!</span>({
-                    <span class="string">&quot;time&quot;</span>: <span class="self">self</span>.ctx.time(),
-                    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;start_uploading&quot;</span>,
-                    <span class="string">&quot;from&quot;</span>: <span class="self">self</span>.ctx.lookup_name(from),
-                    <span class="string">&quot;to&quot;</span>: <span class="self">self</span>.ctx.lookup_name(to),
-                    <span class="string">&quot;data_id&quot;</span>: data_id,
-                    <span class="string">&quot;data_item_id&quot;</span>: data_item_id,
-                    <span class="string">&quot;data_name&quot;</span>: data_item.name.clone(),
-                }),
+                TraceEvent::StartUploading {
+                    time: <span class="self">self</span>.ctx.time(),
+                    from: <span class="self">self</span>.ctx.lookup_name(from),
+                    to: <span class="self">self</span>.ctx.lookup_name(to),
+                    data_id,
+                    data_item_id,
+                    data_name: data_item.name.clone(),
+                },
             );
         }
     }
@@ -1328,12 +1319,11 @@
         <span class="kw">if </span><span class="self">self</span>.trace_log_enabled {
             <span class="self">self</span>.trace_log.log_event(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
-                <span class="macro">json!</span>({
-                    <span class="string">&quot;time&quot;</span>: <span class="self">self</span>.ctx.time(),
-                    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;task_completed&quot;</span>,
-                    <span class="string">&quot;task_id&quot;</span>: task_id,
-                    <span class="string">&quot;task_name&quot;</span>: task_name,
-                }),
+                TraceEvent::TaskCompleted {
+                    time: <span class="self">self</span>.ctx.time(),
+                    task_id,
+                    task_name,
+                },
             );
         }
         <span class="kw">let </span>location = <span class="kw-2">*</span><span class="self">self</span>.task_location.get(<span class="kw-2">&amp;</span>task_id).unwrap();
@@ -1435,12 +1425,11 @@
         <span class="kw">if </span><span class="self">self</span>.trace_log_enabled {
             <span class="self">self</span>.trace_log.log_event(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
-                <span class="macro">json!</span>({
-                    <span class="string">&quot;time&quot;</span>: <span class="self">self</span>.ctx.time(),
-                    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;task_started&quot;</span>,
-                    <span class="string">&quot;task_id&quot;</span>: task_id,
-                    <span class="string">&quot;task_name&quot;</span>: task.name.clone(),
-                }),
+                TraceEvent::TaskStarted {
+                    time: <span class="self">self</span>.ctx.time(),
+                    task_id,
+                    task_name: task.name.clone(),
+                },
             );
         }
     }
@@ -1454,14 +1443,13 @@
         <span class="kw">if </span><span class="self">self</span>.trace_log_enabled {
             <span class="self">self</span>.trace_log.log_event(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
-                <span class="macro">json!</span>({
-                    <span class="string">&quot;time&quot;</span>: <span class="self">self</span>.ctx.time(),
-                    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;finish_uploading&quot;</span>,
-                    <span class="string">&quot;from&quot;</span>: <span class="self">self</span>.ctx.lookup_name(data_transfer.from),
-                    <span class="string">&quot;to&quot;</span>: <span class="self">self</span>.ctx.lookup_name(data_transfer.to),
-                    <span class="string">&quot;data_id&quot;</span>: data_event_id,
-                    <span class="string">&quot;data_name&quot;</span>: data_item.name.clone(),
-                }),
+                TraceEvent::FinishUploading {
+                    time: <span class="self">self</span>.ctx.time(),
+                    from: <span class="self">self</span>.ctx.lookup_name(data_transfer.from),
+                    to: <span class="self">self</span>.ctx.lookup_name(data_transfer.to),
+                    data_id: data_event_id,
+                    data_name: data_item.name.clone(),
+                },
             );
         }
 
