@@ -28,7 +28,7 @@ use crate::run_stats::RunStats;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::system::System;
 use crate::task::TaskState;
-use crate::trace_log::TraceLog;
+use crate::trace_log::{Event as TraceEvent, TraceLog};
 
 /// Represents a DAG execution configuration.
 #[derive(Clone)]
@@ -475,15 +475,14 @@ impl DAGRunner {
                 if self.trace_log_enabled {
                     self.trace_log.log_event(
                         &self.ctx,
-                        json!({
-                            "time": self.ctx.time(),
-                            "type": "task_scheduled",
-                            "task_id": task_id,
-                            "task_name": task.name.clone(),
-                            "location": resource.name.clone(),
-                            "cores": need_cores,
-                            "memory": task.memory,
-                        }),
+                        TraceEvent::TaskScheduled {
+                            time: self.ctx.time(),
+                            task_id,
+                            task_name: task.name.clone(),
+                            location: resource.name.clone(),
+                            cores: need_cores,
+                            memory: task.memory,
+                        },
                     );
                 }
                 self.dag.update_task_state(task_id, TaskState::Running);
@@ -519,15 +518,14 @@ impl DAGRunner {
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
-                json!({
-                    "time": self.ctx.time(),
-                    "type": "start_uploading",
-                    "from": self.ctx.lookup_name(from),
-                    "to": self.ctx.lookup_name(to),
-                    "data_id": data_id,
-                    "data_item_id": data_item_id,
-                    "data_name": data_item.name.clone(),
-                }),
+                TraceEvent::StartUploading {
+                    time: self.ctx.time(),
+                    from: self.ctx.lookup_name(from),
+                    to: self.ctx.lookup_name(to),
+                    data_id,
+                    data_item_id,
+                    data_name: data_item.name.clone(),
+                },
             );
         }
     }
@@ -556,12 +554,11 @@ impl DAGRunner {
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
-                json!({
-                    "time": self.ctx.time(),
-                    "type": "task_completed",
-                    "task_id": task_id,
-                    "task_name": task_name,
-                }),
+                TraceEvent::TaskCompleted {
+                    time: self.ctx.time(),
+                    task_id,
+                    task_name,
+                },
             );
         }
         let location = *self.task_location.get(&task_id).unwrap();
@@ -663,12 +660,11 @@ impl DAGRunner {
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
-                json!({
-                    "time": self.ctx.time(),
-                    "type": "task_started",
-                    "task_id": task_id,
-                    "task_name": task.name.clone(),
-                }),
+                TraceEvent::TaskStarted {
+                    time: self.ctx.time(),
+                    task_id,
+                    task_name: task.name.clone(),
+                },
             );
         }
     }
@@ -682,14 +678,13 @@ impl DAGRunner {
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
-                json!({
-                    "time": self.ctx.time(),
-                    "type": "finish_uploading",
-                    "from": self.ctx.lookup_name(data_transfer.from),
-                    "to": self.ctx.lookup_name(data_transfer.to),
-                    "data_id": data_event_id,
-                    "data_name": data_item.name.clone(),
-                }),
+                TraceEvent::FinishUploading {
+                    time: self.ctx.time(),
+                    from: self.ctx.lookup_name(data_transfer.from),
+                    to: self.ctx.lookup_name(data_transfer.to),
+                    data_id: data_event_id,
+                    data_name: data_item.name.clone(),
+                },
             );
         }
 

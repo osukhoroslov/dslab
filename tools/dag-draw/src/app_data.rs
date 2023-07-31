@@ -4,9 +4,8 @@ use std::rc::Rc;
 
 use druid::{Data, Lens};
 use serde::Deserialize;
-use serde_json::Value;
 
-use dslab_dag::trace_log::{Graph, TraceLog};
+use dslab_dag::trace_log::{Event, Graph, TraceLog};
 
 use crate::data::*;
 
@@ -66,104 +65,82 @@ impl AppData {
             });
         }
 
-        let mut uploads: BTreeMap<u64, Vec<Value>> = BTreeMap::new();
-        let mut tasks: BTreeMap<u64, Vec<Value>> = BTreeMap::new();
+        let mut uploads: BTreeMap<usize, Vec<Event>> = BTreeMap::new();
+        let mut tasks: BTreeMap<usize, Vec<Event>> = BTreeMap::new();
         let mut present_scheduler_files: BTreeSet<String> = BTreeSet::new();
 
         // split events into groups by id and general type (task/file)
-        for event in trace_log.events.iter() {
-            let time = event["time"].as_f64().unwrap();
-            total_time = time;
-            match event["type"].as_str().unwrap() {
-                "start_uploading" => {
-                    uploads
-                        .entry(event["data_id"].as_u64().unwrap())
-                        .or_default()
-                        .push(event.clone());
-                    if event["from"].as_str().unwrap() == "runner" {
-                        present_scheduler_files.insert(event["data_name"].as_str().unwrap().to_string());
+        for event in trace_log.events.into_iter() {
+            total_time = event.time();
+            match event {
+                Event::StartUploading {
+                    data_id,
+                    ref from,
+                    ref data_name,
+                    ..
+                } => {
+                    if from == "runner" {
+                        present_scheduler_files.insert(data_name.clone());
                     }
+                    uploads.entry(data_id).or_default().push(event);
                 }
-                "finish_uploading" => {
-                    uploads
-                        .entry(event["data_id"].as_u64().unwrap())
-                        .or_default()
-                        .push(event.clone());
-                }
-                "task_scheduled" => {
-                    tasks
-                        .entry(event["task_id"].as_u64().unwrap())
-                        .or_default()
-                        .push(event.clone());
-                }
-                "task_started" => {
-                    tasks
-                        .entry(event["task_id"].as_u64().unwrap())
-                        .or_default()
-                        .push(event.clone());
-                }
-                "task_completed" => {
-                    tasks
-                        .entry(event["task_id"].as_u64().unwrap())
-                        .or_default()
-                        .push(event.clone());
-                }
-                _ => {}
+                Event::FinishUploading { data_id, .. } => uploads.entry(data_id).or_default().push(event),
+                Event::TaskScheduled { task_id, .. }
+                | Event::TaskStarted { task_id, .. }
+                | Event::TaskCompleted { task_id, .. } => tasks.entry(task_id).or_default().push(event),
             }
         }
 
         for (_id, events) in uploads.iter() {
-            if events.len() != 2
-                || events[0]["type"].as_str().unwrap() != "start_uploading"
-                || events[1]["type"].as_str().unwrap() != "finish_uploading"
+            if let [Event::StartUploading {
+                from: ref source,
+                to: ref destination,
+                data_name: ref name,
+                time: start_time,
+                data_item_id,
+                ..
+            }, Event::FinishUploading { time: finish_time, .. }] = events[..]
             {
+                transfers.borrow_mut().push(Transfer {
+                    start: start_time,
+                    end: finish_time,
+                    from: source.clone(),
+                    to: destination.clone(),
+                    name: name.clone(),
+                    data_item_id,
+                });
+
+                if source == "runner" {
+                    compute.borrow_mut()[*compute_index.get(destination).unwrap()]
+                        .files
+                        .push(File {
+                            start: start_time,
+                            uploaded: finish_time,
+                            end: total_time,
+                            name: name.clone(),
+                        });
+                } else {
+                    compute.borrow_mut()[*compute_index.get(source).unwrap()]
+                        .files
+                        .push(File {
+                            start: start_time,
+                            uploaded: start_time,
+                            end: total_time,
+                            name: name.clone(),
+                        });
+                    present_scheduler_files.remove(name);
+                    scheduler_files.borrow_mut().push(File {
+                        start: start_time,
+                        uploaded: finish_time,
+                        end: total_time,
+                        name: name.clone(),
+                    });
+                }
+            } else {
                 eprintln!(
                     "must be exactly 2 events for uploading: start_uploading and finish_uploading, found {:?}",
                     events
                 );
-            }
-
-            let source = events[0]["from"].as_str().unwrap().to_string();
-            let destination = events[0]["to"].as_str().unwrap().to_string();
-            let name = events[0]["data_name"].as_str().unwrap().to_string();
-            let start_time = events[0]["time"].as_f64().unwrap();
-            let finish_time = events[1]["time"].as_f64().unwrap();
-            let data_item_id = events[0]["data_item_id"].as_u64().unwrap() as usize;
-
-            transfers.borrow_mut().push(Transfer {
-                start: start_time,
-                end: finish_time,
-                from: source.clone(),
-                to: destination.clone(),
-                name: name.clone(),
-                data_item_id,
-            });
-
-            if source == "runner" {
-                compute.borrow_mut()[*compute_index.get(&destination).unwrap()]
-                    .files
-                    .push(File {
-                        start: start_time,
-                        uploaded: finish_time,
-                        end: total_time,
-                        name,
-                    });
-            } else {
-                compute.borrow_mut()[*compute_index.get(&source).unwrap()]
-                    .files
-                    .push(File {
-                        start: start_time,
-                        uploaded: start_time,
-                        end: total_time,
-                        name: name.clone(),
-                    });
-                present_scheduler_files.remove(&name);
-                scheduler_files.borrow_mut().push(File {
-                    start: start_time,
-                    uploaded: finish_time,
-                    end: total_time,
-                    name,
-                });
             }
         }
 
@@ -180,34 +157,30 @@ impl AppData {
         std::mem::swap(&mut extra_scheduler_files, &mut scheduler_files.borrow_mut());
 
         for (_id, events) in tasks.iter() {
-            if events.len() != 3
-                || events[0]["type"].as_str().unwrap() != "task_scheduled"
-                || events[1]["type"].as_str().unwrap() != "task_started"
-                || events[2]["type"].as_str().unwrap() != "task_completed"
+            if let [Event::TaskScheduled {
+                time: scheduled,
+                cores,
+                task_id: id,
+                location: ref actor,
+                ..
+            }, Event::TaskStarted { time: started, .. }, Event::TaskCompleted { time: completed, .. }] = events[..]
             {
+                tasks_info.borrow_mut()[id] = Some(TaskInfo {
+                    scheduled,
+                    started,
+                    completed,
+                    cores,
+                    id,
+                    name: trace_log.graph.tasks[id].name.clone(),
+                });
+
+                compute.borrow_mut()[*compute_index.get(actor).unwrap()].tasks.push(id);
+            } else {
                 eprintln!(
                     "must be exactly 3 events for task: task_scheduled, task_started and task_completed, found {:?}",
                     events
                 );
             }
-
-            let scheduled = events[0]["time"].as_f64().unwrap();
-            let started = events[1]["time"].as_f64().unwrap();
-            let completed = events[2]["time"].as_f64().unwrap();
-            let cores = events[0]["cores"].as_u64().unwrap() as u32;
-            let id = events[0]["task_id"].as_u64().unwrap() as usize;
-            let actor = events[0]["location"].as_str().unwrap().to_string();
-
-            tasks_info.borrow_mut()[id] = Some(TaskInfo {
-                scheduled,
-                started,
-                completed,
-                cores,
-                id,
-                name: trace_log.graph.tasks[id].name.clone(),
-            });
-
-            compute.borrow_mut()[*compute_index.get(&actor).unwrap()].tasks.push(id);
         }
 
         Self {

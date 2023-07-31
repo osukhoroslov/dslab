@@ -11,6 +11,56 @@ use serde_json::Value;
 
 use crate::dag::DAG;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Event {
+    TaskScheduled {
+        time: f64,
+        task_id: usize,
+        task_name: String,
+        location: String,
+        cores: u32,
+        memory: u64,
+    },
+    TaskStarted {
+        time: f64,
+        task_id: usize,
+        task_name: String,
+    },
+    TaskCompleted {
+        time: f64,
+        task_id: usize,
+        task_name: String,
+    },
+    StartUploading {
+        time: f64,
+        from: String,
+        to: String,
+        data_id: usize,
+        data_item_id: usize,
+        data_name: String,
+    },
+    FinishUploading {
+        time: f64,
+        from: String,
+        to: String,
+        data_id: usize,
+        data_name: String,
+    },
+}
+
+impl Event {
+    pub fn time(&self) -> f64 {
+        match self {
+            Event::TaskScheduled { time, .. }
+            | Event::TaskStarted { time, .. }
+            | Event::TaskCompleted { time, .. }
+            | Event::StartUploading { time, .. }
+            | Event::FinishUploading { time, .. } => *time,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Task {
     pub name: String,
@@ -39,7 +89,7 @@ pub struct Graph {
 pub struct TraceLog {
     pub resources: Vec<Value>,
     pub graph: Graph,
-    pub events: Vec<Value>,
+    pub events: Vec<Event>,
 }
 
 impl TraceLog {
@@ -47,42 +97,8 @@ impl TraceLog {
         Self::default()
     }
 
-    pub fn log_event(&mut self, ctx: &SimulationContext, event: Value) {
-        let get_field = |name: &str| -> &str { event[name].as_str().unwrap() };
-        let log_message = match event["type"].as_str().unwrap() {
-            "task_scheduled" => {
-                format!(
-                    "scheduled task {} to {} on {} cores",
-                    get_field("task_name"),
-                    get_field("location"),
-                    event["cores"].as_u64().unwrap()
-                )
-            }
-            "task_started" => {
-                format!("started task {}", get_field("task_name"))
-            }
-            "task_completed" => {
-                format!("completed task {}", get_field("task_name"))
-            }
-            "start_uploading" => {
-                format!(
-                    "data item {} started uploading from {} to {}",
-                    get_field("data_name"),
-                    get_field("from"),
-                    get_field("to")
-                )
-            }
-            "finish_uploading" => {
-                format!(
-                    "data item {} finished uploading from {} to {}",
-                    get_field("data_name"),
-                    get_field("from"),
-                    get_field("to")
-                )
-            }
-            _ => "unknown event".to_string(),
-        };
-        log_debug!(ctx, log_message);
+    pub fn log_event(&mut self, ctx: &SimulationContext, event: Event) {
+        log_debug!(ctx, "{:?}", event);
         self.events.push(event);
     }
 
