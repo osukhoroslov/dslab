@@ -127,6 +127,7 @@ impl DynamicListScheduler {
             }
 
             let best_resource = (0..resources.len())
+                .filter(|&r| dag.get_task(task).is_allowed_on(r))
                 .filter(|&r| {
                     resources[r].cores_available >= dag.get_task(task).min_cores
                         && resources[r].memory_available >= dag.get_task(task).memory

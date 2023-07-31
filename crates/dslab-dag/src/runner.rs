@@ -304,6 +304,18 @@ impl DAGRunner {
         allowed_cores: Vec<u32>,
         expected_span: Option<TimeSpan>,
     ) {
+        let task_id = task;
+        let task = self.dag.get_task(task_id);
+        if !task.is_allowed_on(resource) {
+            log_error!(
+                self.ctx,
+                "Wrong action, task {} isn't allowed to run on resource {} because of restriction: {:?}",
+                task_id,
+                resource,
+                task.resource_restriction,
+            );
+            return;
+        }
         if need_cores > self.resources[resource].compute.borrow().cores_total() {
             log_error!(
                 self.ctx,
@@ -312,8 +324,6 @@ impl DAGRunner {
             );
             return;
         }
-        let task_id = task;
-        let task = self.dag.get_task(task_id);
         if task.memory > self.resources[resource].compute.borrow().memory_total() {
             log_error!(
                 self.ctx,

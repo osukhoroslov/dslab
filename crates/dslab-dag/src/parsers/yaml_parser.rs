@@ -36,7 +36,7 @@ struct Task {
     #[serde(default = "one")]
     max_cores: u32,
     cores_dependency: Option<Value>,
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     inputs: Vec<String>,
     outputs: Vec<DataItem>,
 }
@@ -55,7 +55,7 @@ impl DAG {
         let yaml: Yaml = serde_yaml::from_str(
             &std::fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't read file {}", file.as_ref().display())),
         )
-        .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file.as_ref().display()));
+        .unwrap_or_else(|e| panic!("Can't parse YAML from file {}: {e:?}", file.as_ref().display()));
         let mut dag = DAG::new();
         let mut data_items: HashMap<String, usize> = HashMap::new();
         for data_item in yaml.inputs.iter() {

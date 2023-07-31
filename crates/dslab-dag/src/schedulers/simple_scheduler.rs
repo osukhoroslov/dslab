@@ -33,6 +33,9 @@ impl SimpleScheduler {
         for task_id in ready_tasks {
             let task = dag.get_task(task_id);
             for (i, resource) in resources.iter_mut().enumerate() {
+                if !task.is_allowed_on(i) {
+                    continue;
+                }
                 if resource.cores_available < task.min_cores || resource.memory_available < task.memory {
                     continue;
                 }
