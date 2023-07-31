@@ -77,9 +77,6 @@ impl DlsScheduler {
                     .all(|task| scheduled[task])
             }) {
                 for resource in 0..resources.len() {
-                    if !dag.get_task(task_id).is_allowed_on(resource) {
-                        continue;
-                    }
                     let res = evaluate_assignment(
                         task_id,
                         resource,

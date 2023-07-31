@@ -188,4 +188,8 @@ impl DAG {
     pub fn stats(&self) -> DagStats {
         DagStats::new(self)
     }
+
+    pub fn set_resource_restriction(&mut self, task_id: usize, restriction: ResourceRestriction) {
+        self.tasks[task_id].resource_restriction = Some(restriction);
+    }
 }

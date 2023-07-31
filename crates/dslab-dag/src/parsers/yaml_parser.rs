@@ -90,10 +90,13 @@ impl DAG {
                 },
             );
             if let Some(restriction) = &task.resource_restriction {
-                dag.get_task_mut(task_id).resource_restriction = match restriction {
-                    YamlResourceRestriction::Only(v) => ResourceRestriction::Only(v.iter().copied().collect()),
-                    YamlResourceRestriction::Except(v) => ResourceRestriction::Except(v.iter().copied().collect()),
-                }
+                dag.set_resource_restriction(
+                    task_id,
+                    match restriction {
+                        YamlResourceRestriction::Only(v) => ResourceRestriction::Only(v.iter().copied().collect()),
+                        YamlResourceRestriction::Except(v) => ResourceRestriction::Except(v.iter().copied().collect()),
+                    },
+                )
             }
             for output in task.outputs.iter() {
                 data_items.insert(

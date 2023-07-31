@@ -23,18 +23,18 @@ pub enum TaskState {
     Done,
 }
 
-#[derive(Clone, Debug, Default)]
+/// Restrict task execution to some subset of resources.
+#[derive(Clone, Debug)]
 pub enum ResourceRestriction {
-    #[default]
-    Everywhere,
+    /// Allow execution only on given resources.
     Only(BTreeSet<usize>),
+    /// Allow execution everywhere except on given resources.
     Except(BTreeSet<usize>),
 }
 
 impl ResourceRestriction {
     pub fn is_allowed_on(&self, resource_id: usize) -> bool {
         match self {
-            ResourceRestriction::Everywhere => true,
             ResourceRestriction::Only(set) => set.contains(&resource_id),
             ResourceRestriction::Except(set) => !set.contains(&resource_id),
         }
@@ -61,7 +61,7 @@ pub struct Task {
     pub inputs: Vec<usize>,
     pub outputs: Vec<usize>,
     pub(crate) ready_inputs: usize,
-    pub resource_restriction: ResourceRestriction,
+    pub resource_restriction: Option<ResourceRestriction>,
 }
 
 impl Task {
@@ -85,7 +85,7 @@ impl Task {
             inputs: Vec::new(),
             outputs: Vec::new(),
             ready_inputs: 0,
-            resource_restriction: ResourceRestriction::default(),
+            resource_restriction: None,
         }
     }
 
@@ -100,6 +100,9 @@ impl Task {
     }
 
     pub fn is_allowed_on(&self, resource_id: usize) -> bool {
-        self.resource_restriction.is_allowed_on(resource_id)
+        self.resource_restriction
+            .as_ref()
+            .map(|rr| rr.is_allowed_on(resource_id))
+            .unwrap_or(true)
     }
 }

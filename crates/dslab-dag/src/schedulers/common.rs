@@ -71,6 +71,9 @@ pub fn evaluate_assignment(
     if resources[resource].compute.borrow().memory_total() < need_memory {
         return None;
     }
+    if !dag.get_task(task_id).is_allowed_on(resource) {
+        return None;
+    }
 
     let data_transfer_mode = &config.data_transfer_mode;
 
