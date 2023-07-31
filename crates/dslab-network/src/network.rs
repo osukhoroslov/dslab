@@ -1,9 +1,7 @@
 //! Simulation component representing a network.
 
 use indexmap::IndexMap;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serde::Serialize;
@@ -46,7 +44,6 @@ struct StartDataTransfer {
 ///
 /// This is the main entry point for all network operations, which relies internally on the supplied network model.
 pub struct Network {
-    topology: Rc<RefCell<Topology>>,
     nodes_name_map: IndexMap<String, NodeId>,
     network_model: Box<dyn NetworkModel>,
     local_models: HashMap<NodeId, Box<dyn NetworkModel>>,
@@ -70,12 +67,10 @@ impl Network {
         mut model: Box<dyn NetworkModel>,
         ctx: SimulationContext,
     ) -> Self {
-        let topology = Rc::new(RefCell::new(Topology::new()));
         if model.is_topology_aware() {
-            model.init(topology.clone(), routing);
+            model.init(Topology::new(), routing);
         }
         Self {
-            topology,
             nodes_name_map: IndexMap::new(),
             network_model: model,
             local_models: HashMap::new(),
@@ -96,7 +91,11 @@ impl Network {
         S: Into<String>,
     {
         let name = name.into();
-        let node_id = self.topology.borrow_mut().add_node(Node { name: name.clone() });
+        let node_id = self
+            .network_model
+            .topology_mut()
+            .unwrap()
+            .add_node(Node { name: name.clone() });
         self.nodes_name_map.insert(name, node_id);
         self.local_models.insert(node_id, local_model);
         node_id
@@ -117,10 +116,9 @@ impl Network {
 
     /// Adds a new bidirectional link between two nodes.
     pub fn add_link(&mut self, node1: &str, node2: &str, link: Link) -> LinkId {
-        let link_id = self
-            .topology
-            .borrow_mut()
-            .add_link(self.get_node_id(node1), self.get_node_id(node2), link);
+        let node1 = self.get_node_id(node1);
+        let node2 = self.get_node_id(node2);
+        let link_id = self.network_model.topology_mut().unwrap().add_link(node1, node2, link);
         if self.topology_initialized {
             self.network_model.on_topology_change(&mut self.ctx);
         }
@@ -129,11 +127,13 @@ impl Network {
 
     /// Adds a new unidirectional link between two nodes.
     pub fn add_unidirectional_link(&mut self, node_from: &str, node_to: &str, link: Link) -> LinkId {
-        let link_id = self.topology.borrow_mut().add_unidirectional_link(
-            self.get_node_id(node_from),
-            self.get_node_id(node_to),
-            link,
-        );
+        let node_from = self.get_node_id(node_from);
+        let node_to = self.get_node_id(node_to);
+        let link_id = self
+            .network_model
+            .topology_mut()
+            .unwrap()
+            .add_unidirectional_link(node_from, node_to, link);
         if self.topology_initialized {
             self.network_model.on_topology_change(&mut self.ctx);
         }
@@ -144,10 +144,13 @@ impl Network {
     ///
     /// This allows to model the full-duplex communication links.
     pub fn add_full_duplex_link(&mut self, node1: &str, node2: &str, link: Link) -> (LinkId, LinkId) {
-        let (uplink_id, downlink_id) =
-            self.topology
-                .borrow_mut()
-                .add_full_duplex_link(self.get_node_id(node1), self.get_node_id(node2), link);
+        let node1 = self.get_node_id(node1);
+        let node2 = self.get_node_id(node2);
+        let (uplink_id, downlink_id) = self
+            .network_model
+            .topology_mut()
+            .unwrap()
+            .add_full_duplex_link(node1, node2, link);
         if self.topology_initialized {
             self.network_model.on_topology_change(&mut self.ctx);
         }

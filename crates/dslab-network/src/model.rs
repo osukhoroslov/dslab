@@ -1,8 +1,6 @@
 //! Network model interface.
 
 use serde::Serialize;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
@@ -51,7 +49,7 @@ pub trait NetworkModel {
     /// Performs initialization of topology-aware model.
     ///
     /// This method is used for passing network topology and routing algorithm.
-    fn init(&mut self, _topology: Rc<RefCell<Topology>>, _routing: Box<dyn RoutingAlgorithm>) {}
+    fn init(&mut self, _topology: Topology, _routing: Box<dyn RoutingAlgorithm>) {}
 
     /// Returns the network bandwidth from node `src` to node `dst`.
     fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64;
@@ -74,4 +72,22 @@ pub trait NetworkModel {
     ///
     /// This is necessary since the topology change may require recalculation of transfer completion times.
     fn on_topology_change(&mut self, ctx: &mut SimulationContext);
+
+    /// Returns inner topology.
+    fn topology(&self) -> Option<&Topology> {
+        assert!(
+            !self.is_topology_aware(),
+            "Implement this method if your network is topology aware"
+        );
+        None
+    }
+
+    /// Returns inner topology.
+    fn topology_mut(&mut self) -> Option<&mut Topology> {
+        assert!(
+            !self.is_topology_aware(),
+            "Implement this method if your network is topology aware"
+        );
+        None
+    }
 }

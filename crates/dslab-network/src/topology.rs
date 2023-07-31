@@ -1,6 +1,6 @@
 //! Network topology.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use crate::{Link, LinkId, Node, NodeId};
 
@@ -13,8 +13,6 @@ pub struct Topology {
     nodes: Vec<Node>,
     links: Vec<Link>,
     node_links_map: NodeLinksMap,
-    bandwidth_cache: HashMap<Vec<LinkId>, f64>,
-    latency_cache: HashMap<Vec<LinkId>, f64>,
 }
 
 impl Topology {
@@ -72,26 +70,18 @@ impl Topology {
     }
 
     /// Returns the network latency of the given path.
-    pub fn get_path_latency(&mut self, path: &[LinkId]) -> f64 {
-        if let Some(latency) = self.latency_cache.get(path) {
-            return *latency;
-        }
+    pub fn get_path_latency(&self, path: &[LinkId]) -> f64 {
         let latency = path.iter().map(|link_id| self.link(*link_id).latency).sum();
-        self.latency_cache.insert(Vec::from(path), latency);
         latency
     }
 
     /// Returns the network bandwidth of the given path.
-    pub fn get_path_bandwidth(&mut self, path: &[LinkId]) -> f64 {
-        if let Some(bandwidth) = self.bandwidth_cache.get(path) {
-            return *bandwidth;
-        }
+    pub fn get_path_bandwidth(&self, path: &[LinkId]) -> f64 {
         let bandwidth = path
             .iter()
             .map(|link_id| self.link(*link_id).bandwidth)
             .min_by(|a, b| a.total_cmp(b))
             .unwrap();
-        self.bandwidth_cache.insert(Vec::from(path), bandwidth);
         bandwidth
     }
 
