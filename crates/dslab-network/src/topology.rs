@@ -2,6 +2,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::routing::PathIterator;
 use crate::{Link, LinkId, Node, NodeId};
 
 /// Stores for each node a map with its neighbors and corresponding outgoing links.
@@ -13,6 +14,7 @@ pub struct Topology {
     nodes: Vec<Node>,
     links: Vec<Link>,
     node_links_map: NodeLinksMap,
+    inv_node_links_map: NodeLinksMap,
 }
 
 impl Topology {
@@ -26,6 +28,7 @@ impl Topology {
         let node_id = self.nodes.len();
         self.nodes.push(node);
         self.node_links_map.insert(node_id, BTreeMap::new());
+        self.inv_node_links_map.insert(node_id, BTreeMap::new());
         node_id
     }
 
@@ -69,20 +72,22 @@ impl Topology {
         &self.node_links_map
     }
 
+    /// Returns an immutable reference to the inverted [`NodeLinksMap`].
+    pub fn inv_node_links_map(&self) -> &NodeLinksMap {
+        &self.inv_node_links_map
+    }
+
     /// Returns the network latency of the given path.
-    pub fn get_path_latency(&self, path: &[LinkId]) -> f64 {
-        let latency = path.iter().map(|link_id| self.link(*link_id).latency).sum();
-        latency
+    pub fn get_path_latency(&self, path_iter: PathIterator) -> f64 {
+        path_iter.map(|link_id| self.link(link_id).latency).sum()
     }
 
     /// Returns the network bandwidth of the given path.
-    pub fn get_path_bandwidth(&self, path: &[LinkId]) -> f64 {
-        let bandwidth = path
-            .iter()
-            .map(|link_id| self.link(*link_id).bandwidth)
+    pub fn get_path_bandwidth(&self, path_iter: PathIterator) -> f64 {
+        path_iter
+            .map(|link_id| self.link(link_id).bandwidth)
             .min_by(|a, b| a.total_cmp(b))
-            .unwrap();
-        bandwidth
+            .unwrap()
     }
 
     fn add_link_internal(&mut self, node1: NodeId, node2: NodeId, link: Link, bidirectional: bool) -> LinkId {
@@ -90,8 +95,10 @@ impl Topology {
         let link_id = self.links.len();
         self.links.push(link);
         self.node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
+        self.inv_node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
         if bidirectional {
             self.node_links_map.get_mut(&node2).unwrap().insert(node1, link_id);
+            self.inv_node_links_map.get_mut(&node1).unwrap().insert(node2, link_id);
         }
         link_id
     }
