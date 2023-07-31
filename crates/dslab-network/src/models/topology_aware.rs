@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
+use std::ops::Deref;
 use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
@@ -137,7 +138,7 @@ impl TopologyAwareNetworkModel {
 
     fn get_path(&self, src: NodeId, dest: NodeId) -> Vec<LinkId> {
         self.routing
-            .get_path(src, dest, self.topology.borrow())
+            .get_path(src, dest, self.topology.borrow().deref())
             .unwrap_or_else(|| panic!("No path from {} to {}", src, dest))
     }
 
@@ -399,17 +400,17 @@ impl NetworkModel for TopologyAwareNetworkModel {
     fn init(&mut self, topology: Rc<RefCell<Topology>>, routing: Box<dyn RoutingAlgorithm>) {
         self.topology = topology;
         self.routing = routing;
-        self.routing.init(self.topology.borrow());
+        self.routing.init(self.topology.borrow().deref());
     }
 
     fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64 {
         let path = self.get_path(src, dest);
-        self.topology.borrow_mut().get_path_bandwidth(path)
+        self.topology.borrow_mut().get_path_bandwidth(&path)
     }
 
     fn latency(&self, src: NodeId, dest: NodeId) -> f64 {
         let path = self.get_path(src, dest);
-        self.topology.borrow_mut().get_path_latency(path)
+        self.topology.borrow_mut().get_path_latency(&path)
     }
 
     fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
@@ -458,7 +459,7 @@ impl NetworkModel for TopologyAwareNetworkModel {
     }
 
     fn on_topology_change(&mut self, ctx: &mut SimulationContext) {
-        self.routing.init(self.topology.borrow());
+        self.routing.init(self.topology.borrow().deref());
         self.validate_array_lengths();
         self.calc_all(ctx);
         self.update_next_event(ctx);

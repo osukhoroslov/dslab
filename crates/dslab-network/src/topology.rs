@@ -72,21 +72,18 @@ impl Topology {
     }
 
     /// Returns the network latency of the given path.
-    pub fn get_path_latency(&mut self, path: Vec<LinkId>) -> f64 {
-        if let Some(latency) = self.latency_cache.get(&path) {
+    pub fn get_path_latency(&mut self, path: &[LinkId]) -> f64 {
+        if let Some(latency) = self.latency_cache.get(path) {
             return *latency;
         }
-        let mut latency = 0.0;
-        for link_id in &path {
-            latency += self.link(*link_id).latency;
-        }
-        self.latency_cache.insert(path, latency);
+        let latency = path.iter().map(|link_id| self.link(*link_id).latency).sum();
+        self.latency_cache.insert(Vec::from(path), latency);
         latency
     }
 
     /// Returns the network bandwidth of the given path.
-    pub fn get_path_bandwidth(&mut self, path: Vec<LinkId>) -> f64 {
-        if let Some(bandwidth) = self.bandwidth_cache.get(&path) {
+    pub fn get_path_bandwidth(&mut self, path: &[LinkId]) -> f64 {
+        if let Some(bandwidth) = self.bandwidth_cache.get(path) {
             return *bandwidth;
         }
         let bandwidth = path
@@ -94,7 +91,7 @@ impl Topology {
             .map(|link_id| self.link(*link_id).bandwidth)
             .min_by(|a, b| a.total_cmp(b))
             .unwrap();
-        self.bandwidth_cache.insert(path, bandwidth);
+        self.bandwidth_cache.insert(Vec::from(path), bandwidth);
         bandwidth
     }
 

@@ -1,6 +1,6 @@
 //! Routing algorithms.
 
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use crate::{LinkId, NodeId, Topology};
@@ -10,12 +10,12 @@ const INVALID_NODE_ID: usize = usize::MAX;
 /// Calculates the paths between pairs of nodes in a network.
 pub trait RoutingAlgorithm {
     /// Performs initialization of the routing algorithm based on the provided network topology.
-    fn init(&mut self, topology: Ref<Topology>);
+    fn init(&mut self, topology: &Topology);
 
     /// Returns a path from node `src` to node `dest`.
     ///
     /// Can be used only after calling [`Self::init`].
-    fn get_path(&self, src: NodeId, dest: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>>;
+    fn get_path(&self, src: NodeId, dest: NodeId, topology: &Topology) -> Option<Vec<LinkId>>;
 }
 
 // Shortest Path (Floyd–Warshall) --------------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ pub struct ShortestPathFloydWarshall {
 }
 
 impl RoutingAlgorithm for ShortestPathFloydWarshall {
-    fn init(&mut self, topology: Ref<Topology>) {
+    fn init(&mut self, topology: &Topology) {
         self.path_cache.borrow_mut().clear();
         let node_count = topology.node_count();
         self.parent_path = vec![vec![INVALID_NODE_ID; node_count]; node_count];
@@ -62,7 +62,7 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
         }
     }
 
-    fn get_path(&self, src: NodeId, dest: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
+    fn get_path(&self, src: NodeId, dest: NodeId, topology: &Topology) -> Option<Vec<LinkId>> {
         if let Some(path) = self.path_cache.borrow().get(&(src, dest)) {
             return Some(path.clone());
         }
@@ -93,7 +93,7 @@ pub struct ShortestPathDijkstra {
 }
 
 impl ShortestPathDijkstra {
-    fn dijkstra_for_node(&mut self, node: NodeId, topology: &Ref<Topology>) {
+    fn dijkstra_for_node(&mut self, node: NodeId, topology: &Topology) {
         let node_links_map = topology.node_links_map();
         let mut latency: HashMap<NodeId, f64> = HashMap::new();
         for n in node_links_map.keys() {
@@ -128,16 +128,16 @@ impl ShortestPathDijkstra {
 }
 
 impl RoutingAlgorithm for ShortestPathDijkstra {
-    fn init(&mut self, topology: Ref<Topology>) {
+    fn init(&mut self, topology: &Topology) {
         self.path_cache.borrow_mut().clear();
         let node_count = topology.node_count();
         self.parent_path = vec![vec![INVALID_NODE_ID; node_count]; node_count];
         for node in 0..node_count {
-            self.dijkstra_for_node(node, &topology);
+            self.dijkstra_for_node(node, topology);
         }
     }
 
-    fn get_path(&self, src: NodeId, dest: NodeId, topology: Ref<Topology>) -> Option<Vec<LinkId>> {
+    fn get_path(&self, src: NodeId, dest: NodeId, topology: &Topology) -> Option<Vec<LinkId>> {
         if let Some(path) = self.path_cache.borrow().get(&(src, dest)) {
             return Some(path.clone());
         }
