@@ -115,8 +115,8 @@ impl System {
                     msg,
                     src,
                     src_node,
-                    dest,
-                    dest_node,
+                    dst,
+                    dst_node,
                 } => {
                     self.logger.borrow_mut().log(LogEntry::MessageDropped {
                         time: self.sim.time(),
@@ -124,8 +124,8 @@ impl System {
                         msg,
                         src_proc: src,
                         src_node,
-                        dest_proc: dest,
-                        dest_node,
+                        dst_proc: dst,
+                        dst_node,
                     });
                 }
             })

@@ -164,7 +164,7 @@ pub fn log_unhandled_event(event: Event) {
         "[{:.3} {} simulation] Unhandled event: {}",
         event.time,
         crate::log::get_colored("ERROR", colored::Color::Red),
-        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dst": event.dst})
     );
 }
 
@@ -175,7 +175,7 @@ pub(crate) fn log_undelivered_event(event: Event) {
         "[{:.3} {} simulation] Undelivered event: {}",
         event.time,
         crate::log::get_colored("ERROR", colored::Color::Red),
-        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dst": event.dst})
     );
 }
 
@@ -187,6 +187,6 @@ pub(crate) fn log_incorrect_event(event: Event, msg: &str) {
         event.time,
         crate::log::get_colored("ERROR", colored::Color::Red),
         msg,
-        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dest": event.dest})
+        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": event.src, "dst": event.dst})
     );
 }

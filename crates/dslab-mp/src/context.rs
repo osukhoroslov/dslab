@@ -63,11 +63,11 @@ impl Context {
         self.rng.as_mut().rand()
     }
 
-    pub fn send(&mut self, msg: Message, dest: String) {
+    pub fn send(&mut self, msg: Message, dst: String) {
         self.actions.push(ProcessEvent::MessageSent {
             msg,
             src: self.proc_name.clone(),
-            dest,
+            dst,
         });
     }
 

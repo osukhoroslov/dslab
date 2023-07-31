@@ -43,11 +43,11 @@ impl Process {
         Self { ctx }
     }
 
-    fn send_ping(&mut self, dest: Id) {
+    fn send_ping(&mut self, dst: Id) {
         let info = self.ctx.time() + 0.5;
         // emit Ping event to another process with delay 0.5
         // info contains the expected event delivery time
-        self.ctx.emit(Ping { info }, dest, 0.5);
+        self.ctx.emit(Ping { info }, dst, 0.5);
     }
 }
 

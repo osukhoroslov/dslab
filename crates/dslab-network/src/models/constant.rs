@@ -22,11 +22,11 @@ impl NetworkModel for ConstantBandwidthNetworkModel {
         false
     }
 
-    fn bandwidth(&self, _src: NodeId, _dest: NodeId) -> f64 {
+    fn bandwidth(&self, _src: NodeId, _dst: NodeId) -> f64 {
         self.bandwidth
     }
 
-    fn latency(&self, _src: NodeId, _dest: NodeId) -> f64 {
+    fn latency(&self, _src: NodeId, _dst: NodeId) -> f64 {
         self.latency
     }
 

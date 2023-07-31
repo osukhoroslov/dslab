@@ -20,13 +20,13 @@ pub struct DataTransfer {
     /// Node id of data sender.
     pub src_node_id: NodeId,
     /// Simulation component which is receiving the data.
-    pub dest: Id,
+    pub dst: Id,
     /// Node id of data receiver.
-    pub dest_node_id: NodeId,
+    pub dst_node_id: NodeId,
     /// Data size.
     pub size: f64,
     /// Simulation component to notify when the transfer is completed.
-    pub notification_dest: Id,
+    pub notification_dst: Id,
 }
 
 /// Event signalling the completion of data transfer.
@@ -53,11 +53,11 @@ pub trait NetworkModel {
     /// This method is used for passing network topology and routing algorithm.
     fn init(&mut self, _topology: Rc<RefCell<Topology>>, _routing: Box<dyn RoutingAlgorithm>) {}
 
-    /// Returns the network bandwidth from node `src` to node `dest`.
-    fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64;
+    /// Returns the network bandwidth from node `src` to node `dst`.
+    fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64;
 
-    /// Returns the network latency from node `src` to node `dest`.
-    fn latency(&self, src: NodeId, dest: NodeId) -> f64;
+    /// Returns the network latency from node `src` to node `dst`.
+    fn latency(&self, src: NodeId, dst: NodeId) -> f64;
 
     /// Starts data transfer.
     ///

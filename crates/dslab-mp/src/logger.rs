@@ -96,8 +96,8 @@ pub enum LogEntry {
         msg_id: String,
         src_node: String,
         src_proc: String,
-        dest_node: String,
-        dest_proc: String,
+        dst_node: String,
+        dst_proc: String,
         msg: Message,
     },
     MessageReceived {
@@ -108,9 +108,9 @@ pub enum LogEntry {
         #[serde(skip_serializing)]
         src_node: String,
         #[serde(skip_serializing)]
-        dest_proc: String,
+        dst_proc: String,
         #[serde(skip_serializing)]
-        dest_node: String,
+        dst_node: String,
         #[serde(skip_serializing)]
         msg: Message,
     },
@@ -122,9 +122,9 @@ pub enum LogEntry {
         #[serde(skip_serializing)]
         src_node: String,
         #[serde(skip_serializing)]
-        dest_proc: String,
+        dst_proc: String,
         #[serde(skip_serializing)]
-        dest_node: String,
+        dst_node: String,
         #[serde(skip_serializing)]
         msg: Message,
     },
@@ -224,28 +224,28 @@ pub enum LogEntry {
     McMessageSent {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     McMessageReceived {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     McMessageDropped {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     McMessageCorrupted {
         msg: Message,
         corrupted_msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     McMessageDuplicated {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     McTimerSet {
         proc: String,
@@ -293,41 +293,35 @@ impl LogEntry {
                 msg_id: _,
                 src_node: _,
                 src_proc,
-                dest_node: _,
-                dest_proc,
+                dst_node: _,
+                dst_proc,
                 msg,
             } => {
-                t!(format!(
-                    "{:>9.3} {:>10} --> {:<10} {:?}",
-                    time, src_proc, dest_proc, msg
-                ));
+                t!(format!("{:>9.3} {:>10} --> {:<10} {:?}", time, src_proc, dst_proc, msg));
             }
             LogEntry::MessageReceived {
                 time,
                 msg_id: _,
                 src_proc,
                 src_node: _,
-                dest_proc,
-                dest_node: _,
+                dst_proc,
+                dst_node: _,
                 msg,
             } => {
-                t!(format!(
-                    "{:>9.3} {:>10} <-- {:<10} {:?}",
-                    time, dest_proc, src_proc, msg
-                ))
+                t!(format!("{:>9.3} {:>10} <-- {:<10} {:?}", time, dst_proc, src_proc, msg))
             }
             LogEntry::MessageDropped {
                 time: _,
                 msg_id: _,
                 src_proc,
                 src_node: _,
-                dest_proc,
-                dest_node: _,
+                dst_proc,
+                dst_node: _,
                 msg,
             } => {
                 t!(format!(
                     "{:>9} {:>10} --x {:<10} {:?} <-- message dropped",
-                    "!!!", src_proc, dest_proc, msg
+                    "!!!", src_proc, dst_proc, msg
                 )
                 .red());
             }
@@ -388,31 +382,31 @@ impl LogEntry {
             LogEntry::McLocalMessageReceived { msg, proc } => {
                 t!(format!("{:>10} <<< {:<10} {:?}", "local", proc, msg).cyan());
             }
-            LogEntry::McMessageSent { msg, src, dest } => {
-                t!(format!("{:>10} --> {:<10} {:?}", src, dest, msg));
+            LogEntry::McMessageSent { msg, src, dst } => {
+                t!(format!("{:>10} --> {:<10} {:?}", src, dst, msg));
             }
-            LogEntry::McMessageReceived { msg, src, dest } => {
-                t!("{:>10} <-- {:<10} {:?}", dest, src, msg);
+            LogEntry::McMessageReceived { msg, src, dst } => {
+                t!("{:>10} <-- {:<10} {:?}", dst, src, msg);
             }
-            LogEntry::McMessageDropped { msg, src, dest } => {
-                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dest, msg).red());
+            LogEntry::McMessageDropped { msg, src, dst } => {
+                t!(format!("{:>10} --x {:<10} {:?} <-- message dropped", src, dst, msg).red());
             }
             LogEntry::McMessageCorrupted {
                 msg,
                 corrupted_msg,
                 src,
-                dest,
+                dst,
             } => {
                 t!(format!(
                     "{:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
-                    src, dest, msg, corrupted_msg
+                    src, dst, msg, corrupted_msg
                 )
                 .blue());
             }
-            LogEntry::McMessageDuplicated { msg, src, dest } => {
+            LogEntry::McMessageDuplicated { msg, src, dst } => {
                 t!(format!(
                     "{:>9} {:>10} -=≡ {:<10} {:?} <-- message duplicated",
-                    "~~~", src, dest, msg
+                    "~~~", src, dst, msg
                 )
                 .blue());
             }

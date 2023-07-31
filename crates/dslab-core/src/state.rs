@@ -62,7 +62,7 @@ impl SimulationState {
         Alphanumeric.sample_string(&mut self.rand, len)
     }
 
-    pub fn add_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn add_event<T>(&mut self, data: T, src: Id, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
@@ -71,7 +71,7 @@ impl SimulationState {
             id: event_id,
             time: self.clock + delay.max(0.),
             src,
-            dest,
+            dst,
             data: Box::new(data),
         };
         if delay >= -EPSILON {
@@ -84,7 +84,7 @@ impl SimulationState {
         }
     }
 
-    pub fn add_ordered_event<T>(&mut self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn add_ordered_event<T>(&mut self, data: T, src: Id, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
@@ -98,7 +98,7 @@ impl SimulationState {
             // max is used to enforce time order despite of floating-point errors
             time: last_time.max(self.clock + delay),
             src,
-            dest,
+            dst,
             data: Box::new(data),
         };
         if delay >= 0. {

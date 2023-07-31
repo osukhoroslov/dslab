@@ -8,8 +8,8 @@ pub struct MessageReceived {
     pub msg: Message,
     pub src: String,
     pub src_node: String,
-    pub dest: String,
-    pub dest_node: String,
+    pub dst: String,
+    pub dst_node: String,
 }
 
 #[derive(Clone, Serialize)]

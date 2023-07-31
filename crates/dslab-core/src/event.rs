@@ -34,7 +34,7 @@ pub struct Event {
     /// Identifier of event source.
     pub src: Id,
     /// Identifier of event destination.
-    pub dest: Id,
+    pub dst: Id,
     /// Event payload.
     pub data: Box<dyn EventData>,
 }

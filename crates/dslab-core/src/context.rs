@@ -195,11 +195,11 @@ impl SimulationContext {
     /// let mut comp2_ctx = sim.create_context("comp2");
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), -1.0); // will panic because of negative delay
     /// ```
-    pub fn emit<T>(&self, data: T, dest: Id, delay: f64) -> EventId
+    pub fn emit<T>(&self, data: T, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id, dest, delay)
+        self.sim_state.borrow_mut().add_event(data, self.id, dst, delay)
     }
 
     /// This and all other `emit_ordered...` functions are special variants of normal `emit_...` functions
@@ -245,13 +245,11 @@ impl SimulationContext {
     /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
     /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0); // will panic because of broken time order
     /// ```
-    pub fn emit_ordered<T>(&self, data: T, dest: Id, delay: f64) -> EventId
+    pub fn emit_ordered<T>(&self, data: T, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
-        self.sim_state
-            .borrow_mut()
-            .add_ordered_event(data, self.id, dest, delay)
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dst, delay)
     }
 
     /// Checks whether it is safe to emit an ordered event with the specified delay.
@@ -332,19 +330,19 @@ impl SimulationContext {
     /// sim.step();
     /// assert_eq!(sim.time(), 0.0);
     /// ```
-    pub fn emit_now<T>(&self, data: T, dest: Id) -> EventId
+    pub fn emit_now<T>(&self, data: T, dst: Id) -> EventId
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, self.id, dest, 0.)
+        self.sim_state.borrow_mut().add_event(data, self.id, dst, 0.)
     }
 
     /// See [`Self::emit_ordered`].
-    pub fn emit_ordered_now<T>(&self, data: T, dest: Id) -> EventId
+    pub fn emit_ordered_now<T>(&self, data: T, dst: Id) -> EventId
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dest, 0.)
+        self.sim_state.borrow_mut().add_ordered_event(data, self.id, dst, 0.)
     }
 
     /// Creates new event for itself with specified payload and delay, returns event id.
@@ -526,19 +524,19 @@ impl SimulationContext {
     /// sim.step();
     /// assert_eq!(sim.time(), 2.4);
     /// ```
-    pub fn emit_as<T>(&self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn emit_as<T>(&self, data: T, src: Id, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_event(data, src, dest, delay)
+        self.sim_state.borrow_mut().add_event(data, src, dst, delay)
     }
 
     /// See [`Self::emit_ordered`].
-    pub fn emit_ordered_as<T>(&self, data: T, src: Id, dest: Id, delay: f64) -> EventId
+    pub fn emit_ordered_as<T>(&self, data: T, src: Id, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
     {
-        self.sim_state.borrow_mut().add_ordered_event(data, src, dest, delay)
+        self.sim_state.borrow_mut().add_ordered_event(data, src, dst, delay)
     }
 
     /// Cancels the specified event.

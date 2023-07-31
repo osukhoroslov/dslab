@@ -102,7 +102,7 @@ impl McNode {
             ProcessEvent::MessageReceived {
                 msg: msg.clone(),
                 src: from.clone(),
-                dest: proc.clone(),
+                dst: proc.clone(),
             },
         ));
         proc_entry.received_message_count += 1;
@@ -153,15 +153,15 @@ impl McNode {
             let proc_entry = self.processes.get_mut(&proc).unwrap();
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
-                ProcessEvent::MessageSent { msg, src, dest } => {
+                ProcessEvent::MessageSent { msg, src, dst } => {
                     let event = self
                         .net
                         .borrow_mut()
-                        .send_message(msg.clone(), src.clone(), dest.clone());
+                        .send_message(msg.clone(), src.clone(), dst.clone());
                     new_events.push(event);
                     proc_entry.sent_message_count += 1;
 
-                    let log_entry = LogEntry::McMessageSent { msg, src, dest };
+                    let log_entry = LogEntry::McMessageSent { msg, src, dst };
                     self.trace_handler.borrow_mut().push(log_entry);
                 }
                 ProcessEvent::LocalMessageSent { msg } => {

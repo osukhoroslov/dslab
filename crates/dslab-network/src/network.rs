@@ -25,7 +25,7 @@ pub struct Message {
     /// Simulation component which is sending the message.
     pub src: Id,
     /// Simulation component which is receiving the message.
-    pub dest: Id,
+    pub dst: Id,
     /// Contents of the message.
     pub data: String,
 }
@@ -185,24 +185,24 @@ impl Network {
     // Bandwidth and latency -------------------------------------------------------------------------------------------
 
     /// Returns the network bandwidth between two simulation components.
-    pub fn bandwidth(&self, src: Id, dest: Id) -> f64 {
+    pub fn bandwidth(&self, src: Id, dst: Id) -> f64 {
         let src_node_id = self.get_location(src);
-        let dest_node_id = self.get_location(dest);
-        if src_node_id == dest_node_id {
+        let dst_node_id = self.get_location(dst);
+        if src_node_id == dst_node_id {
             self.local_models[&src_node_id].bandwidth(src_node_id, src_node_id)
         } else {
-            self.network_model.bandwidth(src_node_id, dest_node_id)
+            self.network_model.bandwidth(src_node_id, dst_node_id)
         }
     }
 
     /// Returns the network latency between two simulation components.
-    pub fn latency(&self, src: Id, dest: Id) -> f64 {
+    pub fn latency(&self, src: Id, dst: Id) -> f64 {
         let src_node_id = self.get_location(src);
-        let dest_node_id = self.get_location(dest);
-        if src_node_id == dest_node_id {
+        let dst_node_id = self.get_location(dst);
+        if src_node_id == dst_node_id {
             self.local_models[&src_node_id].latency(src_node_id, src_node_id)
         } else {
-            self.network_model.latency(src_node_id, dest_node_id)
+            self.network_model.latency(src_node_id, dst_node_id)
         }
     }
 
@@ -212,31 +212,31 @@ impl Network {
     ///
     /// The network locations of these components must be previously registered via [`Self::set_location`].
     /// The transfer completion time is calculated by the underlying network model.
-    /// The [`DataTransferCompleted`] event is sent to `notification_dest` on the transfer completion.
-    pub fn transfer_data(&mut self, src: Id, dest: Id, size: f64, notification_dest: Id) -> usize {
+    /// The [`DataTransferCompleted`] event is sent to `notification_dst` on the transfer completion.
+    pub fn transfer_data(&mut self, src: Id, dst: Id, size: f64, notification_dst: Id) -> usize {
         let src_node_id = self.get_location(src);
-        let dest_node_id = self.get_location(dest);
+        let dst_node_id = self.get_location(dst);
         let transfer_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let dt = DataTransfer {
             id: transfer_id,
             src,
             src_node_id,
-            dest,
-            dest_node_id,
+            dst,
+            dst_node_id,
             size,
-            notification_dest,
+            notification_dst,
         };
         log_debug!(
             self.ctx,
             "new data transfer {} from {} to {} of size {}",
             dt.id,
             dt.src,
-            dt.dest,
+            dt.dst,
             dt.size
         );
         // The fixed part of data transfer time (latency) is modeled by the delayed StartDataTransfer event.
         // The remaining part is calculated by the underlying network model (see handling of StartDataTransfer event).
-        let delay = self.latency(src, dest);
+        let delay = self.latency(src, dst);
         self.ctx.emit_self(StartDataTransfer { dt }, delay);
         transfer_id
     }
@@ -245,18 +245,18 @@ impl Network {
     ///
     /// The network locations of these components must be previously registered via [`Self::set_location`].
     /// The message delivery time is equal to the network latency, assuming the message data has a small size.
-    /// The [`MessageDelivered`] event is sent to `dest` on the message delivery.
-    pub fn send_msg(&mut self, message: String, src: Id, dest: Id) -> usize {
-        log_debug!(self.ctx, "{} sent message '{}' to {}", src, message, dest);
+    /// The [`MessageDelivered`] event is sent to `dst` on the message delivery.
+    pub fn send_msg(&mut self, message: String, src: Id, dst: Id) -> usize {
+        log_debug!(self.ctx, "{} sent message '{}' to {}", src, message, dst);
         let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
             src,
-            dest,
+            dst,
             data: message,
         };
-        let delay = self.latency(src, dest);
-        self.ctx.emit(MessageDelivered { msg }, dest, delay);
+        let delay = self.latency(src, dst);
+        self.ctx.emit(MessageDelivered { msg }, dst, delay);
         msg_id
     }
 
@@ -264,10 +264,10 @@ impl Network {
     ///
     /// The network locations of these components must be previously registered via [`Self::set_location`].
     /// The event delivery time is equal to the network latency, assuming the event data has a small size.
-    pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dest: Id) -> EventId {
-        log_debug!(self.ctx, "{} sent event to {}", src, dest);
-        let delay = self.latency(src, dest);
-        self.ctx.emit_as(data, src, dest, delay)
+    pub fn send_event<T: EventData>(&mut self, data: T, src: Id, dst: Id) -> EventId {
+        log_debug!(self.ctx, "{} sent event to {}", src, dst);
+        let delay = self.latency(src, dst);
+        self.ctx.emit_as(data, src, dst, delay)
     }
 }
 
@@ -275,7 +275,7 @@ impl EventHandler for Network {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
             StartDataTransfer { dt } => {
-                let model = if dt.src_node_id == dt.dest_node_id {
+                let model = if dt.src_node_id == dt.dst_node_id {
                     self.local_models.get_mut(&dt.src_node_id).unwrap()
                 } else {
                     &mut self.network_model
@@ -288,17 +288,17 @@ impl EventHandler for Network {
                     "completed data transfer {} from {} to {} of size {}",
                     dt.id,
                     dt.src,
-                    dt.dest,
+                    dt.dst,
                     dt.size
                 );
-                let model = if dt.src_node_id == dt.dest_node_id {
+                let model = if dt.src_node_id == dt.dst_node_id {
                     self.local_models.get_mut(&dt.src_node_id).unwrap()
                 } else {
                     &mut self.network_model
                 };
                 model.on_transfer_completion(dt.clone(), &mut self.ctx);
-                let notification_dest = dt.notification_dest;
-                self.ctx.emit_now(DataTransferCompleted { dt }, notification_dest);
+                let notification_dst = dt.notification_dst;
+                self.ctx.emit_now(DataTransferCompleted { dt }, notification_dst);
             }
         })
     }

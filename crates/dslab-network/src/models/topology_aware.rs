@@ -136,10 +136,10 @@ impl TopologyAwareNetworkModel {
         self
     }
 
-    fn get_path(&self, src: NodeId, dest: NodeId) -> Vec<LinkId> {
+    fn get_path(&self, src: NodeId, dst: NodeId) -> Vec<LinkId> {
         self.routing
-            .get_path(src, dest, self.topology.borrow().deref())
-            .unwrap_or_else(|| panic!("No path from {} to {}", src, dest))
+            .get_path(src, dst, self.topology.borrow().deref())
+            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst))
     }
 
     /// Finds the smallest subset of transfers which contains `updated_transfer`
@@ -403,19 +403,19 @@ impl NetworkModel for TopologyAwareNetworkModel {
         self.routing.init(self.topology.borrow().deref());
     }
 
-    fn bandwidth(&self, src: NodeId, dest: NodeId) -> f64 {
-        let path = self.get_path(src, dest);
+    fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64 {
+        let path = self.get_path(src, dst);
         self.topology.borrow_mut().get_path_bandwidth(&path)
     }
 
-    fn latency(&self, src: NodeId, dest: NodeId) -> f64 {
-        let path = self.get_path(src, dest);
+    fn latency(&self, src: NodeId, dst: NodeId) -> f64 {
+        let path = self.get_path(src, dst);
         self.topology.borrow_mut().get_path_latency(&path)
     }
 
     fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
         self.validate_array_lengths();
-        let path = self.get_path(dt.src_node_id, dt.dest_node_id);
+        let path = self.get_path(dt.src_node_id, dt.dst_node_id);
         let id = dt.id;
         assert!(!self.current_transfers.contains_key(&dt.id));
         for &link in path.iter() {
