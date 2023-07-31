@@ -7,7 +7,6 @@ use dslab_core::context::SimulationContext;
 use dslab_core::log_debug;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::dag::DAG;
 
@@ -89,6 +88,14 @@ impl ToString for Event {
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
+pub struct Resource {
+    pub name: String,
+    pub speed: f64,
+    pub cores: u32,
+    pub memory: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Task {
     pub name: String,
     pub flops: f64,
@@ -114,7 +121,7 @@ pub struct Graph {
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct TraceLog {
-    pub resources: Vec<Value>,
+    pub resources: Vec<Resource>,
     pub graph: Graph,
     pub events: Vec<Event>,
 }

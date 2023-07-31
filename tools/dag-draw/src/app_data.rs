@@ -52,14 +52,13 @@ impl AppData {
         let mut compute_index: HashMap<String, usize> = HashMap::new();
 
         // read compute actors
-        for resource in trace_log.resources {
-            let name = resource["name"].as_str().unwrap().to_string();
-            compute_index.insert(name.clone(), compute.borrow().len());
+        for resource in trace_log.resources.into_iter() {
+            compute_index.insert(resource.name.clone(), compute.borrow().len());
             compute.borrow_mut().push(Compute {
-                name,
-                speed: resource["speed"].as_f64().unwrap(),
-                cores: resource["cores"].as_u64().unwrap() as u32,
-                memory: resource["memory"].as_u64().unwrap(),
+                name: resource.name,
+                speed: resource.speed,
+                cores: resource.cores,
+                memory: resource.memory,
                 files: Vec::new(),
                 tasks: Vec::new(),
             });

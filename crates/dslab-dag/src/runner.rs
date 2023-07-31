@@ -6,7 +6,6 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use serde::Serialize;
-use serde_json::json;
 
 use strum::IntoEnumIterator;
 
@@ -28,7 +27,7 @@ use crate::run_stats::RunStats;
 use crate::scheduler::{Action, Scheduler, TimeSpan};
 use crate::system::System;
 use crate::task::TaskState;
-use crate::trace_log::{Event as TraceEvent, TraceLog};
+use crate::trace_log::{Event as TraceEvent, Resource as TraceResource, TraceLog};
 
 /// Represents a DAG execution configuration.
 #[derive(Clone)]
@@ -286,12 +285,12 @@ impl DAGRunner {
             return;
         }
         for resource in self.resources.iter() {
-            self.trace_log.resources.push(json!({
-                "name": resource.name.clone(),
-                "speed": resource.compute.borrow().speed(),
-                "cores": resource.cores_available,
-                "memory": resource.memory_available,
-            }));
+            self.trace_log.resources.push(TraceResource {
+                name: resource.name.clone(),
+                speed: resource.compute.borrow().speed(),
+                cores: resource.cores_available,
+                memory: resource.memory_available,
+            });
         }
         self.trace_log.log_dag(&self.dag);
     }
