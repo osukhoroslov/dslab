@@ -61,6 +61,33 @@ impl Event {
     }
 }
 
+impl ToString for Event {
+    fn to_string(&self) -> String {
+        match self {
+            Event::TaskScheduled {
+                ref task_name,
+                ref location,
+                cores,
+                ..
+            } => format!("scheduled task {task_name} to {location} on {cores} cores"),
+            Event::TaskStarted { ref task_name, .. } => format!("started task {task_name}"),
+            Event::TaskCompleted { ref task_name, .. } => format!("completed task {task_name}"),
+            Event::StartUploading {
+                ref data_name,
+                ref from,
+                ref to,
+                ..
+            } => format!("data item {data_name} started uploading from {from} to {to}"),
+            Event::FinishUploading {
+                ref data_name,
+                ref from,
+                ref to,
+                ..
+            } => format!("data item {data_name} finished uploading from {from} to {to}"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Task {
     pub name: String,
@@ -98,7 +125,7 @@ impl TraceLog {
     }
 
     pub fn log_event(&mut self, ctx: &SimulationContext, event: Event) {
-        log_debug!(ctx, "{:?}", event);
+        log_debug!(ctx, "{}", event.to_string());
         self.events.push(event);
     }
 
