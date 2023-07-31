@@ -750,6 +750,16 @@
 <a href="#750" id="750">750</a>
 <a href="#751" id="751">751</a>
 <a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! DAG execution runtime.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -1056,6 +1066,18 @@
         allowed_cores: Vec&lt;u32&gt;,
         expected_span: <span class="prelude-ty">Option</span>&lt;TimeSpan&gt;,
     ) {
+        <span class="kw">let </span>task_id = task;
+        <span class="kw">let </span>task = <span class="self">self</span>.dag.get_task(task_id);
+        <span class="kw">if </span>!task.is_allowed_on(resource) {
+            <span class="macro">log_error!</span>(
+                <span class="self">self</span>.ctx,
+                <span class="string">&quot;Wrong action, task {} isn&#39;t allowed to run on resource {} because of restriction: {:?}&quot;</span>,
+                task_id,
+                resource,
+                task.resource_restriction,
+            );
+            <span class="kw">return</span>;
+        }
         <span class="kw">if </span>need_cores &gt; <span class="self">self</span>.resources[resource].compute.borrow().cores_total() {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,
@@ -1064,8 +1086,6 @@
             );
             <span class="kw">return</span>;
         }
-        <span class="kw">let </span>task_id = task;
-        <span class="kw">let </span>task = <span class="self">self</span>.dag.get_task(task_id);
         <span class="kw">if </span>task.memory &gt; <span class="self">self</span>.resources[resource].compute.borrow().memory_total() {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,

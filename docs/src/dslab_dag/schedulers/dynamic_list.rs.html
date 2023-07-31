@@ -203,6 +203,7 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>std::string::ToString;
@@ -332,6 +333,7 @@
             }
 
             <span class="kw">let </span>best_resource = (<span class="number">0</span>..resources.len())
+                .filter(|<span class="kw-2">&amp;</span>r| dag.get_task(task).is_allowed_on(r))
                 .filter(|<span class="kw-2">&amp;</span>r| {
                     resources[r].cores_available &gt;= dag.get_task(task).min_cores
                         &amp;&amp; resources[r].memory_available &gt;= dag.get_task(task).memory

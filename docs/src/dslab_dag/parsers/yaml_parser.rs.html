@@ -131,7 +131,7 @@
     <span class="attr">#[serde(default = <span class="string">&quot;one&quot;</span>)]
     </span>max_cores: u32,
     cores_dependency: <span class="prelude-ty">Option</span>&lt;Value&gt;,
-    <span class="attr">#[serde(default = <span class="string">&quot;Vec::new&quot;</span>)]
+    <span class="attr">#[serde(default)]
     </span>inputs: Vec&lt;String&gt;,
     outputs: Vec&lt;DataItem&gt;,
 }
@@ -150,7 +150,7 @@
         <span class="kw">let </span>yaml: Yaml = serde_yaml::from_str(
             <span class="kw-2">&amp;</span>std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t read file {}&quot;</span>, file.as_ref().display())),
         )
-        .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t parse YAML from file {}&quot;</span>, file.as_ref().display()));
+        .unwrap_or_else(|e| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t parse YAML from file {}: {e:?}&quot;</span>, file.as_ref().display()));
         <span class="kw">let </span><span class="kw-2">mut </span>dag = DAG::new();
         <span class="kw">let </span><span class="kw-2">mut </span>data_items: HashMap&lt;String, usize&gt; = HashMap::new();
         <span class="kw">for </span>data_item <span class="kw">in </span>yaml.inputs.iter() {

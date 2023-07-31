@@ -189,6 +189,10 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! DAG model of computation.
 
 </span><span class="kw">use </span>std::collections::BTreeSet;
@@ -378,6 +382,10 @@
 
     <span class="kw">pub fn </span>stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DagStats {
         DagStats::new(<span class="self">self</span>)
+    }
+
+    <span class="kw">pub fn </span>set_resource_restriction(<span class="kw-2">&amp;mut </span><span class="self">self</span>, task_id: usize, restriction: ResourceRestriction) {
+        <span class="self">self</span>.tasks[task_id].resource_restriction = <span class="prelude-val">Some</span>(restriction);
     }
 }
 </code></pre></div></section></main></body></html>

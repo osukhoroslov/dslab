@@ -317,6 +317,9 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
 <span class="kw">use </span>std::ops::Bound::{Excluded, Included, Unbounded};
@@ -388,6 +391,9 @@
     }
     <span class="kw">let </span>need_memory = dag.get_task(task_id).memory;
     <span class="kw">if </span>resources[resource].compute.borrow().memory_total() &lt; need_memory {
+        <span class="kw">return </span><span class="prelude-val">None</span>;
+    }
+    <span class="kw">if </span>!dag.get_task(task_id).is_allowed_on(resource) {
         <span class="kw">return </span><span class="prelude-val">None</span>;
     }
 

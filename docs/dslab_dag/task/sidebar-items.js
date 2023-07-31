@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["TaskState"],"struct":["Task","TaskStateIter"]};
+window.SIDEBAR_ITEMS = {"enum":["ResourceRestriction","TaskState"],"struct":["Task","TaskStateIter"]};

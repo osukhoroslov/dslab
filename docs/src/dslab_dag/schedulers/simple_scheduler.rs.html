@@ -77,6 +77,9 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>dslab_core::context::SimulationContext;
 
 <span class="kw">use </span><span class="kw">crate</span>::dag::DAG;
@@ -112,6 +115,9 @@
         <span class="kw">for </span>task_id <span class="kw">in </span>ready_tasks {
             <span class="kw">let </span>task = dag.get_task(task_id);
             <span class="kw">for </span>(i, resource) <span class="kw">in </span>resources.iter_mut().enumerate() {
+                <span class="kw">if </span>!task.is_allowed_on(i) {
+                    <span class="kw">continue</span>;
+                }
                 <span class="kw">if </span>resource.cores_available &lt; task.min_cores || resource.memory_available &lt; task.memory {
                     <span class="kw">continue</span>;
                 }

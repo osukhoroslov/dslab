@@ -111,6 +111,9 @@
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">use </span>dslab_core::component::Id;
@@ -153,6 +156,9 @@
         <span class="kw">for </span>task_id <span class="kw">in </span>ready_tasks {
             <span class="kw">let </span>task = dag.get_task(task_id);
             <span class="kw">for </span>(i, resource) <span class="kw">in </span>resources.iter_mut().enumerate() {
+                <span class="kw">if </span>!task.is_allowed_on(i) {
+                    <span class="kw">continue</span>;
+                }
                 <span class="kw">if </span>resource.cores_available &lt; task.min_cores || resource.memory_available &lt; task.memory {
                     <span class="kw">continue</span>;
                 }
