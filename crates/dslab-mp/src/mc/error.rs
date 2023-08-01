@@ -1,6 +1,6 @@
 //! Model checking error.
 
-use std::fmt::Display;
+use std::fmt::{Display, Debug};
 
 use crate::{logger::LogEntry, util::t};
 
@@ -41,5 +41,13 @@ impl McError {
 impl Display for McError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.message)
+    }
+}
+
+impl Debug for McError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)?;
+        self.print();
+        Ok(())
     }
 }
