@@ -18,17 +18,10 @@ pub trait RoutingAlgorithm {
     fn get_path_iter<'a>(&'a self, src: NodeId, dst: NodeId, topology: &'a Topology) -> Option<PathIterator<'a>>;
 }
 
-// Shortest Path (Floyd–Warshall) --------------------------------------------------------------------------------------
-
-/// Static routing algorithm which returns shortest paths (by latency) computed using the Floyd–Warshall algorithm.
-#[derive(Default)]
-pub struct ShortestPathFloydWarshall {
-    parent_path: Vec<Vec<NodeId>>,
-}
-
+/// Iterator which returns links on a path.
 pub struct PathIterator<'a> {
-    from: NodeId,
-    to: NodeId,
+    src: NodeId,
+    dst: NodeId,
     node_links_map: &'a NodeLinksMap,
     parent_path: &'a Vec<Vec<NodeId>>,
 }
@@ -37,14 +30,22 @@ impl Iterator for PathIterator<'_> {
     type Item = LinkId;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.from == self.to {
+        if self.src == self.dst {
             return None;
         }
-        let nxt = self.parent_path[self.to][self.from];
-        let link_id = self.node_links_map[&self.from][&nxt];
-        self.from = nxt;
+        let next = self.parent_path[self.dst][self.src];
+        let link_id = self.node_links_map[&self.src][&next];
+        self.src = next;
         Some(link_id)
     }
+}
+
+// Shortest Path (Floyd–Warshall) --------------------------------------------------------------------------------------
+
+/// Static routing algorithm which returns shortest paths (by latency) computed using the Floyd–Warshall algorithm.
+#[derive(Default)]
+pub struct ShortestPathFloydWarshall {
+    parent_path: Vec<Vec<NodeId>>,
 }
 
 impl RoutingAlgorithm for ShortestPathFloydWarshall {
@@ -86,8 +87,8 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
             None
         } else {
             Some(PathIterator {
-                from: src,
-                to: dst,
+                src: src,
+                dst: dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
             })
@@ -152,8 +153,8 @@ impl RoutingAlgorithm for ShortestPathDijkstra {
             None
         } else {
             Some(PathIterator {
-                from: src,
-                to: dst,
+                src: src,
+                dst: dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
             })

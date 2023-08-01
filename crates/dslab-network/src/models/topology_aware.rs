@@ -133,12 +133,6 @@ impl TopologyAwareNetworkModel {
         self
     }
 
-    fn get_path(&self, src: NodeId, dst: NodeId) -> Vec<LinkId> {
-        self.routing
-            .get_path(src, dst, &self.topology)
-            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst))
-    }
-
     /// Finds the smallest subset of transfers which contains `updated_transfer`
     /// so that the sets of links used by transfers inside and outside this subset don't intersect.
     fn get_affected_transfers(&self, updated_transfer: usize) -> HashSet<usize> {
