@@ -13,7 +13,7 @@ use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug};
 
 use crate::routing::{RoutingAlgorithm, ShortestPathFloydWarshall};
-use crate::{DataTransfer, DataTransferCompleted, Link, LinkId, NetworkModel, Node, NodeId, Topology};
+use crate::{DataTransfer, DataTransferCompleted, Link, LinkId, NetworkModel, Node, NodeId};
 
 /// Represents a message sent between two simulation components over the network.
 #[derive(Clone, Serialize)]
@@ -68,7 +68,7 @@ impl Network {
         ctx: SimulationContext,
     ) -> Self {
         if model.is_topology_aware() {
-            model.init(Topology::new(), routing);
+            model.init(routing);
         }
         Self {
             nodes_name_map: IndexMap::new(),

@@ -48,8 +48,13 @@ pub trait NetworkModel {
 
     /// Performs initialization of topology-aware model.
     ///
-    /// This method is used for passing network topology and routing algorithm.
-    fn init(&mut self, _topology: Topology, _routing: Box<dyn RoutingAlgorithm>) {}
+    /// This method is used for passing routing algorithm.
+    fn init(&mut self, _routing: Box<dyn RoutingAlgorithm>) {
+        assert!(
+            !self.is_topology_aware(),
+            "This method must be implemented for topology-aware model"
+        );
+    }
 
     /// Returns the network bandwidth from node `src` to node `dst`.
     fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64;
@@ -68,26 +73,35 @@ pub trait NetworkModel {
     /// This is necessary since the model itself does not receive the [`DataTransferCompleted`] event.
     fn on_transfer_completion(&mut self, dt: DataTransfer, ctx: &mut SimulationContext);
 
-    /// Callback for notifying topology-aware model about the topology change.
+    /// Returns a reference to inner network topology.
     ///
-    /// This is necessary since the topology change may require recalculation of transfer completion times.
-    fn on_topology_change(&mut self, ctx: &mut SimulationContext);
-
-    /// Returns inner topology.
+    /// Must be implemented for topology-aware model.
     fn topology(&self) -> Option<&Topology> {
         assert!(
             !self.is_topology_aware(),
-            "Implement this method if your network is topology aware"
+            "This method must be implemented for topology-aware model"
         );
         None
     }
 
-    /// Returns inner topology.
+    /// Returns a mutable reference to inner network topology.
+    ///
+    /// Must be implemented for topology-aware model.
     fn topology_mut(&mut self) -> Option<&mut Topology> {
         assert!(
             !self.is_topology_aware(),
-            "Implement this method if your network is topology aware"
+            "This method must be implemented for topology-aware model"
         );
         None
+    }
+
+    /// Callback for notifying topology-aware model about the topology change.
+    ///
+    /// This is necessary since the topology change may require recalculation of transfer completion times.
+    fn on_topology_change(&mut self, _ctx: &mut SimulationContext) {
+        assert!(
+            !self.is_topology_aware(),
+            "This method must be implemented for topology-aware model"
+        );
     }
 }

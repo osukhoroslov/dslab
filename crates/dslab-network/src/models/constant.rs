@@ -36,6 +36,4 @@ impl NetworkModel for ConstantBandwidthNetworkModel {
     }
 
     fn on_transfer_completion(&mut self, _dt: DataTransfer, _ctx: &mut SimulationContext) {}
-
-    fn on_topology_change(&mut self, _ctx: &mut SimulationContext) {}
 }

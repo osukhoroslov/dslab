@@ -388,8 +388,7 @@ impl NetworkModel for TopologyAwareNetworkModel {
         true
     }
 
-    fn init(&mut self, topology: Topology, routing: Box<dyn RoutingAlgorithm>) {
-        self.topology = topology;
+    fn init(&mut self, routing: Box<dyn RoutingAlgorithm>) {
         self.routing = routing;
         self.routing.init(&self.topology);
     }
@@ -453,18 +452,18 @@ impl NetworkModel for TopologyAwareNetworkModel {
         self.update_next_event(ctx);
     }
 
-    fn on_topology_change(&mut self, ctx: &mut SimulationContext) {
-        self.routing.init(&self.topology);
-        self.validate_array_lengths();
-        self.calc_all(ctx);
-        self.update_next_event(ctx);
-    }
-
     fn topology(&self) -> Option<&Topology> {
         Some(&self.topology)
     }
 
     fn topology_mut(&mut self) -> Option<&mut Topology> {
         Some(&mut self.topology)
+    }
+
+    fn on_topology_change(&mut self, ctx: &mut SimulationContext) {
+        self.routing.init(&self.topology);
+        self.validate_array_lengths();
+        self.calc_all(ctx);
+        self.update_next_event(ctx);
     }
 }

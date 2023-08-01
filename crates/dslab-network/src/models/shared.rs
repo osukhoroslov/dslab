@@ -53,6 +53,4 @@ impl NetworkModel for SharedBandwidthNetworkModel {
             self.next_event = ctx.emit_self(DataTransferCompleted { dt: dt.clone() }, time - ctx.time());
         }
     }
-
-    fn on_topology_change(&mut self, _ctx: &mut SimulationContext) {}
 }
