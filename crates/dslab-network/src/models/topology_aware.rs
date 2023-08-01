@@ -104,6 +104,7 @@ pub struct TopologyAwareNetworkModel {
     full_mesh_optimization: bool,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for TopologyAwareNetworkModel {
     fn default() -> Self {
         TopologyAwareNetworkModel {
