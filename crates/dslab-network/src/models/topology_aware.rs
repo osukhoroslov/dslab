@@ -92,7 +92,6 @@ impl TransferInfo {
 // Model ---------------------------------------------------------------------------------------------------------------
 
 /// Topology-aware network model supporting arbitrary network topologies.
-#[derive(Default)]
 pub struct TopologyAwareNetworkModel {
     topology: Topology,
     routing: Box<dyn RoutingAlgorithm>,
@@ -103,6 +102,22 @@ pub struct TopologyAwareNetworkModel {
     next_event_index: Option<usize>,
     link_data: Vec<Option<LinkUsage>>,
     full_mesh_optimization: bool,
+}
+
+impl Default for TopologyAwareNetworkModel {
+    fn default() -> Self {
+        TopologyAwareNetworkModel {
+            topology: Topology::default(),
+            routing: Box::<ShortestPathFloydWarshall>::default(),
+            current_transfers: BTreeMap::new(),
+            transfers_through_link: Vec::new(),
+            tmp_transfers_through_link: Vec::new(),
+            next_event: None,
+            next_event_index: None,
+            link_data: Vec::new(),
+            full_mesh_optimization: false,
+        }
+    }
 }
 
 impl TopologyAwareNetworkModel {
