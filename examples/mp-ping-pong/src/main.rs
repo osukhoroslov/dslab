@@ -283,10 +283,10 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
     for (message_data, i) in messages_data.iter().zip(1u64..) {
         messages_prefix.push(message_data.clone());
         let strategy_config = StrategyConfig::default()
-            .prune(prunes::sent_messages_limit(2 * (i as u64 + 1)))
+            .prune(prunes::sent_messages_limit(2 * i))
             .goal(goals::all_goals(vec![
                 goals::no_events(),
-                goals::got_n_local_messages("client-node", "client", i as u64 + 1),
+                goals::got_n_local_messages("client-node", "client", i),
             ]))
             .invariant(invariants::all_invariants(vec![
                 invariants::received_messages(
@@ -294,12 +294,12 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                     "client",
                     HashSet::<String>::from_iter(messages_prefix.clone()),
                 ),
-                invariants::state_depth(20 * (i as u64 + 1)),
+                invariants::state_depth(20 * i),
             ]))
-            .collect(collects::got_n_local_messages("client-node", "client", i as u64 + 1));
+            .collect(collects::got_n_local_messages("client-node", "client", i));
         let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
 
-        let res = if i == 0 {
+        let res = if i == 1 {
             mc.run_with_change(|system| {
                 system.send_local_message("client-node", "client", Message::new("PING", message_data));
             })
