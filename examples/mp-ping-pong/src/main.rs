@@ -277,11 +277,11 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
     let data2 = r#"{"value": 1}"#.to_string();
 
     let messages_data = vec![data, data2];
-    let mut messages_prefix = Vec::new();
+    let mut messages_expected = HashSet::new();
     let mut collected_states = HashSet::new();
 
     for (message_data, i) in messages_data.iter().zip(1u64..) {
-        messages_prefix.push(message_data.clone());
+        messages_expected.insert(message_data.clone());
         let strategy_config = StrategyConfig::default()
             .prune(prunes::sent_messages_limit(2 * i))
             .goal(goals::all_goals(vec![
@@ -292,7 +292,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                 invariants::received_messages(
                     "client-node",
                     "client",
-                    HashSet::<String>::from_iter(messages_prefix.clone()),
+                    messages_expected.clone(),
                 ),
                 invariants::state_depth(20 * i),
             ]))
