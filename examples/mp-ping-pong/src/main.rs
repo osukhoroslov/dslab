@@ -289,11 +289,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                 goals::got_n_local_messages("client-node", "client", i),
             ]))
             .invariant(invariants::all_invariants(vec![
-                invariants::received_messages(
-                    "client-node",
-                    "client",
-                    messages_expected.clone(),
-                ),
+                invariants::received_messages("client-node", "client", messages_expected.clone()),
                 invariants::state_depth(20 * i),
             ]))
             .collect(collects::got_n_local_messages("client-node", "client", i));
