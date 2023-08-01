@@ -206,7 +206,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
@@ -233,7 +233,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
@@ -264,7 +264,7 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
@@ -306,7 +306,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
         };
         match res {
             Err(e) => {
-                println!("{:#?}", e);
+                e.print();
                 return Err(e.message());
             }
             Ok(stats) => {

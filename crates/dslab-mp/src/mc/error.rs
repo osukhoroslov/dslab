@@ -1,8 +1,8 @@
 //! Model checking error.
 
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 
-use crate::logger::LogEntry;
+use crate::{logger::LogEntry, util::t};
 
 /// Stores information about an error found by model checking.
 #[derive(PartialEq)]
@@ -28,17 +28,18 @@ impl McError {
     pub fn trace(&self) -> &Vec<LogEntry> {
         &self.trace
     }
+
+    /// Prints error information required for debugging
+    pub fn print(&self) {
+        t!("\n\n===\n");
+        for log in &self.trace {
+            log.print();
+        }
+    }
 }
 
 impl Display for McError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.message)
-    }
-}
-
-impl Debug for McError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("\n===\nError message: {}\n", self.message))?;
-        f.write_str(&format!("Trace: {:#?}", self.trace))
     }
 }

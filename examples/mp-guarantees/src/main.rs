@@ -457,7 +457,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
@@ -472,7 +472,6 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
         .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
         .collect();
     let strategy_config = StrategyConfig::default()
-        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(prunes::state_depth(7))
         .goal(goals::any_goal(vec![
             goals::got_n_local_messages("receiver-node", "receiver", 2),
@@ -486,7 +485,7 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
@@ -512,7 +511,6 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         goals::no_events()
     };
     let strategy_config = StrategyConfig::default()
-        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(prunes::any_prune(vec![
             prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
             prunes::events_limit(LogEntry::is_mc_message_duplicated, num_duplication_allowed),
@@ -530,7 +528,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        println!("{:#?}", e);
+        e.print();
         Err(e.message())
     } else {
         Ok(true)
