@@ -87,8 +87,8 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
             None
         } else {
             Some(PathIterator {
-                src: src,
-                dst: dst,
+                src,
+                dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
             })
@@ -153,8 +153,8 @@ impl RoutingAlgorithm for ShortestPathDijkstra {
             None
         } else {
             Some(PathIterator {
-                src: src,
-                dst: dst,
+                src,
+                dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
             })
