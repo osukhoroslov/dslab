@@ -111,7 +111,7 @@ pub mod goals {
             for goal in &mut goals {
                 goal(state)?;
             }
-            Some("combied goal reached".to_string())
+            Some("combined goal is reached".to_string())
         })
     }
 

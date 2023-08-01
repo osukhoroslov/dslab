@@ -280,8 +280,8 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
     let mut messages_prefix = Vec::new();
     let mut collected_states = HashSet::new();
 
-    for (i, message_data) in messages_data.iter().enumerate() {
-        messages_prefix.push(message_data.to_string());
+    for (message_data, i) in messages_data.iter().zip(1u64..) {
+        messages_prefix.push(message_data.clone());
         let strategy_config = StrategyConfig::default()
             .prune(prunes::sent_messages_limit(2 * (i as u64 + 1)))
             .goal(goals::all_goals(vec![
