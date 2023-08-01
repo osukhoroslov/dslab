@@ -432,6 +432,10 @@ impl LogEntry {
         matches!(self, Self::McMessageDropped { .. })
     }
 
+    pub fn is_mc_message_duplicated(&self) -> bool {
+        matches!(self, Self::McMessageDuplicated { .. })
+    }
+
     pub fn is_mc_message_sent(&self) -> bool {
         matches!(self, Self::McMessageSent { .. })
     }

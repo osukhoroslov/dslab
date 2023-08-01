@@ -464,7 +464,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     }
 }
 
-fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
+fn test_mc_message_drops(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.1);
     let messages: Vec<Message> = generate_message_texts(&mut sys, 2)
@@ -493,25 +493,31 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     }
 }
 
-fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
+fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.1);
+    sys.network().set_dupl_rate(0.1);
     let messages: Vec<Message> = generate_message_texts(&mut sys, 2)
         .into_iter()
         .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
         .collect();
-    let num_drops_allowed = 3;
+    let num_drops_allowed = 2;
+    let num_duplication_allowed = 2;
+    let goal = if config.reliable && config.once {
+        goals::all_goals(vec![
+            goals::got_n_local_messages("receiver-node", "receiver", 2),
+            goals::no_events(),
+        ])
+    } else {
+        goals::no_events()
+    };
     let strategy_config = StrategyConfig::default()
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug)
         .prune(prunes::any_prune(vec![
             prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
-            prunes::events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
-            prunes::events_limit(LogEntry::is_mc_timer_set, 4),
+            prunes::events_limit(LogEntry::is_mc_message_duplicated, num_duplication_allowed),
         ]))
-        .goal(goals::any_goal(vec![
-            goals::got_n_local_messages("receiver-node", "receiver", 2),
-            goals::no_events(),
-        ]))
+        .goal(goal)
         .invariant(invariants::all_invariants(vec![
             invariants::state_depth(20),
             mc_invariant_guarantees(messages.clone(), *config),
@@ -622,13 +628,13 @@ fn main() {
         }
         tests.add("[AT MOST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
         tests.add(
-            "[AT MOST ONCE] MODEL CHECKING UNRELIABLE",
-            test_mc_unreliable_network,
+            "[AT MOST ONCE] MODEL CHECKING MESSAGE DROPS",
+            test_mc_message_drops,
             config,
         );
         tests.add(
-            "[AT MOST ONCE] MODEL CHECKING LIMITED DROPS",
-            test_mc_limited_message_drops,
+            "[AT MOST ONCE] MODEL CHECKING UNSTABLE NETWORK",
+            test_mc_unstable_network,
             config,
         );
     }
@@ -662,13 +668,13 @@ fn main() {
         }
         tests.add("[AT LEAST ONCE] MODEL CHECKING", test_mc_reliable_network, config);
         tests.add(
-            "[AT LEAST ONCE] MODEL CHECKING UNRELIABLE",
-            test_mc_unreliable_network,
+            "[AT LEAST ONCE] MODEL CHECKING MESSAGE DROPS",
+            test_mc_message_drops,
             config,
         );
         tests.add(
-            "[AT LEAST ONCE] MODEL CHECKING LIMITED DROPS",
-            test_mc_limited_message_drops,
+            "[AT LEAST ONCE] MODEL CHECKING UNSTABLE NETWORK",
+            test_mc_unstable_network,
             config,
         );
     }
@@ -702,13 +708,13 @@ fn main() {
         }
         tests.add("[EXACTLY ONCE] MODEL CHECKING", test_mc_reliable_network, config);
         tests.add(
-            "[EXACTLY ONCE] MODEL CHECKING UNRELIABLE",
-            test_mc_unreliable_network,
+            "[EXACTLY ONCE] MODEL CHECKING MESSAGE DROPS",
+            test_mc_message_drops,
             config,
         );
         tests.add(
-            "[EXACTLY ONCE] MODEL CHECKING LIMITED DROPS",
-            test_mc_limited_message_drops,
+            "[EXACTLY ONCE] MODEL CHECKING LIMITED UNSTABLE NETWORK",
+            test_mc_unstable_network,
             config,
         );
     }
@@ -755,13 +761,13 @@ fn main() {
             config,
         );
         tests.add(
-            "[EXACTLY ONCE ORDERED] MODEL CHECKING UNRELIABLE",
-            test_mc_unreliable_network,
+            "[EXACTLY ONCE ORDERED] MODEL CHECKING MESSAGE DROPS",
+            test_mc_message_drops,
             config,
         );
         tests.add(
-            "[EXACTLY ONCE ORDERED] MODEL CHECKING LIMITED DROPS",
-            test_mc_limited_message_drops,
+            "[EXACTLY ONCE ORDERED] MODEL CHECKING UNSTABLE NETWORK",
+            test_mc_unstable_network,
             config,
         );
     }
