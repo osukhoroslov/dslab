@@ -12,7 +12,6 @@ use dslab_core::event::{Event, EventData, EventId};
 use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug};
 
-use crate::routing::{RoutingAlgorithm, ShortestPathFloydWarshall};
 use crate::{DataTransfer, DataTransferCompleted, Link, LinkId, NetworkModel, Node, NodeId};
 
 /// Represents a message sent between two simulation components over the network.
@@ -55,21 +54,7 @@ pub struct Network {
 
 impl Network {
     /// Creates a new network with supplied network model.
-    ///
-    /// Uses [`ShortestPathFloydWarshall`] as default routing algorithm.
     pub fn new(model: Box<dyn NetworkModel>, ctx: SimulationContext) -> Self {
-        Self::with_routing(Box::<ShortestPathFloydWarshall>::default(), model, ctx)
-    }
-
-    /// Creates a new network with supplied routing algorithm and network model.
-    pub fn with_routing(
-        routing: Box<dyn RoutingAlgorithm>,
-        mut model: Box<dyn NetworkModel>,
-        ctx: SimulationContext,
-    ) -> Self {
-        if model.is_topology_aware() {
-            model.init(routing);
-        }
         Self {
             nodes_name_map: IndexMap::new(),
             network_model: model,
@@ -119,6 +104,10 @@ impl Network {
 
     /// Adds a new bidirectional link between two nodes.
     pub fn add_link(&mut self, node1: &str, node2: &str, link: Link) -> LinkId {
+        assert!(
+            self.network_model.is_topology_aware(),
+            "This method requires topology-aware model"
+        );
         let node1 = self.get_node_id(node1);
         let node2 = self.get_node_id(node2);
         let link_id = self.network_model.topology_mut().unwrap().add_link(node1, node2, link);
@@ -130,6 +119,10 @@ impl Network {
 
     /// Adds a new unidirectional link between two nodes.
     pub fn add_unidirectional_link(&mut self, node_from: &str, node_to: &str, link: Link) -> LinkId {
+        assert!(
+            self.network_model.is_topology_aware(),
+            "This method requires topology-aware model"
+        );
         let node_from = self.get_node_id(node_from);
         let node_to = self.get_node_id(node_to);
         let link_id = self
@@ -147,6 +140,10 @@ impl Network {
     ///
     /// This allows to model the full-duplex communication links.
     pub fn add_full_duplex_link(&mut self, node1: &str, node2: &str, link: Link) -> (LinkId, LinkId) {
+        assert!(
+            self.network_model.is_topology_aware(),
+            "This method requires topology-aware model"
+        );
         let node1 = self.get_node_id(node1);
         let node2 = self.get_node_id(node2);
         let (uplink_id, downlink_id) = self
@@ -164,6 +161,10 @@ impl Network {
     ///
     /// Must be called after all links are added and before submitting any operations.
     pub fn init_topology(&mut self) {
+        assert!(
+            self.network_model.is_topology_aware(),
+            "This method requires topology-aware model"
+        );
         self.network_model.on_topology_change(&mut self.ctx);
         self.topology_initialized = true;
     }

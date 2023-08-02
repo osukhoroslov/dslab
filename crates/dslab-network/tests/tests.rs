@@ -73,12 +73,14 @@ fn run_link_test(
 
     let mut sim = Simulation::new(123);
 
-    let network_model = Box::new(TopologyAwareNetworkModel::new().with_full_mesh_optimization(full_mesh_optimization));
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
         RoutingImpl::FloydWarshall => Box::new(ShortestPathFloydWarshall::default()),
     };
-    let mut network = Network::with_routing(routing, network_model, sim.create_context("net"));
+    let network_model = TopologyAwareNetworkModel::new()
+        .with_routing(routing)
+        .with_full_mesh_optimization(full_mesh_optimization);
+    let mut network = Network::new(Box::new(network_model), sim.create_context("net"));
 
     network.add_node("host1", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
     network.add_node("host2", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
@@ -189,12 +191,12 @@ fn test_links(
 fn test_triangle(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] routing: RoutingImpl) {
     let mut sim = Simulation::new(123);
 
-    let network_model = Box::new(TopologyAwareNetworkModel::new());
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
         RoutingImpl::FloydWarshall => Box::new(ShortestPathFloydWarshall::default()),
     };
-    let mut network = Network::with_routing(routing, network_model, sim.create_context("net"));
+    let network_model = Box::new(TopologyAwareNetworkModel::new().with_routing(routing));
+    let mut network = Network::new(network_model, sim.create_context("net"));
 
     network.add_node("host1", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
     network.add_node("host2", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
@@ -252,12 +254,12 @@ fn test_triangle(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] ro
 fn test_diamond(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] routing: RoutingImpl) {
     let mut sim = Simulation::new(123);
 
-    let network_model = Box::new(TopologyAwareNetworkModel::new());
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
         RoutingImpl::FloydWarshall => Box::new(ShortestPathFloydWarshall::default()),
     };
-    let mut network = Network::with_routing(routing, network_model, sim.create_context("net"));
+    let network_model = Box::new(TopologyAwareNetworkModel::new().with_routing(routing));
+    let mut network = Network::new(network_model, sim.create_context("net"));
 
     network.add_node("input", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));
     network.add_node("mid1", Box::new(ConstantBandwidthNetworkModel::new(100.0, 0.0)));

@@ -5,7 +5,6 @@ use serde::Serialize;
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
-use crate::routing::RoutingAlgorithm;
 use crate::{NodeId, Topology};
 
 /// Represents a data transfer between two simulation components located on a network.
@@ -45,16 +44,6 @@ pub struct DataTransferCompleted {
 pub trait NetworkModel {
     /// Returns true is the model is topology-aware.
     fn is_topology_aware(&self) -> bool;
-
-    /// Performs initialization of topology-aware model.
-    ///
-    /// This method is used for passing routing algorithm.
-    fn init(&mut self, _routing: Box<dyn RoutingAlgorithm>) {
-        assert!(
-            !self.is_topology_aware(),
-            "This method must be implemented for topology-aware model"
-        );
-    }
 
     /// Returns the network bandwidth from node `src` to node `dst`.
     fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64;
@@ -97,7 +86,7 @@ pub trait NetworkModel {
 
     /// Callback for notifying topology-aware model about the topology change.
     ///
-    /// This is necessary since the topology change may require recalculation of transfer completion times.
+    /// Must be implemented for topology-aware model.
     fn on_topology_change(&mut self, _ctx: &mut SimulationContext) {
         assert!(
             !self.is_topology_aware(),

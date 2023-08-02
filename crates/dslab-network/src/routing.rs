@@ -12,7 +12,7 @@ pub trait RoutingAlgorithm {
     /// Performs initialization of the routing algorithm based on the provided network topology.
     fn init(&mut self, topology: &Topology);
 
-    /// Returns a path iterator from node `src` to node `dst`.
+    /// Returns a path iterator from node `src` to node `dst`, or `None` if there is no path.
     ///
     /// Can be used only after calling [`Self::init`].
     fn get_path_iter<'a>(&'a self, src: NodeId, dst: NodeId, topology: &'a Topology) -> Option<PathIterator<'a>>;

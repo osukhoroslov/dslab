@@ -122,9 +122,17 @@ impl Default for TopologyAwareNetworkModel {
 }
 
 impl TopologyAwareNetworkModel {
-    /// Creates a new network model.
+    /// Creates a new network model with empty topology.
+    ///
+    /// Uses [`ShortestPathFloydWarshall`] as default routing algorithm.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the used routing algorithm.
+    pub fn with_routing(mut self, routing: Box<dyn RoutingAlgorithm>) -> Self {
+        self.routing = routing;
+        self
     }
 
     /// Enables optimization which greatly improves simulation times
@@ -389,19 +397,20 @@ impl NetworkModel for TopologyAwareNetworkModel {
         true
     }
 
-    fn init(&mut self, routing: Box<dyn RoutingAlgorithm>) {
-        self.routing = routing;
-        self.routing.init(&self.topology);
-    }
-
     fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64 {
-        self.topology
-            .get_path_bandwidth(self.routing.get_path_iter(src, dst, &self.topology).unwrap())
+        let path = self
+            .routing
+            .get_path_iter(src, dst, &self.topology)
+            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst));
+        self.topology.get_path_bandwidth(path)
     }
 
     fn latency(&self, src: NodeId, dst: NodeId) -> f64 {
-        self.topology
-            .get_path_latency(self.routing.get_path_iter(src, dst, &self.topology).unwrap())
+        let path = self
+            .routing
+            .get_path_iter(src, dst, &self.topology)
+            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst));
+        self.topology.get_path_latency(path)
     }
 
     fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
@@ -409,7 +418,7 @@ impl NetworkModel for TopologyAwareNetworkModel {
         let path = self
             .routing
             .get_path_iter(dt.src_node_id, dt.dst_node_id, &self.topology)
-            .unwrap()
+            .unwrap_or_else(|| panic!("No path from {} to {}", dt.src_node_id, dt.dst_node_id))
             .collect::<Vec<_>>();
         let id = dt.id;
         assert!(!self.current_transfers.contains_key(&dt.id));
