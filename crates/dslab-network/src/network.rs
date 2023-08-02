@@ -91,11 +91,14 @@ impl Network {
         S: Into<String>,
     {
         let name = name.into();
-        let node_id = self
-            .network_model
-            .topology_mut()
-            .unwrap()
-            .add_node(Node { name: name.clone() });
+        let node_id = if self.network_model.is_topology_aware() {
+            self.network_model
+                .topology_mut()
+                .unwrap()
+                .add_node(Node { name: name.clone() })
+        } else {
+            self.nodes_name_map.len()
+        };
         self.nodes_name_map.insert(name, node_id);
         self.local_models.insert(node_id, local_model);
         node_id
