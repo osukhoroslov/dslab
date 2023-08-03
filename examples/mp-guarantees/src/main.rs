@@ -714,7 +714,7 @@ fn main() {
             config,
         );
         tests.add(
-            "[EXACTLY ONCE] MODEL CHECKING LIMITED UNSTABLE NETWORK",
+            "[EXACTLY ONCE] MODEL CHECKING UNSTABLE NETWORK",
             test_mc_unstable_network,
             config,
         );
