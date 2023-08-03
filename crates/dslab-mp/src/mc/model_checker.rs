@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use colored::*;
 use sugars::boxed;
 
 use crate::events::{MessageReceived, TimerFired};
@@ -18,7 +17,6 @@ use crate::mc::strategy::{McResult, McStats, Strategy, StrategyConfig};
 use crate::mc::system::{McSystem, McTime};
 use crate::mc::trace_handler::TraceHandler;
 use crate::system::System;
-use crate::util::t;
 
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
@@ -81,9 +79,6 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> McResult {
-        t!("RUNNING MODEL CHECKING THROUGH POSSIBLE EXECUTION PATHS"
-            .to_string()
-            .yellow());
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }

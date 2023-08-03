@@ -264,11 +264,11 @@ pub enum LogEntry {
 impl LogEntry {
     pub fn print(&self) {
         match self {
-            LogEntry::NodeStarted { time, node, .. } => {
-                t!(format!("{:>9.3} - node started: {}", time, node));
+            LogEntry::NodeStarted {  .. } => {
+                // t!(format!("{:>9.3} - node started: {}", time, node));
             }
-            LogEntry::ProcessStarted { time, node, proc } => {
-                t!(format!("{:>9.3} - process started: {} @ {}", time, proc, node));
+            LogEntry::ProcessStarted { .. } => {
+                // t!(format!("{:>9.3} - process started: {} @ {}", time, proc, node));
             }
             LogEntry::LocalMessageSent {
                 time,
@@ -380,7 +380,7 @@ impl LogEntry {
             }
             LogEntry::ProcessStateUpdated { .. } => {}
             LogEntry::McStarted { .. } => {
-                t!("MODEL CHECKING STARTED");
+                // t!("MODEL CHECKING STARTED");
             }
             LogEntry::McLocalMessageSent { msg, proc } => {
                 t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
