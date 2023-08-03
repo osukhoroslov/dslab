@@ -440,7 +440,15 @@ impl LogEntry {
         matches!(self, Self::McMessageSent { .. })
     }
 
+    pub fn is_mc_message_received(&self) -> bool {
+        matches!(self, Self::McMessageReceived { .. })
+    }
+
     pub fn is_mc_timer_set(&self) -> bool {
         matches!(self, Self::McTimerSet { .. })
+    }
+
+    pub fn is_mc_timer_fired(&self) -> bool {
+        matches!(self, Self::McTimerFired { .. })
     }
 }

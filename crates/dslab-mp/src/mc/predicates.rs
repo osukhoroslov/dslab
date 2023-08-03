@@ -116,14 +116,14 @@ pub mod goals {
     }
 
     /// Checks if the given process produced `n` local messages.
-    pub fn got_n_local_messages<S>(node: S, proc: S, n: u64) -> GoalFn
+    pub fn got_n_local_messages<S>(node: S, proc: S, n: usize) -> GoalFn
     where
         S: Into<String>,
     {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| {
-            if state.node_states[&node][&proc].local_outbox.len() == n as usize {
+            if state.node_states[&node][&proc].local_outbox.len() == n {
                 Some(format!("{proc} produced {n} local messages"))
             } else {
                 None
@@ -136,6 +136,17 @@ pub mod goals {
         boxed!(|state: &McState| {
             if state.events.available_events_num() == 0 {
                 Some("final state reached".to_string())
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Checks if current state is on given depth.
+    pub fn depth_reached(depth: u64) -> GoalFn {
+        boxed!(move |state: &McState| {
+            if state.depth >= depth {
+                Some("final depth reached".to_string())
             } else {
                 None
             }

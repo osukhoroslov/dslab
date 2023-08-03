@@ -496,15 +496,16 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     sys.network().set_drop_rate(0.1);
     sys.network().set_dupl_rate(0.1);
-    let messages: Vec<Message> = generate_message_texts(&mut sys, 2)
+    let msg_count = if config.ordered { 3 } else { 2 };
+    let messages: Vec<Message> = generate_message_texts(&mut sys, msg_count)
         .into_iter()
         .map(|text| Message::new("MESSAGE", &format!(r#"{{"text": "{}"}}"#, text)))
         .collect();
-    let num_drops_allowed = 2;
-    let num_duplication_allowed = 2;
+    let num_drops_allowed = 1;
+    let num_duplication_allowed = 1;
     let goal = if config.reliable && config.once {
         goals::all_goals(vec![
-            goals::got_n_local_messages("receiver-node", "receiver", 2),
+            goals::got_n_local_messages("receiver-node", "receiver", msg_count),
             goals::no_events(),
         ])
     } else {
@@ -514,6 +515,8 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         .prune(prunes::any_prune(vec![
             prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
             prunes::events_limit(LogEntry::is_mc_message_duplicated, num_duplication_allowed),
+            prunes::events_limit(LogEntry::is_mc_timer_fired, 1),
+            prunes::events_limit(LogEntry::is_mc_message_received, msg_count + num_drops_allowed),
         ]))
         .goal(goal)
         .invariant(invariants::all_invariants(vec![
