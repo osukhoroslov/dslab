@@ -21,6 +21,7 @@ pub(crate) fn default_collect(_: &McState) -> bool {
 /// Invariants check whether state is correct or not.
 pub mod invariants {
     use std::collections::HashSet;
+    use std::time::{Duration, Instant};
 
     use sugars::boxed;
 
@@ -45,6 +46,22 @@ pub mod invariants {
             } else {
                 Ok(())
             }
+        })
+    }
+
+    /// Checks that overall run duration does not exceed the given time limit.
+    pub fn time_limit(time_limit: Duration) -> InvariantFn {
+        let start_time = Instant::now();
+        // We use counter to calculate time 1 out of 256 for performance purposes.
+        let mut counter: u8 = 0;
+        boxed!(move |_: &McState| {
+            if counter == 0 {
+                if start_time.elapsed() > time_limit {
+                    return Err(format!("time limit of {}s exceeded", time_limit.as_secs_f32()));
+                }
+            }
+            counter += 1;
+            Ok(())
         })
     }
 
