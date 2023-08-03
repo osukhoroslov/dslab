@@ -14,7 +14,7 @@ use sugars::boxed;
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
-use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::StrategyConfig;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
@@ -200,7 +200,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             invariants::state_depth(20),
         ]));
 
-    let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
     let res = mc.run_with_change(|system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
     });
@@ -226,7 +226,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
             "client",
             messages_expected,
         ));
-    let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
 
     let res = mc.run_with_change(|system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
@@ -257,7 +257,7 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
             "client",
             messages_expected,
         ));
-    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
 
     let res = mc.run_with_change(|system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
@@ -293,7 +293,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                 invariants::state_depth(20 * i),
             ]))
             .collect(collects::got_n_local_messages("client-node", "client", i));
-        let mut mc = ModelChecker::new::<Dfs>(&system, strategy_config);
+        let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
 
         let res = if i == 1 {
             mc.run_with_change(|system| {

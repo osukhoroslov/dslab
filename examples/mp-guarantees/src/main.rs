@@ -13,7 +13,7 @@ use sugars::boxed;
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates::{goals, invariants, prunes};
-use dslab_mp::mc::strategies::dfs::Dfs;
+use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
@@ -450,7 +450,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             invariants::state_depth(20),
             mc_invariant_guarantees(messages.clone(), *config),
         ]));
-    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
@@ -478,7 +478,7 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
             goals::no_events(),
         ]))
         .invariant(mc_invariant_guarantees(messages.clone(), *config));
-    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     let res = mc.run_with_change(move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
@@ -523,7 +523,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
             invariants::state_depth(20),
             mc_invariant_guarantees(messages.clone(), *config),
         ]));
-    let mut mc = ModelChecker::new::<Dfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
 
     let res = mc.run_with_change(|sys| {
         for msg in messages {
