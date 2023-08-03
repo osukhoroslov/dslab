@@ -264,7 +264,7 @@ pub enum LogEntry {
 impl LogEntry {
     pub fn print(&self) {
         match self {
-            LogEntry::NodeStarted {  .. } => {
+            LogEntry::NodeStarted { .. } => {
                 // t!(format!("{:>9.3} - node started: {}", time, node));
             }
             LogEntry::ProcessStarted { .. } => {
