@@ -108,9 +108,10 @@ impl ModelChecker {
         F: Fn(&mut McSystem),
     {
         let mut total_stats = McStats::default();
-        let mut sorted_states = Vec::from_iter(states.into_iter());
-        sorted_states.sort_by_key(|x| x.depth);
-        for state in sorted_states {
+        let mut states = Vec::from_iter(states);
+        // sort starting states by increasing depth to produce shorter error traces
+        states.sort_by_key(|x| x.depth);
+        for state in states {
             self.system.set_state(state);
             preliminary_callback(&mut self.system);
             let stats = self.run()?;

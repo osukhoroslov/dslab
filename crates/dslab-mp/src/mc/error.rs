@@ -29,11 +29,10 @@ impl McError {
         &self.trace
     }
 
-    /// Prints error information required for debugging
-    pub fn print(&self) {
-        t!("\n\n===\n");
-        for log in &self.trace {
-            log.print();
+    /// Prints error trace.
+    pub fn print_trace(&self) {
+        for entry in &self.trace {
+            entry.print();
         }
     }
 }
