@@ -292,7 +292,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                 invariants::received_messages("client-node", "client", messages_expected.clone()),
                 invariants::state_depth(20 * i),
             ]))
-            .collect(collects::got_n_local_messages("client-node", "client", i));
+            .collect(collects::got_n_local_messages("client-node", "client", i as usize));
         let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
 
         let res = if i == 1 {

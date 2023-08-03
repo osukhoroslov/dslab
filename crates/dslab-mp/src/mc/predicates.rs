@@ -227,12 +227,12 @@ pub mod collects {
     use crate::mc::strategy::CollectFn;
 
     /// Checks if the given process produced `n` local messages.
-    pub fn got_n_local_messages<S>(node: S, proc: S, n: u64) -> CollectFn
+    pub fn got_n_local_messages<S>(node: S, proc: S, n: usize) -> CollectFn
     where
         S: Into<String>,
     {
         let node = node.into();
         let proc = proc.into();
-        boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n as usize)
+        boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
     }
 }
