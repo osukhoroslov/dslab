@@ -55,10 +55,8 @@ pub mod invariants {
         // We use counter to calculate time 1 out of 256 for performance purposes.
         let mut counter: u8 = 0;
         boxed!(move |_: &McState| {
-            if counter == 0 {
-                if start_time.elapsed() > time_limit {
-                    return Err(format!("time limit of {}s exceeded", time_limit.as_secs_f32()));
-                }
+            if counter == 0 && start_time.elapsed() > time_limit {
+                return Err(format!("time limit of {}s exceeded", time_limit.as_secs_f32()));
             }
             counter += 1;
             Ok(())
