@@ -206,7 +206,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
@@ -233,7 +233,7 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
@@ -264,7 +264,7 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
     });
 
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
@@ -286,7 +286,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
             .prune(prunes::sent_messages_limit(2 * i))
             .goal(goals::all_goals(vec![
                 goals::no_events(),
-                goals::got_n_local_messages("client-node", "client", i),
+                goals::got_n_local_messages("client-node", "client", i as usize),
             ]))
             .invariant(invariants::all_invariants(vec![
                 invariants::received_messages("client-node", "client", messages_expected.clone()),
@@ -306,7 +306,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
         };
         match res {
             Err(e) => {
-                e.print();
+                e.print_trace();
                 return Err(e.message());
             }
             Ok(stats) => {

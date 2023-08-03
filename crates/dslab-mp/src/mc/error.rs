@@ -1,11 +1,11 @@
 //! Model checking error.
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
-use crate::{logger::LogEntry, util::t};
+use crate::logger::LogEntry;
 
 /// Stores information about an error found by model checking.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct McError {
     message: String,
     trace: Vec<LogEntry>,
@@ -34,19 +34,5 @@ impl McError {
         for entry in &self.trace {
             entry.print();
         }
-    }
-}
-
-impl Display for McError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl Debug for McError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)?;
-        self.print();
-        Ok(())
     }
 }

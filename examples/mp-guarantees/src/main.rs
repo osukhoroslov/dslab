@@ -457,7 +457,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
@@ -485,7 +485,7 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
@@ -531,7 +531,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         }
     });
     if let Err(e) = res {
-        e.print();
+        e.print_trace();
         Err(e.message())
     } else {
         Ok(true)
