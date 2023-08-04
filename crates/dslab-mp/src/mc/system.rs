@@ -69,7 +69,12 @@ impl McSystem {
         }
     }
 
-    pub fn send_local_message(&mut self, node: String, proc: String, msg: Message) {
+    pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        let proc = proc.into();
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
 

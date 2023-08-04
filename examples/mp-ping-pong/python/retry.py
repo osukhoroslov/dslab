@@ -22,7 +22,7 @@ class PingClient(Process):
 
     def on_timer(self, timer_name: str, ctx: Context):
         # process fired timers here
-        if timer_name == 'check_pong':
+        if timer_name == 'check_pong' and self._ping is not None:
             ctx.send(self._ping, self._server_id)
             ctx.set_timer('check_pong', 3)
 

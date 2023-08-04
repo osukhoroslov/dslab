@@ -264,11 +264,11 @@ pub enum LogEntry {
 impl LogEntry {
     pub fn print(&self) {
         match self {
-            LogEntry::NodeStarted { time, node, .. } => {
-                t!(format!("{:>9.3} - node started: {}", time, node));
+            LogEntry::NodeStarted { .. } => {
+                // t!(format!("{:>9.3} - node started: {}", time, node));
             }
-            LogEntry::ProcessStarted { time, node, proc } => {
-                t!(format!("{:>9.3} - process started: {} @ {}", time, proc, node));
+            LogEntry::ProcessStarted { .. } => {
+                // t!(format!("{:>9.3} - process started: {} @ {}", time, proc, node));
             }
             LogEntry::LocalMessageSent {
                 time,
@@ -380,7 +380,7 @@ impl LogEntry {
             }
             LogEntry::ProcessStateUpdated { .. } => {}
             LogEntry::McStarted { .. } => {
-                t!("MODEL CHECKING STARTED");
+                // t!("MODEL CHECKING STARTED");
             }
             LogEntry::McLocalMessageSent { msg, proc } => {
                 t!(format!("{:>10} >>> {:<10} {:?}", proc, "local", msg).green());
@@ -426,5 +426,29 @@ impl LogEntry {
                 t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
             }
         }
+    }
+
+    pub fn is_mc_message_dropped(&self) -> bool {
+        matches!(self, Self::McMessageDropped { .. })
+    }
+
+    pub fn is_mc_message_duplicated(&self) -> bool {
+        matches!(self, Self::McMessageDuplicated { .. })
+    }
+
+    pub fn is_mc_message_sent(&self) -> bool {
+        matches!(self, Self::McMessageSent { .. })
+    }
+
+    pub fn is_mc_message_received(&self) -> bool {
+        matches!(self, Self::McMessageReceived { .. })
+    }
+
+    pub fn is_mc_timer_set(&self) -> bool {
+        matches!(self, Self::McTimerSet { .. })
+    }
+
+    pub fn is_mc_timer_fired(&self) -> bool {
+        matches!(self, Self::McTimerFired { .. })
     }
 }

@@ -1,6 +1,7 @@
 mod basic;
 mod retry;
 
+use std::collections::HashSet;
 use std::env;
 use std::io::Write;
 
@@ -10,6 +11,11 @@ use env_logger::Builder;
 use log::LevelFilter;
 use sugars::boxed;
 
+use dslab_mp::logger::LogEntry;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategy::StrategyConfig;
 use dslab_mp::message::Message;
 use dslab_mp::process::Process;
 use dslab_mp::system::System;
@@ -179,6 +185,139 @@ fn test_10results_unique_unreliable(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+// MODEL CHECKING ------------------------------------------------------------------------------------------------------
+
+fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
+    let system = build_system(config);
+    let data = r#"{"value": 0}"#.to_string();
+    let messages_expected = HashSet::<String>::from_iter([data.clone()]);
+
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::sent_messages_limit(4))
+        .goal(goals::got_n_local_messages("client-node", "client", 1))
+        .invariant(invariants::all_invariants(vec![
+            invariants::received_messages("client-node", "client", messages_expected),
+            invariants::state_depth(20),
+        ]));
+
+    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
+    let res = mc.run_with_change(|system| {
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+    });
+
+    if let Err(e) = res {
+        e.print_trace();
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
+    let system = build_system(config);
+    let data = r#"{"value": 0}"#.to_string();
+    let messages_expected = HashSet::<String>::from_iter([data.clone()]);
+    system.network().set_drop_rate(0.3);
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::state_depth(7))
+        .goal(goals::got_n_local_messages("client-node", "client", 1))
+        .invariant(invariants::received_messages(
+            "client-node",
+            "client",
+            messages_expected,
+        ));
+    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
+
+    let res = mc.run_with_change(|system| {
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+    });
+
+    if let Err(e) = res {
+        e.print_trace();
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
+    let sys = build_system(config);
+    sys.network().set_drop_rate(0.1);
+    let data = r#"{"value": 0}"#.to_string();
+    let messages_expected = HashSet::<String>::from_iter([data.clone()]);
+    let num_drops_allowed = 3;
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::any_prune(vec![
+            prunes::events_limit(LogEntry::is_mc_message_dropped, num_drops_allowed),
+            prunes::events_limit(LogEntry::is_mc_message_sent, 2 + num_drops_allowed),
+        ]))
+        .goal(goals::got_n_local_messages("client-node", "client", 1))
+        .invariant(invariants::received_messages(
+            "client-node",
+            "client",
+            messages_expected,
+        ));
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+
+    let res = mc.run_with_change(|system| {
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+    });
+
+    if let Err(e) = res {
+        e.print_trace();
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
+    let system = build_system(config);
+    let data = r#"{"value": 0}"#.to_string();
+    let data2 = r#"{"value": 1}"#.to_string();
+
+    let messages_data = vec![data, data2];
+    let mut messages_expected = HashSet::new();
+    let mut collected_states = HashSet::new();
+
+    for (message_data, i) in messages_data.iter().zip(1u64..) {
+        messages_expected.insert(message_data.clone());
+        let strategy_config = StrategyConfig::default()
+            .prune(prunes::sent_messages_limit(2 * i))
+            .goal(goals::all_goals(vec![
+                goals::no_events(),
+                goals::got_n_local_messages("client-node", "client", i as usize),
+            ]))
+            .invariant(invariants::all_invariants(vec![
+                invariants::received_messages("client-node", "client", messages_expected.clone()),
+                invariants::state_depth(20 * i),
+            ]))
+            .collect(collects::got_n_local_messages("client-node", "client", i as usize));
+        let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
+
+        let res = if i == 1 {
+            mc.run_with_change(|system| {
+                system.send_local_message("client-node", "client", Message::new("PING", message_data));
+            })
+        } else {
+            mc.run_from_states_with_change(collected_states, |system| {
+                system.send_local_message("client-node", "client", Message::new("PING", message_data));
+            })
+        };
+        match res {
+            Err(e) => {
+                e.print_trace();
+                return Err(e.message());
+            }
+            Ok(stats) => {
+                // println!("{}", stats.collected_states.len());
+                collected_states = stats.collected_states;
+            }
+        }
+    }
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Ping-Pong Tests
@@ -222,7 +361,23 @@ fn main() {
     tests.add("DROP PING 2", test_drop_ping2, config.clone());
     tests.add("DROP PONG 2", test_drop_pong2, config.clone());
     tests.add("10 UNIQUE RESULTS", test_10results_unique, config.clone());
-    tests.add("10 UNIQUE RESULTS UNRELIABLE", test_10results_unique_unreliable, config);
+    tests.add(
+        "10 UNIQUE RESULTS UNRELIABLE",
+        test_10results_unique_unreliable,
+        config.clone(),
+    );
+    tests.add("MODEL CHECKING", test_mc_reliable_network, config.clone());
+    tests.add("MODEL CHECKING UNRELIABLE", test_mc_unreliable_network, config.clone());
+    tests.add(
+        "MODEL CHECKING LIMITED DROPS",
+        test_mc_limited_message_drops,
+        config.clone(),
+    );
+    tests.add(
+        "MODEL CHECKING CONSECUTIVE MESSAGES",
+        test_mc_consecutive_messages,
+        config,
+    );
 
     if args.test.is_none() {
         tests.run();
