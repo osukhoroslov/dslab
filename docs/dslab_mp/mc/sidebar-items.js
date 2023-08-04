@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["error","model_checker","state","strategies","strategy"]};
+window.SIDEBAR_ITEMS = {"mod":["error","model_checker","predicates","state","strategies","strategy"]};

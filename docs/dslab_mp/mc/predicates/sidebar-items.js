@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["collects","goals","invariants","prunes"]};
