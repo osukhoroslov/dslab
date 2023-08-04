@@ -52,7 +52,7 @@ pub mod invariants {
     /// Checks that overall run duration does not exceed the given time limit.
     pub fn time_limit(time_limit: Duration) -> InvariantFn {
         let start_time = Instant::now();
-        // We use counter to calculate time 1 out of 256 for performance purposes.
+        // We use counter to calculate time 1 out of 256 calls for performance purposes.
         let mut counter: u8 = 0;
         boxed!(move |_: &McState| {
             if counter == 0 && start_time.elapsed() > time_limit {
