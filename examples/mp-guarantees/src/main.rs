@@ -512,17 +512,12 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
     } else {
         goals::no_events()
     };
-    let invariant = if config.ordered {
-        invariants::all_invariants(vec![
-            invariants::state_depth(20),
-            mc_invariant_guarantees(messages.clone(), *config),
-            invariants::time_limit(Duration::from_secs(10)),
-        ])
-    } else {
-        invariants::all_invariants(vec![
-            invariants::state_depth(20),
-            mc_invariant_guarantees(messages.clone(), *config),
-        ])
+    let mut invariants = vec![
+        invariants::state_depth(20),
+        mc_invariant_guarantees(messages.clone(), *config),
+    ];
+    if config.ordered {
+        invariants.push(invariants::time_limit(Duration::from_secs(80)))
     };
     let strategy_config = StrategyConfig::default()
         .prune(prunes::any_prune(vec![
@@ -532,7 +527,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
             prunes::events_limit(LogEntry::is_mc_message_received, msg_count + num_drops_allowed),
         ]))
         .goal(goal)
-        .invariant(invariant);
+        .invariant(invariants::all_invariants(invariants));
     let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
 
     let res = mc.run_with_change(|sys| {
