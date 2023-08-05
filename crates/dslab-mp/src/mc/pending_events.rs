@@ -96,6 +96,14 @@ impl PendingEvents {
         }
         result
     }
+
+    pub(crate) fn clear_and_dump_events(&mut self) -> Vec<McEvent> {
+        let mut res = Vec::new();
+        while let Some(event_id) = self.available_events().iter().next() {
+            res.push(self.pop(*event_id));
+        }
+        res
+    }
 }
 
 #[cfg(test)]

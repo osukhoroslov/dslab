@@ -11,6 +11,13 @@ use serde::Serialize;
 use serde_json::Value;
 use sugars::boxed;
 
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates::{goals, prunes};
+use dslab_mp::mc::state::McState;
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategy::{GoalFn, PruneFn, StrategyConfig};
+
+use dslab_mp::logger::LogEntry;
 use dslab_mp::message::Message;
 use dslab_mp::node::ProcessEvent;
 use dslab_mp::system::System;
@@ -382,6 +389,187 @@ fn test_scalability(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+// MODEL CHECKING ------------------------------------------------------------------------------------------------------
+
+fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
+    let equivalent_procs = equivalent_procs.clone().into_iter().map(|x| x.clone()).collect::<Vec<String>>();
+    boxed!(move |state| {
+        let proc_names = HashSet::<String>::from_iter(equivalent_procs.clone().into_iter());
+        let used_proc_names = HashSet::<String>::new();
+        let mut waiting_for_proc = 0;
+        for entry in &state.trace {
+            match entry {
+                LogEntry::McMessageReceived { src: proc, .. } | LogEntry::McTimerFired { proc, .. } => {
+                    if used_proc_names.contains(proc) || !proc_names.contains(proc) {
+                        continue;
+                    }
+                    if equivalent_procs[waiting_for_proc] != *proc {
+                        return Some("state is the same as another state with renumerated processes".to_owned());
+                    }
+                    waiting_for_proc += 1;
+                },
+                _ => {}
+            }
+        }
+        None
+    })
+}
+
+fn mc_invariant(state: &McState, proc_names: Vec<String>, sent_messages: &HashSet<String>) -> Result<(), String> {
+    for name in proc_names {
+        let outbox = &state.node_states[&name][&name].local_outbox;
+        let mut unique = HashSet::new();
+        for message in outbox {
+            let data: Value = serde_json::from_str(&message.data).unwrap();
+            let message = data["text"].as_str().unwrap().to_string();
+
+            if unique.contains(&message) {
+                return Err("No duplication violated".to_owned());
+            }
+            unique.insert(message.clone());
+            if !sent_messages.contains(&message) {
+                return Err("No creation violated".to_owned());
+            }
+        }
+    }
+    Ok(())
+}
+
+// fn get_n_start_states(start_states: HashSet<McState>, mut n: usize) -> HashSet<McState> {
+//     n = min(n, start_states.len());
+//     let mut hashed = start_states.into_iter().map(|state| {
+//         let mut hasher = DefaultHasher::default();
+//         state.hash(&mut hasher);
+//         (hasher.finish(), state)
+//     }).collect::<Vec<(u64, McState)>>();
+//     hashed.sort_by_key(|(a, b)| *a);
+//     HashSet::from_iter(hashed.split_at(n).0.into_iter().map(|(a, b)| b.clone()))
+// }
+
+fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+    let proc_names = (0..config.proc_count).map(|i| format!("{i}")).collect::<Vec<String>>();
+    let msg_text = "0:Hello".to_owned();
+    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, msg_text));
+    sys.send_local_message("0", msg);
+    let sent_messages: HashSet<String> = HashSet::from_iter(vec![msg_text].into_iter());
+    let goal = goals::all_goals(
+        proc_names
+            .iter()
+            .map(|name| goals::got_n_local_messages(name, name, 1))
+            .collect::<Vec<GoalFn>>(),
+    );
+    let strategy_config = StrategyConfig::default()
+        .goal(goal)
+        .prune(prunes::any_prune(vec![
+            prunes::state_depth(10),
+            prunes::events_limit_per_proc(
+                |entry: &LogEntry, proc: &String| match entry {
+                    LogEntry::McMessageReceived { src, .. } => src == proc,
+                    _ => false,
+                },
+                proc_names.clone(),
+                2,
+            ),
+            mc_prune_proc_permutations(proc_names.split_at(1).1),
+        ]))
+        .invariant(Box::new(move |state: &McState| {
+            mc_invariant(state, proc_names.clone(), &sent_messages)
+        }));
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let res = mc.run();
+    if let Err(err) = res {
+        err.print_trace();
+        Err(err.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+    let proc_names = (0..config.proc_count).map(|i| format!("{i}")).collect::<Vec<String>>();
+    let msg_text = "0:Hello".to_owned();
+    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, msg_text));
+    sys.send_local_message("0", msg);
+    let sent_messages: HashSet<String> = HashSet::from_iter(vec![msg_text].into_iter());
+    let goal = goals::all_goals(
+        proc_names
+            .iter()
+            .map(|name| goals::got_n_local_messages(name, name, 1))
+            .collect::<Vec<GoalFn>>(),
+    );
+
+    let proc_names_cloned = proc_names.clone();
+    let collect = Box::new(move |state: &McState| {
+        for name in proc_names_cloned.clone() {
+            if name == "0" {
+                continue;
+            }
+            let process_state = &state.node_states[&name][&name];
+            if process_state.received_message_count > 0 {
+                return true;
+            }
+        }
+        false
+    });
+
+    let proc_names_cloned = proc_names.clone();
+    let sent_message_cloned = sent_messages.clone();
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::state_depth(4))
+        .goal(goal)
+        .invariant(Box::new(move |state: &McState| {
+            mc_invariant(state, proc_names_cloned.clone(), &sent_message_cloned)
+        }))
+        .collect(collect);
+
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let res = mc.run();
+    let intermediate_states = res.map_err(|err| {
+        err.print_trace();
+        err.message()
+    })?;
+    if intermediate_states.collected_states.is_empty() {
+        return Err("no states collected after first stage".to_string());
+    }
+    sys.network().disconnect_node("0");
+    let goal = goals::all_goals(
+        proc_names
+            .iter()
+            .filter(|name| **name != "0")
+            .map(|name| goals::got_n_local_messages(name, name, 1))
+            .collect::<Vec<GoalFn>>(),
+    );
+    
+    let proc_names_cloned = proc_names.clone();
+    let strategy_config = StrategyConfig::default()
+        .goal(goal)
+        .invariant(boxed!(move |state| mc_invariant(state, proc_names_cloned.clone(), &sent_messages)))
+        .prune(prunes::any_prune(vec![
+            prunes::state_depth(6),
+            mc_prune_proc_permutations(proc_names.split_at(1).1),
+            prunes::events_limit_per_proc(
+                |entry: &LogEntry, proc: &String| match entry {
+                    LogEntry::McMessageReceived { src, .. } => src == proc,
+                    _ => false,
+                },
+                proc_names,
+                4,
+            ),
+        ]));
+    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    // TODO: check if this is necessary
+    // let collected = get_n_start_states(res.collected, 100);
+    let res = mc.run_from_states(intermediate_states.collected_states);
+    if let Err(err) = res {
+        err.print_trace();
+        Err(err.message())
+    } else {
+        Ok(true)
+    }
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Broadcast Homework Tests
@@ -441,6 +629,20 @@ fn main() {
     tests.add("CAUSAL ORDER", test_causal_order, config);
     tests.add("CHAOS MONKEY", test_chaos_monkey, config);
     tests.add("SCALABILITY", test_scalability, config);
+
+    let config_mc = TestConfig {
+        proc_factory: &proc_factory,
+        proc_count: 3,
+        seed: args.seed,
+        monkeys: args.monkeys,
+        debug: args.debug,
+    };
+    tests.add(
+        "MODEL CHECKING NORMAL DELIVERY",
+        test_model_checking_normal_delivery,
+        config_mc,
+    );
+    tests.add("MODEL CHECKING SENDER CRASH", test_model_checking_sender_crash, config_mc);
 
     if args.test.is_none() {
         tests.run();

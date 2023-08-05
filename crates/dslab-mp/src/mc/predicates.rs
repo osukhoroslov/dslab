@@ -198,6 +198,8 @@ pub mod goals {
 
 /// Prunes cut execution branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
+    use std::iter::Iterator;
+
     use sugars::boxed;
 
     use crate::logger::LogEntry;
@@ -249,7 +251,7 @@ pub mod prunes {
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = state.trace.iter().filter(|x| predicate(x)).count();
+            let event_count = filter_state_trace(&predicate, state);
             if event_count > limit {
                 Some(format!(
                     "event occured {event_count} times but expected at most {limit} times"
@@ -258,6 +260,34 @@ pub mod prunes {
                 None
             }
         })
+    }
+
+    /// Prunes states where the number of events matching the predicate is more than the limit for any of processes.
+    pub fn events_limit_per_proc<F>(predicate: F, process_names: Vec<String>, limit: usize) -> PruneFn
+    where
+        F: Fn(&LogEntry, &String) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            for proc in &process_names {
+                let proc_predicate = |entry: &LogEntry| {
+                    predicate(entry, proc)
+                };
+                let event_count = filter_state_trace(proc_predicate, state);
+                if event_count > limit {
+                    return Some(format!(
+                        "event occured {event_count} times on proc {proc} but expected at most {limit} times"
+                    ));
+                }
+            }
+            None
+        })
+    }
+
+    fn filter_state_trace<F>(predicate: F, state: &McState) -> usize
+    where
+        F: Fn(&LogEntry) -> bool,   
+    {
+        state.trace.iter().filter(|x| predicate(x)).count()
     }
 }
 

@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
@@ -87,6 +87,10 @@ impl McSystem {
             .on_local_message_received(proc, msg, event_time, state_hash);
         self.add_events(new_events);
     }
+
+    pub(crate) fn network(&mut self) -> RefMut<McNetwork> {
+        self.net.borrow_mut()
+    } 
 
     pub fn get_state(&self) -> McState {
         let mut state = McState::new(
