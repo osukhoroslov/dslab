@@ -7,7 +7,7 @@ var sourcesIndex = JSON.parse('{\
 "dslab_models":["",[["power",[["cpu_models",[],["asymptotic.rs","constant.rs","cubic.rs","dvfs.rs","empirical.rs","linear.rs","mod.rs","mse.rs","square.rs","state_based.rs"]],["hdd_models",[],["constant.rs","mod.rs","state_based.rs"]],["memory_models",[],["constant.rs","ddr3.rs","mod.rs"]],["tests",[],["mod.rs"]]],["cpu.rs","hdd.rs","host.rs","memory.rs","mod.rs"]],["throughput_sharing",[],["fair_fast.rs","fair_slow.rs","functions.rs","mod.rs","model.rs"]]],["lib.rs"]],\
 "dslab_mp":["",[["mc",[["strategies",[],["bfs.rs","dfs.rs","mod.rs"]]],["dependency.rs","error.rs","events.rs","mod.rs","model_checker.rs","network.rs","node.rs","pending_events.rs","predicates.rs","state.rs","strategy.rs","system.rs","trace_handler.rs"]]],["context.rs","events.rs","lib.rs","logger.rs","message.rs","network.rs","node.rs","process.rs","system.rs","test.rs","util.rs"]],\
 "dslab_mp_python":["",[],["lib.rs"]],\
-"dslab_network":["",[],["constant_bandwidth_model.rs","lib.rs","model.rs","network.rs","shared_bandwidth_model.rs","topology.rs","topology_model.rs","topology_resolver.rs","topology_structures.rs"]],\
+"dslab_network":["",[["models",[],["constant.rs","mod.rs","shared.rs","topology_aware.rs"]]],["lib.rs","link.rs","model.rs","network.rs","node.rs","routing.rs","topology.rs"]],\
 "dslab_storage":["",[],["disk.rs","events.rs","fs.rs","lib.rs","scheduler.rs","storage.rs"]]\
 }');
 createSourceSidebar();

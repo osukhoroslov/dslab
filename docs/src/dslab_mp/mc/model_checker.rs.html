@@ -177,7 +177,7 @@
                 events.push(
                     mc_net
                         .borrow_mut()
-                        .send_message(value.msg.clone(), value.src.clone(), value.dest.clone()),
+                        .send_message(value.msg.clone(), value.src.clone(), value.dst.clone()),
                 );
             } <span class="kw">else if let </span><span class="prelude-val">Some</span>(value) = event.data.downcast_ref::&lt;TimerFired&gt;() {
                 events.push(McEvent::TimerFired {

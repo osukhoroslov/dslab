@@ -338,11 +338,6 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
 <span class="kw">use </span>std::rc::Rc;
@@ -568,16 +563,11 @@
         <span class="self">self</span>.traffic
     }
 
-    <span class="kw">pub fn </span>dest_node_id(<span class="kw-2">&amp;</span><span class="self">self</span>, dest: <span class="kw-2">&amp;</span>str) -&gt; Id {
-        <span class="kw">let </span>dest_node = <span class="self">self</span>.proc_locations.get(dest).unwrap();
-        <span class="kw-2">*</span><span class="self">self</span>.node_ids.get(dest_node).unwrap()
-    }
-
-    <span class="kw">fn </span>message_is_dropped(<span class="kw-2">&amp;</span><span class="self">self</span>, src: <span class="kw-2">&amp;</span>String, dest: <span class="kw-2">&amp;</span>String) -&gt; bool {
+    <span class="kw">fn </span>message_is_dropped(<span class="kw-2">&amp;</span><span class="self">self</span>, src: <span class="kw-2">&amp;</span>String, dst: <span class="kw-2">&amp;</span>String) -&gt; bool {
         <span class="self">self</span>.ctx.rand() &lt; <span class="self">self</span>.drop_rate
             || <span class="self">self</span>.drop_outgoing.contains(src)
-            || <span class="self">self</span>.drop_incoming.contains(dest)
-            || <span class="self">self</span>.disabled_links.contains(<span class="kw-2">&amp;</span>(src.clone(), dest.clone()))
+            || <span class="self">self</span>.drop_incoming.contains(dst)
+            || <span class="self">self</span>.disabled_links.contains(<span class="kw-2">&amp;</span>(src.clone(), dst.clone()))
     }
 
     <span class="kw">fn </span>corrupt_if_needed(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: Message) -&gt; Message {
@@ -600,12 +590,12 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: <span class="kw-2">&amp;</span>str, dest: <span class="kw-2">&amp;</span>str) {
+    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: <span class="kw-2">&amp;</span>str, dst: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>msg_size = msg.size();
         <span class="kw">let </span>src_node = <span class="self">self</span>.proc_locations.get(src).unwrap();
-        <span class="kw">let </span>dest_node = <span class="self">self</span>.proc_locations.get(dest).unwrap();
+        <span class="kw">let </span>dst_node = <span class="self">self</span>.proc_locations.get(dst).unwrap();
         <span class="kw">let </span>src_node_id = <span class="kw-2">*</span><span class="self">self</span>.node_ids.get(src_node).unwrap();
-        <span class="kw">let </span>dest_node_id = <span class="kw-2">*</span><span class="self">self</span>.node_ids.get(dest_node).unwrap();
+        <span class="kw">let </span>dst_node_id = <span class="kw-2">*</span><span class="self">self</span>.node_ids.get(dst_node).unwrap();
 
         <span class="kw">let </span>msg_id = <span class="self">self</span>.message_count;
 
@@ -613,42 +603,42 @@
             msg_id,
             src_node.to_string(),
             src.to_string(),
-            dest_node.to_string(),
-            dest.to_string(),
+            dst_node.to_string(),
+            dst.to_string(),
             msg.clone(),
         );
 
         <span class="comment">// local communication inside a node is reliable and fast
-        </span><span class="kw">if </span>src_node == dest_node {
+        </span><span class="kw">if </span>src_node == dst_node {
             <span class="kw">let </span>e = MessageReceived {
                 id: <span class="self">self</span>.message_count,
                 msg,
                 src: src.to_string(),
                 src_node: src_node.to_string(),
-                dest: dest.to_string(),
-                dest_node: dest_node.to_string(),
+                dst: dst.to_string(),
+                dst_node: dst_node.to_string(),
             };
-            <span class="self">self</span>.ctx.emit_as(e, src_node_id, dest_node_id, <span class="number">0.</span>);
+            <span class="self">self</span>.ctx.emit_as(e, src_node_id, dst_node_id, <span class="number">0.</span>);
         <span class="comment">// communication between different nodes can be faulty
         </span>} <span class="kw">else </span>{
-            <span class="kw">if </span>!<span class="self">self</span>.message_is_dropped(src_node, dest_node) {
+            <span class="kw">if </span>!<span class="self">self</span>.message_is_dropped(src_node, dst_node) {
                 <span class="kw">let </span>msg = <span class="self">self</span>.corrupt_if_needed(msg);
                 <span class="kw">let </span>e = MessageReceived {
                     id: <span class="self">self</span>.message_count,
                     msg,
                     src: src.to_string(),
                     src_node: src_node.to_string(),
-                    dest: dest.to_string(),
-                    dest_node: dest_node.to_string(),
+                    dst: dst.to_string(),
+                    dst_node: dst_node.to_string(),
                 };
                 <span class="kw">let </span>msg_count = <span class="self">self</span>.get_message_count();
                 <span class="kw">if </span>msg_count == <span class="number">1 </span>{
                     <span class="kw">let </span>delay = <span class="self">self</span>.min_delay + <span class="self">self</span>.ctx.rand() * (<span class="self">self</span>.max_delay - <span class="self">self</span>.min_delay);
-                    <span class="self">self</span>.ctx.emit_as(e, src_node_id, dest_node_id, delay);
+                    <span class="self">self</span>.ctx.emit_as(e, src_node_id, dst_node_id, delay);
                 } <span class="kw">else </span>{
                     <span class="kw">for _ in </span><span class="number">0</span>..msg_count {
                         <span class="kw">let </span>delay = <span class="self">self</span>.min_delay + <span class="self">self</span>.ctx.rand() * (<span class="self">self</span>.max_delay - <span class="self">self</span>.min_delay);
-                        <span class="self">self</span>.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
+                        <span class="self">self</span>.ctx.emit_as(e.clone(), src_node_id, dst_node_id, delay);
                     }
                 }
             } <span class="kw">else </span>{
@@ -657,8 +647,8 @@
                     msg_id: msg_id.to_string(),
                     src_proc: src.to_string(),
                     src_node: src_node.to_string(),
-                    dest_proc: dest.to_string(),
-                    dest_node: dest_node.to_string(),
+                    dst_proc: dst.to_string(),
+                    dst_node: dst_node.to_string(),
                     msg,
                 });
             }
@@ -673,8 +663,8 @@
         msg_id: EventId,
         src_node: String,
         src_proc: String,
-        dest_node: String,
-        dest_proc: String,
+        dst_node: String,
+        dst_proc: String,
         msg: Message,
     ) {
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::MessageSent {
@@ -682,8 +672,8 @@
             msg_id: msg_id.to_string(),
             src_node,
             src_proc,
-            dest_node,
-            dest_proc,
+            dst_node,
+            dst_proc,
             msg,
         });
     }

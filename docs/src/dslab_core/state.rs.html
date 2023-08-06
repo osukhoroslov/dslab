@@ -291,7 +291,7 @@
         Alphanumeric.sample_string(<span class="kw-2">&amp;mut </span><span class="self">self</span>.rand, len)
     }
 
-    <span class="kw">pub fn </span>add_event&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: T, src: Id, dest: Id, delay: f64) -&gt; EventId
+    <span class="kw">pub fn </span>add_event&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: T, src: Id, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
@@ -300,7 +300,7 @@
             id: event_id,
             time: <span class="self">self</span>.clock + delay.max(<span class="number">0.</span>),
             src,
-            dest,
+            dst,
             data: Box::new(data),
         };
         <span class="kw">if </span>delay &gt;= -EPSILON {
@@ -313,7 +313,7 @@
         }
     }
 
-    <span class="kw">pub fn </span>add_ordered_event&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: T, src: Id, dest: Id, delay: f64) -&gt; EventId
+    <span class="kw">pub fn </span>add_ordered_event&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: T, src: Id, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
@@ -327,7 +327,7 @@
             <span class="comment">// max is used to enforce time order despite of floating-point errors
             </span>time: last_time.max(<span class="self">self</span>.clock + delay),
             src,
-            dest,
+            dst,
             data: Box::new(data),
         };
         <span class="kw">if </span>delay &gt;= <span class="number">0. </span>{

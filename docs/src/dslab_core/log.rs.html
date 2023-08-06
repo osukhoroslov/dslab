@@ -356,7 +356,7 @@
         <span class="string">&quot;[{:.3} {} simulation] Unhandled event: {}&quot;</span>,
         event.time,
         <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;ERROR&quot;</span>, colored::Color::Red),
-        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dest&quot;</span>: event.dest})
+        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dst&quot;</span>: event.dst})
     );
 }
 
@@ -367,7 +367,7 @@
         <span class="string">&quot;[{:.3} {} simulation] Undelivered event: {}&quot;</span>,
         event.time,
         <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;ERROR&quot;</span>, colored::Color::Red),
-        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dest&quot;</span>: event.dest})
+        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dst&quot;</span>: event.dst})
     );
 }
 
@@ -379,7 +379,7 @@
         event.time,
         <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;ERROR&quot;</span>, colored::Color::Red),
         msg,
-        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dest&quot;</span>: event.dest})
+        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: event.src, <span class="string">&quot;dst&quot;</span>: event.dst})
     );
 }
 </code></pre></div></section></main></body></html>

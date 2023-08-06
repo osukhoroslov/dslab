@@ -460,11 +460,6 @@
 <a href="#460" id="460">460</a>
 <a href="#461" id="461">461</a>
 <a href="#462" id="462">462</a>
-<a href="#463" id="463">463</a>
-<a href="#464" id="464">464</a>
-<a href="#465" id="465">465</a>
-<a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Main logic and configuration of model checking strategy.
 
 </span><span class="kw">use </span>std::collections::hash_map::DefaultHasher;
@@ -637,12 +632,7 @@
     </span><span class="kw">fn </span>process_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: <span class="kw-2">&amp;mut </span>McSystem, event_id: McEventId) -&gt; <span class="prelude-ty">Result</span>&lt;(), McError&gt; {
         <span class="kw">let </span>event = system.events.get(event_id).unwrap();
         <span class="kw">match </span>event {
-            MessageReceived {
-                msg,
-                src,
-                dest,
-                options,
-            } =&gt; {
+            MessageReceived { msg, src, dst, options } =&gt; {
                 <span class="kw">match </span><span class="kw-2">*</span>options {
                     DeliveryOptions::NoFailures(..) =&gt; <span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?</span>,
                     DeliveryOptions::PossibleFailures {
@@ -653,7 +643,7 @@
                         <span class="comment">// Clone needed data here to avoid cloning normal events without failures
                         </span><span class="kw">let </span>msg = msg.clone();
                         <span class="kw">let </span>src = src.clone();
-                        <span class="kw">let </span>dest = dest.clone();
+                        <span class="kw">let </span>dst = dst.clone();
 
                         <span class="comment">// Normal delivery
                         </span><span class="self">self</span>.search_step(system, EventOrId::Id(event_id))<span class="question-mark">?</span>;
@@ -663,7 +653,7 @@
                             <span class="kw">let </span>drop_event = MessageDropped {
                                 msg: msg.clone(),
                                 src: src.clone(),
-                                dest: dest.clone(),
+                                dst: dst.clone(),
                                 receive_event_id: <span class="prelude-val">Some</span>(event_id),
                             };
                             <span class="self">self</span>.search_step(system, EventOrId::Event(drop_event))<span class="question-mark">?</span>;
@@ -675,7 +665,7 @@
                                 msg: msg.clone(),
                                 corrupted_msg: <span class="self">self</span>.corrupt_message(msg.clone()),
                                 src: src.clone(),
-                                dest: dest.clone(),
+                                dst: dst.clone(),
                                 receive_event_id: event_id,
                             };
                             <span class="self">self</span>.search_step(system, EventOrId::Event(corruption_event))<span class="question-mark">?</span>;
@@ -686,7 +676,7 @@
                             <span class="kw">let </span>duplication_event = MessageDuplicated {
                                 msg,
                                 src,
-                                dest,
+                                dst,
                                 receive_event_id: event_id,
                             };
                             <span class="self">self</span>.search_step(system, EventOrId::Event(duplication_event))<span class="question-mark">?</span>;
@@ -771,7 +761,7 @@
     <span class="doccomment">/// Creates MessageReceived event with corrupted msg.
     </span><span class="kw">fn </span>create_corrupted_receive(<span class="kw-2">&amp;</span><span class="self">self</span>, event: McEvent, corrupted_msg: Message) -&gt; McEvent {
         <span class="kw">if let </span>MessageReceived {
-            src, dest, <span class="kw-2">mut </span>options, ..
+            src, dst, <span class="kw-2">mut </span>options, ..
         } = event
         {
             <span class="kw">if let </span>DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = <span class="kw-2">&amp;mut </span>options {
@@ -780,7 +770,7 @@
             MessageReceived {
                 msg: corrupted_msg,
                 src,
-                dest,
+                dst,
                 options,
             }
         } <span class="kw">else </span>{
@@ -803,8 +793,8 @@
     </span><span class="kw">fn </span>debug_log(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>McEvent, depth: u64) {
         <span class="kw">if </span><span class="self">self</span>.execution_mode() == <span class="kw-2">&amp;</span>ExecutionMode::Debug {
             <span class="kw">match </span>event {
-                MessageReceived { msg, src, dest, .. } =&gt; {
-                    <span class="macro">t!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, depth, dest, src, msg);
+                MessageReceived { msg, src, dst, .. } =&gt; {
+                    <span class="macro">t!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, depth, dst, src, msg);
                 }
                 TimerFired { proc, timer, .. } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} !-- {:&lt;10} &lt;-- timer fired&quot;</span>, depth, proc, timer).yellow());
@@ -812,17 +802,17 @@
                 TimerCancelled { proc, timer } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} | {:&gt;10} xxx {:&lt;10} &lt;-- timer cancelled&quot;</span>, depth, proc, timer).yellow());
                 }
-                MessageDropped { msg, src, dest, .. } =&gt; {
+                MessageDropped { msg, src, dst, .. } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;{:&gt;10} | {:&gt;10} --x {:&lt;10} {:?} &lt;-- message dropped&quot;</span>,
-                        depth, src, dest, msg
+                        depth, src, dst, msg
                     )
                     .red());
                 }
-                MessageDuplicated { msg, src, dest, .. } =&gt; {
+                MessageDuplicated { msg, src, dst, .. } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;{:&gt;10} | {:&gt;10} -=≡ {:&lt;10} {:?} &lt;-- message duplicated&quot;</span>,
-                        depth, src, dest, msg
+                        depth, src, dst, msg
                     )
                     .blue());
                 }
@@ -830,12 +820,12 @@
                     msg,
                     corrupted_msg,
                     src,
-                    dest,
+                    dst,
                     ..
                 } =&gt; {
                     <span class="macro">t!</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;{:&gt;10} | {:&gt;10} -x- {:&lt;10} {:?} ~~&gt; {:?} &lt;-- message corrupted&quot;</span>,
-                        depth, src, dest, msg, corrupted_msg
+                        depth, src, dst, msg, corrupted_msg
                     )
                     .blue());
                 }

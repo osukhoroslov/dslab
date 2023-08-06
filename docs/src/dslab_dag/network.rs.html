@@ -169,27 +169,6 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Network model tools.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -200,12 +179,8 @@
 
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 <span class="kw">use </span>dslab_core::Id;
-<span class="kw">use </span>dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
-<span class="kw">use </span>dslab_network::network::Network;
-<span class="kw">use </span>dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
-<span class="kw">use </span>dslab_network::topology::Topology;
-<span class="kw">use </span>dslab_network::topology_model::TopologyNetwork;
-<span class="kw">use </span>dslab_network::topology_structures::Link;
+<span class="kw">use </span>dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel, TopologyAwareNetworkModel};
+<span class="kw">use </span>dslab_network::{Link, Network};
 
 <span class="kw">use </span><span class="kw">crate</span>::resource::Resource;
 
@@ -221,25 +196,21 @@
 </span><span class="attr">#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = <span class="string">&quot;model&quot;</span>)]
 </span><span class="kw">pub enum </span>NetworkConfig {
-    ConstantBandwidthNetwork {
+    ConstantBandwidth {
         <span class="doccomment">/// Network bandwidth in MB/s.
         </span>bandwidth: f64,
         <span class="doccomment">/// Network latency in μs.
         </span>latency: f64,
     },
-    SharedBandwidthNetwork {
+    SharedBandwidth {
         <span class="doccomment">/// Network bandwidth in MB/s.
         </span>bandwidth: f64,
         <span class="doccomment">/// Network latency in μs.
         </span>latency: f64,
     },
-    TopologyNetwork {
+    TopologyAware {
         <span class="attr">#[serde(rename = <span class="string">&quot;topology&quot;</span>)]
         </span>topology_type: TopologyType,
-        <span class="doccomment">/// Local node bandwidth in MB/s.
-        </span>local_bandwidth: f64,
-        <span class="doccomment">/// Local latency in μs.
-        </span>local_latency: f64,
         <span class="doccomment">/// Links bandwidth in MB/s.
         </span>link_bandwidth: f64,
         <span class="doccomment">/// Links latency in μs.
@@ -248,34 +219,26 @@
 }
 
 <span class="kw">impl </span>NetworkConfig {
-    <span class="doccomment">/// Creates network config with ConstantBandwidthNetwork model.
+    <span class="doccomment">/// Creates network config with [`ConstantBandwidthNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     </span><span class="kw">pub fn </span>constant(bandwidth: f64, latency: f64) -&gt; <span class="self">Self </span>{
-        NetworkConfig::ConstantBandwidthNetwork { bandwidth, latency }
+        NetworkConfig::ConstantBandwidth { bandwidth, latency }
     }
 
-    <span class="doccomment">/// Creates network config with SharedBandwidthNetwork model
+    <span class="doccomment">/// Creates network config with [`SharedBandwidthNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     </span><span class="kw">pub fn </span>shared(bandwidth: f64, latency: f64) -&gt; <span class="self">Self </span>{
-        NetworkConfig::SharedBandwidthNetwork { bandwidth, latency }
+        NetworkConfig::SharedBandwidth { bandwidth, latency }
     }
 
-    <span class="doccomment">/// Creates network config with TopologyNetwork model
+    <span class="doccomment">/// Creates network config with [`TopologyAwareNetworkModel`].
     ///
     /// Bandwidth should be in MB/s, latency in μs.
-    </span><span class="kw">pub fn </span>topology(
-        topology_type: TopologyType,
-        local_bandwidth: f64,
-        local_latency: f64,
-        link_bandwidth: f64,
-        link_latency: f64,
-    ) -&gt; <span class="self">Self </span>{
-        NetworkConfig::TopologyNetwork {
+    </span><span class="kw">pub fn </span>topology(topology_type: TopologyType, link_bandwidth: f64, link_latency: f64) -&gt; <span class="self">Self </span>{
+        NetworkConfig::TopologyAware {
             topology_type,
-            local_bandwidth,
-            local_latency,
             link_bandwidth,
             link_latency,
         }
@@ -284,62 +247,57 @@
     <span class="doccomment">/// Creates network model based on stored parameters.
     </span><span class="kw">pub fn </span>make_network(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: SimulationContext) -&gt; Network {
         <span class="kw">match </span><span class="self">self </span>{
-            NetworkConfig::ConstantBandwidthNetwork { bandwidth, latency } =&gt; {
+            NetworkConfig::ConstantBandwidth { bandwidth, latency } =&gt; {
                 Network::new(
-                    Rc::new(RefCell::new(ConstantBandwidthNetwork::new(
+                    Box::new(ConstantBandwidthNetworkModel::new(
                         <span class="kw-2">*</span>bandwidth,     <span class="comment">// keep MB/s since data item sizes are in MB
                         </span>latency * <span class="number">1e-6</span>, <span class="comment">// convert to seconds
-                    </span>))),
+                    </span>)),
                     ctx,
                 )
             }
-            NetworkConfig::SharedBandwidthNetwork { bandwidth, latency } =&gt; {
+            NetworkConfig::SharedBandwidth { bandwidth, latency } =&gt; {
                 Network::new(
-                    Rc::new(RefCell::new(SharedBandwidthNetwork::new(
+                    Box::new(SharedBandwidthNetworkModel::new(
                         <span class="kw-2">*</span>bandwidth,     <span class="comment">// keep MB/s since data item sizes are in MB
                         </span>latency * <span class="number">1e-6</span>, <span class="comment">// convert to seconds
-                    </span>))),
+                    </span>)),
                     ctx,
                 )
             }
-            NetworkConfig::TopologyNetwork { .. } =&gt; {
-                <span class="kw">let </span>topology = Rc::new(RefCell::new(Topology::new()));
-                Network::new_with_topology(
-                    Rc::new(RefCell::new(TopologyNetwork::new(topology.clone()))),
-                    topology,
-                    ctx,
-                )
-            }
+            NetworkConfig::TopologyAware { .. } =&gt; Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
         }
     }
 
-    <span class="doccomment">/// Adds hosts and links between them in case of TopologyNetwork.
+    <span class="doccomment">/// Adds network nodes and links (in case of topology-aware network model).
     </span><span class="kw">pub fn </span>init_network(<span class="kw-2">&amp;</span><span class="self">self</span>, network: Rc&lt;RefCell&lt;Network&gt;&gt;, runner_id: Id, resources: <span class="kw-2">&amp;</span>[Resource]) {
-        <span class="kw">if let </span>NetworkConfig::TopologyNetwork {
+        <span class="kw">let </span><span class="kw-2">mut </span>network = network.borrow_mut();
+
+        <span class="comment">// Add nodes
+        </span><span class="kw">for </span>(host_name, id) <span class="kw">in </span>resources
+            .iter()
+            .map(|r| (r.name.as_str(), r.id))
+            .chain([(<span class="string">&quot;master&quot;</span>, runner_id)])
+        {
+            network.add_node(
+                host_name,
+                <span class="comment">// since local transfers are not used,
+                // we don&#39;t care about the local model parameters
+                </span>Box::new(ConstantBandwidthNetworkModel::new(<span class="number">100000.</span>, <span class="number">0.</span>)),
+            );
+            network.set_location(id, host_name);
+        }
+
+        <span class="comment">// Add links
+        </span><span class="kw">if let </span>NetworkConfig::TopologyAware {
             topology_type,
-            local_bandwidth,
-            local_latency,
             link_bandwidth,
             link_latency,
         } = <span class="self">self
         </span>{
-            <span class="kw">let </span>local_latency = local_latency * <span class="number">1e-6</span>; <span class="comment">// convert to seconds
-            </span><span class="kw">let </span>link_latency = link_latency * <span class="number">1e-6</span>; <span class="comment">// convert to seconds
-            </span><span class="kw">let </span><span class="kw-2">mut </span>network = network.borrow_mut();
+            <span class="kw">let </span>link_latency = link_latency * <span class="number">1e-6</span>; <span class="comment">// convert to seconds
 
-            <span class="kw">for </span>(host_name, id) <span class="kw">in </span>resources
-                .iter()
-                .map(|r| (r.name.as_str(), r.id))
-                .chain([(<span class="string">&quot;master&quot;</span>, runner_id)])
-            {
-                network.add_node(
-                    host_name,
-                    Box::new(SharedBandwidthNetwork::new(<span class="kw-2">*</span>local_bandwidth, local_latency)),
-                );
-                network.set_location(id, host_name);
-            }
-
-            <span class="kw">match </span>topology_type {
+            </span><span class="kw">match </span>topology_type {
                 TopologyType::Star =&gt; {
                     <span class="kw">for </span>resource <span class="kw">in </span>resources.iter() {
                         network.add_full_duplex_link(

@@ -73,79 +73,121 @@
 <a href="#73" id="73">73</a>
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>serde::Serialize;
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Network model interface.
+
+</span><span class="kw">use </span>serde::Serialize;
 
 <span class="kw">use </span>dslab_core::component::Id;
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 
-<span class="comment">// NETWORK TYPES ///////////////////////////////////////////////////////////////////////////////////
+<span class="kw">use crate</span>::{NodeId, Topology};
 
+<span class="doccomment">/// Represents a data transfer between two simulation components located on a network.
 </span><span class="attr">#[derive(Clone, Debug, Serialize)]
-</span><span class="kw">pub struct </span>Data {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>src: Id,
-    <span class="kw">pub </span>dest: Id,
-    <span class="kw">pub </span>size: f64,
-    <span class="kw">pub </span>notification_dest: Id,
+</span><span class="kw">pub struct </span>DataTransfer {
+    <span class="doccomment">/// Unique transfer id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Simulation component which is sending the data.
+    </span><span class="kw">pub </span>src: Id,
+    <span class="doccomment">/// Node id of data sender.
+    </span><span class="kw">pub </span>src_node_id: NodeId,
+    <span class="doccomment">/// Simulation component which is receiving the data.
+    </span><span class="kw">pub </span>dst: Id,
+    <span class="doccomment">/// Node id of data receiver.
+    </span><span class="kw">pub </span>dst_node_id: NodeId,
+    <span class="doccomment">/// Data size.
+    </span><span class="kw">pub </span>size: f64,
+    <span class="doccomment">/// Simulation component to notify when the transfer is completed.
+    </span><span class="kw">pub </span>notification_dst: Id,
 }
 
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>Message {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>src: Id,
-    <span class="kw">pub </span>dest: Id,
-    <span class="kw">pub </span>data: String,
-}
-
-<span class="comment">// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
-
+<span class="doccomment">/// Event signalling the completion of data transfer.
 </span><span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>MessageSend {
-    <span class="kw">pub </span>message: Message,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>MessageReceive {
-    <span class="kw">pub </span>message: Message,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>MessageDelivery {
-    <span class="kw">pub </span>message: Message,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>DataTransferRequest {
-    <span class="kw">pub </span>data: Data,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>StartDataTransfer {
-    <span class="kw">pub </span>data: Data,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
-</span><span class="kw">pub struct </span>DataReceive {
-    <span class="kw">pub </span>data: Data,
-}
-
-<span class="attr">#[derive(Clone, Serialize)]
 </span><span class="kw">pub struct </span>DataTransferCompleted {
-    <span class="kw">pub </span>data: Data,
+    <span class="doccomment">/// Completed data transfer.
+    </span><span class="kw">pub </span>dt: DataTransfer,
 }
 
-<span class="comment">// NETWORK MODEL TEMPLATE ///////////////////////////////////////////////////////////////////////////////////
+<span class="doccomment">/// Network model interface.
+///
+/// The main functions of the network model:
+/// - Provide bandwidth and latency between network nodes,
+/// - Calculate data transfer completion times and emit [`DataTransferCompleted`] events.
+///
+/// A topology-aware model uses information about the network topology (links connecting the nodes)
+/// and relies on a routing algorithm to compute paths between the nodes.
+</span><span class="kw">pub trait </span>NetworkModel {
+    <span class="doccomment">/// Returns true is the model is topology-aware.
+    </span><span class="kw">fn </span>is_topology_aware(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool;
 
-</span><span class="kw">pub trait </span>DataOperation {
-    <span class="kw">fn </span>send_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: Data, ctx: <span class="kw-2">&amp;mut </span>SimulationContext);
-    <span class="kw">fn </span>receive_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: Data, ctx: <span class="kw-2">&amp;mut </span>SimulationContext);
-    <span class="kw">fn </span>recalculate_operations(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>SimulationContext);
+    <span class="doccomment">/// Returns the network bandwidth from node `src` to node `dst`.
+    </span><span class="kw">fn </span>bandwidth(<span class="kw-2">&amp;</span><span class="self">self</span>, src: NodeId, dst: NodeId) -&gt; f64;
+
+    <span class="doccomment">/// Returns the network latency from node `src` to node `dst`.
+    </span><span class="kw">fn </span>latency(<span class="kw-2">&amp;</span><span class="self">self</span>, src: NodeId, dst: NodeId) -&gt; f64;
+
+    <span class="doccomment">/// Starts data transfer.
+    ///
+    /// Must calculate the transfer completion time and emit the [`DataTransferCompleted`] event at this time.
+    /// The event must be emitted via the passed simulation context using [`SimulationContext::emit_self`].
+    </span><span class="kw">fn </span>start_transfer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dt: DataTransfer, ctx: <span class="kw-2">&amp;mut </span>SimulationContext);
+
+    <span class="doccomment">/// Callback for notifying the model about data transfer completion.
+    ///
+    /// This is necessary since the model itself does not receive the [`DataTransferCompleted`] event.
+    </span><span class="kw">fn </span>on_transfer_completion(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dt: DataTransfer, ctx: <span class="kw-2">&amp;mut </span>SimulationContext);
+
+    <span class="doccomment">/// Returns a reference to inner network topology.
+    ///
+    /// Must be implemented for topology-aware model.
+    </span><span class="kw">fn </span>topology(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Topology&gt; {
+        <span class="macro">assert!</span>(
+            !<span class="self">self</span>.is_topology_aware(),
+            <span class="string">&quot;This method must be implemented for topology-aware model&quot;
+        </span>);
+        <span class="prelude-val">None
+    </span>}
+
+    <span class="doccomment">/// Returns a mutable reference to inner network topology.
+    ///
+    /// Must be implemented for topology-aware model.
+    </span><span class="kw">fn </span>topology_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Topology&gt; {
+        <span class="macro">assert!</span>(
+            !<span class="self">self</span>.is_topology_aware(),
+            <span class="string">&quot;This method must be implemented for topology-aware model&quot;
+        </span>);
+        <span class="prelude-val">None
+    </span>}
+
+    <span class="doccomment">/// Callback for notifying topology-aware model about the topology change.
+    ///
+    /// Must be implemented for topology-aware model.
+    </span><span class="kw">fn </span>on_topology_change(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _ctx: <span class="kw-2">&amp;mut </span>SimulationContext) {
+        <span class="macro">assert!</span>(
+            !<span class="self">self</span>.is_topology_aware(),
+            <span class="string">&quot;This method must be implemented for topology-aware model&quot;
+        </span>);
+    }
 }
-
-<span class="kw">pub trait </span>NetworkConfiguration {
-    <span class="kw">fn </span>latency(<span class="kw-2">&amp;</span><span class="self">self</span>, src: Id, dst: Id) -&gt; f64;
-    <span class="kw">fn </span>bandwidth(<span class="kw-2">&amp;</span><span class="self">self</span>, src: Id, dst: Id) -&gt; f64;
-}
-
-<span class="kw">pub trait </span>NetworkModel: DataOperation + NetworkConfiguration {}
 </code></pre></div></section></main></body></html>

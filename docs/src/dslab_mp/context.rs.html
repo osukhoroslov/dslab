@@ -165,11 +165,11 @@
         <span class="self">self</span>.rng.as_mut().rand()
     }
 
-    <span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, dest: String) {
+    <span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, dst: String) {
         <span class="self">self</span>.actions.push(ProcessEvent::MessageSent {
             msg,
             src: <span class="self">self</span>.proc_name.clone(),
-            dest,
+            dst,
         });
     }
 

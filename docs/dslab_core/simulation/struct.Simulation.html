@@ -174,7 +174,7 @@ sim.step();
 </div></details><details class="toggle method-toggle" open><summary><section id="method.step" class="method"><a class="srclink rightside" href="../../src/dslab_core/simulation.rs.html#342-370">source</a><h4 class="code-header">pub fn <a href="#method.step" class="fn">step</a>(&amp;mut self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.71.1/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Performs a single step through the simulation.</p>
 <p>Takes the next event from the queue, advances the simulation time to event time and tries to process it
 by invoking the <a href="../handler/trait.EventHandler.html#tymethod.on" title="method dslab_core::handler::EventHandler::on"><code>EventHandler::on()</code></a> method of the corresponding event handler.
-If there is no handler registered for component with Id <code>event.dest</code>, logs the undelivered event and discards it.</p>
+If there is no handler registered for component with Id <code>event.dst</code>, logs the undelivered event and discards it.</p>
 <p>Returns <code>true</code> if some pending event was found (no matter was it properly processed or not) and <code>false</code>
 otherwise. The latter means that there are no pending events, so no progress can be made.</p>
 <h5 id="examples-6"><a href="#examples-6">Examples</a></h5>

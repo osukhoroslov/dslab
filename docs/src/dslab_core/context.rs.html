@@ -649,8 +649,6 @@
 <a href="#649" id="649">649</a>
 <a href="#650" id="650">650</a>
 <a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accessing simulation from components.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -848,11 +846,11 @@
     /// let mut comp2_ctx = sim.create_context(&quot;comp2&quot;);
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), -1.0); // will panic because of negative delay
     /// ```
-    </span><span class="kw">pub fn </span>emit&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dest: Id, delay: f64) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, <span class="self">self</span>.id, dest, delay)
+        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, <span class="self">self</span>.id, dst, delay)
     }
 
     <span class="doccomment">/// This and all other `emit_ordered...` functions are special variants of normal `emit_...` functions
@@ -898,13 +896,11 @@
     /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 2.0);
     /// comp1_ctx.emit_ordered(SomeEvent{}, comp2_ctx.id(), 1.0); // will panic because of broken time order
     /// ```
-    </span><span class="kw">pub fn </span>emit_ordered&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dest: Id, delay: f64) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit_ordered&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state
-            .borrow_mut()
-            .add_ordered_event(data, <span class="self">self</span>.id, dest, delay)
+        <span class="self">self</span>.sim_state.borrow_mut().add_ordered_event(data, <span class="self">self</span>.id, dst, delay)
     }
 
     <span class="doccomment">/// Checks whether it is safe to emit an ordered event with the specified delay.
@@ -985,19 +981,19 @@
     /// sim.step();
     /// assert_eq!(sim.time(), 0.0);
     /// ```
-    </span><span class="kw">pub fn </span>emit_now&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dest: Id) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit_now&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dst: Id) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, <span class="self">self</span>.id, dest, <span class="number">0.</span>)
+        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, <span class="self">self</span>.id, dst, <span class="number">0.</span>)
     }
 
     <span class="doccomment">/// See [`Self::emit_ordered`].
-    </span><span class="kw">pub fn </span>emit_ordered_now&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dest: Id) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit_ordered_now&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, dst: Id) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state.borrow_mut().add_ordered_event(data, <span class="self">self</span>.id, dest, <span class="number">0.</span>)
+        <span class="self">self</span>.sim_state.borrow_mut().add_ordered_event(data, <span class="self">self</span>.id, dst, <span class="number">0.</span>)
     }
 
     <span class="doccomment">/// Creates new event for itself with specified payload and delay, returns event id.
@@ -1179,19 +1175,19 @@
     /// sim.step();
     /// assert_eq!(sim.time(), 2.4);
     /// ```
-    </span><span class="kw">pub fn </span>emit_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, src: Id, dest: Id, delay: f64) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, src: Id, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, src, dest, delay)
+        <span class="self">self</span>.sim_state.borrow_mut().add_event(data, src, dst, delay)
     }
 
     <span class="doccomment">/// See [`Self::emit_ordered`].
-    </span><span class="kw">pub fn </span>emit_ordered_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, src: Id, dest: Id, delay: f64) -&gt; EventId
+    </span><span class="kw">pub fn </span>emit_ordered_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, data: T, src: Id, dst: Id, delay: f64) -&gt; EventId
     <span class="kw">where
         </span>T: EventData,
     {
-        <span class="self">self</span>.sim_state.borrow_mut().add_ordered_event(data, src, dest, delay)
+        <span class="self">self</span>.sim_state.borrow_mut().add_ordered_event(data, src, dst, delay)
     }
 
     <span class="doccomment">/// Cancels the specified event.

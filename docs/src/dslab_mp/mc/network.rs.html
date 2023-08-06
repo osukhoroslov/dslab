@@ -139,25 +139,25 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.proc_locations[proc]
     }
 
-    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: String, dest: String) -&gt; McEvent {
+    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: String, dst: String) -&gt; McEvent {
         <span class="kw">let </span>src_node = <span class="self">self</span>.get_proc_node(<span class="kw-2">&amp;</span>src).clone();
-        <span class="kw">let </span>dest_node = <span class="self">self</span>.get_proc_node(<span class="kw-2">&amp;</span>dest).clone();
+        <span class="kw">let </span>dst_node = <span class="self">self</span>.get_proc_node(<span class="kw-2">&amp;</span>dst).clone();
 
-        <span class="kw">if </span>src_node == dest_node {
+        <span class="kw">if </span>src_node == dst_node {
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: DeliveryOptions::NoFailures(McTime::from(<span class="self">self</span>.max_delay)),
             }
         } <span class="kw">else if </span>!<span class="self">self</span>.drop_outgoing.contains(<span class="kw-2">&amp;</span>src_node)
-            &amp;&amp; !<span class="self">self</span>.drop_incoming.contains(<span class="kw-2">&amp;</span>dest_node)
-            &amp;&amp; !<span class="self">self</span>.disabled_links.contains(<span class="kw-2">&amp;</span>(src_node, dest_node))
+            &amp;&amp; !<span class="self">self</span>.drop_incoming.contains(<span class="kw-2">&amp;</span>dst_node)
+            &amp;&amp; !<span class="self">self</span>.disabled_links.contains(<span class="kw-2">&amp;</span>(src_node, dst_node))
         {
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: DeliveryOptions::PossibleFailures {
                     can_be_dropped: <span class="self">self</span>.drop_rate &gt; <span class="number">0.</span>,
                     max_dupl_count: <span class="kw">if </span><span class="self">self</span>.dupl_rate == <span class="number">0. </span>{ <span class="number">0 </span>} <span class="kw">else </span>{ DUPL_COUNT },
@@ -168,7 +168,7 @@
             McEvent::MessageDropped {
                 msg,
                 src,
-                dest,
+                dst,
                 receive_event_id: <span class="prelude-val">None</span>,
             }
         }

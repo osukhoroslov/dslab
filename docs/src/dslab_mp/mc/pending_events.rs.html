@@ -273,8 +273,8 @@
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>push_with_fixed_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: McEvent, id: McEventId) -&gt; McEventId {
         <span class="macro">assert!</span>(!<span class="self">self</span>.events.contains_key(<span class="kw-2">&amp;</span>id), <span class="string">&quot;event with such id already exists&quot;</span>);
         <span class="kw">match </span><span class="kw-2">&amp;</span>event {
-            McEvent::MessageReceived { msg, src, dest, .. } =&gt; {
-                <span class="kw">if </span><span class="self">self</span>.resolver.add_message(msg.clone(), src.clone(), dest.clone(), id) {
+            McEvent::MessageReceived { msg, src, dst, .. } =&gt; {
+                <span class="kw">if </span><span class="self">self</span>.resolver.add_message(msg.clone(), src.clone(), dst.clone(), id) {
                     <span class="self">self</span>.available_events.insert(id);
                 }
             }
@@ -344,8 +344,8 @@
             <span class="kw">let </span>unblocked_events = <span class="self">self</span>.resolver.remove_timer(event_id);
             <span class="self">self</span>.available_events.extend(unblocked_events);
         }
-        <span class="kw">if let </span>McEvent::MessageReceived { msg, src, dest, .. } = result.clone() {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(unblocked_event) = <span class="self">self</span>.resolver.remove_message(msg, src, dest) {
+        <span class="kw">if let </span>McEvent::MessageReceived { msg, src, dst, .. } = result.clone() {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(unblocked_event) = <span class="self">self</span>.resolver.remove_message(msg, src, dst) {
                 <span class="self">self</span>.available_events.insert(unblocked_event);
             }
         }

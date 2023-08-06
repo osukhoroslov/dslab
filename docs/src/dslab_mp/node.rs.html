@@ -396,12 +396,12 @@
     MessageSent {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     MessageReceived {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     LocalMessageSent {
         msg: Message,
@@ -578,8 +578,8 @@
             msg_id: msg_id.to_string(),
             src_proc: from.clone(),
             src_node: from_node,
-            dest_proc: proc.clone(),
-            dest_node: <span class="self">self</span>.name.clone(),
+            dst_proc: proc.clone(),
+            dst_node: <span class="self">self</span>.name.clone(),
             msg: msg.clone(),
         });
 
@@ -589,7 +589,7 @@
             ProcessEvent::MessageReceived {
                 msg: msg.clone(),
                 src: from.clone(),
-                dest: proc.clone(),
+                dst: proc.clone(),
             },
         ));
         proc_entry.received_message_count += <span class="number">1</span>;
@@ -627,8 +627,8 @@
             <span class="kw">let </span>proc_entry = <span class="self">self</span>.processes.get_mut(<span class="kw-2">&amp;</span>proc).unwrap();
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             <span class="kw">match </span>action {
-                ProcessEvent::MessageSent { msg, src: <span class="kw">_</span>, dest } =&gt; {
-                    <span class="self">self</span>.net.borrow_mut().send_message(msg, <span class="kw-2">&amp;</span>proc, <span class="kw-2">&amp;</span>dest);
+                ProcessEvent::MessageSent { msg, src: <span class="kw">_</span>, dst } =&gt; {
+                    <span class="self">self</span>.net.borrow_mut().send_message(msg, <span class="kw-2">&amp;</span>proc, <span class="kw-2">&amp;</span>dst);
                     proc_entry.sent_message_count += <span class="number">1</span>;
                 }
                 ProcessEvent::LocalMessageSent { msg } =&gt; {
@@ -711,10 +711,10 @@
                 msg,
                 src,
                 src_node,
-                dest,
-                dest_node: <span class="kw">_</span>,
+                dst,
+                dst_node: <span class="kw">_</span>,
             } =&gt; {
-                <span class="self">self</span>.on_message_received(id, dest, msg, src, src_node);
+                <span class="self">self</span>.on_message_received(id, dst, msg, src, src_node);
             }
             TimerFired { proc, timer } =&gt; {
                 <span class="self">self</span>.on_timer_fired(proc, timer);

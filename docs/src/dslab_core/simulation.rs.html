@@ -1008,7 +1008,7 @@
     ///
     /// Takes the next event from the queue, advances the simulation time to event time and tries to process it
     /// by invoking the [`EventHandler::on()`](crate::EventHandler::on()) method of the corresponding event handler.
-    /// If there is no handler registered for component with Id `event.dest`, logs the undelivered event and discards it.
+    /// If there is no handler registered for component with Id `event.dst`, logs the undelivered event and discards it.
     ///
     /// Returns `true` if some pending event was found (no matter was it properly processed or not) and `false`
     /// otherwise. The latter means that there are no pending events, so no progress can be made.
@@ -1036,16 +1036,16 @@
     </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
         <span class="kw">let </span>next = <span class="self">self</span>.sim_state.borrow_mut().next_event();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(event) = next {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dest <span class="kw">as </span>usize) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
                 <span class="kw">if </span><span class="macro">log_enabled!</span>(Trace) {
                     <span class="kw">let </span>src_name = <span class="self">self</span>.lookup_name(event.src);
-                    <span class="kw">let </span>dest_name = <span class="self">self</span>.lookup_name(event.dest);
+                    <span class="kw">let </span>dst_name = <span class="self">self</span>.lookup_name(event.dst);
                     <span class="macro">trace!</span>(
-                        target: <span class="kw-2">&amp;</span>dest_name,
+                        target: <span class="kw-2">&amp;</span>dst_name,
                         <span class="string">&quot;[{:.3} {} {}] {}&quot;</span>,
                         event.time,
                         <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;EVENT&quot;</span>, colored::Color::BrightBlack),
-                        dest_name,
+                        dst_name,
                         <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: src_name})
                     );
                 }

@@ -213,7 +213,7 @@
         </span>src: String,
 
         <span class="doccomment">/// The name of the process that received the message.
-        </span>dest: String,
+        </span>dst: String,
 
         <span class="doccomment">/// Network delivery options for the message.
         </span>options: DeliveryOptions,
@@ -249,7 +249,7 @@
         </span>src: String,
 
         <span class="doccomment">/// The name of the process the message was sent to.
-        </span>dest: String,
+        </span>dst: String,
 
         <span class="doccomment">/// The id of original MessageReceived event.
         ///
@@ -266,7 +266,7 @@
         </span>src: String,
 
         <span class="doccomment">/// The name of the process the message was sent to.
-        </span>dest: String,
+        </span>dst: String,
 
         <span class="doccomment">/// The id of original MessageReceived event.
         </span>receive_event_id: McEventId,
@@ -284,7 +284,7 @@
         </span>src: String,
 
         <span class="doccomment">/// The name of the process the message was sent to.
-        </span>dest: String,
+        </span>dst: String,
 
         <span class="doccomment">/// The id of original MessageReceived event.
         </span>receive_event_id: McEventId,
@@ -298,7 +298,7 @@
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options:
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
@@ -308,7 +308,7 @@
             } =&gt; <span class="prelude-val">Some</span>(McEvent::MessageReceived {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
                 options: DeliveryOptions::PossibleFailures {
                     can_be_dropped: <span class="kw-2">*</span>can_be_dropped,
                     max_dupl_count: max_dupl_count - <span class="number">1</span>,
@@ -334,12 +334,12 @@
             <span class="self">Self</span>::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: <span class="kw">_</span>,
             } =&gt; LogEntry::McMessageReceived {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
             <span class="self">Self</span>::TimerFired {
                 proc,
@@ -353,27 +353,27 @@
                 proc: proc.clone(),
                 timer: timer.clone(),
             },
-            <span class="self">Self</span>::MessageDropped { msg, src, dest, .. } =&gt; LogEntry::McMessageDropped {
+            <span class="self">Self</span>::MessageDropped { msg, src, dst, .. } =&gt; LogEntry::McMessageDropped {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
-            <span class="self">Self</span>::MessageDuplicated { msg, src, dest, .. } =&gt; LogEntry::McMessageDuplicated {
+            <span class="self">Self</span>::MessageDuplicated { msg, src, dst, .. } =&gt; LogEntry::McMessageDuplicated {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
             <span class="self">Self</span>::MessageCorrupted {
                 msg,
                 corrupted_msg,
                 src,
-                dest,
+                dst,
                 ..
             } =&gt; LogEntry::McMessageCorrupted {
                 msg: msg.clone(),
                 corrupted_msg: corrupted_msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
         }
     }

@@ -425,8 +425,8 @@
                     msg,
                     src,
                     src_node,
-                    dest,
-                    dest_node,
+                    dst,
+                    dst_node,
                 } =&gt; {
                     <span class="self">self</span>.logger.borrow_mut().log(LogEntry::MessageDropped {
                         time: <span class="self">self</span>.sim.time(),
@@ -434,8 +434,8 @@
                         msg,
                         src_proc: src,
                         src_node,
-                        dest_proc: dest,
-                        dest_node,
+                        dst_proc: dst,
+                        dst_node,
                     });
                 }
             })
