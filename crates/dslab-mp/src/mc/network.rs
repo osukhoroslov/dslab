@@ -51,25 +51,25 @@ impl McNetwork {
         &self.proc_locations[proc]
     }
 
-    pub fn send_message(&mut self, msg: Message, src: String, dest: String) -> McEvent {
+    pub fn send_message(&mut self, msg: Message, src: String, dst: String) -> McEvent {
         let src_node = self.get_proc_node(&src).clone();
-        let dest_node = self.get_proc_node(&dest).clone();
+        let dst_node = self.get_proc_node(&dst).clone();
 
-        if src_node == dest_node {
+        if src_node == dst_node {
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: DeliveryOptions::NoFailures(McTime::from(self.max_delay)),
             }
         } else if !self.drop_outgoing.contains(&src_node)
-            && !self.drop_incoming.contains(&dest_node)
-            && !self.disabled_links.contains(&(src_node, dest_node))
+            && !self.drop_incoming.contains(&dst_node)
+            && !self.disabled_links.contains(&(src_node, dst_node))
         {
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: DeliveryOptions::PossibleFailures {
                     can_be_dropped: self.drop_rate > 0.,
                     max_dupl_count: if self.dupl_rate == 0. { 0 } else { DUPL_COUNT },
@@ -80,7 +80,7 @@ impl McNetwork {
             McEvent::MessageDropped {
                 msg,
                 src,
-                dest,
+                dst,
                 receive_event_id: None,
             }
         }

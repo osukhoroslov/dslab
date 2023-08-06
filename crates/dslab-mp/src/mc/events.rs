@@ -23,7 +23,7 @@ pub enum McEvent {
         src: String,
 
         /// The name of the process that received the message.
-        dest: String,
+        dst: String,
 
         /// Network delivery options for the message.
         options: DeliveryOptions,
@@ -59,7 +59,7 @@ pub enum McEvent {
         src: String,
 
         /// The name of the process the message was sent to.
-        dest: String,
+        dst: String,
 
         /// The id of original MessageReceived event.
         ///
@@ -76,7 +76,7 @@ pub enum McEvent {
         src: String,
 
         /// The name of the process the message was sent to.
-        dest: String,
+        dst: String,
 
         /// The id of original MessageReceived event.
         receive_event_id: McEventId,
@@ -94,7 +94,7 @@ pub enum McEvent {
         src: String,
 
         /// The name of the process the message was sent to.
-        dest: String,
+        dst: String,
 
         /// The id of original MessageReceived event.
         receive_event_id: McEventId,
@@ -108,7 +108,7 @@ impl McEvent {
             McEvent::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options:
                     DeliveryOptions::PossibleFailures {
                         can_be_dropped,
@@ -118,7 +118,7 @@ impl McEvent {
             } => Some(McEvent::MessageReceived {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
                 options: DeliveryOptions::PossibleFailures {
                     can_be_dropped: *can_be_dropped,
                     max_dupl_count: max_dupl_count - 1,
@@ -144,12 +144,12 @@ impl McEvent {
             Self::MessageReceived {
                 msg,
                 src,
-                dest,
+                dst,
                 options: _,
             } => LogEntry::McMessageReceived {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
             Self::TimerFired {
                 proc,
@@ -163,27 +163,27 @@ impl McEvent {
                 proc: proc.clone(),
                 timer: timer.clone(),
             },
-            Self::MessageDropped { msg, src, dest, .. } => LogEntry::McMessageDropped {
+            Self::MessageDropped { msg, src, dst, .. } => LogEntry::McMessageDropped {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
-            Self::MessageDuplicated { msg, src, dest, .. } => LogEntry::McMessageDuplicated {
+            Self::MessageDuplicated { msg, src, dst, .. } => LogEntry::McMessageDuplicated {
                 msg: msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
             Self::MessageCorrupted {
                 msg,
                 corrupted_msg,
                 src,
-                dest,
+                dst,
                 ..
             } => LogEntry::McMessageCorrupted {
                 msg: msg.clone(),
                 corrupted_msg: corrupted_msg.clone(),
                 src: src.clone(),
-                dest: dest.clone(),
+                dst: dst.clone(),
             },
         }
     }

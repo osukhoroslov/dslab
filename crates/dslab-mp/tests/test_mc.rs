@@ -375,8 +375,8 @@ fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
             msg_id: "0".to_string(),
             src_node: "node1".to_string(),
             src_proc: "process1".to_string(),
-            dest_node: "node2".to_string(),
-            dest_proc: "process2".to_string(),
+            dst_node: "node2".to_string(),
+            dst_proc: "process2".to_string(),
             msg,
         },
     ]);
@@ -520,7 +520,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
         LogEntry::McMessageDropped {
             msg,
             src: "process1".to_string(),
-            dest: "process2".to_string(),
+            dst: "process2".to_string(),
         },
     ]);
 
@@ -574,7 +574,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let mut sys = build_ping_system();
     let msg = Message::new("PING", "some_data");
     let src = "process1".to_string();
-    let dest = "process2".to_string();
+    let dst = "process2".to_string();
     sys.send_local_message("process1", msg.clone());
     sys.network().set_dupl_rate(0.5);
 
@@ -585,14 +585,14 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
-        dest: dest.clone(),
+        dst: dst.clone(),
     };
     let expected_message_received_event = LogEntry::McMessageReceived {
         msg: msg.clone(),
         src,
-        dest: dest.clone(),
+        dst: dst.clone(),
     };
-    let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dest };
+    let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dst };
     expected_trace.extend(vec![
         LogEntry::McStarted {},
         expected_message_duplicated_event,

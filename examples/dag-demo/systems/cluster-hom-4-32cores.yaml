@@ -16,6 +16,6 @@ resources:
     cores: 8
     memory: 16000
 network:
-  model: ConstantBandwidthNetwork
+  model: ConstantBandwidth
   bandwidth: 1000
   latency: 100

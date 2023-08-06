@@ -1,17 +1,14 @@
-use std::cell::RefCell;
+//! Topology-aware network model.
+
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
-use std::rc::Rc;
 
-use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 
-use crate::model::*;
-use crate::topology::Topology;
-use crate::topology_structures::{BandwidthSharingPolicy, LinkID, NodeId};
+use crate::routing::{RoutingAlgorithm, ShortestPathFloydWarshall};
+use crate::{BandwidthSharingPolicy, DataTransfer, DataTransferCompleted, LinkId, NetworkModel, NodeId, Topology};
 
-#[derive(Debug)]
-struct DataTransfer {}
+// Link usage ----------------------------------------------------------------------------------------------------------
 
 #[derive(Clone)]
 struct LinkUsage {
@@ -60,23 +57,26 @@ impl PartialEq for LinkUsage {
 
 impl Eq for LinkUsage {}
 
+// Transfer info -------------------------------------------------------------------------------------------------------
+
 #[derive(Debug)]
-struct Transfer {
+struct TransferInfo {
+    dt: DataTransfer,
+    path: Vec<LinkId>,
     size_left: f64,
-    last_update_time: f64,
     throughput: f64,
-    data: Data,
-    path: Vec<LinkID>,
+    last_update_time: f64,
 }
 
-impl Transfer {
-    fn new(size: f64, data: Data, path: Vec<LinkID>, time: f64) -> Transfer {
-        Transfer {
+impl TransferInfo {
+    fn new(dt: DataTransfer, path: Vec<LinkId>, time: f64) -> TransferInfo {
+        let size = dt.size;
+        TransferInfo {
+            dt,
+            path,
             size_left: size,
-            data,
             throughput: 0.0,
             last_update_time: time,
-            path,
         }
     }
 
@@ -89,9 +89,15 @@ impl Transfer {
     }
 }
 
-pub struct TopologyNetwork {
-    topology: Rc<RefCell<Topology>>,
-    current_transfers: BTreeMap<usize, Transfer>,
+// Model ---------------------------------------------------------------------------------------------------------------
+
+/// Topology-aware model which uses information about the network [`Topology`] (links connecting the nodes)
+/// and relies on [`RoutingAlgorithm`](crate::routing::RoutingAlgorithm) to compute paths between the nodes.
+/// The link's bandwidth is shared fairly among the transfers using the link.  
+pub struct TopologyAwareNetworkModel {
+    topology: Topology,
+    routing: Box<dyn RoutingAlgorithm>,
+    current_transfers: BTreeMap<usize, TransferInfo>,
     transfers_through_link: Vec<Vec<usize>>,
     tmp_transfers_through_link: Vec<Vec<usize>>,
     next_event: Option<u64>,
@@ -100,10 +106,12 @@ pub struct TopologyNetwork {
     full_mesh_optimization: bool,
 }
 
-impl TopologyNetwork {
-    pub fn new(topology: Rc<RefCell<Topology>>) -> TopologyNetwork {
-        TopologyNetwork {
-            topology,
+#[allow(clippy::derivable_impls)]
+impl Default for TopologyAwareNetworkModel {
+    fn default() -> Self {
+        TopologyAwareNetworkModel {
+            topology: Topology::default(),
+            routing: Box::<ShortestPathFloydWarshall>::default(),
             current_transfers: BTreeMap::new(),
             transfers_through_link: Vec::new(),
             tmp_transfers_through_link: Vec::new(),
@@ -113,34 +121,31 @@ impl TopologyNetwork {
             full_mesh_optimization: false,
         }
     }
+}
 
-    /// Enables optimization which greatly improves simulation times for cases with a lot of non-intersecting transfers.
+impl TopologyAwareNetworkModel {
+    /// Creates a new network model with empty topology.
+    ///
+    /// Uses [`ShortestPathFloydWarshall`] as default routing algorithm.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the used routing algorithm.
+    pub fn with_routing(mut self, routing: Box<dyn RoutingAlgorithm>) -> Self {
+        self.routing = routing;
+        self
+    }
+
+    /// Enables optimization which greatly improves simulation times
+    /// for cases with a lot of non-intersecting data transfers.
     pub fn with_full_mesh_optimization(mut self, full_mesh_optimization: bool) -> Self {
         self.full_mesh_optimization = full_mesh_optimization;
         self
     }
 
-    fn get_location(&self, node: Id) -> NodeId {
-        let topology = self.topology.borrow();
-        let node1 = topology.get_location(node);
-        if node1.is_none() {
-            panic!("Invalid host {}", node);
-        }
-        *node1.unwrap()
-    }
-
-    fn get_path(&self, from: Id, to: Id) -> Option<Vec<LinkID>> {
-        let node1 = self.get_location(from);
-        let node2 = self.get_location(to);
-        self.topology.borrow_mut().get_path(&node1, &node2)
-    }
-
-    fn check_path_exists(&self, src: Id, dst: Id) -> bool {
-        self.get_path(src, dst).is_some()
-    }
-
-    /// Finds smallest subset of transfers which contains `updated_transfer` so that sets of links
-    /// used by transfers inside and outside this subset don't intersect.
+    /// Finds the smallest subset of transfers which contains `updated_transfer`
+    /// so that the sets of links used by transfers inside and outside this subset don't intersect.
     fn get_affected_transfers(&self, updated_transfer: usize) -> HashSet<usize> {
         if self.current_transfers.is_empty() {
             return HashSet::new();
@@ -183,8 +188,8 @@ impl TopologyNetwork {
             let transfer = &self.current_transfers[&event_idx];
             let time = transfer.expected_finish();
             self.next_event = Some(ctx.emit_self(
-                DataReceive {
-                    data: transfer.data.clone(),
+                DataTransferCompleted {
+                    dt: transfer.dt.clone(),
                 },
                 time - ctx.time(),
             ));
@@ -197,7 +202,7 @@ impl TopologyNetwork {
             return;
         }
 
-        let topology = self.topology.borrow();
+        let topology = &self.topology;
 
         for transfer_id in affected_transfers.iter() {
             let transfer = self.current_transfers.get_mut(transfer_id).unwrap();
@@ -213,7 +218,7 @@ impl TopologyNetwork {
         let affected_links = affected_transfers
             .iter()
             .flat_map(|transfer| self.current_transfers[transfer].path.iter().cloned())
-            .collect::<HashSet<LinkID>>();
+            .collect::<HashSet<LinkId>>();
 
         let transfers_through_link = &mut self.tmp_transfers_through_link;
 
@@ -233,8 +238,8 @@ impl TopologyNetwork {
             let link = LinkUsage {
                 link_id: *link_id,
                 transfers_count: cur_transfers.len(),
-                left_bandwidth: topology.get_link(link_id).unwrap().bandwidth,
-                sharing_policy: topology.get_link(link_id).unwrap().sharing_policy,
+                left_bandwidth: topology.link(*link_id).bandwidth,
+                sharing_policy: topology.link(*link_id).sharing_policy,
             };
             transfers_through_link[*link_id] = cur_transfers;
             self.link_data[*link_id] = Some(link);
@@ -304,10 +309,10 @@ impl TopologyNetwork {
         }
     }
 
-    /// Same as [TopologyNetwork::calc] with `affected_transfers` equal to the set of all transfers,
+    /// Same as [`Self::calc`] with `affected_transfers` equal to the set of all transfers,
     /// but this corner case allows for some optimization.
     fn calc_all(&mut self, ctx: &mut SimulationContext) {
-        let topology = self.topology.borrow();
+        let topology = &self.topology;
 
         for transfer in self.current_transfers.values_mut() {
             transfer.size_left -= transfer.throughput * (ctx.time() - transfer.last_update_time);
@@ -327,8 +332,8 @@ impl TopologyNetwork {
             let link = LinkUsage {
                 link_id,
                 transfers_count: transfers.len(),
-                left_bandwidth: topology.get_link(&link_id).unwrap().bandwidth,
-                sharing_policy: topology.get_link(&link_id).unwrap().sharing_policy,
+                left_bandwidth: topology.link(link_id).bandwidth,
+                sharing_policy: topology.link(link_id).sharing_policy,
             };
             current_link_usage.push(link.clone());
             self.link_data[link_id] = Some(link);
@@ -381,44 +386,49 @@ impl TopologyNetwork {
     }
 
     fn validate_array_lengths(&mut self) {
-        let topology = self.topology.borrow();
-        self.link_data.resize(topology.get_links_count(), None);
-        self.transfers_through_link
-            .resize(topology.get_links_count(), Vec::new());
+        let topology = &self.topology;
+        self.link_data.resize(topology.link_count(), None);
+        self.transfers_through_link.resize(topology.link_count(), Vec::new());
         self.tmp_transfers_through_link
-            .resize(topology.get_links_count(), Vec::new());
+            .resize(topology.link_count(), Vec::new());
     }
 }
 
-impl NetworkConfiguration for TopologyNetwork {
-    fn latency(&self, host1: Id, host2: Id) -> f64 {
-        let node1 = self.get_location(host1);
-        let node2 = self.get_location(host2);
-        self.topology.borrow_mut().get_latency(&node1, &node2)
+impl NetworkModel for TopologyAwareNetworkModel {
+    fn is_topology_aware(&self) -> bool {
+        true
     }
 
-    fn bandwidth(&self, host1: Id, host2: Id) -> f64 {
-        let node1 = self.get_location(host1);
-        let node2 = self.get_location(host2);
-        self.topology.borrow_mut().get_bandwidth(&node1, &node2)
+    fn bandwidth(&self, src: NodeId, dst: NodeId) -> f64 {
+        let path = self
+            .routing
+            .get_path_iter(src, dst, &self.topology)
+            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst));
+        self.topology.get_path_bandwidth(path)
     }
-}
 
-impl DataOperation for TopologyNetwork {
-    fn send_data(&mut self, data: Data, ctx: &mut SimulationContext) {
-        if !self.check_path_exists(data.src, data.dest) {
-            return;
-        }
+    fn latency(&self, src: NodeId, dst: NodeId) -> f64 {
+        let path = self
+            .routing
+            .get_path_iter(src, dst, &self.topology)
+            .unwrap_or_else(|| panic!("No path from {} to {}", src, dst));
+        self.topology.get_path_latency(path)
+    }
+
+    fn start_transfer(&mut self, dt: DataTransfer, ctx: &mut SimulationContext) {
         self.validate_array_lengths();
-
-        let path = self.get_path(data.src, data.dest).unwrap();
-        let id = data.id;
-        assert!(!self.current_transfers.contains_key(&data.id));
+        let path = self
+            .routing
+            .get_path_iter(dt.src_node_id, dt.dst_node_id, &self.topology)
+            .unwrap_or_else(|| panic!("No path from {} to {}", dt.src_node_id, dt.dst_node_id))
+            .collect::<Vec<_>>();
+        let id = dt.id;
+        assert!(!self.current_transfers.contains_key(&dt.id));
         for &link in path.iter() {
             self.transfers_through_link[link].push(id);
         }
         self.current_transfers
-            .insert(id, Transfer::new(data.size, data, path, ctx.time()));
+            .insert(id, TransferInfo::new(dt, path, ctx.time()));
 
         if self.full_mesh_optimization {
             let affected_transfers = self.get_affected_transfers(id);
@@ -429,7 +439,7 @@ impl DataOperation for TopologyNetwork {
         self.update_next_event(ctx);
     }
 
-    fn receive_data(&mut self, _data: Data, ctx: &mut SimulationContext) {
+    fn on_transfer_completion(&mut self, _dt: DataTransfer, ctx: &mut SimulationContext) {
         self.validate_array_lengths();
         let next_event_index = self.next_event_index.unwrap();
         let affected_transfers = if self.full_mesh_optimization {
@@ -454,11 +464,18 @@ impl DataOperation for TopologyNetwork {
         self.update_next_event(ctx);
     }
 
-    fn recalculate_operations(&mut self, ctx: &mut SimulationContext) {
+    fn topology(&self) -> Option<&Topology> {
+        Some(&self.topology)
+    }
+
+    fn topology_mut(&mut self) -> Option<&mut Topology> {
+        Some(&mut self.topology)
+    }
+
+    fn on_topology_change(&mut self, ctx: &mut SimulationContext) {
+        self.routing.init(&self.topology);
         self.validate_array_lengths();
         self.calc_all(ctx);
         self.update_next_event(ctx);
     }
 }
-
-impl NetworkModel for TopologyNetwork {}

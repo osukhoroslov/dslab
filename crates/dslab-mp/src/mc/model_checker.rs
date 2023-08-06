@@ -60,7 +60,7 @@ impl ModelChecker {
                 events.push(
                     mc_net
                         .borrow_mut()
-                        .send_message(value.msg.clone(), value.src.clone(), value.dest.clone()),
+                        .send_message(value.msg.clone(), value.src.clone(), value.dst.clone()),
                 );
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use serde::Deserialize;
 
 use dslab_core::component::Id;
-use dslab_network::network::Network;
+use dslab_network::Network;
 
 /// Represents a data item state.
 #[derive(Eq, PartialEq, Clone)]
@@ -62,7 +62,7 @@ pub enum DataTransferMode {
 }
 
 impl DataTransferMode {
-    /// Calculates the data transfer time per data unit between the specified resources (src, dest).
+    /// Calculates the data transfer time per data unit between the specified resources (src, dst).
     pub fn net_time(&self, network: &Network, src: Id, dst: Id, runner: Id) -> f64 {
         match self {
             DataTransferMode::ViaMasterNode => {

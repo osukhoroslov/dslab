@@ -223,16 +223,11 @@ impl Network {
         self.traffic
     }
 
-    pub fn dest_node_id(&self, dest: &str) -> Id {
-        let dest_node = self.proc_locations.get(dest).unwrap();
-        *self.node_ids.get(dest_node).unwrap()
-    }
-
-    fn message_is_dropped(&self, src: &String, dest: &String) -> bool {
+    fn message_is_dropped(&self, src: &String, dst: &String) -> bool {
         self.ctx.rand() < self.drop_rate
             || self.drop_outgoing.contains(src)
-            || self.drop_incoming.contains(dest)
-            || self.disabled_links.contains(&(src.clone(), dest.clone()))
+            || self.drop_incoming.contains(dst)
+            || self.disabled_links.contains(&(src.clone(), dst.clone()))
     }
 
     fn corrupt_if_needed(&self, msg: Message) -> Message {
@@ -255,12 +250,12 @@ impl Network {
         }
     }
 
-    pub fn send_message(&mut self, msg: Message, src: &str, dest: &str) {
+    pub fn send_message(&mut self, msg: Message, src: &str, dst: &str) {
         let msg_size = msg.size();
         let src_node = self.proc_locations.get(src).unwrap();
-        let dest_node = self.proc_locations.get(dest).unwrap();
+        let dst_node = self.proc_locations.get(dst).unwrap();
         let src_node_id = *self.node_ids.get(src_node).unwrap();
-        let dest_node_id = *self.node_ids.get(dest_node).unwrap();
+        let dst_node_id = *self.node_ids.get(dst_node).unwrap();
 
         let msg_id = self.message_count;
 
@@ -268,42 +263,42 @@ impl Network {
             msg_id,
             src_node.to_string(),
             src.to_string(),
-            dest_node.to_string(),
-            dest.to_string(),
+            dst_node.to_string(),
+            dst.to_string(),
             msg.clone(),
         );
 
         // local communication inside a node is reliable and fast
-        if src_node == dest_node {
+        if src_node == dst_node {
             let e = MessageReceived {
                 id: self.message_count,
                 msg,
                 src: src.to_string(),
                 src_node: src_node.to_string(),
-                dest: dest.to_string(),
-                dest_node: dest_node.to_string(),
+                dst: dst.to_string(),
+                dst_node: dst_node.to_string(),
             };
-            self.ctx.emit_as(e, src_node_id, dest_node_id, 0.);
+            self.ctx.emit_as(e, src_node_id, dst_node_id, 0.);
         // communication between different nodes can be faulty
         } else {
-            if !self.message_is_dropped(src_node, dest_node) {
+            if !self.message_is_dropped(src_node, dst_node) {
                 let msg = self.corrupt_if_needed(msg);
                 let e = MessageReceived {
                     id: self.message_count,
                     msg,
                     src: src.to_string(),
                     src_node: src_node.to_string(),
-                    dest: dest.to_string(),
-                    dest_node: dest_node.to_string(),
+                    dst: dst.to_string(),
+                    dst_node: dst_node.to_string(),
                 };
                 let msg_count = self.get_message_count();
                 if msg_count == 1 {
                     let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                    self.ctx.emit_as(e, src_node_id, dest_node_id, delay);
+                    self.ctx.emit_as(e, src_node_id, dst_node_id, delay);
                 } else {
                     for _ in 0..msg_count {
                         let delay = self.min_delay + self.ctx.rand() * (self.max_delay - self.min_delay);
-                        self.ctx.emit_as(e.clone(), src_node_id, dest_node_id, delay);
+                        self.ctx.emit_as(e.clone(), src_node_id, dst_node_id, delay);
                     }
                 }
             } else {
@@ -312,8 +307,8 @@ impl Network {
                     msg_id: msg_id.to_string(),
                     src_proc: src.to_string(),
                     src_node: src_node.to_string(),
-                    dest_proc: dest.to_string(),
-                    dest_node: dest_node.to_string(),
+                    dst_proc: dst.to_string(),
+                    dst_node: dst_node.to_string(),
                     msg,
                 });
             }
@@ -328,8 +323,8 @@ impl Network {
         msg_id: EventId,
         src_node: String,
         src_proc: String,
-        dest_node: String,
-        dest_proc: String,
+        dst_node: String,
+        dst_proc: String,
         msg: Message,
     ) {
         self.logger.borrow_mut().log(LogEntry::MessageSent {
@@ -337,8 +332,8 @@ impl Network {
             msg_id: msg_id.to_string(),
             src_node,
             src_proc,
-            dest_node,
-            dest_proc,
+            dst_node,
+            dst_proc,
             msg,
         });
     }

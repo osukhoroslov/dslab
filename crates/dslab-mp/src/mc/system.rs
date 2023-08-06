@@ -47,12 +47,12 @@ impl McSystem {
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
         let new_events = match event {
-            McEvent::MessageReceived { msg, src, dest, .. } => {
-                let name = self.net.borrow().get_proc_node(&dest).clone();
+            McEvent::MessageReceived { msg, src, dst, .. } => {
+                let name = self.net.borrow().get_proc_node(&dst).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
-                    .on_message_received(dest, msg, src, event_time, state_hash)
+                    .on_message_received(dst, msg, src, event_time, state_hash)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.borrow().get_proc_node(&proc).clone();

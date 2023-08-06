@@ -34,12 +34,12 @@ pub enum ProcessEvent {
     MessageSent {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     MessageReceived {
         msg: Message,
         src: String,
-        dest: String,
+        dst: String,
     },
     LocalMessageSent {
         msg: Message,
@@ -216,8 +216,8 @@ impl Node {
             msg_id: msg_id.to_string(),
             src_proc: from.clone(),
             src_node: from_node,
-            dest_proc: proc.clone(),
-            dest_node: self.name.clone(),
+            dst_proc: proc.clone(),
+            dst_node: self.name.clone(),
             msg: msg.clone(),
         });
 
@@ -227,7 +227,7 @@ impl Node {
             ProcessEvent::MessageReceived {
                 msg: msg.clone(),
                 src: from.clone(),
-                dest: proc.clone(),
+                dst: proc.clone(),
             },
         ));
         proc_entry.received_message_count += 1;
@@ -265,8 +265,8 @@ impl Node {
             let proc_entry = self.processes.get_mut(&proc).unwrap();
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
-                ProcessEvent::MessageSent { msg, src: _, dest } => {
-                    self.net.borrow_mut().send_message(msg, &proc, &dest);
+                ProcessEvent::MessageSent { msg, src: _, dst } => {
+                    self.net.borrow_mut().send_message(msg, &proc, &dst);
                     proc_entry.sent_message_count += 1;
                 }
                 ProcessEvent::LocalMessageSent { msg } => {
@@ -349,10 +349,10 @@ impl EventHandler for Node {
                 msg,
                 src,
                 src_node,
-                dest,
-                dest_node: _,
+                dst,
+                dst_node: _,
             } => {
-                self.on_message_received(id, dest, msg, src, src_node);
+                self.on_message_received(id, dst, msg, src, src_node);
             }
             TimerFired { proc, timer } => {
                 self.on_timer_fired(proc, timer);

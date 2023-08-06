@@ -71,22 +71,19 @@ impl DependencyResolver {
         unblocked
     }
 
-    pub fn add_message(&mut self, msg: Message, src: String, dest: String, event_id: McEventId) -> bool {
-        let vec_ref = self.messages.entry((msg, src, dest)).or_default();
+    pub fn add_message(&mut self, msg: Message, src: String, dst: String, event_id: McEventId) -> bool {
+        let vec_ref = self.messages.entry((msg, src, dst)).or_default();
         vec_ref.push_back(event_id);
         vec_ref.len() == 1
     }
 
-    pub fn remove_message(&mut self, msg: Message, src: String, dest: String) -> Option<McEventId> {
-        let ids = self
-            .messages
-            .get_mut(&(msg.clone(), src.clone(), dest.clone()))
-            .unwrap();
+    pub fn remove_message(&mut self, msg: Message, src: String, dst: String) -> Option<McEventId> {
+        let ids = self.messages.get_mut(&(msg.clone(), src.clone(), dst.clone())).unwrap();
         ids.pop_front();
         if !ids.is_empty() {
             Some(ids[0])
         } else {
-            self.messages.remove(&(msg, src, dest));
+            self.messages.remove(&(msg, src, dst));
             None
         }
     }

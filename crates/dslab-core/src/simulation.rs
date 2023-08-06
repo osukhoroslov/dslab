@@ -314,7 +314,7 @@ impl Simulation {
     ///
     /// Takes the next event from the queue, advances the simulation time to event time and tries to process it
     /// by invoking the [`EventHandler::on()`](crate::EventHandler::on()) method of the corresponding event handler.
-    /// If there is no handler registered for component with Id `event.dest`, logs the undelivered event and discards it.
+    /// If there is no handler registered for component with Id `event.dst`, logs the undelivered event and discards it.
     ///
     /// Returns `true` if some pending event was found (no matter was it properly processed or not) and `false`
     /// otherwise. The latter means that there are no pending events, so no progress can be made.
@@ -342,16 +342,16 @@ impl Simulation {
     pub fn step(&mut self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
-            if let Some(handler_opt) = self.handlers.get(event.dest as usize) {
+            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
                 if log_enabled!(Trace) {
                     let src_name = self.lookup_name(event.src);
-                    let dest_name = self.lookup_name(event.dest);
+                    let dst_name = self.lookup_name(event.dst);
                     trace!(
-                        target: &dest_name,
+                        target: &dst_name,
                         "[{:.3} {} {}] {}",
                         event.time,
                         crate::log::get_colored("EVENT", colored::Color::BrightBlack),
-                        dest_name,
+                        dst_name,
                         json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
                     );
                 }

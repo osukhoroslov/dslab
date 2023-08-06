@@ -170,12 +170,7 @@ pub trait Strategy {
     fn process_event(&mut self, system: &mut McSystem, event_id: McEventId) -> Result<(), McError> {
         let event = system.events.get(event_id).unwrap();
         match event {
-            MessageReceived {
-                msg,
-                src,
-                dest,
-                options,
-            } => {
+            MessageReceived { msg, src, dst, options } => {
                 match *options {
                     DeliveryOptions::NoFailures(..) => self.search_step(system, EventOrId::Id(event_id))?,
                     DeliveryOptions::PossibleFailures {
@@ -186,7 +181,7 @@ pub trait Strategy {
                         // Clone needed data here to avoid cloning normal events without failures
                         let msg = msg.clone();
                         let src = src.clone();
-                        let dest = dest.clone();
+                        let dst = dst.clone();
 
                         // Normal delivery
                         self.search_step(system, EventOrId::Id(event_id))?;
@@ -196,7 +191,7 @@ pub trait Strategy {
                             let drop_event = MessageDropped {
                                 msg: msg.clone(),
                                 src: src.clone(),
-                                dest: dest.clone(),
+                                dst: dst.clone(),
                                 receive_event_id: Some(event_id),
                             };
                             self.search_step(system, EventOrId::Event(drop_event))?;
@@ -208,7 +203,7 @@ pub trait Strategy {
                                 msg: msg.clone(),
                                 corrupted_msg: self.corrupt_message(msg.clone()),
                                 src: src.clone(),
-                                dest: dest.clone(),
+                                dst: dst.clone(),
                                 receive_event_id: event_id,
                             };
                             self.search_step(system, EventOrId::Event(corruption_event))?;
@@ -219,7 +214,7 @@ pub trait Strategy {
                             let duplication_event = MessageDuplicated {
                                 msg,
                                 src,
-                                dest,
+                                dst,
                                 receive_event_id: event_id,
                             };
                             self.search_step(system, EventOrId::Event(duplication_event))?;
@@ -304,7 +299,7 @@ pub trait Strategy {
     /// Creates MessageReceived event with corrupted msg.
     fn create_corrupted_receive(&self, event: McEvent, corrupted_msg: Message) -> McEvent {
         if let MessageReceived {
-            src, dest, mut options, ..
+            src, dst, mut options, ..
         } = event
         {
             if let DeliveryOptions::PossibleFailures { can_be_corrupted, .. } = &mut options {
@@ -313,7 +308,7 @@ pub trait Strategy {
             MessageReceived {
                 msg: corrupted_msg,
                 src,
-                dest,
+                dst,
                 options,
             }
         } else {
@@ -336,8 +331,8 @@ pub trait Strategy {
     fn debug_log(&self, event: &McEvent, depth: u64) {
         if self.execution_mode() == &ExecutionMode::Debug {
             match event {
-                MessageReceived { msg, src, dest, .. } => {
-                    t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dest, src, msg);
+                MessageReceived { msg, src, dst, .. } => {
+                    t!("{:>10} | {:>10} <-- {:<10} {:?}", depth, dst, src, msg);
                 }
                 TimerFired { proc, timer, .. } => {
                     t!(format!("{:>10} | {:>10} !-- {:<10} <-- timer fired", depth, proc, timer).yellow());
@@ -345,17 +340,17 @@ pub trait Strategy {
                 TimerCancelled { proc, timer } => {
                     t!(format!("{:>10} | {:>10} xxx {:<10} <-- timer cancelled", depth, proc, timer).yellow());
                 }
-                MessageDropped { msg, src, dest, .. } => {
+                MessageDropped { msg, src, dst, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} --x {:<10} {:?} <-- message dropped",
-                        depth, src, dest, msg
+                        depth, src, dst, msg
                     )
                     .red());
                 }
-                MessageDuplicated { msg, src, dest, .. } => {
+                MessageDuplicated { msg, src, dst, .. } => {
                     t!(format!(
                         "{:>10} | {:>10} -=≡ {:<10} {:?} <-- message duplicated",
-                        depth, src, dest, msg
+                        depth, src, dst, msg
                     )
                     .blue());
                 }
@@ -363,12 +358,12 @@ pub trait Strategy {
                     msg,
                     corrupted_msg,
                     src,
-                    dest,
+                    dst,
                     ..
                 } => {
                     t!(format!(
                         "{:>10} | {:>10} -x- {:<10} {:?} ~~> {:?} <-- message corrupted",
-                        depth, src, dest, msg, corrupted_msg
+                        depth, src, dst, msg, corrupted_msg
                     )
                     .blue());
                 }
