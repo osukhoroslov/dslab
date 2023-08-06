@@ -269,9 +269,7 @@ pub mod prunes {
     {
         boxed!(move |state: &McState| {
             for proc in &process_names {
-                let proc_predicate = |entry: &LogEntry| {
-                    predicate(entry, proc)
-                };
+                let proc_predicate = |entry: &LogEntry| predicate(entry, proc);
                 let event_count = filter_state_trace(proc_predicate, state);
                 if event_count > limit {
                     return Some(format!(
@@ -285,7 +283,7 @@ pub mod prunes {
 
     fn filter_state_trace<F>(predicate: F, state: &McState) -> usize
     where
-        F: Fn(&LogEntry) -> bool,   
+        F: Fn(&LogEntry) -> bool,
     {
         state.trace.iter().filter(|x| predicate(x)).count()
     }
