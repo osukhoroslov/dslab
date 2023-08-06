@@ -399,7 +399,7 @@ fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
         .collect::<Vec<String>>();
     boxed!(move |state| {
         let proc_names = HashSet::<String>::from_iter(equivalent_procs.clone().into_iter());
-        let used_proc_names = HashSet::<String>::new();
+        let mut used_proc_names = HashSet::<String>::new();
         let mut waiting_for_proc = 0;
         for entry in &state.trace {
             match entry {
@@ -410,6 +410,7 @@ fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
                     if equivalent_procs[waiting_for_proc] != *proc {
                         return Some("state is the same as another state with renumerated processes".to_owned());
                     }
+                    used_proc_names.insert(proc.clone());
                     waiting_for_proc += 1;
                 }
                 _ => {}
