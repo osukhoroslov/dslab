@@ -114,16 +114,13 @@ impl PendingEvents {
         }
         let mut new_events = Vec::new();
         for event_id in events_to_clear {
-            match self.pop(event_id) {
-                McEvent::MessageReceived { msg, src, dst, .. } => {
-                    new_events.push(McEvent::MessageDropped {
-                        msg,
-                        src,
-                        dst,
-                        receive_event_id: None,
-                    });
-                }
-                _ => {}
+            if let McEvent::MessageReceived { msg, src, dst, .. } = self.pop(event_id) {
+                new_events.push(McEvent::MessageDropped {
+                    msg,
+                    src,
+                    dst,
+                    receive_event_id: None,
+                });
             }
         }
         new_events

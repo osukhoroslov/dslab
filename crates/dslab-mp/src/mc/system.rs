@@ -53,7 +53,7 @@ impl McSystem {
                 let name = self.net.get_proc_node(&dst).clone();
                 self.nodes
                     .get_mut(&name)
-                    .and_then(|node| Some(node.on_message_received(dst, msg, src, event_time, state_hash)))
+                    .map(|node| node.on_message_received(dst, msg, src, event_time, state_hash))
                     .unwrap_or(Vec::new())
             }
             McEvent::TimerFired { proc, timer, .. } => {
@@ -120,7 +120,9 @@ impl McSystem {
 
     pub fn set_state(&mut self, state: McState) {
         for (name, node_state) in state.node_states {
-            self.nodes.get_mut(&name).map(|node| node.set_state(node_state));
+            if let Some(node) = self.nodes.get_mut(&name) {
+                node.set_state(node_state);
+            }
         }
         self.events = state.events;
         self.depth = state.depth;

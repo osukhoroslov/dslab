@@ -392,11 +392,7 @@ fn test_scalability(config: &TestConfig) -> TestResult {
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
 fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
-    let equivalent_procs = equivalent_procs
-        .clone()
-        .into_iter()
-        .map(|x| x.clone())
-        .collect::<Vec<String>>();
+    let equivalent_procs = equivalent_procs.to_vec();
     boxed!(move |state| {
         let proc_names = HashSet::<String>::from_iter(equivalent_procs.clone().into_iter());
         let mut used_proc_names = HashSet::<String>::new();
