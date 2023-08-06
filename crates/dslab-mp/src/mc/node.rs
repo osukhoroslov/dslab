@@ -66,6 +66,7 @@ impl ProcessEntry {
 
 pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 
+#[derive(Clone)]
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
     trace_handler: Rc<RefCell<TraceHandler>>,

@@ -1,4 +1,4 @@
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
@@ -17,6 +17,7 @@ use crate::message::Message;
 
 pub type McTime = OrderedFloat<f64>;
 
+#[derive(Clone)]
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: McNetwork,
@@ -52,8 +53,8 @@ impl McSystem {
                 let name = self.net.get_proc_node(&dst).clone();
                 self.nodes
                     .get_mut(&name)
-                    .unwrap()
-                    .on_message_received(dst, msg, src, event_time, state_hash)
+                    .and_then(|node| Some(node.on_message_received(dst, msg, src, event_time, state_hash)))
+                    .unwrap_or(Vec::new())
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.get_proc_node(&proc).clone();
@@ -88,9 +89,21 @@ impl McSystem {
         self.add_events(new_events);
     }
 
-    pub(crate) fn network(&mut self) -> RefMut<McNetwork> {
-        self.net.borrow_mut()
-    } 
+    pub fn crash_node<S>(&mut self, node: S)
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        self.trace_handler
+            .borrow_mut()
+            .push(LogEntry::McNodeCrashed { node: node.clone() });
+        for proc in self.nodes[&node].processes.keys() {
+            for destruction_event in self.events.cancel_proc_events(proc) {
+                self.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
+            }
+        }
+        self.nodes.remove(&node);
+    }
 
     pub fn get_state(&self) -> McState {
         let mut state = McState::new(
@@ -107,7 +120,7 @@ impl McSystem {
 
     pub fn set_state(&mut self, state: McState) {
         for (name, node_state) in state.node_states {
-            self.nodes.get_mut(&name).unwrap().set_state(node_state);
+            self.nodes.get_mut(&name).map(|node| node.set_state(node_state));
         }
         self.events = state.events;
         self.depth = state.depth;

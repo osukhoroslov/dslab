@@ -125,24 +125,12 @@ impl ModelChecker {
 
         // sort starting states by increasing depth to produce shorter error traces
         states.sort_by_key(|x| x.depth);
-        for mut state in states {
-            let mut new_events = PendingEvents::new();
-            for event in state.events.clear_and_dump_events() {
-                match event {
-                    McEvent::MessageReceived { msg, src, dest, .. } => {
-                        new_events.push(
-                            self.system.network().send_message(msg, src, dest)
-                        );
-                    },
-                    event => {
-                        new_events.push(event);
-                    },
-                }
-            }
-            state.events = new_events;
+        for state in states {
+            let system_backup = self.system.clone();
             self.system.set_state(state);
             let stats = self.run_impl(&mut strategy, &preliminary_callback)?;
             total_stats.combine(stats);
+            self.system = system_backup;
         }
         Ok(total_stats)
     }

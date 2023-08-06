@@ -97,12 +97,31 @@ impl PendingEvents {
         result
     }
 
-    pub(crate) fn clear_and_dump_events(&mut self) -> Vec<McEvent> {
-        let mut res = Vec::new();
-        while let Some(event_id) = self.available_events().iter().next() {
-            res.push(self.pop(*event_id));
+    pub(crate) fn cancel_proc_events(&mut self, proc: &String) -> Vec<McEvent> {
+        let mut events_to_clear = Vec::new();
+        for (event_id, event) in &self.events {
+            let need_to_clear = match event {
+                McEvent::MessageCorrupted { src, dst, .. } => src == proc || dst == proc,
+                McEvent::MessageDropped { src, dst, .. } => src == proc || dst == proc,
+                McEvent::MessageDuplicated { src, dst, .. } => src == proc || dst == proc,
+                McEvent::MessageReceived { src, dst, .. } => src == proc || dst == proc,
+                McEvent::TimerFired { proc: event_proc, .. } => event_proc == proc,
+                McEvent::TimerCancelled { proc: event_proc, .. } => event_proc == proc,
+            };
+            if need_to_clear {
+                events_to_clear.push(*event_id);
+            }
         }
-        res
+        let mut new_events = Vec::new();
+        for event_id in events_to_clear {
+            match self.pop(event_id) {
+                McEvent::MessageReceived { msg, src, dst, .. } => {
+                    new_events.push(McEvent::MessageDropped { msg, src, dst, receive_event_id: None });
+                },
+                _ => {}
+            }
+        }
+        new_events
     }
 }
 

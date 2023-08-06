@@ -392,7 +392,11 @@ fn test_scalability(config: &TestConfig) -> TestResult {
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
 fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
-    let equivalent_procs = equivalent_procs.clone().into_iter().map(|x| x.clone()).collect::<Vec<String>>();
+    let equivalent_procs = equivalent_procs
+        .clone()
+        .into_iter()
+        .map(|x| x.clone())
+        .collect::<Vec<String>>();
     boxed!(move |state| {
         let proc_names = HashSet::<String>::from_iter(equivalent_procs.clone().into_iter());
         let used_proc_names = HashSet::<String>::new();
@@ -407,7 +411,7 @@ fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
                         return Some("state is the same as another state with renumerated processes".to_owned());
                     }
                     waiting_for_proc += 1;
-                },
+                }
                 _ => {}
             }
         }
@@ -533,7 +537,6 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     if intermediate_states.collected_states.is_empty() {
         return Err("no states collected after first stage".to_string());
     }
-    sys.network().disconnect_node("0");
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -541,11 +544,16 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
             .map(|name| goals::got_n_local_messages(name, name, 1))
             .collect::<Vec<GoalFn>>(),
     );
-    
-    let proc_names_cloned = proc_names.clone();
+
+    let mut proc_names_cloned = proc_names.clone();
+    proc_names_cloned.remove(0);
     let strategy_config = StrategyConfig::default()
         .goal(goal)
-        .invariant(boxed!(move |state| mc_invariant(state, proc_names_cloned.clone(), &sent_messages)))
+        .invariant(boxed!(move |state| mc_invariant(
+            state,
+            proc_names_cloned.clone(),
+            &sent_messages
+        )))
         .prune(prunes::any_prune(vec![
             prunes::state_depth(6),
             mc_prune_proc_permutations(proc_names.split_at(1).1),
@@ -561,7 +569,9 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     // TODO: check if this is necessary
     // let collected = get_n_start_states(res.collected, 100);
-    let res = mc.run_from_states(intermediate_states.collected_states);
+    let res = mc.run_from_states_with_change(intermediate_states.collected_states, |sys| {
+        sys.crash_node("0");
+    });
     if let Err(err) = res {
         err.print_trace();
         Err(err.message())
@@ -642,7 +652,11 @@ fn main() {
         test_model_checking_normal_delivery,
         config_mc,
     );
-    tests.add("MODEL CHECKING SENDER CRASH", test_model_checking_sender_crash, config_mc);
+    tests.add(
+        "MODEL CHECKING SENDER CRASH",
+        test_model_checking_sender_crash,
+        config_mc,
+    );
 
     if args.test.is_none() {
         tests.run();
