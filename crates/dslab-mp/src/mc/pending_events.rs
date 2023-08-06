@@ -116,8 +116,13 @@ impl PendingEvents {
         for event_id in events_to_clear {
             match self.pop(event_id) {
                 McEvent::MessageReceived { msg, src, dst, .. } => {
-                    new_events.push(McEvent::MessageDropped { msg, src, dst, receive_event_id: None });
-                },
+                    new_events.push(McEvent::MessageDropped {
+                        msg,
+                        src,
+                        dst,
+                        receive_event_id: None,
+                    });
+                }
                 _ => {}
             }
         }
