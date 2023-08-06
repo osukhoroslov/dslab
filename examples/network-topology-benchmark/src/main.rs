@@ -24,23 +24,23 @@ enum Topology {
     FatTree,
 }
 
-/// Network topology benchmarks
+/// Benchmarks the performance of TopologyAwareNetworkModel on different topologies.
 #[derive(Parser, Debug)]
 #[command(about, long_about = None)]
 struct Args {
-    /// Total number of hosts in topology
+    /// Total number of hosts in topology.
     #[arg(long = "hosts", default_value_t = 64)]
     host_count: usize,
 
-    /// Number of stars in tree topology
+    /// Number of stars in tree topology.
     #[arg(long = "stars", default_value_t = 8)]
     star_count: usize,
 
-    /// Number of level-1 (bottom) switches in fat-tree topology
+    /// Number of level-1 (bottom) switches in fat-tree topology.
     #[arg(long = "l1-switches", default_value_t = 8)]
     l1_switch_count: usize,
 
-    /// Number of level-2 (top) switches in fat-tree topology
+    /// Number of level-2 (top) switches in fat-tree topology.
     #[arg(long = "l2-switches", default_value_t = 4)]
     l2_switch_count: usize,
 }

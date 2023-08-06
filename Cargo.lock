@@ -2247,24 +2247,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "network-constant-example"
+name = "network-simple"
 version = "0.1.0"
 dependencies = [
+ "clap 4.2.1",
  "dslab-core",
  "dslab-network",
- "env_logger 0.8.4",
- "sugars",
-]
-
-[[package]]
-name = "network-shared-example"
-version = "0.1.0"
-dependencies = [
- "dslab-core",
- "dslab-network",
- "env_logger 0.8.4",
+ "env_logger 0.10.0",
  "log 0.4.17",
- "serde",
  "sugars",
 ]
 
@@ -2287,9 +2277,8 @@ version = "0.1.0"
 dependencies = [
  "dslab-core",
  "dslab-network",
- "env_logger 0.8.4",
+ "env_logger 0.10.0",
  "log 0.4.17",
- "serde",
  "sugars",
 ]
 

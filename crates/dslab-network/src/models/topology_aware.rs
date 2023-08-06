@@ -91,7 +91,9 @@ impl TransferInfo {
 
 // Model ---------------------------------------------------------------------------------------------------------------
 
-/// Topology-aware network model supporting arbitrary network topologies.
+/// Topology-aware model which uses information about the network [`Topology`] (links connecting the nodes)
+/// and relies on [`RoutingAlgorithm`](crate::routing::RoutingAlgorithm) to compute paths between the nodes.
+/// The link's bandwidth is shared fairly among the transfers using the link.  
 pub struct TopologyAwareNetworkModel {
     topology: Topology,
     routing: Box<dyn RoutingAlgorithm>,

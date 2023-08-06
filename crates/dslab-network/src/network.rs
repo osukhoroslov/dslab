@@ -47,7 +47,8 @@ pub struct Network {
     network_model: Box<dyn NetworkModel>,
     local_models: HashMap<NodeId, Box<dyn NetworkModel>>,
     locations: HashMap<Id, NodeId>,
-    id_counter: AtomicUsize,
+    next_dt_id: AtomicUsize,
+    next_msg_id: AtomicUsize,
     topology_initialized: bool,
     ctx: SimulationContext,
 }
@@ -60,7 +61,8 @@ impl Network {
             network_model: model,
             local_models: HashMap::new(),
             locations: HashMap::new(),
-            id_counter: AtomicUsize::new(1),
+            next_dt_id: AtomicUsize::new(0),
+            next_msg_id: AtomicUsize::new(0),
             topology_initialized: false,
             ctx,
         }
@@ -223,7 +225,7 @@ impl Network {
     pub fn transfer_data(&mut self, src: Id, dst: Id, size: f64, notification_dst: Id) -> usize {
         let src_node_id = self.get_location(src);
         let dst_node_id = self.get_location(dst);
-        let transfer_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let transfer_id = self.next_dt_id.fetch_add(1, Ordering::Relaxed);
         let dt = DataTransfer {
             id: transfer_id,
             src,
@@ -255,7 +257,7 @@ impl Network {
     /// The [`MessageDelivered`] event is sent to `dst` on the message delivery.
     pub fn send_msg(&mut self, message: String, src: Id, dst: Id) -> usize {
         log_debug!(self.ctx, "{} sent message '{}' to {}", src, message, dst);
-        let msg_id = self.id_counter.fetch_add(1, Ordering::Relaxed);
+        let msg_id = self.next_msg_id.fetch_add(1, Ordering::Relaxed);
         let msg = Message {
             id: msg_id,
             src,
