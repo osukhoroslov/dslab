@@ -127,13 +127,14 @@ impl AppData {
                             end: total_time,
                             name: name.clone(),
                         });
-                    present_scheduler_files.remove(name);
-                    scheduler_files.borrow_mut().push(File {
-                        start: start_time,
-                        uploaded: finish_time,
-                        end: total_time,
-                        name: name.clone(),
-                    });
+                    if present_scheduler_files.remove(name) || destination == "runner" {
+                        scheduler_files.borrow_mut().push(File {
+                            start: start_time,
+                            uploaded: finish_time,
+                            end: total_time,
+                            name: name.clone(),
+                        });
+                    }
                 }
             } else {
                 eprintln!(

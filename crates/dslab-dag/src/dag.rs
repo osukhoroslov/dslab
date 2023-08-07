@@ -125,6 +125,18 @@ impl DAG {
         data_item_id
     }
 
+    pub(crate) fn set_as_task_output(&mut self, producer: usize, data_item: usize) {
+        self.tasks.get_mut(producer).unwrap().add_output(data_item);
+        assert!(self.inputs.remove(&data_item));
+        self.data_items[data_item].state = DataItemState::Pending;
+        let consumers = &self.data_items[data_item].consumers;
+        for &consumer in consumers.iter() {
+            self.tasks[consumer].state = TaskState::Pending;
+            self.tasks[consumer].ready_inputs -= 1;
+            self.ready_tasks.remove(&consumer);
+        }
+    }
+
     /// Adds a dependency between [data item](crate::data_item::DataItem) and [task](crate::task::Task).
     pub fn add_data_dependency(&mut self, data_item_id: usize, consumer_id: usize) {
         let data_item = self.data_items.get_mut(data_item_id).unwrap();
