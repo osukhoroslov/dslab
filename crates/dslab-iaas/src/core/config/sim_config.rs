@@ -1,10 +1,7 @@
 //! Simulation configuration.
 
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 
-use crate::core::config::exp_config::parse_options;
 use crate::extensions::dataset_type::VmDatasetType;
 
 /// Auxiliary structure to parse SimulationConfig from file
@@ -47,17 +44,17 @@ pub struct VmDatasetConfig {
     pub path: String,
 }
 
-impl FromStr for VmDatasetConfig {
-    type Err = std::string::ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let variables_map = parse_options(s);
-        Ok(Self {
-            r#type: VmDatasetType::from_str(variables_map.get("type").unwrap()).unwrap(),
-            path: (*variables_map.get("path").unwrap().clone()).to_string(),
-        })
-    }
-}
+// impl FromStr for VmDatasetConfig {
+//     type Err = std::string::ParseError;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         let variables_map = parse_options(s);
+//         Ok(Self {
+//             r#type: VmDatasetType::from_str(variables_map.get("type").unwrap()).unwrap(),
+//             path: (*variables_map.get("path").unwrap().clone()).to_string(),
+//         })
+//     }
+// }
 
 impl std::fmt::Display for VmDatasetConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

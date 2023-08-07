@@ -2,8 +2,7 @@
 
 use dyn_clone::{clone_trait_object, DynClone};
 
-use crate::core::config::exp_config::parse_config_value;
-use crate::core::config::exp_config::parse_options;
+use crate::core::config::options::{parse_config_value, parse_options};
 
 /// A resource load model is a function, which defines load of resource X at the moment.
 /// time - current simulation time, time_from_start - time from previous initialization

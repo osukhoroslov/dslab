@@ -12,8 +12,8 @@ step_duration: 500
 
 #Vms
 trace:
-    type: Huawei
-    path: .
+  type: Huawei
+  path: .
 
 # Hosts
 hosts:

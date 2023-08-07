@@ -1,152 +1,123 @@
 //! Dynamic variables implementation.
 
 use std::fmt::Debug;
-use std::str::FromStr;
+use std::ops::AddAssign;
 
-use dyn_clone::{clone_trait_object, DynClone};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum NumericParam<T> {
+pub enum NumericValues<T: PartialOrd + AddAssign + Copy> {
     Value(T),
     Range { from: T, to: T, step: T },
     Values(Vec<T>),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum CustomParam<T> {
+pub enum GenericValues<T> {
     Value(T),
     Values(Vec<T>),
 }
 
-pub trait DynamicVariableTrait: Debug + DynClone {
-    /// Increment config variable
-    fn next(&mut self);
-
-    /// Reset this variable to initial value
-    fn reset(&mut self);
-
-    /// Returns true if variable can be incremented and produce next test case
-    fn has_next(&self) -> bool;
-
-    /// returns variable name to display it`s current state in logs
+pub trait DynVar {
+    /// Returns the variable name.
     fn name(&self) -> String;
 
-    /// returns value in string format for display reasons
+    /// Returns true if contains multiple values.
+    fn has_multiple_values(&self) -> bool;
+
+    /// Tries to change the current value to the next value and returns true if succeeded.
+    fn next(&mut self) -> bool;
+
+    /// Resets the current value to the initial value.
+    fn reset(&mut self);
+
+    /// Returns the current value in string format for debug purposes.
     fn value(&self) -> String;
-
-    /// returns if this variable has several different values
-    fn is_dynamic(&self) -> bool;
 }
-
-clone_trait_object!(DynamicVariableTrait);
 
 /// Represents variable experiment alternatives for strings
 /// Can contain single string values and list of values
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct DynamicVariable<T> {
-    /// current step
-    pub current: usize,
-    /// all test cases taken into account
-    pub values: Vec<T>,
-    // varable config name
-    pub name: String,
+pub struct GenericDynVar<T: Clone> {
+    name: String,
+    values: Vec<T>,
+    cur_idx: usize,
 }
 
-impl<T> std::ops::Deref for DynamicVariable<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.values[self.current]
-    }
-}
-
-impl<T: std::fmt::Debug + std::clone::Clone + std::fmt::Display> DynamicVariableTrait for DynamicVariable<T> {
-    /// Increment config variable
-    fn next(&mut self) {
-        if !self.has_next() {
-            return;
+impl<T: Clone> GenericDynVar<T> {
+    pub fn new<S>(name: S, values: GenericValues<T>) -> Self
+    where
+        S: Into<String>,
+    {
+        let name = name.into();
+        let values = match values {
+            GenericValues::Value(value) => vec![value],
+            GenericValues::Values(values) => values,
+        };
+        Self {
+            name,
+            values,
+            cur_idx: 0,
         }
-
-        self.current += 1;
     }
 
-    /// Reset this variable to initial value
-    fn reset(&mut self) {
-        self.current = 0;
+    pub fn value(&self) -> T {
+        self.values[self.cur_idx].clone()
     }
+}
 
-    /// Returns true if variable can be incremented and produce next test case
-    fn has_next(&self) -> bool {
-        self.current + 1 < self.values.len()
+impl<T: PartialOrd + AddAssign + Copy> GenericDynVar<T> {
+    pub fn from_numeric<S>(name: S, values: NumericValues<T>) -> Self
+    where
+        S: Into<String>,
+    {
+        let name = name.into();
+        let values = match values {
+            NumericValues::Value(value) => vec![value],
+            NumericValues::Range { from, to, step } => {
+                let mut values = Vec::new();
+                let mut current = from;
+                while current <= to {
+                    values.push(current);
+                    current += step;
+                }
+                values
+            }
+            NumericValues::Values(values) => values,
+        };
+        Self {
+            name,
+            values,
+            cur_idx: 0,
+        }
     }
+}
 
-    /// returns variable name to display it`s current state in logs
+impl<T: Clone + Debug> DynVar for GenericDynVar<T> {
     fn name(&self) -> String {
         self.name.clone()
     }
 
-    /// returns variable name to display it`s current state in logs
-    fn value(&self) -> String {
-        self.values[self.current].to_string()
-    }
-
-    /// returns if this variable has several different values
-    fn is_dynamic(&self) -> bool {
+    fn has_multiple_values(&self) -> bool {
         self.values.len() > 1
     }
-}
 
-pub fn make_dynamic_numeric_variable<
-    T: FromStr + std::fmt::Display + std::cmp::PartialOrd<T> + Default + std::ops::AddAssign + Clone,
->(
-    name: String,
-    config: NumericParam<T>,
-) -> DynamicVariable<T> {
-    match config {
-        NumericParam::Value(value) => DynamicVariable {
-            current: 0,
-            values: vec![value],
-            name,
-        },
-        NumericParam::Range { from, to, step } => {
-            let mut values = Vec::new();
-            let mut current = from;
-            while current.clone() <= to {
-                values.push(current.clone());
-                current += step.clone();
-            }
-
-            DynamicVariable {
-                current: 0,
-                values,
-                name,
-            }
+    fn next(&mut self) -> bool {
+        if self.cur_idx + 1 < self.values.len() {
+            self.cur_idx += 1;
+            true
+        } else {
+            false
         }
-        NumericParam::Values(values) => DynamicVariable {
-            current: 0,
-            values,
-            name,
-        },
     }
-}
 
-pub fn make_dynamic_custom_variable<T: FromStr + std::fmt::Display>(
-    name: String,
-    config: CustomParam<T>,
-) -> DynamicVariable<T> {
-    match config {
-        CustomParam::Value(value) => DynamicVariable {
-            current: 0,
-            values: vec![value],
-            name,
-        },
-        CustomParam::Values(values) => DynamicVariable {
-            current: 0,
-            values,
-            name,
-        },
+    fn reset(&mut self) {
+        self.cur_idx = 0;
+    }
+
+    fn value(&self) -> String {
+        format!("{:?}", self.values[self.cur_idx])
     }
 }
