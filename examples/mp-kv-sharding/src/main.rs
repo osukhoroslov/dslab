@@ -725,11 +725,8 @@ fn mc_check_query(
             invariant,
             invariants::state_depth_last_stage(max_depth),
         ]))
-        .collect(collects::event_happened_n_times(
-            LogEntry::is_mc_local_message_sent,
-            1,
-        ));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+        .collect(collects::event_happened_n_times(LogEntry::is_mc_local_message_sent, 1));
+    let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
 
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change(start_states, |sys| {
@@ -764,8 +761,8 @@ fn check_mc_get(
         let messages = state
             .current_stage_trace()
             .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(*x));
-        if let Some(LogEntry::McLocalMessageSent{
+            .filter(|x| LogEntry::is_mc_local_message_sent(x));
+        if let Some(LogEntry::McLocalMessageSent {
             msg: message,
             proc: proc_tmp,
         }) = messages.last()
@@ -780,7 +777,7 @@ fn check_mc_get(
             if data.key != key {
                 return Err(format!("wrong key {}", data.key));
             }
-            if data.value.and_then(|x| Some(x.to_string())) != expected {
+            if data.value.map(|x| x.to_string()) != expected {
                 return Err(format!("wrong value {:?}", data.value));
             }
         }
@@ -804,7 +801,7 @@ fn check_mc_put(
         let messages = state
             .current_stage_trace()
             .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(*x));
+            .filter(|x| LogEntry::is_mc_local_message_sent(x));
         if let Some(LogEntry::McLocalMessageSent {
             msg: message,
             proc: proc_tmp,
@@ -844,7 +841,7 @@ fn check_mc_delete(
         let messages = state
             .current_stage_trace()
             .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(*x));
+            .filter(|x| LogEntry::is_mc_local_message_sent(x));
         if let Some(LogEntry::McLocalMessageSent {
             msg: message,
             proc: proc_tmp,
@@ -860,7 +857,7 @@ fn check_mc_delete(
             if data.key != key {
                 return Err(format!("wrong key {}", data.key));
             }
-            if data.value.and_then(|x| Some(x.to_string())) != expected {
+            if data.value.map(|x| x.to_string()) != expected {
                 return Err(format!("wrong value {:?}", data.value));
             }
         }
@@ -876,13 +873,6 @@ fn check_mc_node_removed(
     start_states: HashSet<McState>,
 ) -> Result<McStats, String> {
     let removed_node = &sys.proc_node_name(removed_proc);
-    let alive_processes = sys
-        .nodes()
-        .iter()
-        .filter(|name| *name != removed_node)
-        .map(|node| sys.get_node(node).unwrap().process_names()[0].clone())
-        .collect::<Vec<String>>();
-    let alive_processes_cloned = alive_processes.clone();
     let process_names = sys.process_names();
 
     let strategy_config = StrategyConfig::default()
@@ -890,14 +880,14 @@ fn check_mc_node_removed(
         .goal(goals::no_events())
         .collect(collects::no_events());
 
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
     let res = mc.run_from_states_with_change(start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
         for proc in process_names.clone() {
             sys.send_local_message(proc.clone(), proc, msg.clone());
         }
     });
-    sys.network().disconnect_node(&removed_node);
+    sys.network().disconnect_node(removed_node);
     match res {
         Ok(stats) => Ok(stats),
         Err(err) => {
@@ -941,7 +931,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         node.clone(),
         proc.clone(),
         key.clone(),
-        Some(value.clone()),
+        Some(value),
         max_steps,
         Some(achieved_states.collected_states),
     )?;
@@ -956,9 +946,9 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
     )?;
     check_mc_delete(
         &mut sys,
-        node.clone(),
-        proc.clone(),
-        key.clone(),
+        node,
+        proc,
+        key,
         None,
         max_steps,
         Some(achieved_states.collected_states),

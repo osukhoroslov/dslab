@@ -292,9 +292,6 @@ pub mod collects {
 
     /// Checks if current state has no more active events.
     pub fn no_events() -> CollectFn {
-        boxed!(|state: &McState| {
-            state.events.available_events_num() == 0
-        })
+        boxed!(|state: &McState| { state.events.available_events_num() == 0 })
     }
-
 }

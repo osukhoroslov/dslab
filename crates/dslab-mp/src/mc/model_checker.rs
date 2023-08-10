@@ -101,7 +101,6 @@ impl ModelChecker {
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         preliminary_callback(&mut self.system);
         self.run_impl()
-
     }
 
     /// Runs model checking from a set of initial states.

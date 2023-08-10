@@ -40,13 +40,7 @@ impl McState {
     /// Creates a slice of trace that represents current model checker run.
     pub fn current_stage_trace(&self) -> &[LogEntry] {
         self.trace
-            .split(|entry| {
-                if let LogEntry::McStarted { .. } = entry {
-                    true
-                } else {
-                    false
-                }
-            })
+            .split(|entry| matches!(entry, LogEntry::McStarted { .. }))
             .last()
             .unwrap()
     }
