@@ -25,9 +25,7 @@ struct PingMessageNode {
 
 impl PingMessageNode {
     pub fn new(peers: Vec<String>) -> Self {
-        Self {
-            peers,
-        }
+        Self { peers }
     }
 }
 
@@ -52,9 +50,7 @@ struct MiddleNode {
 
 impl MiddleNode {
     pub fn new(peers: Vec<String>) -> Self {
-        Self {
-            peers,
-        }
+        Self { peers }
     }
 }
 
@@ -67,8 +63,7 @@ impl Process for MiddleNode {
 
     fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {
-    }
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 }
 
 #[derive(Clone)]
@@ -267,7 +262,10 @@ fn build_ping_system_with_middle_node() -> System {
     sys.add_node("node2");
     sys.add_node("node3");
     let process0 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
-    let process1 = boxed!(MiddleNode::new(Vec::from(["process2".to_string(), "process3".to_string()])));
+    let process1 = boxed!(MiddleNode::new(Vec::from([
+        "process2".to_string(),
+        "process3".to_string()
+    ])));
     let process2 = boxed!(MiddleNode::new(Vec::from(["process3".to_string()])));
     let process3 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
     sys.add_process("process0", process0, "node0");
