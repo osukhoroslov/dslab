@@ -54,18 +54,10 @@ impl PendingEvents {
                     self.available_events.insert(id);
                 }
             }
-            McEvent::TimerCancelled { .. } => {
-                self.directives.insert(id);
-            }
             McEvent::MessageDropped { .. } => {
                 self.directives.insert(id);
             }
-            McEvent::MessageDuplicated { .. } => {
-                self.directives.insert(id);
-            }
-            McEvent::MessageCorrupted { .. } => {
-                self.directives.insert(id);
-            }
+            _ => {}
         };
         self.events.insert(id, event);
         id

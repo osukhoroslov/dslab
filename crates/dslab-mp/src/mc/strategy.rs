@@ -222,10 +222,6 @@ pub trait Strategy {
                     }
                 }
             }
-            TimerCancelled { proc, timer } => {
-                system.events.cancel_timer(proc.clone(), timer.clone());
-                self.search_step(system, EventOrId::Id(event_id))?
-            }
             _ => self.search_step(system, EventOrId::Id(event_id))?,
         }
 
@@ -264,7 +260,24 @@ pub trait Strategy {
 
         self.debug_log(&event, system.depth());
 
-        system.apply_event(event);
+        let new_events = system.apply_event(event);
+        for new_event in new_events {
+            match &new_event {
+                TimerCancelled { proc, timer } => {
+                    system.events.cancel_timer(proc.clone(), timer.clone());
+                    self.debug_log(&new_event, system.depth());
+                    system.trace_handler.borrow_mut().push(new_event.to_log_entry());
+                }
+                MessageDropped { receive_event_id, .. } => {
+                    receive_event_id.map(|id| self.take_event(system, id));
+                    self.debug_log(&new_event, system.depth());
+                    system.trace_handler.borrow_mut().push(new_event.to_log_entry());
+                }
+                _ => {
+                    self.add_event(system, new_event);
+                }
+            }
+        }
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {

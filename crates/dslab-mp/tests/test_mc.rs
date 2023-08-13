@@ -20,13 +20,13 @@ use dslab_mp::system::System;
 
 #[derive(Clone)]
 struct PingMessageNode {
-    other: String,
+    peers: Vec<String>,
 }
 
 impl PingMessageNode {
-    pub fn new(other: &str) -> Self {
+    pub fn new(peers: Vec<String>) -> Self {
         Self {
-            other: other.to_string(),
+            peers,
         }
     }
 }
@@ -37,10 +37,38 @@ impl Process for PingMessageNode {
     }
 
     fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
-        ctx.send(msg, self.other.clone());
+        for peer in &self.peers {
+            ctx.send(msg.clone(), peer.clone());
+        }
     }
 
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+}
+
+#[derive(Clone)]
+struct MiddleNode {
+    peers: Vec<String>,
+}
+
+impl MiddleNode {
+    pub fn new(peers: Vec<String>) -> Self {
+        Self {
+            peers,
+        }
+    }
+}
+
+impl Process for MiddleNode {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+        for peer in &self.peers {
+            ctx.send(msg.clone(), peer.clone());
+        }
+    }
+
+    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
+
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {
+    }
 }
 
 #[derive(Clone)]
@@ -127,14 +155,8 @@ impl Process for PostponedReceiverNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct DumbReceiverNode {}
-
-impl DumbReceiverNode {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 impl Process for DumbReceiverNode {
     fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
@@ -177,18 +199,53 @@ impl Process for SpammerNode {
     fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
 }
 
-#[derive(Clone, Default)]
-struct TimerNode {}
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+struct TimerNode {
+    timer_fired: bool,
+}
 
 impl Process for TimerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) {}
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+        if !self.timer_fired {
+            ctx.cancel_timer("timer");
+        }
+    }
 
     fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
         ctx.set_timer("timer", 0.1);
     }
 
     fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+        self.timer_fired = true;
         ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()))
+    }
+
+    fn state(&self) -> Rc<dyn ProcessState> {
+        rc!(self.clone())
+    }
+
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+        let postponed_state = (*state).as_any().downcast_ref::<Self>().unwrap();
+        self.timer_fired = postponed_state.timer_fired;
+    }
+}
+
+#[derive(Clone, Default)]
+struct TimerResettingNode {}
+
+impl Process for TimerResettingNode {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+        ctx.send_local(Message::json("MESSAGE", &ctx.time()));
+        ctx.cancel_timer("timer");
+        ctx.set_timer("timer", 0.1);
+    }
+
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+        ctx.set_timer("timer", 0.1);
+    }
+
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+        ctx.send_local(Message::json("TIMEOUT", &ctx.time()));
     }
 }
 
@@ -196,10 +253,27 @@ fn build_ping_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new("process2"));
-    let process2 = boxed!(PingMessageNode::new("process1"));
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process2 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
+    sys
+}
+
+fn build_ping_system_with_middle_node() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node0");
+    sys.add_node("node1");
+    sys.add_node("node2");
+    sys.add_node("node3");
+    let process0 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
+    let process1 = boxed!(MiddleNode::new(Vec::from(["process2".to_string(), "process3".to_string()])));
+    let process2 = boxed!(MiddleNode::new(Vec::from(["process3".to_string()])));
+    let process3 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    sys.add_process("process0", process0, "node0");
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
+    sys.add_process("process3", process3, "node3");
     sys
 }
 
@@ -208,9 +282,9 @@ fn build_ping_system_with_collector() -> System {
     sys.add_node("node1");
     sys.add_node("node2");
     sys.add_node("node3");
-    let process1 = boxed!(PingMessageNode::new("process2"));
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
     let process2 = boxed!(CollectorNode::new("process3"));
-    let process3 = boxed!(PingMessageNode::new("process2"));
+    let process3 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys.add_process("process3", process3, "node3");
@@ -221,7 +295,7 @@ fn build_postponed_delivery_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new("process2"));
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
     let process2 = boxed!(PostponedReceiverNode::new());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
@@ -232,8 +306,8 @@ fn build_dumb_delivery_system_with_useless_timer() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new("process2"));
-    let process2 = boxed!(DumbReceiverNode::new());
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process2 = boxed!(DumbReceiverNode::default());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -244,7 +318,7 @@ fn build_spammer_delivery_system() -> System {
     sys.add_node("node1");
     sys.add_node("node2");
     let process1 = boxed!(SpammerNode::new("process2"));
-    let process2 = boxed!(PingMessageNode::new("process1"));
+    let process2 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -256,6 +330,28 @@ fn build_timer_system(clock_skew: f64) -> System {
     sys.set_node_clock_skew("node", clock_skew);
     let process = boxed!(TimerNode::default());
     sys.add_process("process", process, "node");
+    sys
+}
+
+fn build_ping_system_with_timer() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process2 = boxed!(TimerNode::default());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
+    sys
+}
+
+fn build_timer_resetting_system() -> System {
+    let mut sys = System::new(12345);
+    sys.add_node("node1");
+    sys.add_node("node2");
+    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process2 = boxed!(TimerResettingNode::default());
+    sys.add_process("process1", process1, "node1");
+    sys.add_process("process2", process2, "node2");
     sys
 }
 
@@ -809,4 +905,98 @@ fn collect_mode(#[case] strategy_name: String) {
         );
     });
     assert!(res.is_ok());
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn cancel_timer(#[case] strategy_name: String) {
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_no_events_left_goal();
+
+    // allow two situations:
+    // 1) [TimerFired, MessageReceived]
+    // 2) [MessageReceived, TimerCancelled]
+    let invariant = boxed!(|state: &McState| {
+        if state.events.available_events_num() == 0 {
+            assert!(!matches!(state.trace.last().unwrap(), LogEntry::McTimerFired { .. }));
+        }
+        Ok(())
+    });
+
+    let mut sys: System = build_ping_system_with_timer();
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    sys.send_local_message("process2", Message::new("WAKEUP", ""));
+
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
+    let result = mc.run();
+    assert!(result.is_ok());
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn reset_timer(#[case] strategy_name: String) {
+    let prune = boxed!(|state: &McState| {
+        let outbox = &state.node_states["node2"]["process2"].local_outbox;
+        if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
+            Some("not interesting branch".to_string())
+        } else {
+            None
+        }
+    });
+    let goal = build_no_events_left_goal();
+
+    let invariant = boxed!(|state: &McState| {
+        let outbox = &state.node_states["node2"]["process2"].local_outbox;
+        if outbox.len() == 1 && outbox[0].tip == "MESSAGE" && state.events.available_events_num() == 0 {
+            Err("no timer after reset".to_string())
+        } else {
+            Ok(())
+        }
+    });
+
+    let mut sys: System = build_timer_resetting_system();
+    sys.send_local_message("process1", Message::new("PING", "some_data"));
+    sys.send_local_message("process2", Message::new("WAKEUP", ""));
+
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
+    let result = mc.run();
+    assert!(result.is_ok());
+}
+
+pub enum NetworkProblem {
+    DropOutgoing,
+    DropIncoming,
+    DisableLink,
+}
+
+#[rstest(
+    net_problem => [NetworkProblem::DropOutgoing, NetworkProblem::DropIncoming, NetworkProblem::DisableLink]
+)]
+#[case("dfs")]
+#[case("bfs")]
+fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProblem) {
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_no_events_left_goal();
+
+    let invariant = boxed!(|state: &McState| {
+        if state.node_states["node3"]["process3"].local_outbox.len() <= 1 {
+            Ok(())
+        } else {
+            Err("too many messages".to_string())
+        }
+    });
+
+    let mut sys: System = build_ping_system_with_middle_node();
+    match net_problem {
+        NetworkProblem::DropOutgoing => sys.network().drop_outgoing("node2"),
+        NetworkProblem::DropIncoming => sys.network().drop_incoming("node2"),
+        NetworkProblem::DisableLink => sys.network().disable_link("node1", "node3"),
+    }
+    sys.send_local_message("process0", Message::new("PING", "some_data"));
+
+    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
+    let result = mc.run();
+    assert!(result.is_ok());
 }
