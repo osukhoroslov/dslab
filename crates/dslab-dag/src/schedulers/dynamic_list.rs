@@ -136,7 +136,7 @@ impl DynamicListScheduler {
             .get_tasks()
             .iter()
             .map(|t| t.max_cores)
-            .max_by(|a, b| a.cmp(&b))
+            .max_by(|a, b| a.cmp(b))
             .unwrap();
         let task_norm_cores: Vec<f64> = dag
             .get_tasks()
@@ -147,7 +147,7 @@ impl DynamicListScheduler {
             .get_tasks()
             .iter()
             .map(|t| t.memory)
-            .max_by(|a, b| a.cmp(&b))
+            .max_by(|a, b| a.cmp(b))
             .unwrap();
         let task_norm_memory: Vec<f64> = dag
             .get_tasks()
@@ -158,7 +158,7 @@ impl DynamicListScheduler {
             .get_tasks()
             .iter()
             .map(|t| t.flops)
-            .max_by(|a, b| a.total_cmp(&b))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap();
         let task_norm_flops: Vec<f64> = dag.get_tasks().iter().map(|t| t.flops / max_flops).collect();
 
@@ -358,8 +358,8 @@ impl DynamicListScheduler {
                         .sorted_by(|&a, &b| task_ranks[*b].total_cmp(&task_ranks[*a]))
                         .take(10)
                         .min_by(|&a, &b| {
-                            dot_product(dag.get_task(*b), &resource)
-                                .total_cmp(&(dot_product(dag.get_task(*a), &resource)))
+                            dot_product(dag.get_task(*b), resource)
+                                .total_cmp(&(dot_product(dag.get_task(*a), resource)))
                                 .then(dag.get_task(*b).flops.total_cmp(&dag.get_task(*a).flops))
                         })
                 } else {
@@ -371,13 +371,13 @@ impl DynamicListScheduler {
                         })
                         .sorted_by(|&a, &b| task_ranks[*b].total_cmp(&task_ranks[*a]))
                         .min_by(|&a, &b| match self.strategy.task_criterion {
-                            TaskCriterion::RankPackMult => (task_ranks[*b] * dot_product(dag.get_task(*b), &resource))
-                                .total_cmp(&(task_ranks[*a] * dot_product(dag.get_task(*a), &resource)))
+                            TaskCriterion::RankPackMult => (task_ranks[*b] * dot_product(dag.get_task(*b), resource))
+                                .total_cmp(&(task_ranks[*a] * dot_product(dag.get_task(*a), resource)))
                                 .then(dag.get_task(*b).flops.total_cmp(&dag.get_task(*a).flops)),
-                            _ => (task_ranks[*b] * rank_weight + dot_product(dag.get_task(*b), &resource) * dot_weight)
+                            _ => (task_ranks[*b] * rank_weight + dot_product(dag.get_task(*b), resource) * dot_weight)
                                 .total_cmp(
                                     &(task_ranks[*a] * rank_weight
-                                        + dot_product(dag.get_task(*a), &resource) * dot_weight),
+                                        + dot_product(dag.get_task(*a), resource) * dot_weight),
                                 )
                                 .then(dag.get_task(*b).flops.total_cmp(&dag.get_task(*a).flops)),
                         })

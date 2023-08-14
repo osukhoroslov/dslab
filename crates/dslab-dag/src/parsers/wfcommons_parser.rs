@@ -83,7 +83,7 @@ impl Workflow {
 }
 
 #[derive(Serialize, Deserialize)]
-struct WMS {
+struct Wms {
     name: String,
 }
 
@@ -92,7 +92,7 @@ struct Json {
     #[serde(rename = "schemaVersion")]
     schema_version: String,
     workflow: Workflow,
-    wms: WMS,
+    wms: Wms,
 }
 
 impl DAG {
@@ -129,7 +129,7 @@ impl DAG {
         let mut stage_mem: HashMap<String, u64> = HashMap::new();
         let mut stage_cores: HashMap<String, u32> = HashMap::new();
         for task in workflow.tasks().iter() {
-            let stage = task.name.split("_").next().unwrap().to_string();
+            let stage = task.name.split('_').next().unwrap().to_string();
 
             let cores = if let Some(cores_conf) = &config.generate_cores {
                 if cores_conf.regular && stage_cores.contains_key(&stage) {
