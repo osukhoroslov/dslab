@@ -415,13 +415,13 @@ fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
     })
 }
 
-fn mc_prune_msg_per_proc_limit(proc_names: &Vec<String>, limit: usize) -> PruneFn {
+fn mc_prune_msg_per_proc_limit(proc_names: &[String], limit: usize) -> PruneFn {
     prunes::events_limit_per_proc(
         |entry: &LogEntry, proc: &String| match entry {
             LogEntry::McMessageReceived { src, .. } => src == proc,
             _ => false,
         },
-        proc_names.clone(),
+        proc_names.to_owned(),
         limit,
     )
 }
