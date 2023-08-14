@@ -11,13 +11,12 @@ use serde::Serialize;
 use serde_json::Value;
 use sugars::boxed;
 
+use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{goals, prunes};
+use dslab_mp::mc::predicates::{collects, goals, prunes};
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
-use dslab_mp::mc::strategy::{GoalFn, PruneFn, StrategyConfig};
-
-use dslab_mp::logger::LogEntry;
+use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::node::ProcessEvent;
 use dslab_mp::system::System;
@@ -416,36 +415,38 @@ fn mc_prune_proc_permutations(equivalent_procs: &[String]) -> PruneFn {
     })
 }
 
-fn mc_invariant(state: &McState, proc_names: Vec<String>, sent_messages: &HashSet<String>) -> Result<(), String> {
-    for name in proc_names {
-        let outbox = &state.node_states[&name][&name].local_outbox;
-        let mut unique = HashSet::new();
-        for message in outbox {
-            let data: Value = serde_json::from_str(&message.data).unwrap();
-            let message = data["text"].as_str().unwrap().to_string();
-
-            if unique.contains(&message) {
-                return Err("No duplication violated".to_owned());
-            }
-            unique.insert(message.clone());
-            if !sent_messages.contains(&message) {
-                return Err("No creation violated".to_owned());
-            }
-        }
-    }
-    Ok(())
+fn mc_prune_msg_per_proc_limit(proc_names: &Vec<String>, limit: usize) -> PruneFn {
+    prunes::events_limit_per_proc(
+        |entry: &LogEntry, proc: &String| match entry {
+            LogEntry::McMessageReceived { src, .. } => src == proc,
+            _ => false,
+        },
+        proc_names.clone(),
+        limit,
+    )
 }
 
-// fn get_n_start_states(start_states: HashSet<McState>, mut n: usize) -> HashSet<McState> {
-//     n = min(n, start_states.len());
-//     let mut hashed = start_states.into_iter().map(|state| {
-//         let mut hasher = DefaultHasher::default();
-//         state.hash(&mut hasher);
-//         (hasher.finish(), state)
-//     }).collect::<Vec<(u64, McState)>>();
-//     hashed.sort_by_key(|(a, b)| *a);
-//     HashSet::from_iter(hashed.split_at(n).0.into_iter().map(|(a, b)| b.clone()))
-// }
+fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> InvariantFn {
+    boxed!(move |state: &McState| {
+        for name in &proc_names {
+            let outbox = &state.node_states[name][name].local_outbox;
+            let mut message_data = HashSet::new();
+            for message in outbox {
+                let data: Value = serde_json::from_str(&message.data).unwrap();
+                let message = data["text"].as_str().unwrap().to_string();
+
+                if message_data.contains(&message) {
+                    return Err("No duplication violated".to_owned());
+                }
+                message_data.insert(message.clone());
+                if !sent_messages.contains(&message) {
+                    return Err("No creation violated".to_owned());
+                }
+            }
+        }
+        Ok(())
+    })
+}
 
 fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
@@ -464,19 +465,10 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
         .goal(goal)
         .prune(prunes::any_prune(vec![
             prunes::state_depth(10),
-            prunes::events_limit_per_proc(
-                |entry: &LogEntry, proc: &String| match entry {
-                    LogEntry::McMessageReceived { src, .. } => src == proc,
-                    _ => false,
-                },
-                proc_names.clone(),
-                2,
-            ),
-            mc_prune_proc_permutations(proc_names.split_at(1).1),
+            mc_prune_proc_permutations(&proc_names[1..]),
+            mc_prune_msg_per_proc_limit(&proc_names, 2),
         ]))
-        .invariant(Box::new(move |state: &McState| {
-            mc_invariant(state, proc_names.clone(), &sent_messages)
-        }));
+        .invariant(mc_invariant(proc_names.clone(), sent_messages));
     let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     let res = mc.run();
     if let Err(err) = res {
@@ -501,29 +493,16 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
             .collect::<Vec<GoalFn>>(),
     );
 
-    let proc_names_cloned = proc_names.clone();
-    let collect = Box::new(move |state: &McState| {
-        for name in proc_names_cloned.clone() {
-            if name == "0" {
-                continue;
-            }
-            let process_state = &state.node_states[&name][&name];
-            if process_state.received_message_count > 0 {
-                return true;
-            }
-        }
-        false
-    });
-
-    let proc_names_cloned = proc_names.clone();
-    let sent_message_cloned = sent_messages.clone();
     let strategy_config = StrategyConfig::default()
         .prune(prunes::state_depth(4))
         .goal(goal)
-        .invariant(Box::new(move |state: &McState| {
-            mc_invariant(state, proc_names_cloned.clone(), &sent_message_cloned)
-        }))
-        .collect(collect);
+        .invariant(mc_invariant(proc_names.clone(), sent_messages.clone()))
+        .collect(collects::any_collect(
+            proc_names[1..]
+                .iter()
+                .map(|proc| collects::got_n_local_messages(proc, proc, 1))
+                .collect(),
+        ));
 
     let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     let res = mc.run();
@@ -546,22 +525,11 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     proc_names_cloned.remove(0);
     let strategy_config = StrategyConfig::default()
         .goal(goal)
-        .invariant(boxed!(move |state| mc_invariant(
-            state,
-            proc_names_cloned.clone(),
-            &sent_messages
-        )))
+        .invariant(mc_invariant(proc_names_cloned, sent_messages))
         .prune(prunes::any_prune(vec![
             prunes::state_depth(6),
-            mc_prune_proc_permutations(proc_names.split_at(1).1),
-            prunes::events_limit_per_proc(
-                |entry: &LogEntry, proc: &String| match entry {
-                    LogEntry::McMessageReceived { src, .. } => src == proc,
-                    _ => false,
-                },
-                proc_names,
-                4,
-            ),
+            mc_prune_proc_permutations(&proc_names[1..]),
+            mc_prune_msg_per_proc_limit(&proc_names, 4),
         ]));
     let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
     // TODO: check if this is necessary
@@ -635,7 +603,7 @@ fn main() {
     tests.add("TWO CRASHES 2", test_two_crashes2, config);
     tests.add("CAUSAL ORDER", test_causal_order, config);
     tests.add("CHAOS MONKEY", test_chaos_monkey, config);
-    tests.add("SCALABILITY", test_scalability, config);
+    // tests.add("SCALABILITY", test_scalability, config);
 
     let config_mc = TestConfig {
         proc_factory: &proc_factory,

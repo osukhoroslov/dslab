@@ -198,8 +198,6 @@ pub mod goals {
 
 /// Prunes cut execution branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
-    use std::iter::Iterator;
-
     use sugars::boxed;
 
     use crate::logger::LogEntry;
@@ -307,8 +305,20 @@ pub mod collects {
         boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
     }
 
-    /// Checks if current run trace has at least `n` events matching the predicate.
-    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
+    /// Combines multiple collect functions by returning `true` iff at least one collect is satisfied.
+    pub fn any_collect(mut collects: Vec<CollectFn>) -> CollectFn {
+        boxed!(move |state: &McState| {
+            for collect in &mut collects {
+                if collect(state) {
+                    return true;
+                }
+            }
+            false
+        })
+    }
+
+    /// Checks if trace to given state has at least `n` events matching the predicate.
+    pub fn event_happened_n_times<F>(predicate: F, n: usize) -> CollectFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
