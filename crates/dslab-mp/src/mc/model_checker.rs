@@ -82,15 +82,19 @@ impl ModelChecker {
         }
     }
 
-    fn run_impl(&mut self) -> McResult {
+    fn run_impl<F>(&mut self, preliminary_callback: F) -> McResult
+    where
+        F: FnOnce(&mut McSystem),
+    {
+        self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
+        preliminary_callback(&mut self.system);
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> McResult {
-        self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
-        self.run_impl()
+        self.run_impl(|_| {})
     }
 
     /// Runs model checking after applying callback.
@@ -98,9 +102,7 @@ impl ModelChecker {
     where
         F: FnOnce(&mut McSystem),
     {
-        self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
-        preliminary_callback(&mut self.system);
-        self.run_impl()
+        self.run_impl(preliminary_callback)
     }
 
     /// Runs model checking from a set of initial states.
@@ -119,9 +121,7 @@ impl ModelChecker {
         states.sort_by_key(|x| x.depth);
         for state in states {
             self.system.set_state(state);
-            self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
-            preliminary_callback(&mut self.system);
-            let stats = self.run_impl()?;
+            let stats = self.run_impl(&preliminary_callback)?;
             total_stats.combine(stats);
         }
         Ok(total_stats)

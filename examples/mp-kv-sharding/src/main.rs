@@ -5,12 +5,6 @@ use std::io::Write;
 use assertables::{assume, assume_eq};
 use clap::Parser;
 use decorum::R64;
-use dslab_mp::logger::LogEntry;
-use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{self, collects, goals, invariants};
-use dslab_mp::mc::state::McState;
-use dslab_mp::mc::strategies::bfs::Bfs;
-use dslab_mp::mc::strategy::{InvariantFn, McStats, StrategyConfig};
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::distributions::WeightedIndex;
@@ -19,6 +13,12 @@ use rand_pcg::{Lcg128Xsl64, Pcg64};
 use serde::{Deserialize, Serialize};
 use sugars::boxed;
 
+use dslab_mp::logger::LogEntry;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates::{self, collects, goals, invariants};
+use dslab_mp::mc::state::McState;
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategy::{InvariantFn, McStats, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
@@ -707,15 +707,18 @@ fn test_distribution_node_removed(config: &TestConfig) -> TestResult {
 
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
-fn mc_check_query(
+fn mc_check_query<S>(
     sys: &mut System,
-    node: String,
-    proc: String,
+    proc: S,
     invariant: InvariantFn,
     msg: Message,
     start_states: Option<HashSet<McState>>,
     max_depth: u64,
-) -> Result<McStats, String> {
+) -> Result<McStats, String>
+where
+    S: Into<String>,
+{
+    let proc = proc.into();
     let strategy_config = StrategyConfig::default()
         .goal(goals::all_goals(vec![
             goals::event_happened_n_times(LogEntry::is_mc_local_message_sent, 1),
@@ -723,18 +726,18 @@ fn mc_check_query(
         ]))
         .invariant(invariants::all_invariants(vec![
             invariant,
-            invariants::state_depth_last_stage(max_depth),
+            invariants::state_depth_current_run(max_depth),
         ]))
         .collect(collects::event_happened_n_times(LogEntry::is_mc_local_message_sent, 1));
     let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
 
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change(start_states, |sys| {
-            sys.send_local_message(node.clone(), proc.clone(), msg.clone());
+            sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
         })
     } else {
         mc.run_with_change(|sys| {
-            sys.send_local_message(node.clone(), proc.clone(), msg);
+            sys.send_local_message(proc.clone(), proc.clone(), msg);
         })
     };
     match res {
@@ -746,124 +749,133 @@ fn mc_check_query(
     }
 }
 
-fn check_mc_get(
+fn check_mc_get<S>(
     sys: &mut System,
-    node: String,
-    proc: String,
-    key: String,
-    expected: Option<String>,
+    proc: S,
+    key: S,
+    expected: Option<S>,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
+) -> Result<McStats, String>
+where
+    S: Into<String> + Clone,
+{
+    let proc = proc.into();
+    let key = key.into();
+    let expected = expected.map(|s| s.into());
     let msg = Message::new("GET", &format!(r#"{{"key": "{}"}}"#, key));
     let proc_name = proc.clone();
     let invariant = boxed!(move |state: &McState| {
-        let messages = state
-            .current_stage_trace()
-            .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(x));
-        if let Some(LogEntry::McLocalMessageSent {
-            msg: message,
-            proc: proc_tmp,
-        }) = messages.last()
-        {
-            if *proc_tmp != proc_name {
-                return Err("local message received on wrong process".to_string());
-            }
-            if message.tip != "GET_RESP" {
-                return Err(format!("wrong type {}", message.tip));
-            }
-            let data: GetRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
-            if data.key != key {
-                return Err(format!("wrong key {}", data.key));
-            }
-            if data.value.map(|x| x.to_string()) != expected {
-                return Err(format!("wrong value {:?}", data.value));
+        for entry in state.current_run_trace().iter() {
+            if let LogEntry::McLocalMessageSent {
+                msg: message,
+                proc: proc_tmp,
+            } = entry
+            {
+                if *proc_tmp != proc {
+                    return Err("local message received on wrong process".to_string());
+                }
+                if message.tip != "GET_RESP" {
+                    return Err(format!("wrong type {}", message.tip));
+                }
+                let data: GetRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
+                if data.key != key {
+                    return Err(format!("wrong key {}", data.key));
+                }
+                if data.value.map(|s| s.to_string()) != expected {
+                    return Err(format!("wrong value {:?}", data.value));
+                }
             }
         }
         Ok(())
     });
-    mc_check_query(sys, node, proc, invariant, msg, start_states, max_steps)
+    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
 }
 
-fn check_mc_put(
+fn check_mc_put<S>(
     sys: &mut System,
-    node: String,
-    proc: String,
-    key: String,
-    value: String,
+    proc: S,
+    key: S,
+    value: S,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
-    let msg = Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}"}}"#, key, value));
+) -> Result<McStats, String>
+where
+    S: Into<String>,
+{
+    let proc = proc.into();
+    let key = key.into();
+    let value = value.into();
     let proc_name = proc.clone();
+    let msg = Message::new("PUT", &format!(r#"{{"key": "{}", "value": "{}"}}"#, key, value));
     let invariant = Box::new(move |state: &McState| {
-        let messages = state
-            .current_stage_trace()
-            .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(x));
-        if let Some(LogEntry::McLocalMessageSent {
-            msg: message,
-            proc: proc_tmp,
-        }) = messages.last()
-        {
-            if *proc_tmp != proc_name {
-                return Err("local message received on wrong process".to_string());
-            }
-            if message.tip != "PUT_RESP" {
-                return Err(format!("wrong type {}", message.tip));
-            }
-            let data: PutRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
-            if data.key != key {
-                return Err(format!("wrong key {}", data.key));
-            }
-            if data.value != value {
-                return Err(format!("wrong value {:?}", data.value));
+        for entry in state.current_run_trace().iter() {
+            if let LogEntry::McLocalMessageSent {
+                msg: message,
+                proc: proc_tmp,
+            } = entry
+            {
+                if *proc_tmp != proc {
+                    return Err("local message received on wrong process".to_string());
+                }
+                if message.tip != "PUT_RESP" {
+                    return Err(format!("wrong type {}", message.tip));
+                }
+                let data: PutRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
+                if data.key != key {
+                    return Err(format!("wrong key {}", data.key));
+                }
+                if data.value != value {
+                    return Err(format!("wrong value {:?}", data.value));
+                }
             }
         }
         Ok(())
     });
-    mc_check_query(sys, node, proc, invariant, msg, start_states, max_steps)
+    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
 }
 
-fn check_mc_delete(
+fn check_mc_delete<S>(
     sys: &mut System,
-    node: String,
-    proc: String,
-    key: String,
-    expected: Option<String>,
+    proc: S,
+    key: S,
+    expected: Option<S>,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
+) -> Result<McStats, String>
+where
+    S: Into<String> + Clone,
+{
+    let proc = proc.into();
+    let key = key.into();
+    let expected = expected.map(|s| s.into());
     let msg = Message::new("DELETE", &format!(r#"{{"key": "{}"}}"#, key));
     let proc_name = proc.clone();
     let invariant = Box::new(move |state: &McState| {
-        let messages = state
-            .current_stage_trace()
-            .iter()
-            .filter(|x| LogEntry::is_mc_local_message_sent(x));
-        if let Some(LogEntry::McLocalMessageSent {
-            msg: message,
-            proc: proc_tmp,
-        }) = messages.last()
-        {
-            if *proc_tmp != proc_name {
-                return Err("local message received on wrong process".to_string());
-            }
-            if message.tip != "DELETE_RESP" {
-                return Err(format!("wrong type {}", message.tip));
-            }
-            let data: DeleteRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
-            if data.key != key {
-                return Err(format!("wrong key {}", data.key));
-            }
-            if data.value.map(|x| x.to_string()) != expected {
-                return Err(format!("wrong value {:?}", data.value));
+        for entry in state.current_run_trace().iter() {
+            if let LogEntry::McLocalMessageSent {
+                msg: message,
+                proc: proc_tmp,
+            } = entry
+            {
+                if *proc_tmp != proc {
+                    return Err("local message received on wrong process".to_string());
+                }
+                if message.tip != "DELETE_RESP" {
+                    return Err(format!("wrong type {}", message.tip));
+                }
+                let data: DeleteRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
+                if data.key != key {
+                    return Err(format!("wrong key {}", data.key));
+                }
+                if data.value.map(|s| s.to_string()) != expected {
+                    return Err(format!("wrong value {:?}", data.value));
+                }
             }
         }
         Ok(())
     });
-    mc_check_query(sys, node, proc, invariant, msg, start_states, max_steps)
+    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
 }
 
 fn check_mc_node_removed(
@@ -876,7 +888,7 @@ fn check_mc_node_removed(
     let process_names = sys.process_names();
 
     let strategy_config = StrategyConfig::default()
-        .invariant(predicates::invariants::state_depth_last_stage(max_steps))
+        .invariant(predicates::invariants::state_depth_current_run(max_steps))
         .goal(goals::no_events())
         .collect(collects::no_events());
 
@@ -901,55 +913,49 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-    let node = "0".to_string();
-    let proc = "0".to_string();
+    let proc = random_proc(&sys, &mut rand);
     let key = random_string(8, &mut rand).to_uppercase();
     let value = random_string(8, &mut rand);
     let max_steps = 10;
 
-    let achieved_states = check_mc_get(&mut sys, node.clone(), proc.clone(), key.clone(), None, max_steps, None)?;
+    let achieved_states = check_mc_get(&mut sys, &proc, &key, None::<&String>, max_steps, None)?;
     let achieved_states = check_mc_put(
         &mut sys,
-        node.clone(),
-        proc.clone(),
-        key.clone(),
-        value.clone(),
+        &proc,
+        &key,
+        &value,
         max_steps,
         Some(achieved_states.collected_states),
     )?;
     let achieved_states = check_mc_get(
         &mut sys,
-        node.clone(),
-        proc.clone(),
-        key.clone(),
-        Some(value.clone()),
+        &proc,
+        &key,
+        Some(&value),
         max_steps,
         Some(achieved_states.collected_states),
     )?;
     let achieved_states = check_mc_delete(
         &mut sys,
-        node.clone(),
-        proc.clone(),
-        key.clone(),
-        Some(value),
+        &proc,
+        &key,
+        Some(&value),
         max_steps,
         Some(achieved_states.collected_states),
     )?;
     let achieved_states = check_mc_get(
         &mut sys,
-        node.clone(),
-        proc.clone(),
-        key.clone(),
-        None,
+        &proc,
+        &key,
+        None::<&String>,
         max_steps,
         Some(achieved_states.collected_states),
     )?;
     check_mc_delete(
         &mut sys,
-        node,
-        proc,
-        key,
-        None,
+        &proc,
+        &key,
+        None::<&String>,
         max_steps,
         Some(achieved_states.collected_states),
     )?;
@@ -967,16 +973,14 @@ fn test_model_checking_node_removed(config: &TestConfig) -> TestResult {
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
-        let proc = sys.process_names().choose(&mut rand).unwrap().clone();
-        let node = sys.proc_node_name(&proc);
-        let res = check_mc_put(&mut sys, node, proc, k.clone(), v.clone(), 10, states.clone())?;
-        assert!(states.clone().is_none() || states.clone().unwrap() != res.collected_states);
+        let proc = random_proc(&sys, &mut rand);
+        let res = check_mc_put(&mut sys, &proc, &k, &v, 10, states.clone())?;
         states = Some(res.collected_states);
         kv.insert(k, v);
     }
 
     // remove a node from the system
-    let removed = sys.process_names().choose(&mut rand).unwrap().clone();
+    let removed = random_proc(&sys, &mut rand);
     states = Some(check_mc_node_removed(&mut sys, &removed, 15, states.unwrap())?.collected_states);
     let alive_proc = sys
         .process_names()
@@ -985,8 +989,7 @@ fn test_model_checking_node_removed(config: &TestConfig) -> TestResult {
         .collect::<Vec<String>>();
     for (k, v) in kv {
         let proc = alive_proc.choose(&mut rand).unwrap().clone();
-        let node = sys.proc_node_name(&proc);
-        states = Some(check_mc_get(&mut sys, node, proc, k, Some(v), 6, states)?.collected_states);
+        states = Some(check_mc_get(&mut sys, &proc, &k, Some(&v), 10, states)?.collected_states);
     }
     Ok(true)
 }

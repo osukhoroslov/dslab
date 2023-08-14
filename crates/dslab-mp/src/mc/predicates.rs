@@ -49,10 +49,10 @@ pub mod invariants {
         })
     }
 
-    /// Checks that state depth does not exceed the given value.
-    pub fn state_depth_last_stage(depth: u64) -> InvariantFn {
+    /// Checks that state depth for current run does not exceed the given value.
+    pub fn state_depth_current_run(depth: u64) -> InvariantFn {
         boxed!(move |state: &McState| {
-            if state.current_stage_trace().len() > depth as usize {
+            if state.current_run_trace().len() > depth as usize {
                 Err(format!("state depth exceeds maximum allowed depth {depth}"))
             } else {
                 Ok(())
@@ -180,13 +180,13 @@ pub mod goals {
         })
     }
 
-    /// Checks if trace to given state matched the predicate n times.
+    /// Checks if trace to given state has at least `n` events matching the predicate.
     pub fn event_happened_n_times<F>(predicate: F, n: usize) -> GoalFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = state.current_stage_trace().iter().filter(|x| predicate(x)).count();
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
             if event_count >= n {
                 Some(format!("event occured {event_count} >= {n} times"))
             } else {
@@ -279,13 +279,13 @@ pub mod collects {
         boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
     }
 
-    /// Checks if trace to given state matched the predicate n times.
+    /// Checks if trace to given state has at least `n` events matching the predicate.
     pub fn event_happened_n_times<F>(predicate: F, n: usize) -> CollectFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = state.current_stage_trace().iter().filter(|x| predicate(x)).count();
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
             event_count >= n
         })
     }
