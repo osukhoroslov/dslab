@@ -884,7 +884,6 @@ fn check_mc_node_removed(
     max_steps: u64,
     start_states: HashSet<McState>,
 ) -> Result<McStats, String> {
-    let removed_node = &sys.proc_node_name(removed_proc);
     let process_names = sys.process_names();
 
     let strategy_config = StrategyConfig::default()
@@ -899,7 +898,7 @@ fn check_mc_node_removed(
             sys.send_local_message(proc.clone(), proc, msg.clone());
         }
     });
-    sys.network().disconnect_node(removed_node);
+    sys.network().disconnect_node(removed_proc);
     match res {
         Ok(stats) => Ok(stats),
         Err(err) => {
