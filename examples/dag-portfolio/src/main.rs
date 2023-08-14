@@ -100,6 +100,7 @@ fn run_experiments(args: &Args) {
             &ParserConfig {
                 reference_speed: 100.,
                 ignore_memory: true,
+                ..ParserConfig::default()
             },
         );
 
