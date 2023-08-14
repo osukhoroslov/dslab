@@ -120,18 +120,6 @@ pub fn evaluate_assignment(
     };
 
     let cur_net_time = 1. / network.bandwidth(ctx.id(), resources[resource].id);
-    let input_load_time = match data_transfer_strategy {
-        DataTransferStrategy::Eager => dag
-            .get_task(task_id)
-            .inputs
-            .iter()
-            .filter(|f| dag.get_inputs().contains(f))
-            .map(|&f| dag.get_data_item(f).size * cur_net_time)
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap_or(0.),
-        DataTransferStrategy::Lazy => 0.,
-    };
-    let start_time = start_time.max(input_load_time);
 
     let download_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => 0.,
@@ -142,14 +130,10 @@ pub fn evaluate_assignment(
             .map(|&f| match data_transfer_mode {
                 DataTransferMode::ViaMasterNode => dag.get_data_item(f).size * cur_net_time,
                 DataTransferMode::Direct => {
-                    if !dag.get_inputs().contains(&f) {
-                        if data_location[&f] == resources[resource].id {
-                            0.
-                        } else {
-                            dag.get_data_item(f).size / network.bandwidth(data_location[&f], resources[resource].id)
-                        }
+                    if data_location[&f] == resources[resource].id {
+                        0.
                     } else {
-                        dag.get_data_item(f).size * cur_net_time
+                        dag.get_data_item(f).size / network.bandwidth(data_location[&f], resources[resource].id)
                     }
                 }
                 DataTransferMode::Manual => 0.,

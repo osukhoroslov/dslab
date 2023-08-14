@@ -50,12 +50,38 @@ impl DagSimulation {
         });
     }
 
+    fn add_input_output_tasks(&mut self, dag: &mut DAG) {
+        let master_resource = self.resource_configs.iter().position(|r| r.name == "master").unwrap();
+
+        for task in 0..dag.get_tasks().len() {
+            dag.set_resource_restriction(task, ResourceRestriction::Except([master_resource].into()));
+        }
+        if !dag.get_inputs().is_empty() {
+            let inputs = dag.get_inputs().clone();
+            let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(input_task, ResourceRestriction::Only([master_resource].into()));
+            for input in inputs.into_iter() {
+                dag.set_as_task_output(input, input_task);
+            }
+        }
+        if !dag.get_outputs().is_empty() {
+            let outputs = dag.get_outputs().clone();
+            let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(output_task, ResourceRestriction::Only([master_resource].into()));
+            for output in outputs.into_iter() {
+                dag.add_data_dependency(output, output_task);
+            }
+        }
+    }
+
     /// Initializes DAG simulation.
     pub fn init(&mut self, mut dag: DAG) -> Rc<RefCell<DAGRunner>> {
         let net_ctx = self.sim.create_context("net");
         let network = Rc::new(RefCell::new(self.network_config.make_network(net_ctx)));
         self.sim.add_handler("net", network.clone());
-        let scheduler_resource = self.resource_configs.iter().position(|r| r.name == "scheduler");
+        if !self.resource_configs.iter().any(|r| r.name == "master") {
+            self.add_resource("master", 1., 1, 0);
+        }
         let resources = self
             .resource_configs
             .iter()
@@ -77,30 +103,12 @@ impl DagSimulation {
                 }
             })
             .collect::<Vec<_>>();
-        if let Some(pos) = scheduler_resource {
-            for task in 0..dag.get_tasks().len() {
-                dag.set_resource_restriction(task, ResourceRestriction::Except([pos].into()));
-            }
-            if !dag.get_inputs().is_empty() {
-                let inputs = dag.get_inputs().clone();
-                let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
-                dag.set_resource_restriction(input_task, ResourceRestriction::Only([pos].into()));
-                for input in inputs.into_iter() {
-                    dag.set_as_task_output(input_task, input);
-                }
-            }
-            if !dag.get_outputs().is_empty() {
-                let outputs = dag.get_outputs().clone();
-                let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
-                dag.set_resource_restriction(output_task, ResourceRestriction::Only([pos].into()));
-                for output in outputs.into_iter() {
-                    dag.add_data_dependency(output, output_task);
-                }
-            }
 
-            assert!(dag.get_inputs().is_empty());
-            assert!(dag.get_outputs().is_empty());
-        }
+        self.add_input_output_tasks(&mut dag);
+
+        assert!(dag.get_inputs().is_empty());
+        assert!(dag.get_outputs().is_empty());
+
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
             network.clone(),

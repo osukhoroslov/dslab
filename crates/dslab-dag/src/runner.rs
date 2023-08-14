@@ -183,35 +183,9 @@ impl DAGRunner {
         if let Some(makespan) = actions
             .iter()
             .filter_map(|action| match action {
-                Action::ScheduleTask {
-                    expected_span,
-                    task,
-                    resource,
-                    ..
+                Action::ScheduleTask { expected_span, .. } | Action::ScheduleTaskOnCores { expected_span, .. } => {
+                    expected_span.as_ref().map(|x| x.finish())
                 }
-                | Action::ScheduleTaskOnCores {
-                    expected_span,
-                    task,
-                    resource,
-                    ..
-                } => expected_span.as_ref().map(|x| {
-                    x.finish()
-                        + self
-                            .dag
-                            .get_task(*task)
-                            .outputs
-                            .iter()
-                            .filter(|f| self.dag.get_outputs().contains(f))
-                            .map(|&f| {
-                                self.dag.get_data_item(f).size
-                                    / self
-                                        .network
-                                        .borrow()
-                                        .bandwidth(self.resources[*resource].id, self.ctx.id())
-                            })
-                            .max_by(|a, b| a.total_cmp(b))
-                            .unwrap_or(0.)
-                }),
                 Action::TransferData { .. } => None,
             })
             .max_by(|a, b| a.total_cmp(b))
@@ -274,6 +248,10 @@ impl DAGRunner {
             > self.resources.iter().map(|r| r.compute.borrow().cores_total()).max()
         {
             log_error!(self.ctx, "some tasks require more cores than any resource can provide");
+            return false;
+        }
+        if !self.dag.get_inputs().is_empty() || !self.dag.get_outputs().is_empty() {
+            log_error!(self.ctx, "graph inputs and outputs must be empty");
             return false;
         }
         true

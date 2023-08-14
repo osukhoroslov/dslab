@@ -131,10 +131,6 @@ impl LookaheadScheduler {
                 let mut output_time: f64 = 0.;
                 for &output in dag.get_task(task_id).outputs.iter() {
                     data_locations.insert(output, resources[resource].id);
-                    if dag.get_outputs().contains(&output) {
-                        output_time = output_time
-                            .max(dag.get_data_item(output).size / network.bandwidth(resources[resource].id, ctx.id()))
-                    }
                 }
                 task_locations.insert(task_id, resources[resource].id);
                 to_undo.push((
@@ -222,11 +218,6 @@ impl LookaheadScheduler {
                     output_time = 0.;
                     for &output in dag.get_task(child).outputs.iter() {
                         data_locations.insert(output, resources[resource].id);
-                        if dag.get_outputs().contains(&output) {
-                            output_time = output_time.max(
-                                dag.get_data_item(output).size / network.bandwidth(resources[resource].id, ctx.id()),
-                            )
-                        }
                     }
                     task_locations.insert(child, resources[resource].id);
 
