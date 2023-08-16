@@ -144,9 +144,9 @@ impl Process for PostponedReceiverNode {
     }
 
     fn set_state(&mut self, state: Rc<dyn ProcessState>) {
-        let postponed_state = (*state).as_any().downcast_ref::<Self>().unwrap();
-        self.timer_fired = postponed_state.timer_fired;
-        self.message = postponed_state.message.clone();
+        let state = state.downcast_ref::<Self>().unwrap();
+        self.timer_fired = state.timer_fired;
+        self.message = state.message.clone();
     }
 }
 
@@ -220,8 +220,8 @@ impl Process for TimerNode {
     }
 
     fn set_state(&mut self, state: Rc<dyn ProcessState>) {
-        let postponed_state = (*state).as_any().downcast_ref::<Self>().unwrap();
-        self.timer_fired = postponed_state.timer_fired;
+        let state = state.downcast_ref::<Self>().unwrap();
+        self.timer_fired = state.timer_fired;
     }
 }
 
