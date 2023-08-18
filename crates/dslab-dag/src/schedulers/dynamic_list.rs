@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -316,7 +316,7 @@ impl DynamicListScheduler {
             .resources
             .iter()
             .enumerate()
-            .filter(|(_id, resource)| resource.cores_available > 0 && resource.memory_available > 0)
+            .filter(|(_id, resource)| resource.cores_available > 0)
             .map(|(id, resource)| Resource {
                 id,
                 cores: resource.cores,
@@ -339,7 +339,7 @@ impl DynamicListScheduler {
         }
         let task_ranks: Vec<f64> = task_ranks.iter().map(|r| r / max_rank).collect();
 
-        let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<HashSet<usize>>();
+        let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<BTreeSet<usize>>();
 
         resources.sort_by(|a, b| {
             b.speed
@@ -369,7 +369,6 @@ impl DynamicListScheduler {
                             resource.cores_available >= dag.get_task(*t).min_cores
                                 && resource.memory_available >= dag.get_task(*t).memory
                         })
-                        .sorted_by(|&a, &b| task_ranks[*b].total_cmp(&task_ranks[*a]))
                         .min_by(|&a, &b| match self.strategy.task_criterion {
                             TaskCriterion::RankPackMult => (task_ranks[*b] * dot_product(dag.get_task(*b), resource))
                                 .total_cmp(&(task_ranks[*a] * dot_product(dag.get_task(*a), resource)))
@@ -389,12 +388,29 @@ impl DynamicListScheduler {
                 let task = dag.get_task(task_id);
                 ready_tasks.remove(&task_id);
 
-                resource.cores_available -= task.max_cores;
+                let get_max_cores_for_efficiency = |efficiency: f64| -> u32 {
+                    for cores in (1..resource.cores_available).rev() {
+                        let cur = task.cores_dependency.speedup(cores) / cores as f64;
+                        if cur >= efficiency {
+                            return cores;
+                        }
+                    }
+                    1
+                };
+
+                let cores = match self.strategy.cores_criterion {
+                    CoresCriterion::MaxCores => resource.cores_available,
+                    CoresCriterion::Efficiency90 => get_max_cores_for_efficiency(0.9),
+                    CoresCriterion::Efficiency50 => get_max_cores_for_efficiency(0.5),
+                };
+                let cores = cores.clamp(task.min_cores, task.max_cores);
+
+                resource.cores_available -= cores;
                 resource.memory_available -= task.memory;
                 result.push(Action::ScheduleTask {
                     task: task_id,
                     resource: resource.id,
-                    cores: task.max_cores,
+                    cores,
                     expected_span: None,
                 });
                 for &data_item in task.outputs.iter() {
@@ -408,6 +424,9 @@ impl DynamicListScheduler {
 }
 
 fn dot_product(task: &Task, resource: &Resource) -> f64 {
+    if resource.memory == 0 {
+        0.
+    }
     // When computing the dot product, task requirements and available resources
     // are normalized by the resource capacity
     let cores_product = resource.cores_available * task.max_cores;
