@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -263,7 +263,7 @@ impl DynamicListScheduler {
                 .unwrap();
 
             let get_max_cores_for_efficiency = |efficiency: f64| -> u32 {
-                for cores in (1..resources[best_resource].cores_available).rev() {
+                for cores in (1..=resources[best_resource].cores_available).rev() {
                     let cur = dag.get_task(task).cores_dependency.speedup(cores) / cores as f64;
                     if cur >= efficiency {
                         return cores;
@@ -339,7 +339,7 @@ impl DynamicListScheduler {
         }
         let task_ranks: Vec<f64> = task_ranks.iter().map(|r| r / max_rank).collect();
 
-        let mut ready_tasks = dag.get_ready_tasks().iter().cloned().collect::<BTreeSet<usize>>();
+        let mut ready_tasks = dag.get_ready_tasks().clone();
 
         resources.sort_by(|a, b| {
             b.speed
@@ -389,7 +389,7 @@ impl DynamicListScheduler {
                 ready_tasks.remove(&task_id);
 
                 let get_max_cores_for_efficiency = |efficiency: f64| -> u32 {
-                    for cores in (1..resource.cores_available).rev() {
+                    for cores in (1..=resource.cores_available).rev() {
                         let cur = task.cores_dependency.speedup(cores) / cores as f64;
                         if cur >= efficiency {
                             return cores;
@@ -424,14 +424,13 @@ impl DynamicListScheduler {
 }
 
 fn dot_product(task: &Task, resource: &Resource) -> f64 {
-    if resource.memory == 0 {
-        return 0.;
-    }
     // When computing the dot product, task requirements and available resources
     // are normalized by the resource capacity
-    let cores_product = resource.cores_available * task.max_cores;
-    let memory_product = resource.memory_available * task.memory;
-    (cores_product as f64 / resource.cores.pow(2) as f64 + memory_product as f64 / resource.memory.pow(2) as f64) / 2.
+    let mut result = (resource.cores_available * task.max_cores) as f64 / resource.cores.pow(2) as f64;
+    if resource.memory > 0 {
+        result += (resource.memory_available * task.memory) as f64 / resource.memory.pow(2) as f64;
+    }
+    result / 2.
 }
 
 impl Scheduler for DynamicListScheduler {
