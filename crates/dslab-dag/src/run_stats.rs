@@ -109,13 +109,29 @@ impl RunStats {
         }
 
         self.max_cpu_utilization = self.max_used_cores as f64 / total_cores as f64;
-        self.max_memory_utilization = self.max_used_memory as f64 / total_memory as f64;
+        self.max_memory_utilization = if total_memory > 0 {
+            self.max_used_memory as f64 / total_memory as f64
+        } else {
+            1.
+        };
         self.cpu_utilization_used = self.cpu_utilization / time / total_cores_used as f64;
-        self.memory_utilization_used = self.memory_utilization / time / total_memory_used as f64;
+        self.memory_utilization_used = if total_memory_used > 0 {
+            self.memory_utilization / time / total_memory_used as f64
+        } else {
+            1.
+        };
         self.cpu_utilization_active = self.cpu_utilization / total_cores_active;
-        self.memory_utilization_active = self.memory_utilization / total_memory_active;
+        self.memory_utilization_active = if total_memory_active > 0. {
+            self.memory_utilization / total_memory_active
+        } else {
+            1.
+        };
         self.cpu_utilization /= time * total_cores as f64;
-        self.memory_utilization /= time * total_memory as f64;
+        if self.memory_utilization > 0. {
+            self.memory_utilization /= time * total_memory as f64;
+        } else {
+            self.memory_utilization = 1.;
+        }
         self.used_resource_count = self.used_resources.len();
     }
 }
