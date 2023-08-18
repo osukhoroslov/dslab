@@ -618,7 +618,7 @@
             </span>.ctx
             .borrow_mut()
             .emit_self(ContainerEndEvent { id: container_id }, delay);
-        <span class="kw">let </span><span class="kw-2">mut </span>container = <span class="self">self</span>.container_manager.get_container_mut(container_id).unwrap();
+        <span class="kw">let </span>container = <span class="self">self</span>.container_manager.get_container_mut(container_id).unwrap();
         container.end_event = <span class="prelude-val">Some</span>(event_id);
         <span class="kw">if </span>delay == <span class="number">0.0 </span>{
             container.status = ContainerStatus::Terminated;
