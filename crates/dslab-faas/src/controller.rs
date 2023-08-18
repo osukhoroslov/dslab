@@ -41,6 +41,7 @@ impl Controller {
     fn idle_deploy(&mut self, app_id: usize, expected_invocation: u64, time: f64) {
         let next_invocation = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
         if next_invocation != expected_invocation {
+            // do not deploy container when the expected invocation has already happened
             return;
         }
         let reg = self.function_registry.borrow();
