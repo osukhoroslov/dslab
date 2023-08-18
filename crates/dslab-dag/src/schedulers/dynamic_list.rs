@@ -425,7 +425,7 @@ impl DynamicListScheduler {
 
 fn dot_product(task: &Task, resource: &Resource) -> f64 {
     if resource.memory == 0 {
-        0.
+        return 0.;
     }
     // When computing the dot product, task requirements and available resources
     // are normalized by the resource capacity
