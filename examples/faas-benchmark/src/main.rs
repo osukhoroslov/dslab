@@ -10,7 +10,9 @@ use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::Config;
 use dslab_faas::cpu::IgnoredCpuPolicy;
-use dslab_faas::extra::azure_trace::{process_azure_trace, AppPreference, AzureTraceConfig, StartGenerator};
+use dslab_faas::extra::azure_trace_2019::{
+    process_azure_2019_trace, AppPreference, Azure2019TraceConfig, StartGenerator,
+};
 use dslab_faas::resource::ResourceProvider;
 use dslab_faas::simulation::ServerlessSimulation;
 use dslab_faas::trace::Trace;
@@ -89,7 +91,7 @@ fn main() {
         Preset::Skewed => vec![AppPreference::new(1, 0.0, 0.1), AppPreference::new(29, 0.4, 0.6)],
         Preset::Balanced => vec![AppPreference::new(30, 0.48, 0.52)],
     };
-    let trace_config = AzureTraceConfig {
+    let trace_config = Azure2019TraceConfig {
         time_period: 24 * 60,
         cold_start_latency: 0.5,
         app_preferences: prefs,
@@ -97,7 +99,7 @@ fn main() {
         rps: Some(args.rps),
         ..Default::default()
     };
-    let trace = process_azure_trace(Path::new(&args.trace), trace_config);
+    let trace = process_azure_2019_trace(Path::new(&args.trace), trace_config);
     println!("Trace generated successfully!");
     if let Some(path) = args.dump {
         dump_trace(&trace, Path::new(&path));
