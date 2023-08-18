@@ -123,12 +123,18 @@ impl Scheduler for LocalityBasedScheduler {
         let start_idx = (self.hasher.hash(app.id as u64) % (hosts.len() as u64)) as usize;
         let mut cycle = false;
         let mut idx = start_idx;
+        let mut allocatable_idx = usize::MAX;
         while !cycle {
-            if hosts[idx].borrow().can_invoke(app, false) {
+            if self.warm_only && hosts[idx].borrow().can_invoke(app, false) {
                 break;
             }
-            if !self.warm_only && hosts[idx].borrow().can_allocate(app.get_resources()) {
-                break;
+            if hosts[idx].borrow().can_allocate(app.get_resources()) {
+                if !self.warm_only {
+                    break;
+                }
+                if allocatable_idx == usize::MAX {
+                    allocatable_idx = idx;
+                }
             }
             idx = (idx + self.step) % hosts.len();
             if idx == start_idx {
@@ -136,6 +142,9 @@ impl Scheduler for LocalityBasedScheduler {
             }
         }
         if cycle {
+            if allocatable_idx != usize::MAX {
+                return allocatable_idx;
+            }
             start_idx
         } else {
             idx

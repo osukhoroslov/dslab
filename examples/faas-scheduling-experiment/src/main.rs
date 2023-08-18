@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +24,12 @@ struct ExperimentConfig {
     pub schedulers: Vec<String>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Preset {
+    Skewed,
+    Balanced,
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -32,6 +38,9 @@ struct Args {
     /// Path to a simulation config in YAML format.
     #[arg(long)]
     config: String,
+    /// Workload preset.
+    #[arg(long, value_enum)]
+    preset: Preset,
     /// Plot output path.
     #[arg(long)]
     plot: String,
@@ -48,12 +57,16 @@ fn main() {
     let base_config = experiment_config.base_config;
     let rps_vec = (1..15).map(|x| x as f64).collect::<Vec<f64>>();
     let mut points = vec![Vec::with_capacity(rps_vec.len()); schedulers.len()];
+    let prefs = match args.preset {
+        Preset::Skewed => vec![AppPreference::new(1, 0.02, 0.05), AppPreference::new(49, 0.45, 0.55)],
+        Preset::Balanced => vec![AppPreference::new(50, 0.45, 0.55)],
+    };
     for rps in rps_vec.iter() {
         let trace_config = Azure2019TraceConfig {
             time_period: 60,
             duration_generator: DurationGenerator::PrefittedLognormal,
             start_generator: StartGenerator::PoissonFit,
-            app_preferences: vec![AppPreference::new(1, 0.02, 0.05), AppPreference::new(49, 0.45, 0.55)],
+            app_preferences: prefs.clone(),
             force_fixed_memory: Some(256),
             rps: Some(*rps),
             ..Default::default()

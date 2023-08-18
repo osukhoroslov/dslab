@@ -6,13 +6,12 @@ base_config:
           quantity: 26624
       invoker: FIFOInvoker
       count: 8
-  coldstart_policy: FixedTimeColdStartPolicy[keepalive=600,prewarm=0]
-  cpu_policy: isolated
+  coldstart_policy: FixedTimeColdStartPolicy[keepalive=1200,prewarm=0]
+  cpu_policy: contended
   idle_deployer: BasicDeployer
 schedulers:
-  - LocalityBasedScheduler[warm_only=true]
   - LocalityBasedScheduler[warm_only=false]
   - RandomScheduler[seed=1]
-  - LeastLoadedScheduler[prefer_warm=false,use_invocation_count=true,avoid_queueing=false]
+  - LeastLoadedScheduler[prefer_warm=false,use_invocation_count=true,avoid_queueing=true]
   - RoundRobinScheduler
-  - HermesScheduler[use_invocation_count=true,avoid_queueing=false]
+  - HermodScheduler[prefer_warm=false,use_invocation_count=true,avoid_queueing=true]

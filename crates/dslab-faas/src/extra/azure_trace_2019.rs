@@ -10,8 +10,9 @@ use std::str::FromStr;
 use csv::ReaderBuilder;
 use indexmap::{IndexMap, IndexSet};
 use rand::prelude::*;
-use rand_distr::{Distribution, Exp, LogNormal};
 use rand_pcg::Pcg64;
+use rv::dist::{Empirical, Exponential, LogNormal};
+use rv::traits::Rv;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
 
@@ -106,6 +107,7 @@ fn app_id(id: &str) -> String {
 
 /// Experiment generator will choose `count` random apps with popularity in range
 /// [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+#[derive(Copy, Clone)]
 pub struct AppPreference {
     pub count: usize,
     pub left: f64,
@@ -134,7 +136,7 @@ impl AppPreference {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum DurationGenerator {
     /// Simple duration generator from quantiles.
     Piecewise,
@@ -144,14 +146,17 @@ pub enum DurationGenerator {
     Lognormal,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum StartGenerator {
     /// For each 1-minute bucket select each starting time uniformly at random within that bucket.
     BucketUniform,
     /// Fit Poisson process to buckets and generate the invocations from it.
     PoissonFit,
+    /// Generate invocations from empirical distribution.
+    EmpiricalFit,
 }
 
+#[derive(Clone)]
 pub struct Azure2019TraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).
     pub time_period: u64,
@@ -393,6 +398,32 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
                     if total > 0 {
                         inv_map.insert(id.clone(), (begin, total));
                     }
+                } else if config.start_generator == StartGenerator::EmpiricalFit {
+                    let mut int_id = fn_id.len();
+                    if let Some(idx) = fn_id.get(&id).copied() {
+                        int_id = idx;
+                    } else {
+                        fn_id.insert(id.clone(), fn_id.len());
+                    }
+                    let begin = invocations.len();
+                    let mut total = 0;
+                    let mut samples = Vec::new();
+                    for t in 0..bound {
+                        let cnt = usize::from_str(&record[4 + t]).unwrap();
+                        for _ in 0..cnt {
+                            samples.push((t * 60) as f64);
+                        }
+                        total += cnt;
+                    }
+                    if total > 0 {
+                        let dist = Empirical::new(samples);
+                        for _ in 0..total {
+                            let second =
+                                dist.draw(&mut gen) + gen.gen_range(0.0..60.0) + ((part_id * 1440 * 60) as f64);
+                            invocations.push((int_id, second, 0.));
+                        }
+                        inv_map.insert(id.clone(), (begin, total));
+                    }
                 } else {
                     let mut total = 0;
                     for t in 0..bound {
@@ -411,8 +442,8 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
             let limit = (config.time_period as f64).min(((part_id + 1) as f64) * 1440.);
             for (id, (s, k)) in poisson_data.drain(..) {
                 let lambda = (s as f64) / (k as f64) * poisson_scale_factor;
-                let dist = Exp::new(lambda).unwrap();
-                let mut t = (part_id as f64) * 1440. + dist.sample(&mut gen);
+                let dist = Exponential::new(lambda).unwrap();
+                let mut t = (part_id as f64) * 1440. + <Exponential as Rv<f64>>::draw(&dist, &mut gen);
                 let begin = invocations.len();
                 let mut int_id = fn_id.len();
                 if let Some(idx) = fn_id.get(&id).copied() {
@@ -422,7 +453,7 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
                 }
                 while t < limit {
                     invocations.push((int_id, t * 60., 0.));
-                    t += dist.sample(&mut gen);
+                    t += <Exponential as Rv<f64>>::draw(&dist, &mut gen);
                 }
                 if begin != invocations.len() {
                     inv_map.insert(id, (begin, invocations.len() - begin));
@@ -453,7 +484,7 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
             DurationGenerator::PrefittedLognormal => {
                 let dist = LogNormal::new(-0.38, 2.36).unwrap();
                 for inv in invocations.iter_mut() {
-                    inv.2 = f64::max(0.001, dist.sample(&mut gen));
+                    inv.2 = f64::max(0.001, dist.draw(&mut gen));
                 }
             }
             DurationGenerator::Lognormal => {
@@ -471,7 +502,7 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
                         assert!(squared_dev >= 0.);
                         let dist = LogNormal::new(median.ln(), squared_dev.sqrt()).unwrap();
                         for inv in &mut invocations[begin..begin + len] {
-                            inv.2 = f64::max(0.001, dist.sample(&mut gen));
+                            inv.2 = f64::max(0.001, dist.draw(&mut gen));
                         }
                     }
                 }
@@ -483,7 +514,7 @@ pub fn process_azure_2019_trace(path: &Path, config: Azure2019TraceConfig) -> Az
         let dist = LogNormal::new(-0.38, 2.36).unwrap();
         for inv in invocations.iter_mut() {
             if inv.2 == 0. {
-                inv.2 = f64::max(0.001, dist.sample(&mut gen));
+                inv.2 = f64::max(0.001, dist.draw(&mut gen));
             }
         }
     }

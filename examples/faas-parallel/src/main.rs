@@ -28,7 +28,7 @@ fn main() {
     let mut policies: Vec<Box<dyn ColdStartPolicy + Send>> = Vec::new();
     let mut descr = Vec::new();
     for len in &[5.0, 10.0, 20.0, 45.0, 60.0, 90.0, 120.0, 150.0, 180.0] {
-        policies.push(Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0)));
+        policies.push(Box::new(FixedTimeColdStartPolicy::new(len * 60.0, 0.0, false)));
         descr.push(format!("{}-minute keepalive", len));
     }
     let configs: Vec<_> = policies

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use rand::prelude::*;
 
-use crate::coldstart::ColdStartPolicy;
+use crate::coldstart::{ColdStartPolicy, KeepaliveDecision};
 use crate::container::Container;
 use crate::extra::arima_extra::{arima_forecast, autofit};
 use crate::function::Application;
@@ -120,6 +120,7 @@ pub struct HybridHistogramPolicy {
     n_bins: usize,
     data: HashMap<usize, ApplicationData>,
     last: HashMap<usize, f64>,
+    already_set: HashMap<(usize, usize), f64>,
 }
 
 enum Pattern {
@@ -141,6 +142,7 @@ impl HybridHistogramPolicy {
             n_bins,
             data: HashMap::new(),
             last: HashMap::new(),
+            already_set: HashMap::new(),
         }
     }
 
@@ -192,15 +194,28 @@ impl HybridHistogramPolicy {
 }
 
 impl ColdStartPolicy for HybridHistogramPolicy {
-    fn keepalive_window(&mut self, container: &Container) -> f64 {
-        match self.describe_pattern(container.app_id) {
-            Pattern::Uncertain => self.range,
+    fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision {
+        if let Some(t) = self.already_set.get(&(container.host_id, container.id)) {
+            if t - container.last_change <= 0.0 {
+                // last_change should be equal to current time
+                return KeepaliveDecision::TerminateNow;
+            } else {
+                return KeepaliveDecision::OldWindow;
+            }
+        }
+        let keepalive = match self.describe_pattern(container.app_id) {
+            Pattern::Uncertain => {
+                self.already_set
+                    .insert((container.host_id, container.id), container.last_change + self.range);
+                self.range
+            }
             Pattern::Certain => {
                 let tail = 1 + self.get_app(container.app_id).get_tail();
                 (tail as f64) * self.bin_len * (1. + self.hist_margin)
             }
             Pattern::OutOfBounds => self.get_app(container.app_id).arima() * self.arima_margin * 2.,
-        }
+        };
+        KeepaliveDecision::NewWindow(keepalive)
     }
 
     fn prewarm_window(&mut self, app: &Application) -> f64 {

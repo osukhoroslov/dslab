@@ -3,7 +3,6 @@ use serde::Serialize;
 #[derive(Clone, Serialize)]
 pub struct ContainerEndEvent {
     pub id: usize,
-    pub expected_count: usize,
 }
 
 #[derive(Clone, Serialize)]
@@ -14,6 +13,7 @@ pub struct ContainerStartEvent {
 #[derive(Clone, Serialize)]
 pub struct IdleDeployEvent {
     pub id: usize,
+    pub expected_invocation: u64,
 }
 
 #[derive(Clone, Serialize)]

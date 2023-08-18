@@ -7,30 +7,38 @@ use crate::host::Host;
 use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
-/// Refer to <https://arxiv.org/abs/2111.07226>
-pub struct HermesScheduler {
+/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>
+pub struct HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
+    /// Passed to `high_load_fallback`.
+    prefer_warm: bool,
+    /// If true, the scheduler uses invocation count instead of CPU usage.
+    /// Also passed to `high_load_fallback`.
     use_invocation_count: bool,
+    /// If true, the scheduler avoids decisions that would result in queueing of the invocation.
+    /// Also passed to `high_load_fallback`.
     avoid_queueing: bool,
 }
 
-impl HermesScheduler {
-    pub fn new(use_invocation_count: bool, avoid_queueing: bool) -> Self {
+impl HermodScheduler {
+    pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
-            high_load_fallback: LeastLoadedScheduler::new(true, use_invocation_count, avoid_queueing),
+            high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
+            prefer_warm,
             use_invocation_count,
             avoid_queueing,
         }
     }
 
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
+        let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
         let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();
         let avoid_queueing = options.get("avoid_queueing").unwrap().parse::<bool>().unwrap();
-        Self::new(use_invocation_count, avoid_queueing)
+        Self::new(prefer_warm, use_invocation_count, avoid_queueing)
     }
 }
 
-impl Scheduler for HermesScheduler {
+impl Scheduler for HermodScheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize {
         let mut ans = 0;
         // 0 -> empty, no warm container
@@ -72,8 +80,8 @@ impl Scheduler for HermesScheduler {
 
     fn to_string(&self) -> String {
         format!(
-            "HermesScheduler[use_invocation_count={},avoid_queueing={}]",
-            self.use_invocation_count, self.avoid_queueing
+            "HermodScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]",
+            self.prefer_warm, self.use_invocation_count, self.avoid_queueing
         )
     }
 }

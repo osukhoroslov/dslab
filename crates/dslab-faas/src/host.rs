@@ -6,7 +6,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 
-use crate::coldstart::ColdStartPolicy;
+use crate::coldstart::{ColdStartPolicy, KeepaliveDecision};
 use crate::container::{ContainerManager, ContainerStatus};
 use crate::cpu::{Cpu, CpuPolicy};
 use crate::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
@@ -49,7 +49,7 @@ impl Host {
         Self {
             id,
             invoker,
-            container_manager: ContainerManager::new(resources, ctx.clone()),
+            container_manager: ContainerManager::new(id, resources, ctx.clone()),
             cpu: Cpu::new(cores, cpu_policy, ctx.clone()),
             function_registry,
             invocation_registry,
@@ -100,6 +100,12 @@ impl Host {
         let invocation = &mut ir[id];
         invocation.host_id = Some(self.id);
         self.container_manager.inc_active_invocations();
+        let concurrency_limit = self
+            .function_registry
+            .borrow()
+            .get_app(invocation.app_id)
+            .unwrap()
+            .get_concurrent_invocations();
         let status = self.invoker.invoke(
             invocation,
             self.function_registry.clone(),
@@ -113,6 +119,16 @@ impl Host {
                 drop(stats);
                 drop(ir);
                 self.start_invocation(container_id, id, time);
+                if self
+                    .container_manager
+                    .get_container(container_id)
+                    .unwrap()
+                    .invocations
+                    .len()
+                    == concurrency_limit
+                {
+                    self.container_manager.move_container_to_full(container_id);
+                }
             }
             InvokerDecision::Cold((container_id, delay)) => {
                 invocation.status = InvocationStatus::WaitingForContainer;
@@ -120,6 +136,9 @@ impl Host {
                 stats.on_cold_start(invocation.app_id, invocation.func_id, delay);
                 drop(stats);
                 self.container_manager.reserve_container(container_id, id);
+                if self.container_manager.count_reservations(container_id) == concurrency_limit {
+                    self.container_manager.move_container_to_full(container_id);
+                }
             }
             _ => {
                 invocation.status = InvocationStatus::Queued;
@@ -169,16 +188,28 @@ impl Host {
             }
         } else {
             let container = self.container_manager.get_container_mut(id).unwrap();
+            container.last_change = time;
             container.status = ContainerStatus::Idle;
             let immut_container = self.container_manager.get_container(id).unwrap();
-            let keepalive = self.coldstart.borrow_mut().keepalive_window(immut_container);
-            self.new_container_end_event(id, 0, keepalive);
+            let decision = self.coldstart.borrow_mut().keepalive_decision(immut_container);
+            match decision {
+                KeepaliveDecision::NewWindow(keepalive) => {
+                    self.new_container_end_event(id, keepalive);
+                }
+                KeepaliveDecision::OldWindow => {
+                    panic!("Keepalive policy returned OldWindow for newly created container!");
+                }
+                KeepaliveDecision::TerminateNow => {
+                    // weird but ok
+                    self.new_container_end_event(id, 0.0);
+                }
+            }
         }
     }
 
-    pub fn on_container_end(&mut self, id: usize, expected: usize, time: f64) {
+    pub fn on_container_end(&mut self, id: usize, time: f64) {
         if let Some(cont) = self.container_manager.get_container(id) {
-            if cont.status == ContainerStatus::Idle && cont.started_invocations == expected {
+            if cont.status == ContainerStatus::Idle || cont.status == ContainerStatus::Terminated {
                 let delta = time - cont.last_change;
                 self.stats.borrow_mut().update_wasted_resources(delta, &cont.resources);
                 self.container_manager.delete_container(id);
@@ -201,35 +232,62 @@ impl Host {
             .borrow_mut()
             .update(invocation, self.function_registry.borrow().get_app(app_id).unwrap());
         self.container_manager.dec_active_invocations();
+        self.container_manager.try_move_container_to_free(cont_id);
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         self.stats.borrow_mut().update_invocation_stats(invocation);
         self.cpu.on_invocation_end(invocation, container, time);
-        let expect = container.started_invocations;
         let app = function_registry.get_app(app_id).unwrap();
         if container.status == ContainerStatus::Idle {
             let prewarm = f64::max(0.0, self.coldstart.borrow_mut().prewarm_window(app));
-            if prewarm != 0. {
-                self.ctx
-                    .borrow_mut()
-                    .emit(IdleDeployEvent { id: app_id }, self.controller_id, prewarm);
-                self.new_container_end_event(cont_id, expect, 0.0);
+            if prewarm > 1e-9 {
+                let expected_invocation = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
+                let ctx = self.ctx.borrow_mut();
+                ctx.emit(
+                    IdleDeployEvent {
+                        id: app_id,
+                        expected_invocation,
+                    },
+                    self.controller_id,
+                    prewarm,
+                );
+                if let Some(id) = container.end_event {
+                    ctx.cancel_event(id);
+                }
+                drop(ctx);
+                self.new_container_end_event(cont_id, 0.0);
             } else {
                 let immut_container = self.container_manager.get_container(cont_id).unwrap();
-                let keepalive = f64::max(0.0, self.coldstart.borrow_mut().keepalive_window(immut_container));
-                self.new_container_end_event(cont_id, expect, keepalive);
+                let decision = self.coldstart.borrow_mut().keepalive_decision(immut_container);
+                match decision {
+                    KeepaliveDecision::NewWindow(keepalive) => {
+                        if let Some(id) = immut_container.end_event {
+                            self.ctx.borrow_mut().cancel_event(id);
+                        }
+                        self.new_container_end_event(cont_id, f64::max(0.0, keepalive));
+                    }
+                    KeepaliveDecision::OldWindow => {}
+                    KeepaliveDecision::TerminateNow => {
+                        if let Some(id) = immut_container.end_event {
+                            self.ctx.borrow_mut().cancel_event(id);
+                        }
+                        self.new_container_end_event(cont_id, 0.0);
+                    }
+                }
             }
         }
     }
 
-    fn new_container_end_event(&mut self, container_id: usize, expected: usize, delay: f64) {
-        self.ctx.borrow_mut().emit_self(
-            ContainerEndEvent {
-                id: container_id,
-                expected_count: expected,
-            },
-            delay,
-        );
+    fn new_container_end_event(&mut self, container_id: usize, delay: f64) {
+        let event_id = self
+            .ctx
+            .borrow_mut()
+            .emit_self(ContainerEndEvent { id: container_id }, delay);
+        let mut container = self.container_manager.get_container_mut(container_id).unwrap();
+        container.end_event = Some(event_id);
+        if delay == 0.0 {
+            container.status = ContainerStatus::Terminated;
+        }
     }
 
     fn dequeue_requests(&mut self, time: f64) {
@@ -265,8 +323,8 @@ impl EventHandler for Host {
                 self.on_container_start(id, event.time);
                 self.dequeue_requests(event.time);
             }
-            ContainerEndEvent { id, expected_count } => {
-                self.on_container_end(id, expected_count, event.time);
+            ContainerEndEvent { id } => {
+                self.on_container_end(id, event.time);
             }
             InvocationEndEvent { id } => {
                 self.on_invocation_end(id, event.time);

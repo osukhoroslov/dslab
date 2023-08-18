@@ -46,6 +46,7 @@ impl ServerlessSimulation {
             function_registry.clone(),
             config.idle_deployer,
             config.scheduler,
+            stats.clone(),
         )));
         let controller_id = sim.add_handler("controller", controller.clone());
         let mut this_sim = Self {

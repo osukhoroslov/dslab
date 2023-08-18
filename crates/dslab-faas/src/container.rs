@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use dslab_core::context::SimulationContext;
+use dslab_core::event::EventId;
 
 use crate::event::ContainerStartEvent;
 use crate::function::Application;
@@ -13,17 +14,20 @@ pub enum ContainerStatus {
     Deploying,
     Running,
     Idle,
+    Terminated, // terminated containers may remain in the system due to several events with delay 0.0
 }
 
 pub struct Container {
     pub status: ContainerStatus,
     pub id: usize,
+    pub host_id: usize,
     pub deployment_time: f64,
     pub app_id: usize,
     pub invocations: FxIndexSet<usize>,
     pub resources: ResourceConsumer,
     pub started_invocations: usize,
     pub last_change: f64,
+    pub end_event: Option<EventId>,
     pub cpu_share: f64,
 }
 
@@ -44,21 +48,29 @@ impl Container {
 
 pub struct ContainerManager {
     active_invocations: usize,
+    host_id: usize,
     resources: ResourceProvider,
+    /// A map of containers by id.
     containers: FxIndexMap<usize, Container>,
-    containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
+    /// A set of containers for each app that can accommodate one more invocation.
+    free_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
+    /// A set of containers for each app that can't accommodate any more invocations.
+    full_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
     container_counter: Counter,
+    /// A set of invocations that will start on each non-running container that is being deployed.
     reservations: FxIndexMap<usize, Vec<usize>>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
 impl ContainerManager {
-    pub fn new(resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
+    pub fn new(host_id: usize, resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self {
             active_invocations: 0,
+            host_id,
             resources,
             containers: FxIndexMap::default(),
-            containers_by_app: Default::default(),
+            free_containers_by_app: Default::default(),
+            full_containers_by_app: Default::default(),
             container_counter: Counter::default(),
             reservations: FxIndexMap::default(),
             ctx,
@@ -97,9 +109,11 @@ impl ContainerManager {
         &mut self.containers
     }
 
+    /// Returns an iterator over running containers that can accommodate one more invocation of given app.
+    /// If `allow_deploying` is true, also returns containers that are being deployed.
     pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
         let limit = app.get_concurrent_invocations();
-        if let Some(set) = self.containers_by_app.get(app.id) {
+        if let Some(set) = self.free_containers_by_app.get(app.id) {
             return PossibleContainerIterator::new(
                 Some(set.iter()),
                 &self.containers,
@@ -111,6 +125,7 @@ impl ContainerManager {
         PossibleContainerIterator::new(None, &self.containers, &self.reservations, limit, allow_deploying)
     }
 
+    /// Tries to deploy a new container for given app.
     pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(usize, f64)> {
         if self.resources.can_allocate(app.get_resources()) {
             let id = self.deploy_container(app, time);
@@ -119,8 +134,14 @@ impl ContainerManager {
         None
     }
 
+    /// Reserves a deploying container for a new invocation.
     pub fn reserve_container(&mut self, id: usize, request: usize) {
         self.reservations.entry(id).or_default().push(request);
+    }
+
+    /// Counts reserved invocations for a deploying container.
+    pub fn count_reservations(&self, id: usize) -> usize {
+        self.reservations.get(&id).map(|x| x.len()).unwrap_or_default()
     }
 
     pub fn take_reservations(&mut self, id: usize) -> Option<Vec<usize>> {
@@ -129,26 +150,46 @@ impl ContainerManager {
 
     pub fn delete_container(&mut self, id: usize) {
         let container = self.containers.remove(&id).unwrap();
-        self.containers_by_app.get_mut(container.app_id).remove(&id);
+        self.free_containers_by_app.get_mut(container.app_id).remove(&id);
+        self.full_containers_by_app.get_mut(container.app_id).remove(&id);
         self.resources.release(&container.resources);
     }
 
+    /// Moves a container to free if it was full.
+    pub fn try_move_container_to_free(&mut self, id: usize) {
+        let app_id = self.containers.get(&id).unwrap().app_id;
+        let was = self.full_containers_by_app.get_mut(app_id).remove(&id);
+        if was {
+            self.free_containers_by_app.get_mut(app_id).insert(id);
+        }
+    }
+
+    pub fn move_container_to_full(&mut self, id: usize) {
+        let app_id = self.containers.get(&id).unwrap().app_id;
+        let was = self.free_containers_by_app.get_mut(app_id).remove(&id);
+        assert!(was);
+        self.full_containers_by_app.get_mut(app_id).insert(id);
+    }
+
+    /// Deploys a new container for given application.
     fn deploy_container(&mut self, app: &Application, time: f64) -> usize {
         let cont_id = self.container_counter.increment();
         let container = Container {
             status: ContainerStatus::Deploying,
             id: cont_id,
+            host_id: self.host_id,
             deployment_time: app.get_deployment_time(),
             app_id: app.id,
             invocations: Default::default(),
             resources: app.get_resources().clone(),
             started_invocations: 0,
+            end_event: None,
             last_change: time,
             cpu_share: app.get_cpu_share(),
         };
         self.resources.allocate(&container.resources);
         self.containers.insert(cont_id, container);
-        self.containers_by_app.get_mut(app.id).insert(cont_id);
+        self.free_containers_by_app.get_mut(app.id).insert(cont_id);
         self.ctx
             .borrow_mut()
             .emit_self(ContainerStartEvent { id: cont_id }, app.get_deployment_time());
@@ -188,13 +229,12 @@ impl<'a> Iterator for PossibleContainerIterator<'a> {
         if let Some(inner) = self.inner.as_mut() {
             for id in inner.by_ref() {
                 let c = self.containers.get(id).unwrap();
-                if c.status != ContainerStatus::Deploying && c.invocations.len() < self.limit {
+                if c.status != ContainerStatus::Deploying {
+                    assert!(c.invocations.len() < self.limit);
                     return Some(c);
                 }
-                if c.status == ContainerStatus::Deploying
-                    && self.allow_deploying
-                    && (!self.reserve.contains_key(id) || self.reserve.get(id).unwrap().len() < self.limit)
-                {
+                if c.status == ContainerStatus::Deploying && self.allow_deploying {
+                    assert!(!self.reserve.contains_key(id) || self.reserve.get(id).unwrap().len() < self.limit);
                     return Some(c);
                 }
             }
