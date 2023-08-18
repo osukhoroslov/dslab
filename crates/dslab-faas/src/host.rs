@@ -283,7 +283,7 @@ impl Host {
             .ctx
             .borrow_mut()
             .emit_self(ContainerEndEvent { id: container_id }, delay);
-        let mut container = self.container_manager.get_container_mut(container_id).unwrap();
+        let container = self.container_manager.get_container_mut(container_id).unwrap();
         container.end_event = Some(event_id);
         if delay == 0.0 {
             container.status = ContainerStatus::Terminated;
