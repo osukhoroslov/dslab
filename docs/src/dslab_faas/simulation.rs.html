@@ -273,6 +273,7 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::ops::Range;
@@ -321,6 +322,7 @@
             function_registry.clone(),
             config.idle_deployer,
             config.scheduler,
+            stats.clone(),
         )));
         <span class="kw">let </span>controller_id = sim.add_handler(<span class="string">&quot;controller&quot;</span>, controller.clone());
         <span class="kw">let </span><span class="kw-2">mut </span>this_sim = <span class="self">Self </span>{

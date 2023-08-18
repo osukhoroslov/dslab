@@ -75,6 +75,18 @@
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
@@ -89,12 +101,14 @@
 <span class="kw">use </span><span class="kw">crate</span>::host::Host;
 <span class="kw">use </span><span class="kw">crate</span>::invoker::InvokerDecision;
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::Scheduler;
+<span class="kw">use </span><span class="kw">crate</span>::stats::Stats;
 
 <span class="kw">pub struct </span>Controller {
     function_registry: Rc&lt;RefCell&lt;FunctionRegistry&gt;&gt;,
     hosts: Vec&lt;Rc&lt;RefCell&lt;Host&gt;&gt;&gt;,
     idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
     scheduler: Box&lt;<span class="kw">dyn </span>Scheduler&gt;,
+    stats: Rc&lt;RefCell&lt;Stats&gt;&gt;,
 }
 
 <span class="kw">impl </span>Controller {
@@ -102,16 +116,23 @@
         function_registry: Rc&lt;RefCell&lt;FunctionRegistry&gt;&gt;,
         idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
         scheduler: Box&lt;<span class="kw">dyn </span>Scheduler&gt;,
+        stats: Rc&lt;RefCell&lt;Stats&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             function_registry,
             hosts: Vec::new(),
             idle_deployer,
             scheduler,
+            stats,
         }
     }
 
-    <span class="kw">fn </span>idle_deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app_id: usize, time: f64) {
+    <span class="kw">fn </span>idle_deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app_id: usize, expected_invocation: u64, time: f64) {
+        <span class="kw">let </span>next_invocation = <span class="self">self</span>.stats.borrow().app_stats.get(app_id).unwrap().invocations;
+        <span class="kw">if </span>next_invocation != expected_invocation {
+            <span class="comment">// do not deploy container when the expected invocation has already happened
+            </span><span class="kw">return</span>;
+        }
         <span class="kw">let </span>reg = <span class="self">self</span>.function_registry.borrow();
         <span class="kw">let </span>app = reg.get_app(app_id).unwrap();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(host) = <span class="self">self</span>.idle_deployer.deploy(app, <span class="kw-2">&amp;</span><span class="self">self</span>.hosts) {
@@ -140,8 +161,11 @@
 <span class="kw">impl </span>EventHandler <span class="kw">for </span>Controller {
     <span class="kw">fn </span>on(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: Event) {
         <span class="macro">cast!</span>(<span class="kw">match </span>event.data {
-            IdleDeployEvent { id } =&gt; {
-                <span class="self">self</span>.idle_deploy(id, event.time);
+            IdleDeployEvent {
+                id,
+                expected_invocation,
+            } =&gt; {
+                <span class="self">self</span>.idle_deploy(id, expected_invocation, event.time);
             }
             InvocationStartEvent { id, func_id } =&gt; {
                 <span class="self">self</span>.invoke(id, func_id, event.time);

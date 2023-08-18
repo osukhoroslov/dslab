@@ -23,7 +23,7 @@
 </pre></div><pre class="rust"><code><span class="doccomment">/// This file contains additional resolvers for YAML configs.
 </span><span class="kw">use </span><span class="kw">crate</span>::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy};
 <span class="kw">use </span><span class="kw">crate</span>::config::parse_options;
-<span class="kw">use </span><span class="kw">crate</span>::extra::hermes::HermesScheduler;
+<span class="kw">use </span><span class="kw">crate</span>::extra::hermod::HermodScheduler;
 <span class="kw">use </span><span class="kw">crate</span>::extra::hybrid_histogram::HybridHistogramPolicy;
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::{default_scheduler_resolver, Scheduler};
 
@@ -36,9 +36,9 @@
 }
 
 <span class="kw">pub fn </span>extra_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
-    <span class="kw">if </span>s.len() &gt;= <span class="number">17 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">16</span>] == <span class="string">&quot;HermesScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
+    <span class="kw">if </span>s.len() &gt;= <span class="number">17 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">16</span>] == <span class="string">&quot;HermodScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">16</span>..s.len() - <span class="number">1</span>]);
-        <span class="kw">return </span>Box::new(HermesScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
+        <span class="kw">return </span>Box::new(HermodScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
     }
     default_scheduler_resolver(s)
 }

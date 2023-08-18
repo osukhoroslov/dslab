@@ -144,8 +144,10 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::hash_map::Iter;
-<span class="kw">use </span>std::collections::HashMap;
+<a href="#147" id="147">147</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+
+<span class="kw">use </span><span class="kw">crate</span>::util::{VecMap, VecMapIterator};
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>ResourceNameResolver {
@@ -218,12 +220,12 @@
 
 <span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>ResourceProvider {
-    resources: HashMap&lt;usize, Resource&gt;,
+    resources: VecMap&lt;Resource&gt;,
 }
 
 <span class="kw">impl </span>ResourceProvider {
     <span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;Resource&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::default();
         <span class="kw">for </span>r <span class="kw">in </span>resources.drain(..) {
             map.insert(r.id, r);
         }
@@ -232,7 +234,7 @@
 
     <span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            resources: HashMap::new(),
+            resources: Default::default(),
         }
     }
 
@@ -262,18 +264,18 @@
     }
 
     <span class="kw">pub fn </span>get_resource(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Resource&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>id)
+        <span class="self">self</span>.resources.get(id)
     }
 }
 
 <span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>ResourceConsumer {
-    resources: HashMap&lt;usize, ResourceRequirement&gt;,
+    resources: VecMap&lt;ResourceRequirement&gt;,
 }
 
 <span class="kw">impl </span>ResourceConsumer {
     <span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;ResourceRequirement&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::default();
         <span class="kw">for </span>r <span class="kw">in </span>resources.drain(..) {
             map.insert(r.id, r);
         }
@@ -282,11 +284,11 @@
 
     <span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            resources: HashMap::new(),
+            resources: Default::default(),
         }
     }
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;usize, ResourceRequirement&gt; {
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VecMapIterator&lt;ResourceRequirement&gt; {
         <span class="self">self</span>.resources.iter()
     }
 }

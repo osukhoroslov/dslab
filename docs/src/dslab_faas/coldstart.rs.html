@@ -81,6 +81,40 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
@@ -101,9 +135,19 @@
     }
 }
 
+<span class="kw">pub enum </span>KeepaliveDecision {
+    <span class="doccomment">/// A new keepalive window `w` is chosen for the container.
+    /// The container will be deallocated after `w` time units.
+    </span>NewWindow(f64),
+    <span class="doccomment">/// Nothing changes, the container will be deallocated after the old keepalive window passes.
+    </span>OldWindow,
+    <span class="doccomment">/// The container must be terminated right now.
+    </span>TerminateNow,
+}
+
 <span class="kw">pub trait </span>ColdStartPolicy: ColdStartConvertHelper {
-    <span class="doccomment">/// Maximum allowed idle time until container destruction.
-    </span><span class="kw">fn </span>keepalive_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; f64;
+    <span class="doccomment">/// Defines delay before container deallocation.
+    </span><span class="kw">fn </span>keepalive_decision(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; KeepaliveDecision;
     <span class="doccomment">/// Prewarm = x &gt; 0 =&gt; destroy container, deploy new container after x time units since execution.
     /// Prewarm = 0 =&gt; do not destroy container immediately after execution.
     </span><span class="kw">fn </span>prewarm_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application) -&gt; f64;
@@ -118,26 +162,50 @@
 <span class="kw">pub struct </span>FixedTimeColdStartPolicy {
     keepalive_window: f64,
     prewarm_window: f64,
+    <span class="doccomment">/// If true, keepalive time is reset to new `keepalive_window` after each invocation.
+    /// Otherwise keepalive is set only after the first invocation. False by default.
+    </span>reset_keepalive: bool,
+    already_set: HashMap&lt;(usize, usize), f64&gt;,
 }
 
 <span class="kw">impl </span>FixedTimeColdStartPolicy {
-    <span class="kw">pub fn </span>new(keepalive_window: f64, prewarm_window: f64) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(keepalive_window: f64, prewarm_window: f64, reset_keepalive: bool) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             keepalive_window,
             prewarm_window,
+            reset_keepalive,
+            already_set: Default::default(),
         }
     }
 
     <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>keepalive = options.get(<span class="string">&quot;keepalive&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
         <span class="kw">let </span>prewarm = options.get(<span class="string">&quot;prewarm&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
-        <span class="self">Self</span>::new(keepalive, prewarm)
+        <span class="kw">let </span>reset = options
+            .get(<span class="string">&quot;reset_keepalive&quot;</span>)
+            .map(|x| x.parse::&lt;bool&gt;().unwrap())
+            .unwrap_or(<span class="bool-val">false</span>);
+        <span class="self">Self</span>::new(keepalive, prewarm, reset)
     }
 }
 
 <span class="kw">impl </span>ColdStartPolicy <span class="kw">for </span>FixedTimeColdStartPolicy {
-    <span class="kw">fn </span>keepalive_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _container: <span class="kw-2">&amp;</span>Container) -&gt; f64 {
-        <span class="self">self</span>.keepalive_window
+    <span class="kw">fn </span>keepalive_decision(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; KeepaliveDecision {
+        <span class="kw">if </span>!<span class="self">self</span>.reset_keepalive {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = <span class="self">self</span>.already_set.get(<span class="kw-2">&amp;</span>(container.host_id, container.id)) {
+                <span class="kw">return if </span>t - container.last_change &lt;= <span class="number">0.0 </span>{
+                    <span class="comment">// last_change should be equal to current time
+                    </span>KeepaliveDecision::TerminateNow
+                } <span class="kw">else </span>{
+                    KeepaliveDecision::OldWindow
+                };
+            }
+            <span class="self">self</span>.already_set.insert(
+                (container.host_id, container.id),
+                container.last_change + <span class="self">self</span>.keepalive_window,
+            );
+        }
+        KeepaliveDecision::NewWindow(<span class="self">self</span>.keepalive_window)
     }
 
     <span class="kw">fn </span>prewarm_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _app: <span class="kw-2">&amp;</span>Application) -&gt; f64 {
@@ -148,15 +216,15 @@
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(
-            <span class="string">&quot;FixedTimeColdStartPolicy[keepalive={:.2},prewarm{:.2}]&quot;</span>,
-            <span class="self">self</span>.keepalive_window, <span class="self">self</span>.prewarm_window
+            <span class="string">&quot;FixedTimeColdStartPolicy[keepalive={:.2},prewarm={:.2},reset_keepalive={}]&quot;</span>,
+            <span class="self">self</span>.keepalive_window, <span class="self">self</span>.prewarm_window, <span class="self">self</span>.reset_keepalive
         )
     }
 }
 
 <span class="kw">pub fn </span>default_coldstart_policy_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; {
     <span class="kw">if </span>s == <span class="string">&quot;No unloading&quot; </span>{
-        <span class="kw">return </span>Box::new(FixedTimeColdStartPolicy::new(f64::MAX / <span class="number">10.0</span>, <span class="number">0.0</span>));
+        <span class="kw">return </span>Box::new(FixedTimeColdStartPolicy::new(f64::MAX / <span class="number">10.0</span>, <span class="number">0.0</span>, <span class="bool-val">true</span>));
     }
     <span class="kw">if </span>s.len() &gt;= <span class="number">26 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">25</span>] == <span class="string">&quot;FixedTimeColdStartPolicy[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">25</span>..s.len() - <span class="number">1</span>]);

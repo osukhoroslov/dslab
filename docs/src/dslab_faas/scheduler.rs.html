@@ -298,6 +298,15 @@
 <a href="#298" id="298">298</a>
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
@@ -423,12 +432,18 @@
         <span class="kw">let </span>start_idx = (<span class="self">self</span>.hasher.hash(app.id <span class="kw">as </span>u64) % (hosts.len() <span class="kw">as </span>u64)) <span class="kw">as </span>usize;
         <span class="kw">let </span><span class="kw-2">mut </span>cycle = <span class="bool-val">false</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>idx = start_idx;
+        <span class="kw">let </span><span class="kw-2">mut </span>allocatable_idx = usize::MAX;
         <span class="kw">while </span>!cycle {
-            <span class="kw">if </span>hosts[idx].borrow().can_invoke(app, <span class="bool-val">false</span>) {
+            <span class="kw">if </span><span class="self">self</span>.warm_only &amp;&amp; hosts[idx].borrow().can_invoke(app, <span class="bool-val">false</span>) {
                 <span class="kw">break</span>;
             }
-            <span class="kw">if </span>!<span class="self">self</span>.warm_only &amp;&amp; hosts[idx].borrow().can_allocate(app.get_resources()) {
-                <span class="kw">break</span>;
+            <span class="kw">if </span>hosts[idx].borrow().can_allocate(app.get_resources()) {
+                <span class="kw">if </span>!<span class="self">self</span>.warm_only {
+                    <span class="kw">break</span>;
+                }
+                <span class="kw">if </span>allocatable_idx == usize::MAX {
+                    allocatable_idx = idx;
+                }
             }
             idx = (idx + <span class="self">self</span>.step) % hosts.len();
             <span class="kw">if </span>idx == start_idx {
@@ -436,6 +451,9 @@
             }
         }
         <span class="kw">if </span>cycle {
+            <span class="kw">if </span>allocatable_idx != usize::MAX {
+                <span class="kw">return </span>allocatable_idx;
+            }
             start_idx
         } <span class="kw">else </span>{
             idx

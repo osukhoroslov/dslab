@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["default_coldstart_policy_resolver"],"struct":["FixedTimeColdStartPolicy"],"trait":["ColdStartConvertHelper","ColdStartPolicy"]};
+window.SIDEBAR_ITEMS = {"enum":["KeepaliveDecision"],"fn":["default_coldstart_policy_resolver"],"struct":["FixedTimeColdStartPolicy"],"trait":["ColdStartConvertHelper","ColdStartPolicy"]};

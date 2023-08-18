@@ -331,7 +331,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Config {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(<span class="number">0.0</span>, <span class="number">0.0</span>)),
+            coldstart_policy: Box::new(FixedTimeColdStartPolicy::new(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="bool-val">false</span>)),
             cpu_policy: Box::&lt;ContendedCpuPolicy&gt;::default(),
             idle_deployer: Box::new(BasicDeployer {}),
             scheduler: Box::new(BasicScheduler {}),

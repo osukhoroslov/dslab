@@ -275,6 +275,64 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -283,7 +341,7 @@
 <span class="kw">use </span>dslab_core::event::Event;
 <span class="kw">use </span>dslab_core::handler::EventHandler;
 
-<span class="kw">use </span><span class="kw">crate</span>::coldstart::ColdStartPolicy;
+<span class="kw">use </span><span class="kw">crate</span>::coldstart::{ColdStartPolicy, KeepaliveDecision};
 <span class="kw">use </span><span class="kw">crate</span>::container::{ContainerManager, ContainerStatus};
 <span class="kw">use </span><span class="kw">crate</span>::cpu::{Cpu, CpuPolicy};
 <span class="kw">use </span><span class="kw">crate</span>::event::{ContainerEndEvent, ContainerStartEvent, IdleDeployEvent, InvocationEndEvent};
@@ -326,7 +384,7 @@
         <span class="self">Self </span>{
             id,
             invoker,
-            container_manager: ContainerManager::new(resources, ctx.clone()),
+            container_manager: ContainerManager::new(id, resources, ctx.clone()),
             cpu: Cpu::new(cores, cpu_policy, ctx.clone()),
             function_registry,
             invocation_registry,
@@ -377,6 +435,12 @@
         <span class="kw">let </span>invocation = <span class="kw-2">&amp;mut </span>ir[id];
         invocation.host_id = <span class="prelude-val">Some</span>(<span class="self">self</span>.id);
         <span class="self">self</span>.container_manager.inc_active_invocations();
+        <span class="kw">let </span>concurrency_limit = <span class="self">self
+            </span>.function_registry
+            .borrow()
+            .get_app(invocation.app_id)
+            .unwrap()
+            .get_concurrent_invocations();
         <span class="kw">let </span>status = <span class="self">self</span>.invoker.invoke(
             invocation,
             <span class="self">self</span>.function_registry.clone(),
@@ -390,6 +454,16 @@
                 drop(stats);
                 drop(ir);
                 <span class="self">self</span>.start_invocation(container_id, id, time);
+                <span class="kw">if </span><span class="self">self
+                    </span>.container_manager
+                    .get_container(container_id)
+                    .unwrap()
+                    .invocations
+                    .len()
+                    == concurrency_limit
+                {
+                    <span class="self">self</span>.container_manager.move_container_to_full(container_id);
+                }
             }
             InvokerDecision::Cold((container_id, delay)) =&gt; {
                 invocation.status = InvocationStatus::WaitingForContainer;
@@ -397,6 +471,9 @@
                 stats.on_cold_start(invocation.app_id, invocation.func_id, delay);
                 drop(stats);
                 <span class="self">self</span>.container_manager.reserve_container(container_id, id);
+                <span class="kw">if </span><span class="self">self</span>.container_manager.count_reservations(container_id) == concurrency_limit {
+                    <span class="self">self</span>.container_manager.move_container_to_full(container_id);
+                }
             }
             <span class="kw">_ </span>=&gt; {
                 invocation.status = InvocationStatus::Queued;
@@ -446,16 +523,28 @@
             }
         } <span class="kw">else </span>{
             <span class="kw">let </span>container = <span class="self">self</span>.container_manager.get_container_mut(id).unwrap();
+            container.last_change = time;
             container.status = ContainerStatus::Idle;
             <span class="kw">let </span>immut_container = <span class="self">self</span>.container_manager.get_container(id).unwrap();
-            <span class="kw">let </span>keepalive = <span class="self">self</span>.coldstart.borrow_mut().keepalive_window(immut_container);
-            <span class="self">self</span>.new_container_end_event(id, <span class="number">0</span>, keepalive);
+            <span class="kw">let </span>decision = <span class="self">self</span>.coldstart.borrow_mut().keepalive_decision(immut_container);
+            <span class="kw">match </span>decision {
+                KeepaliveDecision::NewWindow(keepalive) =&gt; {
+                    <span class="self">self</span>.new_container_end_event(id, keepalive);
+                }
+                KeepaliveDecision::OldWindow =&gt; {
+                    <span class="macro">panic!</span>(<span class="string">&quot;Keepalive policy returned OldWindow for newly created container!&quot;</span>);
+                }
+                KeepaliveDecision::TerminateNow =&gt; {
+                    <span class="comment">// weird but ok
+                    </span><span class="self">self</span>.new_container_end_event(id, <span class="number">0.0</span>);
+                }
+            }
         }
     }
 
-    <span class="kw">pub fn </span>on_container_end(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, expected: usize, time: f64) {
+    <span class="kw">pub fn </span>on_container_end(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, time: f64) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(cont) = <span class="self">self</span>.container_manager.get_container(id) {
-            <span class="kw">if </span>cont.status == ContainerStatus::Idle &amp;&amp; cont.started_invocations == expected {
+            <span class="kw">if </span>cont.status == ContainerStatus::Idle || cont.status == ContainerStatus::Terminated {
                 <span class="kw">let </span>delta = time - cont.last_change;
                 <span class="self">self</span>.stats.borrow_mut().update_wasted_resources(delta, <span class="kw-2">&amp;</span>cont.resources);
                 <span class="self">self</span>.container_manager.delete_container(id);
@@ -478,35 +567,62 @@
             .borrow_mut()
             .update(invocation, <span class="self">self</span>.function_registry.borrow().get_app(app_id).unwrap());
         <span class="self">self</span>.container_manager.dec_active_invocations();
+        <span class="self">self</span>.container_manager.try_move_container_to_free(cont_id);
         <span class="kw">let </span>container = <span class="self">self</span>.container_manager.get_container_mut(cont_id).unwrap();
         container.end_invocation(id, time);
         <span class="self">self</span>.stats.borrow_mut().update_invocation_stats(invocation);
         <span class="self">self</span>.cpu.on_invocation_end(invocation, container, time);
-        <span class="kw">let </span>expect = container.started_invocations;
         <span class="kw">let </span>app = function_registry.get_app(app_id).unwrap();
         <span class="kw">if </span>container.status == ContainerStatus::Idle {
             <span class="kw">let </span>prewarm = f64::max(<span class="number">0.0</span>, <span class="self">self</span>.coldstart.borrow_mut().prewarm_window(app));
-            <span class="kw">if </span>prewarm != <span class="number">0. </span>{
-                <span class="self">self</span>.ctx
-                    .borrow_mut()
-                    .emit(IdleDeployEvent { id: app_id }, <span class="self">self</span>.controller_id, prewarm);
-                <span class="self">self</span>.new_container_end_event(cont_id, expect, <span class="number">0.0</span>);
+            <span class="kw">if </span>prewarm &gt; <span class="number">1e-9 </span>{
+                <span class="kw">let </span>expected_invocation = <span class="self">self</span>.stats.borrow().app_stats.get(app_id).unwrap().invocations;
+                <span class="kw">let </span>ctx = <span class="self">self</span>.ctx.borrow_mut();
+                ctx.emit(
+                    IdleDeployEvent {
+                        id: app_id,
+                        expected_invocation,
+                    },
+                    <span class="self">self</span>.controller_id,
+                    prewarm,
+                );
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = container.end_event {
+                    ctx.cancel_event(id);
+                }
+                drop(ctx);
+                <span class="self">self</span>.new_container_end_event(cont_id, <span class="number">0.0</span>);
             } <span class="kw">else </span>{
                 <span class="kw">let </span>immut_container = <span class="self">self</span>.container_manager.get_container(cont_id).unwrap();
-                <span class="kw">let </span>keepalive = f64::max(<span class="number">0.0</span>, <span class="self">self</span>.coldstart.borrow_mut().keepalive_window(immut_container));
-                <span class="self">self</span>.new_container_end_event(cont_id, expect, keepalive);
+                <span class="kw">let </span>decision = <span class="self">self</span>.coldstart.borrow_mut().keepalive_decision(immut_container);
+                <span class="kw">match </span>decision {
+                    KeepaliveDecision::NewWindow(keepalive) =&gt; {
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = immut_container.end_event {
+                            <span class="self">self</span>.ctx.borrow_mut().cancel_event(id);
+                        }
+                        <span class="self">self</span>.new_container_end_event(cont_id, f64::max(<span class="number">0.0</span>, keepalive));
+                    }
+                    KeepaliveDecision::OldWindow =&gt; {}
+                    KeepaliveDecision::TerminateNow =&gt; {
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = immut_container.end_event {
+                            <span class="self">self</span>.ctx.borrow_mut().cancel_event(id);
+                        }
+                        <span class="self">self</span>.new_container_end_event(cont_id, <span class="number">0.0</span>);
+                    }
+                }
             }
         }
     }
 
-    <span class="kw">fn </span>new_container_end_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container_id: usize, expected: usize, delay: f64) {
-        <span class="self">self</span>.ctx.borrow_mut().emit_self(
-            ContainerEndEvent {
-                id: container_id,
-                expected_count: expected,
-            },
-            delay,
-        );
+    <span class="kw">fn </span>new_container_end_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container_id: usize, delay: f64) {
+        <span class="kw">let </span>event_id = <span class="self">self
+            </span>.ctx
+            .borrow_mut()
+            .emit_self(ContainerEndEvent { id: container_id }, delay);
+        <span class="kw">let </span><span class="kw-2">mut </span>container = <span class="self">self</span>.container_manager.get_container_mut(container_id).unwrap();
+        container.end_event = <span class="prelude-val">Some</span>(event_id);
+        <span class="kw">if </span>delay == <span class="number">0.0 </span>{
+            container.status = ContainerStatus::Terminated;
+        }
     }
 
     <span class="kw">fn </span>dequeue_requests(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) {
@@ -542,8 +658,8 @@
                 <span class="self">self</span>.on_container_start(id, event.time);
                 <span class="self">self</span>.dequeue_requests(event.time);
             }
-            ContainerEndEvent { id, expected_count } =&gt; {
-                <span class="self">self</span>.on_container_end(id, expected_count, event.time);
+            ContainerEndEvent { id } =&gt; {
+                <span class="self">self</span>.on_container_end(id, event.time);
             }
             InvocationEndEvent { id } =&gt; {
                 <span class="self">self</span>.on_invocation_end(id, event.time);

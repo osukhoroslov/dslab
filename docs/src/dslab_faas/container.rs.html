@@ -203,10 +203,51 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>dslab_core::context::SimulationContext;
+<span class="kw">use </span>dslab_core::event::EventId;
 
 <span class="kw">use </span><span class="kw">crate</span>::event::ContainerStartEvent;
 <span class="kw">use </span><span class="kw">crate</span>::function::Application;
@@ -218,17 +259,20 @@
     Deploying,
     Running,
     Idle,
-}
+    Terminated, <span class="comment">// terminated containers may remain in the system due to several events with delay 0.0
+</span>}
 
 <span class="kw">pub struct </span>Container {
     <span class="kw">pub </span>status: ContainerStatus,
     <span class="kw">pub </span>id: usize,
+    <span class="kw">pub </span>host_id: usize,
     <span class="kw">pub </span>deployment_time: f64,
     <span class="kw">pub </span>app_id: usize,
     <span class="kw">pub </span>invocations: FxIndexSet&lt;usize&gt;,
     <span class="kw">pub </span>resources: ResourceConsumer,
     <span class="kw">pub </span>started_invocations: usize,
     <span class="kw">pub </span>last_change: f64,
+    <span class="kw">pub </span>end_event: <span class="prelude-ty">Option</span>&lt;EventId&gt;,
     <span class="kw">pub </span>cpu_share: f64,
 }
 
@@ -249,21 +293,29 @@
 
 <span class="kw">pub struct </span>ContainerManager {
     active_invocations: usize,
+    host_id: usize,
     resources: ResourceProvider,
-    containers: FxIndexMap&lt;usize, Container&gt;,
-    containers_by_app: DefaultVecMap&lt;FxIndexSet&lt;usize&gt;&gt;,
+    <span class="doccomment">/// A map of containers by id.
+    </span>containers: FxIndexMap&lt;usize, Container&gt;,
+    <span class="doccomment">/// A set of containers for each app that can accommodate one more invocation.
+    </span>free_containers_by_app: DefaultVecMap&lt;FxIndexSet&lt;usize&gt;&gt;,
+    <span class="doccomment">/// A set of containers for each app that can&#39;t accommodate any more invocations.
+    </span>full_containers_by_app: DefaultVecMap&lt;FxIndexSet&lt;usize&gt;&gt;,
     container_counter: Counter,
-    reservations: FxIndexMap&lt;usize, Vec&lt;usize&gt;&gt;,
+    <span class="doccomment">/// A set of invocations that will start on each non-running container that is being deployed.
+    </span>reservations: FxIndexMap&lt;usize, Vec&lt;usize&gt;&gt;,
     ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;,
 }
 
 <span class="kw">impl </span>ContainerManager {
-    <span class="kw">pub fn </span>new(resources: ResourceProvider, ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(host_id: usize, resources: ResourceProvider, ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             active_invocations: <span class="number">0</span>,
+            host_id,
             resources,
             containers: FxIndexMap::default(),
-            containers_by_app: Default::default(),
+            free_containers_by_app: Default::default(),
+            full_containers_by_app: Default::default(),
             container_counter: Counter::default(),
             reservations: FxIndexMap::default(),
             ctx,
@@ -302,9 +354,11 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.containers
     }
 
-    <span class="kw">pub fn </span>get_possible_containers(<span class="kw-2">&amp;</span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, allow_deploying: bool) -&gt; PossibleContainerIterator&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="doccomment">/// Returns an iterator over running containers that can accommodate one more invocation of given app.
+    /// If `allow_deploying` is true, also returns containers that are being deployed.
+    </span><span class="kw">pub fn </span>get_possible_containers(<span class="kw-2">&amp;</span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, allow_deploying: bool) -&gt; PossibleContainerIterator&lt;<span class="lifetime">&#39;_</span>&gt; {
         <span class="kw">let </span>limit = app.get_concurrent_invocations();
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(set) = <span class="self">self</span>.containers_by_app.get(app.id) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(set) = <span class="self">self</span>.free_containers_by_app.get(app.id) {
             <span class="kw">return </span>PossibleContainerIterator::new(
                 <span class="prelude-val">Some</span>(set.iter()),
                 <span class="kw-2">&amp;</span><span class="self">self</span>.containers,
@@ -316,7 +370,8 @@
         PossibleContainerIterator::new(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.containers, <span class="kw-2">&amp;</span><span class="self">self</span>.reservations, limit, allow_deploying)
     }
 
-    <span class="kw">pub fn </span>try_deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, time: f64) -&gt; <span class="prelude-ty">Option</span>&lt;(usize, f64)&gt; {
+    <span class="doccomment">/// Tries to deploy a new container for given app.
+    </span><span class="kw">pub fn </span>try_deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, time: f64) -&gt; <span class="prelude-ty">Option</span>&lt;(usize, f64)&gt; {
         <span class="kw">if </span><span class="self">self</span>.resources.can_allocate(app.get_resources()) {
             <span class="kw">let </span>id = <span class="self">self</span>.deploy_container(app, time);
             <span class="kw">return </span><span class="prelude-val">Some</span>((id, app.get_deployment_time()));
@@ -324,8 +379,14 @@
         <span class="prelude-val">None
     </span>}
 
-    <span class="kw">pub fn </span>reserve_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, request: usize) {
+    <span class="doccomment">/// Reserves a deploying container for a new invocation.
+    </span><span class="kw">pub fn </span>reserve_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, request: usize) {
         <span class="self">self</span>.reservations.entry(id).or_default().push(request);
+    }
+
+    <span class="doccomment">/// Counts reserved invocations for a deploying container.
+    </span><span class="kw">pub fn </span>count_reservations(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; usize {
+        <span class="self">self</span>.reservations.get(<span class="kw-2">&amp;</span>id).map(|x| x.len()).unwrap_or_default()
     }
 
     <span class="kw">pub fn </span>take_reservations(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;usize&gt;&gt; {
@@ -334,26 +395,46 @@
 
     <span class="kw">pub fn </span>delete_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
         <span class="kw">let </span>container = <span class="self">self</span>.containers.remove(<span class="kw-2">&amp;</span>id).unwrap();
-        <span class="self">self</span>.containers_by_app.get_mut(container.app_id).remove(<span class="kw-2">&amp;</span>id);
+        <span class="self">self</span>.free_containers_by_app.get_mut(container.app_id).remove(<span class="kw-2">&amp;</span>id);
+        <span class="self">self</span>.full_containers_by_app.get_mut(container.app_id).remove(<span class="kw-2">&amp;</span>id);
         <span class="self">self</span>.resources.release(<span class="kw-2">&amp;</span>container.resources);
     }
 
-    <span class="kw">fn </span>deploy_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, time: f64) -&gt; usize {
+    <span class="doccomment">/// Moves a container to free if it was full.
+    </span><span class="kw">pub fn </span>try_move_container_to_free(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
+        <span class="kw">let </span>app_id = <span class="self">self</span>.containers.get(<span class="kw-2">&amp;</span>id).unwrap().app_id;
+        <span class="kw">let </span>was = <span class="self">self</span>.full_containers_by_app.get_mut(app_id).remove(<span class="kw-2">&amp;</span>id);
+        <span class="kw">if </span>was {
+            <span class="self">self</span>.free_containers_by_app.get_mut(app_id).insert(id);
+        }
+    }
+
+    <span class="kw">pub fn </span>move_container_to_full(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
+        <span class="kw">let </span>app_id = <span class="self">self</span>.containers.get(<span class="kw-2">&amp;</span>id).unwrap().app_id;
+        <span class="kw">let </span>was = <span class="self">self</span>.free_containers_by_app.get_mut(app_id).remove(<span class="kw-2">&amp;</span>id);
+        <span class="macro">assert!</span>(was);
+        <span class="self">self</span>.full_containers_by_app.get_mut(app_id).insert(id);
+    }
+
+    <span class="doccomment">/// Deploys a new container for given application.
+    </span><span class="kw">fn </span>deploy_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, time: f64) -&gt; usize {
         <span class="kw">let </span>cont_id = <span class="self">self</span>.container_counter.increment();
         <span class="kw">let </span>container = Container {
             status: ContainerStatus::Deploying,
             id: cont_id,
+            host_id: <span class="self">self</span>.host_id,
             deployment_time: app.get_deployment_time(),
             app_id: app.id,
             invocations: Default::default(),
             resources: app.get_resources().clone(),
             started_invocations: <span class="number">0</span>,
+            end_event: <span class="prelude-val">None</span>,
             last_change: time,
             cpu_share: app.get_cpu_share(),
         };
         <span class="self">self</span>.resources.allocate(<span class="kw-2">&amp;</span>container.resources);
         <span class="self">self</span>.containers.insert(cont_id, container);
-        <span class="self">self</span>.containers_by_app.get_mut(app.id).insert(cont_id);
+        <span class="self">self</span>.free_containers_by_app.get_mut(app.id).insert(cont_id);
         <span class="self">self</span>.ctx
             .borrow_mut()
             .emit_self(ContainerStartEvent { id: cont_id }, app.get_deployment_time());
@@ -393,13 +474,12 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(inner) = <span class="self">self</span>.inner.as_mut() {
             <span class="kw">for </span>id <span class="kw">in </span>inner.by_ref() {
                 <span class="kw">let </span>c = <span class="self">self</span>.containers.get(id).unwrap();
-                <span class="kw">if </span>c.status != ContainerStatus::Deploying &amp;&amp; c.invocations.len() &lt; <span class="self">self</span>.limit {
+                <span class="kw">if </span>c.status != ContainerStatus::Deploying {
+                    <span class="macro">assert!</span>(c.invocations.len() &lt; <span class="self">self</span>.limit);
                     <span class="kw">return </span><span class="prelude-val">Some</span>(c);
                 }
-                <span class="kw">if </span>c.status == ContainerStatus::Deploying
-                    &amp;&amp; <span class="self">self</span>.allow_deploying
-                    &amp;&amp; (!<span class="self">self</span>.reserve.contains_key(id) || <span class="self">self</span>.reserve.get(id).unwrap().len() &lt; <span class="self">self</span>.limit)
-                {
+                <span class="kw">if </span>c.status == ContainerStatus::Deploying &amp;&amp; <span class="self">self</span>.allow_deploying {
+                    <span class="macro">assert!</span>(!<span class="self">self</span>.reserve.contains_key(id) || <span class="self">self</span>.reserve.get(id).unwrap().len() &lt; <span class="self">self</span>.limit);
                     <span class="kw">return </span><span class="prelude-val">Some</span>(c);
                 }
             }

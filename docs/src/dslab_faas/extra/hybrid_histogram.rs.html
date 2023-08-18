@@ -227,6 +227,21 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// This file contains the implementation of hybrid histogram policy from
 /// https://www.usenix.org/conference/atc20/presentation/shahrad
 </span><span class="kw">use </span>std::collections::hash_map::Entry;
@@ -234,7 +249,7 @@
 
 <span class="kw">use </span>rand::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use </span><span class="kw">crate</span>::coldstart::ColdStartPolicy;
+<span class="kw">use </span><span class="kw">crate</span>::coldstart::{ColdStartPolicy, KeepaliveDecision};
 <span class="kw">use </span><span class="kw">crate</span>::container::Container;
 <span class="kw">use </span><span class="kw">crate</span>::extra::arima_extra::{arima_forecast, autofit};
 <span class="kw">use </span><span class="kw">crate</span>::function::Application;
@@ -349,6 +364,7 @@
     n_bins: usize,
     data: HashMap&lt;usize, ApplicationData&gt;,
     last: HashMap&lt;usize, f64&gt;,
+    already_set: HashMap&lt;(usize, usize), f64&gt;,
 }
 
 <span class="kw">enum </span>Pattern {
@@ -370,6 +386,7 @@
             n_bins,
             data: HashMap::new(),
             last: HashMap::new(),
+            already_set: HashMap::new(),
         }
     }
 
@@ -421,15 +438,28 @@
 }
 
 <span class="kw">impl </span>ColdStartPolicy <span class="kw">for </span>HybridHistogramPolicy {
-    <span class="kw">fn </span>keepalive_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; f64 {
-        <span class="kw">match </span><span class="self">self</span>.describe_pattern(container.app_id) {
-            Pattern::Uncertain =&gt; <span class="self">self</span>.range,
+    <span class="kw">fn </span>keepalive_decision(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; KeepaliveDecision {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = <span class="self">self</span>.already_set.get(<span class="kw-2">&amp;</span>(container.host_id, container.id)) {
+            <span class="kw">if </span>t - container.last_change &lt;= <span class="number">0.0 </span>{
+                <span class="comment">// last_change should be equal to current time
+                </span><span class="kw">return </span>KeepaliveDecision::TerminateNow;
+            } <span class="kw">else </span>{
+                <span class="kw">return </span>KeepaliveDecision::OldWindow;
+            }
+        }
+        <span class="kw">let </span>keepalive = <span class="kw">match </span><span class="self">self</span>.describe_pattern(container.app_id) {
+            Pattern::Uncertain =&gt; {
+                <span class="self">self</span>.already_set
+                    .insert((container.host_id, container.id), container.last_change + <span class="self">self</span>.range);
+                <span class="self">self</span>.range
+            }
             Pattern::Certain =&gt; {
                 <span class="kw">let </span>tail = <span class="number">1 </span>+ <span class="self">self</span>.get_app(container.app_id).get_tail();
                 (tail <span class="kw">as </span>f64) * <span class="self">self</span>.bin_len * (<span class="number">1. </span>+ <span class="self">self</span>.hist_margin)
             }
             Pattern::OutOfBounds =&gt; <span class="self">self</span>.get_app(container.app_id).arima() * <span class="self">self</span>.arima_margin * <span class="number">2.</span>,
-        }
+        };
+        KeepaliveDecision::NewWindow(keepalive)
     }
 
     <span class="kw">fn </span>prewarm_window(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application) -&gt; f64 {

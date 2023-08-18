@@ -253,6 +253,10 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>order_stat::kth_by;
 <span class="kw">use </span>serde::ser::{SerializeSeq, Serializer};
 <span class="kw">use </span>serde::Serialize;
@@ -348,6 +352,10 @@
 
     <span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[f64] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data
+    }
+
+    <span class="kw">pub fn </span>to_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;f64&gt; {
+        <span class="self">self</span>.data.to_vec()
     }
 
     <span class="doccomment">/// Extends current metric with zeros to given number of samples.
