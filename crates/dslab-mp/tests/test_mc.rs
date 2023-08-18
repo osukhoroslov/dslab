@@ -18,6 +18,10 @@ use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
 use dslab_mp::system::System;
 
+macro_rules! str_vec {
+    ($($x:expr),*) => (vec![$($x.to_string()),*]);
+}
+
 #[derive(Clone)]
 struct PingMessageNode {
     peers: Vec<String>,
@@ -248,8 +252,8 @@ fn build_ping_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
-    let process2 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
+    let process2 = boxed!(PingMessageNode::new(str_vec!["process1"]));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -261,13 +265,13 @@ fn build_ping_system_with_middle_node() -> System {
     sys.add_node("node1");
     sys.add_node("node2");
     sys.add_node("node3");
-    let process0 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
+    let process0 = boxed!(PingMessageNode::new(str_vec!["process1"]));
     let process1 = boxed!(MiddleNode::new(Vec::from([
         "process2".to_string(),
         "process3".to_string()
     ])));
-    let process2 = boxed!(MiddleNode::new(Vec::from(["process3".to_string()])));
-    let process3 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process2 = boxed!(MiddleNode::new(str_vec!["process3"]));
+    let process3 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     sys.add_process("process0", process0, "node0");
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
@@ -280,9 +284,9 @@ fn build_ping_system_with_collector() -> System {
     sys.add_node("node1");
     sys.add_node("node2");
     sys.add_node("node3");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     let process2 = boxed!(CollectorNode::new("process3"));
-    let process3 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process3 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys.add_process("process3", process3, "node3");
@@ -293,7 +297,7 @@ fn build_postponed_delivery_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     let process2 = boxed!(PostponedReceiverNode::new());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
@@ -304,7 +308,7 @@ fn build_dumb_delivery_system_with_useless_timer() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     let process2 = boxed!(DumbReceiverNode::default());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
@@ -316,7 +320,7 @@ fn build_spammer_delivery_system() -> System {
     sys.add_node("node1");
     sys.add_node("node2");
     let process1 = boxed!(SpammerNode::new("process2"));
-    let process2 = boxed!(PingMessageNode::new(Vec::from(["process1".to_string()])));
+    let process2 = boxed!(PingMessageNode::new(str_vec!["process1"]));
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
     sys
@@ -335,7 +339,7 @@ fn build_ping_system_with_timer() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     let process2 = boxed!(TimerNode::default());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
@@ -346,7 +350,7 @@ fn build_timer_resetting_system() -> System {
     let mut sys = System::new(12345);
     sys.add_node("node1");
     sys.add_node("node2");
-    let process1 = boxed!(PingMessageNode::new(Vec::from(["process2".to_string()])));
+    let process1 = boxed!(PingMessageNode::new(str_vec!["process2"]));
     let process2 = boxed!(TimerResettingNode::default());
     sys.add_process("process1", process1, "node1");
     sys.add_process("process2", process2, "node2");
