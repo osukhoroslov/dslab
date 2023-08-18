@@ -29,7 +29,7 @@ pub enum KeepaliveDecision {
 }
 
 pub trait ColdStartPolicy: ColdStartConvertHelper {
-    /// Sets delay before container deallocation.
+    /// Defines delay before container deallocation.
     fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision;
     /// Prewarm = x > 0 => destroy container, deploy new container after x time units since execution.
     /// Prewarm = 0 => do not destroy container immediately after execution.
@@ -45,7 +45,7 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
 pub struct FixedTimeColdStartPolicy {
     keepalive_window: f64,
     prewarm_window: f64,
-    /// If true, keepalive time is reset to new `keepalive_window` after each invocation of the policy.
+    /// If true, keepalive time is reset to new `keepalive_window` after each invocation.
     /// Otherwise keepalive is set only after the first invocation. False by default.
     reset_keepalive: bool,
     already_set: HashMap<(usize, usize), f64>,
@@ -76,12 +76,12 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
     fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision {
         if !self.reset_keepalive {
             if let Some(t) = self.already_set.get(&(container.host_id, container.id)) {
-                if t - container.last_change <= 0.0 {
+                return if t - container.last_change <= 0.0 {
                     // last_change should be equal to current time
-                    return KeepaliveDecision::TerminateNow;
+                    KeepaliveDecision::TerminateNow
                 } else {
-                    return KeepaliveDecision::OldWindow;
-                }
+                    KeepaliveDecision::OldWindow
+                };
             }
             self.already_set.insert(
                 (container.host_id, container.id),

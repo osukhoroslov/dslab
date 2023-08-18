@@ -10,8 +10,13 @@ use crate::scheduler::Scheduler;
 /// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>
 pub struct HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
+    /// Passed to `high_load_fallback`.
     prefer_warm: bool,
+    /// If true, the scheduler uses invocation count instead of CPU usage.
+    /// Also passed to `high_load_fallback`.
     use_invocation_count: bool,
+    /// If true, the scheduler avoids decisions that would result in queueing of the invocation.
+    /// Also passed to `high_load_fallback`.
     avoid_queueing: bool,
 }
 

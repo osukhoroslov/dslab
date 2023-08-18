@@ -9,6 +9,5 @@ val copy = instances.toList()
 copy.forEach(FunctionInstance::close)
 ```
 3. Replace `opendc-experiments/opendc-experiments-serverless20/src/main/kotlin/org/opendc/experiments/serverless/ServerlessExperiment.kt` with the corresponding file from this directory.
-4. Build it: go to the root directory and run `./gradlew distZip`.
-5. Extract `build/distributions/opendc-2.0.zip`. The resulting directory will contain opendc-harness and experiment jar required for running the benchmark.
-6. Run the benchmark with `run.py`. **Note**: for large benchmark datasets it is advised to set `DEFAULT_JAVA_OPTS="-XX:+UseConcMarkSweepGC -Xmx10g"` in opendc-harness to avoid crashes.
+4. Build it: go to the root directory and run `./gradlew installDist`. Directory `build/install/opendc` will contain opendc-harness and experiment jar required for running the benchmark.
+5. Run the benchmark with `run.py`. **Note**: for large benchmark datasets it is advised to set `DEFAULT_JAVA_OPTS="-XX:+UseConcMarkSweepGC -Xmx10g"` in opendc-harness to avoid crashes.

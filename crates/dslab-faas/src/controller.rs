@@ -38,9 +38,9 @@ impl Controller {
         }
     }
 
-    fn idle_deploy(&mut self, app_id: usize, tag: u64, time: f64) {
-        let expect = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
-        if expect != tag {
+    fn idle_deploy(&mut self, app_id: usize, expected_invocation: u64, time: f64) {
+        let next_invocation = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
+        if next_invocation != expected_invocation {
             return;
         }
         let reg = self.function_registry.borrow();
@@ -71,8 +71,11 @@ impl Controller {
 impl EventHandler for Controller {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            IdleDeployEvent { id, tag } => {
-                self.idle_deploy(id, tag, event.time);
+            IdleDeployEvent {
+                id,
+                expected_invocation,
+            } => {
+                self.idle_deploy(id, expected_invocation, event.time);
             }
             InvocationStartEvent { id, func_id } => {
                 self.invoke(id, func_id, event.time);

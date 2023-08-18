@@ -241,9 +241,16 @@ impl Host {
         if container.status == ContainerStatus::Idle {
             let prewarm = f64::max(0.0, self.coldstart.borrow_mut().prewarm_window(app));
             if prewarm > 1e-9 {
-                let tag = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
+                let expected_invocation = self.stats.borrow().app_stats.get(app_id).unwrap().invocations;
                 let ctx = self.ctx.borrow_mut();
-                ctx.emit(IdleDeployEvent { id: app_id, tag }, self.controller_id, prewarm);
+                ctx.emit(
+                    IdleDeployEvent {
+                        id: app_id,
+                        expected_invocation,
+                    },
+                    self.controller_id,
+                    prewarm,
+                );
                 if let Some(id) = container.end_event {
                     ctx.cancel_event(id);
                 }

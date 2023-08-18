@@ -62,21 +62,15 @@ impl LocalityBasedDeployer {
 impl IdleDeployer for LocalityBasedDeployer {
     fn deploy(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> Option<usize> {
         let start_idx = (self.hasher.hash(app.id as u64) % (hosts.len() as u64)) as usize;
-        let mut cycle = false;
         let mut idx = start_idx;
-        while !cycle {
+        loop {
             if hosts[idx].borrow().can_allocate(app.get_resources()) {
-                break;
+                return Some(idx);
             }
             idx = (idx + self.step) % hosts.len();
             if idx == start_idx {
-                cycle = true;
+                return None;
             }
-        }
-        if cycle {
-            None
-        } else {
-            Some(idx)
         }
     }
 

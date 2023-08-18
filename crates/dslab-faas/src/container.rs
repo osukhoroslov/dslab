@@ -52,9 +52,9 @@ pub struct ContainerManager {
     resources: ResourceProvider,
     /// A map of containers by id.
     containers: FxIndexMap<usize, Container>,
-    /// A set of running containers for each app that can accomodate one more invocation.
+    /// A set of containers for each app that can accommodate one more invocation.
     free_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
-    /// A set of running containers for each app that can't accomodate any more invocations.
+    /// A set of containers for each app that can't accommodate any more invocations.
     full_containers_by_app: DefaultVecMap<FxIndexSet<usize>>,
     container_counter: Counter,
     /// A set of invocations that will start on each non-running container that is being deployed.
@@ -109,7 +109,7 @@ impl ContainerManager {
         &mut self.containers
     }
 
-    /// Returns an iterator over running containers that can accomodate one more invocation of given app.
+    /// Returns an iterator over running containers that can accommodate one more invocation of given app.
     /// If `allow_deploying` is true, also returns containers that are being deployed.
     pub fn get_possible_containers(&self, app: &Application, allow_deploying: bool) -> PossibleContainerIterator<'_> {
         let limit = app.get_concurrent_invocations();
