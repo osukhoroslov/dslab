@@ -69,7 +69,6 @@ impl Simulation {
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             let (task_sender, ready_queue) = channel();
-
             Self {
                 sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
                 name_to_id: HashMap::new(),
