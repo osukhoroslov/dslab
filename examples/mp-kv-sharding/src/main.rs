@@ -708,7 +708,7 @@ fn test_distribution_node_removed(config: &TestConfig) -> TestResult {
 // MODEL CHECKING ------------------------------------------------------------------------------------------------------
 
 fn mc_check_query<S>(
-    sys: &mut System,
+    mc: &mut ModelChecker,
     proc: S,
     invariant: InvariantFn,
     msg: Message,
@@ -731,8 +731,9 @@ where
         .collect(collects::event_happened_n_times_current_run(
             LogEntry::is_mc_local_message_sent,
             1,
-        ));
-    let mut mc = ModelChecker::new(sys);
+        ))
+        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug);
+
 
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, |sys| {
@@ -753,7 +754,7 @@ where
 }
 
 fn check_mc_get<S>(
-    sys: &mut System,
+    mc: &mut ModelChecker,
     proc: S,
     key: S,
     expected: Option<S>,
@@ -792,11 +793,11 @@ where
         }
         Ok(())
     });
-    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
+    mc_check_query(mc, proc_name, invariant, msg, start_states, max_steps)
 }
 
 fn check_mc_put<S>(
-    sys: &mut System,
+    mc: &mut ModelChecker,
     proc: S,
     key: S,
     value: S,
@@ -835,11 +836,11 @@ where
         }
         Ok(())
     });
-    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
+    mc_check_query(mc, proc_name, invariant, msg, start_states, max_steps)
 }
 
 fn check_mc_delete<S>(
-    sys: &mut System,
+    mc: &mut ModelChecker,
     proc: S,
     key: S,
     expected: Option<S>,
@@ -878,32 +879,35 @@ where
         }
         Ok(())
     });
-    mc_check_query(sys, proc_name, invariant, msg, start_states, max_steps)
+    mc_check_query(mc, proc_name, invariant, msg, start_states, max_steps)
 }
 
 fn check_mc_node_removed(
-    sys: &mut System,
+    mc: &mut ModelChecker,
+    process_names: Vec<String>,
     removed_proc: &str,
     max_steps: u64,
     start_states: HashSet<McState>,
 ) -> Result<HashSet<McState>, String> {
-    let process_names = sys.process_names();
-
     let strategy_config = StrategyConfig::default()
         .invariant(invariants::state_depth_current_run(max_steps))
         .goal(goals::no_events())
-        .collect(collects::no_events());
+        .collect(collects::no_events())
+        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug);
 
-    let mut mc = ModelChecker::new(sys);
     let res = mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
         for proc in process_names.clone() {
             sys.send_local_message(proc.clone(), proc, msg.clone());
         }
     });
-    sys.network().disconnect_node(removed_proc);
     match res {
-        Ok(stats) => Ok(stats.collected_states),
+        Ok(stats) => {
+            Ok(stats.collected_states.into_iter().map(|state| {
+                state.network.borrow_mut().disconnect_node(removed_proc);
+                state
+            }).collect::<HashSet<McState>>())
+        },
         Err(err) => {
             err.print_trace();
             Err(err.message())
@@ -912,7 +916,8 @@ fn check_mc_node_removed(
 }
 
 fn test_mc_normal(config: &TestConfig) -> TestResult {
-    let mut sys = build_system(config, false);
+    let sys = build_system(config, false);
+    let mut mc = ModelChecker::new(&sys);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
     let proc = random_proc(&sys, &mut rand);
@@ -920,17 +925,18 @@ fn test_mc_normal(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     let max_steps = 10;
 
-    let achieved_states = check_mc_get(&mut sys, &proc, &key, None, max_steps, None)?;
-    let achieved_states = check_mc_put(&mut sys, &proc, &key, &value, max_steps, Some(achieved_states))?;
-    let achieved_states = check_mc_get(&mut sys, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
-    let achieved_states = check_mc_delete(&mut sys, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
-    let achieved_states = check_mc_get(&mut sys, &proc, &key, None, max_steps, Some(achieved_states))?;
-    check_mc_delete(&mut sys, &proc, &key, None, max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_get(&mut mc, &proc, &key, None, max_steps, None)?;
+    let achieved_states = check_mc_put(&mut mc, &proc, &key, &value, max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_get(&mut mc, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_delete(&mut mc, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_get(&mut mc, &proc, &key, None, max_steps, Some(achieved_states))?;
+    check_mc_delete(&mut mc, &proc, &key, None, max_steps, Some(achieved_states))?;
     Ok(true)
 }
 
 fn test_mc_node_removed(config: &TestConfig) -> TestResult {
-    let mut sys = build_system(config, false);
+    let sys = build_system(config, false);
+    let mut mc = ModelChecker::new(&sys);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
     // insert random key-value pairs
@@ -941,14 +947,14 @@ fn test_mc_node_removed(config: &TestConfig) -> TestResult {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
         let proc = random_proc(&sys, &mut rand);
-        let res = check_mc_put(&mut sys, &proc, &k, &v, 10, states.clone())?;
+        let res = check_mc_put(&mut mc, &proc, &k, &v, 10, states.clone())?;
         states = Some(res);
         kv.insert(k, v);
     }
 
     // remove a node from the system
     let removed = random_proc(&sys, &mut rand);
-    states = Some(check_mc_node_removed(&mut sys, &removed, 15, states.unwrap())?);
+    states = Some(check_mc_node_removed(&mut mc, sys.process_names(), &removed, 15, states.unwrap())?);
     let alive_proc = sys
         .process_names()
         .into_iter()
@@ -956,7 +962,7 @@ fn test_mc_node_removed(config: &TestConfig) -> TestResult {
         .collect::<Vec<String>>();
     for (k, v) in kv {
         let proc = alive_proc.choose(&mut rand).unwrap().clone();
-        states = Some(check_mc_get(&mut sys, &proc, &k, Some(&v), 10, states)?);
+        states = Some(check_mc_get(&mut mc, &proc, &k, Some(&v), 10, states)?);
     }
     Ok(true)
 }

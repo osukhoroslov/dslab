@@ -22,6 +22,7 @@ pub enum DeliveryOptions {
     },
 }
 
+#[derive(Debug, Clone)]
 pub struct McNetwork {
     corrupt_rate: f64,
     dupl_rate: f64,
@@ -49,6 +50,11 @@ impl McNetwork {
 
     pub fn get_proc_node(&self, proc: &String) -> &String {
         &self.proc_locations[proc]
+    }
+
+    pub fn disconnect_node(&mut self, proc: &str) {
+        self.drop_incoming.insert(proc.to_string());
+        self.drop_outgoing.insert(proc.to_string());
     }
 
     pub fn send_message(&mut self, msg: Message, src: String, dst: String) -> McEvent {
