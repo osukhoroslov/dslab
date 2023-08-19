@@ -61,4 +61,4 @@ jobs:
       - name: Run tests
         run: |
           cargo test --verbose
-          cargo test --package dslab-core --features async_core --verbose
+          cargo test --features async_core --verbose
