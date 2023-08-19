@@ -15,10 +15,10 @@ use sugars::boxed;
 
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{self, collects, goals, invariants};
+use dslab_mp::mc::predicates::{collects, goals, invariants};
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
-use dslab_mp::mc::strategy::{InvariantFn, McStats, StrategyConfig};
+use dslab_mp::mc::strategy::{InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
@@ -714,21 +714,21 @@ fn mc_check_query<S>(
     msg: Message,
     start_states: Option<HashSet<McState>>,
     max_depth: u64,
-) -> Result<McStats, String>
+) -> Result<HashSet<McState>, String>
 where
     S: Into<String>,
 {
     let proc = proc.into();
     let strategy_config = StrategyConfig::default()
         .goal(goals::all_goals(vec![
-            goals::event_happened_n_times(LogEntry::is_mc_local_message_sent, 1),
+            goals::event_happened_n_times_current_run(LogEntry::is_mc_local_message_sent, 1),
             goals::no_events(),
         ]))
         .invariant(invariants::all_invariants(vec![
             invariant,
             invariants::state_depth_current_run(max_depth),
         ]))
-        .collect(collects::event_happened_n_times(LogEntry::is_mc_local_message_sent, 1));
+        .collect(collects::event_happened_n_times_current_run(LogEntry::is_mc_local_message_sent, 1));
     let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
 
     let res = if let Some(start_states) = start_states {
@@ -741,7 +741,7 @@ where
         })
     };
     match res {
-        Ok(stats) => Ok(stats),
+        Ok(stats) => Ok(stats.collected_states),
         Err(err) => {
             err.print_trace();
             Err(err.message())
@@ -756,7 +756,7 @@ fn check_mc_get<S>(
     expected: Option<S>,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String>
+) -> Result<HashSet<McState>, String>
 where
     S: Into<String> + Clone,
 {
@@ -799,7 +799,7 @@ fn check_mc_put<S>(
     value: S,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String>
+) -> Result<HashSet<McState>, String>
 where
     S: Into<String>,
 {
@@ -842,7 +842,7 @@ fn check_mc_delete<S>(
     expected: Option<S>,
     max_steps: u64,
     start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String>
+) -> Result<HashSet<McState>, String>
 where
     S: Into<String> + Clone,
 {
@@ -883,7 +883,7 @@ fn check_mc_node_removed(
     removed_proc: &str,
     max_steps: u64,
     start_states: HashSet<McState>,
-) -> Result<McStats, String> {
+) -> Result<HashSet<McState>, String> {
     let process_names = sys.process_names();
 
     let strategy_config = StrategyConfig::default()
@@ -900,7 +900,7 @@ fn check_mc_node_removed(
     });
     sys.network().disconnect_node(removed_proc);
     match res {
-        Ok(stats) => Ok(stats),
+        Ok(stats) => Ok(stats.collected_states),
         Err(err) => {
             err.print_trace();
             Err(err.message())
@@ -908,7 +908,7 @@ fn check_mc_node_removed(
     }
 }
 
-fn test_model_checking_normal(config: &TestConfig) -> TestResult {
+fn test_mc_normal(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
@@ -924,7 +924,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &key,
         &value,
         max_steps,
-        Some(achieved_states.collected_states),
+        Some(achieved_states),
     )?;
     let achieved_states = check_mc_get(
         &mut sys,
@@ -932,7 +932,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &key,
         Some(&value),
         max_steps,
-        Some(achieved_states.collected_states),
+        Some(achieved_states),
     )?;
     let achieved_states = check_mc_delete(
         &mut sys,
@@ -940,7 +940,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &key,
         Some(&value),
         max_steps,
-        Some(achieved_states.collected_states),
+        Some(achieved_states),
     )?;
     let achieved_states = check_mc_get(
         &mut sys,
@@ -948,7 +948,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &key,
         None,
         max_steps,
-        Some(achieved_states.collected_states),
+        Some(achieved_states),
     )?;
     check_mc_delete(
         &mut sys,
@@ -956,12 +956,12 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &key,
         None,
         max_steps,
-        Some(achieved_states.collected_states),
+        Some(achieved_states),
     )?;
     Ok(true)
 }
 
-fn test_model_checking_node_removed(config: &TestConfig) -> TestResult {
+fn test_mc_node_removed(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config, false);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
@@ -974,13 +974,13 @@ fn test_model_checking_node_removed(config: &TestConfig) -> TestResult {
         let v = random_string(8, &mut rand);
         let proc = random_proc(&sys, &mut rand);
         let res = check_mc_put(&mut sys, &proc, &k, &v, 10, states.clone())?;
-        states = Some(res.collected_states);
+        states = Some(res);
         kv.insert(k, v);
     }
 
     // remove a node from the system
     let removed = random_proc(&sys, &mut rand);
-    states = Some(check_mc_node_removed(&mut sys, &removed, 15, states.unwrap())?.collected_states);
+    states = Some(check_mc_node_removed(&mut sys, &removed, 15, states.unwrap())?);
     let alive_proc = sys
         .process_names()
         .into_iter()
@@ -988,7 +988,7 @@ fn test_model_checking_node_removed(config: &TestConfig) -> TestResult {
         .collect::<Vec<String>>();
     for (k, v) in kv {
         let proc = alive_proc.choose(&mut rand).unwrap().clone();
-        states = Some(check_mc_get(&mut sys, &proc, &k, Some(&v), 10, states)?.collected_states);
+        states = Some(check_mc_get(&mut sys, &proc, &k, Some(&v), 10, states)?);
     }
     Ok(true)
 }
@@ -1037,6 +1037,8 @@ fn main() {
     };
     let mut single_config = config;
     single_config.proc_count = 1;
+    let mut mc_config = config;
+    mc_config.proc_count = 3;
     let mut tests = TestSuite::new();
 
     tests.add("SINGLE NODE", test_single_node, single_config);
@@ -1046,23 +1048,16 @@ fn main() {
     tests.add("NODE ADDED", test_node_added, config);
     tests.add("NODE REMOVED", test_node_removed, config);
     tests.add("NODE REMOVED AFTER CRASH", test_node_removed_after_crash, config);
+
     tests.add(
         "MODEL CHECKING",
         test_mc_normal,
-        TestConfig {
-            process_factory: &process_factory,
-            proc_count: 3,
-            seed: args.seed,
-        },
+        mc_config
     );
     tests.add(
         "MODEL CHECKING NODE REMOVED",
         test_mc_node_removed,
-        TestConfig {
-            process_factory: &process_factory,
-            proc_count: 3,
-            seed: args.seed,
-        },
+        mc_config
     );
     tests.add("MIGRATION", test_migration, config);
     tests.add("SCALE UP DOWN", test_scale_up_down, config);
