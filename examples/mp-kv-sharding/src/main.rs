@@ -728,15 +728,18 @@ where
             invariant,
             invariants::state_depth_current_run(max_depth),
         ]))
-        .collect(collects::event_happened_n_times_current_run(LogEntry::is_mc_local_message_sent, 1));
-    let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
+        .collect(collects::event_happened_n_times_current_run(
+            LogEntry::is_mc_local_message_sent,
+            1,
+        ));
+    let mut mc = ModelChecker::new(sys);
 
     let res = if let Some(start_states) = start_states {
-        mc.run_from_states_with_change(start_states, |sys| {
+        mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, |sys| {
             sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
         })
     } else {
-        mc.run_with_change(|sys| {
+        mc.run_with_change::<_, Bfs>(strategy_config, |sys| {
             sys.send_local_message(proc.clone(), proc.clone(), msg);
         })
     };
@@ -891,8 +894,8 @@ fn check_mc_node_removed(
         .goal(goals::no_events())
         .collect(collects::no_events());
 
-    let mut mc = ModelChecker::new::<Bfs>(sys, strategy_config);
-    let res = mc.run_from_states_with_change(start_states, move |sys| {
+    let mut mc = ModelChecker::new(sys);
+    let res = mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
         for proc in process_names.clone() {
             sys.send_local_message(proc.clone(), proc, msg.clone());
@@ -918,46 +921,11 @@ fn test_mc_normal(config: &TestConfig) -> TestResult {
     let max_steps = 10;
 
     let achieved_states = check_mc_get(&mut sys, &proc, &key, None, max_steps, None)?;
-    let achieved_states = check_mc_put(
-        &mut sys,
-        &proc,
-        &key,
-        &value,
-        max_steps,
-        Some(achieved_states),
-    )?;
-    let achieved_states = check_mc_get(
-        &mut sys,
-        &proc,
-        &key,
-        Some(&value),
-        max_steps,
-        Some(achieved_states),
-    )?;
-    let achieved_states = check_mc_delete(
-        &mut sys,
-        &proc,
-        &key,
-        Some(&value),
-        max_steps,
-        Some(achieved_states),
-    )?;
-    let achieved_states = check_mc_get(
-        &mut sys,
-        &proc,
-        &key,
-        None,
-        max_steps,
-        Some(achieved_states),
-    )?;
-    check_mc_delete(
-        &mut sys,
-        &proc,
-        &key,
-        None,
-        max_steps,
-        Some(achieved_states),
-    )?;
+    let achieved_states = check_mc_put(&mut sys, &proc, &key, &value, max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_get(&mut sys, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_delete(&mut sys, &proc, &key, Some(&value), max_steps, Some(achieved_states))?;
+    let achieved_states = check_mc_get(&mut sys, &proc, &key, None, max_steps, Some(achieved_states))?;
+    check_mc_delete(&mut sys, &proc, &key, None, max_steps, Some(achieved_states))?;
     Ok(true)
 }
 
@@ -1049,16 +1017,8 @@ fn main() {
     tests.add("NODE REMOVED", test_node_removed, config);
     tests.add("NODE REMOVED AFTER CRASH", test_node_removed_after_crash, config);
 
-    tests.add(
-        "MODEL CHECKING",
-        test_mc_normal,
-        mc_config
-    );
-    tests.add(
-        "MODEL CHECKING NODE REMOVED",
-        test_mc_node_removed,
-        mc_config
-    );
+    tests.add("MODEL CHECKING", test_mc_normal, mc_config);
+    tests.add("MODEL CHECKING NODE REMOVED", test_mc_node_removed, mc_config);
     tests.add("MIGRATION", test_migration, config);
     tests.add("SCALE UP DOWN", test_scale_up_down, config);
     tests.add("DISTRIBUTION", test_distribution, config);

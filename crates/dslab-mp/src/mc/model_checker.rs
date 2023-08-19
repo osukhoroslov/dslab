@@ -23,16 +23,12 @@ use crate::system::System;
 /// Main class of (and entrypoint to) the model checking testing technique.
 pub struct ModelChecker {
     system: McSystem,
-    strategy: Box<dyn Strategy>,
 }
 
 impl ModelChecker {
     /// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    pub fn new<S: Strategy + 'static>(sys: &System, strategy_config: StrategyConfig) -> Self {
-        // Setup strategy which specifies rules for state exploration
-        let strategy = boxed!(S::build(strategy_config));
-
+    pub fn new(sys: &System) -> Self {
         // Setup environment for model checker
         let sim = sys.sim();
 
@@ -78,50 +74,65 @@ impl ModelChecker {
 
         Self {
             system: McSystem::new(nodes, mc_net, events, trace_handler),
-            strategy,
         }
     }
 
-    fn run_impl<F>(&mut self, preliminary_callback: F) -> McResult
+    fn run_impl<F, S>(&mut self, strategy: &mut S, preliminary_callback: F) -> McResult
     where
         F: FnOnce(&mut McSystem),
+        S: Strategy,
     {
+        // Setup strategy which specifies rules for state exploration
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         preliminary_callback(&mut self.system);
-        self.strategy.mark_visited(self.system.get_state());
-        self.strategy.run(&mut self.system)
+        strategy.mark_visited(self.system.get_state());
+        strategy.run(&mut self.system)
     }
 
     /// Runs model checking and returns the result on completion.
-    pub fn run(&mut self) -> McResult {
-        self.run_impl(|_| {})
+    pub fn run<S: Strategy>(&mut self, strategy_config: StrategyConfig) -> McResult {
+        self.run_with_change::<_, S>(strategy_config, |_| {})
     }
 
     /// Runs model checking after applying callback.
-    pub fn run_with_change<F>(&mut self, preliminary_callback: F) -> McResult
+    pub fn run_with_change<F, S>(&mut self, strategy_config: StrategyConfig, preliminary_callback: F) -> McResult
     where
         F: FnOnce(&mut McSystem),
+        S: Strategy,
     {
-        self.run_impl(preliminary_callback)
+        let mut strategy = S::build(strategy_config);
+        self.run_impl(&mut strategy, preliminary_callback)
     }
 
     /// Runs model checking from a set of initial states.
-    pub fn run_from_states(&mut self, states: HashSet<McState>) -> McResult {
-        self.run_from_states_with_change(states, |_| {})
+    pub fn run_from_states<S: Strategy>(
+        &mut self,
+        strategy_config: StrategyConfig,
+        states: HashSet<McState>,
+    ) -> McResult {
+        self.run_from_states_with_change::<_, S>(strategy_config, states, |_| {})
     }
 
     /// Runs model checking from a set of initial states after applying callback.
-    pub fn run_from_states_with_change<F>(&mut self, states: HashSet<McState>, preliminary_callback: F) -> McResult
+    pub fn run_from_states_with_change<F, S>(
+        &mut self,
+        strategy_config: StrategyConfig,
+        states: HashSet<McState>,
+        preliminary_callback: F,
+    ) -> McResult
     where
         F: Fn(&mut McSystem),
+        S: Strategy,
     {
         let mut total_stats = McStats::default();
         let mut states = Vec::from_iter(states);
+        let mut strategy = RefCell::new(S::build(strategy_config));
+
         // sort starting states by increasing depth to produce shorter error traces
         states.sort_by_key(|x| x.depth);
         for state in states {
             self.system.set_state(state);
-            let stats = self.run_impl(&preliminary_callback)?;
+            let stats = self.run_impl(strategy.get_mut(), &preliminary_callback)?;
             total_stats.combine(stats);
         }
         Ok(total_stats)

@@ -13,7 +13,7 @@ use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig, VisitedStates};
+use dslab_mp::mc::strategy::{GoalFn, InvariantFn, McResult, PruneFn, StrategyConfig, VisitedStates};
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
 use dslab_mp::system::System;
@@ -366,17 +366,12 @@ fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -
     StrategyConfig::default().prune(prune).goal(goal).invariant(invariant)
 }
 
-fn build_mc_from_config(sys: &System, strategy_name: String, config: StrategyConfig) -> ModelChecker {
-    if strategy_name == "bfs" {
-        ModelChecker::new::<Bfs>(sys, config)
-    } else {
-        ModelChecker::new::<Dfs>(sys, config)
+fn run_mc(mc: &mut ModelChecker, strategy_config: StrategyConfig, strategy_name: &str) -> McResult {
+    match strategy_name {
+        "bfs" => mc.run::<Bfs>(strategy_config),
+        "dfs" => mc.run::<Dfs>(strategy_config),
+        s => panic!("Unknown strategy name: {}", s),
     }
-}
-
-fn build_mc(sys: &System, strategy_name: String, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
-    let config = build_strategy_config(prune, goal, invariant);
-    build_mc_from_config(sys, strategy_name, config)
 }
 
 fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {
@@ -489,8 +484,9 @@ fn one_state_ok(#[case] strategy_name: String) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let mut mc = ModelChecker::new(&build_ping_system());
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc(&mut mc, strategy_config, strategy_name.as_str());
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 1);
 }
@@ -503,8 +499,9 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
     let goal = boxed!(|_: &McState| Some("final".to_string()));
     let invariant = boxed!(|_: &McState| Err("broken".to_string()));
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let mut mc = ModelChecker::new(&build_ping_system());
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc(&mut mc, strategy_config, strategy_name.as_str());
     assert!(if let Err(err) = result {
         err.message() == "broken"
     } else {
@@ -520,8 +517,9 @@ fn one_state_no_goal(#[case] strategy_name: String) {
     let goal = boxed!(|_: &McState| None);
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let mut mc = ModelChecker::new(&build_ping_system());
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc(&mut mc, strategy_config, strategy_name.as_str());
 
     let mut expected_trace = two_nodes_started_trace();
     expected_trace.push(LogEntry::McStarted {});
