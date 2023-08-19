@@ -20,7 +20,7 @@ impl<T: EventData> Default for AwaitResult<T> {
             id: 0,
             time: 0.,
             src: 0,
-            dest: 0,
+            dst: 0,
             data: Box::new(EmptyData {}),
         })
     }
@@ -28,12 +28,12 @@ impl<T: EventData> Default for AwaitResult<T> {
 
 impl<T: EventData> AwaitResult<T> {
     /// Creates a Timeout result with specified source and destination.
-    pub(crate) fn timeout_with(src: Id, dest: Id) -> Self {
+    pub(crate) fn timeout_with(src: Id, dst: Id) -> Self {
         Self::Timeout(Event {
             id: 0,
             time: 0.,
             src,
-            dest,
+            dst,
             data: Box::new(EmptyData {}),
         })
     }

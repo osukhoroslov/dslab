@@ -5,7 +5,7 @@ use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
 pub fn get_data_transfer_completed_details(data: &dyn EventData) -> DetailsKey {
     let event = data.downcast_ref::<DataTransferCompleted>().unwrap();
-    event.data.id as DetailsKey
+    event.dt.id as DetailsKey
 }
 
 pub fn get_data_read_completed_details(data: &dyn EventData) -> DetailsKey {

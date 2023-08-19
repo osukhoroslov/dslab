@@ -4,9 +4,7 @@ mod master;
 mod task;
 mod worker;
 
-use std::cell::RefCell;
 use std::io::Write;
-use std::rc::Rc;
 use std::time::Instant;
 
 use clap::Parser;
@@ -17,10 +15,9 @@ use sugars::{rc, refcell};
 
 use dslab_compute::multicore::{CompFinished, CompStarted, Compute, CoresDependency};
 use dslab_core::simulation::Simulation;
-use dslab_network::constant_bandwidth_model::ConstantBandwidthNetwork;
 use dslab_network::model::{DataTransferCompleted, NetworkModel};
+use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
 use dslab_network::network::Network;
-use dslab_network::shared_bandwidth_model::SharedBandwidthNetwork;
 use dslab_storage::disk::DiskBuilder;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
@@ -85,16 +82,16 @@ fn main() {
     sim.register_details_getter_for::<CompFinished>(get_compute_finished_details);
 
     // create network and add hosts
-    let network_model: Rc<RefCell<dyn NetworkModel>> = if use_shared_network {
-        rc!(refcell!(SharedBandwidthNetwork::new(
+    let network_model: Box<dyn NetworkModel> = if use_shared_network {
+        Box::new(SharedBandwidthNetworkModel::new(
             network_bandwidth as f64,
-            network_latency
-        )))
+            network_latency,
+        ))
     } else {
-        rc!(refcell!(ConstantBandwidthNetwork::new(
+        Box::new(ConstantBandwidthNetworkModel::new(
             network_bandwidth as f64,
-            network_latency
-        )))
+            network_latency,
+        ))
     };
 
     let network_ctx = sim.create_context("net");
@@ -103,7 +100,7 @@ fn main() {
     for i in 0..host_count {
         network.borrow_mut().add_node(
             &format!("host{}", i),
-            Box::new(SharedBandwidthNetwork::new(local_bandwidth as f64, local_latency)),
+            Box::new(SharedBandwidthNetworkModel::new(local_bandwidth as f64, local_latency)),
         );
     }
     let hosts = network.borrow().get_nodes();

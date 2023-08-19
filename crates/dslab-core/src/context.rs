@@ -797,7 +797,7 @@ impl SimulationContext {
         }
 
 
-        /// Waits for any event of type `T` from component `src` until the specified timeout.  
+        /// Waits for any event of type `T` from component `src` until the specified timeout.
         ///
         /// # Example
         /// ```rust
@@ -827,7 +827,7 @@ impl SimulationContext {
         ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
         ///         AwaitResult::Timeout(e) => {
         ///             assert_eq!(e.src, root_id);
-        ///             assert_eq!(e.dest, client_ctx.id());
+        ///             assert_eq!(e.dst, client_ctx.id());
         ///         }
         ///     }
         ///
@@ -1020,7 +1020,6 @@ impl SimulationContext {
         /// let mut sim = Simulation::new(42);
         ///
         /// let root_ctx = sim.create_context("root");
-        /// 
         /// let client_ctx = sim.create_context("client");
         /// let client_id = client_ctx.id();
         /// let client = Rc::new(RefCell::new(Client {
