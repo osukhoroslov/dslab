@@ -1,4 +1,4 @@
-#![doc = include_str!("../../readme.md")]
+//! Asynchronous programming support.
 
 use crate::async_enabled;
 pub(crate) mod build_macro_rules;
