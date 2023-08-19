@@ -734,7 +734,6 @@ where
         ))
         .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug);
 
-
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, |sys| {
             sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
@@ -902,12 +901,14 @@ fn check_mc_node_removed(
         }
     });
     match res {
-        Ok(stats) => {
-            Ok(stats.collected_states.into_iter().map(|state| {
+        Ok(stats) => Ok(stats
+            .collected_states
+            .into_iter()
+            .map(|state| {
                 state.network.borrow_mut().disconnect_node(removed_proc);
                 state
-            }).collect::<HashSet<McState>>())
-        },
+            })
+            .collect::<HashSet<McState>>()),
         Err(err) => {
             err.print_trace();
             Err(err.message())
@@ -954,7 +955,13 @@ fn test_mc_node_removed(config: &TestConfig) -> TestResult {
 
     // remove a node from the system
     let removed = random_proc(&sys, &mut rand);
-    states = Some(check_mc_node_removed(&mut mc, sys.process_names(), &removed, 15, states.unwrap())?);
+    states = Some(check_mc_node_removed(
+        &mut mc,
+        sys.process_names(),
+        &removed,
+        15,
+        states.unwrap(),
+    )?);
     let alive_proc = sys
         .process_names()
         .into_iter()

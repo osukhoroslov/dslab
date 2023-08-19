@@ -89,7 +89,12 @@ impl McSystem {
     }
 
     pub fn get_state(&self) -> McState {
-        let mut state = McState::new(self.events.clone(), self.depth, self.trace_handler.borrow().trace(), self.net.clone());
+        let mut state = McState::new(
+            self.events.clone(),
+            self.depth,
+            self.trace_handler.borrow().trace(),
+            self.net.clone(),
+        );
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
         }
