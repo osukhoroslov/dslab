@@ -4,24 +4,45 @@ use serde::{Deserialize, Serialize};
 
 use crate::system::System;
 
+/// Contains metrics collected from a simulation run.
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct RunStats {
+    /// Makespan expected by the scheduling algorithm (for static algorithms only).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expected_makespan: Option<f64>,
+    /// Scheduling algorithm's execution time (total for all calls to the scheduler).
     pub scheduling_time: f64,
+    /// Total task execution time (in seconds).
     pub total_task_time: f64,
+    /// Total amount of data transmitted over the network (in MB).
     pub total_network_traffic: f64,
+    /// Total time of data transfers over the network (in seconds).
     pub total_network_time: f64,
+    /// Maximum number of cores used at once.
     pub max_used_cores: u32,
+    /// Maximum amount of memory used at once.
     pub max_used_memory: u64,
+    /// Maximum CPU utilization (max_used_cores / total_cores).
     pub max_cpu_utilization: f64,
+    /// Maximum memory utilization (max_used_memory / total_memory).
     pub max_memory_utilization: f64,
+    /// Average CPU utilization (the ratio of core-seconds consumed by tasks to total core-seconds).
     pub cpu_utilization: f64,
+    /// Average memory utilization (analogous to cpu_utilization).
     pub memory_utilization: f64,
+    /// The number of used resources, i.e. on which at least one task has been executed.
     pub used_resource_count: usize,
+    /// Average CPU utilization for used resources only,
+    /// i.e. unused resources are not taken into account in the denominator.
     pub cpu_utilization_used: f64,
+    /// Average memory utilization for used resources only (analogous to cpu_utilization_used).
     pub memory_utilization_used: f64,
+    /// Average CPU utilization for active resources only,
+    /// i.e. without taking into account the consumption before the first execution of the task on the resource
+    /// and after the last execution. That is, we consider resources as machines that are turned on when they are
+    /// needed and turned off when they are no longer needed.
     pub cpu_utilization_active: f64,
+    /// Average memory utilization for active resources only (analogous to cpu_utilization_active).
     pub memory_utilization_active: f64,
 
     #[serde(skip)]
