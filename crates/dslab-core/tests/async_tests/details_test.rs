@@ -47,7 +47,7 @@ impl SimpleExchanger {
         for _i in 0..iterations {
             let (event, data) = self.ctx.async_detailed_handle_self::<Message>(details).await;
             assert!(event.src == self.ctx.id());
-            assert!(event.dest == self.ctx.id());
+            assert!(event.dst == self.ctx.id());
             assert!(data.details == details);
         }
 
