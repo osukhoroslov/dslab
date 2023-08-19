@@ -822,7 +822,7 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let mut res = client_ctx.async_wait_for_event::<Message>(root_id, 10.).await;
+        ///     let mut res = client_ctx.async_wait_event_for::<Message>(root_id, 10.).await;
         ///     match res {
         ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
         ///         AwaitResult::Timeout(e) => {
@@ -831,7 +831,7 @@ impl SimulationContext {
         ///         }
         ///     }
         ///
-        ///     res = client_ctx.async_wait_for_event::<Message>(root_id, 50.).await;
+        ///     res = client_ctx.async_wait_event_for::<Message>(root_id, 50.).await;
         ///     match res {
         ///         AwaitResult::Ok((e, data)) => {
         ///             assert_eq!(e.src, root_id);
@@ -844,13 +844,13 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 60.);
         /// ```
-        pub async fn async_wait_for_event<T>(&self, src: Id, timeout: f64) -> AwaitResult<T>
+        pub async fn async_wait_event_for<T>(&self, src: Id, timeout: f64) -> AwaitResult<T>
         where
             T: EventData,
         {
             assert!(timeout >= 0., "timeout must be a positive value");
 
-            self.async_wait_for_event_to(src, self.id, timeout).await
+            self.async_wait_for_event_to(src, self.id, Some(timeout)).await
         }
 
         /// Waits for any event of type `T` from component `src` without timeout.
@@ -879,7 +879,7 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = client_ctx.async_handle_event::<Message>(root_id).await;
+        ///     let (e, data) = client_ctx.async_wait_event::<Message>(root_id).await;
         ///     assert_eq!(e.src, root_id);
         ///     assert_eq!(data.payload, 42);
         /// });
@@ -887,7 +887,7 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 50.);
         /// ```
-        pub async fn async_handle_event<T>(&self, src: Id) -> (Event, T)
+        pub async fn async_wait_event<T>(&self, src: Id) -> (Event, T)
         where
             T: EventData,
         {
@@ -931,7 +931,16 @@ impl SimulationContext {
         }
 
         /// Register the function for a type of EventData to get await details to further call
-        /// ctx.async_detailed_handle_event::<T>(from, details)
+        /// Self::async_detailed_wait_event or Self::async_detailed_wait_event_for
+        ///
+        /// See [`Self::async_detailed_wait_event_for`].
+        pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
+            self.sim_state
+                .borrow_mut()
+                .register_details_getter_for::<T>(details_getter);
+        }
+
+        /// Waits for any event of type `T` from component `src` and given `details` until the specified timeout.
         ///
         /// # Example
         /// ```rust
@@ -967,7 +976,7 @@ impl SimulationContext {
         ///     async fn listen_first(&self) {
         ///         let mut result = self
         ///             .ctx
-        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 10.)
+        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 10.)
         ///             .await;
         ///         if let AwaitResult::Timeout(e) = result {
         ///             assert_eq!(e.src, self.root_id);
@@ -976,7 +985,7 @@ impl SimulationContext {
         ///         }
         ///         result = self
         ///             .ctx
-        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 100.)
+        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 100.)
         ///             .await;
         ///         if let AwaitResult::Ok((e, data)) = result {
         ///             assert_eq!(e.src, self.root_id);
@@ -988,7 +997,7 @@ impl SimulationContext {
         ///     }
         ///
         ///     async fn listen_second(&self) {
-        ///         let (e, data) = self.ctx.async_detailed_handle_event::<SomeEvent>(self.root_id, 2).await;
+        ///         let (e, data) = self.ctx.async_detailed_wait_event::<SomeEvent>(self.root_id, 2).await;
         ///         assert_eq!(e.src, self.root_id);
         ///         assert_eq!(data.request_id, 2);
         ///         *self.actions_finished.borrow_mut() += 1;
@@ -1039,18 +1048,18 @@ impl SimulationContext {
         ///
         /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
         /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
-        pub async fn async_detailed_wait_for_event<T>(&self, src: Id, details: DetailsKey, timeout: f64) -> AwaitResult<T>
+        pub async fn async_detailed_wait_event_for<T>(&self, src: Id, details: DetailsKey, timeout: f64) -> AwaitResult<T>
         where
             T: EventData,
         {
             assert!(timeout >= 0., "timeout must be a non-negative value");
 
-            self.async_detailed_wait_for_event_to(src, self.id, details, timeout).await
+            self.async_detailed_wait_for_event_to(src, self.id, details, Some(timeout)).await
         }
 
         /// Async wait for event of type T from src component with details flag without timeout.
-        /// See [`Self::async_detailed_wait_for_event`].
-        pub async fn async_detailed_handle_event<T>(&self, src: Id, details: DetailsKey) -> (Event, T)
+        /// See [`Self::async_detailed_wait_event_for`].
+        pub async fn async_detailed_wait_event<T>(&self, src: Id, details: DetailsKey) -> (Event, T)
         where
             T: EventData,
         {
@@ -1058,7 +1067,7 @@ impl SimulationContext {
         }
 
         /// Async detailed handling event from self.
-        /// See [`Self::async_handle_self`, `Self::async_detailed_wait_for_event`]
+        /// See [`Self::async_handle_self`, `Self::async_detailed_wait_event_for`]
         pub async fn async_detailed_handle_self<T>(&self, details: DetailsKey) -> (Event, T)
         where
             T: EventData,
@@ -1067,28 +1076,18 @@ impl SimulationContext {
                 .await
         }
 
-        /// Register the function for a type of EventData to get await details to further call
-        /// Self::async_detailed_handle_event or Self::async_detailed_wait_for_event
-        ///
-        /// See [`Self::async_detailed_wait_for_event`].
-        pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
-            self.sim_state
-                .borrow_mut()
-                .register_details_getter_for::<T>(details_getter);
-        }
-
         async fn async_handle_event_to<T>(&self, src: Id, dst: Id) -> (Event, T)
         where
             T: EventData,
         {
-            let result = self.async_wait_for_event_to::<T>(src, dst, -1.).await;
+            let result = self.async_wait_for_event_to::<T>(src, dst, None).await;
             match result {
                 AwaitResult::Ok(t) => t,
                 AwaitResult::Timeout(_) => panic!("internal error: unexpected timeout"),
             }
         }
 
-        fn async_wait_for_event_to<T>(&self, src: Id, dst: Id, timeout: f64) -> EventFuture<T>
+        fn async_wait_for_event_to<T>(&self, src: Id, dst: Id, timeout: Option<f64>) -> EventFuture<T>
         where
             T: EventData,
         {
@@ -1107,7 +1106,7 @@ impl SimulationContext {
             src: Id,
             dst: Id,
             details: DetailsKey,
-            timeout: f64,
+            timeout: Option<f64>,
         ) -> EventFuture<T>
         where
             T: EventData,
@@ -1127,21 +1126,21 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            let result = self.async_detailed_wait_for_event_to::<T>(src, dst, details, -1.).await;
+            let result = self.async_detailed_wait_for_event_to::<T>(src, dst, details, None).await;
             match result {
                 AwaitResult::Ok(t) => t,
                 AwaitResult::Timeout(_) => panic!("internal error: unexpected timeout"),
             }
         }
 
-        fn create_event_future<T>(&self, await_key: AwaitKey, timeout: f64) -> EventFuture<T>
+        fn create_event_future<T>(&self, await_key: AwaitKey, timeout: Option<f64>) -> EventFuture<T>
         where
             T: EventData,
         {
             let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
             state.borrow_mut().shared_content = AwaitResult::timeout_with(await_key.from, await_key.to);
 
-            if timeout >= 0. {
+            if let Some(timeout) = timeout {
                 self.sim_state.borrow_mut().add_timer_on_state(await_key.to, timeout, state.clone());
             }
 

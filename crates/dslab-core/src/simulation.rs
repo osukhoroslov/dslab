@@ -554,7 +554,7 @@ impl Simulation {
 
         /// Registers a function that extracts [`DetailsKey`] from events of specific type `T`.
         ///
-        /// This is required step before using the [`SimulationContext::async_detailed_handle_event`]
+        /// This is required step before using the [`SimulationContext::async_detailed_wait_event`]
         /// function with type `T`.
         ///
         /// # Example
@@ -591,7 +591,7 @@ impl Simulation {
         ///     async fn listen_first(&self) {
         ///         let mut result = self
         ///             .ctx
-        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 10.)
+        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 10.)
         ///             .await;
         ///         if let AwaitResult::Timeout(e) = result {
         ///             assert_eq!(e.src, self.root_id);
@@ -600,7 +600,7 @@ impl Simulation {
         ///         }
         ///         result = self
         ///             .ctx
-        ///             .async_detailed_wait_for_event::<SomeEvent>(self.root_id, 1, 100.)
+        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 100.)
         ///             .await;
         ///         if let AwaitResult::Ok((e, data)) = result {
         ///             assert_eq!(e.src, self.root_id);
@@ -612,7 +612,7 @@ impl Simulation {
         ///     }
         ///
         ///     async fn listen_second(&self) {
-        ///         let (e, data) = self.ctx.async_detailed_handle_event::<SomeEvent>(self.root_id, 2).await;
+        ///         let (e, data) = self.ctx.async_detailed_wait_event::<SomeEvent>(self.root_id, 2).await;
         ///         assert_eq!(e.src, self.root_id);
         ///         assert_eq!(data.request_id, 2);
         ///         *self.actions_finished.borrow_mut() += 1;
@@ -677,9 +677,17 @@ impl Simulation {
 
         /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
         ///
+        /// The purpose of this queue is enabling convenient communication
+        /// between different asynchronous tasks within a single component.
+        /// This allows for the operation of numerous "parallel activities" within one component.
+        ///
+        /// Certainly, it could also serve as a mail-box for events between multiple components,
+        /// but such a perspective is highly not recommended. For multi-component communication another components
+        /// should be used (for example dslab-network).
+        ///
         /// # Examples:
         /// ```rust
-        ///
+        //)/
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
         ///
@@ -688,7 +696,7 @@ impl Simulation {
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
         /// use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
         ///
-        /// struct AnyStruct {
+        /// struct InternalMessage {
         ///     payload: u32,
         /// }
         ///
@@ -697,7 +705,7 @@ impl Simulation {
         ///
         /// struct Client {
         ///     ctx: SimulationContext,
-        ///     queue: UnboundedBlockingQueue<AnyStruct>,
+        ///     queue: UnboundedBlockingQueue<InternalMessage>,
         /// }
         ///
         /// impl Client {
@@ -709,7 +717,7 @@ impl Simulation {
         ///     async fn producer(&self) {
         ///         for i in 0..10 {
         ///             self.ctx.async_wait_for(5.).await;
-        ///             self.queue.send(AnyStruct {payload: i});
+        ///             self.queue.send(InternalMessage {payload: i});
         ///         }
         ///     }
         ///
@@ -736,7 +744,7 @@ impl Simulation {
         /// let client_ctx = sim.create_context("client");
         /// let client_id = client_ctx.id();
         ///
-        /// let queue: UnboundedBlockingQueue<AnyStruct> = sim.create_queue("client_queue");
+        /// let queue: UnboundedBlockingQueue<InternalMessage> = sim.create_queue("client_queue");
         /// let client = Rc::new(RefCell::new(Client {ctx: client_ctx, queue }));
         ///
         /// sim.add_handler("client", client);
@@ -808,7 +816,7 @@ impl Simulation {
     /// assert_eq!(sim.time(), 1.3);
     /// status = sim.steps(2);
     /// assert!(!status);
-    /// assert_eq!(sim.time(), 1.4);
+    /// assert_eq!(sim.time(), 1.4)
     /// ```
     pub fn steps(&mut self, step_count: u64) -> bool {
         for _ in 0..step_count {
@@ -917,8 +925,6 @@ impl Simulation {
     /// assert_eq!(sim.time(), 3.6);
     /// assert!(!status); // there are no more events
     /// ```
-    ///
-    /// Implementation is feature-defined
     pub fn step_until_time(&mut self, time: f64) -> bool {
         self.step_until_time_inner(time)
     }

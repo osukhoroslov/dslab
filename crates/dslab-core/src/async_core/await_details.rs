@@ -6,7 +6,7 @@ use crate::{event::EventData, Event, Id};
 /// Type of key that represents the details of event to wait for.
 pub type DetailsKey = u64;
 
-/// Represents the result of `SimulationContext::async_wait_for_event` call.
+/// Represents the result of `SimulationContext::async_wait_event_for` call.
 pub enum AwaitResult<T: EventData> {
     /// Contains Event with destination and source that it was waited from. Id, time, and data are empty.
     Timeout(Event),
