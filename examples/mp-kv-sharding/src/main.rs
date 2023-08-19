@@ -887,7 +887,7 @@ fn check_mc_node_removed(
     let process_names = sys.process_names();
 
     let strategy_config = StrategyConfig::default()
-        .invariant(predicates::invariants::state_depth_current_run(max_steps))
+        .invariant(invariants::state_depth_current_run(max_steps))
         .goal(goals::no_events())
         .collect(collects::no_events());
 
@@ -917,7 +917,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     let max_steps = 10;
 
-    let achieved_states = check_mc_get(&mut sys, &proc, &key, None::<&String>, max_steps, None)?;
+    let achieved_states = check_mc_get(&mut sys, &proc, &key, None, max_steps, None)?;
     let achieved_states = check_mc_put(
         &mut sys,
         &proc,
@@ -946,7 +946,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &mut sys,
         &proc,
         &key,
-        None::<&String>,
+        None,
         max_steps,
         Some(achieved_states.collected_states),
     )?;
@@ -954,7 +954,7 @@ fn test_model_checking_normal(config: &TestConfig) -> TestResult {
         &mut sys,
         &proc,
         &key,
-        None::<&String>,
+        None,
         max_steps,
         Some(achieved_states.collected_states),
     )?;
@@ -1048,7 +1048,7 @@ fn main() {
     tests.add("NODE REMOVED AFTER CRASH", test_node_removed_after_crash, config);
     tests.add(
         "MODEL CHECKING",
-        test_model_checking_normal,
+        test_mc_normal,
         TestConfig {
             process_factory: &process_factory,
             proc_count: 3,
@@ -1057,7 +1057,7 @@ fn main() {
     );
     tests.add(
         "MODEL CHECKING NODE REMOVED",
-        test_model_checking_node_removed,
+        test_mc_node_removed,
         TestConfig {
             process_factory: &process_factory,
             proc_count: 3,

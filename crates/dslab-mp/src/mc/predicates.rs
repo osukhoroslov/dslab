@@ -180,8 +180,8 @@ pub mod goals {
         })
     }
 
-    /// Checks if trace to given state has at least `n` events matching the predicate.
-    pub fn event_happened_n_times<F>(predicate: F, n: usize) -> GoalFn
+    /// Checks if current run trace has at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> GoalFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
@@ -279,8 +279,8 @@ pub mod collects {
         boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
     }
 
-    /// Checks if trace to given state has at least `n` events matching the predicate.
-    pub fn event_happened_n_times<F>(predicate: F, n: usize) -> CollectFn
+    /// Checks if current run trace has at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {
