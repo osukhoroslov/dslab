@@ -41,12 +41,31 @@ impl McSystem {
         }
     }
 
-    pub fn apply_event(&mut self, event: McEvent) -> Vec<McEvent> {
+    fn add_events(&mut self, events: Vec<McEvent>) {
+        for event in events {
+            match &event {
+                McEvent::TimerCancelled { proc, timer } => {
+                    self.events.cancel_timer(proc.clone(), timer.clone());
+                    self.trace_handler.borrow_mut().push(event.to_log_entry());
+                }
+                McEvent::MessageDropped { receive_event_id, .. } => {
+                    receive_event_id.map(|id| self.events.pop(id));
+                    self.trace_handler.borrow_mut().push(event.to_log_entry());
+                }
+                _ => {
+                    self.events.push(event);
+                }
+            }
+        }
+    }
+
+    pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
         let state_hash = self.get_state_hash();
-        match event {
+
+        let new_events = match event {
             McEvent::MessageReceived { msg, src, dst, .. } => {
                 let name = self.net.borrow().get_proc_node(&dst).clone();
                 self.nodes
@@ -62,7 +81,8 @@ impl McSystem {
                     .on_timer_fired(proc, timer, event_time, state_hash)
             }
             _ => vec![],
-        }
+        };
+        self.add_events(new_events);
     }
 
     pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
@@ -83,9 +103,7 @@ impl McSystem {
             .get_mut(&node)
             .unwrap()
             .on_local_message_received(proc, msg, event_time, state_hash);
-        for new_event in new_events {
-            self.events.push(new_event);
-        }
+        self.add_events(new_events);
     }
 
     pub fn get_state(&self) -> McState {
@@ -123,5 +141,9 @@ impl McSystem {
         let mut hasher = DefaultHasher::default();
         self.get_state().hash(&mut hasher);
         hasher.finish()
+    }
+
+    pub fn network(&mut self) -> Rc<RefCell<McNetwork>> {
+        self.net.clone()
     }
 }

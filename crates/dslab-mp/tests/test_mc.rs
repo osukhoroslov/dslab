@@ -835,20 +835,20 @@ fn useless_timer(#[case] strategy_name: String) {
 #[case("bfs")]
 fn many_dropped_messages(#[case] strategy_name: String) {
     let invariant = boxed!(|state: &McState| {
-        if state.events.available_events_num() > 1 {
-            Err("MessageDropped directives should have strict order".to_owned())
+        if state.events.available_events_num() > 0 {
+            Err("MessageDropped directives should appear in events list".to_owned())
         } else {
             Ok(())
         }
     });
     let prune = boxed!(|_: &McState| None);
-    let goal = build_reached_depth_goal(10);
-    let mut sys = build_spammer_delivery_system();
-    sys.send_local_message("process1", Message::new("START", "start spamming!!!"));
+    let goal = build_no_events_left_goal();
 
-    sys.network().drop_outgoing("node1");
-    let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let mut mc = build_mc(&build_spammer_delivery_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().drop_outgoing("node1");
+        mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
+    });
     assert!(result.is_ok());
 }
 

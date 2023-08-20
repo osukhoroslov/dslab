@@ -85,4 +85,8 @@ impl McNetwork {
             }
         }
     }
+
+    pub fn drop_outgoing(&mut self, node: &str) {
+        self.drop_outgoing.insert(node.to_string());
+    }
 }
