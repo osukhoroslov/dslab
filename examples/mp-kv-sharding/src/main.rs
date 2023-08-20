@@ -958,7 +958,7 @@ fn test_mc_node_removed(config: &TestConfig) -> TestResult {
         sys.process_names(),
         &removed_proc,
         15,
-        achieved_states.expect(&format!("there should be states after {} GET queries", keys_count)),
+        achieved_states.unwrap_or_else(|| panic!("no states found after {} GET queries", keys_count)),
     )?);
     let alive_proc = sys
         .process_names()
