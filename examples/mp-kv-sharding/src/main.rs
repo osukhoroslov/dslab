@@ -940,34 +940,36 @@ fn test_mc_node_removed(config: &TestConfig) -> TestResult {
 
     // insert random key-value pairs
     let keys_count = 40;
-    let mut states = None;
+    let mut achieved_states = None;
     let mut kv = HashMap::new();
     for _ in 0..keys_count {
         let k = random_string(8, &mut rand).to_uppercase();
         let v = random_string(8, &mut rand);
         let proc = random_proc(&sys, &mut rand);
-        let res = check_mc_put(&mut mc, &proc, &k, &v, 10, states.clone())?;
-        states = Some(res);
+        let res = check_mc_put(&mut mc, &proc, &k, &v, 10, achieved_states)?;
+        achieved_states = Some(res);
         kv.insert(k, v);
     }
 
     // remove a node from the system
-    let removed = random_proc(&sys, &mut rand);
-    states = Some(check_mc_node_removed(
+    let removed_proc = random_proc(&sys, &mut rand);
+    achieved_states = Some(check_mc_node_removed(
         &mut mc,
         sys.process_names(),
-        &removed,
+        &removed_proc,
         15,
-        states.unwrap(),
+        achieved_states.expect(&format!("there should be states after {} GET queries", keys_count)),
     )?);
     let alive_proc = sys
         .process_names()
         .into_iter()
-        .filter(|proc| *proc != removed)
+        .filter(|proc| *proc != removed_proc)
         .collect::<Vec<String>>();
+
+    // check that all data is still in the storage
     for (k, v) in kv {
         let proc = alive_proc.choose(&mut rand).unwrap().clone();
-        states = Some(check_mc_get(&mut mc, &proc, &k, Some(&v), 10, states)?);
+        achieved_states = Some(check_mc_get(&mut mc, &proc, &k, Some(&v), 10, achieved_states)?);
     }
     Ok(true)
 }
