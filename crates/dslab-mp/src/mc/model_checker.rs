@@ -82,7 +82,6 @@ impl ModelChecker {
         F: FnOnce(&mut McSystem),
         S: Strategy,
     {
-        // Setup strategy which specifies rules for state exploration
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         preliminary_callback(&mut self.system);
         strategy.mark_visited(self.system.get_state());
