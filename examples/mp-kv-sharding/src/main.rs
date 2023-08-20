@@ -731,8 +731,7 @@ where
         .collect(collects::event_happened_n_times_current_run(
             LogEntry::is_mc_local_message_sent,
             1,
-        ))
-        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug);
+        ));
 
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, |sys| {
@@ -891,8 +890,7 @@ fn check_mc_node_removed(
     let strategy_config = StrategyConfig::default()
         .invariant(invariants::state_depth_current_run(max_steps))
         .goal(goals::no_events())
-        .collect(collects::no_events())
-        .execution_mode(dslab_mp::mc::strategy::ExecutionMode::Debug);
+        .collect(collects::no_events());
 
     let res = mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
