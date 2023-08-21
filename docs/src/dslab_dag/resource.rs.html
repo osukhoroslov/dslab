@@ -56,6 +56,8 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Resource model.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -82,9 +84,11 @@
     <span class="kw">pub </span>compute: Rc&lt;RefCell&lt;Compute&gt;&gt;,
     <span class="doccomment">/// CPU speed in Gflop/s.
     </span><span class="kw">pub </span>speed: f64,
+    <span class="kw">pub </span>cores: u32,
     <span class="kw">pub </span>cores_available: u32,
     <span class="doccomment">/// Memory size in MB.
-    </span><span class="kw">pub </span>memory_available: u64,
+    </span><span class="kw">pub </span>memory: u64,
+    <span class="kw">pub </span>memory_available: u64,
 }
 
 <span class="doccomment">/// Contains parameters of computing resource, can be used later to create a compute resource instance.

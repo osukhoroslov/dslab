@@ -151,9 +151,81 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::hash_map::DefaultHasher;
+<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>std::hash::{Hash, Hasher};
 <span class="kw">use </span>std::path::Path;
 
+<span class="kw">use </span>rand::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>rand_pcg::Pcg64;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>serde_json::from_str;
 
@@ -181,7 +253,8 @@
 </span><span class="kw">struct </span>File {
     <span class="comment">// A human-readable name for the file
     </span>name: String,
-    <span class="comment">// File size in KB
+    <span class="comment">// File size in KB (schema v1.3) or in bytes (schema v1.4)
+    </span><span class="attr">#[serde(alias = <span class="string">&quot;sizeInBytes&quot;</span>)]
     </span>size: u64,
     <span class="comment">// Whether it is an input or output data
     </span>link: String,
@@ -192,11 +265,21 @@
     <span class="comment">// Task name
     </span>name: String,
     <span class="comment">// Task runtime in seconds
+    </span><span class="attr">#[serde(alias = <span class="string">&quot;runtimeInSeconds&quot;</span>)]
     </span>runtime: f64,
     <span class="comment">// Number of cores required by the task
     </span>cores: <span class="prelude-ty">Option</span>&lt;f64&gt;, <span class="comment">// some files specify cores as &quot;1.0&quot;
-    // Memory (resident set) size of the process in KB
-    </span>memory: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+    // Memory (resident set) size of the process in KB (schema v1.3) or in bytes (schema v1.4)
+    //
+    // TODO: Uncomment after this issue is fixed: https://github.com/wfcommons/makeflow-instances/issues/1
+    //
+    // #[serde(alias = &quot;memoryInBytes&quot;)]
+    // memory: Option&lt;u64&gt;,
+    //
+    // Until then we have to resort to using both `memory_in_bytes` and `memory`.
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;memoryInBytes&quot;</span>)]
+    </span>memory_in_bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+    memory: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     <span class="comment">// Task input/output files
     </span>files: Vec&lt;File&gt;,
     <span class="comment">// Machine used for task execution
@@ -205,8 +288,8 @@
 
 <span class="attr">#[derive(Serialize, Deserialize)]
 </span><span class="kw">struct </span>Workflow {
-    jobs: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;,  <span class="comment">// v1.2
-    </span>tasks: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;, <span class="comment">// v1.3
+    jobs: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;,  <span class="comment">// schema v1.2
+    </span>tasks: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;, <span class="comment">// schema v1.3
     </span><span class="attr">#[serde(default = <span class="string">&quot;Vec::new&quot;</span>)]
     </span>machines: Vec&lt;Machine&gt;,
 }
@@ -221,23 +304,37 @@
 }
 
 <span class="attr">#[derive(Serialize, Deserialize)]
+</span><span class="kw">struct </span>Wms {
+    name: String,
+}
+
+<span class="attr">#[derive(Serialize, Deserialize)]
 </span><span class="kw">struct </span>Json {
+    <span class="attr">#[serde(rename = <span class="string">&quot;schemaVersion&quot;</span>)]
+    </span>schema_version: String,
     workflow: Workflow,
+    wms: Wms,
 }
 
 <span class="kw">impl </span>DAG {
     <span class="doccomment">/// Reads DAG from a file in [WfCommons json format](https://wfcommons.org/format).
     </span><span class="kw">pub fn </span>from_wfcommons&lt;P: AsRef&lt;Path&gt;&gt;(file: P, config: <span class="kw-2">&amp;</span>ParserConfig) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>json: Json = from_str(
-            <span class="kw-2">&amp;</span>std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t read file {}&quot;</span>, file.as_ref().display())),
-        )
-        .unwrap_or_else(|e| {
+        <span class="kw">let </span><span class="kw-2">mut </span>hasher = DefaultHasher::new();
+        <span class="kw">let </span>str =
+            <span class="kw-2">&amp;</span>std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t read file {}&quot;</span>, file.as_ref().display()));
+        str.hash(<span class="kw-2">&amp;mut </span>hasher);
+        <span class="kw">let </span>hash = hasher.finish();
+        <span class="kw">let </span><span class="kw-2">mut </span>rand = Pcg64::seed_from_u64(hash + config.seed.unwrap_or(<span class="number">123</span>));
+
+        <span class="kw">let </span>json: Json = from_str(str).unwrap_or_else(|e| {
             <span class="macro">panic!</span>(
                 <span class="string">&quot;Can&#39;t parse WfCommons json from file {}: {}&quot;</span>,
                 file.as_ref().display(),
                 e
             )
         });
+        <span class="kw">let </span>schema_version = json.schema_version;
+        <span class="kw">let </span>wms = json.wms.name;
         <span class="kw">let </span>workflow = json.workflow;
         <span class="kw">let </span>machine_speed: HashMap&lt;String, f64&gt; = workflow
             .machines
@@ -250,37 +347,65 @@
             .collect();
         <span class="kw">let </span><span class="kw-2">mut </span>dag = DAG::new();
         <span class="kw">let </span><span class="kw-2">mut </span>data_items: HashMap&lt;String, usize&gt; = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>stage_mem: HashMap&lt;String, u64&gt; = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>stage_cores: HashMap&lt;String, u32&gt; = HashMap::new();
         <span class="kw">for </span>task <span class="kw">in </span>workflow.tasks().iter() {
-            <span class="kw">let </span><span class="kw-2">mut </span>flops = task.runtime;
+            <span class="kw">let </span>stage = task.name.split(<span class="string">&#39;_&#39;</span>).next().unwrap().to_string();
+
+            <span class="kw">let </span>cores = <span class="kw">if let </span><span class="prelude-val">Some</span>(cores_conf) = <span class="kw-2">&amp;</span>config.generate_cores {
+                <span class="kw">if </span>cores_conf.regular &amp;&amp; stage_cores.contains_key(<span class="kw-2">&amp;</span>stage) {
+                    stage_cores[<span class="kw-2">&amp;</span>stage]
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span>cores = rand.gen_range(cores_conf.min..=cores_conf.max);
+                    <span class="kw">if </span>cores_conf.regular {
+                        stage_cores.insert(stage.clone(), cores);
+                    }
+                    cores
+                }
+            } <span class="kw">else </span>{
+                task.cores.unwrap_or(<span class="number">1.</span>) <span class="kw">as </span>u32
+            };
+
+            <span class="kw">let </span>memory = <span class="kw">if </span>config.ignore_memory {
+                <span class="number">0
+            </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(mem_conf) = <span class="kw-2">&amp;</span>config.generate_memory {
+                <span class="kw">if </span>mem_conf.regular &amp;&amp; stage_mem.contains_key(<span class="kw-2">&amp;</span>stage) {
+                    stage_mem[<span class="kw-2">&amp;</span>stage]
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span>memory = (rand.gen_range(mem_conf.min..=mem_conf.max) <span class="kw">as </span>f64 / <span class="number">1000.</span>).ceil() <span class="kw">as </span>u64 * <span class="number">1000</span>;
+                    <span class="kw">if </span>mem_conf.regular {
+                        stage_mem.insert(stage, memory);
+                    }
+                    memory
+                }
+            } <span class="kw">else </span>{
+                <span class="comment">// TODO: Uncomment after this issue is fixed: https://github.com/wfcommons/makeflow-instances/issues/1
+                // let memory = task.memory.unwrap_or(0);
+                // if schema_version == &quot;1.4&quot; {
+                //     (memory as f64 / 1e6).ceil() as u64 // convert bytes to MB (round up to nearest)
+                // } else {
+                //     (memory as f64 / 1e3).ceil() as u64 // convert KB to MB (round up to nearest)
+                // }
+                </span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory) = task.memory_in_bytes {
+                    (memory <span class="kw">as </span>f64 / <span class="number">1e6</span>).ceil() <span class="kw">as </span>u64 <span class="comment">// convert bytes to MB (round up to nearest)
+                </span>} <span class="kw">else </span>{
+                    (task.memory.unwrap_or(<span class="number">0</span>) <span class="kw">as </span>f64 / <span class="number">1e3</span>).ceil() <span class="kw">as </span>u64 <span class="comment">// convert KB to MB (round up to nearest)
+                </span>}
+            };
+
+            <span class="kw">let </span><span class="kw-2">mut </span>flops = task.runtime * cores <span class="kw">as </span>f64;
             <span class="kw">if let </span><span class="prelude-val">Some</span>(machine_speed) = task.machine.as_ref().and_then(|m| machine_speed.get(m)) {
                 flops <span class="kw-2">*</span>= <span class="kw-2">*</span>machine_speed;
             } <span class="kw">else </span>{
                 flops <span class="kw-2">*</span>= config.reference_speed;
             }
 
-            <span class="kw">let </span>memory = <span class="kw">if </span>!config.ignore_memory {
-                (task.memory.unwrap_or(<span class="number">0</span>) <span class="kw">as </span>f64 / <span class="number">1000.</span>).ceil() <span class="kw">as </span>u64 <span class="comment">// convert KB to MB (round up to nearest)
-            </span>} <span class="kw">else </span>{
-                <span class="number">0
-            </span>};
-
-            <span class="kw">let </span>task_id = dag.add_task(
-                <span class="kw-2">&amp;</span>task.name,
-                flops,
-                memory,
-                <span class="number">1</span>,
-                task.cores.unwrap_or(<span class="number">1.</span>) <span class="kw">as </span>u32,
-                CoresDependency::Linear,
-            );
+            <span class="kw">let </span>task_id = dag.add_task(<span class="kw-2">&amp;</span>task.name, flops, memory, cores, cores, CoresDependency::Linear);
             <span class="kw">for </span>file <span class="kw">in </span>task.files.iter() {
                 <span class="kw">if </span>file.link == <span class="string">&quot;output&quot; </span>{
                     data_items.insert(
                         file.name.clone(),
-                        dag.add_task_output(
-                            task_id,
-                            <span class="kw-2">&amp;</span>file.name,
-                            file.size <span class="kw">as </span>f64 / <span class="number">1000.</span>, <span class="comment">// convert KB to MB
-                        </span>),
+                        dag.add_task_output(task_id, <span class="kw-2">&amp;</span>file.name, file_size_in_mb(file.size, <span class="kw-2">&amp;</span>schema_version, <span class="kw-2">&amp;</span>wms)),
                     );
                 }
             }
@@ -291,10 +416,8 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(data_item_id) = data_items.get(<span class="kw-2">&amp;</span>file.name) {
                         dag.add_data_dependency(<span class="kw-2">*</span>data_item_id, task_id);
                     } <span class="kw">else </span>{
-                        <span class="kw">let </span>data_item_id = dag.add_data_item(
-                            <span class="kw-2">&amp;</span>file.name,
-                            file.size <span class="kw">as </span>f64 / <span class="number">1000.</span>, <span class="comment">// convert KB to MB
-                        </span>);
+                        <span class="kw">let </span>data_item_id =
+                            dag.add_data_item(<span class="kw-2">&amp;</span>file.name, file_size_in_mb(file.size, <span class="kw-2">&amp;</span>schema_version, <span class="kw-2">&amp;</span>wms));
                         data_items.insert(file.name.clone(), data_item_id);
                         dag.add_data_dependency(data_item_id, task_id);
                     }
@@ -303,5 +426,18 @@
         }
         dag
     }
+}
+
+<span class="kw">fn </span>file_size_in_mb(size: u64, schema_version: <span class="kw-2">&amp;</span>String, wms: <span class="kw-2">&amp;</span>String) -&gt; f64 {
+    <span class="comment">// Pegasus instances pre 1.4 have file sizes in bytes by mistake!
+    // See https://github.com/wfcommons/pegasus-instances/issues/1
+    //
+    // TODO: Makeflow 1.4 instances still have sizes in KB, until this issue is fixed:
+    // https://github.com/wfcommons/makeflow-instances/issues/1
+    </span><span class="kw">if </span>(schema_version == <span class="string">&quot;1.4&quot; </span>&amp;&amp; wms != <span class="string">&quot;Makeflow&quot;</span>) || wms == <span class="string">&quot;Pegasus&quot; </span>{
+        size <span class="kw">as </span>f64 / <span class="number">1e6 </span><span class="comment">// convert bytes to MB
+    </span>} <span class="kw">else </span>{
+        size <span class="kw">as </span>f64 / <span class="number">1e3 </span><span class="comment">// convert KB to MB
+    </span>}
 }
 </code></pre></div></section></main></body></html>

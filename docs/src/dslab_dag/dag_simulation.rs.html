@@ -125,6 +125,8 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Simulation configuration and execution.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -197,7 +199,9 @@
                     name: r.name.clone(),
                     compute,
                     speed: r.speed,
+                    cores: r.cores,
                     cores_available: r.cores,
+                    memory: r.memory,
                     memory_available: r.memory,
                 }
             })

@@ -119,31 +119,89 @@
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::{HashMap, HashSet};
 
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::system::System;
 
-<span class="attr">#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+<span class="doccomment">/// Contains metrics collected from a simulation run.
+</span><span class="attr">#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 </span><span class="kw">pub struct </span>RunStats {
-    <span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="doccomment">/// Makespan expected by the scheduling algorithm (for static algorithms only).
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     </span><span class="kw">pub </span>expected_makespan: <span class="prelude-ty">Option</span>&lt;f64&gt;,
-    <span class="kw">pub </span>scheduling_time: f64,
-    <span class="kw">pub </span>total_task_time: f64,
-    <span class="kw">pub </span>total_network_traffic: f64,
-    <span class="kw">pub </span>total_network_time: f64,
-    <span class="kw">pub </span>max_used_cores: u32,
-    <span class="kw">pub </span>max_used_memory: u64,
-    <span class="kw">pub </span>max_cpu_utilization: f64,
-    <span class="kw">pub </span>max_memory_utilization: f64,
-    <span class="kw">pub </span>cpu_utilization: f64,
-    <span class="kw">pub </span>memory_utilization: f64,
-    <span class="kw">pub </span>used_resource_count: usize,
-    <span class="kw">pub </span>cpu_utilization_used: f64,
-    <span class="kw">pub </span>memory_utilization_used: f64,
-    <span class="kw">pub </span>cpu_utilization_active: f64,
-    <span class="kw">pub </span>memory_utilization_active: f64,
+    <span class="doccomment">/// Scheduling algorithm&#39;s execution time (total for all calls to the scheduler).
+    </span><span class="kw">pub </span>scheduling_time: f64,
+    <span class="doccomment">/// Total task execution time (in seconds).
+    </span><span class="kw">pub </span>total_task_time: f64,
+    <span class="doccomment">/// Total amount of data transmitted over the network (in MB).
+    </span><span class="kw">pub </span>total_network_traffic: f64,
+    <span class="doccomment">/// Total time of data transfers over the network (in seconds).
+    </span><span class="kw">pub </span>total_network_time: f64,
+    <span class="doccomment">/// Maximum number of cores used at once.
+    </span><span class="kw">pub </span>max_used_cores: u32,
+    <span class="doccomment">/// Maximum amount of memory used at once.
+    </span><span class="kw">pub </span>max_used_memory: u64,
+    <span class="doccomment">/// Maximum CPU utilization (max_used_cores / total_cores).
+    </span><span class="kw">pub </span>max_cpu_utilization: f64,
+    <span class="doccomment">/// Maximum memory utilization (max_used_memory / total_memory).
+    </span><span class="kw">pub </span>max_memory_utilization: f64,
+    <span class="doccomment">/// Average CPU utilization (the ratio of core-seconds consumed by tasks to total core-seconds).
+    </span><span class="kw">pub </span>cpu_utilization: f64,
+    <span class="doccomment">/// Average memory utilization (analogous to cpu_utilization).
+    </span><span class="kw">pub </span>memory_utilization: f64,
+    <span class="doccomment">/// The number of used resources, i.e. on which at least one task has been executed.
+    </span><span class="kw">pub </span>used_resource_count: usize,
+    <span class="doccomment">/// Average CPU utilization for used resources only,
+    /// i.e. unused resources are not taken into account in the denominator.
+    </span><span class="kw">pub </span>cpu_utilization_used: f64,
+    <span class="doccomment">/// Average memory utilization for used resources only (analogous to cpu_utilization_used).
+    </span><span class="kw">pub </span>memory_utilization_used: f64,
+    <span class="doccomment">/// Average CPU utilization for active resources only,
+    /// i.e. without taking into account the consumption before the first execution of the task on the resource
+    /// and after the last execution. That is, we consider resources as machines that are turned on when they are
+    /// needed and turned off when they are no longer needed.
+    </span><span class="kw">pub </span>cpu_utilization_active: f64,
+    <span class="doccomment">/// Average memory utilization for active resources only (analogous to cpu_utilization_active).
+    </span><span class="kw">pub </span>memory_utilization_active: f64,
 
     <span class="attr">#[serde(skip)]
     </span>task_starts: HashMap&lt;usize, (u32, u64, f64)&gt;,
@@ -230,13 +288,29 @@
         }
 
         <span class="self">self</span>.max_cpu_utilization = <span class="self">self</span>.max_used_cores <span class="kw">as </span>f64 / total_cores <span class="kw">as </span>f64;
-        <span class="self">self</span>.max_memory_utilization = <span class="self">self</span>.max_used_memory <span class="kw">as </span>f64 / total_memory <span class="kw">as </span>f64;
+        <span class="self">self</span>.max_memory_utilization = <span class="kw">if </span>total_memory &gt; <span class="number">0 </span>{
+            <span class="self">self</span>.max_used_memory <span class="kw">as </span>f64 / total_memory <span class="kw">as </span>f64
+        } <span class="kw">else </span>{
+            <span class="number">1.
+        </span>};
         <span class="self">self</span>.cpu_utilization_used = <span class="self">self</span>.cpu_utilization / time / total_cores_used <span class="kw">as </span>f64;
-        <span class="self">self</span>.memory_utilization_used = <span class="self">self</span>.memory_utilization / time / total_memory_used <span class="kw">as </span>f64;
+        <span class="self">self</span>.memory_utilization_used = <span class="kw">if </span>total_memory_used &gt; <span class="number">0 </span>{
+            <span class="self">self</span>.memory_utilization / time / total_memory_used <span class="kw">as </span>f64
+        } <span class="kw">else </span>{
+            <span class="number">1.
+        </span>};
         <span class="self">self</span>.cpu_utilization_active = <span class="self">self</span>.cpu_utilization / total_cores_active;
-        <span class="self">self</span>.memory_utilization_active = <span class="self">self</span>.memory_utilization / total_memory_active;
+        <span class="self">self</span>.memory_utilization_active = <span class="kw">if </span>total_memory_active &gt; <span class="number">0. </span>{
+            <span class="self">self</span>.memory_utilization / total_memory_active
+        } <span class="kw">else </span>{
+            <span class="number">1.
+        </span>};
         <span class="self">self</span>.cpu_utilization /= time * total_cores <span class="kw">as </span>f64;
-        <span class="self">self</span>.memory_utilization /= time * total_memory <span class="kw">as </span>f64;
+        <span class="kw">if </span><span class="self">self</span>.memory_utilization &gt; <span class="number">0. </span>{
+            <span class="self">self</span>.memory_utilization /= time * total_memory <span class="kw">as </span>f64;
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.memory_utilization = <span class="number">1.</span>;
+        }
         <span class="self">self</span>.used_resource_count = <span class="self">self</span>.used_resources.len();
     }
 }

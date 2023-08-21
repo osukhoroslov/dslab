@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ParserConfig"]};
+window.SIDEBAR_ITEMS = {"struct":["GenerateCoresOptions","GenerateMemoryOptions","ParserConfig"]};
