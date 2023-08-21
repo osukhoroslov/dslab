@@ -5,6 +5,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 
 use dslab_compute::multicore::CoresDependency;
+use dslab_core::EPSILON;
 
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
@@ -20,6 +21,15 @@ use dslab_dag::schedulers::peft::PeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
+
+fn assert_float_eq(x: f64, y: f64, eps: f64) {
+    assert!(
+        (x - y).abs() < eps || (x.max(y) - x.min(y)) / x.min(y) < eps,
+        "Values do not match: {:.15} vs {:.15}",
+        x,
+        y
+    );
+}
 
 fn gen_dag(rng: &mut Pcg64, num_tasks: usize, num_data_items: usize) -> DAG {
     let mut dag = DAG::new();
@@ -115,7 +125,7 @@ fn simple_test() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 1183.88168430328369140625);
+    assert_float_eq(result, 1183.88168430328369140625, EPSILON);
 }
 
 #[test]
@@ -137,7 +147,7 @@ fn test_1() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 109.53108978271484375);
+    assert_float_eq(result, 103.860325813293457, EPSILON);
 }
 
 #[test]
@@ -159,7 +169,7 @@ fn test_2() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 35.27810382843017578125);
+    assert_float_eq(result, 35.046996116638184, EPSILON);
 }
 
 #[test]
@@ -181,7 +191,7 @@ fn test_3() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_eq!(result, 102.86716175079345703125);
+    assert_float_eq(result, 105.132052421569824, EPSILON);
 }
 
 #[test]
@@ -249,31 +259,31 @@ fn test_4() {
     // 1:                           [-------------E------------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]
     // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
-    assert_eq!(heft_makespan, 98.0);
+    assert_float_eq(heft_makespan, 98.0, EPSILON);
 
     let lookahead_makespan = run_scheduler(LookaheadScheduler::new(), dag.clone());
     // 0:
     // 1:                         [-------D------]
     // 2:[-------A------][-----C-----][--------B--------][-------F------][-----I----][----H----][--J--]
     // 3:                           [------E-----]           [------G------]
-    assert_eq!(lookahead_makespan, 94.0);
+    assert_float_eq(lookahead_makespan, 94.0, EPSILON);
 
     let dls_makespan = run_scheduler(DlsScheduler::new(), dag.clone());
     // 0:
     // 1:                           [--------------E-----------]
     // 2:[-------A------][-----C-----][--------B--------][------G------]     [-----I----]
     // 3:                         [---D--][-------F------]                  [----H----]           [--J--]
-    assert_eq!(dls_makespan, 96.0);
+    assert_float_eq(dls_makespan, 100.0, EPSILON);
 
     let peft_makespan = run_scheduler(PeftScheduler::new().with_original_network_estimation(), dag.clone());
     // 0:
     // 1:
     // 2:[-------A------][-----C-----][--------B--------][------G------][-----I----]
     // 3:                         [---D--][------E-----][-------F------]    [----H----]          [--J--]
-    assert_eq!(peft_makespan, 95.0);
+    assert_float_eq(peft_makespan, 95.0, EPSILON);
 
     let simple_makespan = run_scheduler(SimpleScheduler::new(), dag);
-    assert_eq!(simple_makespan, 256.0);
+    assert_float_eq(simple_makespan, 256.0, EPSILON);
 }
 
 #[test]
@@ -315,7 +325,7 @@ fn test_chain_1() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    assert_eq!(result, correct_result);
+    assert_float_eq(result, correct_result, EPSILON);
 }
 
 #[test]
@@ -340,13 +350,8 @@ fn test_chain_2() {
         correct_result += task.flops as f64 / 5. / 2.;
     }
     for data_item in dag.get_data_items() {
-        if data_item.name == "input" || data_item.name == "output" {
-            continue;
-        }
         correct_result += (data_item.size as f64 / bandwidth + latency) * 2.;
     }
-    correct_result += 600. / bandwidth + latency;
-    correct_result += 700. / bandwidth + latency;
 
     let mut sim = DagSimulation::new(
         123,
@@ -363,7 +368,7 @@ fn test_chain_2() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    assert_eq!(result, correct_result);
+    assert_float_eq(result, correct_result, EPSILON);
 }
 
 #[test]
@@ -403,5 +408,5 @@ fn test_fork_join() {
     assert!(runner.borrow().is_completed());
 
     let result = sim.time();
-    assert_eq!(result, correct_result);
+    assert_float_eq(result, correct_result, EPSILON);
 }

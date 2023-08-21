@@ -106,9 +106,6 @@ impl DagSimulation {
 
         self.add_input_output_tasks(&mut dag);
 
-        assert!(dag.get_inputs().is_empty());
-        assert!(dag.get_outputs().is_empty());
-
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
             network.clone(),

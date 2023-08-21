@@ -250,10 +250,6 @@ impl DAGRunner {
             log_error!(self.ctx, "some tasks require more cores than any resource can provide");
             return false;
         }
-        if !self.dag.get_inputs().is_empty() || !self.dag.get_outputs().is_empty() {
-            log_error!(self.ctx, "graph inputs and outputs must be empty");
-            return false;
-        }
         true
     }
 
