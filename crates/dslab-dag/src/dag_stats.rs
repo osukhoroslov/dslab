@@ -17,6 +17,20 @@ pub struct DagStats {
     /// Sum of sizes of all data transfers
     /// (differs from `total_data_size` if some data items are read by multiple tasks).
     pub total_transfers_size: f64,
+    /// Sum of sizes of all DAG input data items
+    /// (i.e. data items not produced by the tasks).
+    pub input_data_size: f64,
+    /// Sum of sizes of all DAG output data items
+    /// (i.e. data items not consumed by the tasks).
+    pub output_data_size: f64,
+    /// Maximum size of DAG input data item.
+    pub max_input_size: f64,
+    /// Maximum size of DAG output data item.
+    pub max_output_size: f64,
+    /// Minimum of maximum task input size among all entry tasks (first level).
+    pub min_max_input_size: f64,
+    /// Minimum of maximum task output size among all exit tasks (last level).
+    pub min_max_output_size: f64,
     /// Computation-to-communication ratio computed as `total_comp_size / total_transfers_size`.
     pub comp_transfers_ratio: f64,
     /// Longest path in the DAG measured in sum of flops of tasks on this path.
@@ -121,6 +135,44 @@ impl DagStats {
             total_comp_size,
             total_data_size,
             total_transfers_size,
+            input_data_size: dag.get_inputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
+            output_data_size: dag.get_outputs().iter().map(|&i| dag.get_data_item(i).size).sum(),
+            max_input_size: dag
+                .get_inputs()
+                .iter()
+                .map(|&i| dag.get_data_item(i).size)
+                .max_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            max_output_size: dag
+                .get_outputs()
+                .iter()
+                .map(|&i| dag.get_data_item(i).size)
+                .max_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            min_max_input_size: dag
+                .get_tasks()
+                .iter()
+                .filter_map(|t| {
+                    t.inputs
+                        .iter()
+                        .filter(|&data_item| dag.get_inputs().contains(data_item))
+                        .map(|&data_item| dag.get_data_item(data_item).size)
+                        .max_by(|a, b| a.total_cmp(b))
+                })
+                .min_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
+            min_max_output_size: dag
+                .get_tasks()
+                .iter()
+                .filter_map(|t| {
+                    t.outputs
+                        .iter()
+                        .filter(|&data_item| dag.get_outputs().contains(data_item))
+                        .map(|&data_item| dag.get_data_item(data_item).size)
+                        .max_by(|a, b| a.total_cmp(b))
+                })
+                .min_by(|a, b| a.total_cmp(b))
+                .unwrap_or_default(),
             comp_transfers_ratio: total_comp_size / total_transfers_size,
             critical_path_size,
             parallelism_degree: total_comp_size / critical_path_size,

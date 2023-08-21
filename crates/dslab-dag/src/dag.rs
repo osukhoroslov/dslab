@@ -206,4 +206,14 @@ impl DAG {
     pub fn set_resource_restriction(&mut self, task_id: usize, restriction: ResourceRestriction) {
         self.tasks[task_id].resource_restriction = Some(restriction);
     }
+
+    pub(crate) fn set_inputs(&mut self, inputs: BTreeSet<usize>) {
+        assert!(self.inputs.is_empty());
+        self.inputs = inputs
+    }
+
+    pub(crate) fn set_outputs(&mut self, outputs: BTreeSet<usize>) {
+        assert!(self.outputs.is_empty());
+        self.outputs = outputs
+    }
 }

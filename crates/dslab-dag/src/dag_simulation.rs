@@ -60,17 +60,19 @@ impl DagSimulation {
             let inputs = dag.get_inputs().clone();
             let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
             dag.set_resource_restriction(input_task, ResourceRestriction::Only([master_resource].into()));
-            for input in inputs.into_iter() {
+            for &input in inputs.iter() {
                 dag.set_as_task_output(input, input_task);
             }
+            dag.set_inputs(inputs);
         }
         if !dag.get_outputs().is_empty() {
             let outputs = dag.get_outputs().clone();
             let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
             dag.set_resource_restriction(output_task, ResourceRestriction::Only([master_resource].into()));
-            for output in outputs.into_iter() {
+            for &output in outputs.iter() {
                 dag.add_data_dependency(output, output_task);
             }
+            dag.set_outputs(outputs);
         }
     }
 
