@@ -306,7 +306,7 @@
             <span class="number">1.
         </span>};
         <span class="self">self</span>.cpu_utilization /= time * total_cores <span class="kw">as </span>f64;
-        <span class="kw">if </span><span class="self">self</span>.memory_utilization &gt; <span class="number">0. </span>{
+        <span class="kw">if </span>total_memory &gt; <span class="number">0 </span>{
             <span class="self">self</span>.memory_utilization /= time * total_memory <span class="kw">as </span>f64;
         } <span class="kw">else </span>{
             <span class="self">self</span>.memory_utilization = <span class="number">1.</span>;
