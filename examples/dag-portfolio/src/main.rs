@@ -9,7 +9,6 @@ use clap::Parser;
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use strum::IntoEnumIterator;
 
 use dslab_compute::multicore::*;
 use dslab_dag::dag::DAG;
@@ -20,6 +19,25 @@ use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::resource::ResourceConfig;
 use dslab_dag::scheduler::{default_scheduler_resolver, SchedulerParams};
 use dslab_dag::schedulers::dynamic_list::{CoresCriterion, DynamicListStrategy, ResourceCriterion, TaskCriterion};
+
+const TASK_CRITERIA: &[TaskCriterion] = &[
+    TaskCriterion::CompSize,
+    TaskCriterion::DataSize,
+    TaskCriterion::ChildrenCount,
+    TaskCriterion::BottomLevel,
+];
+
+const RESOURCE_CRITERIA: &[ResourceCriterion] = &[
+    ResourceCriterion::Speed,
+    ResourceCriterion::TaskData,
+    ResourceCriterion::MaxAvailableCores,
+];
+
+const CORES_CRITERIA: &[CoresCriterion] = &[
+    CoresCriterion::MaxCores,
+    CoresCriterion::Efficiency90,
+    CoresCriterion::Efficiency50,
+];
 
 #[derive(Parser, Debug)]
 #[command(about, long_about = None)]
@@ -98,8 +116,9 @@ fn run_experiments(args: &Args) {
         let mut dag = DAG::from_wfcommons(
             format!("{}{}", dags_folder, filename),
             &ParserConfig {
-                reference_speed: 100.,
+                reference_speed: 10.,
                 ignore_memory: true,
+                ..ParserConfig::default()
             },
         );
 
@@ -116,15 +135,15 @@ fn run_experiments(args: &Args) {
     // up to 3 clusters for each platform, each triple means (nodes, speed in Gflop/s, bandwidth in MB/s)
     // currently different bandwidth for different clusters is not supported
     let platform_configs = vec![
-        vec![(96, 100., 100.)],
-        vec![(48, 50., 100.), (48, 150., 100.)],
-        vec![(48, 50., 100.), (48, 400., 10.)],
-        vec![(32, 100., 100.), (32, 200., 200.), (32, 300., 300.)],
-        // vec![(32, 100., 100.), (32, 200., 300.), (32, 300., 200.)],
-        // vec![(32, 100., 200.), (32, 200., 100.), (32, 300., 300.)],
-        // vec![(32, 100., 200.), (32, 200., 300.), (32, 300., 100.)],
-        // vec![(32, 100., 300.), (32, 200., 200.), (32, 300., 100.)],
-        // vec![(32, 100., 300.), (32, 200., 100.), (32, 300., 200.)],
+        vec![(96, 10., 100.)],
+        vec![(48, 5., 100.), (48, 15., 100.)],
+        vec![(48, 5., 100.), (48, 40., 10.)],
+        vec![(32, 10., 100.), (32, 20., 200.), (32, 30., 300.)],
+        // vec![(32, 10., 100.), (32, 20., 300.), (32, 30., 200.)],
+        // vec![(32, 10., 200.), (32, 20., 100.), (32, 30., 300.)],
+        // vec![(32, 10., 200.), (32, 20., 300.), (32, 30., 100.)],
+        // vec![(32, 10., 300.), (32, 20., 200.), (32, 30., 100.)],
+        // vec![(32, 10., 300.), (32, 20., 100.), (32, 30., 200.)],
     ];
     let mut systems = Vec::new();
     for (id, platform_config) in platform_configs.iter().enumerate() {
@@ -148,9 +167,9 @@ fn run_experiments(args: &Args) {
     }
 
     let mut algos = Vec::new();
-    for task_criterion in TaskCriterion::iter() {
-        for resource_criterion in ResourceCriterion::iter() {
-            for cores_criterion in CoresCriterion::iter() {
+    for task_criterion in TASK_CRITERIA {
+        for resource_criterion in RESOURCE_CRITERIA {
+            for cores_criterion in CORES_CRITERIA {
                 let algo_str = format!(
                     "DynamicList[task={},resource={},cores={}]",
                     task_criterion, resource_criterion, cores_criterion
@@ -209,12 +228,12 @@ fn process_results() {
     let mut avg_ratio_to_best = Vec::from_iter(avg_ratio_to_best);
     avg_ratio_to_best.sort_by(|&(_, a), &(_, b)| a.total_cmp(&b));
 
-    println!("| task crit     | resource crit | cores crit    | avg ratio | # best |");
-    println!("|---------------|---------------|---------------|-----------|--------|");
+    println!("| task crit          | resource crit      | cores crit         | avg ratio | # best |");
+    println!("|--------------------|--------------------|--------------------|-----------|--------|");
     for (algo, avg_ratio) in avg_ratio_to_best.iter() {
         let strategy = DynamicListStrategy::from_params(&SchedulerParams::from_str(algo).unwrap());
         println!(
-            "| {: >13} | {: >13} | {: >13} | {: >9.3} | {: >6.3} |",
+            "| {: >18} | {: >18} | {: >18} | {: >9.3} | {: >6.3} |",
             strategy.task_criterion,
             strategy.resource_criterion,
             strategy.cores_criterion,

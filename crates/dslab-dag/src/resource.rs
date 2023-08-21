@@ -24,8 +24,10 @@ pub struct Resource {
     pub compute: Rc<RefCell<Compute>>,
     /// CPU speed in Gflop/s.
     pub speed: f64,
+    pub cores: u32,
     pub cores_available: u32,
     /// Memory size in MB.
+    pub memory: u64,
     pub memory_available: u64,
 }
 
