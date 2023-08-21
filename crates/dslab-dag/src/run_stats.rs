@@ -148,7 +148,7 @@ impl RunStats {
             1.
         };
         self.cpu_utilization /= time * total_cores as f64;
-        if self.memory_utilization > 0. {
+        if total_memory > 0 {
             self.memory_utilization /= time * total_memory as f64;
         } else {
             self.memory_utilization = 1.;
