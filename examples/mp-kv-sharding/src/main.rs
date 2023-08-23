@@ -734,11 +734,11 @@ where
         ));
 
     let res = if let Some(start_states) = start_states {
-        mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, |sys| {
+        mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
             sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
         })
     } else {
-        mc.run_with_change::<_, Bfs>(strategy_config, |sys| {
+        mc.run_with_change::<Bfs>(strategy_config, |sys| {
             sys.send_local_message(proc.clone(), proc.clone(), msg);
         })
     };
@@ -892,7 +892,7 @@ fn check_mc_node_removed(
         .goal(goals::no_events())
         .collect(collects::no_events());
 
-    let res = mc.run_from_states_with_change::<_, Bfs>(strategy_config, start_states, move |sys| {
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
         for proc in process_names.clone() {
             sys.send_local_message(proc.clone(), proc, msg.clone());

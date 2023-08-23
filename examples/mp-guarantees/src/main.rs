@@ -452,7 +452,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             mc_invariant_guarantees(messages.clone(), *config),
         ]));
     let mut mc = ModelChecker::new(&sys);
-    let res = mc.run_with_change::<_, Bfs>(strategy_config, move |sys| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
         }
@@ -480,7 +480,7 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
         ]))
         .invariant(mc_invariant_guarantees(messages.clone(), *config));
     let mut mc = ModelChecker::new(&sys);
-    let res = mc.run_with_change::<_, Bfs>(strategy_config, move |sys| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
         }
@@ -530,7 +530,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         .invariant(invariants::all_invariants(invariants));
     let mut mc = ModelChecker::new(&sys);
 
-    let res = mc.run_with_change::<_, Bfs>(strategy_config, |sys| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
         for msg in messages {
             sys.send_local_message("sender-node", "sender", msg.clone());
         }

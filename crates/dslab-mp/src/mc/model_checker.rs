@@ -77,9 +77,8 @@ impl ModelChecker {
         }
     }
 
-    fn run_impl<F, S>(&mut self, strategy: &mut S, preliminary_callback: F) -> McResult
+    fn run_impl<S>(&mut self, strategy: &mut S, preliminary_callback: impl FnOnce(&mut McSystem)) -> McResult
     where
-        F: FnOnce(&mut McSystem),
         S: Strategy,
     {
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
@@ -90,13 +89,12 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run<S: Strategy>(&mut self, strategy_config: StrategyConfig) -> McResult {
-        self.run_with_change::<_, S>(strategy_config, |_| {})
+        self.run_with_change::<S>(strategy_config, |_| {})
     }
 
     /// Runs model checking after applying callback.
-    pub fn run_with_change<F, S>(&mut self, strategy_config: StrategyConfig, preliminary_callback: F) -> McResult
+    pub fn run_with_change<S>(&mut self, strategy_config: StrategyConfig, preliminary_callback: impl FnOnce(&mut McSystem)) -> McResult
     where
-        F: FnOnce(&mut McSystem),
         S: Strategy,
     {
         let mut strategy = S::build(strategy_config);
@@ -109,18 +107,17 @@ impl ModelChecker {
         strategy_config: StrategyConfig,
         states: HashSet<McState>,
     ) -> McResult {
-        self.run_from_states_with_change::<_, S>(strategy_config, states, |_| {})
+        self.run_from_states_with_change::<S>(strategy_config, states, |_| {})
     }
 
     /// Runs model checking from a set of initial states after applying callback.
-    pub fn run_from_states_with_change<F, S>(
+    pub fn run_from_states_with_change<S>(
         &mut self,
         strategy_config: StrategyConfig,
         states: HashSet<McState>,
-        preliminary_callback: F,
+        preliminary_callback: impl Fn(&mut McSystem),
     ) -> McResult
     where
-        F: Fn(&mut McSystem),
         S: Strategy,
     {
         let mut total_stats = McStats::default();
