@@ -369,21 +369,21 @@ fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -
 
 macro_rules! run_mc {
     ($mc:ident, $config:ident, $strategy:ident) => {
-        match $strategy.as_str() {
+        match $strategy {
             "bfs" => $mc.run::<Bfs>($config),
             "dfs" => $mc.run::<Dfs>($config),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
     ($mc:ident, $config:ident, $strategy:ident, $callback:expr) => {
-        match $strategy.as_str() {
+        match $strategy {
             "bfs" => $mc.run_with_change::<Bfs>($config, $callback),
             "dfs" => $mc.run_with_change::<Dfs>($config, $callback),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
     ($mc:ident, $config:ident, $strategy:ident, $states:ident, $callback:expr) => {
-        match $strategy.as_str() {
+        match $strategy {
             "bfs" => $mc.run_from_states_with_change::<Bfs>($config, $states, $callback),
             "dfs" => $mc.run_from_states_with_change::<Dfs>($config, $states, $callback),
             s => panic!("Unknown strategy name: {}", s),
@@ -494,7 +494,7 @@ fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_ok(#[case] strategy_name: String) {
+fn one_state_ok(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| Some("final".to_string()));
 
@@ -511,7 +511,7 @@ fn one_state_ok(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_broken_invariant(#[case] strategy_name: String) {
+fn one_state_broken_invariant(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| Some("final".to_string()));
     let invariant = boxed!(|_: &McState| Err("broken".to_string()));
@@ -529,7 +529,7 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_no_goal(#[case] strategy_name: String) {
+fn one_state_no_goal(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| None);
     let invariant = boxed!(|_: &McState| Ok(()));
@@ -552,7 +552,7 @@ fn one_state_no_goal(#[case] strategy_name: String) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_ok(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn two_states_one_message_ok(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
@@ -584,7 +584,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String, init_method: SystemI
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn two_states_one_message_pruned(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| Some("pruned".to_string()));
 
     let goal = boxed!(|_: &McState| None);
@@ -616,7 +616,7 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: Sys
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
+fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -638,7 +638,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
+fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
     let invariant = boxed!(|_: &McState| Ok(()));
@@ -672,7 +672,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
+fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let count_goal_states = rc!(refcell!(0));
@@ -697,7 +697,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
+fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -749,7 +749,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
+fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal_data = rc!(refcell!(vec![]));
@@ -780,7 +780,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn visited_states(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -815,7 +815,7 @@ fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) 
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -867,7 +867,7 @@ fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -923,7 +923,7 @@ fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn many_dropped_messages(#[case] strategy_name: String) {
+fn many_dropped_messages(#[case] strategy_name: &str) {
     let invariant = boxed!(|state: &McState| {
         if state.events.available_events_num() > 0 {
             Err("MessageDropped events should appear in events list".to_owned())
@@ -988,7 +988,7 @@ fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
 #[case("dfs")]
 #[case("bfs")]
 fn collect_mode(
-    #[case] strategy_name: String,
+    #[case] strategy_name: &str,
     init_method_first_stage: SystemInitMethod,
     init_method_second_stage: SystemInitMethod,
 ) {
@@ -1051,7 +1051,7 @@ fn collect_mode(
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
@@ -1091,7 +1091,7 @@ fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn reset_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|state: &McState| {
         let outbox = &state.node_states["node2"]["process2"].local_outbox;
         if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
@@ -1145,7 +1145,7 @@ pub enum NetworkProblem {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProblem, init_method: SystemInitMethod) {
+fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProblem, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
