@@ -1,9 +1,7 @@
 //! Definition of model checking state.
 
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
 
 use crate::logger::LogEntry;
 
@@ -19,7 +17,7 @@ pub struct McState {
     pub node_states: BTreeMap<String, McNodeState>,
 
     /// State of the system network
-    pub network: Rc<RefCell<McNetwork>>,
+    pub network: McNetwork,
 
     /// List of events waiting for delivery.
     pub events: PendingEvents,
@@ -34,7 +32,7 @@ pub struct McState {
 
 impl McState {
     /// Creates a new state with the specified events in the system, depth and trace.
-    pub fn new(events: PendingEvents, depth: u64, trace: Vec<LogEntry>, network: Rc<RefCell<McNetwork>>) -> Self {
+    pub fn new(events: PendingEvents, depth: u64, trace: Vec<LogEntry>, network: McNetwork) -> Self {
         Self {
             node_states: BTreeMap::new(),
             network,
