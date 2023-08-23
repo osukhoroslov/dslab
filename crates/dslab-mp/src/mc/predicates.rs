@@ -83,7 +83,7 @@ pub mod invariants {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| {
-            let local_outbox = &state.node_states[&node][&proc].local_outbox;
+            let local_outbox = &state.node_states[&node].proc_states[&proc].local_outbox;
             let mut messages_got = HashSet::<String>::default();
             if local_outbox.len() > messages_expected.len() {
                 return Err(format!(
@@ -150,7 +150,7 @@ pub mod goals {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| {
-            if state.node_states[&node][&proc].local_outbox.len() == n {
+            if state.node_states[&node].proc_states[&proc].local_outbox.len() == n {
                 Some(format!("{proc} produced {n} local messages"))
             } else {
                 None
@@ -233,7 +233,7 @@ pub mod prunes {
     pub fn sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
         boxed!(move |state: &McState| {
             for (_, node) in state.node_states.iter() {
-                for (proc_name, proc) in node.iter() {
+                for (proc_name, proc) in node.proc_states.iter() {
                     if proc.sent_message_count > max_allowed_messages {
                         return Some(format!("too many messages sent by {proc_name}"));
                     }
@@ -302,7 +302,7 @@ pub mod collects {
     {
         let node = node.into();
         let proc = proc.into();
-        boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
+        boxed!(move |state: &McState| state.node_states[&node].proc_states[&proc].local_outbox.len() == n)
     }
 
     /// Combines multiple collect functions by returning `true` iff at least one collect is satisfied.

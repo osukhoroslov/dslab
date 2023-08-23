@@ -119,7 +119,7 @@ impl PendingEvents {
                     msg,
                     src,
                     dst,
-                    receive_event_id: None,
+                    receive_event_id: Some(event_id),
                 });
             }
         }

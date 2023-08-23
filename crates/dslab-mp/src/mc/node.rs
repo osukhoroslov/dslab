@@ -64,13 +64,18 @@ impl ProcessEntry {
     }
 }
 
-pub type McNodeState = BTreeMap<String, ProcessEntryState>;
+#[derive(Clone,Debug, PartialEq, Eq, Hash)]
+pub struct McNodeState {
+    pub(crate) proc_states: BTreeMap<String, ProcessEntryState>,
+    is_crashed: bool,
+}
 
 #[derive(Clone)]
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
     trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
+    is_crashed: bool,
 }
 
 impl McNode {
@@ -83,6 +88,7 @@ impl McNode {
             processes,
             trace_handler,
             clock_skew,
+            is_crashed: false,
         }
     }
 
@@ -94,6 +100,9 @@ impl McNode {
         time: f64,
         random_seed: u64,
     ) -> Vec<McEvent> {
+        if self.is_crashed {
+            return vec![];
+        }
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             0.0,
@@ -111,6 +120,9 @@ impl McNode {
     }
 
     pub fn on_timer_fired(&mut self, proc: String, timer: String, time: f64, random_seed: u64) -> Vec<McEvent> {
+        if self.is_crashed {
+            return vec![];
+        }
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
@@ -126,6 +138,9 @@ impl McNode {
         time: f64,
         random_seed: u64,
     ) -> Vec<McEvent> {
+        if self.is_crashed {
+            return vec![];
+        }
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
         proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
@@ -133,16 +148,18 @@ impl McNode {
     }
 
     pub fn get_state(&self) -> McNodeState {
-        self.processes
+        let proc_states = self.processes
             .iter()
             .map(|(proc, entry)| (proc.clone(), entry.get_state()))
-            .collect()
+            .collect();
+        McNodeState { proc_states, is_crashed: self.is_crashed }
     }
 
     pub fn set_state(&mut self, state: McNodeState) {
-        for (proc, state) in state {
+        for (proc, state) in state.proc_states {
             self.processes.get_mut(&proc).unwrap().set_state(state);
         }
+        self.is_crashed = self.is_crashed;
     }
 
     fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) -> Vec<McEvent> {
