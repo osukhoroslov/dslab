@@ -1,3 +1,5 @@
+//! Container model and host container manager.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -46,6 +48,7 @@ impl Container {
     }
 }
 
+/// Manages container pool of a single host.
 pub struct ContainerManager {
     active_invocations: usize,
     host_id: usize,

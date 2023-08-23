@@ -1,3 +1,5 @@
+//! Coldstart-reducing policies that govern container keepalive and prewarming.
+
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,6 +20,7 @@ impl<T: 'static + ColdStartPolicy> ColdStartConvertHelper for T {
     }
 }
 
+/// A decision regarding keepalive of some container.
 pub enum KeepaliveDecision {
     /// A new keepalive window `w` is chosen for the container.
     /// The container will be deallocated after `w` time units.
@@ -28,6 +31,7 @@ pub enum KeepaliveDecision {
     TerminateNow,
 }
 
+/// A policy that governs keepalive and prewarming.
 pub trait ColdStartPolicy: ColdStartConvertHelper {
     /// Defines delay before container deallocation.
     fn keepalive_decision(&mut self, container: &Container) -> KeepaliveDecision;
@@ -42,6 +46,7 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
     }
 }
 
+/// Coldstart policy with fixed keepalive and prewarm windows.
 pub struct FixedTimeColdStartPolicy {
     keepalive_window: f64,
     prewarm_window: f64,

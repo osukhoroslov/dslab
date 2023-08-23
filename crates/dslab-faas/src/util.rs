@@ -1,3 +1,4 @@
+//! Various utility structs.
 use std::hash::BuildHasherDefault;
 use std::ops::{Index, IndexMut};
 
@@ -6,6 +7,7 @@ use rustc_hash::FxHasher;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::Serialize;
 
+/// A simple incrementing counter.
 #[derive(Default)]
 pub struct Counter {
     value: usize,
@@ -102,7 +104,7 @@ impl<T> IndexMut<usize> for VecMap<T> {
     }
 }
 
-/// Similar to VecMap, but returns the default value instead of None and auto-extends to keys in
+/// Similar to [`VecMap`], but returns the default value instead of None and auto-extends to keys in
 /// `get_mut` query.
 #[derive(Clone, Default)]
 pub struct DefaultVecMap<T: Default> {
@@ -178,5 +180,7 @@ where
     }
 }
 
+/// IndexMap with faster hash function.
 pub type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
+/// IndexSet with faster hash function.
 pub type FxIndexSet<K> = IndexSet<K, BuildHasherDefault<FxHasher>>;

@@ -1,3 +1,4 @@
+//! Scheduler implementation from "Hermod: principled and practical scheduling for serverless functions" paper.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -7,7 +8,7 @@ use crate::host::Host;
 use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
-/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>
+/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>.
 pub struct HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
     /// Passed to `high_load_fallback`.

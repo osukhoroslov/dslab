@@ -1,3 +1,4 @@
+//! OpenDC FaaS trace format parser.
 use std::fs::read_dir;
 use std::path::Path;
 use std::str::FromStr;

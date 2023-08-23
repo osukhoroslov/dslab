@@ -1,3 +1,4 @@
+//! A component that manages incoming invocations on some host.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -8,14 +9,21 @@ use crate::function::{Application, FunctionRegistry};
 use crate::invocation::Invocation;
 use crate::stats::Stats;
 
+/// Invoker's decision on new function invocation.
 #[derive(Clone, Copy, PartialEq)]
 pub enum InvokerDecision {
+    /// Invocation will instantly start running on a warm container.
     Warm(usize),
+    /// Invocation will start running on a cold container after it is fully deployed.
     Cold((usize, f64)),
+    /// Invocation is queued on the invoker because the invoker can't run it now or provide a cold container.
     Queued,
+    /// Invoker rejects the invocation.
+    /// Note: This value is used internally, invoker shouldn't return it to the host.
     Rejected,
 }
 
+/// Previously-queued invocation that is finally able to be executed.
 #[derive(Clone, Copy)]
 pub struct DequeuedInvocation {
     pub id: usize,

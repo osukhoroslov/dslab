@@ -1,5 +1,6 @@
-/// Functions responsible for parsing Azure Functions 2019 trace and generating experiments using it.
-/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md
+//! Functions for parsing Azure Functions 2019 trace and generating experiments using it.
+//!
+//! Trace description: <https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md>
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::read_dir;
@@ -106,7 +107,7 @@ fn app_id(id: &str) -> String {
 }
 
 /// Experiment generator will choose `count` random apps with popularity in range
-/// [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+/// `[floor(left * n_apps), floor(right * n_apps)]` (apps are sorted by popularity in decreasing order).
 #[derive(Copy, Clone)]
 pub struct AppPreference {
     pub count: usize,

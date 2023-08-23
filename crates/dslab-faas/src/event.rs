@@ -1,3 +1,4 @@
+//! Simulation events.
 use serde::Serialize;
 
 #[derive(Clone, Serialize)]

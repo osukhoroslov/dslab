@@ -1,7 +1,11 @@
+//! Resource model.
+//!
+//! The simulator considers all resources except CPU to be renewable and strictly isolated among containers.
 use std::collections::HashMap;
 
 use crate::util::{VecMap, VecMapIterator};
 
+/// Transforms resource name to resource id in current simulation.
 #[derive(Default)]
 pub struct ResourceNameResolver {
     map: HashMap<String, usize>,
@@ -23,6 +27,7 @@ impl ResourceNameResolver {
     }
 }
 
+/// A simple strictly isolated renewable resource.
 #[derive(Clone)]
 pub struct Resource {
     id: usize,
@@ -71,6 +76,7 @@ impl ResourceRequirement {
     }
 }
 
+/// A model of a host or other entity that provides several resources to the consumers.
 #[derive(Clone, Default)]
 pub struct ResourceProvider {
     resources: VecMap<Resource>,
@@ -121,6 +127,7 @@ impl ResourceProvider {
     }
 }
 
+/// A model of a container or other entity that consumes resources offered by the provider.
 #[derive(Clone, Default)]
 pub struct ResourceConsumer {
     resources: VecMap<ResourceRequirement>,

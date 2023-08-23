@@ -1,5 +1,6 @@
-/// Functions for parsing Azure Functions 2021 trace and generating experiments using it.
-/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md
+//! Functions for parsing Azure Functions 2021 trace and generating experiments using it.
+//!
+//! Trace description: <https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md>
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;

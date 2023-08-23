@@ -1,5 +1,4 @@
-/// This file contains the implementation of hybrid histogram policy from
-/// https://www.usenix.org/conference/atc20/presentation/shahrad
+//! Coldstart policy implementation from "Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider" paper.
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
@@ -110,6 +109,7 @@ impl ApplicationData {
     }
 }
 
+/// Refer to <https://www.usenix.org/conference/atc20/presentation/shahrad>.
 pub struct HybridHistogramPolicy {
     range: f64,
     arima_margin: f64,

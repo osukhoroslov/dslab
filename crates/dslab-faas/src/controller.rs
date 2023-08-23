@@ -1,3 +1,5 @@
+//! Platform controller.
+
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,6 +16,7 @@ use crate::invoker::InvokerDecision;
 use crate::scheduler::Scheduler;
 use crate::stats::Stats;
 
+/// Responsible for managing incoming invocation requests and deploying prewarmed containers.
 pub struct Controller {
     function_registry: Rc<RefCell<FunctionRegistry>>,
     hosts: Vec<Rc<RefCell<Host>>>,

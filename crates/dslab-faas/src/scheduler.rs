@@ -1,3 +1,4 @@
+//! Scheduler trait and several simple implementations.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use crate::config::parse_options;
 use crate::function::Application;
 use crate::host::Host;
 
-/// Scheduler chooses an invoker to run new invocation of some function from given application.
+/// Chooses an invoker to run new invocation of some function from given application.
 pub trait Scheduler {
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize;
 
@@ -21,8 +22,7 @@ pub trait Scheduler {
     }
 }
 
-/// BasicScheduler chooses the first invoker that can hotstart the invocation,
-/// otherwise it chooses the first invoker that can deploy the container.
+/// Chooses the first invoker that can hotstart the invocation, otherwise chooses the first invoker that can deploy the container.
 pub struct BasicScheduler {}
 
 impl Scheduler for BasicScheduler {
@@ -45,6 +45,7 @@ impl Scheduler for BasicScheduler {
     }
 }
 
+/// Hashes application ids, used to map applications to hosts.
 pub struct ApplicationHasher {
     pub hash_fn: Box<dyn Fn(u64) -> u64>,
     pub name: String,
@@ -90,8 +91,7 @@ impl ApplicationHasher {
     }
 }
 
-/// LocalityBasedScheduler picks a host based on application hash.
-/// In case host number `i` can't invoke, the scheduler considers host number `(i + step) % hosts.len()`.
+/// Picks a host based on the application hash. In case host number `i` can't invoke, the scheduler considers host number `(i + step) % hosts.len()`.
 pub struct LocalityBasedScheduler {
     hasher: ApplicationHasher,
     step: usize,
@@ -159,7 +159,7 @@ impl Scheduler for LocalityBasedScheduler {
     }
 }
 
-/// RandomScheduler picks a host uniformly at random.
+/// Picks a host uniformly at random.
 pub struct RandomScheduler {
     rng: Pcg64,
 }
@@ -187,7 +187,7 @@ impl Scheduler for RandomScheduler {
     }
 }
 
-/// LeastLoadedScheduler chooses a host with the least number of active (running and queued) invocations.
+/// Chooses a host with the least CPU usage.
 pub struct LeastLoadedScheduler {
     /// Break ties by preferring instances with warm containers.
     prefer_warm: bool,
@@ -261,7 +261,7 @@ impl Scheduler for LeastLoadedScheduler {
     }
 }
 
-/// RoundRobinScheduler chooses hosts in a circular fashion.
+/// Chooses hosts in a circular fashion.
 #[derive(Default)]
 pub struct RoundRobinScheduler {
     index: usize,

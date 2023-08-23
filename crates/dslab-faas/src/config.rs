@@ -1,3 +1,5 @@
+//! Experiment configuration (YAML-serializeable).
+
 use std::boxed::Box;
 use std::collections::HashMap;
 use std::fs::File;
@@ -12,6 +14,7 @@ use crate::invoker::{default_invoker_resolver, FIFOInvoker, Invoker};
 use crate::parallel::{ParallelConfig, ParallelHostConfig};
 use crate::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
+/// Describes a host in the simulation.
 pub struct HostConfig {
     pub invoker: Box<dyn Invoker>,
     pub resources: Vec<(String, u64)>,
@@ -51,6 +54,7 @@ impl From<ParallelConfig> for Config {
     }
 }
 
+/// Describes a resource in the simulation.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawResource {
     pub name: String,
@@ -61,6 +65,7 @@ fn default_one() -> u32 {
     1
 }
 
+/// Similar to [`HostConfig`], but is YAML-serializable.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawHostConfig {
     #[serde(default)]
@@ -86,6 +91,7 @@ pub struct RawConfig {
     pub hosts: Vec<RawHostConfig>,
 }
 
+/// Parses option map from string.
 pub fn parse_options(s: &str) -> HashMap<String, String> {
     let mut ans = HashMap::new();
     for t in s.split(',') {
@@ -97,6 +103,7 @@ pub fn parse_options(s: &str) -> HashMap<String, String> {
     ans
 }
 
+/// Functions that create algorithm implementation from a string containing a name and options.
 pub struct ConfigParamResolvers {
     pub coldstart_policy_resolver: Box<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync>,
     pub cpu_policy_resolver: Box<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync>,
@@ -117,8 +124,7 @@ impl Default for ConfigParamResolvers {
     }
 }
 
-/// This is simulation config. It implements Default trait (see below) so that you can create
-/// default config and change only the fields you need.
+/// Simulation config. It implements Default trait so that you can create default config and change only the fields you need.
 pub struct Config {
     pub coldstart_policy: Box<dyn ColdStartPolicy>,
     pub cpu_policy: Box<dyn CpuPolicy>,

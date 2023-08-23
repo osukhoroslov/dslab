@@ -1,7 +1,8 @@
+//! Function and application models.
 use crate::resource::ResourceConsumer;
 
 /// An application shares a common container image.
-/// Functions from the same application can be executed on the same container (limited by concurrent_invocations field).
+/// Functions from the same application can be executed on the same container (limited by `concurrent_invocations` field).
 pub struct Application {
     pub id: usize,
     concurrent_invocations: usize,

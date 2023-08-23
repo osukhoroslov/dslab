@@ -1,3 +1,4 @@
+//! Various implementations of DSLab FaaS traits, including trace formats, schedulers and coldstart policies.
 pub(crate) mod arima_extra;
 pub mod azure_trace_2019;
 pub mod azure_trace_2021;

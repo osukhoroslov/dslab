@@ -1,3 +1,4 @@
+//! Simulation metrics.
 use order_stat::kth_by;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::Serialize;
@@ -6,8 +7,7 @@ use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
 use crate::util::DefaultVecMap;
 
-/// This struct allows calculating statistical functions on some data sample.
-/// Almost all metrics computed by the simulator are stored using this struct.
+/// Statistical sample.
 #[derive(Clone, Default)]
 pub struct SampleMetric {
     data: Vec<f64>,
@@ -128,6 +128,7 @@ impl Serialize for SampleMetric {
     }
 }
 
+/// Metrics related to invocations and execution speed.
 #[derive(Clone, Default, Serialize)]
 pub struct InvocationStats {
     pub invocations: u64,
@@ -168,6 +169,7 @@ impl InvocationStats {
     }
 }
 
+/// All metrics computed by the simulator.
 #[derive(Clone, Default, Serialize)]
 pub struct GlobalStats {
     pub invocation_stats: InvocationStats,
@@ -221,6 +223,7 @@ impl GlobalStats {
     }
 }
 
+/// Main metrics storage of the simulator, stores metrics on global level, application level, and function level.
 #[derive(Clone, Default, Serialize)]
 pub struct Stats {
     pub app_stats: DefaultVecMap<InvocationStats>,

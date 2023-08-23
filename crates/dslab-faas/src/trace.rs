@@ -1,3 +1,4 @@
+//! Workload trace trait.
 use std::cmp::Ordering;
 
 #[derive(Default, Clone)]

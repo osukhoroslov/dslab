@@ -1,3 +1,4 @@
+//! FaaS simulation.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::ops::Range;

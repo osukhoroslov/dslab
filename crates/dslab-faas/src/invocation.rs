@@ -1,3 +1,4 @@
+//! Function invocation.
 use std::ops::{Index, IndexMut, Range};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -14,6 +15,7 @@ pub enum InvocationStatus {
     Finished,
 }
 
+/// Function invocation.
 #[derive(Copy, Clone)]
 pub struct Invocation {
     pub id: usize,
@@ -42,6 +44,7 @@ impl Invocation {
     }
 }
 
+/// Stores information about function invocations.
 #[derive(Default)]
 pub struct InvocationRegistry {
     invocations: Vec<Invocation>,

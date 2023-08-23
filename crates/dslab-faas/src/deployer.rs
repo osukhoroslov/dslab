@@ -1,3 +1,4 @@
+//! A component that chooses host for deploying a new prewarmed container.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -37,7 +38,7 @@ impl IdleDeployer for BasicDeployer {
     }
 }
 
-/// LocalityBasedDeployer picks a host based on application hash (see also `LocalityBasedScheduler` in `scheduler.rs`).
+/// LocalityBasedDeployer picks a host based on application hash (see also [`crate::scheduler::LocalityBasedScheduler`]).
 /// In case host number `i` can't deploy, the deployer considers host number `(i + step) % hosts.len()`.
 pub struct LocalityBasedDeployer {
     hasher: ApplicationHasher,

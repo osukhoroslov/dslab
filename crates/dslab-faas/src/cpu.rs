@@ -1,8 +1,9 @@
-/// CPU sharing models used in the simulator.
-/// We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
-/// i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
-/// If the container allows concurrent invocations, each invocation gets an equal part of the container share.
-/// The exact CPU sharing model depends on the used CpuPolicy.
+//! CPU sharing models.
+//!
+//! We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
+//! i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
+//! If the container allows concurrent invocations, each invocation gets an equal part of the container share.
+//! The exact CPU sharing model depends on the used CpuPolicy.
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -16,7 +17,7 @@ use crate::event::InvocationEndEvent;
 use crate::invocation::Invocation;
 
 #[derive(Clone)]
-pub struct WorkItem {
+struct WorkItem {
     finish: f64,
     id: usize,
 }
@@ -328,6 +329,7 @@ pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CpuPolicy> {
     }
 }
 
+/// Just a wrapper over [`CpuPolicy`].
 pub struct Cpu {
     pub cores: u32,
     policy: Box<dyn CpuPolicy>,
