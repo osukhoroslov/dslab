@@ -36,8 +36,7 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let mut trace = sys.logger().trace().clone();
-        trace.push(LogEntry::McStarted {});
+        let trace = sys.logger().trace().clone();
         let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
@@ -79,6 +78,7 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> McResult {
+        self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }
