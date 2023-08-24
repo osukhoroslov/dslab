@@ -109,7 +109,10 @@ pub fn evaluate_assignment(
             .map(|data_item| (data_item.producer.unwrap(), data_item.size))
             .map(|(task, weight)| {
                 let data_upload_time = match data_transfer_mode {
-                    DataTransferMode::ViaMasterNode => weight / network.bandwidth(task_location[&task], ctx.id()),
+                    DataTransferMode::ViaMasterNode => {
+                        network.latency(task_location[&task], ctx.id())
+                            + weight / network.bandwidth(task_location[&task], ctx.id())
+                    }
                     DataTransferMode::Direct => 0.,
                     DataTransferMode::Manual => 0.,
                 };
@@ -119,8 +122,6 @@ pub fn evaluate_assignment(
             .unwrap_or(0.),
     };
 
-    let cur_net_time = 1. / network.bandwidth(ctx.id(), resources[resource].id);
-
     let download_time = match data_transfer_strategy {
         DataTransferStrategy::Eager => 0.,
         DataTransferStrategy::Lazy => dag
@@ -128,12 +129,16 @@ pub fn evaluate_assignment(
             .inputs
             .iter()
             .map(|&f| match data_transfer_mode {
-                DataTransferMode::ViaMasterNode => dag.get_data_item(f).size * cur_net_time,
+                DataTransferMode::ViaMasterNode => {
+                    network.latency(ctx.id(), resources[resource].id)
+                        + dag.get_data_item(f).size / network.bandwidth(ctx.id(), resources[resource].id)
+                }
                 DataTransferMode::Direct => {
                     if data_location[&f] == resources[resource].id {
                         0.
                     } else {
-                        dag.get_data_item(f).size / network.bandwidth(data_location[&f], resources[resource].id)
+                        network.latency(data_location[&f], resources[resource].id)
+                            + dag.get_data_item(f).size / network.bandwidth(data_location[&f], resources[resource].id)
                     }
                 }
                 DataTransferMode::Manual => 0.,

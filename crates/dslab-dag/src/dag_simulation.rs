@@ -50,32 +50,6 @@ impl DagSimulation {
         });
     }
 
-    fn add_input_output_tasks(&mut self, dag: &mut DAG) {
-        let master_resource = self.resource_configs.iter().position(|r| r.name == "master").unwrap();
-
-        for task in 0..dag.get_tasks().len() {
-            dag.set_resource_restriction(task, ResourceRestriction::Except([master_resource].into()));
-        }
-        if !dag.get_inputs().is_empty() {
-            let inputs = dag.get_inputs().clone();
-            let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
-            dag.set_resource_restriction(input_task, ResourceRestriction::Only([master_resource].into()));
-            for &input in inputs.iter() {
-                dag.set_as_task_output(input, input_task);
-            }
-            dag.set_inputs(inputs);
-        }
-        if !dag.get_outputs().is_empty() {
-            let outputs = dag.get_outputs().clone();
-            let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
-            dag.set_resource_restriction(output_task, ResourceRestriction::Only([master_resource].into()));
-            for &output in outputs.iter() {
-                dag.add_data_dependency(output, output_task);
-            }
-            dag.set_outputs(outputs);
-        }
-    }
-
     /// Initializes DAG simulation.
     pub fn init(&mut self, mut dag: DAG) -> Rc<RefCell<DAGRunner>> {
         let net_ctx = self.sim.create_context("net");
@@ -156,5 +130,31 @@ impl DagSimulation {
     /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
     pub fn time(&mut self) -> f64 {
         self.sim.time()
+    }
+
+    fn add_input_output_tasks(&mut self, dag: &mut DAG) {
+        let master_resource = self.resource_configs.iter().position(|r| r.name == "master").unwrap();
+
+        for task in 0..dag.get_tasks().len() {
+            dag.set_resource_restriction(task, ResourceRestriction::Except([master_resource].into()));
+        }
+        if !dag.get_inputs().is_empty() {
+            let inputs = dag.get_inputs().clone();
+            let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(input_task, ResourceRestriction::Only([master_resource].into()));
+            for &input in inputs.iter() {
+                dag.set_as_task_output(input, input_task);
+            }
+            dag.set_inputs(inputs);
+        }
+        if !dag.get_outputs().is_empty() {
+            let outputs = dag.get_outputs().clone();
+            let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(output_task, ResourceRestriction::Only([master_resource].into()));
+            for &output in outputs.iter() {
+                dag.add_data_dependency(output, output_task);
+            }
+            dag.set_outputs(outputs);
+        }
     }
 }

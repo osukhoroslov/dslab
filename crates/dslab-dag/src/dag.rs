@@ -125,20 +125,6 @@ impl DAG {
         data_item_id
     }
 
-    pub(crate) fn set_as_task_output(&mut self, data_item_id: usize, producer: usize) {
-        assert!(self.data_items[data_item_id].producer.is_none());
-        assert!(self.inputs.remove(&data_item_id));
-        self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
-        self.data_items[data_item_id].state = DataItemState::Pending;
-        self.data_items[data_item_id].producer = Some(producer);
-        let consumers = &self.data_items[data_item_id].consumers;
-        for &consumer in consumers.iter() {
-            self.tasks[consumer].state = TaskState::Pending;
-            self.tasks[consumer].ready_inputs -= 1;
-            self.ready_tasks.remove(&consumer);
-        }
-    }
-
     /// Adds a dependency between [data item](crate::data_item::DataItem) and [task](crate::task::Task).
     pub fn add_data_dependency(&mut self, data_item_id: usize, consumer_id: usize) {
         let data_item = self.data_items.get_mut(data_item_id).unwrap();
@@ -205,6 +191,23 @@ impl DAG {
 
     pub fn set_resource_restriction(&mut self, task_id: usize, restriction: ResourceRestriction) {
         self.tasks[task_id].resource_restriction = Some(restriction);
+    }
+
+    /// Sets data item as output of the specified task.
+    ///
+    /// The data item must not have producer, i.e. it must be among the DAG inputs.
+    pub(crate) fn set_as_task_output(&mut self, data_item_id: usize, producer: usize) {
+        assert!(self.data_items[data_item_id].producer.is_none());
+        assert!(self.inputs.remove(&data_item_id));
+        self.tasks.get_mut(producer).unwrap().add_output(data_item_id);
+        self.data_items[data_item_id].state = DataItemState::Pending;
+        self.data_items[data_item_id].producer = Some(producer);
+        let consumers = &self.data_items[data_item_id].consumers;
+        for &consumer in consumers.iter() {
+            self.tasks[consumer].state = TaskState::Pending;
+            self.tasks[consumer].ready_inputs -= 1;
+            self.ready_tasks.remove(&consumer);
+        }
     }
 
     pub(crate) fn set_inputs(&mut self, inputs: BTreeSet<usize>) {

@@ -6,11 +6,7 @@ use crate::schedulers::common::task_successors;
 use crate::system::System;
 
 pub fn makespan_lower_bound(dag: &DAG, system: System, _scheduler: Id) -> f64 {
-    let stats = dag.stats();
-    [critical_path_time(dag, system), total_comp_time(&stats, system)]
-        .into_iter()
-        .max_by(|a, b| a.total_cmp(b))
-        .unwrap()
+    critical_path_time(dag, system).max(total_comp_time(&dag.stats(), system))
 }
 
 fn critical_path_time(dag: &DAG, system: System) -> f64 {

@@ -128,7 +128,6 @@ impl LookaheadScheduler {
                 memory_usage[resource].add(start_time, finish_time, dag.get_task(task_id).memory);
                 task_finish_times[task_id] = finish_time;
                 scheduled[task_id] = true;
-                let mut output_time: f64 = 0.;
                 for &output in dag.get_task(task_id).outputs.iter() {
                     data_locations.insert(output, resources[resource].id);
                 }
@@ -165,7 +164,7 @@ impl LookaheadScheduler {
                     }
                 }
 
-                let mut makespan = finish_time + output_time;
+                let mut makespan = finish_time;
 
                 for child in unscheduled_tasks.into_iter() {
                     let (resource, cores, start, finish) = {
@@ -215,7 +214,6 @@ impl LookaheadScheduler {
                         scheduled_tasks[resource][core as usize].insert(ScheduledTask::new(start, finish, child));
                     }
                     memory_usage[resource].add(start, finish, dag.get_task(child).memory);
-                    output_time = 0.;
                     for &output in dag.get_task(child).outputs.iter() {
                         data_locations.insert(output, resources[resource].id);
                     }
@@ -223,7 +221,7 @@ impl LookaheadScheduler {
 
                     to_undo.push((resource, cores, ScheduledTask::new(start, finish, child)));
 
-                    makespan = makespan.max(finish + output_time);
+                    makespan = makespan.max(finish);
 
                     if makespan >= best_makespan {
                         break;

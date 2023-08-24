@@ -169,7 +169,7 @@ fn test_2() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_float_eq(result, 35.046996116638184, EPSILON);
+    assert_float_eq(result, 35.153177261352539, EPSILON);
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn test_3() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_float_eq(result, 105.132052421569824, EPSILON);
+    assert_float_eq(result, 104.166267395019531, EPSILON);
 }
 
 #[test]
@@ -255,31 +255,15 @@ fn test_4() {
     }
 
     let heft_makespan = run_scheduler(HeftScheduler::new(), dag.clone());
-    // 0:
-    // 1:                           [-------------E------------]
-    // 2:[-------A------][-----C-----][--------B--------][------G------]
-    // 3:                              [-------F------][---D--]              [-----I----][----H----][--J--]
     assert_float_eq(heft_makespan, 98.0, EPSILON);
 
     let lookahead_makespan = run_scheduler(LookaheadScheduler::new(), dag.clone());
-    // 0:
-    // 1:                         [-------D------]
-    // 2:[-------A------][-----C-----][--------B--------][-------F------][-----I----][----H----][--J--]
-    // 3:                           [------E-----]           [------G------]
     assert_float_eq(lookahead_makespan, 94.0, EPSILON);
 
     let dls_makespan = run_scheduler(DlsScheduler::new(), dag.clone());
-    // 0:
-    // 1:                           [--------------E-----------]
-    // 2:[-------A------][-----C-----][--------B--------][------G------]     [-----I----]
-    // 3:                         [---D--][-------F------]                  [----H----]           [--J--]
-    assert_float_eq(dls_makespan, 100.0, EPSILON);
+    assert_float_eq(dls_makespan, 96.0, EPSILON);
 
     let peft_makespan = run_scheduler(PeftScheduler::new().with_original_network_estimation(), dag.clone());
-    // 0:
-    // 1:
-    // 2:[-------A------][-----C-----][--------B--------][------G------][-----I----]
-    // 3:                         [---D--][------E-----][-------F------]    [----H----]          [--J--]
     assert_float_eq(peft_makespan, 95.0, EPSILON);
 
     let simple_makespan = run_scheduler(SimpleScheduler::new(), dag);
