@@ -73,8 +73,8 @@ impl Experiment {
     ) -> Self {
         let runs = dags
             .into_iter()
-            .cartesian_product(systems.into_iter())
-            .cartesian_product(schedulers.into_iter())
+            .cartesian_product(systems)
+            .cartesian_product(schedulers)
             .map(
                 |(((dag_name, dag), (system_name, resources, network)), scheduler)| Run {
                     dag_name,
@@ -148,7 +148,7 @@ impl Experiment {
 
         let runs = dags
             .cartesian_product(systems)
-            .cartesian_product(schedulers.into_iter())
+            .cartesian_product(schedulers)
             .map(
                 |(((dag_name, dag), (system_name, resources, network)), scheduler)| Run {
                     dag_name,
