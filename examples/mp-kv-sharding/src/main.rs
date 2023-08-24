@@ -902,8 +902,8 @@ fn check_mc_node_removed(
         Ok(stats) => Ok(stats
             .collected_states
             .into_iter()
-            .map(|state| {
-                state.network.borrow_mut().disconnect_node(removed_proc);
+            .map(|mut state| {
+                state.network.disconnect_node(removed_proc);
                 state
             })
             .collect::<HashSet<McState>>()),

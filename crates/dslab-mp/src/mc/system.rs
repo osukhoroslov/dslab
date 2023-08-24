@@ -93,7 +93,7 @@ impl McSystem {
             self.events.clone(),
             self.depth,
             self.trace_handler.borrow().trace(),
-            self.net.borrow().clone()
+            self.net.borrow().clone(),
         );
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
