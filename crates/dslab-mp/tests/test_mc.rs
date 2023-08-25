@@ -533,11 +533,11 @@ fn one_state_no_goal(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn two_states_one_message_ok(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
@@ -545,7 +545,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: SystemIni
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
@@ -565,11 +565,11 @@ fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: SystemIni
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| Some("pruned".to_string()));
 
     let goal = boxed!(|_: &McState| None);
@@ -577,7 +577,7 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: Syste
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
@@ -749,11 +749,11 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn visited_states(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -762,7 +762,7 @@ fn visited_states(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
     let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system_with_collector();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
@@ -783,11 +783,11 @@ fn visited_states(#[case] strategy_name: String, conf_type: SystemInitMethod) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -814,7 +814,7 @@ fn timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     });
 
     let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_postponed_delivery_system();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
@@ -835,11 +835,11 @@ fn timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn useless_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -861,7 +861,7 @@ fn useless_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
         Ok(())
     });
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_dumb_delivery_system_with_useless_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
@@ -917,17 +917,17 @@ fn many_dropped_messages(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case(0.0)]
 #[case(0.1)]
-fn context_time(#[case] clock_skew: f64, conf_type: SystemInitMethod) {
+fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal_data = rc!(refcell!(vec![]));
     let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_timer_system(clock_skew);
             sys.send_local_message("process", Message::new("PING", "some_data"));
@@ -957,15 +957,15 @@ fn context_time(#[case] clock_skew: f64, conf_type: SystemInitMethod) {
 }
 
 #[rstest(
-    conf_type_first_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
-    conf_type_second_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method_first_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method_second_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
 fn collect_mode(
     #[case] strategy_name: String,
-    conf_type_first_stage: SystemInitMethod,
-    conf_type_second_stage: SystemInitMethod,
+    init_method_first_stage: SystemInitMethod,
+    init_method_second_stage: SystemInitMethod,
 ) {
     let mut sys: System = build_postponed_delivery_system();
     sys.send_local_message("process2", Message::new("WAKEUP", ""));
@@ -976,7 +976,7 @@ fn collect_mode(
     let goal = build_reached_depth_goal(1);
     let collect = boxed!(|_: &McState| true);
     let config = build_strategy_config(prune, goal, invariant).collect(collect);
-    let run_stats = match conf_type_first_stage {
+    let run_stats = match init_method_first_stage {
         SystemInitMethod::Simulation => {
             let mut mc = build_mc_from_config(&sys, strategy_name.clone(), config);
             mc.run()
@@ -997,7 +997,7 @@ fn collect_mode(
     let invariant = boxed!(|_: &McState| Ok(()));
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
-    let res = match conf_type_second_stage {
+    let res = match init_method_second_stage {
         SystemInitMethod::Simulation => {
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run_from_states_with_change(states, |mc_sys| {
@@ -1023,11 +1023,11 @@ fn collect_mode(
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn cancel_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
@@ -1041,7 +1041,7 @@ fn cancel_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
         Ok(())
     });
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
@@ -1061,11 +1061,11 @@ fn cancel_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
 }
 
 #[rstest(
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn reset_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
+fn reset_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
     let prune = boxed!(|state: &McState| {
         let outbox = &state.node_states["node2"]["process2"].local_outbox;
         if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
@@ -1085,7 +1085,7 @@ fn reset_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
         }
     });
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_timer_resetting_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
@@ -1112,14 +1112,14 @@ pub enum NetworkProblem {
 
 #[rstest(
     net_problem => [NetworkProblem::DropOutgoing, NetworkProblem::DropIncoming, NetworkProblem::DisableLink],
-    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
 fn permanent_net_problem(
     #[case] strategy_name: String,
     net_problem: NetworkProblem,
-    conf_type: SystemInitMethod,
+    init_method: SystemInitMethod,
 ) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
@@ -1132,7 +1132,7 @@ fn permanent_net_problem(
         }
     });
 
-    let result = match conf_type {
+    let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_middle_node();
             match net_problem {
