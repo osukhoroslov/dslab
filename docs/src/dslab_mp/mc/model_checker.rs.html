@@ -115,6 +115,12 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Model checker configuration and launching.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -123,10 +129,12 @@
 
 <span class="kw">use </span>sugars::boxed;
 
+<span class="kw">use </span>dslab_core::cast;
+
 <span class="kw">use </span><span class="kw">crate</span>::events::{MessageReceived, TimerFired};
 <span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
 <span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent;
-<span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
+<span class="kw">use </span><span class="kw">crate</span>::mc::network::{DeliveryOptions, McNetwork};
 <span class="kw">use </span><span class="kw">crate</span>::mc::node::McNode;
 <span class="kw">use </span><span class="kw">crate</span>::mc::pending_events::PendingEvents;
 <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
@@ -153,8 +161,7 @@
 
         <span class="kw">let </span>mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        <span class="kw">let </span><span class="kw-2">mut </span>trace = sys.logger().trace().clone();
-        trace.push(LogEntry::McStarted {});
+        <span class="kw">let </span>trace = sys.logger().trace().clone();
         <span class="kw">let </span>trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
 
         <span class="kw">let </span><span class="kw-2">mut </span>nodes: HashMap&lt;String, McNode&gt; = HashMap::new();
@@ -173,19 +180,23 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>events = PendingEvents::new();
         <span class="kw">for </span>event <span class="kw">in </span>sim.dump_events() {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = event.data.downcast_ref::&lt;MessageReceived&gt;() {
-                events.push(
-                    mc_net
-                        .borrow_mut()
-                        .send_message(value.msg.clone(), value.src.clone(), value.dst.clone()),
-                );
-            } <span class="kw">else if let </span><span class="prelude-val">Some</span>(value) = event.data.downcast_ref::&lt;TimerFired&gt;() {
-                events.push(McEvent::TimerFired {
-                    proc: value.proc.clone(),
-                    timer: value.timer.clone(),
-                    timer_delay: McTime::from(<span class="number">0.0</span>),
-                });
-            }
+            <span class="macro">cast!</span>(<span class="kw">match </span>event.data {
+                MessageReceived { msg, src, dst, .. } =&gt; {
+                    events.push(McEvent::MessageReceived {
+                        msg,
+                        src,
+                        dst,
+                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                    });
+                }
+                TimerFired { proc, timer } =&gt; {
+                    events.push(McEvent::TimerFired {
+                        proc,
+                        timer,
+                        timer_delay: McTime::from(<span class="number">0.0</span>),
+                    });
+                }
+            });
         }
 
         <span class="self">Self </span>{
@@ -196,6 +207,7 @@
 
     <span class="doccomment">/// Runs model checking and returns the result on completion.
     </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; McResult {
+        <span class="self">self</span>.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         <span class="self">self</span>.strategy.mark_visited(<span class="self">self</span>.system.get_state());
         <span class="self">self</span>.strategy.run(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system)
     }
