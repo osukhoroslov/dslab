@@ -82,7 +82,9 @@ impl ModelChecker {
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         preliminary_callback(&mut self.system);
         strategy.mark_visited(self.system.get_state());
-        strategy.run(&mut self.system)
+        let res = strategy.run(&mut self.system);
+        strategy.reset();
+        res
     }
 
     /// Runs model checking and returns the result on completion.
@@ -124,13 +126,13 @@ impl ModelChecker {
     {
         let mut total_stats = McStats::default();
         let mut states = Vec::from_iter(states);
-        let mut strategy = RefCell::new(S::build(strategy_config));
+        let mut strategy = S::build(strategy_config);
 
         // sort starting states by increasing depth to produce shorter error traces
         states.sort_by_key(|x| x.depth);
         for state in states {
             self.system.set_state(state);
-            let stats = self.run_impl(strategy.get_mut(), &preliminary_callback)?;
+            let stats = self.run_impl(&mut strategy, &preliminary_callback)?;
             total_stats.combine(stats);
         }
         Ok(total_stats)
