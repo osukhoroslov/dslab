@@ -967,9 +967,6 @@ fn collect_mode(
     init_method_first_stage: SystemInitMethod,
     init_method_second_stage: SystemInitMethod,
 ) {
-    let mut sys: System = build_postponed_delivery_system();
-    sys.send_local_message("process2", Message::new("WAKEUP", ""));
-
     // first stage: either process wakes or it doesn't: collect both states
     let invariant = boxed!(|_: &McState| Ok(()));
     let prune = boxed!(|_: &McState| None);
@@ -978,6 +975,8 @@ fn collect_mode(
     let config = build_strategy_config(prune, goal, invariant).collect(collect);
     let run_stats = match init_method_first_stage {
         SystemInitMethod::Simulation => {
+            let mut sys: System = build_postponed_delivery_system();
+            sys.send_local_message("process2", Message::new("WAKEUP", ""));
             let mut mc = build_mc_from_config(&sys, strategy_name.clone(), config);
             mc.run()
         }
@@ -999,6 +998,8 @@ fn collect_mode(
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
     let res = match init_method_second_stage {
         SystemInitMethod::Simulation => {
+            let mut sys: System = build_postponed_delivery_system();
+            sys.send_local_message("process2", Message::new("WAKEUP", ""));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run_from_states_with_change(states, |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
