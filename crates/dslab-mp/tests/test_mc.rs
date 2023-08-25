@@ -632,8 +632,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace =
-        one_message_sent_before_mc_trace(msg.clone());
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
     expected_trace.extend(vec![
         LogEntry::McStarted {},
         LogEntry::McMessageDropped {
@@ -699,8 +698,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace =
-        one_message_sent_before_mc_trace(msg.clone());
+    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
