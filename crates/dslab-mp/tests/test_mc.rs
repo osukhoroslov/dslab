@@ -653,13 +653,11 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     });
 
     let mut expected_trace = local_message_in_mc_trace(msg.clone());
-    expected_trace.extend(vec![
-        LogEntry::McMessageDropped {
-            msg,
-            src: "process1".to_string(),
-            dst: "process2".to_string(),
-        },
-    ]);
+    expected_trace.extend(vec![LogEntry::McMessageDropped {
+        msg,
+        src: "process1".to_string(),
+        dst: "process2".to_string(),
+    }]);
 
     let expected = Err(McError::new(
         "nothing left to do to reach the goal".to_string(),
