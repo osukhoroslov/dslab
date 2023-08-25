@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use dslab_mp::mc::strategies;
 use rstest::rstest;
 use sugars::{boxed, rc, refcell};
 
@@ -14,7 +13,7 @@ use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategies::dfs::Dfs;
-use dslab_mp::mc::strategy::{GoalFn, InvariantFn, McResult, PruneFn, StrategyConfig, VisitedStates};
+use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig, VisitedStates};
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
 use dslab_mp::system::System;
@@ -624,7 +623,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let mut mc = ModelChecker::new(&build_ping_system());
     let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_drop_rate(0.5);
@@ -644,7 +643,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     let invariant = boxed!(|_: &McState| Ok(()));
     let msg = Message::new("PING", "some_data");
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let mut mc = ModelChecker::new(&build_ping_system());
     
     let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
@@ -681,7 +680,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let mut mc = ModelChecker::new(&build_ping_system());
     
     let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
@@ -715,7 +714,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let dst = "process2".to_string();
 
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let mut mc = ModelChecker::new(&build_ping_system());
     let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_dupl_rate(0.5);
@@ -758,7 +757,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
     let invariant = boxed!(|_: &McState| Ok(()));
 
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let mut mc = ModelChecker::new(&build_ping_system());
     
     let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
@@ -954,7 +953,7 @@ fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
     let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
 
     let result = match init_method {
         SystemInitMethod::Simulation => {
@@ -1022,7 +1021,7 @@ fn collect_mode(
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
     
-    let strategy_config = build_strategy_config(goal, prune, invariant);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let res = match init_method_second_stage {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_postponed_delivery_system();

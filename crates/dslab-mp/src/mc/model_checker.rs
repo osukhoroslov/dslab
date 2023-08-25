@@ -4,8 +4,6 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use sugars::boxed;
-
 use dslab_core::cast;
 
 use crate::events::{MessageReceived, TimerFired};
