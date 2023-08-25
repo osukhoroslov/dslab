@@ -458,43 +458,19 @@ fn two_nodes_started_trace() -> Vec<LogEntry> {
     ]
 }
 
-fn one_message_sent_before_mc_trace(msg: Message, conf_type: McSystemConfiguringType) -> Vec<LogEntry> {
+fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
     let mut trace = two_nodes_started_trace();
-    match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            trace.extend(vec![
-                LogEntry::LocalMessageReceived {
-                    time: 0.0,
-                    msg_id: "node1-process1-0".to_string(),
-                    node: "node1".to_string(),
-                    proc: "process1".to_string(),
-                    msg: msg.clone(),
-                },
-                LogEntry::MessageSent {
-                    time: 0.0,
-                    msg_id: "0".to_string(),
-                    src_node: "node1".to_string(),
-                    src_proc: "process1".to_string(),
-                    dst_node: "node2".to_string(),
-                    dst_proc: "process2".to_string(),
-                    msg,
-                },
-            ]);
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            trace.extend(vec![
-                LogEntry::McLocalMessageReceived {
-                    proc: "process1".to_string(),
-                    msg: msg.clone(),
-                },
-                LogEntry::McMessageSent {
-                    src: "process1".to_string(),
-                    dst: "process2".to_string(),
-                    msg,
-                },
-            ]);
-        }
-    }
+    trace.extend(vec![
+        LogEntry::McLocalMessageReceived {
+            proc: "process1".to_string(),
+            msg: msg.clone(),
+        },
+        LogEntry::McMessageSent {
+            src: "process1".to_string(),
+            dst: "process2".to_string(),
+            msg,
+        },
+    ]);
     trace
 }
 
@@ -657,7 +633,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     });
 
     let mut expected_trace =
-        one_message_sent_before_mc_trace(msg.clone(), McSystemConfiguringType::McPreliminaryCallback);
+        one_message_sent_before_mc_trace(msg.clone());
     expected_trace.extend(vec![
         LogEntry::McStarted {},
         LogEntry::McMessageDropped {
@@ -724,7 +700,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     });
 
     let mut expected_trace =
-        one_message_sent_before_mc_trace(msg.clone(), McSystemConfiguringType::McPreliminaryCallback);
+        one_message_sent_before_mc_trace(msg.clone());
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
