@@ -9,7 +9,7 @@ use sugars::boxed;
 use crate::events::{MessageReceived, TimerFired};
 use crate::logger::LogEntry;
 use crate::mc::events::McEvent;
-use crate::mc::network::McNetwork;
+use crate::mc::network::{DeliveryOptions, McNetwork};
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
@@ -56,11 +56,12 @@ impl ModelChecker {
         let mut events = PendingEvents::new();
         for event in sim.dump_events() {
             if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
-                events.push(
-                    mc_net
-                        .borrow_mut()
-                        .send_message(value.msg.clone(), value.src.clone(), value.dst.clone()),
-                );
+                events.push(McEvent::MessageReceived {
+                    msg: value.msg.clone(),
+                    src: value.src.clone(),
+                    dst: value.dst.clone(),
+                    options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                });
             } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
                 events.push(McEvent::TimerFired {
                     proc: value.proc.clone(),

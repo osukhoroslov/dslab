@@ -620,12 +620,10 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: McSys
     assert_eq!(*count_states.borrow(), 1);
 }
 
-#[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-)]
+#[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_without_guarantees(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -633,56 +631,33 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String, conf_ty
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            let mut sys = build_ping_system();
-            sys.send_local_message("process1", Message::new("PING", "some_data"));
-            sys.network().set_drop_rate(0.5);
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.network().borrow_mut().set_drop_rate(0.5);
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-            })
-        }
-    };
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+    });
 
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 3);
 }
 
-#[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-)]
+#[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_with_guarantees(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
     let invariant = boxed!(|_: &McState| Ok(()));
     let msg = Message::new("PING", "some_data");
 
-    let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            let mut sys = build_ping_system();
-            sys.send_local_message("process1", msg.clone());
-            sys.network().set_drop_rate(0.5);
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.network().borrow_mut().set_drop_rate(0.5);
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-            })
-        }
-    };
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+    });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone(), conf_type);
+    let mut expected_trace =
+        one_message_sent_before_mc_trace(msg.clone(), McSystemConfiguringType::McPreliminaryCallback);
     expected_trace.extend(vec![
         LogEntry::McStarted {},
         LogEntry::McMessageDropped {
@@ -699,12 +674,10 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String, conf_type:
     assert_eq!(result, expected);
 }
 
-#[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-)]
+#[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_without_guarantees(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
     let count_goal_states = rc!(refcell!(0));
@@ -713,34 +686,21 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String, conf
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            let mut sys = build_ping_system();
-            sys.send_local_message("process1", Message::new("PING", "some_data"));
-            sys.network().set_dupl_rate(0.5);
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.network().borrow_mut().set_dupl_rate(0.5);
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-            })
-        }
-    };
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+    });
 
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 9);
     assert_eq!(*count_goal_states.borrow(), 3);
 }
 
-#[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-)]
+#[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_with_guarantees(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -757,24 +717,14 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String, conf_ty
     let src = "process1".to_string();
     let dst = "process2".to_string();
 
-    let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            let mut sys = build_ping_system();
-            sys.send_local_message("process1", msg.clone());
-            sys.network().set_dupl_rate(0.5);
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.network().borrow_mut().set_dupl_rate(0.5);
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-            })
-        }
-    };
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+    });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone(), conf_type);
+    let mut expected_trace =
+        one_message_sent_before_mc_trace(msg.clone(), McSystemConfiguringType::McPreliminaryCallback);
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
@@ -798,12 +748,10 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String, conf_ty
     assert_eq!(result, expected);
 }
 
-#[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-)]
+#[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_corrupted_without_guarantees(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
 
     let goal_data = rc!(refcell!(vec![]));
@@ -811,26 +759,15 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String, conf_
 
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
-            let mut sys = build_ping_system();
-            sys.send_local_message("process1", Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"));
-            sys.network().set_corrupt_rate(0.5);
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
-        }
-        McSystemConfiguringType::McPreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.network().borrow_mut().set_corrupt_rate(0.5);
-                mc_sys.send_local_message(
-                    "node1",
-                    "process1",
-                    Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"),
-                );
-            })
-        }
-    };
+    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
+    let result = mc.run_with_change(move |mc_sys| {
+        mc_sys.network().borrow_mut().set_corrupt_rate(0.5);
+        mc_sys.send_local_message(
+            "node1",
+            "process1",
+            Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"),
+        );
+    });
 
     assert!(result.is_ok());
     assert_eq!(goal_data.borrow().len(), 2);

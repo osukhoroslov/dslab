@@ -109,4 +109,8 @@ impl McNetwork {
     pub fn set_drop_rate(&mut self, drop_rate: f64) {
         self.drop_rate = drop_rate;
     }
+
+    pub fn max_delay(&self) -> f64 {
+        self.max_delay
+    }
 }
