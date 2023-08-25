@@ -41,24 +41,6 @@ impl McSystem {
         }
     }
 
-    fn add_events(&mut self, events: Vec<McEvent>) {
-        for event in events {
-            match &event {
-                McEvent::TimerCancelled { proc, timer } => {
-                    self.events.cancel_timer(proc.clone(), timer.clone());
-                    self.trace_handler.borrow_mut().push(event.to_log_entry());
-                }
-                McEvent::MessageDropped { receive_event_id, .. } => {
-                    receive_event_id.map(|id| self.events.pop(id));
-                    self.trace_handler.borrow_mut().push(event.to_log_entry());
-                }
-                _ => {
-                    self.events.push(event);
-                }
-            }
-        }
-    }
-
     pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
@@ -131,6 +113,28 @@ impl McSystem {
         self.depth
     }
 
+    pub fn network(&mut self) -> Rc<RefCell<McNetwork>> {
+        self.net.clone()
+    }
+
+    fn add_events(&mut self, events: Vec<McEvent>) {
+        for event in events {
+            match &event {
+                McEvent::TimerCancelled { proc, timer } => {
+                    self.events.cancel_timer(proc.clone(), timer.clone());
+                    self.trace_handler.borrow_mut().push(event.to_log_entry());
+                }
+                McEvent::MessageDropped { receive_event_id, .. } => {
+                    receive_event_id.map(|id| self.events.pop(id));
+                    self.trace_handler.borrow_mut().push(event.to_log_entry());
+                }
+                _ => {
+                    self.events.push(event);
+                }
+            }
+        }
+    }
+
     fn get_approximate_event_time(depth: u64) -> f64 {
         // every step of system execution in model checking advances the time by 0.1s
         // this makes the time value look more natural and closer to the time in simulation
@@ -141,9 +145,5 @@ impl McSystem {
         let mut hasher = DefaultHasher::default();
         self.get_state().hash(&mut hasher);
         hasher.finish()
-    }
-
-    pub fn network(&mut self) -> Rc<RefCell<McNetwork>> {
-        self.net.clone()
     }
 }
