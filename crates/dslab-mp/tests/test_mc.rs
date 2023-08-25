@@ -22,6 +22,11 @@ macro_rules! str_vec {
     ($($x:expr),*) => (vec![$($x.to_string()),*]);
 }
 
+pub enum SystemInitMethod {
+    Simulation,
+    PreliminaryCallback,
+}
+
 #[derive(Clone)]
 struct PingMessageNode {
     peers: Vec<String>,
@@ -474,11 +479,6 @@ fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
     trace
 }
 
-pub enum McSystemConfiguringType {
-    DefaultSimulation,
-    McPreliminaryCallback,
-}
-
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
@@ -533,11 +533,11 @@ fn one_state_no_goal(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
@@ -546,13 +546,13 @@ fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: McSystemC
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
@@ -565,11 +565,11 @@ fn two_states_one_message_ok(#[case] strategy_name: String, conf_type: McSystemC
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| Some("pruned".to_string()));
 
     let goal = boxed!(|_: &McState| None);
@@ -578,13 +578,13 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, conf_type: McSys
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
@@ -749,11 +749,11 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn visited_states(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn visited_states(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -763,14 +763,14 @@ fn visited_states(#[case] strategy_name: String, conf_type: McSystemConfiguringT
 
     let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_ping_system_with_collector();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process1", Message::new("PING", "some_data_2"));
             let mut mc = build_mc_from_config(&sys, strategy_name, config);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc_from_config(&build_ping_system_with_collector(), strategy_name, config);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
@@ -783,11 +783,11 @@ fn visited_states(#[case] strategy_name: String, conf_type: McSystemConfiguringT
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -815,14 +815,14 @@ fn timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
 
     let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_postponed_delivery_system();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
             let mut mc = build_mc_from_config(&sys, strategy_name, config);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc_from_config(&build_postponed_delivery_system(), strategy_name, config);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
@@ -835,11 +835,11 @@ fn timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn useless_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn useless_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -862,14 +862,14 @@ fn useless_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringTy
     });
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_dumb_delivery_system_with_useless_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(
                 &build_dumb_delivery_system_with_useless_timer(),
                 strategy_name,
@@ -917,24 +917,24 @@ fn many_dropped_messages(#[case] strategy_name: String) {
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case(0.0)]
 #[case(0.1)]
-fn context_time(#[case] clock_skew: f64, conf_type: McSystemConfiguringType) {
+fn context_time(#[case] clock_skew: f64, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal_data = rc!(refcell!(vec![]));
     let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
     let invariant = boxed!(|_: &McState| Ok(()));
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys = build_timer_system(clock_skew);
             sys.send_local_message("process", Message::new("PING", "some_data"));
             let mut mc = build_mc(&sys, "dfs".to_string(), prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(
                 &build_timer_system(clock_skew),
                 "dfs".to_string(),
@@ -957,15 +957,15 @@ fn context_time(#[case] clock_skew: f64, conf_type: McSystemConfiguringType) {
 }
 
 #[rstest(
-    conf_type_first_stage => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
-    conf_type_second_stage => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type_first_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    conf_type_second_stage => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
 fn collect_mode(
     #[case] strategy_name: String,
-    conf_type_first_stage: McSystemConfiguringType,
-    conf_type_second_stage: McSystemConfiguringType,
+    conf_type_first_stage: SystemInitMethod,
+    conf_type_second_stage: SystemInitMethod,
 ) {
     let mut sys: System = build_postponed_delivery_system();
     sys.send_local_message("process2", Message::new("WAKEUP", ""));
@@ -977,11 +977,11 @@ fn collect_mode(
     let collect = boxed!(|_: &McState| true);
     let config = build_strategy_config(prune, goal, invariant).collect(collect);
     let run_stats = match conf_type_first_stage {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut mc = build_mc_from_config(&sys, strategy_name.clone(), config);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc_from_config(&build_postponed_delivery_system(), strategy_name.clone(), config);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
@@ -998,13 +998,13 @@ fn collect_mode(
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
     let res = match conf_type_second_stage {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run_from_states_with_change(states, |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
             })
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(
                 &build_postponed_delivery_system(),
                 strategy_name,
@@ -1023,11 +1023,11 @@ fn collect_mode(
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn cancel_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn cancel_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
@@ -1042,14 +1042,14 @@ fn cancel_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringTyp
     });
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(&build_ping_system_with_timer(), strategy_name, prune, goal, invariant);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
@@ -1061,11 +1061,11 @@ fn cancel_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringTyp
 }
 
 #[rstest(
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn reset_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType) {
+fn reset_timer(#[case] strategy_name: String, conf_type: SystemInitMethod) {
     let prune = boxed!(|state: &McState| {
         let outbox = &state.node_states["node2"]["process2"].local_outbox;
         if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
@@ -1086,14 +1086,14 @@ fn reset_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringType
     });
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys: System = build_timer_resetting_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(&build_timer_resetting_system(), strategy_name, prune, goal, invariant);
             mc.run_with_change(move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
@@ -1112,14 +1112,14 @@ pub enum NetworkProblem {
 
 #[rstest(
     net_problem => [NetworkProblem::DropOutgoing, NetworkProblem::DropIncoming, NetworkProblem::DisableLink],
-    conf_type => [McSystemConfiguringType::DefaultSimulation, McSystemConfiguringType::McPreliminaryCallback],
+    conf_type => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
 )]
 #[case("dfs")]
 #[case("bfs")]
 fn permanent_net_problem(
     #[case] strategy_name: String,
     net_problem: NetworkProblem,
-    conf_type: McSystemConfiguringType,
+    conf_type: SystemInitMethod,
 ) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
@@ -1133,7 +1133,7 @@ fn permanent_net_problem(
     });
 
     let result = match conf_type {
-        McSystemConfiguringType::DefaultSimulation => {
+        SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_middle_node();
             match net_problem {
                 NetworkProblem::DropOutgoing => sys.network().drop_outgoing("node2"),
@@ -1144,7 +1144,7 @@ fn permanent_net_problem(
             let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
             mc.run()
         }
-        McSystemConfiguringType::McPreliminaryCallback => {
+        SystemInitMethod::PreliminaryCallback => {
             let mut mc = build_mc(
                 &build_ping_system_with_middle_node(),
                 strategy_name,
