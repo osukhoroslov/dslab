@@ -474,9 +474,10 @@ fn two_nodes_started_trace() -> Vec<LogEntry> {
     ]
 }
 
-fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
+fn local_message_in_mc_trace(msg: Message) -> Vec<LogEntry> {
     let mut trace = two_nodes_started_trace();
     trace.extend(vec![
+        LogEntry::McStarted {},
         LogEntry::McLocalMessageReceived {
             proc: "process1".to_string(),
             msg: msg.clone(),
@@ -651,9 +652,8 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    let mut expected_trace = local_message_in_mc_trace(msg.clone());
     expected_trace.extend(vec![
-        LogEntry::McStarted {},
         LogEntry::McMessageDropped {
             msg,
             src: "process1".to_string(),
@@ -720,7 +720,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    let mut expected_trace = local_message_in_mc_trace(msg.clone());
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
@@ -733,7 +733,6 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     };
     let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dst };
     expected_trace.extend(vec![
-        LogEntry::McStarted {},
         expected_message_duplicated_event,
         expected_message_received_event.clone(),
         expected_local_message_sent_event.clone(),
