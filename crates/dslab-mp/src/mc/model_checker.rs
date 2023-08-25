@@ -6,10 +6,12 @@ use std::rc::Rc;
 
 use sugars::boxed;
 
+use dslab_core::cast;
+
 use crate::events::{MessageReceived, TimerFired};
 use crate::logger::LogEntry;
 use crate::mc::events::McEvent;
-use crate::mc::network::McNetwork;
+use crate::mc::network::{DeliveryOptions, McNetwork};
 use crate::mc::node::McNode;
 use crate::mc::pending_events::PendingEvents;
 use crate::mc::state::McState;
@@ -36,8 +38,7 @@ impl ModelChecker {
 
         let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
 
-        let mut trace = sys.logger().trace().clone();
-        trace.push(LogEntry::McStarted {});
+        let trace = sys.logger().trace().clone();
         let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
 
         let mut nodes: HashMap<String, McNode> = HashMap::new();
@@ -56,19 +57,23 @@ impl ModelChecker {
 
         let mut events = PendingEvents::new();
         for event in sim.dump_events() {
-            if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
-                events.push(
-                    mc_net
-                        .borrow_mut()
-                        .send_message(value.msg.clone(), value.src.clone(), value.dst.clone()),
-                );
-            } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
-                events.push(McEvent::TimerFired {
-                    proc: value.proc.clone(),
-                    timer: value.timer.clone(),
-                    timer_delay: McTime::from(0.0),
-                });
-            }
+            cast!(match event.data {
+                MessageReceived { msg, src, dst, .. } => {
+                    events.push(McEvent::MessageReceived {
+                        msg,
+                        src,
+                        dst,
+                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                    });
+                }
+                TimerFired { proc, timer } => {
+                    events.push(McEvent::TimerFired {
+                        proc,
+                        timer,
+                        timer_delay: McTime::from(0.0),
+                    });
+                }
+            });
         }
 
         Self {
@@ -79,6 +84,7 @@ impl ModelChecker {
 
     /// Runs model checking and returns the result on completion.
     pub fn run(&mut self) -> McResult {
+        self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         self.strategy.mark_visited(self.system.get_state());
         self.strategy.run(&mut self.system)
     }

@@ -222,10 +222,6 @@ pub trait Strategy {
                     }
                 }
             }
-            TimerCancelled { proc, timer } => {
-                system.events.cancel_timer(proc.clone(), timer.clone());
-                self.search_step(system, EventOrId::Id(event_id))?
-            }
             _ => self.search_step(system, EventOrId::Id(event_id))?,
         }
 

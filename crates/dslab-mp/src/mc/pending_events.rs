@@ -10,7 +10,6 @@ pub struct PendingEvents {
     events: BTreeMap<McEventId, McEvent>,
     timer_mapping: BTreeMap<(String, String), usize>,
     available_events: BTreeSet<McEventId>,
-    directives: BTreeSet<McEventId>,
     resolver: DependencyResolver,
     id_counter: McEventId,
 }
@@ -22,7 +21,6 @@ impl PendingEvents {
             events: BTreeMap::default(),
             timer_mapping: BTreeMap::default(),
             available_events: BTreeSet::default(),
-            directives: BTreeSet::default(),
             resolver: DependencyResolver::default(),
             id_counter: 0,
         }
@@ -54,18 +52,7 @@ impl PendingEvents {
                     self.available_events.insert(id);
                 }
             }
-            McEvent::TimerCancelled { .. } => {
-                self.directives.insert(id);
-            }
-            McEvent::MessageDropped { .. } => {
-                self.directives.insert(id);
-            }
-            McEvent::MessageDuplicated { .. } => {
-                self.directives.insert(id);
-            }
-            McEvent::MessageCorrupted { .. } => {
-                self.directives.insert(id);
-            }
+            _ => {}
         };
         self.events.insert(id, event);
         id
@@ -78,18 +65,11 @@ impl PendingEvents {
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     pub fn available_events(&self) -> BTreeSet<McEventId> {
-        if let Some(directive) = self.directives.iter().next() {
-            BTreeSet::from_iter(vec![*directive])
-        } else {
-            self.available_events.clone()
-        }
+        self.available_events.clone()
     }
 
     /// Returns the number of currently available events
     pub fn available_events_num(&self) -> usize {
-        if !self.directives.is_empty() {
-            return 1;
-        }
         self.available_events.len()
     }
 
@@ -104,7 +84,6 @@ impl PendingEvents {
     /// Removes available event by its id.
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
         let result = self.events.remove(&event_id).unwrap();
-        self.directives.remove(&event_id);
         self.available_events.remove(&event_id);
         if let McEvent::TimerFired { .. } = result {
             let unblocked_events = self.resolver.remove_timer(event_id);

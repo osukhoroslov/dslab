@@ -85,4 +85,32 @@ impl McNetwork {
             }
         }
     }
+
+    pub fn drop_outgoing(&mut self, node: &str) {
+        self.drop_outgoing.insert(node.to_string());
+    }
+
+    pub fn drop_incoming(&mut self, node: &str) {
+        self.drop_incoming.insert(node.to_string());
+    }
+
+    pub fn disable_link(&mut self, from: &str, to: &str) {
+        self.disabled_links.insert((from.to_string(), to.to_string()));
+    }
+
+    pub fn set_corrupt_rate(&mut self, corrupt_rate: f64) {
+        self.corrupt_rate = corrupt_rate;
+    }
+
+    pub fn set_dupl_rate(&mut self, dupl_rate: f64) {
+        self.dupl_rate = dupl_rate;
+    }
+
+    pub fn set_drop_rate(&mut self, drop_rate: f64) {
+        self.drop_rate = drop_rate;
+    }
+
+    pub fn max_delay(&self) -> f64 {
+        self.max_delay
+    }
 }
