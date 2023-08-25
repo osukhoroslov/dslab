@@ -122,7 +122,6 @@ impl McSystem {
             match &event {
                 McEvent::TimerCancelled { proc, timer } => {
                     self.events.cancel_timer(proc.clone(), timer.clone());
-                    self.trace_handler.borrow_mut().push(event.to_log_entry());
                 }
                 McEvent::MessageDropped { receive_event_id, .. } => {
                     receive_event_id.map(|id| self.events.pop(id));
