@@ -900,7 +900,7 @@ fn useless_timer(#[case] strategy_name: String, conf_type: McSystemConfiguringTy
 fn many_dropped_messages(#[case] strategy_name: String) {
     let invariant = boxed!(|state: &McState| {
         if state.events.available_events_num() > 0 {
-            Err("MessageDropped directives should appear in events list".to_owned())
+            Err("MessageDropped events should appear in events list".to_owned())
         } else {
             Ok(())
         }
