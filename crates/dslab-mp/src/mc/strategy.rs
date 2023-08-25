@@ -438,6 +438,9 @@ pub trait Strategy {
     /// Returns the used execution mode.
     fn execution_mode(&self) -> &ExecutionMode;
 
+    /// Resets the state so strategy can be ran again
+    fn reset(&mut self);
+
     /// Returns the visited states set.
     fn visited(&mut self) -> &mut VisitedStates;
 

@@ -91,7 +91,11 @@ impl ModelChecker {
     }
 
     /// Runs model checking after applying callback.
-    pub fn run_with_change<S>(&mut self, strategy_config: StrategyConfig, preliminary_callback: impl FnOnce(&mut McSystem)) -> McResult
+    pub fn run_with_change<S>(
+        &mut self,
+        strategy_config: StrategyConfig,
+        preliminary_callback: impl FnOnce(&mut McSystem),
+    ) -> McResult
     where
         S: Strategy,
     {

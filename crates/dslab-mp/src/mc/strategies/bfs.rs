@@ -99,4 +99,8 @@ impl Strategy for Bfs {
     fn stats(&mut self) -> &mut McStats {
         &mut self.stats
     }
+
+    fn reset(&mut self) {
+        self.states_queue.clear();
+    }
 }
