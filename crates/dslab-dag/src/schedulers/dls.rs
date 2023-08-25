@@ -44,7 +44,13 @@ impl DlsScheduler {
 
         let task_count = dag.get_tasks().len();
 
-        let median_flop_time = median(system.resources.iter().map(|r| 1. / r.speed));
+        let median_flop_time = median(
+            system
+                .resources
+                .iter()
+                .filter(|r| r.name != "master")
+                .map(|r| 1. / r.speed),
+        );
 
         let task_static_levels = calc_ranks(median_flop_time, avg_net_time, dag);
         let mut task_ids = (0..task_count).collect::<Vec<_>>();

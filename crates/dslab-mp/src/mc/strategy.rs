@@ -125,7 +125,7 @@ pub struct McStats {
 
 impl McStats {
     pub(crate) fn combine(&mut self, other: McStats) {
-        self.collected_states.extend(other.collected_states.into_iter());
+        self.collected_states.extend(other.collected_states);
         for (state, cnt) in other.statuses {
             let entry = self.statuses.entry(state).or_insert(0);
             *entry += cnt;

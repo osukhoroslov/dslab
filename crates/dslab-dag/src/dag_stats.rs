@@ -149,31 +149,27 @@ impl DagStats {
                 .map(|&i| dag.get_data_item(i).size)
                 .max_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
-            min_max_input_size: levels[0]
+            min_max_input_size: dag
+                .get_tasks()
                 .iter()
-                .map(|&t| {
-                    dag.get_task(t)
-                        .inputs
+                .filter_map(|t| {
+                    t.inputs
                         .iter()
                         .filter(|&data_item| dag.get_inputs().contains(data_item))
                         .map(|&data_item| dag.get_data_item(data_item).size)
                         .max_by(|a, b| a.total_cmp(b))
-                        .unwrap_or_default()
                 })
                 .min_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
-            min_max_output_size: levels
-                .last()
-                .unwrap()
+            min_max_output_size: dag
+                .get_tasks()
                 .iter()
-                .map(|&t| {
-                    dag.get_task(t)
-                        .outputs
+                .filter_map(|t| {
+                    t.outputs
                         .iter()
                         .filter(|&data_item| dag.get_outputs().contains(data_item))
                         .map(|&data_item| dag.get_data_item(data_item).size)
                         .max_by(|a, b| a.total_cmp(b))
-                        .unwrap_or_default()
                 })
                 .min_by(|a, b| a.total_cmp(b))
                 .unwrap_or_default(),
@@ -280,7 +276,6 @@ impl DagStats {
         let successor_count = level
             .iter()
             .flat_map(|&t| dag.get_task(t).outputs.iter().cloned())
-            .filter(|data_item| !dag.get_outputs().contains(data_item))
             .flat_map(|data_item| dag.get_data_item(data_item).consumers.iter().cloned())
             .collect::<HashSet<usize>>()
             .len();

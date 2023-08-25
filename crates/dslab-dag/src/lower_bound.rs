@@ -5,24 +5,8 @@ use crate::dag_stats::DagStats;
 use crate::schedulers::common::task_successors;
 use crate::system::System;
 
-pub fn makespan_lower_bound(dag: &DAG, system: System, scheduler: Id) -> f64 {
-    let stats = dag.stats();
-    let max_bandwidth_from_scheduler = system
-        .resources
-        .iter()
-        .map(|r| system.network.bandwidth(scheduler, r.id))
-        .max_by(|a, b| a.total_cmp(b))
-        .unwrap();
-    let min_input_output_time = (stats.min_max_input_size + stats.min_max_output_size) / max_bandwidth_from_scheduler;
-    [
-        critical_path_time(dag, system) + min_input_output_time,
-        total_comp_time(&stats, system) + min_input_output_time,
-        input_time(&stats, max_bandwidth_from_scheduler),
-        output_time(&stats, max_bandwidth_from_scheduler),
-    ]
-    .into_iter()
-    .max_by(|a, b| a.total_cmp(b))
-    .unwrap()
+pub fn makespan_lower_bound(dag: &DAG, system: System, _scheduler: Id) -> f64 {
+    critical_path_time(dag, system).max(total_comp_time(&dag.stats(), system))
 }
 
 fn critical_path_time(dag: &DAG, system: System) -> f64 {
@@ -42,14 +26,6 @@ fn total_comp_time(stats: &DagStats, system: System) -> f64 {
             .iter()
             .map(|r| r.speed * r.cores_available as f64)
             .sum::<f64>()
-}
-
-fn input_time(stats: &DagStats, max_bandwidth_from_scheduler: f64) -> f64 {
-    stats.max_input_size / max_bandwidth_from_scheduler
-}
-
-fn output_time(stats: &DagStats, max_bandwidth_from_scheduler: f64) -> f64 {
-    stats.max_output_size / max_bandwidth_from_scheduler
 }
 
 fn calc_rank(v: usize, system: System, dag: &DAG, ranks: &mut Vec<f64>, visited: &mut Vec<bool>) {

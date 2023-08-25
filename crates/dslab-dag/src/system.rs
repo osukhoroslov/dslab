@@ -16,7 +16,12 @@ pub struct System<'a> {
 impl System<'_> {
     /// Returns average time over all resources for executing one flop.
     pub fn avg_flop_time(&self) -> f64 {
-        self.resources.iter().map(|r| 1. / r.speed).sum::<f64>() / self.resources.len() as f64
+        self.resources
+            .iter()
+            .filter(|r| r.name != "master")
+            .map(|r| 1. / r.speed)
+            .sum::<f64>()
+            / (self.resources.len() - 1) as f64
     }
 
     /// Returns average time over all pairs of resources for sending one unit of data.

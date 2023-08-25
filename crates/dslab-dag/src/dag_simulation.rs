@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_compute::multicore::Compute;
+use dslab_compute::multicore::{Compute, CoresDependency};
 use dslab_core::simulation::Simulation;
 
 use crate::dag::DAG;
@@ -11,6 +11,7 @@ use crate::network::NetworkConfig;
 use crate::resource::{Resource, ResourceConfig};
 use crate::runner::{Config, DAGRunner, Start};
 use crate::scheduler::Scheduler;
+use crate::task::ResourceRestriction;
 
 /// Provides a convenient API for configuring and running simulations of DAG execution.
 pub struct DagSimulation {
@@ -50,10 +51,13 @@ impl DagSimulation {
     }
 
     /// Initializes DAG simulation.
-    pub fn init(&mut self, dag: DAG) -> Rc<RefCell<DAGRunner>> {
+    pub fn init(&mut self, mut dag: DAG) -> Rc<RefCell<DAGRunner>> {
         let net_ctx = self.sim.create_context("net");
         let network = Rc::new(RefCell::new(self.network_config.make_network(net_ctx)));
         self.sim.add_handler("net", network.clone());
+        if !self.resource_configs.iter().any(|r| r.name == "master") {
+            self.add_resource("master", 1., 1, 0);
+        }
         let resources = self
             .resource_configs
             .iter()
@@ -77,6 +81,9 @@ impl DagSimulation {
                 }
             })
             .collect::<Vec<_>>();
+
+        self.add_input_output_tasks(&mut dag);
+
         let runner = Rc::new(RefCell::new(DAGRunner::new(
             dag,
             network.clone(),
@@ -125,5 +132,31 @@ impl DagSimulation {
     /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
     pub fn time(&mut self) -> f64 {
         self.sim.time()
+    }
+
+    fn add_input_output_tasks(&mut self, dag: &mut DAG) {
+        let master_resource = self.resource_configs.iter().position(|r| r.name == "master").unwrap();
+
+        for task in 0..dag.get_tasks().len() {
+            dag.set_resource_restriction(task, ResourceRestriction::Except([master_resource].into()));
+        }
+        if !dag.get_inputs().is_empty() {
+            let inputs = dag.get_inputs().clone();
+            let input_task = dag.add_task("input", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(input_task, ResourceRestriction::Only([master_resource].into()));
+            for &input in inputs.iter() {
+                dag.set_as_task_output(input, input_task);
+            }
+            dag.set_inputs(inputs);
+        }
+        if !dag.get_outputs().is_empty() {
+            let outputs = dag.get_outputs().clone();
+            let output_task = dag.add_task("output", 0., 0, 1, 1, CoresDependency::Linear);
+            dag.set_resource_restriction(output_task, ResourceRestriction::Only([master_resource].into()));
+            for &output in outputs.iter() {
+                dag.add_data_dependency(output, output_task);
+            }
+            dag.set_outputs(outputs);
+        }
     }
 }
