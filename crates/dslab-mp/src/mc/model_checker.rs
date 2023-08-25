@@ -6,6 +6,8 @@ use std::rc::Rc;
 
 use sugars::boxed;
 
+use dslab_core::cast;
+
 use crate::events::{MessageReceived, TimerFired};
 use crate::logger::LogEntry;
 use crate::mc::events::McEvent;
@@ -55,20 +57,23 @@ impl ModelChecker {
 
         let mut events = PendingEvents::new();
         for event in sim.dump_events() {
-            if let Some(value) = event.data.downcast_ref::<MessageReceived>() {
-                events.push(McEvent::MessageReceived {
-                    msg: value.msg.clone(),
-                    src: value.src.clone(),
-                    dst: value.dst.clone(),
-                    options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
-                });
-            } else if let Some(value) = event.data.downcast_ref::<TimerFired>() {
-                events.push(McEvent::TimerFired {
-                    proc: value.proc.clone(),
-                    timer: value.timer.clone(),
-                    timer_delay: McTime::from(0.0),
-                });
-            }
+            cast!(match event.data {
+                MessageReceived { msg, src, dst, .. } => {
+                    events.push(McEvent::MessageReceived {
+                        msg,
+                        src,
+                        dst,
+                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                    });
+                }
+                TimerFired { proc, timer } => {
+                    events.push(McEvent::TimerFired {
+                        proc,
+                        timer,
+                        timer_delay: McTime::from(0.0),
+                    });
+                }
+            });
         }
 
         Self {
