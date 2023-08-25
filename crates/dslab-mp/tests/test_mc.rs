@@ -1116,11 +1116,7 @@ pub enum NetworkProblem {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn permanent_net_problem(
-    #[case] strategy_name: String,
-    net_problem: NetworkProblem,
-    init_method: SystemInitMethod,
-) {
+fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProblem, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
