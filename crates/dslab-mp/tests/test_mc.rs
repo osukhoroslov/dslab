@@ -781,10 +781,15 @@ fn visited_states(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_ping_system_with_collector(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
-            })
+            run_mc!(
+                build_ping_system_with_collector(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -832,10 +837,15 @@ fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
-            })
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -879,10 +889,15 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_dumb_delivery_system_with_useless_timer(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
-            })
+            run_mc!(
+                build_dumb_delivery_system_with_useless_timer(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                }
+            )
         }
     };
     assert!(result.is_err());
@@ -911,10 +926,15 @@ fn many_dropped_messages(#[case] strategy_name: &str) {
     let goal = build_no_events_left_goal();
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let result = run_mc!(build_spammer_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().drop_outgoing("node1");
-        mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
-    });
+    let result = run_mc!(
+        build_spammer_delivery_system(),
+        strategy_config,
+        strategy_name,
+        move |mc_sys| {
+            mc_sys.network().borrow_mut().drop_outgoing("node1");
+            mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
+        }
+    );
     assert!(result.is_ok());
 }
 
@@ -978,9 +998,14 @@ fn collect_mode(
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     }
     .expect("run failed but shouldn't");
@@ -1003,10 +1028,16 @@ fn collect_mode(
             })
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, states, |mc_sys| {
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-            })
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
+                strategy_name,
+                states,
+                |mc_sys| {
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                }
+            )
         }
     };
     assert!(res.is_ok());
@@ -1041,10 +1072,15 @@ fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_ping_system_with_timer(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_ping_system_with_timer(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -1085,10 +1121,15 @@ fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_timer_resetting_system(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_timer_resetting_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -1132,14 +1173,19 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
             run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            run_mc!(build_ping_system_with_middle_node(), strategy_config, strategy_name, move |mc_sys| {
-                match net_problem {
-                    NetworkProblem::DropOutgoing => mc_sys.network().borrow_mut().drop_outgoing("node2"),
-                    NetworkProblem::DropIncoming => mc_sys.network().borrow_mut().drop_incoming("node2"),
-                    NetworkProblem::DisableLink => mc_sys.network().borrow_mut().disable_link("node1", "node3"),
+            run_mc!(
+                build_ping_system_with_middle_node(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    match net_problem {
+                        NetworkProblem::DropOutgoing => mc_sys.network().borrow_mut().drop_outgoing("node2"),
+                        NetworkProblem::DropIncoming => mc_sys.network().borrow_mut().drop_incoming("node2"),
+                        NetworkProblem::DisableLink => mc_sys.network().borrow_mut().disable_link("node1", "node3"),
+                    }
+                    mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
                 }
-                mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
-            })
+            )
         }
     };
     assert!(result.is_ok());
