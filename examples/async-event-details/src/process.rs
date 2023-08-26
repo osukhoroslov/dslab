@@ -64,7 +64,7 @@ impl Worker {
             let task_info = self.task_chan.receive().await;
 
             while !self.try_start_process_task(&task_info).await {
-                self.ctx.async_handle_self::<TaskCompleted>().await;
+                self.ctx.async_wait_event_from_self::<TaskCompleted>().await;
             }
 
             tasks_completed += 1;

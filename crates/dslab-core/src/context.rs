@@ -915,7 +915,7 @@ impl SimulationContext {
         /// sim.spawn(async move {
         ///     client_ctx.emit_self(SomeEvent{payload: 23}, 10.);
         ///
-        ///     let (e, data) = client_ctx.async_handle_self::<SomeEvent>().await;
+        ///     let (e, data) = client_ctx.async_wait_event_from_self::<SomeEvent>().await;
         ///     assert_eq!(data.payload, 23);
         ///     assert_eq!(client_ctx.time(), 10.)
         /// });
@@ -923,7 +923,7 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 10.);
         /// ```
-        pub async fn async_handle_self<T>(&self) -> (Event, T)
+        pub async fn async_wait_event_from_self<T>(&self) -> (Event, T)
         where
             T: EventData,
         {
@@ -1067,8 +1067,8 @@ impl SimulationContext {
         }
 
         /// Async detailed handling event from self.
-        /// See [`Self::async_handle_self`, `Self::async_detailed_wait_event_for`]
-        pub async fn async_detailed_handle_self<T>(&self, details: DetailsKey) -> (Event, T)
+        /// See [`Self::async_wait_event_from_self`, `Self::async_detailed_wait_event_for`]
+        pub async fn async_detailed_wait_event_from_self<T>(&self, details: DetailsKey) -> (Event, T)
         where
             T: EventData,
         {
