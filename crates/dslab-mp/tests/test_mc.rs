@@ -367,21 +367,21 @@ fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -
 }
 
 macro_rules! run_mc {
-    ($sys:expr, $config:ident, $strategy:ident) => {
+    ($sys:expr, $config:expr, $strategy:ident) => {
         match $strategy {
             "bfs" => ModelChecker::new(&$sys).run::<Bfs>($config),
             "dfs" => ModelChecker::new(&$sys).run::<Dfs>($config),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
-    ($sys:expr, $config:ident, $strategy:ident, $callback:expr) => {
+    ($sys:expr, $config:expr, $strategy:ident, $callback:expr) => {
         match $strategy {
             "bfs" => ModelChecker::new(&$sys).run_with_change::<Bfs>($config, $callback),
             "dfs" => ModelChecker::new(&$sys).run_with_change::<Dfs>($config, $callback),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
-    ($sys:expr, $config:ident, $strategy:ident, $states:ident, $callback:expr) => {
+    ($sys:expr, $config:expr, $strategy:ident, $states:ident, $callback:expr) => {
         match $strategy {
             "bfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Bfs>($config, $states, $callback),
             "dfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Dfs>($config, $states, $callback),
@@ -940,10 +940,11 @@ fn many_dropped_messages(#[case] strategy_name: &str) {
 
 #[rstest(
     init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    strategy_name => ["dfs", "bfs"]
 )]
 #[case(0.0)]
 #[case(0.1)]
-fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
+fn context_time(#[case] clock_skew: f64, strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal_data = rc!(refcell!(vec![]));
     let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
@@ -955,14 +956,17 @@ fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
         SystemInitMethod::Simulation => {
             let mut sys = build_timer_system(clock_skew);
             sys.send_local_message("process", Message::new("PING", "some_data"));
-            let mut mc = ModelChecker::new(&sys);
-            mc.run::<Dfs>(strategy_config)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_timer_system(clock_skew));
-            mc.run_with_change::<Dfs>(strategy_config, move |mc_sys| {
-                mc_sys.send_local_message("node", "process", Message::new("PING", "some_data"));
-            })
+            run_mc!(
+                build_timer_system(clock_skew),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node", "process", Message::new("PING", "some_data"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
