@@ -367,24 +367,24 @@ fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -
 }
 
 macro_rules! run_mc {
-    ($mc:ident, $config:ident, $strategy:ident) => {
+    ($sys:expr, $config:ident, $strategy:ident) => {
         match $strategy {
-            "bfs" => $mc.run::<Bfs>($config),
-            "dfs" => $mc.run::<Dfs>($config),
+            "bfs" => ModelChecker::new(&$sys).run::<Bfs>($config),
+            "dfs" => ModelChecker::new(&$sys).run::<Dfs>($config),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
-    ($mc:ident, $config:ident, $strategy:ident, $callback:expr) => {
+    ($sys:expr, $config:ident, $strategy:ident, $callback:expr) => {
         match $strategy {
-            "bfs" => $mc.run_with_change::<Bfs>($config, $callback),
-            "dfs" => $mc.run_with_change::<Dfs>($config, $callback),
+            "bfs" => ModelChecker::new(&$sys).run_with_change::<Bfs>($config, $callback),
+            "dfs" => ModelChecker::new(&$sys).run_with_change::<Dfs>($config, $callback),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
-    ($mc:ident, $config:ident, $strategy:ident, $states:ident, $callback:expr) => {
+    ($sys:expr, $config:ident, $strategy:ident, $states:ident, $callback:expr) => {
         match $strategy {
-            "bfs" => $mc.run_from_states_with_change::<Bfs>($config, $states, $callback),
-            "dfs" => $mc.run_from_states_with_change::<Dfs>($config, $states, $callback),
+            "bfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Bfs>($config, $states, $callback),
+            "dfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Dfs>($config, $states, $callback),
             s => panic!("Unknown strategy name: {}", s),
         }
     };
@@ -501,9 +501,8 @@ fn one_state_ok(#[case] strategy_name: &str) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = ModelChecker::new(&build_ping_system());
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let result = run_mc!(mc, strategy_config, strategy_name);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 1);
 }
@@ -516,9 +515,8 @@ fn one_state_broken_invariant(#[case] strategy_name: &str) {
     let goal = boxed!(|_: &McState| Some("final".to_string()));
     let invariant = boxed!(|_: &McState| Err("broken".to_string()));
 
-    let mut mc = ModelChecker::new(&build_ping_system());
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let result = run_mc!(mc, strategy_config, strategy_name);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
     assert!(if let Err(err) = result {
         err.message() == "broken"
     } else {
@@ -534,9 +532,8 @@ fn one_state_no_goal(#[case] strategy_name: &str) {
     let goal = boxed!(|_: &McState| None);
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let mut mc = ModelChecker::new(&build_ping_system());
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let result = run_mc!(mc, strategy_config, strategy_name);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
 
     let mut expected_trace = two_nodes_started_trace();
     expected_trace.push(LogEntry::McStarted {});
@@ -564,12 +561,10 @@ fn two_states_one_message_ok(#[case] strategy_name: &str, init_method: SystemIni
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_ping_system());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
             })
         }
@@ -598,12 +593,10 @@ fn two_states_one_message_pruned(#[case] strategy_name: &str, init_method: Syste
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_ping_system());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
             })
         }
@@ -625,8 +618,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_ping_system());
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
@@ -645,9 +637,8 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     let msg = Message::new("PING", "some_data");
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_ping_system());
 
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
@@ -679,9 +670,8 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_ping_system());
 
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
@@ -712,8 +702,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let dst = "process2".to_string();
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_ping_system());
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
@@ -753,9 +742,8 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
     let invariant = boxed!(|_: &McState| Ok(()));
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_ping_system());
 
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().set_corrupt_rate(0.5);
         mc_sys.send_local_message(
             "node1",
@@ -790,12 +778,10 @@ fn visited_states(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             let mut sys = build_ping_system_with_collector();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process1", Message::new("PING", "some_data_2"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_ping_system_with_collector());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_ping_system_with_collector(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
             })
@@ -843,12 +829,10 @@ fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             let mut sys = build_postponed_delivery_system();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_postponed_delivery_system());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
             })
@@ -892,12 +876,10 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             let mut sys = build_dumb_delivery_system_with_useless_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_dumb_delivery_system_with_useless_timer());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_dumb_delivery_system_with_useless_timer(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
             })
@@ -929,8 +911,7 @@ fn many_dropped_messages(#[case] strategy_name: &str) {
     let goal = build_no_events_left_goal();
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
-    let mut mc = ModelChecker::new(&build_spammer_delivery_system());
-    let result = run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+    let result = run_mc!(build_spammer_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().borrow_mut().drop_outgoing("node1");
         mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
     });
@@ -994,12 +975,10 @@ fn collect_mode(
         SystemInitMethod::Simulation => {
             let mut sys: System = build_postponed_delivery_system();
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_postponed_delivery_system());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
             })
         }
@@ -1019,15 +998,12 @@ fn collect_mode(
         SystemInitMethod::Simulation => {
             let mut sys: System = build_postponed_delivery_system();
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name, states, |mc_sys| {
+            run_mc!(sys, strategy_config, strategy_name, states, |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
             })
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_postponed_delivery_system());
-
-            run_mc!(mc, strategy_config, strategy_name, states, |mc_sys| {
+            run_mc!(build_postponed_delivery_system(), strategy_config, strategy_name, states, |mc_sys| {
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
             })
@@ -1062,12 +1038,10 @@ fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             let mut sys: System = build_ping_system_with_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_ping_system_with_timer());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_ping_system_with_timer(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
             })
@@ -1108,12 +1082,10 @@ fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             let mut sys: System = build_timer_resetting_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_timer_resetting_system());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_timer_resetting_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
                 mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
             })
@@ -1157,12 +1129,10 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
                 NetworkProblem::DisableLink => sys.network().disable_link("node1", "node3"),
             }
             sys.send_local_message("process0", Message::new("PING", "some_data"));
-            let mut mc = ModelChecker::new(&sys);
-            run_mc!(mc, strategy_config, strategy_name)
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = ModelChecker::new(&build_ping_system_with_middle_node());
-            run_mc!(mc, strategy_config, strategy_name, move |mc_sys| {
+            run_mc!(build_ping_system_with_middle_node(), strategy_config, strategy_name, move |mc_sys| {
                 match net_problem {
                     NetworkProblem::DropOutgoing => mc_sys.network().borrow_mut().drop_outgoing("node2"),
                     NetworkProblem::DropIncoming => mc_sys.network().borrow_mut().drop_incoming("node2"),
