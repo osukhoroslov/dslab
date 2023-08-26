@@ -124,7 +124,10 @@ impl McSystem {
     }
 
     fn add_events(&mut self, events: Vec<McEvent>) {
-        for event in events {
+        for mut event in events {
+            if let McEvent::MessageReceived { msg, src, dst, .. } = event {
+                event = self.net.send_message(msg, src, dst);
+            }
             match &event {
                 McEvent::TimerCancelled { proc, timer } => {
                     self.events.cancel_timer(proc.clone(), timer.clone());
@@ -132,10 +135,6 @@ impl McSystem {
                 McEvent::MessageDropped { receive_event_id, .. } => {
                     receive_event_id.map(|id| self.events.pop(id));
                     self.trace_handler.borrow_mut().push(event.to_log_entry());
-                }
-                McEvent::MessageReceived { msg, src, dst, .. } => {
-                    let event = self.net.send_message(msg.clone(), src.clone(), dst.clone());
-                    self.events.push(event);
                 }
                 _ => {
                     self.events.push(event);
