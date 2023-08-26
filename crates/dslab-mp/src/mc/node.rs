@@ -10,7 +10,7 @@ use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
 
 use crate::mc::events::McEvent;
-use crate::mc::network::McNetwork;
+use crate::mc::network::DeliveryOptions;
 use crate::mc::system::McTime;
 use crate::mc::trace_handler::TraceHandler;
 
@@ -68,7 +68,6 @@ pub type McNodeState = BTreeMap<String, ProcessEntryState>;
 
 pub struct McNode {
     processes: HashMap<String, ProcessEntry>,
-    net: Rc<RefCell<McNetwork>>,
     trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
 }
@@ -76,13 +75,11 @@ pub struct McNode {
 impl McNode {
     pub(crate) fn new(
         processes: HashMap<String, ProcessEntry>,
-        net: Rc<RefCell<McNetwork>>,
         trace_handler: Rc<RefCell<TraceHandler>>,
         clock_skew: f64,
     ) -> Self {
         Self {
             processes,
-            net,
             trace_handler,
             clock_skew,
         }
@@ -154,11 +151,12 @@ impl McNode {
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             match action {
                 ProcessEvent::MessageSent { msg, src, dst } => {
-                    let event = self
-                        .net
-                        .borrow_mut()
-                        .send_message(msg.clone(), src.clone(), dst.clone());
-                    new_events.push(event);
+                    new_events.push(McEvent::MessageReceived {
+                        msg: msg.clone(),
+                        src: src.clone(),
+                        dst: dst.clone(),
+                        options: DeliveryOptions::NoFailures(0.0.into()),
+                    });
                     proc_entry.sent_message_count += 1;
 
                     let log_entry = LogEntry::McMessageSent { msg, src, dst };

@@ -619,7 +619,7 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+        mc_sys.network().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -639,7 +639,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     let strategy_config = build_strategy_config(prune, goal, invariant);
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+        mc_sys.network().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -672,7 +672,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
     let strategy_config = build_strategy_config(prune, goal, invariant);
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+        mc_sys.network().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -703,7 +703,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
 
     let strategy_config = build_strategy_config(prune, goal, invariant);
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+        mc_sys.network().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -744,7 +744,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
     let strategy_config = build_strategy_config(prune, goal, invariant);
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-        mc_sys.network().borrow_mut().set_corrupt_rate(0.5);
+        mc_sys.network().set_corrupt_rate(0.5);
         mc_sys.send_local_message(
             "node1",
             "process1",
@@ -931,7 +931,7 @@ fn many_dropped_messages(#[case] strategy_name: &str) {
         strategy_config,
         strategy_name,
         move |mc_sys| {
-            mc_sys.network().borrow_mut().drop_outgoing("node1");
+            mc_sys.network().drop_outgoing("node1");
             mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
         }
     );
@@ -1179,9 +1179,9 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
                 strategy_name,
                 move |mc_sys| {
                     match net_problem {
-                        NetworkProblem::DropOutgoing => mc_sys.network().borrow_mut().drop_outgoing("node2"),
-                        NetworkProblem::DropIncoming => mc_sys.network().borrow_mut().drop_incoming("node2"),
-                        NetworkProblem::DisableLink => mc_sys.network().borrow_mut().disable_link("node1", "node3"),
+                        NetworkProblem::DropOutgoing => mc_sys.network().drop_outgoing("node2"),
+                        NetworkProblem::DropIncoming => mc_sys.network().drop_incoming("node2"),
+                        NetworkProblem::DisableLink => mc_sys.network().disable_link("node1", "node3"),
                     }
                     mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
                 }

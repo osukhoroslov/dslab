@@ -19,7 +19,7 @@ pub type McTime = OrderedFloat<f64>;
 
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
-    net: Rc<RefCell<McNetwork>>,
+    net: McNetwork,
     pub(crate) events: PendingEvents,
     depth: u64,
     pub(crate) trace_handler: Rc<RefCell<TraceHandler>>,
@@ -28,7 +28,7 @@ pub struct McSystem {
 impl McSystem {
     pub fn new(
         nodes: HashMap<String, McNode>,
-        net: Rc<RefCell<McNetwork>>,
+        net: McNetwork,
         events: PendingEvents,
         trace_handler: Rc<RefCell<TraceHandler>>,
     ) -> Self {
@@ -49,14 +49,14 @@ impl McSystem {
 
         let new_events = match event {
             McEvent::MessageReceived { msg, src, dst, .. } => {
-                let name = self.net.borrow().get_proc_node(&dst).clone();
+                let name = self.net.get_proc_node(&dst).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
                     .on_message_received(dst, msg, src, event_time, state_hash)
             }
             McEvent::TimerFired { proc, timer, .. } => {
-                let name = self.net.borrow().get_proc_node(&proc).clone();
+                let name = self.net.get_proc_node(&proc).clone();
                 self.nodes
                     .get_mut(&name)
                     .unwrap()
@@ -93,7 +93,7 @@ impl McSystem {
             self.events.clone(),
             self.depth,
             self.trace_handler.borrow().trace(),
-            self.net.borrow().clone(),
+            self.net.clone(),
         );
         for (name, node) in &self.nodes {
             state.node_states.insert(name.clone(), node.get_state());
@@ -107,7 +107,7 @@ impl McSystem {
         }
         self.events = state.events;
         self.depth = state.depth;
-        self.net.replace(state.network);
+        self.net = state.network;
         self.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
@@ -119,8 +119,8 @@ impl McSystem {
         self.depth
     }
 
-    pub fn network(&mut self) -> Rc<RefCell<McNetwork>> {
-        self.net.clone()
+    pub fn network(&mut self) -> &mut McNetwork {
+        &mut self.net
     }
 
     fn add_events(&mut self, events: Vec<McEvent>) {
@@ -132,6 +132,10 @@ impl McSystem {
                 McEvent::MessageDropped { receive_event_id, .. } => {
                     receive_event_id.map(|id| self.events.pop(id));
                     self.trace_handler.borrow_mut().push(event.to_log_entry());
+                }
+                McEvent::MessageReceived { msg, src, dst, .. } => {
+                    let event = self.net.send_message(msg.clone(), src.clone(), dst.clone());
+                    self.events.push(event);
                 }
                 _ => {
                     self.events.push(event);

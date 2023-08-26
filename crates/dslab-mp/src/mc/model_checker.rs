@@ -30,7 +30,7 @@ impl ModelChecker {
         // Setup environment for model checker
         let sim = sys.sim();
 
-        let mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
+        let mc_net = McNetwork::new(sys.network());
 
         let trace = sys.logger().trace().clone();
         let trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
@@ -40,12 +40,7 @@ impl ModelChecker {
             let node = sys.get_node(&node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(
-                    node.processes(),
-                    mc_net.clone(),
-                    trace_handler.clone(),
-                    node.clock_skew(),
-                ),
+                McNode::new(node.processes(), trace_handler.clone(), node.clock_skew()),
             );
         }
 
@@ -57,7 +52,7 @@ impl ModelChecker {
                         msg,
                         src,
                         dst,
-                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.max_delay())),
                     });
                 }
                 TimerFired { proc, timer } => {
