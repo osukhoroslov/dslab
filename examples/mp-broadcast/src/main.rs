@@ -429,7 +429,7 @@ fn mc_prune_msg_per_proc_limit(proc_names: &[String], limit: usize) -> PruneFn {
 fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> InvariantFn {
     boxed!(move |state: &McState| {
         for name in &proc_names {
-            let outbox = &state.node_states[name][name].local_outbox;
+            let outbox = &state.node_states[name].proc_states[name].local_outbox;
             let mut message_data = HashSet::new();
             for message in outbox {
                 let data: Value = serde_json::from_str(&message.data).unwrap();
@@ -450,11 +450,10 @@ fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> Inva
 
 fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let proc_names = (0..config.proc_count).map(|i| format!("{i}")).collect::<Vec<String>>();
-    let msg_text = "0:Hello".to_owned();
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, msg_text));
-    sys.send_local_message("0", msg);
-    let sent_messages: HashSet<String> = HashSet::from_iter(vec![msg_text].into_iter());
+    let proc_names = sys.process_names();
+    let text = "0:Hello";
+    sys.send_local_message(proc_names[0].as_str(), Message::json("SEND", &BroadcastMessage{text}));
+    let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -466,11 +465,12 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
         .prune(prunes::any_prune(vec![
             prunes::state_depth(10),
             mc_prune_proc_permutations(&proc_names[1..]),
+            // Prune states with more than 2 messages received from any process
             mc_prune_msg_per_proc_limit(&proc_names, 2),
         ]))
         .invariant(mc_invariant(proc_names.clone(), sent_messages));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
-    let res = mc.run();
+    let mut mc = ModelChecker::new(&sys);
+    let res = mc.run::<Bfs>(strategy_config);
     if let Err(err) = res {
         err.print_trace();
         Err(err.message())
@@ -481,11 +481,10 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
 
 fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
-    let proc_names = (0..config.proc_count).map(|i| format!("{i}")).collect::<Vec<String>>();
-    let msg_text = "0:Hello".to_owned();
-    let msg = Message::new("SEND", &format!(r#"{{"text": "{}"}}"#, msg_text));
-    sys.send_local_message("0", msg);
-    let sent_messages: HashSet<String> = HashSet::from_iter(vec![msg_text].into_iter());
+    let proc_names = sys.process_names();
+    let text = "0:Hello";
+    sys.send_local_message(proc_names[0].as_str(), Message::json("SEND", &BroadcastMessage{text}));
+    let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -504,37 +503,35 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
                 .collect(),
         ));
 
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
-    let res = mc.run();
+    let mut mc = ModelChecker::new(&sys);
+    let res = mc.run::<Bfs>(strategy_config);
     let intermediate_states = res.map_err(|err| {
         err.print_trace();
         err.message()
-    })?;
-    if intermediate_states.collected_states.is_empty() {
+    })?.collected_states;
+    if intermediate_states.is_empty() {
         return Err("no states collected after first stage".to_string());
     }
+    let left_proc_names = proc_names[1..].to_vec();
+
     let goal = goals::all_goals(
-        proc_names
+        left_proc_names
             .iter()
-            .filter(|name| **name != "0")
             .map(|name| goals::got_n_local_messages(name, name, 1))
             .collect::<Vec<GoalFn>>(),
     );
-
-    let mut proc_names_cloned = proc_names.clone();
-    proc_names_cloned.remove(0);
     let strategy_config = StrategyConfig::default()
         .goal(goal)
-        .invariant(mc_invariant(proc_names_cloned, sent_messages))
+        .invariant(mc_invariant(left_proc_names, sent_messages))
         .prune(prunes::any_prune(vec![
             prunes::state_depth(6),
             mc_prune_proc_permutations(&proc_names[1..]),
             mc_prune_msg_per_proc_limit(&proc_names, 4),
         ]));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new(&sys);
     // TODO: check if this is necessary
     // let collected = get_n_start_states(res.collected, 100);
-    let res = mc.run_from_states_with_change(intermediate_states.collected_states, |sys| {
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, intermediate_states, |sys| {
         sys.crash_node("0");
     });
     if let Err(err) = res {

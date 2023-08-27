@@ -318,7 +318,7 @@ pub mod collects {
     }
 
     /// Checks if trace to given state has at least `n` events matching the predicate.
-    pub fn event_happened_n_times<F>(predicate: F, n: usize) -> CollectFn
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
     {

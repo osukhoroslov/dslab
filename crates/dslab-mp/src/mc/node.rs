@@ -64,15 +64,15 @@ impl ProcessEntry {
     }
 }
 
-#[derive(Clone,Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct McNodeState {
-    pub(crate) proc_states: BTreeMap<String, ProcessEntryState>,
+    pub proc_states: BTreeMap<String, ProcessEntryState>,
     is_crashed: bool,
 }
 
 #[derive(Clone)]
 pub struct McNode {
-    processes: HashMap<String, ProcessEntry>,
+    pub(crate) processes: HashMap<String, ProcessEntry>,
     trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
     is_crashed: bool,
@@ -148,11 +148,15 @@ impl McNode {
     }
 
     pub fn get_state(&self) -> McNodeState {
-        let proc_states = self.processes
+        let proc_states = self
+            .processes
             .iter()
             .map(|(proc, entry)| (proc.clone(), entry.get_state()))
             .collect();
-        McNodeState { proc_states, is_crashed: self.is_crashed }
+        McNodeState {
+            proc_states,
+            is_crashed: self.is_crashed,
+        }
     }
 
     pub fn set_state(&mut self, state: McNodeState) {

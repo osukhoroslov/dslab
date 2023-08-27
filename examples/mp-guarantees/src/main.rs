@@ -419,7 +419,7 @@ fn mc_invariant_guarantees(messages_expected: Vec<Message>, config: TestConfig) 
         for msg in &messages_expected {
             *expected_msg_count.entry(msg.data.clone()).or_insert(0) += 1;
         }
-        let delivered = &state.node_states["receiver-node"]["receiver"].local_outbox;
+        let delivered = &state.node_states["receiver-node"].proc_states["receiver"].local_outbox;
 
         // check that delivered messages have expected type and data
         let delivered_msg_count = check_delivered_messages(delivered, &expected_msg_count, &messages_expected[0].tip)?;
