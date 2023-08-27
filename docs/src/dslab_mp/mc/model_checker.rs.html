@@ -121,13 +121,23 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Model checker configuration and launching.
 
 </span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
 <span class="kw">use </span>std::rc::Rc;
-
-<span class="kw">use </span>sugars::boxed;
 
 <span class="kw">use </span>dslab_core::cast;
 
@@ -146,20 +156,16 @@
 <span class="doccomment">/// Main class of (and entrypoint to) the model checking testing technique.
 </span><span class="kw">pub struct </span>ModelChecker {
     system: McSystem,
-    strategy: Box&lt;<span class="kw">dyn </span>Strategy&gt;,
 }
 
 <span class="kw">impl </span>ModelChecker {
     <span class="doccomment">/// Creates a new model checker with the specified strategy
     /// and initial state equal to the current state of the system.
-    </span><span class="kw">pub fn </span>new&lt;S: Strategy + <span class="lifetime">&#39;static</span>&gt;(sys: <span class="kw-2">&amp;</span>System, strategy_config: StrategyConfig) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Setup strategy which specifies rules for state exploration
-        </span><span class="kw">let </span>strategy = <span class="macro">boxed!</span>(S::build(strategy_config));
-
+    </span><span class="kw">pub fn </span>new(sys: <span class="kw-2">&amp;</span>System) -&gt; <span class="self">Self </span>{
         <span class="comment">// Setup environment for model checker
         </span><span class="kw">let </span>sim = sys.sim();
 
-        <span class="kw">let </span>mc_net = Rc::new(RefCell::new(McNetwork::new(sys.network())));
+        <span class="kw">let </span>mc_net = McNetwork::new(sys.network());
 
         <span class="kw">let </span>trace = sys.logger().trace().clone();
         <span class="kw">let </span>trace_handler = Rc::new(RefCell::new(TraceHandler::new(trace)));
@@ -169,12 +175,7 @@
             <span class="kw">let </span>node = sys.get_node(<span class="kw-2">&amp;</span>node).unwrap();
             nodes.insert(
                 node.name.clone(),
-                McNode::new(
-                    node.processes(),
-                    mc_net.clone(),
-                    trace_handler.clone(),
-                    node.clock_skew(),
-                ),
+                McNode::new(node.processes(), trace_handler.clone(), node.clock_skew()),
             );
         }
 
@@ -186,7 +187,7 @@
                         msg,
                         src,
                         dst,
-                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.borrow().max_delay())),
+                        options: DeliveryOptions::NoFailures(McTime::from(mc_net.max_delay())),
                     });
                 }
                 TimerFired { proc, timer } =&gt; {
@@ -201,44 +202,67 @@
 
         <span class="self">Self </span>{
             system: McSystem::new(nodes, mc_net, events, trace_handler),
-            strategy,
         }
     }
 
-    <span class="doccomment">/// Runs model checking and returns the result on completion.
-    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; McResult {
+    <span class="kw">fn </span>run_impl&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, strategy: <span class="kw-2">&amp;mut </span>S, preliminary_callback: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>McSystem)) -&gt; McResult
+    <span class="kw">where
+        </span>S: Strategy,
+    {
         <span class="self">self</span>.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
-        <span class="self">self</span>.strategy.mark_visited(<span class="self">self</span>.system.get_state());
-        <span class="self">self</span>.strategy.run(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system)
+        preliminary_callback(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system);
+        strategy.mark_visited(<span class="self">self</span>.system.get_state());
+        <span class="kw">let </span>res = strategy.run(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system);
+        strategy.reset();
+        res
+    }
+
+    <span class="doccomment">/// Runs model checking and returns the result on completion.
+    </span><span class="kw">pub fn </span>run&lt;S: Strategy&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, strategy_config: StrategyConfig) -&gt; McResult {
+        <span class="self">self</span>.run_with_change::&lt;S&gt;(strategy_config, |<span class="kw">_</span>| {})
     }
 
     <span class="doccomment">/// Runs model checking after applying callback.
-    </span><span class="kw">pub fn </span>run_with_change&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, preliminary_callback: F) -&gt; McResult
+    </span><span class="kw">pub fn </span>run_with_change&lt;S&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        strategy_config: StrategyConfig,
+        preliminary_callback: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>McSystem),
+    ) -&gt; McResult
     <span class="kw">where
-        </span>F: FnOnce(<span class="kw-2">&amp;mut </span>McSystem),
+        </span>S: Strategy,
     {
-        preliminary_callback(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system);
-        <span class="self">self</span>.run()
+        <span class="kw">let </span><span class="kw-2">mut </span>strategy = S::build(strategy_config);
+        <span class="self">self</span>.run_impl(<span class="kw-2">&amp;mut </span>strategy, preliminary_callback)
     }
 
     <span class="doccomment">/// Runs model checking from a set of initial states.
-    </span><span class="kw">pub fn </span>run_from_states(<span class="kw-2">&amp;mut </span><span class="self">self</span>, states: HashSet&lt;McState&gt;) -&gt; McResult {
-        <span class="self">self</span>.run_from_states_with_change(states, |<span class="kw">_</span>| {})
+    </span><span class="kw">pub fn </span>run_from_states&lt;S: Strategy&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        strategy_config: StrategyConfig,
+        states: HashSet&lt;McState&gt;,
+    ) -&gt; McResult {
+        <span class="self">self</span>.run_from_states_with_change::&lt;S&gt;(strategy_config, states, |<span class="kw">_</span>| {})
     }
 
     <span class="doccomment">/// Runs model checking from a set of initial states after applying callback.
-    </span><span class="kw">pub fn </span>run_from_states_with_change&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, states: HashSet&lt;McState&gt;, preliminary_callback: F) -&gt; McResult
+    </span><span class="kw">pub fn </span>run_from_states_with_change&lt;S&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        strategy_config: StrategyConfig,
+        states: HashSet&lt;McState&gt;,
+        preliminary_callback: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;mut </span>McSystem),
+    ) -&gt; McResult
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;mut </span>McSystem),
+        </span>S: Strategy,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>total_stats = McStats::default();
         <span class="kw">let </span><span class="kw-2">mut </span>states = Vec::from_iter(states);
+        <span class="kw">let </span><span class="kw-2">mut </span>strategy = S::build(strategy_config);
+
         <span class="comment">// sort starting states by increasing depth to produce shorter error traces
         </span>states.sort_by_key(|x| x.depth);
         <span class="kw">for </span>state <span class="kw">in </span>states {
             <span class="self">self</span>.system.set_state(state);
-            preliminary_callback(<span class="kw-2">&amp;mut </span><span class="self">self</span>.system);
-            <span class="kw">let </span>stats = <span class="self">self</span>.run()<span class="question-mark">?</span>;
+            <span class="kw">let </span>stats = <span class="self">self</span>.run_impl(<span class="kw-2">&amp;mut </span>strategy, <span class="kw-2">&amp;</span>preliminary_callback)<span class="question-mark">?</span>;
             total_stats.combine(stats);
         }
         <span class="prelude-val">Ok</span>(total_stats)

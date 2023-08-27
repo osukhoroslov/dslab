@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["got_n_local_messages"]};
+window.SIDEBAR_ITEMS = {"fn":["event_happened_n_times_current_run","got_n_local_messages","no_events"]};

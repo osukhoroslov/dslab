@@ -100,6 +100,10 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of model checking BFS search strategy.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -200,6 +204,10 @@
 
     <span class="kw">fn </span>stats(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>McStats {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.stats
+    }
+
+    <span class="kw">fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.states_queue.clear();
     }
 }
 </code></pre></div></section></main></body></html>

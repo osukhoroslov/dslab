@@ -52,6 +52,21 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Definition of model checking state.
 
 </span><span class="kw">use </span>std::collections::BTreeMap;
@@ -59,6 +74,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
 
+<span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
 <span class="kw">use </span><span class="kw">crate</span>::mc::node::McNodeState;
 <span class="kw">use </span><span class="kw">crate</span>::mc::pending_events::PendingEvents;
 
@@ -68,6 +84,9 @@
 </span><span class="kw">pub struct </span>McState {
     <span class="doccomment">/// States of nodes in the system.
     </span><span class="kw">pub </span>node_states: BTreeMap&lt;String, McNodeState&gt;,
+
+    <span class="doccomment">/// State of the system network
+    </span><span class="kw">pub </span>network: McNetwork,
 
     <span class="doccomment">/// List of events waiting for delivery.
     </span><span class="kw">pub </span>events: PendingEvents,
@@ -82,13 +101,24 @@
 
 <span class="kw">impl </span>McState {
     <span class="doccomment">/// Creates a new state with the specified events in the system, depth and trace.
-    </span><span class="kw">pub fn </span>new(events: PendingEvents, depth: u64, trace: Vec&lt;LogEntry&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(events: PendingEvents, depth: u64, trace: Vec&lt;LogEntry&gt;, network: McNetwork) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             node_states: BTreeMap::new(),
+            network,
             events,
             depth,
             trace,
         }
+    }
+
+    <span class="doccomment">/// Creates a slice of trace that represents current model checker run.
+    </span><span class="kw">pub fn </span>current_run_trace(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[LogEntry] {
+        <span class="kw">let </span>start_pos = <span class="self">self
+            </span>.trace
+            .iter()
+            .rposition(|entry| <span class="macro">matches!</span>(entry, LogEntry::McStarted { .. }))
+            .unwrap_or(<span class="number">0</span>);
+        <span class="kw-2">&amp;</span><span class="self">self</span>.trace[start_pos..]
     }
 }
 

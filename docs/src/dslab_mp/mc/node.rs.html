@@ -209,8 +209,6 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
@@ -223,7 +221,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::process::ProcessState;
 
 <span class="kw">use </span><span class="kw">crate</span>::mc::events::McEvent;
-<span class="kw">use </span><span class="kw">crate</span>::mc::network::McNetwork;
+<span class="kw">use </span><span class="kw">crate</span>::mc::network::DeliveryOptions;
 <span class="kw">use </span><span class="kw">crate</span>::mc::system::McTime;
 <span class="kw">use </span><span class="kw">crate</span>::mc::trace_handler::TraceHandler;
 
@@ -281,7 +279,6 @@
 
 <span class="kw">pub struct </span>McNode {
     processes: HashMap&lt;String, ProcessEntry&gt;,
-    net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
     trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
     clock_skew: f64,
 }
@@ -289,13 +286,11 @@
 <span class="kw">impl </span>McNode {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
         processes: HashMap&lt;String, ProcessEntry&gt;,
-        net: Rc&lt;RefCell&lt;McNetwork&gt;&gt;,
         trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
         clock_skew: f64,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             processes,
-            net,
             trace_handler,
             clock_skew,
         }
@@ -367,11 +362,12 @@
             proc_entry.event_log.push(EventLogEntry::new(time, action.clone()));
             <span class="kw">match </span>action {
                 ProcessEvent::MessageSent { msg, src, dst } =&gt; {
-                    <span class="kw">let </span>event = <span class="self">self
-                        </span>.net
-                        .borrow_mut()
-                        .send_message(msg.clone(), src.clone(), dst.clone());
-                    new_events.push(event);
+                    new_events.push(McEvent::MessageReceived {
+                        msg: msg.clone(),
+                        src: src.clone(),
+                        dst: dst.clone(),
+                        options: DeliveryOptions::NoFailures(<span class="number">0.0</span>.into()),
+                    });
                     proc_entry.sent_message_count += <span class="number">1</span>;
 
                     <span class="kw">let </span>log_entry = LogEntry::McMessageSent { msg, src, dst };
