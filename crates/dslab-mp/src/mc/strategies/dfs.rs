@@ -87,4 +87,6 @@ impl Strategy for Dfs {
     fn stats(&mut self) -> &mut McStats {
         &mut self.stats
     }
+
+    fn reset(&mut self) {}
 }

@@ -366,17 +366,28 @@ fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -
     StrategyConfig::default().prune(prune).goal(goal).invariant(invariant)
 }
 
-fn build_mc_from_config(sys: &System, strategy_name: String, config: StrategyConfig) -> ModelChecker {
-    if strategy_name == "bfs" {
-        ModelChecker::new::<Bfs>(sys, config)
-    } else {
-        ModelChecker::new::<Dfs>(sys, config)
-    }
-}
-
-fn build_mc(sys: &System, strategy_name: String, prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> ModelChecker {
-    let config = build_strategy_config(prune, goal, invariant);
-    build_mc_from_config(sys, strategy_name, config)
+macro_rules! run_mc {
+    ($sys:expr, $config:expr, $strategy:ident) => {
+        match $strategy {
+            "bfs" => ModelChecker::new(&$sys).run::<Bfs>($config),
+            "dfs" => ModelChecker::new(&$sys).run::<Dfs>($config),
+            s => panic!("Unknown strategy name: {}", s),
+        }
+    };
+    ($sys:expr, $config:expr, $strategy:ident, $callback:expr) => {
+        match $strategy {
+            "bfs" => ModelChecker::new(&$sys).run_with_change::<Bfs>($config, $callback),
+            "dfs" => ModelChecker::new(&$sys).run_with_change::<Dfs>($config, $callback),
+            s => panic!("Unknown strategy name: {}", s),
+        }
+    };
+    ($sys:expr, $config:expr, $strategy:ident, $states:ident, $callback:expr) => {
+        match $strategy {
+            "bfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Bfs>($config, $states, $callback),
+            "dfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Dfs>($config, $states, $callback),
+            s => panic!("Unknown strategy name: {}", s),
+        }
+    };
 }
 
 fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {
@@ -463,9 +474,10 @@ fn two_nodes_started_trace() -> Vec<LogEntry> {
     ]
 }
 
-fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
+fn local_message_processed_trace(msg: Message) -> Vec<LogEntry> {
     let mut trace = two_nodes_started_trace();
     trace.extend(vec![
+        LogEntry::McStarted {},
         LogEntry::McLocalMessageReceived {
             proc: "process1".to_string(),
             msg: msg.clone(),
@@ -482,15 +494,15 @@ fn one_message_sent_before_mc_trace(msg: Message) -> Vec<LogEntry> {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_ok(#[case] strategy_name: String) {
+fn one_state_ok(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| Some("final".to_string()));
 
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
     assert!(result.is_ok());
     assert_eq!(*count_states.borrow(), 1);
 }
@@ -498,13 +510,13 @@ fn one_state_ok(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_broken_invariant(#[case] strategy_name: String) {
+fn one_state_broken_invariant(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| Some("final".to_string()));
     let invariant = boxed!(|_: &McState| Err("broken".to_string()));
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
     assert!(if let Err(err) = result {
         err.message() == "broken"
     } else {
@@ -515,13 +527,13 @@ fn one_state_broken_invariant(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_state_no_goal(#[case] strategy_name: String) {
+fn one_state_no_goal(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = boxed!(|_: &McState| None);
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run();
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name);
 
     let mut expected_trace = two_nodes_started_trace();
     expected_trace.push(LogEntry::McStarted {});
@@ -537,24 +549,22 @@ fn one_state_no_goal(#[case] strategy_name: String) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_ok(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn two_states_one_message_ok(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
 
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
-
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
+            run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
             })
         }
@@ -569,7 +579,7 @@ fn two_states_one_message_ok(#[case] strategy_name: String, init_method: SystemI
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn two_states_one_message_pruned(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| Some("pruned".to_string()));
 
     let goal = boxed!(|_: &McState| None);
@@ -577,16 +587,16 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: Sys
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
+            run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
             })
         }
@@ -599,7 +609,7 @@ fn two_states_one_message_pruned(#[case] strategy_name: String, init_method: Sys
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
+fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -607,9 +617,9 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.network().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -620,27 +630,25 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
+fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 1);
     let invariant = boxed!(|_: &McState| Ok(()));
     let msg = Message::new("PING", "some_data");
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().set_drop_rate(0.5);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.network().set_drop_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
-    expected_trace.extend(vec![
-        LogEntry::McStarted {},
-        LogEntry::McMessageDropped {
-            msg,
-            src: "process1".to_string(),
-            dst: "process2".to_string(),
-        },
-    ]);
+    let mut expected_trace = local_message_processed_trace(msg.clone());
+    expected_trace.extend(vec![LogEntry::McMessageDropped {
+        msg,
+        src: "process1".to_string(),
+        dst: "process2".to_string(),
+    }]);
 
     let expected = Err(McError::new(
         "nothing left to do to reach the goal".to_string(),
@@ -652,7 +660,7 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
+fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let count_goal_states = rc!(refcell!(0));
@@ -661,9 +669,10 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.network().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
@@ -675,7 +684,7 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
+fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -692,13 +701,13 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     let src = "process1".to_string();
     let dst = "process2".to_string();
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().set_dupl_rate(0.5);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.network().set_dupl_rate(0.5);
         mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
     });
 
-    let mut expected_trace = one_message_sent_before_mc_trace(msg.clone());
+    let mut expected_trace = local_message_processed_trace(msg.clone());
     let expected_message_duplicated_event = LogEntry::McMessageDuplicated {
         msg: msg.clone(),
         src: src.clone(),
@@ -711,7 +720,6 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
     };
     let expected_local_message_sent_event = LogEntry::McLocalMessageSent { msg, proc: dst };
     expected_trace.extend(vec![
-        LogEntry::McStarted {},
         expected_message_duplicated_event,
         expected_message_received_event.clone(),
         expected_local_message_sent_event.clone(),
@@ -725,7 +733,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: String) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
+fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
     let prune = boxed!(|_: &McState| None);
 
     let goal_data = rc!(refcell!(vec![]));
@@ -733,9 +741,10 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
 
     let invariant = boxed!(|_: &McState| Ok(()));
 
-    let mut mc = build_mc(&build_ping_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().set_corrupt_rate(0.5);
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.network().set_corrupt_rate(0.5);
         mc_sys.send_local_message(
             "node1",
             "process1",
@@ -753,7 +762,7 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: String) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn visited_states(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -761,21 +770,26 @@ fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) 
     let count_states = rc!(refcell!(0));
     let invariant = build_dumb_counter_invariant(count_states.clone());
 
-    let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
+    let strategy_config =
+        build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_ping_system_with_collector();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process1", Message::new("PING", "some_data_2"));
-            let mut mc = build_mc_from_config(&sys, strategy_name, config);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc_from_config(&build_ping_system_with_collector(), strategy_name, config);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
-            })
+            run_mc!(
+                build_ping_system_with_collector(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -787,7 +801,7 @@ fn visited_states(#[case] strategy_name: String, init_method: SystemInitMethod) 
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -813,21 +827,25 @@ fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
         Ok(())
     });
 
-    let config = build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
+    let strategy_config =
+        build_strategy_config(prune, goal, invariant).visited_states(VisitedStates::Full(HashSet::default()));
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_postponed_delivery_system();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
-            let mut mc = build_mc_from_config(&sys, strategy_name, config);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc_from_config(&build_postponed_delivery_system(), strategy_name, config);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
-            })
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -839,7 +857,7 @@ fn timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
 
     let goal = build_no_events_left_goal();
@@ -861,26 +879,25 @@ fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
         Ok(())
     });
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_dumb_delivery_system_with_useless_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data_1"));
             sys.send_local_message("process2", Message::new("WAKEUP", "start_timer"));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(
-                &build_dumb_delivery_system_with_useless_timer(),
+            run_mc!(
+                build_dumb_delivery_system_with_useless_timer(),
+                strategy_config,
                 strategy_name,
-                prune,
-                goal,
-                invariant,
-            );
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
-            })
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                }
+            )
         }
     };
     assert!(result.is_err());
@@ -897,7 +914,7 @@ fn useless_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
-fn many_dropped_messages(#[case] strategy_name: String) {
+fn many_dropped_messages(#[case] strategy_name: &str) {
     let invariant = boxed!(|state: &McState| {
         if state.events.available_events_num() > 0 {
             Err("MessageDropped events should appear in events list".to_owned())
@@ -908,43 +925,48 @@ fn many_dropped_messages(#[case] strategy_name: String) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
-    let mut mc = build_mc(&build_spammer_delivery_system(), strategy_name, prune, goal, invariant);
-    let result = mc.run_with_change(move |mc_sys| {
-        mc_sys.network().borrow_mut().drop_outgoing("node1");
-        mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
-    });
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+    let result = run_mc!(
+        build_spammer_delivery_system(),
+        strategy_config,
+        strategy_name,
+        move |mc_sys| {
+            mc_sys.network().drop_outgoing("node1");
+            mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
+        }
+    );
     assert!(result.is_ok());
 }
 
 #[rstest(
     init_method => [SystemInitMethod::Simulation, SystemInitMethod::PreliminaryCallback],
+    strategy_name => ["dfs", "bfs"]
 )]
 #[case(0.0)]
 #[case(0.1)]
-fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
+fn context_time(#[case] clock_skew: f64, strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal_data = rc!(refcell!(vec![]));
     let goal = build_one_message_get_data_goal("node".to_string(), "process".to_string(), goal_data.clone());
     let invariant = boxed!(|_: &McState| Ok(()));
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys = build_timer_system(clock_skew);
             sys.send_local_message("process", Message::new("PING", "some_data"));
-            let mut mc = build_mc(&sys, "dfs".to_string(), prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(
-                &build_timer_system(clock_skew),
-                "dfs".to_string(),
-                prune,
-                goal,
-                invariant,
-            );
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node", "process", Message::new("PING", "some_data"));
-            })
+            run_mc!(
+                build_timer_system(clock_skew),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node", "process", Message::new("PING", "some_data"));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -963,7 +985,7 @@ fn context_time(#[case] clock_skew: f64, init_method: SystemInitMethod) {
 #[case("dfs")]
 #[case("bfs")]
 fn collect_mode(
-    #[case] strategy_name: String,
+    #[case] strategy_name: &str,
     init_method_first_stage: SystemInitMethod,
     init_method_second_stage: SystemInitMethod,
 ) {
@@ -972,19 +994,22 @@ fn collect_mode(
     let prune = boxed!(|_: &McState| None);
     let goal = build_reached_depth_goal(1);
     let collect = boxed!(|_: &McState| true);
-    let config = build_strategy_config(prune, goal, invariant).collect(collect);
+    let strategy_config = build_strategy_config(prune, goal, invariant).collect(collect);
     let run_stats = match init_method_first_stage {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_postponed_delivery_system();
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = build_mc_from_config(&sys, strategy_name.clone(), config);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc_from_config(&build_postponed_delivery_system(), strategy_name.clone(), config);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     }
     .expect("run failed but shouldn't");
@@ -996,28 +1021,27 @@ fn collect_mode(
     let invariant = boxed!(|_: &McState| Ok(()));
     let prune = boxed!(|_: &McState| None);
     let goal = build_n_messages_goal("node2".to_string(), "process2".to_string(), 2);
+
+    let strategy_config = build_strategy_config(prune, goal, invariant);
     let res = match init_method_second_stage {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_postponed_delivery_system();
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run_from_states_with_change(states, |mc_sys| {
+            run_mc!(sys, strategy_config, strategy_name, states, |mc_sys| {
                 mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
             })
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(
-                &build_postponed_delivery_system(),
+            run_mc!(
+                build_postponed_delivery_system(),
+                strategy_config,
                 strategy_name,
-                prune,
-                goal,
-                invariant,
-            );
-
-            mc.run_from_states_with_change(states, |mc_sys| {
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-            })
+                states,
+                |mc_sys| {
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                }
+            )
         }
     };
     assert!(res.is_ok());
@@ -1028,7 +1052,7 @@ fn collect_mode(
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
@@ -1042,20 +1066,25 @@ fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
         Ok(())
     });
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_timer();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(&build_ping_system_with_timer(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_ping_system_with_timer(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -1066,7 +1095,7 @@ fn cancel_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn reset_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
+fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|state: &McState| {
         let outbox = &state.node_states["node2"]["process2"].local_outbox;
         if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
@@ -1086,20 +1115,25 @@ fn reset_timer(#[case] strategy_name: String, init_method: SystemInitMethod) {
         }
     });
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_timer_resetting_system();
             sys.send_local_message("process1", Message::new("PING", "some_data"));
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(&build_timer_resetting_system(), strategy_name, prune, goal, invariant);
-            mc.run_with_change(move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-            })
+            run_mc!(
+                build_timer_resetting_system(),
+                strategy_config,
+                strategy_name,
+                move |mc_sys| {
+                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                }
+            )
         }
     };
     assert!(result.is_ok());
@@ -1117,7 +1151,7 @@ pub enum NetworkProblem {
 )]
 #[case("dfs")]
 #[case("bfs")]
-fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProblem, init_method: SystemInitMethod) {
+fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProblem, init_method: SystemInitMethod) {
     let prune = boxed!(|_: &McState| None);
     let goal = build_no_events_left_goal();
 
@@ -1129,6 +1163,8 @@ fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProb
         }
     });
 
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
     let result = match init_method {
         SystemInitMethod::Simulation => {
             let mut sys: System = build_ping_system_with_middle_node();
@@ -1138,25 +1174,22 @@ fn permanent_net_problem(#[case] strategy_name: String, net_problem: NetworkProb
                 NetworkProblem::DisableLink => sys.network().disable_link("node1", "node3"),
             }
             sys.send_local_message("process0", Message::new("PING", "some_data"));
-            let mut mc = build_mc(&sys, strategy_name, prune, goal, invariant);
-            mc.run()
+            run_mc!(sys, strategy_config, strategy_name)
         }
         SystemInitMethod::PreliminaryCallback => {
-            let mut mc = build_mc(
-                &build_ping_system_with_middle_node(),
+            run_mc!(
+                build_ping_system_with_middle_node(),
+                strategy_config,
                 strategy_name,
-                prune,
-                goal,
-                invariant,
-            );
-            mc.run_with_change(move |mc_sys| {
-                match net_problem {
-                    NetworkProblem::DropOutgoing => mc_sys.network().borrow_mut().drop_outgoing("node2"),
-                    NetworkProblem::DropIncoming => mc_sys.network().borrow_mut().drop_incoming("node2"),
-                    NetworkProblem::DisableLink => mc_sys.network().borrow_mut().disable_link("node1", "node3"),
+                move |mc_sys| {
+                    match net_problem {
+                        NetworkProblem::DropOutgoing => mc_sys.network().drop_outgoing("node2"),
+                        NetworkProblem::DropIncoming => mc_sys.network().drop_incoming("node2"),
+                        NetworkProblem::DisableLink => mc_sys.network().disable_link("node1", "node3"),
+                    }
+                    mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
                 }
-                mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
-            })
+            )
         }
     };
     assert!(result.is_ok());

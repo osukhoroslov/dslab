@@ -49,6 +49,17 @@ pub mod invariants {
         })
     }
 
+    /// Checks that state depth for current run does not exceed the given value.
+    pub fn state_depth_current_run(depth: u64) -> InvariantFn {
+        boxed!(move |state: &McState| {
+            if state.current_run_trace().len() > depth as usize {
+                Err(format!("state depth exceeds maximum allowed depth {depth}"))
+            } else {
+                Ok(())
+            }
+        })
+    }
+
     /// Checks that overall run duration does not exceed the given time limit.
     pub fn time_limit(time_limit: Duration) -> InvariantFn {
         let start_time = Instant::now();
@@ -105,6 +116,7 @@ pub mod invariants {
 pub mod goals {
     use sugars::boxed;
 
+    use crate::logger::LogEntry;
     use crate::mc::state::McState;
     use crate::mc::strategy::GoalFn;
 
@@ -162,6 +174,21 @@ pub mod goals {
         boxed!(move |state: &McState| {
             if state.depth >= depth {
                 Some("final depth reached".to_string())
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Checks if current run trace has at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> GoalFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
+            if event_count >= n {
+                Some(format!("event occured {event_count} >= {n} times"))
             } else {
                 None
             }
@@ -238,6 +265,7 @@ pub mod prunes {
 pub mod collects {
     use sugars::boxed;
 
+    use crate::logger::LogEntry;
     use crate::mc::state::McState;
     use crate::mc::strategy::CollectFn;
 
@@ -249,5 +277,21 @@ pub mod collects {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
+    }
+
+    /// Checks if current run trace has at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
+            event_count >= n
+        })
+    }
+
+    /// Checks if current state has no more active events.
+    pub fn no_events() -> CollectFn {
+        boxed!(|state: &McState| { state.events.available_events_num() == 0 })
     }
 }

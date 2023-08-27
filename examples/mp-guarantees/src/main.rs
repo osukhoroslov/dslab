@@ -451,8 +451,8 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             invariants::state_depth(20),
             mc_invariant_guarantees(messages.clone(), *config),
         ]));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
-    let res = mc.run_with_change(move |sys| {
+    let mut mc = ModelChecker::new(&sys);
+    let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
         }
@@ -479,8 +479,8 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
             goals::no_events(),
         ]))
         .invariant(mc_invariant_guarantees(messages.clone(), *config));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
-    let res = mc.run_with_change(move |sys| {
+    let mut mc = ModelChecker::new(&sys);
+    let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
             sys.send_local_message("sender-node", "sender", message);
         }
@@ -528,9 +528,9 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
         ]))
         .goal(goal)
         .invariant(invariants::all_invariants(invariants));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new(&sys);
 
-    let res = mc.run_with_change(|sys| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
         for msg in messages {
             sys.send_local_message("sender-node", "sender", msg.clone());
         }

@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 
 use crate::logger::LogEntry;
 
+use crate::mc::network::McNetwork;
 use crate::mc::node::McNodeState;
 use crate::mc::pending_events::PendingEvents;
 
@@ -14,6 +15,9 @@ use crate::mc::pending_events::PendingEvents;
 pub struct McState {
     /// States of nodes in the system.
     pub node_states: BTreeMap<String, McNodeState>,
+
+    /// State of the system network
+    pub network: McNetwork,
 
     /// List of events waiting for delivery.
     pub events: PendingEvents,
@@ -28,13 +32,24 @@ pub struct McState {
 
 impl McState {
     /// Creates a new state with the specified events in the system, depth and trace.
-    pub fn new(events: PendingEvents, depth: u64, trace: Vec<LogEntry>) -> Self {
+    pub fn new(events: PendingEvents, depth: u64, trace: Vec<LogEntry>, network: McNetwork) -> Self {
         Self {
             node_states: BTreeMap::new(),
+            network,
             events,
             depth,
             trace,
         }
+    }
+
+    /// Creates a slice of trace that represents current model checker run.
+    pub fn current_run_trace(&self) -> &[LogEntry] {
+        let start_pos = self
+            .trace
+            .iter()
+            .rposition(|entry| matches!(entry, LogEntry::McStarted { .. }))
+            .unwrap_or(0);
+        &self.trace[start_pos..]
     }
 }
 

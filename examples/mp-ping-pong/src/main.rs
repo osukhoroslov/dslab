@@ -200,8 +200,8 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
             invariants::state_depth(20),
         ]));
 
-    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
-    let res = mc.run_with_change(|system| {
+    let mut mc = ModelChecker::new(&system);
+    let res = mc.run_with_change::<Bfs>(strategy_config, |system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
     });
 
@@ -226,9 +226,9 @@ fn test_mc_unreliable_network(config: &TestConfig) -> TestResult {
             "client",
             messages_expected,
         ));
-    let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
+    let mut mc = ModelChecker::new(&system);
 
-    let res = mc.run_with_change(|system| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, |system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
     });
 
@@ -257,9 +257,9 @@ fn test_mc_limited_message_drops(config: &TestConfig) -> TestResult {
             "client",
             messages_expected,
         ));
-    let mut mc = ModelChecker::new::<Bfs>(&sys, strategy_config);
+    let mut mc = ModelChecker::new(&sys);
 
-    let res = mc.run_with_change(|system| {
+    let res = mc.run_with_change::<Bfs>(strategy_config, |system| {
         system.send_local_message("client-node", "client", Message::new("PING", &data));
     });
 
@@ -293,14 +293,14 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
                 invariants::state_depth(20 * i),
             ]))
             .collect(collects::got_n_local_messages("client-node", "client", i as usize));
-        let mut mc = ModelChecker::new::<Bfs>(&system, strategy_config);
+        let mut mc = ModelChecker::new(&system);
 
         let res = if i == 1 {
-            mc.run_with_change(|system| {
+            mc.run_with_change::<Bfs>(strategy_config, |system| {
                 system.send_local_message("client-node", "client", Message::new("PING", message_data));
             })
         } else {
-            mc.run_from_states_with_change(collected_states, |system| {
+            mc.run_from_states_with_change::<Bfs>(strategy_config, collected_states, |system| {
                 system.send_local_message("client-node", "client", Message::new("PING", message_data));
             })
         };

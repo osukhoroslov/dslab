@@ -434,6 +434,10 @@ impl LogEntry {
         matches!(self, Self::McMessageSent { .. })
     }
 
+    pub fn is_mc_local_message_sent(&self) -> bool {
+        matches!(self, Self::McLocalMessageSent { .. })
+    }
+
     pub fn is_mc_message_received(&self) -> bool {
         matches!(self, Self::McMessageReceived { .. })
     }
