@@ -1194,3 +1194,29 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
     };
     assert!(result.is_ok());
 }
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn crash_node(#[case] strategy_name: &str) {
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_no_events_left_goal();
+    let invariant = boxed!(|state: &McState| {
+        if state.node_states["node2"].proc_states["process2"]
+            .local_outbox
+            .is_empty()
+        {
+            Ok(())
+        } else {
+            Err("crashed node received a message".to_string())
+        }
+    });
+
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys.crash_node("node2");
+    });
+    assert!(result.is_ok());
+}
