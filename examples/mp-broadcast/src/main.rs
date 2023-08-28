@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::Write;
+use std::time::Duration;
 
 use clap::Parser;
 use env_logger::Builder;
@@ -13,7 +14,7 @@ use sugars::boxed;
 
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{collects, goals, prunes};
+use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig};
@@ -470,7 +471,10 @@ fn test_mc_normal_delivery(config: &TestConfig) -> TestResult {
             // Prune states with more than 2 messages received from any process
             mc_prune_msg_per_proc_limit(&proc_names, 2),
         ]))
-        .invariant(mc_invariant(proc_names.clone(), text.to_string()));
+        .invariant(invariants::all_invariants(vec![
+            mc_invariant(proc_names.clone(), text.to_string()),
+            invariants::time_limit(Duration::from_secs(100)),
+        ]));
     let mut mc = ModelChecker::new(&sys);
     let res = mc.run::<Bfs>(strategy_config);
     if let Err(err) = res {
@@ -489,7 +493,6 @@ fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
         proc_names[0].as_str(),
         Message::json("SEND", &BroadcastMessage { text }),
     );
-    let sent_message = text.to_string();
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -503,7 +506,10 @@ fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
             mc_prune_proc_permutations(&proc_names[1..]),
         ]))
         .goal(goal)
-        .invariant(mc_invariant(proc_names.clone(), sent_message.clone()))
+        .invariant(invariants::all_invariants(vec![
+            mc_invariant(proc_names.clone(), text.to_string()),
+            invariants::time_limit(Duration::from_secs(100)),
+        ]))
         .collect(collects::any_collect(
             proc_names[1..]
                 .iter()
@@ -533,7 +539,10 @@ fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
     );
     let strategy_config = StrategyConfig::default()
         .goal(goal)
-        .invariant(mc_invariant(left_proc_names, sent_message))
+        .invariant(invariants::all_invariants(vec![
+            mc_invariant(left_proc_names, text.to_string()),
+            invariants::time_limit(Duration::from_secs(100)),
+        ]))
         .prune(prunes::any_prune(vec![
             prunes::state_depth(6),
             mc_prune_proc_permutations(&proc_names[1..]),

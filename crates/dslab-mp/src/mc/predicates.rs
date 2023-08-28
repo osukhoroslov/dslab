@@ -69,7 +69,7 @@ pub mod invariants {
             if counter == 0 && start_time.elapsed() > time_limit {
                 return Err(format!("time limit of {}s exceeded", time_limit.as_secs_f32()));
             }
-            counter += 1;
+            counter = counter.wrapping_add(1);
             Ok(())
         })
     }
