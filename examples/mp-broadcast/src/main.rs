@@ -621,7 +621,7 @@ fn main() {
     tests.add("TWO CRASHES 2", test_two_crashes2, config);
     tests.add("CAUSAL ORDER", test_causal_order, config);
     tests.add("CHAOS MONKEY", test_chaos_monkey, config);
-    // tests.add("SCALABILITY", test_scalability, config);
+    tests.add("SCALABILITY", test_scalability, config);
 
     config.proc_count = 3;
     tests.add("MODEL CHECKING NORMAL DELIVERY", test_mc_normal_delivery, config);
