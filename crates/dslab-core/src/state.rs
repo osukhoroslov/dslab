@@ -382,11 +382,13 @@ impl SimulationState {
             true
         }
 
+        #[allow(clippy::arc_with_non_send_sync)]
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
             let task = Arc::new(Task::new(future, self.task_sender.clone()));
             self.task_sender.send(task).expect("channel is closed");
         }
 
+        #[allow(clippy::arc_with_non_send_sync)]
         pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
             assert!(
                 self.has_registered_handler(component_id),
