@@ -426,7 +426,7 @@ fn mc_prune_msg_per_proc_limit(proc_names: &[String], limit: usize) -> PruneFn {
     )
 }
 
-fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> InvariantFn {
+fn mc_invariant(proc_names: Vec<String>, sent_message: String) -> InvariantFn {
     boxed!(move |state: &McState| {
         for name in &proc_names {
             let outbox = &state.node_states[name].proc_states[name].local_outbox;
@@ -439,7 +439,7 @@ fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> Inva
                     return Err("No duplication violated".to_owned());
                 }
                 message_data.insert(message.clone());
-                if !sent_messages.contains(&message) {
+                if message != sent_message {
                     return Err("No creation violated".to_owned());
                 }
             }
@@ -448,7 +448,7 @@ fn mc_invariant(proc_names: Vec<String>, sent_messages: HashSet<String>) -> Inva
     })
 }
 
-fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
+fn test_mc_normal_delivery(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let proc_names = sys.process_names();
     let text = "0:Hello";
@@ -456,7 +456,6 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
         proc_names[0].as_str(),
         Message::json("SEND", &BroadcastMessage { text }),
     );
-    let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -471,7 +470,7 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
             // Prune states with more than 2 messages received from any process
             mc_prune_msg_per_proc_limit(&proc_names, 2),
         ]))
-        .invariant(mc_invariant(proc_names.clone(), sent_messages));
+        .invariant(mc_invariant(proc_names.clone(), text.to_string()));
     let mut mc = ModelChecker::new(&sys);
     let res = mc.run::<Bfs>(strategy_config);
     if let Err(err) = res {
@@ -482,7 +481,7 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
     }
 }
 
-fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
+fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let proc_names = sys.process_names();
     let text = "0:Hello";
@@ -490,7 +489,7 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
         proc_names[0].as_str(),
         Message::json("SEND", &BroadcastMessage { text }),
     );
-    let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
+    let sent_message = text.to_string();
     let goal = goals::all_goals(
         proc_names
             .iter()
@@ -499,9 +498,12 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     );
 
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::state_depth(4))
+        .prune(prunes::any_prune(vec![
+            prunes::state_depth(4),
+            mc_prune_proc_permutations(&proc_names[1..]),
+        ]))
         .goal(goal)
-        .invariant(mc_invariant(proc_names.clone(), sent_messages.clone()))
+        .invariant(mc_invariant(proc_names.clone(), sent_message.clone()))
         .collect(collects::any_collect(
             proc_names[1..]
                 .iter()
@@ -520,8 +522,9 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     if intermediate_states.is_empty() {
         return Err("no states collected after first stage".to_string());
     }
-    let left_proc_names = proc_names[1..].to_vec();
 
+    // Crash first node in the list
+    let left_proc_names = proc_names[1..].to_vec();
     let goal = goals::all_goals(
         left_proc_names
             .iter()
@@ -530,10 +533,11 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     );
     let strategy_config = StrategyConfig::default()
         .goal(goal)
-        .invariant(mc_invariant(left_proc_names, sent_messages))
+        .invariant(mc_invariant(left_proc_names, sent_message))
         .prune(prunes::any_prune(vec![
             prunes::state_depth(6),
             mc_prune_proc_permutations(&proc_names[1..]),
+            // Prune states with more than 4 messages received from any process
             mc_prune_msg_per_proc_limit(&proc_names, 4),
         ]));
     let mut mc = ModelChecker::new(&sys);
@@ -592,7 +596,7 @@ fn main() {
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
 
     let proc_factory = PyProcessFactory::new(&args.solution_path, "BroadcastProcess");
-    let config = TestConfig {
+    let mut config = TestConfig {
         proc_factory: &proc_factory,
         proc_count: args.proc_count,
         seed: args.seed,
@@ -610,23 +614,9 @@ fn main() {
     tests.add("CHAOS MONKEY", test_chaos_monkey, config);
     // tests.add("SCALABILITY", test_scalability, config);
 
-    let config_mc = TestConfig {
-        proc_factory: &proc_factory,
-        proc_count: 3,
-        seed: args.seed,
-        monkeys: args.monkeys,
-        debug: args.debug,
-    };
-    tests.add(
-        "MODEL CHECKING NORMAL DELIVERY",
-        test_model_checking_normal_delivery,
-        config_mc,
-    );
-    tests.add(
-        "MODEL CHECKING SENDER CRASH",
-        test_model_checking_sender_crash,
-        config_mc,
-    );
+    config.proc_count = 3;
+    tests.add("MODEL CHECKING NORMAL DELIVERY", test_mc_normal_delivery, config);
+    tests.add("MODEL CHECKING SENDER CRASH", test_mc_sender_crash, config);
 
     if args.test.is_none() {
         tests.run();
