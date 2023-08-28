@@ -452,7 +452,10 @@ fn test_model_checking_normal_delivery(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let proc_names = sys.process_names();
     let text = "0:Hello";
-    sys.send_local_message(proc_names[0].as_str(), Message::json("SEND", &BroadcastMessage{text}));
+    sys.send_local_message(
+        proc_names[0].as_str(),
+        Message::json("SEND", &BroadcastMessage { text }),
+    );
     let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
     let goal = goals::all_goals(
         proc_names
@@ -483,7 +486,10 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let proc_names = sys.process_names();
     let text = "0:Hello";
-    sys.send_local_message(proc_names[0].as_str(), Message::json("SEND", &BroadcastMessage{text}));
+    sys.send_local_message(
+        proc_names[0].as_str(),
+        Message::json("SEND", &BroadcastMessage { text }),
+    );
     let sent_messages: HashSet<String> = HashSet::from([text.to_string()]);
     let goal = goals::all_goals(
         proc_names
@@ -505,10 +511,12 @@ fn test_model_checking_sender_crash(config: &TestConfig) -> TestResult {
 
     let mut mc = ModelChecker::new(&sys);
     let res = mc.run::<Bfs>(strategy_config);
-    let intermediate_states = res.map_err(|err| {
-        err.print_trace();
-        err.message()
-    })?.collected_states;
+    let intermediate_states = res
+        .map_err(|err| {
+            err.print_trace();
+            err.message()
+        })?
+        .collected_states;
     if intermediate_states.is_empty() {
         return Err("no states collected after first stage".to_string());
     }
