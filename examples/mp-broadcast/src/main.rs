@@ -544,7 +544,7 @@ fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
     // TODO: check if this is necessary
     // let collected = get_n_start_states(res.collected, 100);
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, intermediate_states, |sys| {
-        sys.crash_node("0");
+        sys.crash_node(proc_names[0].clone());
     });
     if let Err(err) = res {
         err.print_trace();
