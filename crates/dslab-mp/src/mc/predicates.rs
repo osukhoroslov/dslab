@@ -249,7 +249,7 @@ pub mod prunes {
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = filter_state_trace(&predicate, state);
+            let event_count = count_events_in_trace(&predicate, state);
             if event_count > limit {
                 Some(format!(
                     "event occured {event_count} times but expected at most {limit} times"
@@ -268,7 +268,7 @@ pub mod prunes {
         boxed!(move |state: &McState| {
             for proc in &process_names {
                 let proc_predicate = |entry: &LogEntry| predicate(entry, proc);
-                let event_count = filter_state_trace(proc_predicate, state);
+                let event_count = count_events_in_trace(proc_predicate, state);
                 if event_count > limit {
                     return Some(format!(
                         "event occured {event_count} times on proc {proc} but expected at most {limit} times"
@@ -279,7 +279,7 @@ pub mod prunes {
         })
     }
 
-    fn filter_state_trace<F>(predicate: F, state: &McState) -> usize
+    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
     where
         F: Fn(&LogEntry) -> bool,
     {

@@ -52,7 +52,9 @@ impl PendingEvents {
                     self.available_events.insert(id);
                 }
             }
-            _ => {}
+            _ => {
+                panic!("should only have TimerFired or MessageReceived events");
+            }
         };
         self.events.insert(id, event);
         id
@@ -101,12 +103,9 @@ impl PendingEvents {
         let mut events_to_clear = Vec::new();
         for (event_id, event) in &self.events {
             let need_to_clear = match event {
-                McEvent::MessageCorrupted { src, dst, .. } => src == proc || dst == proc,
-                McEvent::MessageDropped { src, dst, .. } => src == proc || dst == proc,
-                McEvent::MessageDuplicated { src, dst, .. } => src == proc || dst == proc,
                 McEvent::MessageReceived { src, dst, .. } => src == proc || dst == proc,
                 McEvent::TimerFired { proc: event_proc, .. } => event_proc == proc,
-                McEvent::TimerCancelled { proc: event_proc, .. } => event_proc == proc,
+                _ => true,
             };
             if need_to_clear {
                 events_to_clear.push(*event_id);

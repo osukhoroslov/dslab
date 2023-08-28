@@ -53,8 +53,8 @@ impl McSystem {
                 let name = self.net.get_proc_node(&dst).clone();
                 self.nodes
                     .get_mut(&name)
-                    .map(|node| node.on_message_received(dst, msg, src, event_time, state_hash))
-                    .unwrap_or(Vec::new())
+                    .unwrap()
+                    .on_message_received(dst, msg, src, event_time, state_hash)
             }
             McEvent::TimerFired { proc, timer, .. } => {
                 let name = self.net.get_proc_node(&proc).clone();
@@ -97,12 +97,13 @@ impl McSystem {
         self.trace_handler
             .borrow_mut()
             .push(LogEntry::McNodeCrashed { node: node.clone() });
+        self.net.disconnect_node(&node);
         for proc in self.nodes[&node].processes.keys() {
             for destruction_event in self.events.cancel_proc_events(proc) {
                 self.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
             }
         }
-        self.nodes.remove(&node);
+        self.nodes.get_mut(&node).unwrap().crash();
     }
 
     pub fn get_state(&self) -> McState {
@@ -120,9 +121,7 @@ impl McSystem {
 
     pub fn set_state(&mut self, state: McState) {
         for (name, node_state) in state.node_states {
-            if let Some(node) = self.nodes.get_mut(&name) {
-                node.set_state(node_state);
-            }
+            self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
         self.events = state.events;
         self.depth = state.depth;

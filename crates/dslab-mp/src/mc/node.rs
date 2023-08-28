@@ -163,7 +163,11 @@ impl McNode {
         for (proc, state) in state.proc_states {
             self.processes.get_mut(&proc).unwrap().set_state(state);
         }
-        self.is_crashed = self.is_crashed;
+        self.is_crashed = state.is_crashed;
+    }
+
+    pub(crate) fn crash(&mut self) {
+        self.is_crashed = true;
     }
 
     fn handle_process_actions(&mut self, proc: String, time: f64, actions: Vec<ProcessEvent>) -> Vec<McEvent> {
