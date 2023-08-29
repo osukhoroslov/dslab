@@ -100,9 +100,7 @@ impl McNode {
         time: f64,
         random_seed: u64,
     ) -> Vec<McEvent> {
-        if self.is_crashed {
-            return vec![];
-        }
+        assert!(!self.is_crashed, "should not receive message on crashed node");
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             0.0,
@@ -120,9 +118,7 @@ impl McNode {
     }
 
     pub fn on_timer_fired(&mut self, proc: String, timer: String, time: f64, random_seed: u64) -> Vec<McEvent> {
-        if self.is_crashed {
-            return vec![];
-        }
+        assert!(!self.is_crashed, "should not fire timer on crashed node");
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         proc_entry.pending_timers.remove(&timer);
 
@@ -138,9 +134,7 @@ impl McNode {
         time: f64,
         random_seed: u64,
     ) -> Vec<McEvent> {
-        if self.is_crashed {
-            return vec![];
-        }
+        assert!(!self.is_crashed, "should not receive local message on crashed node");
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
         proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
