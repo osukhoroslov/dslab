@@ -6,7 +6,21 @@ vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
 simulation_length: 86400
-number_of_hosts: 50
-host_cpu_capacity: 64
-host_memory_capacity: 128
 step_duration: 500
+
+#Vms
+trace:
+    type: Huawei
+    path: .
+
+# Hosts
+hosts:
+  - count: 50
+    cpus: 64
+    memory: 128
+    name_prefix: h
+
+# Schedulers
+schedulers:
+  - name: s
+    algorithm: BestFit

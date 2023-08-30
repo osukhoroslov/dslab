@@ -924,12 +924,14 @@ dependencies = [
  "dslab-models",
  "dyn-clone",
  "env_logger 0.8.4",
+ "indexmap 1.9.3",
  "log 0.4.17",
  "rand 0.8.5",
  "serde",
  "serde_json",
  "serde_yaml",
  "sugars",
+ "threadpool",
 ]
 
 [[package]]
@@ -1787,6 +1789,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "iaas-experiment"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.23",
+ "csv",
+ "dslab-core",
+ "dslab-iaas",
+ "env_logger 0.8.4",
+ "indexmap 1.9.3",
+ "log 0.4.17",
+ "rand 0.8.5",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "iaas-traces"
 version = "0.1.0"
 dependencies = [
@@ -1858,6 +1876,7 @@ checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg 1.1.0",
  "hashbrown 0.12.3",
+ "serde",
 ]
 
 [[package]]

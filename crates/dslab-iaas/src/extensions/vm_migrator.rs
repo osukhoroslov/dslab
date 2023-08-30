@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::MigrationRequest;
 use crate::core::monitoring::Monitoring;
 use crate::core::vm::VmStatus;

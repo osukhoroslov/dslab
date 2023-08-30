@@ -12,11 +12,10 @@ use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::{log_debug, log_trace};
 use dslab_models::power::host::{HostPowerModel, HostState};
 
 use crate::core::common::AllocationVerdict;
-use crate::core::config::SimulationConfig;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::energy_meter::EnergyMeter;
 use crate::core::events::allocation::{
     AllocationFailed, AllocationReleaseRequest, AllocationReleased, MigrationRequest, VmCreateRequest,
@@ -24,6 +23,7 @@ use crate::core::events::allocation::{
 use crate::core::events::monitoring::HostStateUpdate;
 use crate::core::events::vm::{VMDeleted, VMStarted};
 use crate::core::events::vm_api::VmStatusChanged;
+use crate::core::logger::Logger;
 use crate::core::slav_metric::HostSLAVMetric;
 use crate::core::vm::{VirtualMachine, VmStatus};
 use crate::core::vm_api::VmAPI;
@@ -65,6 +65,7 @@ pub struct HostManager {
     slav_metric: Box<dyn HostSLAVMetric>,
 
     ctx: SimulationContext,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
     sim_config: Rc<SimulationConfig>,
 }
 
@@ -82,6 +83,7 @@ impl HostManager {
         power_model: HostPowerModel,
         slav_metric: Box<dyn HostSLAVMetric>,
         ctx: SimulationContext,
+        logger: Rc<RefCell<Box<dyn Logger>>>,
         sim_config: Rc<SimulationConfig>,
     ) -> Self {
         Self {
@@ -108,6 +110,7 @@ impl HostManager {
             power_model,
             slav_metric,
             ctx,
+            logger,
             sim_config,
         }
     }
@@ -210,6 +213,16 @@ impl HostManager {
         memory_used / self.memory_total as f64
     }
 
+    /// Returns host CPU capacity.
+    pub fn get_cpu_capacity(&self) -> u32 {
+        self.cpu_total
+    }
+
+    /// Returns host RAM capacity.
+    pub fn get_memory_capacity(&self) -> u64 {
+        self.memory_total
+    }
+
     /// Returns the current power consumption.
     pub fn get_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
@@ -239,11 +252,16 @@ impl HostManager {
             let start_duration = vm.borrow().start_duration();
             self.allocate(self.ctx.time(), vm);
             self.recent_vm_status_changes.insert(vm_id, VmStatus::Initializing);
-            log_debug!(self.ctx, "vm {} allocated on host {}", vm_id, self.name);
+            self.logger
+                .borrow_mut()
+                .log_debug(&self.ctx, format!("vm {} allocated on host {}", vm_id, self.name));
             self.ctx.emit_self(VMStarted { vm_id }, start_duration);
             true
         } else {
-            log_debug!(self.ctx, "not enough space for vm {} on host {}", vm_id, self.name);
+            self.logger.borrow_mut().log_debug(
+                &self.ctx,
+                format!("not enough space for vm {} on host {}", vm_id, self.name),
+            );
             self.ctx.emit(
                 AllocationFailed {
                     vm_id,
@@ -264,11 +282,9 @@ impl HostManager {
             let start_duration = vm.borrow().start_duration();
 
             self.allocate(self.ctx.time(), vm);
-            log_debug!(
-                self.ctx,
-                "vm {} allocated on host {}, start migration",
-                vm_id,
-                self.name
+            self.logger.borrow_mut().log_debug(
+                &self.ctx,
+                format!("vm {} allocated on host {}, start migration", vm_id, self.name),
             );
             self.recent_vm_status_changes.insert(vm_id, VmStatus::Migrating);
 
@@ -283,11 +299,12 @@ impl HostManager {
                 migration_duration,
             );
         } else {
-            log_debug!(
-                self.ctx,
-                "not enough space for vm {} on host {}, migration failed",
-                vm_id,
-                self.name
+            self.logger.borrow_mut().log_debug(
+                &self.ctx,
+                format!(
+                    "not enough space for vm {} on host {}, migration failed",
+                    vm_id, self.name
+                ),
             );
         }
     }
@@ -295,20 +312,28 @@ impl HostManager {
     /// Processes resource release request by scheduling deletion of corresponding VM.
     fn on_allocation_release_request(&mut self, vm_id: u32, is_migrating: bool) {
         if self.vms.contains(&vm_id) {
-            log_debug!(self.ctx, "release resources from vm {} on host {}", vm_id, self.name);
+            self.logger.borrow_mut().log_debug(
+                &self.ctx,
+                format!("release resources from vm {} on host {}", vm_id, self.name),
+            );
             if !is_migrating {
                 self.recent_vm_status_changes.insert(vm_id, VmStatus::Finished);
             }
             let vm = self.vm_api.borrow().get_vm(vm_id).borrow().clone();
             self.ctx.emit_self(VMDeleted { vm_id }, vm.stop_duration());
         } else {
-            log_trace!(self.ctx, "do not release, probably VM was migrated to other host");
+            self.logger.borrow_mut().log_trace(
+                &self.ctx,
+                "do not release, probably VM was migrated to other host".to_string(),
+            );
         }
     }
 
     /// Invoked upon VM startup, updates VM status and schedules VM release event according to its lifetime.
     fn on_vm_started(&mut self, vm_id: u32) {
-        log_debug!(self.ctx, "vm {} started and running", vm_id);
+        self.logger
+            .borrow_mut()
+            .log_debug(&self.ctx, format!("vm {} started and running", vm_id));
         let vm = self.vm_api.borrow().get_vm(vm_id);
         let start_time = vm.borrow().start_time();
 
@@ -332,7 +357,9 @@ impl HostManager {
     /// Invoked upon VM deletion to release the allocated resources and notify placement store.
     fn on_vm_deleted(&mut self, vm_id: u32) {
         if self.vms.contains(&vm_id) {
-            log_debug!(self.ctx, "vm {} deleted", vm_id);
+            self.logger
+                .borrow_mut()
+                .log_debug(&self.ctx, format!("vm {} deleted", vm_id));
             self.release(self.ctx.time(), vm_id);
             self.ctx.emit(
                 AllocationReleased {
@@ -347,7 +374,9 @@ impl HostManager {
 
     /// Invoked periodically to report the current host state to Monitoring and VM status updates to VM API.
     fn send_host_state(&mut self) {
-        log_trace!(self.ctx, "host #{} sends it`s data to monitoring", self.id);
+        self.logger
+            .borrow_mut()
+            .log_trace(&self.ctx, format!("host #{} sends it`s data to monitoring", self.id));
         let time = self.ctx.time();
         let cpu_load = self.get_cpu_load(time);
         let power = self.get_power(cpu_load);

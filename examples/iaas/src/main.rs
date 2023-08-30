@@ -1,9 +1,8 @@
+use clap::Parser;
 use log::info;
 
-use clap::Parser;
-
 use dslab_core::simulation::Simulation;
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;

@@ -1,5 +1,8 @@
 //! Service that provides information about current state of hosts.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use std::collections::btree_map::Keys;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -8,9 +11,9 @@ use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_trace;
 
 use crate::core::events::monitoring::HostStateUpdate;
+use crate::core::logger::Logger;
 
 /// Host state contains resource capacity and current actual load. In addition a set of active VMs is stored.
 #[derive(Clone)]
@@ -28,6 +31,7 @@ pub struct HostState {
 pub struct Monitoring {
     host_states: BTreeMap<u32, HostState>,
     ctx: SimulationContext,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
 }
 
 impl HostState {
@@ -44,10 +48,11 @@ impl HostState {
 
 impl Monitoring {
     /// Creates component.
-    pub fn new(ctx: SimulationContext) -> Self {
+    pub fn new(ctx: SimulationContext, logger: Rc<RefCell<Box<dyn Logger>>>) -> Self {
         Self {
             host_states: BTreeMap::new(),
             ctx,
+            logger,
         }
     }
 
@@ -91,7 +96,9 @@ impl Monitoring {
         recently_added_vms: Vec<u32>,
         recently_removed_vms: Vec<u32>,
     ) {
-        log_trace!(self.ctx, "monitoring received stats from host #{}", host_id);
+        self.logger
+            .borrow_mut()
+            .log_trace(&self.ctx, format!("monitoring received stats from host #{}", host_id));
         if let Some(host) = self.host_states.get_mut(&host_id) {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;

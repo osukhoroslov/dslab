@@ -4,6 +4,7 @@ pub mod energy_meter;
 pub mod events;
 pub mod host_manager;
 pub mod load_model;
+pub mod logger;
 pub mod monitoring;
 pub mod placement_store;
 pub mod resource_pool;

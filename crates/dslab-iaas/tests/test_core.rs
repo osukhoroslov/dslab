@@ -4,7 +4,7 @@ use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
 use dslab_models::power::host::HostPowerModelBuilder;
 
 use dslab_iaas::core::common::Allocation;
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::monitoring::Monitoring;
 use dslab_iaas::core::resource_pool::ResourcePoolState;
 use dslab_iaas::core::slav_metric::OverloadTimeFraction;
@@ -237,7 +237,7 @@ fn test_wrong_decision() {
     assert_eq!(cloud_sim.vm_status(second_vm), VmStatus::Initializing);
 
     // now host does not exist
-    let random_wrong_id = 47;
+    let random_wrong_id = 8;
     let bad_s2 = cloud_sim.add_scheduler(
         "bad_s2",
         VMPlacementAlgorithm::single(BadScheduler::new(random_wrong_id)),
