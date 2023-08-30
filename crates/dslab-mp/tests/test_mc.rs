@@ -399,7 +399,7 @@ fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {
 
 fn build_n_messages_goal(node: String, process: String, n: usize) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.node_states[&node][&process].local_outbox.len() == n {
+        if state.node_states[&node].proc_states[&process].local_outbox.len() == n {
             Some("final".to_string())
         } else {
             None
@@ -409,8 +409,8 @@ fn build_n_messages_goal(node: String, process: String, n: usize) -> GoalFn {
 
 fn build_one_message_get_data_goal(node: String, proc: String, goal_data: Rc<RefCell<Vec<String>>>) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.node_states[&node][&proc].local_outbox.len() == 1 {
-            (*goal_data.borrow_mut()).push(state.node_states[&node][&proc].local_outbox[0].data.clone());
+        if state.node_states[&node].proc_states[&proc].local_outbox.len() == 1 {
+            (*goal_data.borrow_mut()).push(state.node_states[&node].proc_states[&proc].local_outbox[0].data.clone());
             Some("final".to_string())
         } else {
             None
@@ -690,7 +690,7 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let goal = build_no_events_left_goal();
 
     let invariant = boxed!(|state: &McState| {
-        if state.node_states["node2"]["process2"].local_outbox.len() > 1 {
+        if state.node_states["node2"].proc_states["process2"].local_outbox.len() > 1 {
             Err("too many messages".to_string())
         } else {
             Ok(())
@@ -810,7 +810,7 @@ fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let count_states_cloned = count_states.clone();
     let invariant = boxed!(move |state: &McState| {
         *count_states_cloned.borrow_mut() += 1;
-        let proc2_outbox = &state.node_states["node2"]["process2"].local_outbox;
+        let proc2_outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
 
         if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
             return Err("invalid order".to_string());
@@ -863,7 +863,7 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let goal = build_no_events_left_goal();
 
     let invariant = boxed!(move |state: &McState| {
-        let proc2_outbox = &state.node_states["node2"]["process2"].local_outbox;
+        let proc2_outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
 
         if state.events.available_events_num() == 0 {
             if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
@@ -1097,7 +1097,7 @@ fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
 #[case("bfs")]
 fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let prune = boxed!(|state: &McState| {
-        let outbox = &state.node_states["node2"]["process2"].local_outbox;
+        let outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
         if !outbox.is_empty() && outbox[0].tip == "TIMEOUT" {
             Some("not interesting branch".to_string())
         } else {
@@ -1107,7 +1107,7 @@ fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let goal = build_no_events_left_goal();
 
     let invariant = boxed!(|state: &McState| {
-        let outbox = &state.node_states["node2"]["process2"].local_outbox;
+        let outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
         if outbox.len() == 1 && outbox[0].tip == "MESSAGE" && state.events.available_events_num() == 0 {
             Err("no timer after reset".to_string())
         } else {
@@ -1156,7 +1156,7 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
     let goal = build_no_events_left_goal();
 
     let invariant = boxed!(|state: &McState| {
-        if state.node_states["node3"]["process3"].local_outbox.len() <= 1 {
+        if state.node_states["node3"].proc_states["process3"].local_outbox.len() <= 1 {
             Ok(())
         } else {
             Err("too many messages".to_string())
@@ -1192,5 +1192,31 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
             )
         }
     };
+    assert!(result.is_ok());
+}
+
+#[rstest]
+#[case("dfs")]
+#[case("bfs")]
+fn crash_node(#[case] strategy_name: &str) {
+    let prune = boxed!(|_: &McState| None);
+    let goal = build_no_events_left_goal();
+    let invariant = boxed!(|state: &McState| {
+        if state.node_states["node2"].proc_states["process2"]
+            .local_outbox
+            .is_empty()
+        {
+            Ok(())
+        } else {
+            Err("crashed node received a message".to_string())
+        }
+    });
+
+    let strategy_config = build_strategy_config(prune, goal, invariant);
+
+    let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
+        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys.crash_node("node2");
+    });
     assert!(result.is_ok());
 }

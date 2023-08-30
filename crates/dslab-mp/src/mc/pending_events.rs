@@ -52,7 +52,9 @@ impl PendingEvents {
                     self.available_events.insert(id);
                 }
             }
-            _ => {}
+            _ => {
+                panic!("should only have TimerFired or MessageReceived events");
+            }
         };
         self.events.insert(id, event);
         id
@@ -95,6 +97,32 @@ impl PendingEvents {
             }
         }
         result
+    }
+
+    pub(crate) fn cancel_proc_events(&mut self, proc: &String) -> Vec<McEvent> {
+        let mut events_to_clear = Vec::new();
+        for (event_id, event) in &self.events {
+            let need_to_clear = match event {
+                McEvent::MessageReceived { src, dst, .. } => src == proc || dst == proc,
+                McEvent::TimerFired { proc: event_proc, .. } => event_proc == proc,
+                _ => true,
+            };
+            if need_to_clear {
+                events_to_clear.push(*event_id);
+            }
+        }
+        let mut new_events = Vec::new();
+        for event_id in events_to_clear {
+            if let McEvent::MessageReceived { msg, src, dst, .. } = self.pop(event_id) {
+                new_events.push(McEvent::MessageDropped {
+                    msg,
+                    src,
+                    dst,
+                    receive_event_id: Some(event_id),
+                });
+            }
+        }
+        new_events
     }
 }
 

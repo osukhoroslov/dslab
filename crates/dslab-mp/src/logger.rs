@@ -259,6 +259,9 @@ pub enum LogEntry {
         proc: String,
         timer: String,
     },
+    McNodeCrashed {
+        node: String,
+    },
 }
 
 impl LogEntry {
@@ -418,6 +421,9 @@ impl LogEntry {
             }
             LogEntry::McTimerCancelled { proc, timer } => {
                 t!(format!("{:>10} xxx {:<10} <-- timer cancelled", proc, timer).yellow());
+            }
+            LogEntry::McNodeCrashed { node } => {
+                t!(format!("node crashed: {}", node).red());
             }
         }
     }

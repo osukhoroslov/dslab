@@ -17,6 +17,7 @@ use crate::message::Message;
 
 pub type McTime = OrderedFloat<f64>;
 
+#[derive(Clone)]
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
     net: McNetwork,
@@ -86,6 +87,23 @@ impl McSystem {
             .unwrap()
             .on_local_message_received(proc, msg, event_time, state_hash);
         self.add_events(new_events);
+    }
+
+    pub fn crash_node<S>(&mut self, node: S)
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        self.trace_handler
+            .borrow_mut()
+            .push(LogEntry::McNodeCrashed { node: node.clone() });
+        self.net.disconnect_node(&node);
+        for proc in self.nodes[&node].processes.keys() {
+            for destruction_event in self.events.cancel_proc_events(proc) {
+                self.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
+            }
+        }
+        self.nodes.get_mut(&node).unwrap().crash();
     }
 
     pub fn get_state(&self) -> McState {

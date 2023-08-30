@@ -69,7 +69,7 @@ pub mod invariants {
             if counter == 0 && start_time.elapsed() > time_limit {
                 return Err(format!("time limit of {}s exceeded", time_limit.as_secs_f32()));
             }
-            counter += 1;
+            counter = counter.wrapping_add(1);
             Ok(())
         })
     }
@@ -83,7 +83,7 @@ pub mod invariants {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| {
-            let local_outbox = &state.node_states[&node][&proc].local_outbox;
+            let local_outbox = &state.node_states[&node].proc_states[&proc].local_outbox;
             let mut messages_got = HashSet::<String>::default();
             if local_outbox.len() > messages_expected.len() {
                 return Err(format!(
@@ -150,7 +150,7 @@ pub mod goals {
         let node = node.into();
         let proc = proc.into();
         boxed!(move |state: &McState| {
-            if state.node_states[&node][&proc].local_outbox.len() == n {
+            if state.node_states[&node].proc_states[&proc].local_outbox.len() == n {
                 Some(format!("{proc} produced {n} local messages"))
             } else {
                 None
@@ -233,7 +233,7 @@ pub mod prunes {
     pub fn sent_messages_limit(max_allowed_messages: u64) -> PruneFn {
         boxed!(move |state: &McState| {
             for (_, node) in state.node_states.iter() {
-                for (proc_name, proc) in node.iter() {
+                for (proc_name, proc) in node.proc_states.iter() {
                     if proc.sent_message_count > max_allowed_messages {
                         return Some(format!("too many messages sent by {proc_name}"));
                     }
@@ -249,7 +249,7 @@ pub mod prunes {
         F: Fn(&LogEntry) -> bool + 'static,
     {
         boxed!(move |state: &McState| {
-            let event_count = state.trace.iter().filter(|x| predicate(x)).count();
+            let event_count = count_events_in_trace(&predicate, state);
             if event_count > limit {
                 Some(format!(
                     "event occured {event_count} times but expected at most {limit} times"
@@ -258,6 +258,32 @@ pub mod prunes {
                 None
             }
         })
+    }
+
+    /// Prunes states where the number of events matching the predicate is more than the limit for any of processes.
+    pub fn events_limit_per_proc<F>(predicate: F, process_names: Vec<String>, limit: usize) -> PruneFn
+    where
+        F: Fn(&LogEntry, &String) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            for proc in &process_names {
+                let proc_predicate = |entry: &LogEntry| predicate(entry, proc);
+                let event_count = count_events_in_trace(proc_predicate, state);
+                if event_count > limit {
+                    return Some(format!(
+                        "event occured {event_count} times on proc {proc} but expected at most {limit} times"
+                    ));
+                }
+            }
+            None
+        })
+    }
+
+    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
+    where
+        F: Fn(&LogEntry) -> bool,
+    {
+        state.trace.iter().filter(|x| predicate(x)).count()
     }
 }
 
@@ -276,10 +302,22 @@ pub mod collects {
     {
         let node = node.into();
         let proc = proc.into();
-        boxed!(move |state: &McState| state.node_states[&node][&proc].local_outbox.len() == n)
+        boxed!(move |state: &McState| state.node_states[&node].proc_states[&proc].local_outbox.len() == n)
     }
 
-    /// Checks if current run trace has at least `n` events matching the predicate.
+    /// Combines multiple collect functions by returning `true` iff at least one collect is satisfied.
+    pub fn any_collect(mut collects: Vec<CollectFn>) -> CollectFn {
+        boxed!(move |state: &McState| {
+            for collect in &mut collects {
+                if collect(state) {
+                    return true;
+                }
+            }
+            false
+        })
+    }
+
+    /// Checks if trace to given state has at least `n` events matching the predicate.
     pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
     where
         F: Fn(&LogEntry) -> bool + 'static,
