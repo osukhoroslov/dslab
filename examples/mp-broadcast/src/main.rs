@@ -549,9 +549,6 @@ fn test_mc_sender_crash(config: &TestConfig) -> TestResult {
             // Prune states with more than 4 messages received from any process
             mc_prune_msg_per_proc_limit(&proc_names, 4),
         ]));
-    let mut mc = ModelChecker::new(&sys);
-    // TODO: check if this is necessary
-    // let collected = get_n_start_states(res.collected, 100);
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, intermediate_states, |sys| {
         sys.crash_node(proc_names[0].clone());
     });
