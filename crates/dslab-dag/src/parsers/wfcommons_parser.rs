@@ -63,6 +63,8 @@ struct Task {
     files: Vec<File>,
     // Machine used for task execution
     machine: Option<String>,
+    // Additional empty dependencies.
+    parents: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -128,6 +130,7 @@ impl DAG {
         let mut data_items: HashMap<String, usize> = HashMap::new();
         let mut stage_mem: HashMap<String, u64> = HashMap::new();
         let mut stage_cores: HashMap<String, u32> = HashMap::new();
+        let mut task_ids: HashMap<String, usize> = HashMap::new();
         for task in workflow.tasks().iter() {
             let stage = task.name.split('_').next().unwrap().to_string();
 
@@ -180,6 +183,7 @@ impl DAG {
             }
 
             let task_id = dag.add_task(&task.name, flops, memory, cores, cores, CoresDependency::Linear);
+            task_ids.insert(task.name.clone(), task_id);
             for file in task.files.iter() {
                 if file.link == "output" {
                     data_items.insert(
@@ -201,6 +205,10 @@ impl DAG {
                         dag.add_data_dependency(data_item_id, task_id);
                     }
                 }
+            }
+            for parent in task.parents.iter() {
+                let data_item_id = dag.add_task_output(task_ids[parent], &format!("{} -> {}", parent, task.name), 0.);
+                dag.add_data_dependency(data_item_id, task_id);
             }
         }
         dag
