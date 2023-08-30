@@ -209,6 +209,26 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
@@ -275,12 +295,18 @@
     }
 }
 
-<span class="kw">pub type </span>McNodeState = BTreeMap&lt;String, ProcessEntryState&gt;;
+<span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+</span><span class="kw">pub struct </span>McNodeState {
+    <span class="kw">pub </span>proc_states: BTreeMap&lt;String, ProcessEntryState&gt;,
+    is_crashed: bool,
+}
 
-<span class="kw">pub struct </span>McNode {
-    processes: HashMap&lt;String, ProcessEntry&gt;,
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>McNode {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) processes: HashMap&lt;String, ProcessEntry&gt;,
     trace_handler: Rc&lt;RefCell&lt;TraceHandler&gt;&gt;,
     clock_skew: f64,
+    is_crashed: bool,
 }
 
 <span class="kw">impl </span>McNode {
@@ -293,6 +319,7 @@
             processes,
             trace_handler,
             clock_skew,
+            is_crashed: <span class="bool-val">false</span>,
         }
     }
 
@@ -304,6 +331,7 @@
         time: f64,
         random_seed: u64,
     ) -&gt; Vec&lt;McEvent&gt; {
+        <span class="macro">assert!</span>(!<span class="self">self</span>.is_crashed, <span class="string">&quot;should not receive message on crashed node&quot;</span>);
         <span class="kw">let </span>proc_entry = <span class="self">self</span>.processes.get_mut(<span class="kw-2">&amp;</span>proc).unwrap();
         proc_entry.event_log.push(EventLogEntry::new(
             <span class="number">0.0</span>,
@@ -321,6 +349,7 @@
     }
 
     <span class="kw">pub fn </span>on_timer_fired(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, timer: String, time: f64, random_seed: u64) -&gt; Vec&lt;McEvent&gt; {
+        <span class="macro">assert!</span>(!<span class="self">self</span>.is_crashed, <span class="string">&quot;should not fire timer on crashed node&quot;</span>);
         <span class="kw">let </span>proc_entry = <span class="self">self</span>.processes.get_mut(<span class="kw-2">&amp;</span>proc).unwrap();
         proc_entry.pending_timers.remove(<span class="kw-2">&amp;</span>timer);
 
@@ -336,6 +365,7 @@
         time: f64,
         random_seed: u64,
     ) -&gt; Vec&lt;McEvent&gt; {
+        <span class="macro">assert!</span>(!<span class="self">self</span>.is_crashed, <span class="string">&quot;should not receive local message on crashed node&quot;</span>);
         <span class="kw">let </span>proc_entry = <span class="self">self</span>.processes.get_mut(<span class="kw-2">&amp;</span>proc).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>proc_ctx = Context::basic(proc.to_string(), time, <span class="self">self</span>.clock_skew, random_seed);
         proc_entry.proc_impl.on_local_message(msg, <span class="kw-2">&amp;mut </span>proc_ctx);
@@ -343,16 +373,26 @@
     }
 
     <span class="kw">pub fn </span>get_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; McNodeState {
-        <span class="self">self</span>.processes
+        <span class="kw">let </span>proc_states = <span class="self">self
+            </span>.processes
             .iter()
             .map(|(proc, entry)| (proc.clone(), entry.get_state()))
-            .collect()
+            .collect();
+        McNodeState {
+            proc_states,
+            is_crashed: <span class="self">self</span>.is_crashed,
+        }
     }
 
     <span class="kw">pub fn </span>set_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: McNodeState) {
-        <span class="kw">for </span>(proc, state) <span class="kw">in </span>state {
+        <span class="kw">for </span>(proc, state) <span class="kw">in </span>state.proc_states {
             <span class="self">self</span>.processes.get_mut(<span class="kw-2">&amp;</span>proc).unwrap().set_state(state);
         }
+        <span class="self">self</span>.is_crashed = state.is_crashed;
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>crash(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.is_crashed = <span class="bool-val">true</span>;
     }
 
     <span class="kw">fn </span>handle_process_actions(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, time: f64, actions: Vec&lt;ProcessEvent&gt;) -&gt; Vec&lt;McEvent&gt; {
