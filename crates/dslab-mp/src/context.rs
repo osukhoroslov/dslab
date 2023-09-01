@@ -76,6 +76,7 @@ impl Context {
     }
 
     pub fn set_timer(&mut self, name: &str, delay: f64) {
+        assert!(name.len() <= 50, "Timer name length exceeds the limit of 50 characters");
         self.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,
@@ -84,6 +85,7 @@ impl Context {
     }
 
     pub fn set_timer_once(&mut self, name: &str, delay: f64) {
+        assert!(name.len() <= 50, "Timer name length exceeds the limit of 50 characters");
         self.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,

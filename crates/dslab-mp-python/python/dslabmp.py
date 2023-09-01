@@ -59,6 +59,8 @@ class Context(object):
         """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+        if len(timer_name) > 50:
+            raise ValueError('timer_name length exceeds the limit of 50 characters')
         if not isinstance(delay, (int, float)):
             raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
@@ -72,6 +74,8 @@ class Context(object):
         """
         if not isinstance(timer_name, str):
             raise TypeError('timer_name argument has to be str, not {}'.format(type(timer_name)))
+        if len(timer_name) > 50:
+            raise ValueError('timer_name length exceeds the limit of 50 characters')
         if not isinstance(delay, (int, float)):
             raise TypeError('delay argument has to be int or float, not {}'.format(type(delay)))
         if delay < 0:
