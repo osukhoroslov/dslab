@@ -1,4 +1,4 @@
-//! Container model and host container manager.
+//! Container model and host-level container manager.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,34 +11,53 @@ use crate::function::Application;
 use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::util::{Counter, DefaultVecMap, FxIndexMap, FxIndexSet};
 
+/// Status of a container in the simulation.
 #[derive(Eq, PartialEq)]
 pub enum ContainerStatus {
+    /// Container is being deployed.
     Deploying,
+    /// Container is executing one or more invocations.
     Running,
+    /// Container is up, but isn't executing anything.
     Idle,
-    Terminated, // terminated containers may remain in the system due to several events with delay 0.0
+    /// Container is terminated, but still present. Terminated containers may remain in the system due to several events with delay 0.0
+    Terminated,
 }
 
+/// Container model.
 pub struct Container {
+    /// Container status.
     pub status: ContainerStatus,
+    /// Container id.
     pub id: usize,
+    /// Id of a [`crate::host::Host`], on which the container is located.
     pub host_id: usize,
+    /// Container deployment time.
     pub deployment_time: f64,
+    /// [`crate::function::Application`] id.
     pub app_id: usize,
+    /// Set of running invocations.
     pub invocations: FxIndexSet<usize>,
+    /// Resources allocated for the container.
     pub resources: ResourceConsumer,
+    /// Number of invocations started on this container.
     pub started_invocations: usize,
+    /// Time of last state change.
     pub last_change: f64,
+    /// Container end event.
     pub end_event: Option<EventId>,
+    /// CPU share of the container.
     pub cpu_share: f64,
 }
 
 impl Container {
+    /// Starts a new invocation on the container.
     pub fn start_invocation(&mut self, id: usize) {
         self.invocations.insert(id);
         self.started_invocations += 1;
     }
 
+    /// Ends a running invocation on the container.
     pub fn end_invocation(&mut self, id: usize, curr_time: f64) {
         self.last_change = curr_time;
         self.invocations.remove(&id);
@@ -48,7 +67,7 @@ impl Container {
     }
 }
 
-/// Manages container pool of a single host.
+/// Manages containers on a single host.
 pub struct ContainerManager {
     active_invocations: usize,
     host_id: usize,
@@ -66,6 +85,7 @@ pub struct ContainerManager {
 }
 
 impl ContainerManager {
+    /// Creates new ContainerManager on a specified host.
     pub fn new(host_id: usize, resources: ResourceProvider, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self {
             active_invocations: 0,
@@ -80,34 +100,42 @@ impl ContainerManager {
         }
     }
 
+    /// Checks whether it is possible to create a new container with given resources.
     pub fn can_allocate(&self, resources: &ResourceConsumer) -> bool {
         self.resources.can_allocate(resources)
     }
 
+    /// Returns total amount of a resource.
     pub fn get_total_resource(&self, id: usize) -> u64 {
         self.resources.get_resource(id).unwrap().get_available()
     }
 
+    /// Decrements active invocations count.
     pub fn dec_active_invocations(&mut self) {
         self.active_invocations -= 1;
     }
 
+    /// Increments active invocations count.
     pub fn inc_active_invocations(&mut self) {
         self.active_invocations += 1;
     }
 
+    /// Returns active invocations count.
     pub fn active_invocation_count(&self) -> usize {
         self.active_invocations
     }
 
+    /// Returns a reference to a container specified by `id` if it exists.
     pub fn get_container(&self, id: usize) -> Option<&Container> {
         self.containers.get(&id)
     }
 
+    /// Returns a mutable reference to a container specified by `id` if it exists.
     pub fn get_container_mut(&mut self, id: usize) -> Option<&mut Container> {
         self.containers.get_mut(&id)
     }
 
+    /// Returns a mutable reference to the map that stores all existing containers.
     pub fn get_containers(&mut self) -> &mut FxIndexMap<usize, Container> {
         &mut self.containers
     }
@@ -147,10 +175,12 @@ impl ContainerManager {
         self.reservations.get(&id).map(|x| x.len()).unwrap_or_default()
     }
 
+    /// Returns and removes reserved invocations for a deploying container.
     pub fn take_reservations(&mut self, id: usize) -> Option<Vec<usize>> {
         self.reservations.remove(&id)
     }
 
+    /// Deletes a container.
     pub fn delete_container(&mut self, id: usize) {
         let container = self.containers.remove(&id).unwrap();
         self.free_containers_by_app.get_mut(container.app_id).remove(&id);
@@ -158,7 +188,7 @@ impl ContainerManager {
         self.resources.release(&container.resources);
     }
 
-    /// Moves a container to free if it was full.
+    /// Moves a container to free list if it was full.
     pub fn try_move_container_to_free(&mut self, id: usize) {
         let app_id = self.containers.get(&id).unwrap().app_id;
         let was = self.full_containers_by_app.get_mut(app_id).remove(&id);
@@ -167,6 +197,7 @@ impl ContainerManager {
         }
     }
 
+    /// Moves a container to full list.
     pub fn move_container_to_full(&mut self, id: usize) {
         let app_id = self.containers.get(&id).unwrap().app_id;
         let was = self.free_containers_by_app.get_mut(app_id).remove(&id);
@@ -200,6 +231,7 @@ impl ContainerManager {
     }
 }
 
+/// Iterates over all containers that can run another invocation. May optionally include containers that are being deployed right now.
 pub struct PossibleContainerIterator<'a> {
     inner: Option<indexmap::set::Iter<'a, usize>>,
     containers: &'a FxIndexMap<usize, Container>,
@@ -209,6 +241,7 @@ pub struct PossibleContainerIterator<'a> {
 }
 
 impl<'a> PossibleContainerIterator<'a> {
+    /// Creates new PossibleContainerIterator.
     pub fn new(
         inner: Option<indexmap::set::Iter<'a, usize>>,
         containers: &'a FxIndexMap<usize, Container>,

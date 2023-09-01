@@ -22,8 +22,11 @@ use crate::trace::Trace;
 
 /// Similar to [`crate::config::HostConfig`], but only accepts invokers with `Send` trait.
 pub struct ParallelHostConfig {
+    /// [`crate::invoker::Invoker`] implementation.
     pub invoker: Box<dyn Invoker + Send>,
+    /// Host resources.
     pub resources: Vec<(String, u64)>,
+    /// Host CPU cores.
     pub cores: u32,
 }
 
@@ -39,10 +42,15 @@ impl Default for ParallelHostConfig {
 
 /// Similar to [`crate::config::Config`], but ensures that all simulation components implement `Send` trait.
 pub struct ParallelConfig {
+    /// [`crate::coldstart::ColdStartPolicy`] implementation.
     pub coldstart_policy: Box<dyn ColdStartPolicy + Send>,
+    /// [`crate::cpu::CpuPolicy`] implementation.
     pub cpu_policy: Box<dyn CpuPolicy + Send>,
+    /// [`crate::deployer::IdleDeployer`] implementation.
     pub idle_deployer: Box<dyn IdleDeployer + Send>,
+    /// [`crate::scheduler::Scheduler`] implementation.
     pub scheduler: Box<dyn Scheduler + Send>,
+    /// Host configuration data.
     pub hosts: Vec<ParallelHostConfig>,
 }
 

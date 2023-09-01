@@ -21,8 +21,9 @@ use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::{RequestData, Trace};
 use crate::util::Counter;
 
-pub type HandlerId = dslab_core::component::Id;
+pub(crate) type HandlerId = dslab_core::component::Id;
 
+/// Main FaaS simulation class.
 pub struct ServerlessSimulation {
     coldstart: Rc<RefCell<dyn ColdStartPolicy>>,
     controller: Rc<RefCell<Controller>>,
@@ -38,6 +39,7 @@ pub struct ServerlessSimulation {
 }
 
 impl ServerlessSimulation {
+    /// Creates new simulation.
     pub fn new(mut sim: Simulation, config: Config) -> Self {
         let stats = Rc::new(RefCell::new(Default::default()));
         let ctx = sim.create_context("entry point");
@@ -74,38 +76,47 @@ impl ServerlessSimulation {
         this_sim
     }
 
+    /// Resolves resource name into `id` if it exists.
     pub fn try_resolve_resource_name(&self, name: &str) -> Option<usize> {
         self.resource_name_resolver.try_resolve(name)
     }
 
+    /// Creates new resource.
     pub fn create_resource(&mut self, name: &str, available: u64) -> Resource {
         Resource::new(self.resource_name_resolver.resolve(name), available)
     }
 
+    /// Creates new resource requirement.
     pub fn create_resource_requirement(&mut self, name: &str, needed: u64) -> ResourceRequirement {
         ResourceRequirement::new(self.resource_name_resolver.resolve(name), needed)
     }
 
+    /// Returns invocation by its id.
     pub fn get_invocation(&self, id: usize) -> Invocation {
         self.invocation_registry.borrow()[id]
     }
 
+    /// Returns all invocations with ids in given range.
     pub fn get_invocations(&self, id: Range<usize>) -> Vec<Invocation> {
         self.invocation_registry.borrow()[id].to_vec()
     }
 
+    /// Returns simulation metrics.
     pub fn stats(&self) -> Stats {
         self.stats.borrow().clone()
     }
 
+    /// Returns global metrics.
     pub fn global_stats(&self) -> GlobalStats {
         self.stats.borrow().global_stats.clone()
     }
 
+    /// Returns global invocation metrics.
     pub fn invocation_stats(&self) -> InvocationStats {
         self.stats.borrow().global_stats.invocation_stats.clone()
     }
 
+    /// Adds a new [`crate::host::Host`].
     pub fn add_host(&mut self, invoker: Option<Box<dyn Invoker>>, resources: ResourceProvider, cores: u32) {
         let id = self.host_ctr.increment();
         let real_invoker = invoker.unwrap_or_else(|| Box::new(FIFOInvoker::new()));
@@ -127,14 +138,17 @@ impl ServerlessSimulation {
         self.controller.borrow_mut().add_host(host);
     }
 
+    /// Adds a new [`crate::function::Function`].
     pub fn add_function(&mut self, f: Function) -> usize {
         self.function_registry.borrow_mut().add_function(f)
     }
 
+    /// Adds a new [`crate::function::Application`] with a single function.
     pub fn add_app_with_single_function(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app_with_single_function(app)
     }
 
+    /// Adds a new [`crate::function::Application`].
     pub fn add_app(&mut self, app: Application) -> usize {
         self.function_registry.borrow_mut().add_app(app)
     }
@@ -221,6 +235,7 @@ impl ServerlessSimulation {
         first_idx..ir.len()
     }
 
+    /// Sends a single invocation request.
     pub fn send_invocation_request(&mut self, id: usize, duration: f64, time: f64) -> usize {
         let app_id = self
             .function_registry
@@ -255,22 +270,27 @@ impl ServerlessSimulation {
             .emit(SimulationEndEvent {}, self.controller_id, time - self.sim.time());
     }
 
+    /// Makes one simulation step.
     pub fn step(&mut self) -> bool {
         self.sim.step()
     }
 
+    /// Makes given number of simulation steps.
     pub fn steps(&mut self, step_count: u64) -> bool {
         self.sim.steps(step_count)
     }
 
+    /// Makes simulation steps for given time duration.
     pub fn step_for_duration(&mut self, duration: f64) {
         self.sim.step_for_duration(duration);
     }
 
+    /// Makes simulation steps until no events remain.
     pub fn step_until_no_events(&mut self) {
         self.sim.step_until_no_events();
     }
 
+    /// Returns number of events in the simulation.
     pub fn event_count(&self) -> u64 {
         self.sim.event_count()
     }

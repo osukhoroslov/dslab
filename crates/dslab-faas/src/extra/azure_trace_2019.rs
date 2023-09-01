@@ -17,24 +17,36 @@ use rv::traits::Rv;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
 
+/// Azure trace function data.
 #[derive(Default, Clone, Copy)]
 pub struct FunctionRecord {
+    /// Application id.
     pub app_id: usize,
 }
 
+/// Azure trace application data.
 #[derive(Default, Clone, Copy)]
 pub struct ApplicationRecord {
+    /// Application memory requirement.
     pub mem: u64,
+    /// Application cold start latency.
     pub cold_start: f64,
 }
 
+/// Azure trace.
 #[derive(Default, Clone)]
 pub struct AzureTrace {
+    /// Application concurrency level, same for all applications.
     pub concurrency_level: usize,
+    /// Name of memory resource.
     pub memory_name: String,
+    /// Simulation end time.
     pub sim_end: Option<f64>,
+    /// Request data.
     pub trace_records: Vec<RequestData>,
+    /// Function data.
     pub function_records: Vec<FunctionRecord>,
+    /// Application data.
     pub app_records: Vec<ApplicationRecord>,
 }
 
@@ -110,16 +122,21 @@ fn app_id(id: &str) -> String {
 /// `[floor(left * n_apps), floor(right * n_apps)]` (apps are sorted by popularity in decreasing order).
 #[derive(Copy, Clone)]
 pub struct AppPreference {
+    /// Random apps count.
     pub count: usize,
+    /// Left quantile.
     pub left: f64,
+    /// Right quantile.
     pub right: f64,
 }
 
 impl AppPreference {
+    /// Creates new AppPreference.
     pub fn new(count: usize, left: f64, right: f64) -> Self {
         Self { count, left, right }
     }
 
+    /// Validates AppPreference.
     pub fn validate(&self) -> Result<(), String> {
         if !(0. ..1.).contains(&self.left) {
             return Err(format!("left position {} out of range [0, 1)", self.left));
@@ -137,6 +154,7 @@ impl AppPreference {
     }
 }
 
+/// Generator of invocation durations.
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum DurationGenerator {
     /// Simple duration generator from quantiles.
@@ -147,6 +165,7 @@ pub enum DurationGenerator {
     Lognormal,
 }
 
+/// Generator of invocation arrival times.
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum StartGenerator {
     /// For each 1-minute bucket select each starting time uniformly at random within that bucket.
@@ -157,6 +176,7 @@ pub enum StartGenerator {
     EmpiricalFit,
 }
 
+/// Struct with Azure 2019 trace settings.
 #[derive(Clone)]
 pub struct Azure2019TraceConfig {
     /// Simulation time period in minutes (only integer numbers are supported).

@@ -12,6 +12,7 @@ use rand_pcg::Pcg64;
 use crate::extra::azure_trace_2019::{ApplicationRecord, AzureTrace, FunctionRecord};
 use crate::trace::RequestData;
 
+/// Generator of application memory requirements.
 pub enum MemoryGenerator {
     /// All apps use fixed amount of memory.
     Fixed(u64),
@@ -20,6 +21,7 @@ pub enum MemoryGenerator {
     PrefittedBurr,
 }
 
+/// Struct with Azure 2021 trace settings.
 pub struct Azure2021TraceConfig {
     /// Simulation time period in seconds.
     pub time_period: f64,

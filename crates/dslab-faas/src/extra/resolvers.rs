@@ -5,6 +5,7 @@ use crate::extra::hermod::HermodScheduler;
 use crate::extra::hybrid_histogram::HybridHistogramPolicy;
 use crate::scheduler::{default_scheduler_resolver, Scheduler};
 
+/// Like [`crate::coldstart::default_coldstart_policy_resolver`], but includes extra policies.
 pub fn extra_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     if s.len() >= 23 && &s[0..22] == "HybridHistogramPolicy[" && s.ends_with(']') {
         let opts = parse_options(&s[22..s.len() - 1]);
@@ -13,6 +14,7 @@ pub fn extra_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     default_coldstart_policy_resolver(s)
 }
 
+/// Like [`crate::scheduler::default_scheduler_resolver`], but includes extra schedulers.
 pub fn extra_scheduler_resolver(s: &str) -> Box<dyn Scheduler> {
     if s.len() >= 17 && &s[0..16] == "HermodScheduler[" && s.ends_with(']') {
         let opts = parse_options(&s[16..s.len() - 1]);

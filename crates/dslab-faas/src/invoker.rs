@@ -1,4 +1,4 @@
-//! A component that manages incoming invocations on some host.
+//! A component that manages incoming invocations on a host.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -26,12 +26,16 @@ pub enum InvokerDecision {
 /// Previously-queued invocation that is finally able to be executed.
 #[derive(Clone, Copy)]
 pub struct DequeuedInvocation {
+    /// Invocation id.
     pub id: usize,
+    /// Container id.
     pub container_id: usize,
+    /// Deploying delay if the invocation will be executed on a deploying container.
     pub delay: Option<f64>,
 }
 
 impl DequeuedInvocation {
+    /// Creates new DequeuedInvocation.
     pub fn new(id: usize, container_id: usize, delay: Option<f64>) -> Self {
         Self {
             id,
@@ -89,8 +93,10 @@ pub trait Invoker {
         time: f64,
     ) -> InvokerDecision;
 
+    /// Returns invocation queue length.
     fn queue_len(&self) -> usize;
 
+    /// Returns a string with invoker description.
     fn to_string(&self) -> String {
         "STUB INVOKER NAME".to_string()
     }
@@ -123,6 +129,7 @@ pub struct NaiveInvoker {
 }
 
 impl NaiveInvoker {
+    /// Creates new NaiveInvoker.
     pub fn new() -> Self {
         Default::default()
     }
@@ -223,6 +230,7 @@ pub struct FIFOInvoker {
 }
 
 impl FIFOInvoker {
+    /// Creates new FIFOInvoker.
     pub fn new() -> Self {
         Default::default()
     }
@@ -311,6 +319,7 @@ impl Invoker for FIFOInvoker {
     }
 }
 
+/// Creates [`Invoker`] from a string containing its name and parameters.
 pub fn default_invoker_resolver(s: &str) -> Box<dyn Invoker> {
     if s == "NaiveInvoker" {
         Box::new(NaiveInvoker::new())

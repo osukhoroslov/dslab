@@ -7,24 +7,39 @@ use csv::ReaderBuilder;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
 
+/// One sample from OpenDC trace.
 #[derive(Default, Copy, Clone)]
 pub struct FunctionSample {
+    /// Timestamp.
     pub time: u64,
+    /// Number of invocations at this timestamp.
     pub invocations: usize,
+    /// Execution time.
     pub exec: u32,
+    /// Provisioned CPU.
     pub cpu_provisioned: usize,
+    /// Provisioned memory.
     pub mem_provisioned: usize,
+    /// Used CPU.
     pub cpu_used: usize,
+    /// Used memory.
     pub mem_used: usize,
 }
 
+/// A trace of samples for a function.
 pub type FunctionTrace = Vec<FunctionSample>;
 
+/// OpenDC trace.
 pub struct OpenDCTrace {
+    /// Function traces.
     pub funcs: Vec<FunctionTrace>,
+    /// Application concurrency level, same for all applications.
     pub concurrency_level: usize,
+    /// Application cold start delay, same for all applications.
     pub cold_start: f64,
+    /// Name of memory resource.
     pub memory_name: String,
+    /// Simulation end time.
     pub sim_end: Option<f64>,
 }
 
@@ -84,6 +99,7 @@ impl Trace for OpenDCTrace {
     }
 }
 
+/// OpenDC trace request iterator.
 pub struct OpenDCRequestIter<'a> {
     trace_iter: std::slice::Iter<'a, FunctionTrace>,
     trace: FunctionTrace,
@@ -94,6 +110,7 @@ pub struct OpenDCRequestIter<'a> {
 }
 
 impl<'a> OpenDCRequestIter<'a> {
+    /// Creates new OpenDC request iterator.
     pub fn new(trace_iter: std::slice::Iter<'a, FunctionTrace>) -> Self {
         Self {
             trace_iter,
@@ -133,9 +150,13 @@ impl<'a> Iterator for OpenDCRequestIter<'a> {
     }
 }
 
+/// Struct with settings for reading OpenDC trace.
 pub struct OpenDCTraceConfig {
+    /// Application concurrency level, same for all applications.
     pub concurrency_level: usize,
+    /// Application cold start delay, same for all applications.
     pub cold_start: f64,
+    /// Name of memory resource.
     pub memory_name: String,
 }
 
@@ -149,6 +170,7 @@ impl Default for OpenDCTraceConfig {
     }
 }
 
+/// Reads OpenDC trace.
 pub fn process_opendc_trace(path: &Path, config: OpenDCTraceConfig) -> OpenDCTrace {
     let mut files = Vec::new();
     match read_dir(path) {

@@ -10,11 +10,14 @@ use crate::container::Container;
 use crate::function::Application;
 use crate::invocation::Invocation;
 
+/// Helper trait to convert ColdStartPolicy Box to Rc.
 pub trait ColdStartConvertHelper {
+    /// Converts Box to Rc.
     fn box_to_rc(self: Box<Self>) -> Rc<RefCell<dyn ColdStartPolicy>>;
 }
 
 impl<T: 'static + ColdStartPolicy> ColdStartConvertHelper for T {
+    /// Automatic implementation.
     fn box_to_rc(self: Box<Self>) -> Rc<RefCell<dyn ColdStartPolicy>> {
         Rc::new(RefCell::new(*self))
     }
@@ -41,6 +44,7 @@ pub trait ColdStartPolicy: ColdStartConvertHelper {
     /// This function allows tuning policy on finished invocations.
     fn update(&mut self, invocation: &Invocation, app: &Application);
 
+    /// Returns a string with policy description.
     fn to_string(&self) -> String {
         "STUB COLDSTART POLICY NAME".to_string()
     }
@@ -57,6 +61,7 @@ pub struct FixedTimeColdStartPolicy {
 }
 
 impl FixedTimeColdStartPolicy {
+    /// Creates new FixedTimeColdStartPolicy.
     pub fn new(keepalive_window: f64, prewarm_window: f64, reset_keepalive: bool) -> Self {
         Self {
             keepalive_window,
@@ -66,6 +71,7 @@ impl FixedTimeColdStartPolicy {
         }
     }
 
+    /// Creates policy from a map of strings containing policy parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let keepalive = options.get("keepalive").unwrap().parse::<f64>().unwrap();
         let prewarm = options.get("prewarm").unwrap().parse::<f64>().unwrap();
@@ -110,6 +116,7 @@ impl ColdStartPolicy for FixedTimeColdStartPolicy {
     }
 }
 
+/// Creates [`ColdStartPolicy`] from a string containing its name and parameters.
 pub fn default_coldstart_policy_resolver(s: &str) -> Box<dyn ColdStartPolicy> {
     if s == "No unloading" {
         return Box::new(FixedTimeColdStartPolicy::new(f64::MAX / 10.0, 0.0, true));

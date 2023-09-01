@@ -1,4 +1,4 @@
-//! Experiment configuration (YAML-serializeable).
+//! Experiment configuration (YAML-serializable).
 
 use std::boxed::Box;
 use std::collections::HashMap;
@@ -16,8 +16,11 @@ use crate::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
 /// Describes a host in the simulation.
 pub struct HostConfig {
+    /// [`crate::invoker::Invoker`] implementation.
     pub invoker: Box<dyn Invoker>,
+    /// Host resources.
     pub resources: Vec<(String, u64)>,
+    /// Host CPU cores.
     pub cores: u32,
 }
 
@@ -57,7 +60,9 @@ impl From<ParallelConfig> for Config {
 /// Describes a resource in the simulation.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawResource {
+    /// Resource name.
     pub name: String,
+    /// Resource quantity.
     pub quantity: u64,
 }
 
@@ -68,10 +73,14 @@ fn default_one() -> u32 {
 /// Similar to [`HostConfig`], but is YAML-serializable.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawHostConfig {
+    /// [`crate::invoker::Invoker`] name.
     #[serde(default)]
     pub invoker: String,
+    /// Raw resources.
     pub resources: Vec<RawResource>,
+    /// Host CPU cores.
     pub cores: u32,
+    /// Number of such hosts in the system.
     #[serde(default = "default_one")]
     pub count: u32,
 }
@@ -79,19 +88,24 @@ pub struct RawHostConfig {
 /// YAML-serializable config
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RawConfig {
+    /// [`crate::coldstart::ColdStartPolicy`] name.
     #[serde(default)]
     pub coldstart_policy: String,
+    /// [`crate::cpu::CpuPolicy`] name.
     #[serde(default)]
     pub cpu_policy: String,
+    /// [`crate::deployer::IdleDeployer`] name.
     #[serde(default)]
     pub idle_deployer: String,
+    /// [`crate::scheduler::Scheduler`] name.
     #[serde(default)]
     pub scheduler: String,
+    /// Raw host data.
     #[serde(default)]
     pub hosts: Vec<RawHostConfig>,
 }
 
-/// Parses option map from string.
+/// Parses map with options from string.
 pub fn parse_options(s: &str) -> HashMap<String, String> {
     let mut ans = HashMap::new();
     for t in s.split(',') {
@@ -103,12 +117,17 @@ pub fn parse_options(s: &str) -> HashMap<String, String> {
     ans
 }
 
-/// Functions that create algorithm implementation from a string containing a name and options.
+/// Functions that create algorithm implementation from a string containing algorithm name and options.
 pub struct ConfigParamResolvers {
+    /// Creates [`crate::coldstart::ColdStartPolicy`] from a string.
     pub coldstart_policy_resolver: Box<dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync>,
+    /// Creates [`crate::cpu::CpuPolicy`] from a string.
     pub cpu_policy_resolver: Box<dyn Fn(&str) -> Box<dyn CpuPolicy> + Send + Sync>,
+    /// Creates [`crate::deployer::IdleDeployer`] from a string.
     pub idle_deployer_resolver: Box<dyn Fn(&str) -> Box<dyn IdleDeployer> + Send + Sync>,
+    /// Creates [`crate::scheduler::Scheduler`] from a string.
     pub scheduler_resolver: Box<dyn Fn(&str) -> Box<dyn Scheduler> + Send + Sync>,
+    /// Creates [`crate::invoker::Invoker`] from a string.
     pub invoker_resolver: Box<dyn Fn(&str) -> Box<dyn Invoker> + Send + Sync>,
 }
 
@@ -126,10 +145,15 @@ impl Default for ConfigParamResolvers {
 
 /// Simulation config. It implements Default trait so that you can create default config and change only the fields you need.
 pub struct Config {
+    /// [`crate::coldstart::ColdStartPolicy`] implementation.
     pub coldstart_policy: Box<dyn ColdStartPolicy>,
+    /// [`crate::cpu::CpuPolicy`] implementation.
     pub cpu_policy: Box<dyn CpuPolicy>,
+    /// [`crate::deployer::IdleDeployer`] implementation.
     pub idle_deployer: Box<dyn IdleDeployer>,
+    /// [`crate::scheduler::Scheduler`] implementation.
     pub scheduler: Box<dyn Scheduler>,
+    /// Host data.
     pub hosts: Vec<HostConfig>,
 }
 
@@ -146,6 +170,7 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Creates Config from RawConfig using provided resolvers.
     pub fn from_raw(raw: RawConfig, resolvers: ConfigParamResolvers) -> Self {
         Self::from_raw_split_resolvers(
             raw,
@@ -157,6 +182,7 @@ impl Config {
         )
     }
 
+    /// Similar to [`Self::from_raw`], but takes resolvers as separate functions.
     pub fn from_raw_split_resolvers(
         raw: RawConfig,
         coldstart_policy_resolver: &(dyn Fn(&str) -> Box<dyn ColdStartPolicy> + Send + Sync),
@@ -200,6 +226,7 @@ impl Config {
         me
     }
 
+    /// Creates Config from YAML file using provided resolvers.
     pub fn from_yaml(path: &Path, resolvers: ConfigParamResolvers) -> Self {
         let f = File::open(path).unwrap();
         Self::from_raw(serde_yaml::from_reader(f).unwrap(), resolvers)

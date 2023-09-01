@@ -13,10 +13,11 @@ use crate::config::parse_options;
 use crate::function::Application;
 use crate::host::Host;
 
-/// Chooses an invoker to run new invocation of some function from given application.
+/// Chooses a host to run new invocation of some function from given application.
 pub trait Scheduler {
+    /// Chooses a host.
     fn select_host(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> usize;
-
+    /// Returns a string with scheduler description.
     fn to_string(&self) -> String {
         "STUB SCHEDULER NAME".to_string()
     }
@@ -47,7 +48,9 @@ impl Scheduler for BasicScheduler {
 
 /// Hashes application ids, used to map applications to hosts.
 pub struct ApplicationHasher {
+    /// Hash function, accepts application id.
     pub hash_fn: Box<dyn Fn(u64) -> u64>,
+    /// Hasher name.
     pub name: String,
 }
 
@@ -82,10 +85,12 @@ impl FromStr for ApplicationHasher {
 }
 
 impl ApplicationHasher {
+    /// Creates new ApplicationHasher.
     pub fn new(hash_fn: Box<dyn Fn(u64) -> u64>, name: String) -> Self {
         Self { hash_fn, name }
     }
 
+    /// Hashes application id.
     pub fn hash(&self, app: u64) -> u64 {
         (self.hash_fn)(app)
     }
@@ -99,6 +104,7 @@ pub struct LocalityBasedScheduler {
 }
 
 impl LocalityBasedScheduler {
+    /// Creates new LocalityBasedScheduler.
     pub fn new(hasher: Option<ApplicationHasher>, step: Option<usize>, warm_only: bool) -> Self {
         let f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), "Identity".to_string()));
         let s = step.unwrap_or(1);
@@ -109,6 +115,7 @@ impl LocalityBasedScheduler {
         }
     }
 
+    /// Creates scheduler from a map of strings containing scheduler parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let hasher =
             ApplicationHasher::from_str(options.get("hasher").map(|a| a.deref()).unwrap_or("Identity")).unwrap();
@@ -165,12 +172,14 @@ pub struct RandomScheduler {
 }
 
 impl RandomScheduler {
+    /// Creates new RandomScheduler.
     pub fn new(seed: u64) -> Self {
         Self {
             rng: Pcg64::seed_from_u64(seed),
         }
     }
 
+    /// Creates scheduler from a map of strings containing scheduler parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let seed = options.get("seed").unwrap().parse::<u64>().unwrap();
         Self::new(seed)
@@ -198,6 +207,7 @@ pub struct LeastLoadedScheduler {
 }
 
 impl LeastLoadedScheduler {
+    /// Creates new LeastLoadedScheduler.
     pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
             prefer_warm,
@@ -206,6 +216,7 @@ impl LeastLoadedScheduler {
         }
     }
 
+    /// Creates scheduler from a map of strings containing scheduler parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
         let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();
@@ -268,6 +279,7 @@ pub struct RoundRobinScheduler {
 }
 
 impl RoundRobinScheduler {
+    /// Creates new RoundRobinScheduler.
     pub fn new() -> Self {
         Default::default()
     }
@@ -286,6 +298,7 @@ impl Scheduler for RoundRobinScheduler {
     }
 }
 
+/// Creates [`Scheduler`] from a string containing its name and parameters.
 pub fn default_scheduler_resolver(s: &str) -> Box<dyn Scheduler> {
     if s == "BasicScheduler" {
         return Box::new(BasicScheduler {});

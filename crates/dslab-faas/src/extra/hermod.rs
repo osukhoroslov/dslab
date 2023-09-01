@@ -22,6 +22,7 @@ pub struct HermodScheduler {
 }
 
 impl HermodScheduler {
+    /// Creates new HermodScheduler.
     pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
             high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
@@ -31,6 +32,7 @@ impl HermodScheduler {
         }
     }
 
+    /// Creates scheduler from a map of strings containing scheduler parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
         let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();

@@ -1,4 +1,4 @@
-//! A component that chooses host for deploying a new prewarmed container.
+//! A component that chooses a host for deploying a new prewarmed container.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -11,10 +11,12 @@ use crate::function::Application;
 use crate::host::Host;
 use crate::scheduler::ApplicationHasher;
 
-/// IdleDeployer chooses an invoker to deploy new idle container on. Used for prewarm.
+/// IdleDeployer chooses a host to deploy new idle container on. Used for prewarm.
 pub trait IdleDeployer {
+    /// Chooses a host for a new container.
     fn deploy(&mut self, app: &Application, hosts: &[Rc<RefCell<Host>>]) -> Option<usize>;
 
+    /// Returns a string with deployer description.
     fn to_string(&self) -> String {
         "STUB DEPLOYER NAME".to_string()
     }
@@ -46,12 +48,14 @@ pub struct LocalityBasedDeployer {
 }
 
 impl LocalityBasedDeployer {
+    /// Creates new LocalityBasedDeployer with given hasher and step. If the hasher is `None`, uses identity hasher. If the step is `None`, assumes that step equals one.
     pub fn new(hasher: Option<ApplicationHasher>, step: Option<usize>) -> Self {
         let f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), "Identity".to_string()));
         let s = step.unwrap_or(1);
         Self { hasher: f, step: s }
     }
 
+    /// Creates new LocalityBasedDeployer from a map of strings containing deployer parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let hasher =
             ApplicationHasher::from_str(options.get("hasher").map(|a| a.deref()).unwrap_or("Identity")).unwrap();
@@ -83,6 +87,7 @@ impl IdleDeployer for LocalityBasedDeployer {
     }
 }
 
+/// Creates [`IdleDeployer`] from a string containing its name and parameters.
 pub fn default_idle_deployer_resolver(s: &str) -> Box<dyn IdleDeployer> {
     if s.len() >= 23 && &s[0..22] == "LocalityBasedDeployer[" && s.ends_with(']') {
         let opts = parse_options(&s[22..s.len() - 1]);
