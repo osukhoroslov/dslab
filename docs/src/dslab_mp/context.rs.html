@@ -102,6 +102,14 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -168,6 +176,10 @@
     }
 
     <span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, dst: String) {
+        <span class="macro">assert!</span>(
+            msg.tip.len() &lt;= <span class="number">50</span>,
+            <span class="string">&quot;Message type length exceeds the limit of 50 characters&quot;
+        </span>);
         <span class="self">self</span>.actions.push(ProcessEvent::MessageSent {
             msg,
             src: <span class="self">self</span>.proc_name.clone(),
@@ -176,6 +188,10 @@
     }
 
     <span class="kw">pub fn </span>send_local(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message) {
+        <span class="macro">assert!</span>(
+            msg.tip.len() &lt;= <span class="number">50</span>,
+            <span class="string">&quot;Message type length exceeds the limit of 50 characters&quot;
+        </span>);
         <span class="self">self</span>.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
