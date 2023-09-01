@@ -64,6 +64,10 @@ impl Context {
     }
 
     pub fn send(&mut self, msg: Message, dst: String) {
+        assert!(
+            msg.tip.len() <= 50,
+            "Message type length exceeds the limit of 50 characters"
+        );
         self.actions.push(ProcessEvent::MessageSent {
             msg,
             src: self.proc_name.clone(),
@@ -72,6 +76,10 @@ impl Context {
     }
 
     pub fn send_local(&mut self, msg: Message) {
+        assert!(
+            msg.tip.len() <= 50,
+            "Message type length exceeds the limit of 50 characters"
+        );
         self.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 

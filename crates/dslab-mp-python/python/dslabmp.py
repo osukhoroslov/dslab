@@ -42,6 +42,8 @@ class Context(object):
         """
         Sends a message to the specified process.
         """
+        if len(msg.type) > 50:
+            raise ValueError('message type length exceeds the limit of 50 characters')
         if not isinstance(to, str):
             raise TypeError('to argument has to be string, not {}'.format(type(to)))
         self._sent_messages.append((msg.type, json.dumps(msg._data), to))
@@ -50,6 +52,8 @@ class Context(object):
         """
         Sends a _local_ message.
         """
+        if len(msg.type) > 50:
+            raise ValueError('message type length exceeds the limit of 50 characters')
         self._sent_local_messages.append((msg.type, json.dumps(msg._data)))
 
     def set_timer(self, timer_name: str, delay: float):
