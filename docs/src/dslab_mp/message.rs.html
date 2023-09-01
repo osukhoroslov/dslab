@@ -79,7 +79,7 @@
     }
 
     <span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.data.len()
+        <span class="self">self</span>.tip.len() + <span class="self">self</span>.data.len()
     }
 }
 

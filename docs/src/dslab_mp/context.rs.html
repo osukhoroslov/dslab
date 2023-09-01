@@ -100,6 +100,8 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -178,6 +180,7 @@
     }
 
     <span class="kw">pub fn </span>set_timer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
+        <span class="macro">assert!</span>(name.len() &lt;= <span class="number">50</span>, <span class="string">&quot;Timer name length exceeds the limit of 50 characters&quot;</span>);
         <span class="self">self</span>.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,
@@ -186,6 +189,7 @@
     }
 
     <span class="kw">pub fn </span>set_timer_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
+        <span class="macro">assert!</span>(name.len() &lt;= <span class="number">50</span>, <span class="string">&quot;Timer name length exceeds the limit of 50 characters&quot;</span>);
         <span class="self">self</span>.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
             delay,
