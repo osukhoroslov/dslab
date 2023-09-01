@@ -34,7 +34,7 @@ impl Message {
     }
 
     pub fn size(&self) -> usize {
-        self.data.len()
+        self.tip.len() + self.data.len()
     }
 }
 
