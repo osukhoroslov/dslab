@@ -229,6 +229,7 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
@@ -441,18 +442,19 @@
                     }
                 }
                 ProcessEvent::TimerCancelled { name } =&gt; {
-                    proc_entry.pending_timers.remove(<span class="kw-2">&amp;</span>name);
-                    <span class="kw">let </span>event = McEvent::TimerCancelled {
-                        timer: name.clone(),
-                        proc: proc.clone(),
-                    };
-                    new_events.push(event);
+                    <span class="kw">if </span>proc_entry.pending_timers.remove(<span class="kw-2">&amp;</span>name).is_some() {
+                        <span class="kw">let </span>event = McEvent::TimerCancelled {
+                            timer: name.clone(),
+                            proc: proc.clone(),
+                        };
+                        new_events.push(event);
 
-                    <span class="kw">let </span>log_entry = LogEntry::McTimerCancelled {
-                        proc: proc.clone(),
-                        timer: name,
-                    };
-                    <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
+                        <span class="kw">let </span>log_entry = LogEntry::McTimerCancelled {
+                            proc: proc.clone(),
+                            timer: name,
+                        };
+                        <span class="self">self</span>.trace_handler.borrow_mut().push(log_entry);
+                    }
                 }
                 <span class="kw">_ </span>=&gt; {}
             }
