@@ -79,6 +79,7 @@ impl PendingEvents {
     pub fn cancel_timer(&mut self, proc: String, timer: String) {
         let id = self.timer_mapping.remove(&(proc, timer));
         if let Some(id) = id {
+            assert!(self.events.contains_key(&id));
             self.pop(id);
         }
     }
@@ -87,8 +88,9 @@ impl PendingEvents {
     pub fn pop(&mut self, event_id: McEventId) -> McEvent {
         let result = self.events.remove(&event_id).unwrap();
         self.available_events.remove(&event_id);
-        if let McEvent::TimerFired { .. } = result {
+        if let McEvent::TimerFired { proc, timer, .. } = result.clone() {
             let unblocked_events = self.resolver.remove_timer(event_id);
+            self.timer_mapping.remove(&(proc, timer));
             self.available_events.extend(unblocked_events);
         }
         if let McEvent::MessageReceived { msg, src, dst, .. } = result.clone() {
