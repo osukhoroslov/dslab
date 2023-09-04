@@ -210,18 +210,19 @@ impl McNode {
                     }
                 }
                 ProcessEvent::TimerCancelled { name } => {
-                    proc_entry.pending_timers.remove(&name);
-                    let event = McEvent::TimerCancelled {
-                        timer: name.clone(),
-                        proc: proc.clone(),
-                    };
-                    new_events.push(event);
+                    if proc_entry.pending_timers.remove(&name).is_some() {
+                        let event = McEvent::TimerCancelled {
+                            timer: name.clone(),
+                            proc: proc.clone(),
+                        };
+                        new_events.push(event);
 
-                    let log_entry = LogEntry::McTimerCancelled {
-                        proc: proc.clone(),
-                        timer: name,
-                    };
-                    self.trace_handler.borrow_mut().push(log_entry);
+                        let log_entry = LogEntry::McTimerCancelled {
+                            proc: proc.clone(),
+                            timer: name,
+                        };
+                        self.trace_handler.borrow_mut().push(log_entry);
+                    }
                 }
                 _ => {}
             }
