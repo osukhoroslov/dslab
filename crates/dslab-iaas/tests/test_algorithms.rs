@@ -1,6 +1,6 @@
 use dslab_core::simulation::Simulation;
 
-use dslab_iaas::core::config::SimulationConfig;
+use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;
 use dslab_iaas::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use dslab_iaas::core::vm_placement_algorithms::best_fit::BestFit;

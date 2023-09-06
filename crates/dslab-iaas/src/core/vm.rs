@@ -6,7 +6,7 @@ use std::rc::Rc;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::load_model::{ConstantLoadModel, LoadModel};
 
 /// Status of virtual machine.

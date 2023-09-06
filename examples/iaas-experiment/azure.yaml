@@ -10,8 +10,8 @@ step_duration: 500
 
 #Vms
 trace:
-    type: Azure
-    path: .
+  type: Azure
+  path: .
 
 # Hosts
 hosts:
@@ -23,4 +23,6 @@ hosts:
 # Schedulers
 schedulers:
   - name: s
-    algorithm: BestFit
+    algorithm:
+      - BestFit
+      - FirstFit

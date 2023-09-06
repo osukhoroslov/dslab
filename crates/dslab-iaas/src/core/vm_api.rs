@@ -71,6 +71,11 @@ impl VmAPI {
         self.vms.get(&vm_id).unwrap().clone()
     }
 
+    /// Returns the total VM count.
+    pub fn get_vm_count(&self) -> usize {
+        self.vms.len()
+    }
+
     /// Returns resource allocation for specified VM.
     pub fn get_vm_allocation(&self, vm_id: u32) -> Allocation {
         Allocation {

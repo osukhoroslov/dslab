@@ -8,14 +8,14 @@ use dslab_core::cast;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
-use dslab_core::log_debug;
 
 use crate::core::common::{Allocation, AllocationVerdict};
-use crate::core::config::SimulationConfig;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest, VmCreateRequest,
 };
+use crate::core::logger::Logger;
 use crate::core::resource_pool::ResourcePoolState;
 use crate::core::vm_api::VmAPI;
 
@@ -39,6 +39,7 @@ pub struct PlacementStore {
     schedulers: HashSet<u32>,
     vm_api: Rc<RefCell<VmAPI>>,
     ctx: SimulationContext,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
     sim_config: SimulationConfig,
 }
 
@@ -48,6 +49,7 @@ impl PlacementStore {
         allow_vm_overcommit: bool,
         vm_api: Rc<RefCell<VmAPI>>,
         ctx: SimulationContext,
+        logger: Rc<RefCell<Box<dyn Logger>>>,
         sim_config: SimulationConfig,
     ) -> Self {
         Self {
@@ -56,6 +58,7 @@ impl PlacementStore {
             schedulers: HashSet::new(),
             vm_api,
             ctx,
+            logger,
             sim_config,
         }
     }
@@ -100,11 +103,13 @@ impl PlacementStore {
             if self.pool_state.can_allocate(alloc, host_id, self.allow_vm_overcommit) == AllocationVerdict::Success {
                 pool_state_copy.allocate(alloc, host_id);
             } else {
-                log_debug!(
-                    self.ctx,
-                    "rejected placement of vm {} on host {} due to insufficient resources",
-                    alloc.id,
-                    self.ctx.lookup_name(host_id)
+                self.logger.borrow_mut().log_debug(
+                    &self.ctx,
+                    format!(
+                        "rejected placement of vm {} on host {} due to insufficient resources",
+                        alloc.id,
+                        self.ctx.lookup_name(host_id)
+                    ),
                 );
                 can_be_committed = false;
                 break;
@@ -115,11 +120,13 @@ impl PlacementStore {
         if can_be_committed {
             for (alloc, &host_id) in allocations.iter().zip(host_ids.iter()) {
                 self.pool_state.allocate(alloc, host_id);
-                log_debug!(
-                    self.ctx,
-                    "committed placement of vm {} to host {}",
-                    alloc.id,
-                    self.ctx.lookup_name(host_id)
+                self.logger.borrow_mut().log_debug(
+                    &self.ctx,
+                    format!(
+                        "committed placement of vm {} to host {}",
+                        alloc.id,
+                        self.ctx.lookup_name(host_id)
+                    ),
                 );
                 self.ctx.emit(
                     VmCreateRequest { vm_id: alloc.id },
@@ -138,7 +145,10 @@ impl PlacementStore {
                 );
             }
         } else {
-            log_debug!(self.ctx, "rejected allocation commit request with {} vms", vm_ids.len());
+            self.logger.borrow_mut().log_debug(
+                &self.ctx,
+                format!("rejected allocation commit request with {} vms", vm_ids.len()),
+            );
             if let Some(scheduler) = from_scheduler {
                 self.ctx.emit(
                     AllocationCommitFailed {

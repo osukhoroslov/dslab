@@ -13,10 +13,11 @@ use dslab_core::Id;
 use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 use dslab_models::power::host::{HostPowerModel, HostPowerModelBuilder};
 
-use crate::core::config::SimulationConfig;
+use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};
 use crate::core::host_manager::HostManager;
 use crate::core::host_manager::SendHostState;
+use crate::core::logger::{Logger, StdoutLogger};
 use crate::core::monitoring::Monitoring;
 use crate::core::placement_store::PlacementStore;
 use crate::core::scheduler::Scheduler;
@@ -27,7 +28,10 @@ use crate::core::vm_api::VmAPI;
 use crate::core::vm_placement_algorithm::placement_algorithm_resolver;
 use crate::core::vm_placement_algorithm::VMPlacementAlgorithm;
 use crate::custom_component::CustomComponent;
+use crate::extensions::azure_dataset_reader::AzureDatasetReader;
 use crate::extensions::dataset_reader::DatasetReader;
+use crate::extensions::dataset_type::VmDatasetType;
+use crate::extensions::huawei_dataset_reader::HuaweiDatasetReader;
 
 struct VMSpawnRequest {
     pub resource_consumer: ResourceConsumer,
@@ -50,6 +54,7 @@ pub struct CloudSimulation {
     slav_metric: Box<dyn HostSLAVMetric>,
     batch_mode: bool,
     batch_buffer: Vec<VMSpawnRequest>,
+    logger: Rc<RefCell<Box<dyn Logger>>>,
     sim: Simulation,
     ctx: SimulationContext,
     sim_config: Rc<SimulationConfig>,
@@ -57,8 +62,18 @@ pub struct CloudSimulation {
 
 impl CloudSimulation {
     /// Creates a simulation with specified config.
-    pub fn new(mut sim: Simulation, sim_config: SimulationConfig) -> Self {
-        let monitoring = rc!(refcell!(Monitoring::new(sim.create_context("monitoring"))));
+    pub fn new(sim: Simulation, sim_config: SimulationConfig) -> Self {
+        CloudSimulation::with_logger(sim, sim_config, Box::new(StdoutLogger::new()))
+    }
+
+    /// Creates a simulation with specified config.
+    pub fn with_logger(mut sim: Simulation, sim_config: SimulationConfig, logger: Box<dyn Logger>) -> Self {
+        let logger: Rc<RefCell<Box<dyn Logger>>> = rc!(refcell!(logger));
+
+        let monitoring = rc!(refcell!(Monitoring::new(
+            sim.create_context("monitoring"),
+            logger.clone()
+        )));
         sim.add_handler("monitoring", monitoring.clone());
 
         let vm_api = rc!(refcell!(VmAPI::new(sim.create_context("vm_api"))));
@@ -68,6 +83,7 @@ impl CloudSimulation {
             sim_config.allow_vm_overcommit,
             vm_api.clone(),
             sim.create_context("placement_store"),
+            logger.clone(),
             sim_config.clone(),
         )));
         sim.add_handler("placement_store", placement_store.clone());
@@ -86,6 +102,7 @@ impl CloudSimulation {
             slav_metric: Box::new(OverloadTimeFraction::new()),
             batch_mode: false,
             batch_buffer: Vec::new(),
+            logger,
             sim,
             ctx,
             sim_config: rc!(sim_config),
@@ -123,6 +140,31 @@ impl CloudSimulation {
             }
         }
 
+        // Spawn VM from specifyed dataset
+        if sim.sim_config.trace.is_some() {
+            let dataset_config = sim.sim_config.trace.as_ref().unwrap();
+
+            match dataset_config.r#type {
+                VmDatasetType::Azure => {
+                    let mut dataset = AzureDatasetReader::new(
+                        sim.sim_config.simulation_length,
+                        sim.sim_config.hosts.get(0).unwrap().cpus as f64,
+                        sim.sim_config.hosts.get(0).unwrap().memory as f64,
+                    );
+                    dataset.parse(
+                        format!("{}/vm_types.csv", dataset_config.path),
+                        format!("{}/vm_instances.csv", dataset_config.path),
+                    );
+                    sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
+                }
+                VmDatasetType::Huawei => {
+                    let mut dataset = HuaweiDatasetReader::new(sim.sim_config.simulation_length);
+                    dataset.parse(format!("{}/Huawei-East-1.csv", dataset_config.path));
+                    sim.spawn_vms_from_dataset(*sim.schedulers.iter().next().unwrap().0, &mut dataset);
+                }
+            }
+        }
+
         sim
     }
 
@@ -139,6 +181,7 @@ impl CloudSimulation {
             self.host_power_model.clone(),
             self.slav_metric.clone(),
             self.sim.create_context(name),
+            self.logger.clone(),
             self.sim_config.clone(),
         )));
         let id = self.sim.add_handler(name, host.clone());
@@ -180,6 +223,7 @@ impl CloudSimulation {
             self.placement_store.borrow().get_id(),
             vm_placement_algorithm,
             self.sim.create_context(name),
+            self.logger.clone(),
             self.sim_config.clone(),
         )));
         let id = self.sim.add_handler(name, scheduler.clone());
@@ -413,6 +457,11 @@ impl CloudSimulation {
         self.sim.time()
     }
 
+    /// Returns the map with references to host managers.
+    pub fn hosts(&self) -> BTreeMap<u32, Rc<RefCell<HostManager>>> {
+        self.hosts.clone()
+    }
+
     /// Returns the reference to host manager (host energy consumption, allocated resources etc.).
     pub fn host(&self, host_id: u32) -> Rc<RefCell<HostManager>> {
         self.hosts.get(&host_id).unwrap().clone()
@@ -458,5 +507,71 @@ impl CloudSimulation {
     /// Returns the identifier of component by its name.
     pub fn lookup_id(&self, name: &str) -> Id {
         self.sim.lookup_id(name)
+    }
+
+    /// Returns the average CPU load across all hosts.
+    pub fn average_cpu_load(&mut self) -> f64 {
+        let mut sum_cpu_load = 0.;
+        let time = self.current_time();
+        for host in self.hosts.values() {
+            sum_cpu_load += host.borrow().cpu_load(time);
+        }
+        sum_cpu_load / (self.hosts.len() as f64)
+    }
+
+    /// Returns the average memory load across all hosts.
+    pub fn average_memory_load(&mut self) -> f64 {
+        let mut sum_memory_load = 0.;
+        let time = self.current_time();
+        for host in self.hosts.values() {
+            sum_memory_load += host.borrow().memory_load(time);
+        }
+        sum_memory_load / (self.hosts.len() as f64)
+    }
+
+    /// Returns the current CPU allocation rate (% of overall CPU used).
+    pub fn cpu_allocation_rate(&mut self) -> f64 {
+        let mut sum_cpu_allocated = 0.;
+        let mut sum_cpu_total = 0.;
+        for host in self.hosts.values() {
+            sum_cpu_allocated += host.borrow().cpu_allocated();
+            sum_cpu_total += host.borrow().cpu_total() as f64;
+        }
+        sum_cpu_allocated / sum_cpu_total
+    }
+
+    /// Returns the current memory allocation rate (% of overall RAM used).
+    pub fn memory_allocation_rate(&mut self) -> f64 {
+        let mut sum_memory_allocated = 0.;
+        let mut sum_memory_total = 0.;
+        for host in self.hosts.values() {
+            sum_memory_allocated += host.borrow().memory_allocated();
+            sum_memory_total += host.borrow().memory_total() as f64;
+        }
+        sum_memory_allocated / sum_memory_total
+    }
+
+    pub fn log_error(&mut self, log: String) {
+        self.logger.borrow_mut().log_error(self.context(), log);
+    }
+
+    pub fn log_warn(&mut self, log: String) {
+        self.logger.borrow_mut().log_warn(self.context(), log);
+    }
+
+    pub fn log_info(&mut self, log: String) {
+        self.logger.borrow_mut().log_info(self.context(), log);
+    }
+
+    pub fn log_debug(&mut self, log: String) {
+        self.logger.borrow_mut().log_debug(self.context(), log);
+    }
+
+    pub fn log_trace(&mut self, log: String) {
+        self.logger.borrow_mut().log_trace(self.context(), log);
+    }
+
+    pub fn save_log(&self, path: &str) -> Result<(), std::io::Error> {
+        self.logger.borrow_mut().save_log(path)
     }
 }
