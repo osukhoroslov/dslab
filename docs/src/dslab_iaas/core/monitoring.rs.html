@@ -122,9 +122,19 @@
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Service that provides information about current state of hosts.
 
-</span><span class="kw">use </span>std::collections::btree_map::Keys;
+</span><span class="kw">use </span>std::cell::RefCell;
+<span class="kw">use </span>std::rc::Rc;
+
+<span class="kw">use </span>std::collections::btree_map::Keys;
 <span class="kw">use </span>std::collections::BTreeMap;
 <span class="kw">use </span>std::collections::BTreeSet;
 
@@ -132,9 +142,9 @@
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 <span class="kw">use </span>dslab_core::event::Event;
 <span class="kw">use </span>dslab_core::handler::EventHandler;
-<span class="kw">use </span>dslab_core::log_trace;
 
 <span class="kw">use </span><span class="kw">crate</span>::core::events::monitoring::HostStateUpdate;
+<span class="kw">use </span><span class="kw">crate</span>::core::logger::Logger;
 
 <span class="doccomment">/// Host state contains resource capacity and current actual load. In addition a set of active VMs is stored.
 </span><span class="attr">#[derive(Clone)]
@@ -152,6 +162,7 @@
 </span><span class="kw">pub struct </span>Monitoring {
     host_states: BTreeMap&lt;u32, HostState&gt;,
     ctx: SimulationContext,
+    logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>HostState {
@@ -168,10 +179,11 @@
 
 <span class="kw">impl </span>Monitoring {
     <span class="doccomment">/// Creates component.
-    </span><span class="kw">pub fn </span>new(ctx: SimulationContext) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(ctx: SimulationContext, logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             host_states: BTreeMap::new(),
             ctx,
+            logger,
         }
     }
 
@@ -215,7 +227,9 @@
         recently_added_vms: Vec&lt;u32&gt;,
         recently_removed_vms: Vec&lt;u32&gt;,
     ) {
-        <span class="macro">log_trace!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;monitoring received stats from host #{}&quot;</span>, host_id);
+        <span class="self">self</span>.logger
+            .borrow_mut()
+            .log_trace(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx, <span class="macro">format!</span>(<span class="string">&quot;monitoring received stats from host #{}&quot;</span>, host_id));
         <span class="kw">if let </span><span class="prelude-val">Some</span>(host) = <span class="self">self</span>.host_states.get_mut(<span class="kw-2">&amp;</span>host_id) {
             host.cpu_load = cpu_load;
             host.memory_load = memory_load;

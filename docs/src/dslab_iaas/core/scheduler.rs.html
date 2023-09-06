@@ -206,6 +206,14 @@
 <a href="#206" id="206">206</a>
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Component performing allocation of resources for new VMs.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -215,15 +223,15 @@
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 <span class="kw">use </span>dslab_core::event::Event;
 <span class="kw">use </span>dslab_core::handler::EventHandler;
-<span class="kw">use </span>dslab_core::log_debug;
 
 <span class="kw">use </span><span class="kw">crate</span>::core::common::Allocation;
-<span class="kw">use </span><span class="kw">crate</span>::core::config::SimulationConfig;
+<span class="kw">use </span><span class="kw">crate</span>::core::config::sim_config::SimulationConfig;
 <span class="kw">use </span><span class="kw">crate</span>::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest,
 };
 <span class="kw">use </span><span class="kw">crate</span>::core::events::vm_api::VmStatusChanged;
+<span class="kw">use </span><span class="kw">crate</span>::core::logger::Logger;
 <span class="kw">use </span><span class="kw">crate</span>::core::monitoring::Monitoring;
 <span class="kw">use </span><span class="kw">crate</span>::core::resource_pool::ResourcePoolState;
 <span class="kw">use </span><span class="kw">crate</span>::core::vm::VmStatus;
@@ -249,11 +257,13 @@
     placement_store_id: u32,
     vm_placement_algorithm: VMPlacementAlgorithm,
     ctx: SimulationContext,
+    logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;,
     sim_config: Rc&lt;SimulationConfig&gt;,
 }
 
 <span class="kw">impl </span>Scheduler {
     <span class="doccomment">/// Creates scheduler with specified VM placement algorithm.
+    </span><span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub fn </span>new(
         snapshot: ResourcePoolState,
         monitoring: Rc&lt;RefCell&lt;Monitoring&gt;&gt;,
@@ -261,6 +271,7 @@
         placement_store_id: u32,
         vm_placement_algorithm: VMPlacementAlgorithm,
         ctx: SimulationContext,
+        logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;,
         sim_config: Rc&lt;SimulationConfig&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -271,6 +282,7 @@
             placement_store_id,
             vm_placement_algorithm,
             ctx,
+            logger,
             sim_config,
         }
     }
@@ -341,11 +353,13 @@
         <span class="comment">// try to find placements using the placement algorithm
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(placements) = <span class="self">self</span>.compute_placements(<span class="kw-2">&amp;</span>allocations) {
             <span class="kw">for </span>(host, alloc) <span class="kw">in </span>placements.iter().zip(allocations.iter()) {
-                <span class="macro">log_debug!</span>(
-                    <span class="self">self</span>.ctx,
-                    <span class="string">&quot;decided to place vm {} on host {}&quot;</span>,
-                    alloc.id,
-                    <span class="self">self</span>.ctx.lookup_name(<span class="kw-2">*</span>host)
+                <span class="self">self</span>.logger.borrow_mut().log_debug(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
+                    <span class="macro">format!</span>(
+                        <span class="string">&quot;decided to place vm {} on host {}&quot;</span>,
+                        alloc.id,
+                        <span class="self">self</span>.ctx.lookup_name(<span class="kw-2">*</span>host)
+                    ),
                 );
                 <span class="self">self</span>.pool_state.allocate(alloc, <span class="kw-2">*</span>host);
             }
@@ -358,7 +372,9 @@
                 <span class="self">self</span>.sim_config.message_delay,
             );
         } <span class="kw">else </span>{
-            <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;failed to place {} vms&quot;</span>, vm_ids.len());
+            <span class="self">self</span>.logger
+                .borrow_mut()
+                .log_debug(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx, <span class="macro">format!</span>(<span class="string">&quot;failed to place {} vms&quot;</span>, vm_ids.len()));
             <span class="self">self</span>.ctx
                 .emit_self(AllocationRequest { vm_ids }, <span class="self">self</span>.sim_config.allocation_retry_period);
         }

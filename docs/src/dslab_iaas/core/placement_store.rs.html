@@ -204,6 +204,16 @@
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Component managing the authoritative copy of resource pool state.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -214,14 +224,14 @@
 <span class="kw">use </span>dslab_core::context::SimulationContext;
 <span class="kw">use </span>dslab_core::event::Event;
 <span class="kw">use </span>dslab_core::handler::EventHandler;
-<span class="kw">use </span>dslab_core::log_debug;
 
 <span class="kw">use </span><span class="kw">crate</span>::core::common::{Allocation, AllocationVerdict};
-<span class="kw">use </span><span class="kw">crate</span>::core::config::SimulationConfig;
+<span class="kw">use </span><span class="kw">crate</span>::core::config::sim_config::SimulationConfig;
 <span class="kw">use </span><span class="kw">crate</span>::core::events::allocation::{
     AllocationCommitFailed, AllocationCommitRequest, AllocationCommitSucceeded, AllocationFailed, AllocationReleased,
     AllocationRequest, VmCreateRequest,
 };
+<span class="kw">use </span><span class="kw">crate</span>::core::logger::Logger;
 <span class="kw">use </span><span class="kw">crate</span>::core::resource_pool::ResourcePoolState;
 <span class="kw">use </span><span class="kw">crate</span>::core::vm_api::VmAPI;
 
@@ -245,6 +255,7 @@
     schedulers: HashSet&lt;u32&gt;,
     vm_api: Rc&lt;RefCell&lt;VmAPI&gt;&gt;,
     ctx: SimulationContext,
+    logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;,
     sim_config: SimulationConfig,
 }
 
@@ -254,6 +265,7 @@
         allow_vm_overcommit: bool,
         vm_api: Rc&lt;RefCell&lt;VmAPI&gt;&gt;,
         ctx: SimulationContext,
+        logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt;,
         sim_config: SimulationConfig,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -262,6 +274,7 @@
             schedulers: HashSet::new(),
             vm_api,
             ctx,
+            logger,
             sim_config,
         }
     }
@@ -306,11 +319,13 @@
             <span class="kw">if </span><span class="self">self</span>.pool_state.can_allocate(alloc, host_id, <span class="self">self</span>.allow_vm_overcommit) == AllocationVerdict::Success {
                 pool_state_copy.allocate(alloc, host_id);
             } <span class="kw">else </span>{
-                <span class="macro">log_debug!</span>(
-                    <span class="self">self</span>.ctx,
-                    <span class="string">&quot;rejected placement of vm {} on host {} due to insufficient resources&quot;</span>,
-                    alloc.id,
-                    <span class="self">self</span>.ctx.lookup_name(host_id)
+                <span class="self">self</span>.logger.borrow_mut().log_debug(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
+                    <span class="macro">format!</span>(
+                        <span class="string">&quot;rejected placement of vm {} on host {} due to insufficient resources&quot;</span>,
+                        alloc.id,
+                        <span class="self">self</span>.ctx.lookup_name(host_id)
+                    ),
                 );
                 can_be_committed = <span class="bool-val">false</span>;
                 <span class="kw">break</span>;
@@ -321,11 +336,13 @@
         </span><span class="kw">if </span>can_be_committed {
             <span class="kw">for </span>(alloc, <span class="kw-2">&amp;</span>host_id) <span class="kw">in </span>allocations.iter().zip(host_ids.iter()) {
                 <span class="self">self</span>.pool_state.allocate(alloc, host_id);
-                <span class="macro">log_debug!</span>(
-                    <span class="self">self</span>.ctx,
-                    <span class="string">&quot;committed placement of vm {} to host {}&quot;</span>,
-                    alloc.id,
-                    <span class="self">self</span>.ctx.lookup_name(host_id)
+                <span class="self">self</span>.logger.borrow_mut().log_debug(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
+                    <span class="macro">format!</span>(
+                        <span class="string">&quot;committed placement of vm {} to host {}&quot;</span>,
+                        alloc.id,
+                        <span class="self">self</span>.ctx.lookup_name(host_id)
+                    ),
                 );
                 <span class="self">self</span>.ctx.emit(
                     VmCreateRequest { vm_id: alloc.id },
@@ -344,7 +361,10 @@
                 );
             }
         } <span class="kw">else </span>{
-            <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;rejected allocation commit request with {} vms&quot;</span>, vm_ids.len());
+            <span class="self">self</span>.logger.borrow_mut().log_debug(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
+                <span class="macro">format!</span>(<span class="string">&quot;rejected allocation commit request with {} vms&quot;</span>, vm_ids.len()),
+            );
             <span class="kw">if let </span><span class="prelude-val">Some</span>(scheduler) = from_scheduler {
                 <span class="self">self</span>.ctx.emit(
                     AllocationCommitFailed {
