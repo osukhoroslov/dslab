@@ -4,43 +4,30 @@ use serde::{Deserialize, Serialize};
 
 use crate::extensions::dataset_type::VmDatasetType;
 
-/// Auxiliary structure to parse SimulationConfig from file
+/// Holds raw simulation config parsed from YAML file.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct SimulationConfigRaw {
-    /// periodically send statistics from host to monitoring
+struct RawSimulationConfig {
     pub send_stats_period: Option<f64>,
-    /// message trip time from any host to any direction
     pub message_delay: Option<f64>,
-    /// when allocation request fails then wait for this duration
     pub allocation_retry_period: Option<f64>,
-    /// vm initialization duration
     pub vm_start_duration: Option<f64>,
-    /// vm deallocation duration
     pub vm_stop_duration: Option<f64>,
-    /// pack VM by real resource consumption, not SLA
     pub allow_vm_overcommit: Option<bool>,
-    /// currently used to define VM migration duration
     pub network_throughput: Option<u64>,
-    /// length of simulation (for public datasets only)
     pub simulation_length: Option<f64>,
-    /// duration beetween user access the simulation info
     pub step_duration: Option<f64>,
-    /// VM becomes failed after this timeout is reached
     pub vm_allocation_timeout: Option<f64>,
-    /// Dataset of virtual machines
     pub trace: Option<VmDatasetConfig>,
-    /// cloud physical hosts
     pub hosts: Option<Vec<HostConfig>>,
-    /// cloud schedulers
     pub schedulers: Option<Vec<SchedulerConfig>>,
 }
 
-/// Represents virtual machines dataset supported by this framework.
+/// Holds information about the used VM trace dataset.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct VmDatasetConfig {
-    /// dataset type, one of supported by dslab framework
+    /// Dataset type.
     pub r#type: VmDatasetType,
-    /// dataset file path where data is stored
+    /// Dataset path.
     pub path: String,
 }
 
@@ -50,79 +37,77 @@ impl std::fmt::Display for VmDatasetConfig {
     }
 }
 
-/// Represents scheduler(s) configuration.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct SchedulerConfig {
-    /// Scheduler name. Should be set if count = 1
-    pub name: Option<String>,
-    /// Scheduler name prefix. Full name is produced by appending instance number to the prefix.
-    /// Should be set if count > 1
-    pub name_prefix: Option<String>,
-    /// VM placement algorithm for this scheduler
-    pub algorithm: String,
-    /// number of such schedulers
-    pub count: u32,
-}
-
-/// Represents physical host(s) configuration.
+/// Holds configuration of a single physical host or a set of identical hosts.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct HostConfig {
-    /// Host name. Should be set if count = 1
+    /// Host name.
+    /// Should be set if count = 1.
     pub name: Option<String>,
-    /// Host name prefix. Full name is produced by appending instance number to the prefix.
-    /// Should be set if count > 1
+    /// Host name prefix.
+    /// Full name is produced by appending host instance number to the prefix.
+    /// Should be set if count > 1.
     pub name_prefix: Option<String>,
-    /// host CPU capacity
+    /// Host CPU capacity.
     pub cpus: u32,
-    /// host memory capacity
+    /// Host memory capacity in GB.
     pub memory: u64,
-    /// number of such hosts
+    /// Number of such hosts.
     pub count: Option<u32>,
 }
 
+/// Holds configuration of a single scheduler or a set of identically configured schedulers.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct SchedulerConfig {
+    /// Scheduler name.
+    /// Should be set if count = 1.
+    pub name: Option<String>,
+    /// Scheduler name prefix.
+    /// Full name is produced by appending scheduler instance number to the prefix.
+    /// Should be set if count > 1.
+    pub name_prefix: Option<String>,
+    /// VM placement algorithm used by scheduler(s).
+    pub algorithm: String,
+    /// Number of such schedulers.
+    pub count: Option<u32>,
+}
+
+/// Represents simulation configuration.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct SimulationConfig {
-    /// periodically send statistics from host to monitoring
+    /// Period length in seconds for sending statistics from host to monitoring.
     pub send_stats_period: f64,
-    /// message trip time from any host to any direction
+    /// Message delay in seconds for communications via network.
     pub message_delay: f64,
-    /// when allocation request fails then wait for this duration
+    /// Period is seconds for waiting before retrying failed allocation request.
     pub allocation_retry_period: f64,
-    /// vm initialization duration
+    /// VM start duration in seconds.
     pub vm_start_duration: f64,
-    /// vm deallocation duration
+    /// VM stop duration in seconds.
     pub vm_stop_duration: f64,
-    /// pack VM by real resource consumption, not SLA
+    /// Whether to schedule VMs based on real resource utilization instead of allocated resources.
     pub allow_vm_overcommit: bool,
-    /// currently used to define VM migration duration
+    /// Network throughput in GB/s.
+    /// Currently used to compute VM migration duration.
     pub network_throughput: u64,
-    /// length of simulation (for public datasets only)
+    /// Length of simulation in seconds (for public datasets only).
     pub simulation_length: f64,
-    /// duration beetween user access the simulation info
+    /// Duration in seconds between simulation steps.
     pub step_duration: f64,
-    /// VM becomes failed after this timeout is reached
+    /// Timeout in seconds after which unallocated VM becomes failed.
     pub vm_allocation_timeout: f64,
-    /// Dataset of virtual machines
+    /// Used VM trace dataset.
     pub trace: Option<VmDatasetConfig>,
-    /// cloud physical hosts
+    /// Configurations of physical hosts.
     pub hosts: Vec<HostConfig>,
-    /// cloud schedulers
+    /// Configurations of VM schedulers.
     pub schedulers: Vec<SchedulerConfig>,
 }
 
 impl SimulationConfig {
-    /// Returns total hosts count
-    pub fn number_of_hosts(&self) -> u32 {
-        let mut result = 0;
-        for host in self.hosts.clone().into_iter() {
-            result += host.count.unwrap_or(1);
-        }
-        result
-    }
-
-    /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
+    /// Creates simulation config by reading parameter values from YAM file
+    /// (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
-        let raw: SimulationConfigRaw = serde_yaml::from_str(
+        let raw: RawSimulationConfig = serde_yaml::from_str(
             &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
         )
         .unwrap_or_else(|_| panic!("Can't parse YAML from file {}", file_name));

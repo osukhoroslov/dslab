@@ -1,11 +1,11 @@
-//! VM dataset types supported by the crate.
+//! VM dataset types.
 
 use std::str::FromStr;
 
 use log::warn;
 use serde::{Deserialize, Serialize};
 
-/// Represents VM dataset types supported by framework
+/// Holds supported VM dataset types.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum VmDatasetType {
     Azure,
@@ -16,7 +16,7 @@ impl FromStr for VmDatasetType {
     type Err = ();
     fn from_str(input: &str) -> Result<VmDatasetType, Self::Err> {
         if input != "azure" && input != "huawei" {
-            warn!("Cannot parse dataset type, use azure as default");
+            warn!("Cannot parse dataset type, will use azure as default");
         }
         match input {
             "azure" => Ok(VmDatasetType::Azure),

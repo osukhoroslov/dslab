@@ -1,4 +1,4 @@
-/// Simulation logger where log are configured
+/// Logging facilities to record events during simulation.
 use std::fs::File;
 
 use log::Level;
@@ -21,6 +21,7 @@ pub trait Logger {
     fn save_log(&self, _path: &str) -> Result<(), std::io::Error>;
 }
 
+#[derive(Default)]
 pub struct StdoutLogger {}
 
 impl Logger for StdoutLogger {
@@ -55,22 +56,46 @@ impl StdoutLogger {
     }
 }
 
-impl Default for StdoutLogger {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[derive(Serialize)]
-struct LogEntryRow {
+struct LogEntry {
     timestamp: f64,
     component: String,
     message: String,
 }
 
 pub struct FileLogger {
-    log: Vec<LogEntryRow>,
+    log: Vec<LogEntry>,
     level: Level,
+}
+
+impl Default for FileLogger {
+    fn default() -> Self {
+        Self {
+            log: Vec::new(),
+            level: Level::Info,
+        }
+    }
+}
+
+impl FileLogger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_level(level: Level) -> Self {
+        Self { log: Vec::new(), level }
+    }
+
+    fn log_internal(&mut self, ctx: &SimulationContext, message: String, level: Level) {
+        if self.level < level {
+            return;
+        }
+        self.log.push(LogEntry {
+            timestamp: ctx.time(),
+            component: ctx.name().to_string(),
+            message,
+        });
+    }
 }
 
 impl Logger for FileLogger {
@@ -97,42 +122,10 @@ impl Logger for FileLogger {
     fn save_log(&self, path: &str) -> Result<(), std::io::Error> {
         let file = File::create(path)?;
         let mut wtr = csv::Writer::from_writer(file);
-
         for entry in &self.log {
             wtr.serialize(entry)?;
         }
-
         wtr.flush()?;
         Ok(())
-    }
-}
-
-impl FileLogger {
-    pub fn new() -> Self {
-        Self {
-            log: Vec::new(),
-            level: Level::Info,
-        }
-    }
-
-    pub fn with_level(level: Level) -> Self {
-        Self { log: Vec::new(), level }
-    }
-
-    fn log_internal(&mut self, ctx: &SimulationContext, message: String, level: Level) {
-        if self.level < level {
-            return;
-        }
-        self.log.push(LogEntryRow {
-            timestamp: ctx.time(),
-            component: ctx.name().to_string(),
-            message,
-        });
-    }
-}
-
-impl Default for FileLogger {
-    fn default() -> Self {
-        Self::new()
     }
 }

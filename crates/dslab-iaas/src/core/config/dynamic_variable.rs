@@ -20,6 +20,7 @@ pub enum GenericValues<T> {
     Values(Vec<T>),
 }
 
+/// Trait for implementation of dynamic variables holding multiple values.
 pub trait DynVar {
     /// Returns the variable name.
     fn name(&self) -> String;
@@ -37,8 +38,8 @@ pub trait DynVar {
     fn value(&self) -> String;
 }
 
-/// Represents variable experiment alternatives for strings
-/// Can contain single string values and list of values
+/// Generic dynamic variable implementation, which is used
+/// to support multiple parameter values in IaaS experiments.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct GenericDynVar<T: Clone> {
     name: String,

@@ -1,4 +1,4 @@
-//! Dynamic simulation config which produces series of different configs.
+//! Experiment configuration.
 
 use std::cell::RefCell;
 use std::fmt;
@@ -11,9 +11,27 @@ use sugars::{rc, refcell};
 use crate::core::config::dynamic_variable::{DynVar, GenericDynVar, GenericValues, NumericValues};
 use crate::core::config::sim_config::{HostConfig, SchedulerConfig, SimulationConfig, VmDatasetConfig};
 
-/// Represents scheduler(s) configuration.
+/// Holds raw experiment config parsed from YAML file.
 #[derive(Serialize, Deserialize)]
-pub struct SchedulerConfigRaw {
+struct RawExperimentConfig {
+    pub send_stats_period: Option<NumericValues<f64>>,
+    pub message_delay: Option<NumericValues<f64>>,
+    pub allocation_retry_period: Option<NumericValues<f64>>,
+    pub vm_start_duration: Option<NumericValues<f64>>,
+    pub vm_stop_duration: Option<NumericValues<f64>>,
+    pub allow_vm_overcommit: Option<bool>,
+    pub network_throughput: Option<NumericValues<u64>>,
+    pub simulation_length: Option<NumericValues<f64>>,
+    pub step_duration: Option<NumericValues<f64>>,
+    pub vm_allocation_timeout: Option<NumericValues<f64>>,
+    pub trace: Option<GenericValues<VmDatasetConfig>>,
+    pub hosts: Option<Vec<HostConfig>>,
+    pub schedulers: Option<Vec<RawSchedulerConfig>>,
+}
+
+/// Holds raw scheduler config read from YAML file.
+#[derive(Serialize, Deserialize)]
+struct RawSchedulerConfig {
     /// Scheduler name. Should be set if count = 1
     pub name: Option<String>,
     /// Scheduler name prefix. Full name is produced by appending instance number to the prefix.
@@ -25,44 +43,8 @@ pub struct SchedulerConfigRaw {
     pub count: Option<NumericValues<u32>>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ConfigDataRaw {
-    /// periodically send statistics from host to monitoring
-    pub send_stats_period: Option<NumericValues<f64>>,
-    /// message trip time from any host to any direction
-    pub message_delay: Option<NumericValues<f64>>,
-    /// when allocation request fails then wait for this duration
-    pub allocation_retry_period: Option<NumericValues<f64>>,
-    /// vm initialization duration
-    pub vm_start_duration: Option<NumericValues<f64>>,
-    /// vm deallocation duration
-    pub vm_stop_duration: Option<NumericValues<f64>>,
-    /// pack VM by real resource consumption, not SLA
-    pub allow_vm_overcommit: Option<bool>,
-    /// currently used to define VM migration duration
-    pub network_throughput: Option<NumericValues<u64>>,
-    /// length of simulation (for public datasets only)
-    pub simulation_length: Option<NumericValues<f64>>,
-    /// duration between user access the simulation info
-    pub step_duration: Option<NumericValues<f64>>,
-    /// VM becomes failed after this timeout is reached
-    pub vm_allocation_timeout: Option<NumericValues<f64>>,
-    /// Dataset of virtual machines
-    pub trace: Option<GenericValues<VmDatasetConfig>>,
-    /// cloud physical hosts
-    pub hosts: Option<Vec<HostConfig>>,
-    /// cloud schedulers
-    pub schedulers: Option<Vec<SchedulerConfigRaw>>,
-}
-
-#[derive(Debug)]
-struct SchedulerConfigState {
-    pub name: Option<String>,
-    pub name_prefix: Option<String>,
-    pub algorithm: Rc<RefCell<GenericDynVar<String>>>,
-    pub count: Rc<RefCell<GenericDynVar<u32>>>,
-}
-
+/// Internal structure holding the current experiment config state,
+/// corresponding to a single simulation run with the experiment.
 #[derive(Debug)]
 struct ConfigState {
     pub send_stats_period: Rc<RefCell<GenericDynVar<f64>>>,
@@ -80,7 +62,17 @@ struct ConfigState {
     pub schedulers: Vec<SchedulerConfigState>,
 }
 
-/// Represents simulation configuration.
+/// Internal structure holding the current scheduler config state,
+/// including dynamic variables for scheduler algorithm and count.
+#[derive(Debug)]
+struct SchedulerConfigState {
+    pub name: Option<String>,
+    pub name_prefix: Option<String>,
+    pub algorithm: Rc<RefCell<GenericDynVar<String>>>,
+    pub count: Rc<RefCell<GenericDynVar<u32>>>,
+}
+
+/// Represents experiment configuration and allows to obtain configurations of simulation runs.
 pub struct ExperimentConfig {
     current_state: ConfigState,
     dyn_vars: Vec<Rc<RefCell<dyn DynVar>>>,
@@ -88,9 +80,10 @@ pub struct ExperimentConfig {
 }
 
 impl ExperimentConfig {
-    /// Creates simulation config by reading parameter values from .yaml file (uses default values if some parameters are absent).
+    /// Creates experiment config by reading parameter values from YAML file
+    /// (uses default values if some parameters are absent).
     pub fn from_file(file_name: &str) -> Self {
-        let current_state_raw: ConfigDataRaw = serde_yaml::from_str(
+        let current_state_raw: RawExperimentConfig = serde_yaml::from_str(
             &std::fs::read_to_string(file_name).unwrap_or_else(|_| panic!("Can't read file {}", file_name)),
         )
         .unwrap_or_else(|err| panic!("Can't parse YAML from file {}: {}", file_name, err));
@@ -226,8 +219,8 @@ impl ExperimentConfig {
         }
     }
 
-    /// Get current config state for external usage
-    pub fn get(&mut self) -> Option<SimulationConfig> {
+    /// Returns configuration for next simulation run.
+    pub fn get_next_run(&mut self) -> Option<SimulationConfig> {
         if !self.next() {
             return None;
         }
@@ -238,7 +231,7 @@ impl ExperimentConfig {
                 name: scheduler.name.clone(),
                 name_prefix: scheduler.name_prefix.clone(),
                 algorithm: scheduler.algorithm.borrow().value(),
-                count: scheduler.count.borrow().value(),
+                count: Some(scheduler.count.borrow().value()),
             });
         }
 
@@ -264,7 +257,7 @@ impl ExperimentConfig {
         })
     }
 
-    /// Switch to next test case
+    /// Switches to next simulation run.
     fn next(&mut self) -> bool {
         if self.initial_state {
             self.initial_state = false;
@@ -279,13 +272,13 @@ impl ExperimentConfig {
             var.reset();
         }
 
-        // no cases left
+        // no runs left
         false
     }
 }
 
-/// Print experiment current state with dynamic variables values
 impl Debug for ExperimentConfig {
+    /// Prints the current config state with values of dynamic variables.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = f.debug_struct("Experiment state");
         for var in &self.dyn_vars {

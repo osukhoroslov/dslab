@@ -125,14 +125,14 @@ impl CloudSimulation {
 
         // Add schedulers from config
         for scheduler_config in sim.sim_config.schedulers.clone() {
-            let count = scheduler_config.count;
+            let count = scheduler_config.count.unwrap_or(1);
             if count == 1 {
                 let name = scheduler_config.name.unwrap();
                 let alg = placement_algorithm_resolver(scheduler_config.algorithm);
                 sim.add_scheduler(&name, alg);
             } else {
-                let prefix = scheduler_config.name.unwrap();
-                for i in 0..scheduler_config.count {
+                let prefix = scheduler_config.name_prefix.unwrap();
+                for i in 0..scheduler_config.count.unwrap_or(1) {
                     let name = format!("{}{}", prefix, i + 1);
                     let alg = placement_algorithm_resolver(scheduler_config.algorithm.clone());
                     sim.add_scheduler(&name, alg);
@@ -457,7 +457,7 @@ impl CloudSimulation {
         self.sim.time()
     }
 
-    /// Returns the reference to host manager
+    /// Returns the map with references to host managers.
     pub fn hosts(&self) -> BTreeMap<u32, Rc<RefCell<HostManager>>> {
         self.hosts.clone()
     }
@@ -509,53 +509,45 @@ impl CloudSimulation {
         self.sim.lookup_id(name)
     }
 
-    /// Returns average host CPU load among current simulation hosts
+    /// Returns the average CPU load across all hosts.
     pub fn average_cpu_load(&mut self) -> f64 {
         let mut sum_cpu_load = 0.;
-
         let time = self.current_time();
         for host in self.hosts.values() {
-            sum_cpu_load += host.borrow().get_cpu_load(time);
+            sum_cpu_load += host.borrow().cpu_load(time);
         }
-
         sum_cpu_load / (self.hosts.len() as f64)
     }
 
-    /// Returns average host RAM load among current simulation hosts
+    /// Returns the average memory load across all hosts.
     pub fn average_memory_load(&mut self) -> f64 {
         let mut sum_memory_load = 0.;
-
         let time = self.current_time();
         for host in self.hosts.values() {
-            sum_memory_load += host.borrow().get_memory_load(time);
+            sum_memory_load += host.borrow().memory_load(time);
         }
-
         sum_memory_load / (self.hosts.len() as f64)
     }
 
-    /// Returns CPU allocation rate (% of overall CPU used) among current simulation hosts
+    /// Returns the current CPU allocation rate (% of overall CPU used).
     pub fn cpu_allocation_rate(&mut self) -> f64 {
         let mut sum_cpu_allocated = 0.;
         let mut sum_cpu_total = 0.;
-
         for host in self.hosts.values() {
-            sum_cpu_allocated += host.borrow().get_cpu_allocated();
-            sum_cpu_total += host.borrow().get_cpu_capacity() as f64;
+            sum_cpu_allocated += host.borrow().cpu_allocated();
+            sum_cpu_total += host.borrow().cpu_total() as f64;
         }
-
         sum_cpu_allocated / sum_cpu_total
     }
 
-    /// Returns RAM allocation rate (% of overall RAM used) among current simulation hosts
+    /// Returns the current memory allocation rate (% of overall RAM used).
     pub fn memory_allocation_rate(&mut self) -> f64 {
         let mut sum_memory_allocated = 0.;
         let mut sum_memory_total = 0.;
-
         for host in self.hosts.values() {
-            sum_memory_allocated += host.borrow().get_memory_allocated();
-            sum_memory_total += host.borrow().get_memory_capacity() as f64;
+            sum_memory_allocated += host.borrow().memory_allocated();
+            sum_memory_total += host.borrow().memory_total() as f64;
         }
-
         sum_memory_allocated / sum_memory_total
     }
 

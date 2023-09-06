@@ -5,7 +5,7 @@ vm_start_duration: 1
 vm_stop_duration: 1
 allow_vm_overcommit: false
 network_throughput: 10
-simulation_length: 36000
+simulation_length: 3000
 step_duration: 500
 
 #Vms

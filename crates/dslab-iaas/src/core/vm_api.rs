@@ -21,7 +21,7 @@ use crate::core::vm::{VirtualMachine, VmStatus};
 /// location, and provides an access to this information to other components. A user can also query VM API to obtain
 /// the needed VM information.
 pub struct VmAPI {
-    pub vms: HashMap<u32, Rc<RefCell<VirtualMachine>>>,
+    vms: HashMap<u32, Rc<RefCell<VirtualMachine>>>,
     vm_status: HashMap<u32, VmStatus>,
     vm_location: HashMap<u32, u32>,
     vm_counter: u32,
@@ -69,6 +69,11 @@ impl VmAPI {
     /// Returns the reference to VM information by VM ID.
     pub fn get_vm(&self, vm_id: u32) -> Rc<RefCell<VirtualMachine>> {
         self.vms.get(&vm_id).unwrap().clone()
+    }
+
+    /// Returns the total VM count.
+    pub fn get_vm_count(&self) -> usize {
+        self.vms.len()
     }
 
     /// Returns resource allocation for specified VM.

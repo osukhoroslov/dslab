@@ -151,8 +151,8 @@ impl HostManager {
         }
         self.recently_added_vms.push(vm.id);
         self.vms.insert(vm.id);
-        let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(cpu_load);
+        let cpu_load = self.cpu_load(time);
+        let power = self.current_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
@@ -177,24 +177,34 @@ impl HostManager {
         }
         self.vms.remove(&vm.id);
         self.recently_removed_vms.push(vm.id);
-        let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(cpu_load);
+        let cpu_load = self.cpu_load(time);
+        let power = self.current_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
     }
 
+    /// Returns the host CPU capacity.
+    pub fn cpu_total(&self) -> u32 {
+        self.cpu_total
+    }
+
+    /// Returns the host RAM capacity.
+    pub fn memory_total(&self) -> u64 {
+        self.memory_total
+    }
+
     /// Returns the total amount of allocated vCPUs.
-    pub fn get_cpu_allocated(&self) -> f64 {
+    pub fn cpu_allocated(&self) -> f64 {
         self.cpu_allocated as f64
     }
 
     /// Returns the total amount of allocated memory.
-    pub fn get_memory_allocated(&self) -> f64 {
+    pub fn memory_allocated(&self) -> f64 {
         self.memory_allocated as f64
     }
 
     /// Returns the current CPU load (used/total) by summing the resource consumption of all active VMs on this host.
-    pub fn get_cpu_load(&self, time: f64) -> f64 {
+    pub fn cpu_load(&self, time: f64) -> f64 {
         let mut cpu_used = 0.;
         for vm_id in &self.vms {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
@@ -204,7 +214,7 @@ impl HostManager {
     }
 
     /// Returns the current memory load (used/total) by summing the resource consumption of all active VMs on this host.
-    pub fn get_memory_load(&self, time: f64) -> f64 {
+    pub fn memory_load(&self, time: f64) -> f64 {
         let mut memory_used = 0.;
         for vm_id in &self.vms {
             let vm = self.vm_api.borrow().get_vm(*vm_id).borrow().clone();
@@ -213,18 +223,8 @@ impl HostManager {
         memory_used / self.memory_total as f64
     }
 
-    /// Returns host CPU capacity.
-    pub fn get_cpu_capacity(&self) -> u32 {
-        self.cpu_total
-    }
-
-    /// Returns host RAM capacity.
-    pub fn get_memory_capacity(&self) -> u64 {
-        self.memory_total
-    }
-
     /// Returns the current power consumption.
-    pub fn get_power(&self, cpu_load: f64) -> f64 {
+    pub fn current_power(&self, cpu_load: f64) -> f64 {
         // CPU utilization is capped by 100%
         let cpu_util = cpu_load.min(1.);
         self.power_model.get_power(HostState::cpu_util(cpu_util))
@@ -232,15 +232,15 @@ impl HostManager {
 
     /// Returns the total energy consumption.
     pub fn get_energy_consumed(&mut self, time: f64) -> f64 {
-        let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(cpu_load);
+        let cpu_load = self.cpu_load(time);
+        let power = self.current_power(cpu_load);
         self.energy_meter.update(time, power);
         self.energy_meter.energy_consumed()
     }
 
     /// Returns the total SLAV value.
     pub fn get_accumulated_slav(&mut self, time: f64) -> f64 {
-        let cpu_load = self.get_cpu_load(time);
+        let cpu_load = self.cpu_load(time);
         self.slav_metric.update(time, cpu_load);
         self.slav_metric.value()
     }
@@ -378,8 +378,8 @@ impl HostManager {
             .borrow_mut()
             .log_trace(&self.ctx, format!("host #{} sends it`s data to monitoring", self.id));
         let time = self.ctx.time();
-        let cpu_load = self.get_cpu_load(time);
-        let power = self.get_power(cpu_load);
+        let cpu_load = self.cpu_load(time);
+        let power = self.current_power(cpu_load);
         self.energy_meter.update(time, power);
         self.slav_metric.update(time, cpu_load);
 
@@ -387,7 +387,7 @@ impl HostManager {
             HostStateUpdate {
                 host_id: self.id,
                 cpu_load,
-                memory_load: self.get_memory_load(time),
+                memory_load: self.memory_load(time),
                 recently_added_vms: mem::take(&mut self.recently_added_vms),
                 recently_removed_vms: mem::take(&mut self.recently_removed_vms),
             },
