@@ -39,17 +39,21 @@ impl PingMessageNode {
 }
 
 impl Process for PingMessageNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(msg);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String> {
         for peer in &self.peers {
             ctx.send(msg.clone(), peer.clone());
         }
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -64,15 +68,20 @@ impl MiddleNode {
 }
 
 impl Process for MiddleNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         for peer in &self.peers {
             ctx.send(msg.clone(), peer.clone());
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
+    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -91,16 +100,21 @@ impl CollectorNode {
 }
 
 impl Process for CollectorNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         self.cnt += 1;
         if self.cnt == 2 {
             ctx.send(Message::new("COLLECTED", "2"), self.other.clone());
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, _: &mut Context) {}
+    fn on_local_message(&mut self, _: Message, _: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
     fn state(&self) -> Rc<dyn ProcessState> {
         rc!(self.cnt.to_string())
@@ -128,24 +142,27 @@ impl PostponedReceiverNode {
 }
 
 impl Process for PostponedReceiverNode {
-    fn on_message(&mut self, msg: Message, _: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _: String, ctx: &mut Context) -> Result<(), String> {
         if self.timer_fired {
             ctx.send_local(msg);
         } else {
             self.message = Some(msg);
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timeout", 1.0);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _: String, ctx: &mut Context) -> Result<(), String> {
         self.timer_fired = true;
         ctx.send_local(Message::new("TIMER", "timeout"));
         if let Some(msg) = self.message.take() {
             ctx.send_local(msg);
         }
+        Ok(())
     }
 
     fn state(&self) -> Rc<dyn ProcessState> {
@@ -163,16 +180,19 @@ impl Process for PostponedReceiverNode {
 struct DumbReceiverNode {}
 
 impl Process for DumbReceiverNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(msg);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timeout", 1.0);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::new("TIMER", "timeout"));
+        Ok(())
     }
 }
 
@@ -192,15 +212,20 @@ impl SpammerNode {
 }
 
 impl Process for SpammerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) {}
+    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         for i in 0..self.cnt {
             ctx.send(Message::new("MESSAGE".to_string(), i.to_string()), self.other.clone());
         }
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
@@ -209,19 +234,22 @@ struct TimerNode {
 }
 
 impl Process for TimerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         if !self.timer_fired {
             ctx.cancel_timer("timer");
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) -> Result<(), String> {
         self.timer_fired = true;
-        ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()))
+        ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()));
+        Ok(())
     }
 
     fn state(&self) -> Rc<dyn ProcessState> {
@@ -238,18 +266,21 @@ impl Process for TimerNode {
 struct TimerResettingNode {}
 
 impl Process for TimerResettingNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::json("MESSAGE", &ctx.time()));
         ctx.cancel_timer("timer");
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::json("TIMEOUT", &ctx.time()));
+        Ok(())
     }
 }
 
@@ -565,7 +596,9 @@ fn two_states_one_message_ok(#[case] strategy_name: &str, init_method: SystemIni
         }
         SystemInitMethod::PreliminaryCallback => {
             run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                mc_sys
+                    .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+                    .unwrap();
             })
         }
     };
@@ -597,7 +630,9 @@ fn two_states_one_message_pruned(#[case] strategy_name: &str, init_method: Syste
         }
         SystemInitMethod::PreliminaryCallback => {
             run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+                mc_sys
+                    .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+                    .unwrap();
             })
         }
     };
@@ -620,7 +655,9 @@ fn one_message_dropped_without_guarantees(#[case] strategy_name: &str) {
     let strategy_config = build_strategy_config(prune, goal, invariant);
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().set_drop_rate(0.5);
-        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys
+            .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+            .unwrap();
     });
 
     assert!(result.is_ok());
@@ -640,7 +677,9 @@ fn one_message_dropped_with_guarantees(#[case] strategy_name: &str) {
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().set_drop_rate(0.5);
-        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys
+            .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+            .unwrap();
     });
 
     let mut expected_trace = local_message_processed_trace(msg.clone());
@@ -673,7 +712,9 @@ fn one_message_duplicated_without_guarantees(#[case] strategy_name: &str) {
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().set_dupl_rate(0.5);
-        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys
+            .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+            .unwrap();
     });
 
     assert!(result.is_ok());
@@ -704,7 +745,9 @@ fn one_message_duplicated_with_guarantees(#[case] strategy_name: &str) {
     let strategy_config = build_strategy_config(prune, goal, invariant);
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().set_dupl_rate(0.5);
-        mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
+        mc_sys
+            .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+            .unwrap();
     });
 
     let mut expected_trace = local_message_processed_trace(msg.clone());
@@ -745,11 +788,13 @@ fn one_message_corrupted_without_guarantees(#[case] strategy_name: &str) {
 
     let result = run_mc!(build_ping_system(), strategy_config, strategy_name, move |mc_sys| {
         mc_sys.network().set_corrupt_rate(0.5);
-        mc_sys.send_local_message(
-            "node1",
-            "process1",
-            Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"),
-        );
+        mc_sys
+            .send_local_message(
+                "node1",
+                "process1",
+                Message::new("PING", "{\"key1\": \"value1\", \"key2\": 33}"),
+            )
+            .unwrap();
     });
 
     assert!(result.is_ok());
@@ -786,8 +831,12 @@ fn visited_states(#[case] strategy_name: &str, init_method: SystemInitMethod) {
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_2"));
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data_1"))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data_2"))
+                        .unwrap();
                 }
             )
         }
@@ -842,8 +891,12 @@ fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data_1"))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"))
+                        .unwrap();
                 }
             )
         }
@@ -894,8 +947,12 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"));
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data_1"))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", "start_timer"))
+                        .unwrap();
                 }
             )
         }
@@ -932,7 +989,9 @@ fn many_dropped_messages(#[case] strategy_name: &str) {
         strategy_name,
         move |mc_sys| {
             mc_sys.network().drop_outgoing("node1");
-            mc_sys.send_local_message("node1", "process1", Message::new("START", "start spamming!!!"));
+            mc_sys
+                .send_local_message("node1", "process1", Message::new("START", "start spamming!!!"))
+                .unwrap();
         }
     );
     assert!(result.is_ok());
@@ -964,7 +1023,9 @@ fn context_time(#[case] clock_skew: f64, strategy_name: &str, init_method: Syste
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node", "process", Message::new("PING", "some_data"));
+                    mc_sys
+                        .send_local_message("node", "process", Message::new("PING", "some_data"))
+                        .unwrap();
                 }
             )
         }
@@ -1007,7 +1068,9 @@ fn collect_mode(
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", ""))
+                        .unwrap();
                 }
             )
         }
@@ -1028,7 +1091,9 @@ fn collect_mode(
             let mut sys: System = build_postponed_delivery_system();
             sys.send_local_message("process2", Message::new("WAKEUP", ""));
             run_mc!(sys, strategy_config, strategy_name, states, |mc_sys| {
-                mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                mc_sys
+                    .send_local_message("node1", "process1", Message::new("PING", "some_data_1"))
+                    .unwrap();
             })
         }
         SystemInitMethod::PreliminaryCallback => {
@@ -1038,8 +1103,12 @@ fn collect_mode(
                 strategy_name,
                 states,
                 |mc_sys| {
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data_1"));
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", ""))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data_1"))
+                        .unwrap();
                 }
             )
         }
@@ -1081,8 +1150,12 @@ fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", ""))
+                        .unwrap();
                 }
             )
         }
@@ -1130,8 +1203,12 @@ fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
                 strategy_config,
                 strategy_name,
                 move |mc_sys| {
-                    mc_sys.send_local_message("node1", "process1", Message::new("PING", "some_data"));
-                    mc_sys.send_local_message("node2", "process2", Message::new("WAKEUP", ""));
+                    mc_sys
+                        .send_local_message("node1", "process1", Message::new("PING", "some_data"))
+                        .unwrap();
+                    mc_sys
+                        .send_local_message("node2", "process2", Message::new("WAKEUP", ""))
+                        .unwrap();
                 }
             )
         }
@@ -1187,7 +1264,9 @@ fn permanent_net_problem(#[case] strategy_name: &str, net_problem: NetworkProble
                         NetworkProblem::DropIncoming => mc_sys.network().drop_incoming("node2"),
                         NetworkProblem::DisableLink => mc_sys.network().disable_link("node1", "node3"),
                     }
-                    mc_sys.send_local_message("node0", "process0", Message::new("PING", "some_data"));
+                    mc_sys
+                        .send_local_message("node0", "process0", Message::new("PING", "some_data"))
+                        .unwrap();
                 }
             )
         }

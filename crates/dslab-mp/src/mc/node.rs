@@ -113,7 +113,11 @@ impl McNode {
         proc_entry.received_message_count += 1;
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
+
+        if let Err(e) = proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx) {
+            return vec![McEvent::ProcessError { err: e }];
+        }
+
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
@@ -123,7 +127,11 @@ impl McNode {
         proc_entry.pending_timers.remove(&timer);
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
+
+        if let Err(e) = proc_entry.proc_impl.on_timer(timer, &mut proc_ctx) {
+            return vec![McEvent::ProcessError { err: e }];
+        }
+
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
@@ -137,7 +145,11 @@ impl McNode {
         assert!(!self.is_crashed, "should not receive local message on crashed node");
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
+
+        if let Err(e) = proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx) {
+            return vec![McEvent::ProcessError { err: e }];
+        }
+
         self.handle_process_actions(proc, time, proc_ctx.actions())
     }
 

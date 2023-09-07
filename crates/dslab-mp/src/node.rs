@@ -205,7 +205,13 @@ impl Node {
             ProcessEvent::LocalMessageReceived { msg: msg.clone() },
         ));
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_local_message(msg, &mut proc_ctx)
+            .map_err(log_error)
+            .unwrap();
+
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
 
@@ -232,7 +238,13 @@ impl Node {
         ));
         proc_entry.received_message_count += 1;
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_message(msg, from, &mut proc_ctx)
+            .map_err(log_error)
+            .unwrap();
+
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
         }
@@ -253,7 +265,13 @@ impl Node {
             });
         }
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_timer(timer, &mut proc_ctx)
+            .map_err(log_error)
+            .unwrap();
+
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
         }
@@ -359,4 +377,11 @@ impl EventHandler for Node {
             }
         })
     }
+}
+
+fn log_error(e: String) -> String {
+    eprintln!("\n!!! Error in process code:\n");
+    eprintln!("{}", e);
+    eprintln!();
+    e
 }

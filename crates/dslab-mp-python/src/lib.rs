@@ -115,8 +115,8 @@ impl PyProcess {
 }
 
 impl Process for PyProcess {
-    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
-        Python::with_gil(|py| {
+    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) -> Result<(), String> {
+        Python::with_gil(|py| -> Result<(), String> {
             let py_msg = self
                 .msg_class
                 .call_method1(py, "from_json", (msg.tip, msg.data))
@@ -124,15 +124,15 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_message", (py_msg, from, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| e.to_string())?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
-        Python::with_gil(|py| {
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String> {
+        Python::with_gil(|py| -> Result<(), String> {
             let py_msg = self
                 .msg_class
                 .call_method1(py, "from_json", (msg.tip, msg.data))
@@ -140,23 +140,23 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_local_message", (py_msg, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| e.to_string())?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
-    fn on_timer(&mut self, timer: String, ctx: &mut Context) {
-        Python::with_gil(|py| {
+    fn on_timer(&mut self, timer: String, ctx: &mut Context) -> Result<(), String> {
+        Python::with_gil(|py| -> Result<(), String> {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_timer", (timer, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| e.to_string())?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
     fn max_size(&mut self) -> u64 {

@@ -36,13 +36,13 @@ pub type StringProcessState = String;
 
 pub trait Process: DynClone {
     /// Called when a message is received.
-    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
+    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) -> Result<(), String>;
 
     /// Called when a _local_ message is received.
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context);
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String>;
 
     /// Called when a timer fires.
-    fn on_timer(&mut self, timer: String, ctx: &mut Context);
+    fn on_timer(&mut self, timer: String, ctx: &mut Context) -> Result<(), String>;
 
     /// Returns the maximum size of process inner data observed so far.
     fn max_size(&mut self) -> u64 {

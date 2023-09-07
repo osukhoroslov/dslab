@@ -262,6 +262,9 @@ pub enum LogEntry {
     McNodeCrashed {
         node: String,
     },
+    ProcessError {
+        err: String,
+    },
 }
 
 impl LogEntry {
@@ -424,6 +427,9 @@ impl LogEntry {
             }
             LogEntry::McNodeCrashed { node } => {
                 t!(format!("node crashed: {}", node).red());
+            }
+            LogEntry::ProcessError { err } => {
+                t!(format!("{}", err).red());
             }
         }
     }

@@ -260,7 +260,7 @@ pub trait Strategy {
 
         self.debug_log(&event, system.depth());
 
-        system.apply_event(event);
+        system.apply_event(event)?;
 
         let new_state = system.get_state();
         if !self.have_visited(&new_state) {
@@ -363,6 +363,7 @@ pub trait Strategy {
                     )
                     .blue());
                 }
+                _ => {}
             }
         }
     }
