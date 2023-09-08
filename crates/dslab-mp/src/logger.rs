@@ -429,7 +429,7 @@ impl LogEntry {
                 t!(format!("node crashed: {}", node).red());
             }
             LogEntry::ProcessError { err } => {
-                t!(format!("{}", err).red());
+                t!(err.red());
             }
         }
     }
