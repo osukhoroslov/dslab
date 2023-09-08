@@ -145,21 +145,54 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Resource model.
+//!
+//! The simulator considers all resources to be renewable and all resources except CPU to be strictly isolated among containers.
+</span><span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">use </span><span class="kw">crate</span>::util::{VecMap, VecMapIterator};
 
-<span class="attr">#[derive(Default)]
+<span class="doccomment">/// Transforms resource name to resource id in current simulation.
+</span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>ResourceNameResolver {
     map: HashMap&lt;String, usize&gt;,
 }
 
 <span class="kw">impl </span>ResourceNameResolver {
-    <span class="kw">pub fn </span>try_resolve(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="doccomment">/// Transforms name to id if this resource exists.
+    </span><span class="kw">pub fn </span>try_resolve(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
         <span class="self">self</span>.map.get(name).copied()
     }
 
-    <span class="kw">pub fn </span>resolve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; usize {
+    <span class="doccomment">/// Same as [`Self::try_resolve`], but creates new resource if it doesn&#39;t exist.
+    </span><span class="kw">pub fn </span>resolve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; usize {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.try_resolve(name) {
             id
         } <span class="kw">else </span>{
@@ -170,7 +203,8 @@
     }
 }
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// A simple strictly isolated renewable resource.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Resource {
     id: usize,
     available: u64,
@@ -178,7 +212,8 @@
 }
 
 <span class="kw">impl </span>Resource {
-    <span class="kw">pub fn </span>new(id: usize, available: u64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new resource.
+    </span><span class="kw">pub fn </span>new(id: usize, available: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             id,
             available,
@@ -186,45 +221,55 @@
         }
     }
 
-    <span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) -&gt; bool {
+    <span class="doccomment">/// Checks whether it is possible to allocate given amount of resource.
+    </span><span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) -&gt; bool {
         <span class="kw">if </span>req.quantity + <span class="self">self</span>.consumed &lt;= <span class="self">self</span>.available {
             <span class="kw">return </span><span class="bool-val">true</span>;
         }
         <span class="bool-val">false
     </span>}
 
-    <span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) {
+    <span class="doccomment">/// Allocates free resource.
+    </span><span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) {
         <span class="self">self</span>.consumed += req.quantity;
     }
 
-    <span class="kw">pub fn </span>release(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) {
+    <span class="doccomment">/// Releases allocated resource.
+    </span><span class="kw">pub fn </span>release(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;</span>ResourceRequirement) {
         <span class="self">self</span>.consumed -= req.quantity;
     }
 
-    <span class="kw">pub fn </span>get_available(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="doccomment">/// Returns amount of free resource.
+    </span><span class="kw">pub fn </span>get_available(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.available
     }
 }
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// Requirement for allocating specified amount of a resource.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ResourceRequirement {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>quantity: u64,
+    <span class="doccomment">/// Resource id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Required resource quantity.
+    </span><span class="kw">pub </span>quantity: u64,
 }
 
 <span class="kw">impl </span>ResourceRequirement {
-    <span class="kw">pub fn </span>new(id: usize, quantity: u64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ResourceRequirement.
+    </span><span class="kw">pub fn </span>new(id: usize, quantity: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ id, quantity }
     }
 }
 
-<span class="attr">#[derive(Clone, Default)]
+<span class="doccomment">/// A model of a host or other entity that provides several resources to the consumers.
+</span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>ResourceProvider {
     resources: VecMap&lt;Resource&gt;,
 }
 
 <span class="kw">impl </span>ResourceProvider {
-    <span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;Resource&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ResourceProvider.
+    </span><span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;Resource&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::default();
         <span class="kw">for </span>r <span class="kw">in </span>resources.drain(..) {
             map.insert(r.id, r);
@@ -232,13 +277,15 @@
         <span class="self">Self </span>{ resources: map }
     }
 
-    <span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ResourceProvider without resources.
+    </span><span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             resources: Default::default(),
         }
     }
 
-    <span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) -&gt; bool {
+    <span class="doccomment">/// Checks whether it is possible to allocate resources required by the consumer.
+    </span><span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) -&gt; bool {
         <span class="kw">for </span>(id, req) <span class="kw">in </span>consumer.iter() {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = <span class="self">self</span>.resources.get(id) {
                 <span class="kw">if </span>!resource.can_allocate(req) {
@@ -251,30 +298,35 @@
         <span class="bool-val">true
     </span>}
 
-    <span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) {
+    <span class="doccomment">/// Allocates resources required by the consumer.
+    </span><span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) {
         <span class="kw">for </span>(id, req) <span class="kw">in </span>consumer.iter() {
             <span class="self">self</span>.resources.get_mut(id).unwrap().allocate(req);
         }
     }
 
-    <span class="kw">pub fn </span>release(<span class="kw-2">&amp;mut </span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) {
+    <span class="doccomment">/// Releases resources allocated by the consumer.
+    </span><span class="kw">pub fn </span>release(<span class="kw-2">&amp;mut </span><span class="self">self</span>, consumer: <span class="kw-2">&amp;</span>ResourceConsumer) {
         <span class="kw">for </span>(id, req) <span class="kw">in </span>consumer.iter() {
             <span class="self">self</span>.resources.get_mut(id).unwrap().release(req);
         }
     }
 
-    <span class="kw">pub fn </span>get_resource(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Resource&gt; {
+    <span class="doccomment">/// Returns reference to a resource specified by `id` if it exists.
+    </span><span class="kw">pub fn </span>get_resource(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Resource&gt; {
         <span class="self">self</span>.resources.get(id)
     }
 }
 
-<span class="attr">#[derive(Clone, Default)]
+<span class="doccomment">/// A model of a container or other entity that consumes resources offered by the provider.
+</span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>ResourceConsumer {
     resources: VecMap&lt;ResourceRequirement&gt;,
 }
 
 <span class="kw">impl </span>ResourceConsumer {
-    <span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;ResourceRequirement&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ResourceConsumer.
+    </span><span class="kw">pub fn </span>new(<span class="kw-2">mut </span>resources: Vec&lt;ResourceRequirement&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::default();
         <span class="kw">for </span>r <span class="kw">in </span>resources.drain(..) {
             map.insert(r.id, r);
@@ -282,13 +334,15 @@
         <span class="self">Self </span>{ resources: map }
     }
 
-    <span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ResourceConsumer without resources.
+    </span><span class="kw">pub fn </span>new_empty() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             resources: Default::default(),
         }
     }
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VecMapIterator&lt;ResourceRequirement&gt; {
+    <span class="doccomment">/// Iterates over resource requirements of the consumer.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VecMapIterator&lt;ResourceRequirement&gt; {
         <span class="self">self</span>.resources.iter()
     }
 }

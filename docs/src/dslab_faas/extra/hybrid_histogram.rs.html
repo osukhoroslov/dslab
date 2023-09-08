@@ -242,8 +242,9 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// This file contains the implementation of hybrid histogram policy from
-/// https://www.usenix.org/conference/atc20/presentation/shahrad
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Coldstart policy implementation from &quot;Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider&quot; paper.
 </span><span class="kw">use </span>std::collections::hash_map::Entry;
 <span class="kw">use </span>std::collections::HashMap;
 
@@ -354,7 +355,8 @@
     }
 }
 
-<span class="kw">pub struct </span>HybridHistogramPolicy {
+<span class="doccomment">/// Refer to &lt;https://www.usenix.org/conference/atc20/presentation/shahrad&gt;.
+</span><span class="kw">pub struct </span>HybridHistogramPolicy {
     range: f64,
     arima_margin: f64,
     hist_margin: f64,
@@ -374,7 +376,8 @@
 }
 
 <span class="kw">impl </span>HybridHistogramPolicy {
-    <span class="kw">pub fn </span>new(range: f64, bin_len: f64, cv_thr: f64, oob_thr: f64, arima_margin: f64, hist_margin: f64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new HybridHistogramPolicy.
+    </span><span class="kw">pub fn </span>new(range: f64, bin_len: f64, cv_thr: f64, oob_thr: f64, arima_margin: f64, hist_margin: f64) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>n_bins = (range / bin_len).round() <span class="kw">as </span>usize;
         <span class="self">Self </span>{
             range,
@@ -390,7 +393,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates policy from a map of strings containing policy parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>range = options.get(<span class="string">&quot;range&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
         <span class="kw">let </span>bin_len = options
             .get(<span class="string">&quot;bin_len&quot;</span>)

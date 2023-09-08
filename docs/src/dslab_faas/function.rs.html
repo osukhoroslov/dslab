@@ -102,12 +102,31 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::resource::ResourceConsumer;
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Function and application models.
+</span><span class="kw">use </span><span class="kw">crate</span>::resource::ResourceConsumer;
 
 <span class="doccomment">/// An application shares a common container image.
-/// Functions from the same application can be executed on the same container (limited by concurrent_invocations field).
+/// Functions from the same application can be executed on the same container (limited by `concurrent_invocations` field).
 </span><span class="kw">pub struct </span>Application {
-    <span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Application id.
+    </span><span class="kw">pub </span>id: usize,
     concurrent_invocations: usize,
     container_deployment_time: f64,
     container_cpu_share: f64,
@@ -115,7 +134,8 @@
 }
 
 <span class="kw">impl </span>Application {
-    <span class="kw">pub fn </span>new(
+    <span class="doccomment">/// Creates new application.
+    </span><span class="kw">pub fn </span>new(
         concurrent_invocations: usize,
         container_deployment_time: f64,
         container_cpu_share: f64,
@@ -130,41 +150,50 @@
         }
     }
 
-    <span class="kw">pub fn </span>get_concurrent_invocations(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="doccomment">/// Returns maximum possible number of invocations that can be run simultaneously on one container of this application.
+    </span><span class="kw">pub fn </span>get_concurrent_invocations(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.concurrent_invocations
     }
 
-    <span class="kw">pub fn </span>get_deployment_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the time needed to deploy one container of this application.
+    </span><span class="kw">pub fn </span>get_deployment_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.container_deployment_time
     }
 
-    <span class="kw">pub fn </span>get_cpu_share(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns CPU share required by containers of this application.
+    </span><span class="kw">pub fn </span>get_cpu_share(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.container_cpu_share
     }
 
-    <span class="kw">pub fn </span>get_resources(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ResourceConsumer {
+    <span class="doccomment">/// Returns resources required by containers of this application.
+    </span><span class="kw">pub fn </span>get_resources(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ResourceConsumer {
         <span class="kw-2">&amp;</span><span class="self">self</span>.container_resources
     }
 }
 
-<span class="kw">pub struct </span>Function {
-    <span class="kw">pub </span>app_id: usize,
+<span class="doccomment">/// A single function of an application.
+</span><span class="kw">pub struct </span>Function {
+    <span class="doccomment">/// Application id.
+    </span><span class="kw">pub </span>app_id: usize,
 }
 
 <span class="kw">impl </span>Function {
-    <span class="kw">pub fn </span>new(app_id: usize) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new function.
+    </span><span class="kw">pub fn </span>new(app_id: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ app_id }
     }
 }
 
-<span class="attr">#[derive(Default)]
+<span class="doccomment">/// Stores information about apps and functions.
+</span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>FunctionRegistry {
     apps: Vec&lt;Application&gt;,
     functions: Vec&lt;Function&gt;,
 }
 
 <span class="kw">impl </span>FunctionRegistry {
-    <span class="kw">pub fn </span>get_function(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Function&gt; {
+    <span class="doccomment">/// Returns a reference to a [`Function`] by its `id`.
+    </span><span class="kw">pub fn </span>get_function(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Function&gt; {
         <span class="kw">if </span>id &lt; <span class="self">self</span>.functions.len() {
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.functions[id])
         } <span class="kw">else </span>{
@@ -172,7 +201,8 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>get_app(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Application&gt; {
+    <span class="doccomment">/// Returns a reference to an [`Application`] by its `id`.
+    </span><span class="kw">pub fn </span>get_app(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Application&gt; {
         <span class="kw">if </span>id &lt; <span class="self">self</span>.apps.len() {
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.apps[id])
         } <span class="kw">else </span>{
@@ -180,7 +210,8 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>get_app_by_function(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Application&gt; {
+    <span class="doccomment">/// Returns a reference to an [`Application`] that owns a [`Function`] specified by `id`.
+    </span><span class="kw">pub fn </span>get_app_by_function(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Application&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(func) = <span class="self">self</span>.get_function(id) {
             <span class="self">self</span>.get_app(func.app_id)
         } <span class="kw">else </span>{
@@ -188,18 +219,21 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>add_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: Function) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`Function`] and returns its `id`.
+    </span><span class="kw">pub fn </span>add_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: Function) -&gt; usize {
         <span class="kw">let </span>id = <span class="self">self</span>.functions.len();
         <span class="self">self</span>.functions.push(f);
         id
     }
 
-    <span class="kw">pub fn </span>add_app_with_single_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, a: Application) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`Application`] consisting of a single [`Function`] and returns its `id`.
+    </span><span class="kw">pub fn </span>add_app_with_single_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, a: Application) -&gt; usize {
         <span class="kw">let </span>app_id = <span class="self">self</span>.add_app(a);
         <span class="self">self</span>.add_function(Function::new(app_id))
     }
 
-    <span class="kw">pub fn </span>add_app(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>a: Application) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`Application`] and returns its `id`. Note: the application is created without any functions, they must be added separately.
+    </span><span class="kw">pub fn </span>add_app(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>a: Application) -&gt; usize {
         <span class="kw">let </span>id = <span class="self">self</span>.apps.len();
         a.id = id;
         <span class="self">self</span>.apps.push(a);

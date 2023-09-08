@@ -19,7 +19,9 @@
 <a href="#19" id="19">19</a>
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
-</pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::type_complexity)]
+<a href="#22" id="22">22</a>
+</pre></div><pre class="rust"><code><span class="attr">#![warn(missing_docs)]
+#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../readme.md&quot;</span>)]
 
 </span><span class="kw">pub mod </span>coldstart;
 <span class="kw">pub mod </span>config;

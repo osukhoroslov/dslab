@@ -87,7 +87,14 @@
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Platform controller.
+
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -103,7 +110,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::Scheduler;
 <span class="kw">use </span><span class="kw">crate</span>::stats::Stats;
 
-<span class="kw">pub struct </span>Controller {
+<span class="doccomment">/// Responsible for handling incoming invocation requests and deploying prewarmed containers.
+</span><span class="kw">pub struct </span>Controller {
     function_registry: Rc&lt;RefCell&lt;FunctionRegistry&gt;&gt;,
     hosts: Vec&lt;Rc&lt;RefCell&lt;Host&gt;&gt;&gt;,
     idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
@@ -112,7 +120,8 @@
 }
 
 <span class="kw">impl </span>Controller {
-    <span class="kw">pub fn </span>new(
+    <span class="doccomment">/// Creates new controller.
+    </span><span class="kw">pub fn </span>new(
         function_registry: Rc&lt;RefCell&lt;FunctionRegistry&gt;&gt;,
         idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
         scheduler: Box&lt;<span class="kw">dyn </span>Scheduler&gt;,
@@ -147,7 +156,8 @@
         <span class="self">self</span>.hosts[host].borrow_mut().invoke(id, time)
     }
 
-    <span class="kw">pub fn </span>add_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, host: Rc&lt;RefCell&lt;Host&gt;&gt;) {
+    <span class="doccomment">/// Registers a new host in the controller.
+    </span><span class="kw">pub fn </span>add_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, host: Rc&lt;RefCell&lt;Host&gt;&gt;) {
         <span class="self">self</span>.hosts.push(host);
     }
 

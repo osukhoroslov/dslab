@@ -59,18 +59,41 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cmp::Ordering;
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Workload trace trait.
+</span><span class="kw">use </span>std::cmp::Ordering;
 
-<span class="attr">#[derive(Default, Clone)]
+<span class="doccomment">/// Raw application data.
+</span><span class="attr">#[derive(Default, Clone)]
 </span><span class="kw">pub struct </span>ApplicationData {
-    <span class="kw">pub </span>concurrent_invocations: usize,
-    <span class="kw">pub </span>container_deployment_time: f64,
-    <span class="kw">pub </span>container_cpu_share: f64,
-    <span class="kw">pub </span>container_resources: Vec&lt;(String, u64)&gt;,
+    <span class="doccomment">/// Maximum number of invocations that can run simultaneously on one container of this application.
+    </span><span class="kw">pub </span>concurrent_invocations: usize,
+    <span class="doccomment">/// Time needed to deploy one container of this application.
+    </span><span class="kw">pub </span>container_deployment_time: f64,
+    <span class="doccomment">/// CPU share required by containers of this application.
+    </span><span class="kw">pub </span>container_cpu_share: f64,
+    <span class="doccomment">/// Host resources required by containers of this application.
+    </span><span class="kw">pub </span>container_resources: Vec&lt;(String, u64)&gt;,
 }
 
 <span class="kw">impl </span>ApplicationData {
-    <span class="kw">pub fn </span>new(
+    <span class="doccomment">/// Creates new ApplicationData.
+    </span><span class="kw">pub fn </span>new(
         concurrent_invocations: usize,
         container_deployment_time: f64,
         container_cpu_share: f64,
@@ -85,11 +108,15 @@
     }
 }
 
-<span class="attr">#[derive(Default, Clone, Copy)]
+<span class="doccomment">/// Raw invocation request data.
+</span><span class="attr">#[derive(Default, Clone, Copy)]
 </span><span class="kw">pub struct </span>RequestData {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>duration: f64,
-    <span class="kw">pub </span>time: f64,
+    <span class="doccomment">/// Function id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Invocation duration.
+    </span><span class="kw">pub </span>duration: f64,
+    <span class="doccomment">/// Request arrival time.
+    </span><span class="kw">pub </span>time: f64,
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>RequestData {
@@ -112,12 +139,17 @@
     }
 }
 
-<span class="kw">pub trait </span>Trace {
-    <span class="kw">fn </span>app_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = ApplicationData&gt; + <span class="lifetime">&#39;_</span>&gt;;
-    <span class="kw">fn </span>request_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = RequestData&gt; + <span class="lifetime">&#39;_</span>&gt;;
-    <span class="kw">fn </span>function_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = usize&gt; + <span class="lifetime">&#39;_</span>&gt;;
+<span class="doccomment">/// Workload trace.
+</span><span class="kw">pub trait </span>Trace {
+    <span class="doccomment">/// Returns an iterator over the applications.
+    </span><span class="kw">fn </span>app_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = ApplicationData&gt; + <span class="lifetime">&#39;_</span>&gt;;
+    <span class="doccomment">/// Returns an iterator over the invocation requests.
+    </span><span class="kw">fn </span>request_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = RequestData&gt; + <span class="lifetime">&#39;_</span>&gt;;
+    <span class="doccomment">/// Returns an iterator over the functions.
+    </span><span class="kw">fn </span>function_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = usize&gt; + <span class="lifetime">&#39;_</span>&gt;;
     <span class="doccomment">/// Indicates whether the requests produced by `request_iter` are ordered in non-decreasing order of their time.
     </span><span class="kw">fn </span>is_ordered_by_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool;
-    <span class="kw">fn </span>simulation_end(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt;;
+    <span class="doccomment">/// Optionally returns simulation end time.
+    </span><span class="kw">fn </span>simulation_end(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt;;
 }
 </code></pre></div></section></main></body></html>

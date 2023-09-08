@@ -180,7 +180,24 @@
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::hash::BuildHasherDefault;
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Various utility structs.
+</span><span class="kw">use </span>std::hash::BuildHasherDefault;
 <span class="kw">use </span>std::ops::{Index, IndexMut};
 
 <span class="kw">use </span>indexmap::{IndexMap, IndexSet};
@@ -188,17 +205,20 @@
 <span class="kw">use </span>serde::ser::{SerializeSeq, Serializer};
 <span class="kw">use </span>serde::Serialize;
 
-<span class="attr">#[derive(Default)]
+<span class="doccomment">/// A simple incrementing counter.
+</span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>Counter {
     value: usize,
 }
 
 <span class="kw">impl </span>Counter {
-    <span class="kw">pub fn </span>curr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="doccomment">/// Returns current counter value.
+    </span><span class="kw">pub fn </span>curr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.value
     }
 
-    <span class="kw">pub fn </span>increment(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; usize {
+    <span class="doccomment">/// Post-increments the counter.
+    </span><span class="kw">pub fn </span>increment(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; usize {
         <span class="kw">let </span>curr = <span class="self">self</span>.value;
         <span class="self">self</span>.value += <span class="number">1</span>;
         curr
@@ -219,14 +239,16 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; VecMap&lt;T&gt; {
-    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, value: T) {
+    <span class="doccomment">/// Inserts a new value into the map.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, value: T) {
         <span class="kw">while </span><span class="self">self</span>.data.len() &lt;= id {
             <span class="self">self</span>.data.push(<span class="prelude-val">None</span>);
         }
         <span class="self">self</span>.data[id] = <span class="prelude-val">Some</span>(value);
     }
 
-    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
+    <span class="doccomment">/// Returns a reference to the value specified by id if exists.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
         <span class="kw">if </span>id &lt; <span class="self">self</span>.data.len() {
             <span class="self">self</span>.data[id].as_ref()
         } <span class="kw">else </span>{
@@ -234,7 +256,8 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
+    <span class="doccomment">/// Returns a mutable reference to the value specified by id if exists.
+    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
         <span class="kw">if </span>id &lt; <span class="self">self</span>.data.len() {
             <span class="self">self</span>.data[id].as_mut()
         } <span class="kw">else </span>{
@@ -242,17 +265,20 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VecMapIterator&lt;<span class="lifetime">&#39;_</span>, T&gt; {
+    <span class="doccomment">/// Returns (key, value) pairs iterator.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VecMapIterator&lt;<span class="lifetime">&#39;_</span>, T&gt; {
         VecMapIterator::new(<span class="self">self</span>.data.iter().enumerate())
     }
 }
 
-<span class="kw">pub struct </span>VecMapIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="doccomment">/// Iterator over [`VecMap`] (key, value) pairs.
+</span><span class="kw">pub struct </span>VecMapIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     inner: std::iter::Enumerate&lt;std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; VecMapIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">pub fn </span>new(inner: std::iter::Enumerate&lt;std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new VecMapIterator.
+    </span><span class="kw">pub fn </span>new(inner: std::iter::Enumerate&lt;std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ inner }
     }
 }
@@ -284,7 +310,7 @@
     }
 }
 
-<span class="doccomment">/// Similar to VecMap, but returns the default value instead of None and auto-extends to keys in
+<span class="doccomment">/// Similar to [`VecMap`], but returns the default value instead of None and auto-extends to keys in
 /// `get_mut` query.
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>DefaultVecMap&lt;T: Default&gt; {
@@ -301,12 +327,14 @@
         }
     }
 
-    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, value: T) {
+    <span class="doccomment">/// Inserts a new value into the map.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, value: T) {
         <span class="self">self</span>.extend(id);
         <span class="self">self</span>.data[id] = value;
     }
 
-    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
+    <span class="doccomment">/// Returns a reference to the value speficied by id if exists.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
         <span class="kw">if </span>id &lt; <span class="self">self</span>.data.len() {
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.data[id])
         } <span class="kw">else </span>{
@@ -314,12 +342,14 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="kw-2">&amp;mut </span>T {
+    <span class="doccomment">/// Returns a mutable reference to the value speficied by id if exists.
+    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="kw-2">&amp;mut </span>T {
         <span class="self">self</span>.extend(id);
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.data[id]
     }
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::slice::Iter&lt;<span class="lifetime">&#39;_</span>, T&gt; {
+    <span class="doccomment">/// Returns an iterator over map values. To iterate over (key, value) pairs call enumerate() on the iterator.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::slice::Iter&lt;<span class="lifetime">&#39;_</span>, T&gt; {
         <span class="self">self</span>.data.iter()
     }
 }
@@ -360,6 +390,8 @@
     }
 }
 
-<span class="kw">pub type </span>FxIndexMap&lt;K, V&gt; = IndexMap&lt;K, V, BuildHasherDefault&lt;FxHasher&gt;&gt;;
-<span class="kw">pub type </span>FxIndexSet&lt;K&gt; = IndexSet&lt;K, BuildHasherDefault&lt;FxHasher&gt;&gt;;
+<span class="doccomment">/// IndexMap with faster hash function.
+</span><span class="kw">pub type </span>FxIndexMap&lt;K, V&gt; = IndexMap&lt;K, V, BuildHasherDefault&lt;FxHasher&gt;&gt;;
+<span class="doccomment">/// IndexSet with faster hash function.
+</span><span class="kw">pub type </span>FxIndexSet&lt;K&gt; = IndexSet&lt;K, BuildHasherDefault&lt;FxHasher&gt;&gt;;
 </code></pre></div></section></main></body></html>

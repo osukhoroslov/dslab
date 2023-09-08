@@ -201,7 +201,31 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::fs::read_dir;
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! OpenDC FaaS trace format parser.
+</span><span class="kw">use </span>std::fs::read_dir;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::str::FromStr;
 
@@ -209,25 +233,40 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::trace::{ApplicationData, RequestData, Trace};
 
-<span class="attr">#[derive(Default, Copy, Clone)]
+<span class="doccomment">/// One sample from OpenDC trace.
+</span><span class="attr">#[derive(Default, Copy, Clone)]
 </span><span class="kw">pub struct </span>FunctionSample {
-    <span class="kw">pub </span>time: u64,
-    <span class="kw">pub </span>invocations: usize,
-    <span class="kw">pub </span>exec: u32,
-    <span class="kw">pub </span>cpu_provisioned: usize,
-    <span class="kw">pub </span>mem_provisioned: usize,
-    <span class="kw">pub </span>cpu_used: usize,
-    <span class="kw">pub </span>mem_used: usize,
+    <span class="doccomment">/// Timestamp.
+    </span><span class="kw">pub </span>time: u64,
+    <span class="doccomment">/// Number of invocations at this timestamp.
+    </span><span class="kw">pub </span>invocations: usize,
+    <span class="doccomment">/// Execution time.
+    </span><span class="kw">pub </span>exec: u32,
+    <span class="doccomment">/// Provisioned CPU.
+    </span><span class="kw">pub </span>cpu_provisioned: usize,
+    <span class="doccomment">/// Provisioned memory.
+    </span><span class="kw">pub </span>mem_provisioned: usize,
+    <span class="doccomment">/// Used CPU.
+    </span><span class="kw">pub </span>cpu_used: usize,
+    <span class="doccomment">/// Used memory.
+    </span><span class="kw">pub </span>mem_used: usize,
 }
 
-<span class="kw">pub type </span>FunctionTrace = Vec&lt;FunctionSample&gt;;
+<span class="doccomment">/// A trace of samples for a function.
+</span><span class="kw">pub type </span>FunctionTrace = Vec&lt;FunctionSample&gt;;
 
-<span class="kw">pub struct </span>OpenDCTrace {
-    <span class="kw">pub </span>funcs: Vec&lt;FunctionTrace&gt;,
-    <span class="kw">pub </span>concurrency_level: usize,
-    <span class="kw">pub </span>cold_start: f64,
-    <span class="kw">pub </span>memory_name: String,
-    <span class="kw">pub </span>sim_end: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+<span class="doccomment">/// OpenDC trace.
+</span><span class="kw">pub struct </span>OpenDCTrace {
+    <span class="doccomment">/// Function traces.
+    </span><span class="kw">pub </span>funcs: Vec&lt;FunctionTrace&gt;,
+    <span class="doccomment">/// Application concurrency level, same for all applications.
+    </span><span class="kw">pub </span>concurrency_level: usize,
+    <span class="doccomment">/// Application cold start delay, same for all applications.
+    </span><span class="kw">pub </span>cold_start: f64,
+    <span class="doccomment">/// Name of memory resource.
+    </span><span class="kw">pub </span>memory_name: String,
+    <span class="doccomment">/// Simulation end time.
+    </span><span class="kw">pub </span>sim_end: <span class="prelude-ty">Option</span>&lt;f64&gt;,
 }
 
 <span class="kw">impl </span>Trace <span class="kw">for </span>OpenDCTrace {
@@ -286,7 +325,8 @@
     }
 }
 
-<span class="kw">pub struct </span>OpenDCRequestIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="doccomment">/// OpenDC trace request iterator.
+</span><span class="kw">pub struct </span>OpenDCRequestIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     trace_iter: std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, FunctionTrace&gt;,
     trace: FunctionTrace,
     sample_id: usize,
@@ -296,7 +336,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; OpenDCRequestIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(trace_iter: std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, FunctionTrace&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new OpenDC request iterator.
+    </span><span class="kw">pub fn </span>new(trace_iter: std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, FunctionTrace&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             trace_iter,
             trace: Vec::new(),
@@ -335,10 +376,14 @@
     }
 }
 
-<span class="kw">pub struct </span>OpenDCTraceConfig {
-    <span class="kw">pub </span>concurrency_level: usize,
-    <span class="kw">pub </span>cold_start: f64,
-    <span class="kw">pub </span>memory_name: String,
+<span class="doccomment">/// Struct with settings for reading OpenDC trace.
+</span><span class="kw">pub struct </span>OpenDCTraceConfig {
+    <span class="doccomment">/// Application concurrency level, same for all applications.
+    </span><span class="kw">pub </span>concurrency_level: usize,
+    <span class="doccomment">/// Application cold start delay, same for all applications.
+    </span><span class="kw">pub </span>cold_start: f64,
+    <span class="doccomment">/// Name of memory resource.
+    </span><span class="kw">pub </span>memory_name: String,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>OpenDCTraceConfig {
@@ -351,7 +396,8 @@
     }
 }
 
-<span class="kw">pub fn </span>process_opendc_trace(path: <span class="kw-2">&amp;</span>Path, config: OpenDCTraceConfig) -&gt; OpenDCTrace {
+<span class="doccomment">/// Reads OpenDC trace.
+</span><span class="kw">pub fn </span>process_opendc_trace(path: <span class="kw-2">&amp;</span>Path, config: OpenDCTraceConfig) -&gt; OpenDCTrace {
     <span class="kw">let </span><span class="kw-2">mut </span>files = Vec::new();
     <span class="kw">match </span>read_dir(path) {
         <span class="prelude-val">Ok</span>(paths) =&gt; {

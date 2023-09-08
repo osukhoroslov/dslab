@@ -199,7 +199,44 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Experiment configuration (YAML-serializable).
+</span><span class="attr">#![allow(clippy::type_complexity)]
+
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::path::Path;
@@ -213,10 +250,14 @@
 <span class="kw">use </span><span class="kw">crate</span>::parallel::{ParallelConfig, ParallelHostConfig};
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::{default_scheduler_resolver, BasicScheduler, Scheduler};
 
-<span class="kw">pub struct </span>HostConfig {
-    <span class="kw">pub </span>invoker: Box&lt;<span class="kw">dyn </span>Invoker&gt;,
-    <span class="kw">pub </span>resources: Vec&lt;(String, u64)&gt;,
-    <span class="kw">pub </span>cores: u32,
+<span class="doccomment">/// Describes a host in the simulation.
+</span><span class="kw">pub struct </span>HostConfig {
+    <span class="doccomment">/// [`crate::invoker::Invoker`] implementation.
+    </span><span class="kw">pub </span>invoker: Box&lt;<span class="kw">dyn </span>Invoker&gt;,
+    <span class="doccomment">/// Host resources.
+    </span><span class="kw">pub </span>resources: Vec&lt;(String, u64)&gt;,
+    <span class="doccomment">/// Host CPU cores.
+    </span><span class="kw">pub </span>cores: u32,
 }
 
 <span class="kw">impl </span>From&lt;ParallelHostConfig&gt; <span class="kw">for </span>HostConfig {
@@ -252,42 +293,56 @@
     }
 }
 
-<span class="attr">#[derive(Clone, Serialize, Deserialize)]
+<span class="doccomment">/// Describes a resource in the simulation.
+</span><span class="attr">#[derive(Clone, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>RawResource {
-    <span class="kw">pub </span>name: String,
-    <span class="kw">pub </span>quantity: u64,
+    <span class="doccomment">/// Resource name.
+    </span><span class="kw">pub </span>name: String,
+    <span class="doccomment">/// Resource quantity.
+    </span><span class="kw">pub </span>quantity: u64,
 }
 
 <span class="kw">fn </span>default_one() -&gt; u32 {
     <span class="number">1
 </span>}
 
-<span class="attr">#[derive(Clone, Serialize, Deserialize)]
+<span class="doccomment">/// Similar to [`HostConfig`], but is YAML-serializable.
+</span><span class="attr">#[derive(Clone, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>RawHostConfig {
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// [`crate::invoker::Invoker`] name.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>invoker: String,
-    <span class="kw">pub </span>resources: Vec&lt;RawResource&gt;,
-    <span class="kw">pub </span>cores: u32,
-    <span class="attr">#[serde(default = <span class="string">&quot;default_one&quot;</span>)]
+    <span class="doccomment">/// Raw resources.
+    </span><span class="kw">pub </span>resources: Vec&lt;RawResource&gt;,
+    <span class="doccomment">/// Host CPU cores.
+    </span><span class="kw">pub </span>cores: u32,
+    <span class="doccomment">/// Number of such hosts in the system.
+    </span><span class="attr">#[serde(default = <span class="string">&quot;default_one&quot;</span>)]
     </span><span class="kw">pub </span>count: u32,
 }
 
 <span class="doccomment">/// YAML-serializable config
 </span><span class="attr">#[derive(Clone, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>RawConfig {
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// [`crate::coldstart::ColdStartPolicy`] name.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>coldstart_policy: String,
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// [`crate::cpu::CpuPolicy`] name.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>cpu_policy: String,
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// [`crate::deployer::IdleDeployer`] name.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>idle_deployer: String,
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// [`crate::scheduler::Scheduler`] name.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>scheduler: String,
-    <span class="attr">#[serde(default)]
+    <span class="doccomment">/// Raw host data.
+    </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>hosts: Vec&lt;RawHostConfig&gt;,
 }
 
-<span class="kw">pub fn </span>parse_options(s: <span class="kw-2">&amp;</span>str) -&gt; HashMap&lt;String, String&gt; {
+<span class="doccomment">/// Parses map with options from string.
+</span><span class="kw">pub fn </span>parse_options(s: <span class="kw-2">&amp;</span>str) -&gt; HashMap&lt;String, String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>ans = HashMap::new();
     <span class="kw">for </span>t <span class="kw">in </span>s.split(<span class="string">&#39;,&#39;</span>) {
         <span class="kw">let </span>val = t.split_once(<span class="string">&#39;=&#39;</span>);
@@ -298,12 +353,18 @@
     ans
 }
 
-<span class="kw">pub struct </span>ConfigParamResolvers {
-    <span class="kw">pub </span>coldstart_policy_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; + Send + Sync&gt;,
-    <span class="kw">pub </span>cpu_policy_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>CpuPolicy&gt; + Send + Sync&gt;,
-    <span class="kw">pub </span>idle_deployer_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>IdleDeployer&gt; + Send + Sync&gt;,
-    <span class="kw">pub </span>scheduler_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; + Send + Sync&gt;,
-    <span class="kw">pub </span>invoker_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Invoker&gt; + Send + Sync&gt;,
+<span class="doccomment">/// Functions that create algorithm implementation from a string containing algorithm name and options.
+</span><span class="kw">pub struct </span>ConfigParamResolvers {
+    <span class="doccomment">/// Creates [`crate::coldstart::ColdStartPolicy`] from a string.
+    </span><span class="kw">pub </span>coldstart_policy_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; + Send + Sync&gt;,
+    <span class="doccomment">/// Creates [`crate::cpu::CpuPolicy`] from a string.
+    </span><span class="kw">pub </span>cpu_policy_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>CpuPolicy&gt; + Send + Sync&gt;,
+    <span class="doccomment">/// Creates [`crate::deployer::IdleDeployer`] from a string.
+    </span><span class="kw">pub </span>idle_deployer_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>IdleDeployer&gt; + Send + Sync&gt;,
+    <span class="doccomment">/// Creates [`crate::scheduler::Scheduler`] from a string.
+    </span><span class="kw">pub </span>scheduler_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; + Send + Sync&gt;,
+    <span class="doccomment">/// Creates [`crate::invoker::Invoker`] from a string.
+    </span><span class="kw">pub </span>invoker_resolver: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Invoker&gt; + Send + Sync&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ConfigParamResolvers {
@@ -318,14 +379,18 @@
     }
 }
 
-<span class="doccomment">/// This is simulation config. It implements Default trait (see below) so that you can create
-/// default config and change only the fields you need.
+<span class="doccomment">/// Simulation config. It implements Default trait so that you can create default config and change only the fields you need.
 </span><span class="kw">pub struct </span>Config {
-    <span class="kw">pub </span>coldstart_policy: Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;,
-    <span class="kw">pub </span>cpu_policy: Box&lt;<span class="kw">dyn </span>CpuPolicy&gt;,
-    <span class="kw">pub </span>idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
-    <span class="kw">pub </span>scheduler: Box&lt;<span class="kw">dyn </span>Scheduler&gt;,
-    <span class="kw">pub </span>hosts: Vec&lt;HostConfig&gt;,
+    <span class="doccomment">/// [`crate::coldstart::ColdStartPolicy`] implementation.
+    </span><span class="kw">pub </span>coldstart_policy: Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;,
+    <span class="doccomment">/// [`crate::cpu::CpuPolicy`] implementation.
+    </span><span class="kw">pub </span>cpu_policy: Box&lt;<span class="kw">dyn </span>CpuPolicy&gt;,
+    <span class="doccomment">/// [`crate::deployer::IdleDeployer`] implementation.
+    </span><span class="kw">pub </span>idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer&gt;,
+    <span class="doccomment">/// [`crate::scheduler::Scheduler`] implementation.
+    </span><span class="kw">pub </span>scheduler: Box&lt;<span class="kw">dyn </span>Scheduler&gt;,
+    <span class="doccomment">/// Host data.
+    </span><span class="kw">pub </span>hosts: Vec&lt;HostConfig&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Config {
@@ -341,7 +406,8 @@
 }
 
 <span class="kw">impl </span>Config {
-    <span class="kw">pub fn </span>from_raw(raw: RawConfig, resolvers: ConfigParamResolvers) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates Config from RawConfig using provided resolvers.
+    </span><span class="kw">pub fn </span>from_raw(raw: RawConfig, resolvers: ConfigParamResolvers) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::from_raw_split_resolvers(
             raw,
             resolvers.coldstart_policy_resolver.as_ref(),
@@ -352,7 +418,8 @@
         )
     }
 
-    <span class="kw">pub fn </span>from_raw_split_resolvers(
+    <span class="doccomment">/// Similar to [`Self::from_raw`], but takes resolvers as separate functions.
+    </span><span class="kw">pub fn </span>from_raw_split_resolvers(
         raw: RawConfig,
         coldstart_policy_resolver: <span class="kw-2">&amp;</span>(<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; + Send + Sync),
         cpu_policy_resolver: <span class="kw-2">&amp;</span>(<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>CpuPolicy&gt; + Send + Sync),
@@ -395,7 +462,8 @@
         me
     }
 
-    <span class="kw">pub fn </span>from_yaml(path: <span class="kw-2">&amp;</span>Path, resolvers: ConfigParamResolvers) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates Config from YAML file using provided resolvers.
+    </span><span class="kw">pub fn </span>from_yaml(path: <span class="kw-2">&amp;</span>Path, resolvers: ConfigParamResolvers) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>f = File::open(path).unwrap();
         <span class="self">Self</span>::from_raw(serde_yaml::from_reader(f).unwrap(), resolvers)
     }

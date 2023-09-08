@@ -115,7 +115,21 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Coldstart-reducing policies that govern container keepalive and prewarming.
+
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::rc::Rc;
@@ -125,17 +139,21 @@
 <span class="kw">use </span><span class="kw">crate</span>::function::Application;
 <span class="kw">use </span><span class="kw">crate</span>::invocation::Invocation;
 
-<span class="kw">pub trait </span>ColdStartConvertHelper {
-    <span class="kw">fn </span>box_to_rc(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; Rc&lt;RefCell&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;&gt;;
+<span class="doccomment">/// Helper trait to convert ColdStartPolicy Box to Rc.
+</span><span class="kw">pub trait </span>ColdStartConvertHelper {
+    <span class="doccomment">/// Converts Box to Rc.
+    </span><span class="kw">fn </span>box_to_rc(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; Rc&lt;RefCell&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;&gt;;
 }
 
 <span class="kw">impl</span>&lt;T: <span class="lifetime">&#39;static </span>+ ColdStartPolicy&gt; ColdStartConvertHelper <span class="kw">for </span>T {
-    <span class="kw">fn </span>box_to_rc(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; Rc&lt;RefCell&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;&gt; {
+    <span class="doccomment">/// Automatic implementation.
+    </span><span class="kw">fn </span>box_to_rc(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; Rc&lt;RefCell&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;&gt; {
         Rc::new(RefCell::new(<span class="kw-2">*</span><span class="self">self</span>))
     }
 }
 
-<span class="kw">pub enum </span>KeepaliveDecision {
+<span class="doccomment">/// A decision regarding keepalive of some container.
+</span><span class="kw">pub enum </span>KeepaliveDecision {
     <span class="doccomment">/// A new keepalive window `w` is chosen for the container.
     /// The container will be deallocated after `w` time units.
     </span>NewWindow(f64),
@@ -145,7 +163,8 @@
     </span>TerminateNow,
 }
 
-<span class="kw">pub trait </span>ColdStartPolicy: ColdStartConvertHelper {
+<span class="doccomment">/// A policy that governs keepalive and prewarming.
+</span><span class="kw">pub trait </span>ColdStartPolicy: ColdStartConvertHelper {
     <span class="doccomment">/// Defines delay before container deallocation.
     </span><span class="kw">fn </span>keepalive_decision(<span class="kw-2">&amp;mut </span><span class="self">self</span>, container: <span class="kw-2">&amp;</span>Container) -&gt; KeepaliveDecision;
     <span class="doccomment">/// Prewarm = x &gt; 0 =&gt; destroy container, deploy new container after x time units since execution.
@@ -154,12 +173,14 @@
     <span class="doccomment">/// This function allows tuning policy on finished invocations.
     </span><span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, invocation: <span class="kw-2">&amp;</span>Invocation, app: <span class="kw-2">&amp;</span>Application);
 
-    <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="doccomment">/// Returns a string with policy description.
+    </span><span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="string">&quot;STUB COLDSTART POLICY NAME&quot;</span>.to_string()
     }
 }
 
-<span class="kw">pub struct </span>FixedTimeColdStartPolicy {
+<span class="doccomment">/// Coldstart policy with fixed keepalive and prewarm windows.
+</span><span class="kw">pub struct </span>FixedTimeColdStartPolicy {
     keepalive_window: f64,
     prewarm_window: f64,
     <span class="doccomment">/// If true, keepalive time is reset to new `keepalive_window` after each invocation.
@@ -169,7 +190,8 @@
 }
 
 <span class="kw">impl </span>FixedTimeColdStartPolicy {
-    <span class="kw">pub fn </span>new(keepalive_window: f64, prewarm_window: f64, reset_keepalive: bool) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new FixedTimeColdStartPolicy.
+    </span><span class="kw">pub fn </span>new(keepalive_window: f64, prewarm_window: f64, reset_keepalive: bool) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             keepalive_window,
             prewarm_window,
@@ -178,7 +200,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates policy from a map of strings containing policy parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>keepalive = options.get(<span class="string">&quot;keepalive&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
         <span class="kw">let </span>prewarm = options.get(<span class="string">&quot;prewarm&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
         <span class="kw">let </span>reset = options
@@ -222,7 +245,8 @@
     }
 }
 
-<span class="kw">pub fn </span>default_coldstart_policy_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; {
+<span class="doccomment">/// Creates [`ColdStartPolicy`] from a string containing its name and parameters.
+</span><span class="kw">pub fn </span>default_coldstart_policy_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; {
     <span class="kw">if </span>s == <span class="string">&quot;No unloading&quot; </span>{
         <span class="kw">return </span>Box::new(FixedTimeColdStartPolicy::new(f64::MAX / <span class="number">10.0</span>, <span class="number">0.0</span>, <span class="bool-val">true</span>));
     }

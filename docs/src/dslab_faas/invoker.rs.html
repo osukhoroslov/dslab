@@ -312,7 +312,25 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! A component that manages incoming invocations on a host.
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::rc::Rc;
@@ -322,23 +340,34 @@
 <span class="kw">use </span><span class="kw">crate</span>::invocation::Invocation;
 <span class="kw">use </span><span class="kw">crate</span>::stats::Stats;
 
-<span class="attr">#[derive(Clone, Copy, PartialEq)]
+<span class="doccomment">/// Invoker&#39;s decision on new function invocation.
+</span><span class="attr">#[derive(Clone, Copy, PartialEq)]
 </span><span class="kw">pub enum </span>InvokerDecision {
-    Warm(usize),
-    Cold((usize, f64)),
-    Queued,
-    Rejected,
+    <span class="doccomment">/// Invocation will instantly start running on a warm container.
+    </span>Warm(usize),
+    <span class="doccomment">/// Invocation will start running on a cold container after it is fully deployed.
+    </span>Cold((usize, f64)),
+    <span class="doccomment">/// Invocation is queued on the invoker because the invoker can&#39;t run it now or provide a cold container.
+    </span>Queued,
+    <span class="doccomment">/// Invoker rejects the invocation.
+    /// Note: This value is used internally, invoker shouldn&#39;t return it to the host.
+    </span>Rejected,
 }
 
-<span class="attr">#[derive(Clone, Copy)]
+<span class="doccomment">/// Previously-queued invocation that is finally able to be executed.
+</span><span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub struct </span>DequeuedInvocation {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>container_id: usize,
-    <span class="kw">pub </span>delay: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    <span class="doccomment">/// Invocation id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Container id.
+    </span><span class="kw">pub </span>container_id: usize,
+    <span class="doccomment">/// Deploying delay if the invocation will be executed on a deploying container.
+    </span><span class="kw">pub </span>delay: <span class="prelude-ty">Option</span>&lt;f64&gt;,
 }
 
 <span class="kw">impl </span>DequeuedInvocation {
-    <span class="kw">pub fn </span>new(id: usize, container_id: usize, delay: <span class="prelude-ty">Option</span>&lt;f64&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new DequeuedInvocation.
+    </span><span class="kw">pub fn </span>new(id: usize, container_id: usize, delay: <span class="prelude-ty">Option</span>&lt;f64&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             id,
             container_id,
@@ -395,9 +424,11 @@
         time: f64,
     ) -&gt; InvokerDecision;
 
-    <span class="kw">fn </span>queue_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+    <span class="doccomment">/// Returns invocation queue length.
+    </span><span class="kw">fn </span>queue_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 
-    <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="doccomment">/// Returns a string with invoker description.
+    </span><span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="string">&quot;STUB INVOKER NAME&quot;</span>.to_string()
     }
 }
@@ -429,7 +460,8 @@
 }
 
 <span class="kw">impl </span>NaiveInvoker {
-    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new NaiveInvoker.
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         Default::default()
     }
 }
@@ -529,7 +561,8 @@
 }
 
 <span class="kw">impl </span>FIFOInvoker {
-    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new FIFOInvoker.
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         Default::default()
     }
 }
@@ -617,7 +650,8 @@
     }
 }
 
-<span class="kw">pub fn </span>default_invoker_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Invoker&gt; {
+<span class="doccomment">/// Creates [`Invoker`] from a string containing its name and parameters.
+</span><span class="kw">pub fn </span>default_invoker_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Invoker&gt; {
     <span class="kw">if </span>s == <span class="string">&quot;NaiveInvoker&quot; </span>{
         Box::new(NaiveInvoker::new())
     } <span class="kw">else if </span>s == <span class="string">&quot;FIFOInvoker&quot; </span>{

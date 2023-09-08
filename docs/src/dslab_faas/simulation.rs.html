@@ -274,7 +274,29 @@
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! FaaS simulation.
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::ops::Range;
 <span class="kw">use </span>std::rc::Rc;
@@ -296,9 +318,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::trace::{RequestData, Trace};
 <span class="kw">use </span><span class="kw">crate</span>::util::Counter;
 
-<span class="kw">pub type </span>HandlerId = dslab_core::component::Id;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HandlerId = dslab_core::component::Id;
 
-<span class="kw">pub struct </span>ServerlessSimulation {
+<span class="doccomment">/// Main FaaS simulation class.
+</span><span class="kw">pub struct </span>ServerlessSimulation {
     coldstart: Rc&lt;RefCell&lt;<span class="kw">dyn </span>ColdStartPolicy&gt;&gt;,
     controller: Rc&lt;RefCell&lt;Controller&gt;&gt;,
     controller_id: HandlerId,
@@ -313,7 +336,8 @@
 }
 
 <span class="kw">impl </span>ServerlessSimulation {
-    <span class="kw">pub fn </span>new(<span class="kw-2">mut </span>sim: Simulation, config: Config) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new simulation.
+    </span><span class="kw">pub fn </span>new(<span class="kw-2">mut </span>sim: Simulation, config: Config) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>stats = Rc::new(RefCell::new(Default::default()));
         <span class="kw">let </span>ctx = sim.create_context(<span class="string">&quot;entry point&quot;</span>);
         <span class="kw">let </span>function_registry: Rc&lt;RefCell&lt;FunctionRegistry&gt;&gt; = Rc::new(RefCell::new(Default::default()));
@@ -349,39 +373,48 @@
         this_sim
     }
 
-    <span class="kw">pub fn </span>try_resolve_resource_name(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="doccomment">/// Resolves resource name into `id` if it exists.
+    </span><span class="kw">pub fn </span>try_resolve_resource_name(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
         <span class="self">self</span>.resource_name_resolver.try_resolve(name)
     }
 
-    <span class="kw">pub fn </span>create_resource(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, available: u64) -&gt; Resource {
+    <span class="doccomment">/// Creates new resource.
+    </span><span class="kw">pub fn </span>create_resource(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, available: u64) -&gt; Resource {
         Resource::new(<span class="self">self</span>.resource_name_resolver.resolve(name), available)
     }
 
-    <span class="kw">pub fn </span>create_resource_requirement(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, needed: u64) -&gt; ResourceRequirement {
+    <span class="doccomment">/// Creates new resource requirement.
+    </span><span class="kw">pub fn </span>create_resource_requirement(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, needed: u64) -&gt; ResourceRequirement {
         ResourceRequirement::new(<span class="self">self</span>.resource_name_resolver.resolve(name), needed)
     }
 
-    <span class="kw">pub fn </span>get_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; Invocation {
+    <span class="doccomment">/// Returns invocation by its id.
+    </span><span class="kw">pub fn </span>get_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; Invocation {
         <span class="self">self</span>.invocation_registry.borrow()[id]
     }
 
-    <span class="kw">pub fn </span>get_invocations(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Range&lt;usize&gt;) -&gt; Vec&lt;Invocation&gt; {
+    <span class="doccomment">/// Returns all invocations with ids in given range.
+    </span><span class="kw">pub fn </span>get_invocations(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Range&lt;usize&gt;) -&gt; Vec&lt;Invocation&gt; {
         <span class="self">self</span>.invocation_registry.borrow()[id].to_vec()
     }
 
-    <span class="kw">pub fn </span>stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Stats {
+    <span class="doccomment">/// Returns simulation metrics.
+    </span><span class="kw">pub fn </span>stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Stats {
         <span class="self">self</span>.stats.borrow().clone()
     }
 
-    <span class="kw">pub fn </span>global_stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; GlobalStats {
+    <span class="doccomment">/// Returns global metrics.
+    </span><span class="kw">pub fn </span>global_stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; GlobalStats {
         <span class="self">self</span>.stats.borrow().global_stats.clone()
     }
 
-    <span class="kw">pub fn </span>invocation_stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; InvocationStats {
+    <span class="doccomment">/// Returns global invocation metrics.
+    </span><span class="kw">pub fn </span>invocation_stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; InvocationStats {
         <span class="self">self</span>.stats.borrow().global_stats.invocation_stats.clone()
     }
 
-    <span class="kw">pub fn </span>add_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, invoker: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Invoker&gt;&gt;, resources: ResourceProvider, cores: u32) {
+    <span class="doccomment">/// Adds a new [`crate::host::Host`].
+    </span><span class="kw">pub fn </span>add_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, invoker: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Invoker&gt;&gt;, resources: ResourceProvider, cores: u32) {
         <span class="kw">let </span>id = <span class="self">self</span>.host_ctr.increment();
         <span class="kw">let </span>real_invoker = invoker.unwrap_or_else(|| Box::new(FIFOInvoker::new()));
         <span class="kw">let </span>ctx = <span class="self">self</span>.sim.create_context(<span class="macro">format!</span>(<span class="string">&quot;host_{}&quot;</span>, id));
@@ -402,15 +435,18 @@
         <span class="self">self</span>.controller.borrow_mut().add_host(host);
     }
 
-    <span class="kw">pub fn </span>add_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: Function) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`crate::function::Function`].
+    </span><span class="kw">pub fn </span>add_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: Function) -&gt; usize {
         <span class="self">self</span>.function_registry.borrow_mut().add_function(f)
     }
 
-    <span class="kw">pub fn </span>add_app_with_single_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: Application) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`crate::function::Application`] with a single function.
+    </span><span class="kw">pub fn </span>add_app_with_single_function(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: Application) -&gt; usize {
         <span class="self">self</span>.function_registry.borrow_mut().add_app_with_single_function(app)
     }
 
-    <span class="kw">pub fn </span>add_app(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: Application) -&gt; usize {
+    <span class="doccomment">/// Adds a new [`crate::function::Application`].
+    </span><span class="kw">pub fn </span>add_app(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: Application) -&gt; usize {
         <span class="self">self</span>.function_registry.borrow_mut().add_app(app)
     }
 
@@ -496,7 +532,8 @@
         first_idx..ir.len()
     }
 
-    <span class="kw">pub fn </span>send_invocation_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, duration: f64, time: f64) -&gt; usize {
+    <span class="doccomment">/// Sends a single invocation request.
+    </span><span class="kw">pub fn </span>send_invocation_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, duration: f64, time: f64) -&gt; usize {
         <span class="kw">let </span>app_id = <span class="self">self
             </span>.function_registry
             .borrow()
@@ -530,23 +567,28 @@
             .emit(SimulationEndEvent {}, <span class="self">self</span>.controller_id, time - <span class="self">self</span>.sim.time());
     }
 
-    <span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Makes one simulation step.
+    </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.sim.step()
     }
 
-    <span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
+    <span class="doccomment">/// Makes given number of simulation steps.
+    </span><span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
         <span class="self">self</span>.sim.steps(step_count)
     }
 
-    <span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: f64) {
+    <span class="doccomment">/// Makes simulation steps for given time duration.
+    </span><span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: f64) {
         <span class="self">self</span>.sim.step_for_duration(duration);
     }
 
-    <span class="kw">pub fn </span>step_until_no_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Makes simulation steps until no events remain.
+    </span><span class="kw">pub fn </span>step_until_no_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.sim.step_until_no_events();
     }
 
-    <span class="kw">pub fn </span>event_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="doccomment">/// Returns number of events in the simulation.
+    </span><span class="kw">pub fn </span>event_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.sim.event_count()
     }
 }

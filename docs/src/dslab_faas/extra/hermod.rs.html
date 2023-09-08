@@ -85,7 +85,11 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Scheduler implementation from &quot;Hermod: principled and practical scheduling for serverless functions&quot; paper.
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -94,7 +98,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::LeastLoadedScheduler;
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::Scheduler;
 
-<span class="doccomment">/// Refer to &lt;https://dl.acm.org/doi/abs/10.1145/3542929.3563468&gt;
+<span class="doccomment">/// Refer to &lt;https://dl.acm.org/doi/abs/10.1145/3542929.3563468&gt;.
 </span><span class="kw">pub struct </span>HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
     <span class="doccomment">/// Passed to `high_load_fallback`.
@@ -108,7 +112,8 @@
 }
 
 <span class="kw">impl </span>HermodScheduler {
-    <span class="kw">pub fn </span>new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new HermodScheduler.
+    </span><span class="kw">pub fn </span>new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
             prefer_warm,
@@ -117,7 +122,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>prefer_warm = options.get(<span class="string">&quot;prefer_warm&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
         <span class="kw">let </span>use_invocation_count = options.get(<span class="string">&quot;use_invocation_count&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
         <span class="kw">let </span>avoid_queueing = options.get(<span class="string">&quot;avoid_queueing&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();

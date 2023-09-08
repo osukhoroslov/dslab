@@ -578,8 +578,30 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// Functions responsible for parsing Azure Functions 2019 trace and generating experiments using it.
-/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Functions for parsing Azure Functions 2019 trace and generating experiments using it.
+//!
+//! Trace description: &lt;https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsDataset2019.md&gt;
 </span><span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
 <span class="kw">use </span>std::fs::read_dir;
@@ -596,25 +618,37 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::trace::{ApplicationData, RequestData, Trace};
 
-<span class="attr">#[derive(Default, Clone, Copy)]
+<span class="doccomment">/// Azure trace function data.
+</span><span class="attr">#[derive(Default, Clone, Copy)]
 </span><span class="kw">pub struct </span>FunctionRecord {
-    <span class="kw">pub </span>app_id: usize,
+    <span class="doccomment">/// Application id.
+    </span><span class="kw">pub </span>app_id: usize,
 }
 
-<span class="attr">#[derive(Default, Clone, Copy)]
+<span class="doccomment">/// Azure trace application data.
+</span><span class="attr">#[derive(Default, Clone, Copy)]
 </span><span class="kw">pub struct </span>ApplicationRecord {
-    <span class="kw">pub </span>mem: u64,
-    <span class="kw">pub </span>cold_start: f64,
+    <span class="doccomment">/// Application memory requirement.
+    </span><span class="kw">pub </span>mem: u64,
+    <span class="doccomment">/// Application cold start latency.
+    </span><span class="kw">pub </span>cold_start: f64,
 }
 
-<span class="attr">#[derive(Default, Clone)]
+<span class="doccomment">/// Azure trace.
+</span><span class="attr">#[derive(Default, Clone)]
 </span><span class="kw">pub struct </span>AzureTrace {
-    <span class="kw">pub </span>concurrency_level: usize,
-    <span class="kw">pub </span>memory_name: String,
-    <span class="kw">pub </span>sim_end: <span class="prelude-ty">Option</span>&lt;f64&gt;,
-    <span class="kw">pub </span>trace_records: Vec&lt;RequestData&gt;,
-    <span class="kw">pub </span>function_records: Vec&lt;FunctionRecord&gt;,
-    <span class="kw">pub </span>app_records: Vec&lt;ApplicationRecord&gt;,
+    <span class="doccomment">/// Application concurrency level, same for all applications.
+    </span><span class="kw">pub </span>concurrency_level: usize,
+    <span class="doccomment">/// Name of memory resource.
+    </span><span class="kw">pub </span>memory_name: String,
+    <span class="doccomment">/// Simulation end time.
+    </span><span class="kw">pub </span>sim_end: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    <span class="doccomment">/// Request data.
+    </span><span class="kw">pub </span>trace_records: Vec&lt;RequestData&gt;,
+    <span class="doccomment">/// Function data.
+    </span><span class="kw">pub </span>function_records: Vec&lt;FunctionRecord&gt;,
+    <span class="doccomment">/// Application data.
+    </span><span class="kw">pub </span>app_records: Vec&lt;ApplicationRecord&gt;,
 }
 
 <span class="kw">impl </span>Trace <span class="kw">for </span>AzureTrace {
@@ -686,20 +720,25 @@
 }
 
 <span class="doccomment">/// Experiment generator will choose `count` random apps with popularity in range
-/// [floor(`left` * n_apps), floor(`right` * n_apps)] (apps are sorted by popularity in decreasing order).
+/// `[floor(left * n_apps), floor(right * n_apps)]` (apps are sorted by popularity in decreasing order).
 </span><span class="attr">#[derive(Copy, Clone)]
 </span><span class="kw">pub struct </span>AppPreference {
-    <span class="kw">pub </span>count: usize,
-    <span class="kw">pub </span>left: f64,
-    <span class="kw">pub </span>right: f64,
+    <span class="doccomment">/// Random apps count.
+    </span><span class="kw">pub </span>count: usize,
+    <span class="doccomment">/// Left quantile.
+    </span><span class="kw">pub </span>left: f64,
+    <span class="doccomment">/// Right quantile.
+    </span><span class="kw">pub </span>right: f64,
 }
 
 <span class="kw">impl </span>AppPreference {
-    <span class="kw">pub fn </span>new(count: usize, left: f64, right: f64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new AppPreference.
+    </span><span class="kw">pub fn </span>new(count: usize, left: f64, right: f64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ count, left, right }
     }
 
-    <span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="doccomment">/// Validates AppPreference.
+    </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
         <span class="kw">if </span>!(<span class="number">0. </span>..<span class="number">1.</span>).contains(<span class="kw-2">&amp;</span><span class="self">self</span>.left) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;left position {} out of range [0, 1)&quot;</span>, <span class="self">self</span>.left));
         }
@@ -716,7 +755,8 @@
     }
 }
 
-<span class="attr">#[derive(PartialEq, Eq, Copy, Clone)]
+<span class="doccomment">/// Generator of invocation durations.
+</span><span class="attr">#[derive(PartialEq, Eq, Copy, Clone)]
 </span><span class="kw">pub enum </span>DurationGenerator {
     <span class="doccomment">/// Simple duration generator from quantiles.
     </span>Piecewise,
@@ -726,7 +766,8 @@
     </span>Lognormal,
 }
 
-<span class="attr">#[derive(PartialEq, Eq, Copy, Clone)]
+<span class="doccomment">/// Generator of invocation arrival times.
+</span><span class="attr">#[derive(PartialEq, Eq, Copy, Clone)]
 </span><span class="kw">pub enum </span>StartGenerator {
     <span class="doccomment">/// For each 1-minute bucket select each starting time uniformly at random within that bucket.
     </span>BucketUniform,
@@ -736,7 +777,8 @@
     </span>EmpiricalFit,
 }
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// Struct with Azure 2019 trace settings.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Azure2019TraceConfig {
     <span class="doccomment">/// Simulation time period in minutes (only integer numbers are supported).
     </span><span class="kw">pub </span>time_period: u64,

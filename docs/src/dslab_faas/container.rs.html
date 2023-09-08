@@ -243,7 +243,45 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Container model and host-level container manager.
+
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>dslab_core::context::SimulationContext;
@@ -254,35 +292,54 @@
 <span class="kw">use </span><span class="kw">crate</span>::resource::{ResourceConsumer, ResourceProvider};
 <span class="kw">use </span><span class="kw">crate</span>::util::{Counter, DefaultVecMap, FxIndexMap, FxIndexSet};
 
-<span class="attr">#[derive(Eq, PartialEq)]
+<span class="doccomment">/// Status of a container in the simulation.
+</span><span class="attr">#[derive(Eq, PartialEq)]
 </span><span class="kw">pub enum </span>ContainerStatus {
-    Deploying,
-    Running,
-    Idle,
-    Terminated, <span class="comment">// terminated containers may remain in the system due to several events with delay 0.0
-</span>}
+    <span class="doccomment">/// Container is being deployed.
+    </span>Deploying,
+    <span class="doccomment">/// Container is executing one or more invocations.
+    </span>Running,
+    <span class="doccomment">/// Container is up, but isn&#39;t executing anything.
+    </span>Idle,
+    <span class="doccomment">/// Container is terminated, but still present. Terminated containers may remain in the system due to several events with delay 0.0
+    </span>Terminated,
+}
 
-<span class="kw">pub struct </span>Container {
-    <span class="kw">pub </span>status: ContainerStatus,
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>host_id: usize,
-    <span class="kw">pub </span>deployment_time: f64,
-    <span class="kw">pub </span>app_id: usize,
-    <span class="kw">pub </span>invocations: FxIndexSet&lt;usize&gt;,
-    <span class="kw">pub </span>resources: ResourceConsumer,
-    <span class="kw">pub </span>started_invocations: usize,
-    <span class="kw">pub </span>last_change: f64,
-    <span class="kw">pub </span>end_event: <span class="prelude-ty">Option</span>&lt;EventId&gt;,
-    <span class="kw">pub </span>cpu_share: f64,
+<span class="doccomment">/// Container model.
+</span><span class="kw">pub struct </span>Container {
+    <span class="doccomment">/// Container status.
+    </span><span class="kw">pub </span>status: ContainerStatus,
+    <span class="doccomment">/// Container id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// Id of a [`crate::host::Host`], on which the container is located.
+    </span><span class="kw">pub </span>host_id: usize,
+    <span class="doccomment">/// Container deployment time.
+    </span><span class="kw">pub </span>deployment_time: f64,
+    <span class="doccomment">/// [`crate::function::Application`] id.
+    </span><span class="kw">pub </span>app_id: usize,
+    <span class="doccomment">/// Set of running invocations.
+    </span><span class="kw">pub </span>invocations: FxIndexSet&lt;usize&gt;,
+    <span class="doccomment">/// Resources allocated for the container.
+    </span><span class="kw">pub </span>resources: ResourceConsumer,
+    <span class="doccomment">/// Number of invocations started on this container.
+    </span><span class="kw">pub </span>started_invocations: usize,
+    <span class="doccomment">/// Time of last state change.
+    </span><span class="kw">pub </span>last_change: f64,
+    <span class="doccomment">/// Container end event.
+    </span><span class="kw">pub </span>end_event: <span class="prelude-ty">Option</span>&lt;EventId&gt;,
+    <span class="doccomment">/// CPU share of the container.
+    </span><span class="kw">pub </span>cpu_share: f64,
 }
 
 <span class="kw">impl </span>Container {
-    <span class="kw">pub fn </span>start_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
+    <span class="doccomment">/// Starts a new invocation on the container.
+    </span><span class="kw">pub fn </span>start_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
         <span class="self">self</span>.invocations.insert(id);
         <span class="self">self</span>.started_invocations += <span class="number">1</span>;
     }
 
-    <span class="kw">pub fn </span>end_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, curr_time: f64) {
+    <span class="doccomment">/// Ends a running invocation on the container.
+    </span><span class="kw">pub fn </span>end_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize, curr_time: f64) {
         <span class="self">self</span>.last_change = curr_time;
         <span class="self">self</span>.invocations.remove(<span class="kw-2">&amp;</span>id);
         <span class="kw">if </span><span class="self">self</span>.invocations.is_empty() {
@@ -291,7 +348,8 @@
     }
 }
 
-<span class="kw">pub struct </span>ContainerManager {
+<span class="doccomment">/// Manages containers on a single host.
+</span><span class="kw">pub struct </span>ContainerManager {
     active_invocations: usize,
     host_id: usize,
     resources: ResourceProvider,
@@ -308,7 +366,8 @@
 }
 
 <span class="kw">impl </span>ContainerManager {
-    <span class="kw">pub fn </span>new(host_id: usize, resources: ResourceProvider, ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ContainerManager on a specified host.
+    </span><span class="kw">pub fn </span>new(host_id: usize, resources: ResourceProvider, ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             active_invocations: <span class="number">0</span>,
             host_id,
@@ -322,35 +381,43 @@
         }
     }
 
-    <span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, resources: <span class="kw-2">&amp;</span>ResourceConsumer) -&gt; bool {
+    <span class="doccomment">/// Checks whether it is possible to create a new container with given resources.
+    </span><span class="kw">pub fn </span>can_allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, resources: <span class="kw-2">&amp;</span>ResourceConsumer) -&gt; bool {
         <span class="self">self</span>.resources.can_allocate(resources)
     }
 
-    <span class="kw">pub fn </span>get_total_resource(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; u64 {
+    <span class="doccomment">/// Returns total amount of a resource.
+    </span><span class="kw">pub fn </span>get_total_resource(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; u64 {
         <span class="self">self</span>.resources.get_resource(id).unwrap().get_available()
     }
 
-    <span class="kw">pub fn </span>dec_active_invocations(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Decrements active invocations count.
+    </span><span class="kw">pub fn </span>dec_active_invocations(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.active_invocations -= <span class="number">1</span>;
     }
 
-    <span class="kw">pub fn </span>inc_active_invocations(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Increments active invocations count.
+    </span><span class="kw">pub fn </span>inc_active_invocations(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.active_invocations += <span class="number">1</span>;
     }
 
-    <span class="kw">pub fn </span>active_invocation_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="doccomment">/// Returns active invocations count.
+    </span><span class="kw">pub fn </span>active_invocation_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.active_invocations
     }
 
-    <span class="kw">pub fn </span>get_container(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Container&gt; {
+    <span class="doccomment">/// Returns a reference to a container specified by `id` if it exists.
+    </span><span class="kw">pub fn </span>get_container(<span class="kw-2">&amp;</span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Container&gt; {
         <span class="self">self</span>.containers.get(<span class="kw-2">&amp;</span>id)
     }
 
-    <span class="kw">pub fn </span>get_container_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Container&gt; {
+    <span class="doccomment">/// Returns a mutable reference to a container specified by `id` if it exists.
+    </span><span class="kw">pub fn </span>get_container_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Container&gt; {
         <span class="self">self</span>.containers.get_mut(<span class="kw-2">&amp;</span>id)
     }
 
-    <span class="kw">pub fn </span>get_containers(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>FxIndexMap&lt;usize, Container&gt; {
+    <span class="doccomment">/// Returns a mutable reference to the map that stores all existing containers.
+    </span><span class="kw">pub fn </span>get_containers(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>FxIndexMap&lt;usize, Container&gt; {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.containers
     }
 
@@ -389,18 +456,20 @@
         <span class="self">self</span>.reservations.get(<span class="kw-2">&amp;</span>id).map(|x| x.len()).unwrap_or_default()
     }
 
-    <span class="kw">pub fn </span>take_reservations(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;usize&gt;&gt; {
+    <span class="doccomment">/// Returns and removes reserved invocations for a deploying container.
+    </span><span class="kw">pub fn </span>take_reservations(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;usize&gt;&gt; {
         <span class="self">self</span>.reservations.remove(<span class="kw-2">&amp;</span>id)
     }
 
-    <span class="kw">pub fn </span>delete_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
+    <span class="doccomment">/// Deletes a container.
+    </span><span class="kw">pub fn </span>delete_container(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
         <span class="kw">let </span>container = <span class="self">self</span>.containers.remove(<span class="kw-2">&amp;</span>id).unwrap();
         <span class="self">self</span>.free_containers_by_app.get_mut(container.app_id).remove(<span class="kw-2">&amp;</span>id);
         <span class="self">self</span>.full_containers_by_app.get_mut(container.app_id).remove(<span class="kw-2">&amp;</span>id);
         <span class="self">self</span>.resources.release(<span class="kw-2">&amp;</span>container.resources);
     }
 
-    <span class="doccomment">/// Moves a container to free if it was full.
+    <span class="doccomment">/// Moves a container to free list if it was full.
     </span><span class="kw">pub fn </span>try_move_container_to_free(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
         <span class="kw">let </span>app_id = <span class="self">self</span>.containers.get(<span class="kw-2">&amp;</span>id).unwrap().app_id;
         <span class="kw">let </span>was = <span class="self">self</span>.full_containers_by_app.get_mut(app_id).remove(<span class="kw-2">&amp;</span>id);
@@ -409,7 +478,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>move_container_to_full(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
+    <span class="doccomment">/// Moves a container to full list.
+    </span><span class="kw">pub fn </span>move_container_to_full(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: usize) {
         <span class="kw">let </span>app_id = <span class="self">self</span>.containers.get(<span class="kw-2">&amp;</span>id).unwrap().app_id;
         <span class="kw">let </span>was = <span class="self">self</span>.free_containers_by_app.get_mut(app_id).remove(<span class="kw-2">&amp;</span>id);
         <span class="macro">assert!</span>(was);
@@ -442,7 +512,8 @@
     }
 }
 
-<span class="kw">pub struct </span>PossibleContainerIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="doccomment">/// Iterates over all containers that can run another invocation. May optionally include containers that are being deployed right now.
+</span><span class="kw">pub struct </span>PossibleContainerIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     inner: <span class="prelude-ty">Option</span>&lt;indexmap::set::Iter&lt;<span class="lifetime">&#39;a</span>, usize&gt;&gt;,
     containers: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FxIndexMap&lt;usize, Container&gt;,
     reserve: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FxIndexMap&lt;usize, Vec&lt;usize&gt;&gt;,
@@ -451,7 +522,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; PossibleContainerIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(
+    <span class="doccomment">/// Creates new PossibleContainerIterator.
+    </span><span class="kw">pub fn </span>new(
         inner: <span class="prelude-ty">Option</span>&lt;indexmap::set::Iter&lt;<span class="lifetime">&#39;a</span>, usize&gt;&gt;,
         containers: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FxIndexMap&lt;usize, Container&gt;,
         reserve: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FxIndexMap&lt;usize, Vec&lt;usize&gt;&gt;,

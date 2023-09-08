@@ -307,7 +307,21 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Scheduler trait and several simple implementations.
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::ops::Deref;
@@ -321,17 +335,17 @@
 <span class="kw">use </span><span class="kw">crate</span>::function::Application;
 <span class="kw">use </span><span class="kw">crate</span>::host::Host;
 
-<span class="doccomment">/// Scheduler chooses an invoker to run new invocation of some function from given application.
+<span class="doccomment">/// Chooses a host to run new invocation of some function from given application.
 </span><span class="kw">pub trait </span>Scheduler {
-    <span class="kw">fn </span>select_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, hosts: <span class="kw-2">&amp;</span>[Rc&lt;RefCell&lt;Host&gt;&gt;]) -&gt; usize;
-
-    <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="doccomment">/// Chooses a host.
+    </span><span class="kw">fn </span>select_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, hosts: <span class="kw-2">&amp;</span>[Rc&lt;RefCell&lt;Host&gt;&gt;]) -&gt; usize;
+    <span class="doccomment">/// Returns a string with scheduler description.
+    </span><span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="string">&quot;STUB SCHEDULER NAME&quot;</span>.to_string()
     }
 }
 
-<span class="doccomment">/// BasicScheduler chooses the first invoker that can hotstart the invocation,
-/// otherwise it chooses the first invoker that can deploy the container.
+<span class="doccomment">/// Chooses the first invoker that can hotstart the invocation, otherwise chooses the first invoker that can deploy the container.
 </span><span class="kw">pub struct </span>BasicScheduler {}
 
 <span class="kw">impl </span>Scheduler <span class="kw">for </span>BasicScheduler {
@@ -354,9 +368,12 @@
     }
 }
 
-<span class="kw">pub struct </span>ApplicationHasher {
-    <span class="kw">pub </span>hash_fn: Box&lt;<span class="kw">dyn </span>Fn(u64) -&gt; u64&gt;,
-    <span class="kw">pub </span>name: String,
+<span class="doccomment">/// Hashes application ids, used to map applications to hosts.
+</span><span class="kw">pub struct </span>ApplicationHasher {
+    <span class="doccomment">/// Hash function, accepts application id.
+    </span><span class="kw">pub </span>hash_fn: Box&lt;<span class="kw">dyn </span>Fn(u64) -&gt; u64&gt;,
+    <span class="doccomment">/// Hasher name.
+    </span><span class="kw">pub </span>name: String,
 }
 
 <span class="kw">impl </span>FromStr <span class="kw">for </span>ApplicationHasher {
@@ -390,17 +407,18 @@
 }
 
 <span class="kw">impl </span>ApplicationHasher {
-    <span class="kw">pub fn </span>new(hash_fn: Box&lt;<span class="kw">dyn </span>Fn(u64) -&gt; u64&gt;, name: String) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new ApplicationHasher.
+    </span><span class="kw">pub fn </span>new(hash_fn: Box&lt;<span class="kw">dyn </span>Fn(u64) -&gt; u64&gt;, name: String) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ hash_fn, name }
     }
 
-    <span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, app: u64) -&gt; u64 {
+    <span class="doccomment">/// Hashes application id.
+    </span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, app: u64) -&gt; u64 {
         (<span class="self">self</span>.hash_fn)(app)
     }
 }
 
-<span class="doccomment">/// LocalityBasedScheduler picks a host based on application hash.
-/// In case host number `i` can&#39;t invoke, the scheduler considers host number `(i + step) % hosts.len()`.
+<span class="doccomment">/// Picks a host based on the application hash. In case host number `i` can&#39;t invoke, the scheduler considers host number `(i + step) % hosts.len()`.
 </span><span class="kw">pub struct </span>LocalityBasedScheduler {
     hasher: ApplicationHasher,
     step: usize,
@@ -408,7 +426,8 @@
 }
 
 <span class="kw">impl </span>LocalityBasedScheduler {
-    <span class="kw">pub fn </span>new(hasher: <span class="prelude-ty">Option</span>&lt;ApplicationHasher&gt;, step: <span class="prelude-ty">Option</span>&lt;usize&gt;, warm_only: bool) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new LocalityBasedScheduler.
+    </span><span class="kw">pub fn </span>new(hasher: <span class="prelude-ty">Option</span>&lt;ApplicationHasher&gt;, step: <span class="prelude-ty">Option</span>&lt;usize&gt;, warm_only: bool) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), <span class="string">&quot;Identity&quot;</span>.to_string()));
         <span class="kw">let </span>s = step.unwrap_or(<span class="number">1</span>);
         <span class="self">Self </span>{
@@ -418,7 +437,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>hasher =
             ApplicationHasher::from_str(options.get(<span class="string">&quot;hasher&quot;</span>).map(|a| a.deref()).unwrap_or(<span class="string">&quot;Identity&quot;</span>)).unwrap();
         <span class="kw">let </span>warm_only = options.get(<span class="string">&quot;warm_only&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
@@ -468,19 +488,21 @@
     }
 }
 
-<span class="doccomment">/// RandomScheduler picks a host uniformly at random.
+<span class="doccomment">/// Picks a host uniformly at random.
 </span><span class="kw">pub struct </span>RandomScheduler {
     rng: Pcg64,
 }
 
 <span class="kw">impl </span>RandomScheduler {
-    <span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new RandomScheduler.
+    </span><span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             rng: Pcg64::seed_from_u64(seed),
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>seed = options.get(<span class="string">&quot;seed&quot;</span>).unwrap().parse::&lt;u64&gt;().unwrap();
         <span class="self">Self</span>::new(seed)
     }
@@ -496,7 +518,7 @@
     }
 }
 
-<span class="doccomment">/// LeastLoadedScheduler chooses a host with the least number of active (running and queued) invocations.
+<span class="doccomment">/// Chooses a host with the least CPU usage.
 </span><span class="kw">pub struct </span>LeastLoadedScheduler {
     <span class="doccomment">/// Break ties by preferring instances with warm containers.
     </span>prefer_warm: bool,
@@ -507,7 +529,8 @@
 }
 
 <span class="kw">impl </span>LeastLoadedScheduler {
-    <span class="kw">pub fn </span>new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new LeastLoadedScheduler.
+    </span><span class="kw">pub fn </span>new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             prefer_warm,
             use_invocation_count,
@@ -515,7 +538,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>prefer_warm = options.get(<span class="string">&quot;prefer_warm&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
         <span class="kw">let </span>use_invocation_count = options.get(<span class="string">&quot;use_invocation_count&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
         <span class="kw">let </span>avoid_queueing = options.get(<span class="string">&quot;avoid_queueing&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
@@ -570,14 +594,15 @@
     }
 }
 
-<span class="doccomment">/// RoundRobinScheduler chooses hosts in a circular fashion.
+<span class="doccomment">/// Chooses hosts in a circular fashion.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>RoundRobinScheduler {
     index: usize,
 }
 
 <span class="kw">impl </span>RoundRobinScheduler {
-    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new RoundRobinScheduler.
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         Default::default()
     }
 }
@@ -595,7 +620,8 @@
     }
 }
 
-<span class="kw">pub fn </span>default_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
+<span class="doccomment">/// Creates [`Scheduler`] from a string containing its name and parameters.
+</span><span class="kw">pub fn </span>default_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
     <span class="kw">if </span>s == <span class="string">&quot;BasicScheduler&quot; </span>{
         <span class="kw">return </span>Box::new(BasicScheduler {});
     }

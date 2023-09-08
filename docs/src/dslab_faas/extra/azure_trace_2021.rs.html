@@ -116,8 +116,12 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// Functions for parsing Azure Functions 2021 trace and generating experiments using it.
-/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Functions for parsing Azure Functions 2021 trace and generating experiments using it.
+//!
+//! Trace description: &lt;https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md&gt;
 </span><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::str::FromStr;
@@ -129,7 +133,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::extra::azure_trace_2019::{ApplicationRecord, AzureTrace, FunctionRecord};
 <span class="kw">use </span><span class="kw">crate</span>::trace::RequestData;
 
-<span class="kw">pub enum </span>MemoryGenerator {
+<span class="doccomment">/// Generator of application memory requirements.
+</span><span class="kw">pub enum </span>MemoryGenerator {
     <span class="doccomment">/// All apps use fixed amount of memory.
     </span>Fixed(u64),
     <span class="doccomment">/// Burr fit from Serverless in the Wild paper.
@@ -137,7 +142,8 @@
     </span>PrefittedBurr,
 }
 
-<span class="kw">pub struct </span>Azure2021TraceConfig {
+<span class="doccomment">/// Struct with Azure 2021 trace settings.
+</span><span class="kw">pub struct </span>Azure2021TraceConfig {
     <span class="doccomment">/// Simulation time period in seconds.
     </span><span class="kw">pub </span>time_period: f64,
     <span class="doccomment">/// This option allows skipping a number of seconds from the start of the trace.

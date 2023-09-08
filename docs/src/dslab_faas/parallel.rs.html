@@ -222,7 +222,29 @@
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
 <a href="#224" id="224">224</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Utilities for running multiple experiments in parallel.
+</span><span class="attr">#![allow(clippy::type_complexity)]
+
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::convert::Into;
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::path::Path;
@@ -243,10 +265,14 @@
 <span class="kw">use </span><span class="kw">crate</span>::stats::Stats;
 <span class="kw">use </span><span class="kw">crate</span>::trace::Trace;
 
-<span class="kw">pub struct </span>ParallelHostConfig {
-    <span class="kw">pub </span>invoker: Box&lt;<span class="kw">dyn </span>Invoker + Send&gt;,
-    <span class="kw">pub </span>resources: Vec&lt;(String, u64)&gt;,
-    <span class="kw">pub </span>cores: u32,
+<span class="doccomment">/// Similar to [`crate::config::HostConfig`], but only accepts invokers with `Send` trait.
+</span><span class="kw">pub struct </span>ParallelHostConfig {
+    <span class="doccomment">/// [`crate::invoker::Invoker`] implementation.
+    </span><span class="kw">pub </span>invoker: Box&lt;<span class="kw">dyn </span>Invoker + Send&gt;,
+    <span class="doccomment">/// Host resources.
+    </span><span class="kw">pub </span>resources: Vec&lt;(String, u64)&gt;,
+    <span class="doccomment">/// Host CPU cores.
+    </span><span class="kw">pub </span>cores: u32,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ParallelHostConfig {
@@ -259,12 +285,18 @@
     }
 }
 
-<span class="kw">pub struct </span>ParallelConfig {
-    <span class="kw">pub </span>coldstart_policy: Box&lt;<span class="kw">dyn </span>ColdStartPolicy + Send&gt;,
-    <span class="kw">pub </span>cpu_policy: Box&lt;<span class="kw">dyn </span>CpuPolicy + Send&gt;,
-    <span class="kw">pub </span>idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer + Send&gt;,
-    <span class="kw">pub </span>scheduler: Box&lt;<span class="kw">dyn </span>Scheduler + Send&gt;,
-    <span class="kw">pub </span>hosts: Vec&lt;ParallelHostConfig&gt;,
+<span class="doccomment">/// Similar to [`crate::config::Config`], but ensures that all simulation components implement `Send` trait.
+</span><span class="kw">pub struct </span>ParallelConfig {
+    <span class="doccomment">/// [`crate::coldstart::ColdStartPolicy`] implementation.
+    </span><span class="kw">pub </span>coldstart_policy: Box&lt;<span class="kw">dyn </span>ColdStartPolicy + Send&gt;,
+    <span class="doccomment">/// [`crate::cpu::CpuPolicy`] implementation.
+    </span><span class="kw">pub </span>cpu_policy: Box&lt;<span class="kw">dyn </span>CpuPolicy + Send&gt;,
+    <span class="doccomment">/// [`crate::deployer::IdleDeployer`] implementation.
+    </span><span class="kw">pub </span>idle_deployer: Box&lt;<span class="kw">dyn </span>IdleDeployer + Send&gt;,
+    <span class="doccomment">/// [`crate::scheduler::Scheduler`] implementation.
+    </span><span class="kw">pub </span>scheduler: Box&lt;<span class="kw">dyn </span>Scheduler + Send&gt;,
+    <span class="doccomment">/// Host configuration data.
+    </span><span class="kw">pub </span>hosts: Vec&lt;ParallelHostConfig&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ParallelConfig {
@@ -279,7 +311,8 @@
     }
 }
 
-<span class="kw">pub fn </span>parallel_simulation_n_workers(
+<span class="doccomment">/// Runs parallel simulations in a thread pool with `n_workers` worker threads.
+</span><span class="kw">pub fn </span>parallel_simulation_n_workers(
     <span class="kw-2">mut </span>configs: Vec&lt;ParallelConfig&gt;,
     <span class="kw-2">mut </span>traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,
     <span class="kw-2">mut </span>seeds: Vec&lt;u64&gt;,
@@ -326,7 +359,8 @@
     results.drain(..).map(|x| x.<span class="number">1</span>).collect()
 }
 
-<span class="kw">pub fn </span>parallel_simulation(
+<span class="doccomment">/// Runs parallel simulations in a thread pool with a separate worker for each config.
+</span><span class="kw">pub fn </span>parallel_simulation(
     configs: Vec&lt;ParallelConfig&gt;,
     traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,
     seeds: Vec&lt;u64&gt;,
@@ -335,7 +369,8 @@
     parallel_simulation_n_workers(configs, traces, seeds, n_workers)
 }
 
-<span class="kw">pub fn </span>parallel_simulation_raw_n_workers(
+<span class="doccomment">/// Similar to [`parallel_simulation_n_workers`], but for raw configs.
+</span><span class="kw">pub fn </span>parallel_simulation_raw_n_workers(
     <span class="kw-2">mut </span>configs: Vec&lt;RawConfig&gt;,
     resolvers: ConfigParamResolvers,
     <span class="kw-2">mut </span>traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,
@@ -405,7 +440,8 @@
     results.drain(..).map(|x| x.<span class="number">1</span>).collect()
 }
 
-<span class="kw">pub fn </span>parallel_simulation_raw(
+<span class="doccomment">/// Similar to [`parallel_simulation`], but for raw configs.
+</span><span class="kw">pub fn </span>parallel_simulation_raw(
     configs: Vec&lt;RawConfig&gt;,
     resolvers: ConfigParamResolvers,
     traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,
@@ -415,7 +451,8 @@
     parallel_simulation_raw_n_workers(configs, resolvers, traces, seeds, n_workers)
 }
 
-<span class="kw">pub fn </span>parallel_simulation_yaml_n_workers(
+<span class="doccomment">/// Similar to [`parallel_simulation_n_workers`], but for YAML configs.
+</span><span class="kw">pub fn </span>parallel_simulation_yaml_n_workers(
     configs: Vec&lt;<span class="kw-2">&amp;</span>Path&gt;,
     resolvers: ConfigParamResolvers,
     traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,
@@ -437,7 +474,8 @@
     )
 }
 
-<span class="kw">pub fn </span>parallel_simulation_yaml(
+<span class="doccomment">/// Similar to [`parallel_simulation`], but for YAML configs.
+</span><span class="kw">pub fn </span>parallel_simulation_yaml(
     configs: Vec&lt;<span class="kw-2">&amp;</span>Path&gt;,
     resolvers: ConfigParamResolvers,
     traces: Vec&lt;Box&lt;<span class="kw">dyn </span>Trace + Send + Sync&gt;&gt;,

@@ -92,7 +92,14 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::boxed::Box;
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! A component that chooses a host for deploying a new prewarmed container.
+</span><span class="kw">use </span>std::boxed::Box;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::ops::Deref;
@@ -104,11 +111,13 @@
 <span class="kw">use </span><span class="kw">crate</span>::host::Host;
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::ApplicationHasher;
 
-<span class="doccomment">/// IdleDeployer chooses an invoker to deploy new idle container on. Used for prewarm.
+<span class="doccomment">/// IdleDeployer chooses a host to deploy new idle container on. Used for prewarm.
 </span><span class="kw">pub trait </span>IdleDeployer {
-    <span class="kw">fn </span>deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, hosts: <span class="kw-2">&amp;</span>[Rc&lt;RefCell&lt;Host&gt;&gt;]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt;;
+    <span class="doccomment">/// Chooses a host for a new container.
+    </span><span class="kw">fn </span>deploy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, hosts: <span class="kw-2">&amp;</span>[Rc&lt;RefCell&lt;Host&gt;&gt;]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt;;
 
-    <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="doccomment">/// Returns a string with deployer description.
+    </span><span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="string">&quot;STUB DEPLOYER NAME&quot;</span>.to_string()
     }
 }
@@ -131,7 +140,7 @@
     }
 }
 
-<span class="doccomment">/// LocalityBasedDeployer picks a host based on application hash (see also `LocalityBasedScheduler` in `scheduler.rs`).
+<span class="doccomment">/// LocalityBasedDeployer picks a host based on application hash (see also [`crate::scheduler::LocalityBasedScheduler`]).
 /// In case host number `i` can&#39;t deploy, the deployer considers host number `(i + step) % hosts.len()`.
 </span><span class="kw">pub struct </span>LocalityBasedDeployer {
     hasher: ApplicationHasher,
@@ -139,13 +148,15 @@
 }
 
 <span class="kw">impl </span>LocalityBasedDeployer {
-    <span class="kw">pub fn </span>new(hasher: <span class="prelude-ty">Option</span>&lt;ApplicationHasher&gt;, step: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new LocalityBasedDeployer with given hasher and step. If the hasher is `None`, uses identity hasher. If the step is `None`, assumes that step equals one.
+    </span><span class="kw">pub fn </span>new(hasher: <span class="prelude-ty">Option</span>&lt;ApplicationHasher&gt;, step: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), <span class="string">&quot;Identity&quot;</span>.to_string()));
         <span class="kw">let </span>s = step.unwrap_or(<span class="number">1</span>);
         <span class="self">Self </span>{ hasher: f, step: s }
     }
 
-    <span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates new LocalityBasedDeployer from a map of strings containing deployer parameters.
+    </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>hasher =
             ApplicationHasher::from_str(options.get(<span class="string">&quot;hasher&quot;</span>).map(|a| a.deref()).unwrap_or(<span class="string">&quot;Identity&quot;</span>)).unwrap();
         <span class="kw">let </span>step = options.get(<span class="string">&quot;step&quot;</span>).map(|s| s.parse::&lt;usize&gt;().unwrap());
@@ -176,7 +187,8 @@
     }
 }
 
-<span class="kw">pub fn </span>default_idle_deployer_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>IdleDeployer&gt; {
+<span class="doccomment">/// Creates [`IdleDeployer`] from a string containing its name and parameters.
+</span><span class="kw">pub fn </span>default_idle_deployer_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>IdleDeployer&gt; {
     <span class="kw">if </span>s.len() &gt;= <span class="number">23 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">22</span>] == <span class="string">&quot;LocalityBasedDeployer[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">22</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(LocalityBasedDeployer::from_options_map(<span class="kw-2">&amp;</span>opts));

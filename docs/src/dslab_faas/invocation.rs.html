@@ -96,9 +96,31 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::ops::{Index, IndexMut, Range};
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Function invocation.
+</span><span class="kw">use </span>std::ops::{Index, IndexMut, Range};
 
-<span class="attr">#[derive(Clone, Copy, Debug, PartialEq)]
+<span class="doccomment">/// Invocation status.
+</span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq)]
 </span><span class="kw">pub enum </span>InvocationStatus {
     <span class="doccomment">/// Invocation is registered, but simulation time has not reached its arrival time yet.
     </span>NotArrived,
@@ -112,41 +134,57 @@
     </span>Finished,
 }
 
-<span class="attr">#[derive(Copy, Clone)]
+<span class="doccomment">/// Function invocation.
+</span><span class="attr">#[derive(Copy, Clone)]
 </span><span class="kw">pub struct </span>Invocation {
-    <span class="kw">pub </span>id: usize,
-    <span class="kw">pub </span>app_id: usize,
-    <span class="kw">pub </span>func_id: usize,
-    <span class="kw">pub </span>duration: f64,
-    <span class="kw">pub </span>arrival_time: f64,
-    <span class="kw">pub </span>status: InvocationStatus,
-    <span class="kw">pub </span>host_id: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-    <span class="kw">pub </span>container_id: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-    <span class="kw">pub </span>start_time: <span class="prelude-ty">Option</span>&lt;f64&gt;,
-    <span class="kw">pub </span>finish_time: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    <span class="doccomment">/// Invocation id.
+    </span><span class="kw">pub </span>id: usize,
+    <span class="doccomment">/// [`crate::function::Application`] id.
+    </span><span class="kw">pub </span>app_id: usize,
+    <span class="doccomment">/// [`crate::function::Function`] id.
+    </span><span class="kw">pub </span>func_id: usize,
+    <span class="doccomment">/// Invocation duration.
+    </span><span class="kw">pub </span>duration: f64,
+    <span class="doccomment">/// Invocation request arrival time.
+    </span><span class="kw">pub </span>arrival_time: f64,
+    <span class="doccomment">/// Invocation status.
+    </span><span class="kw">pub </span>status: InvocationStatus,
+    <span class="doccomment">/// [`crate::host::Host`] id if the invocation was scheduled on some host.
+    </span><span class="kw">pub </span>host_id: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// [`crate::container::Container`] id if the invocation was assigned to some container.
+    </span><span class="kw">pub </span>container_id: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// Execution start time.
+    </span><span class="kw">pub </span>start_time: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    <span class="doccomment">/// Execution finish time.
+    </span><span class="kw">pub </span>finish_time: <span class="prelude-ty">Option</span>&lt;f64&gt;,
 }
 
 <span class="kw">impl </span>Invocation {
-    <span class="kw">pub fn </span>execution_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns invocation execution time (finish - start).
+    </span><span class="kw">pub fn </span>execution_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.finish_time.unwrap() - <span class="self">self</span>.start_time.unwrap()
     }
 
-    <span class="kw">pub fn </span>response_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns invocation response time (finish - arrival).
+    </span><span class="kw">pub fn </span>response_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.finish_time.unwrap() - <span class="self">self</span>.arrival_time
     }
 
-    <span class="kw">pub fn </span>wait_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns invocation wait time (start - arrival).
+    </span><span class="kw">pub fn </span>wait_time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.start_time.unwrap() - <span class="self">self</span>.arrival_time
     }
 }
 
-<span class="attr">#[derive(Default)]
+<span class="doccomment">/// Stores information about function invocations.
+</span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>InvocationRegistry {
     invocations: Vec&lt;Invocation&gt;,
 }
 
 <span class="kw">impl </span>InvocationRegistry {
-    <span class="kw">pub fn </span>add_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app_id: usize, func_id: usize, duration: f64, arrival_time: f64) -&gt; usize {
+    <span class="doccomment">/// Adds a new invocation to the registry and returns its `id`.
+    </span><span class="kw">pub fn </span>add_invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app_id: usize, func_id: usize, duration: f64, arrival_time: f64) -&gt; usize {
         <span class="kw">let </span>id = <span class="self">self</span>.invocations.len();
         <span class="kw">let </span>invocation = Invocation {
             id,
@@ -164,11 +202,13 @@
         id
     }
 
-    <span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="doccomment">/// Returns the number of invocations in the registry.
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.invocations.len()
     }
 
-    <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Returns whether the registry is empty.
+    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.invocations.is_empty()
     }
 }

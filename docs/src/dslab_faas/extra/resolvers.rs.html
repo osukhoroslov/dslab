@@ -20,14 +20,17 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// This file contains additional resolvers for YAML configs.
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Additional resolvers for YAML configs.
 </span><span class="kw">use </span><span class="kw">crate</span>::coldstart::{default_coldstart_policy_resolver, ColdStartPolicy};
 <span class="kw">use </span><span class="kw">crate</span>::config::parse_options;
 <span class="kw">use </span><span class="kw">crate</span>::extra::hermod::HermodScheduler;
 <span class="kw">use </span><span class="kw">crate</span>::extra::hybrid_histogram::HybridHistogramPolicy;
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::{default_scheduler_resolver, Scheduler};
 
-<span class="kw">pub fn </span>extra_coldstart_policy_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; {
+<span class="doccomment">/// Like [`crate::coldstart::default_coldstart_policy_resolver`], but includes extra policies.
+</span><span class="kw">pub fn </span>extra_coldstart_policy_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>ColdStartPolicy&gt; {
     <span class="kw">if </span>s.len() &gt;= <span class="number">23 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">22</span>] == <span class="string">&quot;HybridHistogramPolicy[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">22</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(HybridHistogramPolicy::from_options_map(<span class="kw-2">&amp;</span>opts));
@@ -35,7 +38,8 @@
     default_coldstart_policy_resolver(s)
 }
 
-<span class="kw">pub fn </span>extra_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
+<span class="doccomment">/// Like [`crate::scheduler::default_scheduler_resolver`], but includes extra schedulers.
+</span><span class="kw">pub fn </span>extra_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
     <span class="kw">if </span>s.len() &gt;= <span class="number">17 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">16</span>] == <span class="string">&quot;HermodScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">16</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(HermodScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
