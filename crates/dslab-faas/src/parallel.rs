@@ -1,4 +1,6 @@
 //! Utilities for running multiple experiments in parallel.
+#![allow(clippy::type_complexity)]
+
 use std::boxed::Box;
 use std::convert::Into;
 use std::fs::File;

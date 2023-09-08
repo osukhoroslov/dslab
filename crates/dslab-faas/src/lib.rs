@@ -1,6 +1,5 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../readme.md")]
-#![allow(clippy::type_complexity)]
 
 pub mod coldstart;
 pub mod config;

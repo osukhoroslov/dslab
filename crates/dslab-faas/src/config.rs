@@ -1,4 +1,5 @@
 //! Experiment configuration (YAML-serializable).
+#![allow(clippy::type_complexity)]
 
 use std::boxed::Box;
 use std::collections::HashMap;
