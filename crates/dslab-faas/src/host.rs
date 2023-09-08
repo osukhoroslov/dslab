@@ -1,3 +1,10 @@
+//! Host model.
+//!
+//! In DSLab FaaS, the main components of a host are:
+//! - [Container manager][crate::container::ContainerManager] -- a component that manages running containers.
+//! - [CPU model][crate::cpu::Cpu] -- a component that models CPU sharing among running containers.
+//! - [Invoker][crate::invoker::Invoker] -- a component that routes invocation requests to appropriate containers and creates
+//! new containers if needed.
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -17,6 +24,7 @@ use crate::resource::{ResourceConsumer, ResourceProvider};
 use crate::simulation::HandlerId;
 use crate::stats::Stats;
 
+/// Host model.
 pub struct Host {
     id: usize,
     invoker: Box<dyn Invoker>,
@@ -32,6 +40,7 @@ pub struct Host {
 
 impl Host {
     #[allow(clippy::too_many_arguments)]
+    /// Creates new host.
     pub fn new(
         id: usize,
         cores: u32,
@@ -60,10 +69,12 @@ impl Host {
         }
     }
 
+    /// Checks whether the host can allocate given resources.
     pub fn can_allocate(&self, resources: &ResourceConsumer) -> bool {
         self.container_manager.can_allocate(resources)
     }
 
+    /// Checks whether the host can invoke a function of the given [`crate::function::Application`] on existing container and optionally on deploying.
     pub fn can_invoke(&self, app: &Application, allow_deploying: bool) -> bool {
         self.container_manager
             .get_possible_containers(app, allow_deploying)
@@ -71,30 +82,37 @@ impl Host {
             .is_some()
     }
 
+    /// Returns the amount of active invocations on this host.
     pub fn active_invocation_count(&self) -> usize {
         self.container_manager.active_invocation_count()
     }
 
+    /// Returns the amount of queued invocations on this host.
     pub fn queued_invocation_count(&self) -> usize {
         self.invoker.queue_len()
     }
 
+    /// Returns the amount of all existing (active + queued) invocations on this host.
     pub fn total_invocation_count(&self) -> usize {
         self.active_invocation_count() + self.queued_invocation_count()
     }
 
+    /// Returns the total amount of a resource.
     pub fn get_total_resource(&self, id: usize) -> u64 {
         self.container_manager.get_total_resource(id)
     }
 
+    /// Returns the number of CPU cores.
     pub fn get_cpu_cores(&self) -> u32 {
         self.cpu.cores
     }
 
+    /// Returns current CPU load.
     pub fn get_cpu_load(&self) -> f64 {
         self.cpu.get_load()
     }
 
+    /// Passes an invocation to the [`crate::invoker::Invoker`], which either assigns it to a container or puts it in queue.
     pub fn invoke(&mut self, id: usize, time: f64) -> InvokerDecision {
         let mut ir = self.invocation_registry.borrow_mut();
         let invocation = &mut ir[id];
@@ -147,10 +165,12 @@ impl Host {
         status
     }
 
+    /// Tries to deploy a new container for the given application.
     pub fn try_deploy(&mut self, app: &Application, time: f64) -> Option<(usize, f64)> {
         self.container_manager.try_deploy(app, time)
     }
 
+    /// Updates wasted resources for idle containers.
     pub fn update_end_metrics(&mut self, time: f64) {
         let mut stats = self.stats.borrow_mut();
         for (_, container) in self.container_manager.get_containers().iter_mut() {
@@ -162,6 +182,7 @@ impl Host {
         }
     }
 
+    /// Starts an invocation.
     fn start_invocation(&mut self, cont_id: usize, id: usize, time: f64) {
         let container = self.container_manager.get_container_mut(cont_id).unwrap();
         if container.status == ContainerStatus::Idle {
@@ -207,7 +228,7 @@ impl Host {
         }
     }
 
-    pub fn on_container_end(&mut self, id: usize, time: f64) {
+    fn on_container_end(&mut self, id: usize, time: f64) {
         if let Some(cont) = self.container_manager.get_container(id) {
             if cont.status == ContainerStatus::Idle || cont.status == ContainerStatus::Terminated {
                 let delta = time - cont.last_change;
@@ -217,7 +238,7 @@ impl Host {
         }
     }
 
-    pub fn on_invocation_end(&mut self, id: usize, time: f64) {
+    fn on_invocation_end(&mut self, id: usize, time: f64) {
         let ir = self.invocation_registry.clone();
         let fr = self.function_registry.clone();
         let mut invocation_registry = ir.borrow_mut();

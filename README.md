@@ -4,7 +4,7 @@ DSLab is a modular framework for simulation of distributed systems.
 
 ## Documentation
 
-TODO
+See [here](https://osukhoroslov.github.io/dslab/docs/dslab_core/index.html).
 
 ## License
 

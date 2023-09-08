@@ -1,3 +1,4 @@
+//! A component that manages incoming invocations on a host.
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -8,22 +9,33 @@ use crate::function::{Application, FunctionRegistry};
 use crate::invocation::Invocation;
 use crate::stats::Stats;
 
+/// Invoker's decision on new function invocation.
 #[derive(Clone, Copy, PartialEq)]
 pub enum InvokerDecision {
+    /// Invocation will instantly start running on a warm container.
     Warm(usize),
+    /// Invocation will start running on a cold container after it is fully deployed.
     Cold((usize, f64)),
+    /// Invocation is queued on the invoker because the invoker can't run it now or provide a cold container.
     Queued,
+    /// Invoker rejects the invocation.
+    /// Note: This value is used internally, invoker shouldn't return it to the host.
     Rejected,
 }
 
+/// Previously-queued invocation that is finally able to be executed.
 #[derive(Clone, Copy)]
 pub struct DequeuedInvocation {
+    /// Invocation id.
     pub id: usize,
+    /// Container id.
     pub container_id: usize,
+    /// Deploying delay if the invocation will be executed on a deploying container.
     pub delay: Option<f64>,
 }
 
 impl DequeuedInvocation {
+    /// Creates new DequeuedInvocation.
     pub fn new(id: usize, container_id: usize, delay: Option<f64>) -> Self {
         Self {
             id,
@@ -81,8 +93,10 @@ pub trait Invoker {
         time: f64,
     ) -> InvokerDecision;
 
+    /// Returns invocation queue length.
     fn queue_len(&self) -> usize;
 
+    /// Returns a string with invoker description.
     fn to_string(&self) -> String {
         "STUB INVOKER NAME".to_string()
     }
@@ -115,6 +129,7 @@ pub struct NaiveInvoker {
 }
 
 impl NaiveInvoker {
+    /// Creates new NaiveInvoker.
     pub fn new() -> Self {
         Default::default()
     }
@@ -215,6 +230,7 @@ pub struct FIFOInvoker {
 }
 
 impl FIFOInvoker {
+    /// Creates new FIFOInvoker.
     pub fn new() -> Self {
         Default::default()
     }
@@ -303,6 +319,7 @@ impl Invoker for FIFOInvoker {
     }
 }
 
+/// Creates [`Invoker`] from a string containing its name and parameters.
 pub fn default_invoker_resolver(s: &str) -> Box<dyn Invoker> {
     if s == "NaiveInvoker" {
         Box::new(NaiveInvoker::new())

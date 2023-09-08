@@ -1,8 +1,9 @@
-/// CPU sharing models used in the simulator.
-/// We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
-/// i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
-/// If the container allows concurrent invocations, each invocation gets an equal part of the container share.
-/// The exact CPU sharing model depends on the used CpuPolicy.
+//! CPU sharing models.
+//!
+//! We use something similar to CPU shares in cgroups, but instead of shares we operate with (shares/core_shares),
+//! i.e. if the container has 512 shares and each core amounts to 1024 shares, the share of the container equals 0.5.
+//! If the container allows concurrent invocations, each invocation gets an equal part of the container share.
+//! The exact CPU sharing model depends on the used CpuPolicy.
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -16,7 +17,7 @@ use crate::event::InvocationEndEvent;
 use crate::invocation::Invocation;
 
 #[derive(Clone)]
-pub struct WorkItem {
+struct WorkItem {
     finish: f64,
     id: usize,
 }
@@ -119,6 +120,7 @@ pub struct IsolatedCpuPolicy {
 }
 
 impl IsolatedCpuPolicy {
+    /// Creates new IsolatedCpuPolicy.
     pub fn new(cores: u32) -> Self {
         Self {
             cores: cores as f64,
@@ -195,6 +197,7 @@ pub struct ContendedCpuPolicy {
 }
 
 impl ContendedCpuPolicy {
+    /// Creates new ContendedCpuPolicy.
     pub fn new(cores: u32) -> Self {
         Self {
             cores: cores as f64,
@@ -315,6 +318,7 @@ impl CpuPolicy for ContendedCpuPolicy {
     }
 }
 
+/// Creates [`CpuPolicy`] from a string containing its name and parameters.
 pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CpuPolicy> {
     let lower = s.to_lowercase();
     if lower == "ignored" {
@@ -328,26 +332,32 @@ pub fn default_cpu_policy_resolver(s: &str) -> Box<dyn CpuPolicy> {
     }
 }
 
+/// Just a wrapper over [`CpuPolicy`].
 pub struct Cpu {
+    /// Number of CPU cores.
     pub cores: u32,
     policy: Box<dyn CpuPolicy>,
     ctx: Rc<RefCell<SimulationContext>>,
 }
 
 impl Cpu {
+    /// Creates new Cpu.
     pub fn new(cores: u32, policy: Box<dyn CpuPolicy>, ctx: Rc<RefCell<SimulationContext>>) -> Self {
         Self { cores, policy, ctx }
     }
 
+    /// Returns current CPU load.
     pub fn get_load(&self) -> f64 {
         self.policy.get_load()
     }
 
+    /// Called when a new invocation starts running.
     pub fn on_new_invocation(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
         self.policy
             .on_new_invocation(invocation, container, time, &mut self.ctx.borrow_mut())
     }
 
+    /// Called when an invocation stops running.
     pub fn on_invocation_end(&mut self, invocation: &mut Invocation, container: &mut Container, time: f64) {
         self.policy
             .on_invocation_end(invocation, container, time, &mut self.ctx.borrow_mut())

@@ -1,5 +1,6 @@
-/// Functions for parsing Azure Functions 2021 trace and generating experiments using it.
-/// Trace description: https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md
+//! Functions for parsing Azure Functions 2021 trace and generating experiments using it.
+//!
+//! Trace description: <https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md>
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
@@ -11,6 +12,7 @@ use rand_pcg::Pcg64;
 use crate::extra::azure_trace_2019::{ApplicationRecord, AzureTrace, FunctionRecord};
 use crate::trace::RequestData;
 
+/// Generator of application memory requirements.
 pub enum MemoryGenerator {
     /// All apps use fixed amount of memory.
     Fixed(u64),
@@ -19,6 +21,7 @@ pub enum MemoryGenerator {
     PrefittedBurr,
 }
 
+/// Struct with Azure 2021 trace settings.
 pub struct Azure2021TraceConfig {
     /// Simulation time period in seconds.
     pub time_period: f64,

@@ -1,3 +1,4 @@
+//! Various utility structs.
 use std::hash::BuildHasherDefault;
 use std::ops::{Index, IndexMut};
 
@@ -6,16 +7,19 @@ use rustc_hash::FxHasher;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::Serialize;
 
+/// A simple incrementing counter.
 #[derive(Default)]
 pub struct Counter {
     value: usize,
 }
 
 impl Counter {
+    /// Returns current counter value.
     pub fn curr(&self) -> usize {
         self.value
     }
 
+    /// Post-increments the counter.
     pub fn increment(&mut self) -> usize {
         let curr = self.value;
         self.value += 1;
@@ -37,6 +41,7 @@ impl<T> Default for VecMap<T> {
 }
 
 impl<T> VecMap<T> {
+    /// Inserts a new value into the map.
     pub fn insert(&mut self, id: usize, value: T) {
         while self.data.len() <= id {
             self.data.push(None);
@@ -44,6 +49,7 @@ impl<T> VecMap<T> {
         self.data[id] = Some(value);
     }
 
+    /// Returns a reference to the value specified by id if exists.
     pub fn get(&self, id: usize) -> Option<&T> {
         if id < self.data.len() {
             self.data[id].as_ref()
@@ -52,6 +58,7 @@ impl<T> VecMap<T> {
         }
     }
 
+    /// Returns a mutable reference to the value specified by id if exists.
     pub fn get_mut(&mut self, id: usize) -> Option<&mut T> {
         if id < self.data.len() {
             self.data[id].as_mut()
@@ -60,16 +67,19 @@ impl<T> VecMap<T> {
         }
     }
 
+    /// Returns (key, value) pairs iterator.
     pub fn iter(&self) -> VecMapIterator<'_, T> {
         VecMapIterator::new(self.data.iter().enumerate())
     }
 }
 
+/// Iterator over [`VecMap`] (key, value) pairs.
 pub struct VecMapIterator<'a, T> {
     inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>,
 }
 
 impl<'a, T> VecMapIterator<'a, T> {
+    /// Creates new VecMapIterator.
     pub fn new(inner: std::iter::Enumerate<std::slice::Iter<'a, Option<T>>>) -> Self {
         Self { inner }
     }
@@ -102,7 +112,7 @@ impl<T> IndexMut<usize> for VecMap<T> {
     }
 }
 
-/// Similar to VecMap, but returns the default value instead of None and auto-extends to keys in
+/// Similar to [`VecMap`], but returns the default value instead of None and auto-extends to keys in
 /// `get_mut` query.
 #[derive(Clone, Default)]
 pub struct DefaultVecMap<T: Default> {
@@ -119,11 +129,13 @@ where
         }
     }
 
+    /// Inserts a new value into the map.
     pub fn insert(&mut self, id: usize, value: T) {
         self.extend(id);
         self.data[id] = value;
     }
 
+    /// Returns a reference to the value speficied by id if exists.
     pub fn get(&self, id: usize) -> Option<&T> {
         if id < self.data.len() {
             Some(&self.data[id])
@@ -132,11 +144,13 @@ where
         }
     }
 
+    /// Returns a mutable reference to the value speficied by id if exists.
     pub fn get_mut(&mut self, id: usize) -> &mut T {
         self.extend(id);
         &mut self.data[id]
     }
 
+    /// Returns an iterator over map values. To iterate over (key, value) pairs call enumerate() on the iterator.
     pub fn iter(&self) -> std::slice::Iter<'_, T> {
         self.data.iter()
     }
@@ -178,5 +192,7 @@ where
     }
 }
 
+/// IndexMap with faster hash function.
 pub type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
+/// IndexSet with faster hash function.
 pub type FxIndexSet<K> = IndexSet<K, BuildHasherDefault<FxHasher>>;

@@ -1,3 +1,4 @@
+//! Metrics obtained from simulation.
 use order_stat::kth_by;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::Serialize;
@@ -6,8 +7,7 @@ use crate::invocation::Invocation;
 use crate::resource::ResourceConsumer;
 use crate::util::DefaultVecMap;
 
-/// This struct allows calculating statistical functions on some data sample.
-/// Almost all metrics computed by the simulator are stored using this struct.
+/// Statistical sample.
 #[derive(Clone, Default)]
 pub struct SampleMetric {
     data: Vec<f64>,
@@ -24,10 +24,12 @@ impl SampleMetric {
         self.data.len()
     }
 
+    /// Checks whether the sample is empty.
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
 
+    /// Returns the sum of elements in this sample.
     pub fn sum(&self) -> f64 {
         let mut s = 0.0;
         for x in self.data.iter().copied() {
@@ -36,14 +38,17 @@ impl SampleMetric {
         s
     }
 
+    /// Returns the arithmetic mean of elements in this sample.
     pub fn mean(&self) -> f64 {
         self.sum() / (self.data.len() as f64)
     }
 
+    /// Returns minimum element in this sample.
     pub fn min(&self) -> Option<f64> {
         self.data.iter().copied().reduce(f64::min)
     }
 
+    /// Returns maximum element in this sample.
     pub fn max(&self) -> Option<f64> {
         self.data.iter().copied().reduce(f64::max)
     }
@@ -83,18 +88,22 @@ impl SampleMetric {
         }
     }
 
+    /// Returns biased sample variance.
     pub fn biased_variance(&self) -> f64 {
         self.variance(true)
     }
 
+    /// Returns unbiased sample variance.
     pub fn unbiased_variance(&self) -> f64 {
         self.variance(false)
     }
 
+    /// Returns the slice with the elements of this sample.
     pub fn values(&self) -> &[f64] {
         &self.data
     }
 
+    /// Converts sample to float vector.
     pub fn to_vec(&self) -> Vec<f64> {
         self.data.to_vec()
     }
@@ -128,30 +137,40 @@ impl Serialize for SampleMetric {
     }
 }
 
+/// Metrics related to invocations and execution speed.
 #[derive(Clone, Default, Serialize)]
 pub struct InvocationStats {
+    /// Number of started invocations.
     pub invocations: u64,
+    /// Number of cold starts.
     pub cold_starts: u64,
     /// This metric counts latency of cold starts only, warm starts are not counted as zero.
     pub cold_start_latency: SampleMetric,
     /// Measures queueing time of requests stuck in the invoker queue (other requests are not counted at all).
     pub queueing_time: SampleMetric,
+    /// Absolute execution slowdown.
     pub abs_exec_slowdown: SampleMetric,
+    /// Relative execution slowdown.
     pub rel_exec_slowdown: SampleMetric,
+    /// Absolute total execution slowdown (includes queueing and cold starts).
     pub abs_total_slowdown: SampleMetric,
+    /// Relative total execution slowdown (includes queueing and cold starts).
     pub rel_total_slowdown: SampleMetric,
 }
 
 impl InvocationStats {
+    /// Updates metrics on a cold start.
     pub fn on_cold_start(&mut self, delay: f64) {
         self.cold_start_latency.add(delay);
         self.cold_starts += 1;
     }
 
+    /// Updates metrics on a new invocation.
     pub fn on_new_invocation(&mut self) {
         self.invocations += 1;
     }
 
+    /// Updates metrics on invocation end.
     pub fn update(&mut self, invocation: &Invocation) {
         let len = invocation.execution_time();
         let total_len = invocation.response_time();
@@ -163,34 +182,43 @@ impl InvocationStats {
             .add((total_len - invocation.duration) / invocation.duration);
     }
 
+    /// Updates metrics on a dequeued invocation.
     pub fn update_queueing_time(&mut self, queueing_time: f64) {
         self.queueing_time.add(queueing_time);
     }
 }
 
+/// All metrics computed by the simulator.
 #[derive(Clone, Default, Serialize)]
 pub struct GlobalStats {
+    /// Invocation-related metrics.
     pub invocation_stats: InvocationStats,
+    /// Integral of resources wasted by idle containers over time.
     pub wasted_resource_time: DefaultVecMap<SampleMetric>,
 }
 
 impl GlobalStats {
+    /// Updates metrics on a cold start.
     pub fn on_cold_start(&mut self, delay: f64) {
         self.invocation_stats.on_cold_start(delay);
     }
 
+    /// Updates metrics on a new invocation.
     pub fn on_new_invocation(&mut self) {
         self.invocation_stats.on_new_invocation();
     }
 
+    /// Updates metrics on invocation end.
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.invocation_stats.update(invocation);
     }
 
+    /// Updates metrics on a dequeued invocation.
     pub fn update_queueing_time(&mut self, queueing_time: f64) {
         self.invocation_stats.update_queueing_time(queueing_time);
     }
 
+    /// Updates wasted resources.
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         for (_, req) in resource.iter() {
             let delta = time * (req.quantity as f64);
@@ -198,6 +226,7 @@ impl GlobalStats {
         }
     }
 
+    /// Prints metrics summary to stdout.
     pub fn print_summary(&self, name: &str) {
         println!("describing {}", name);
         println!("{} successful invocations", self.invocation_stats.invocations);
@@ -221,38 +250,47 @@ impl GlobalStats {
     }
 }
 
+/// Main metrics storage of the simulator, stores metrics on global level, application level, and function level.
 #[derive(Clone, Default, Serialize)]
 pub struct Stats {
+    /// Application-wise invocation metrics.
     pub app_stats: DefaultVecMap<InvocationStats>,
+    /// Function-wise invocation metrics.
     pub func_stats: DefaultVecMap<InvocationStats>,
+    /// Global metrics.
     pub global_stats: GlobalStats,
 }
 
 impl Stats {
+    /// Updates metrics on a cold start.
     pub fn on_cold_start(&mut self, app_id: usize, func_id: usize, delay: f64) {
         self.global_stats.on_cold_start(delay);
         self.app_stats.get_mut(app_id).on_cold_start(delay);
         self.func_stats.get_mut(func_id).on_cold_start(delay);
     }
 
+    /// Updates metrics on a new invocation.
     pub fn on_new_invocation(&mut self, app_id: usize, func_id: usize) {
         self.global_stats.on_new_invocation();
         self.app_stats.get_mut(app_id).on_new_invocation();
         self.func_stats.get_mut(func_id).on_new_invocation();
     }
 
+    /// Updates metrics on invocation end.
     pub fn update_invocation_stats(&mut self, invocation: &Invocation) {
         self.global_stats.update_invocation_stats(invocation);
         self.app_stats.get_mut(invocation.app_id).update(invocation);
         self.func_stats.get_mut(invocation.func_id).update(invocation);
     }
 
+    /// Updates metrics on a dequeued invocation.
     pub fn update_queueing_time(&mut self, app_id: usize, func_id: usize, queueing_time: f64) {
         self.global_stats.update_queueing_time(queueing_time);
         self.app_stats.get_mut(app_id).update_queueing_time(queueing_time);
         self.func_stats.get_mut(func_id).update_queueing_time(queueing_time);
     }
 
+    /// Updates wasted resources.
     pub fn update_wasted_resources(&mut self, time: f64, resource: &ResourceConsumer) {
         self.global_stats.update_wasted_resources(time, resource);
     }

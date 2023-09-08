@@ -1,3 +1,4 @@
+//! Scheduler implementation from "Hermod: principled and practical scheduling for serverless functions" paper.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -7,7 +8,7 @@ use crate::host::Host;
 use crate::scheduler::LeastLoadedScheduler;
 use crate::scheduler::Scheduler;
 
-/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>
+/// Refer to <https://dl.acm.org/doi/abs/10.1145/3542929.3563468>.
 pub struct HermodScheduler {
     high_load_fallback: LeastLoadedScheduler,
     /// Passed to `high_load_fallback`.
@@ -21,6 +22,7 @@ pub struct HermodScheduler {
 }
 
 impl HermodScheduler {
+    /// Creates new HermodScheduler.
     pub fn new(prefer_warm: bool, use_invocation_count: bool, avoid_queueing: bool) -> Self {
         Self {
             high_load_fallback: LeastLoadedScheduler::new(prefer_warm, use_invocation_count, avoid_queueing),
@@ -30,6 +32,7 @@ impl HermodScheduler {
         }
     }
 
+    /// Creates scheduler from a map of strings containing scheduler parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let prefer_warm = options.get("prefer_warm").unwrap().parse::<bool>().unwrap();
         let use_invocation_count = options.get("use_invocation_count").unwrap().parse::<bool>().unwrap();

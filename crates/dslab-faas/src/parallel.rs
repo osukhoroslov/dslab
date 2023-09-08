@@ -1,3 +1,6 @@
+//! Utilities for running multiple experiments in parallel.
+#![allow(clippy::type_complexity)]
+
 use std::boxed::Box;
 use std::convert::Into;
 use std::fs::File;
@@ -19,9 +22,13 @@ use crate::simulation::ServerlessSimulation;
 use crate::stats::Stats;
 use crate::trace::Trace;
 
+/// Similar to [`crate::config::HostConfig`], but only accepts invokers with `Send` trait.
 pub struct ParallelHostConfig {
+    /// [`crate::invoker::Invoker`] implementation.
     pub invoker: Box<dyn Invoker + Send>,
+    /// Host resources.
     pub resources: Vec<(String, u64)>,
+    /// Host CPU cores.
     pub cores: u32,
 }
 
@@ -35,11 +42,17 @@ impl Default for ParallelHostConfig {
     }
 }
 
+/// Similar to [`crate::config::Config`], but ensures that all simulation components implement `Send` trait.
 pub struct ParallelConfig {
+    /// [`crate::coldstart::ColdStartPolicy`] implementation.
     pub coldstart_policy: Box<dyn ColdStartPolicy + Send>,
+    /// [`crate::cpu::CpuPolicy`] implementation.
     pub cpu_policy: Box<dyn CpuPolicy + Send>,
+    /// [`crate::deployer::IdleDeployer`] implementation.
     pub idle_deployer: Box<dyn IdleDeployer + Send>,
+    /// [`crate::scheduler::Scheduler`] implementation.
     pub scheduler: Box<dyn Scheduler + Send>,
+    /// Host configuration data.
     pub hosts: Vec<ParallelHostConfig>,
 }
 
@@ -55,6 +68,7 @@ impl Default for ParallelConfig {
     }
 }
 
+/// Runs parallel simulations in a thread pool with `n_workers` worker threads.
 pub fn parallel_simulation_n_workers(
     mut configs: Vec<ParallelConfig>,
     mut traces: Vec<Box<dyn Trace + Send + Sync>>,
@@ -102,6 +116,7 @@ pub fn parallel_simulation_n_workers(
     results.drain(..).map(|x| x.1).collect()
 }
 
+/// Runs parallel simulations in a thread pool with a separate worker for each config.
 pub fn parallel_simulation(
     configs: Vec<ParallelConfig>,
     traces: Vec<Box<dyn Trace + Send + Sync>>,
@@ -111,6 +126,7 @@ pub fn parallel_simulation(
     parallel_simulation_n_workers(configs, traces, seeds, n_workers)
 }
 
+/// Similar to [`parallel_simulation_n_workers`], but for raw configs.
 pub fn parallel_simulation_raw_n_workers(
     mut configs: Vec<RawConfig>,
     resolvers: ConfigParamResolvers,
@@ -181,6 +197,7 @@ pub fn parallel_simulation_raw_n_workers(
     results.drain(..).map(|x| x.1).collect()
 }
 
+/// Similar to [`parallel_simulation`], but for raw configs.
 pub fn parallel_simulation_raw(
     configs: Vec<RawConfig>,
     resolvers: ConfigParamResolvers,
@@ -191,6 +208,7 @@ pub fn parallel_simulation_raw(
     parallel_simulation_raw_n_workers(configs, resolvers, traces, seeds, n_workers)
 }
 
+/// Similar to [`parallel_simulation_n_workers`], but for YAML configs.
 pub fn parallel_simulation_yaml_n_workers(
     configs: Vec<&Path>,
     resolvers: ConfigParamResolvers,
@@ -213,6 +231,7 @@ pub fn parallel_simulation_yaml_n_workers(
     )
 }
 
+/// Similar to [`parallel_simulation`], but for YAML configs.
 pub fn parallel_simulation_yaml(
     configs: Vec<&Path>,
     resolvers: ConfigParamResolvers,

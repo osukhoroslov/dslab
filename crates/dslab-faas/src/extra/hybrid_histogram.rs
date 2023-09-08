@@ -1,5 +1,4 @@
-/// This file contains the implementation of hybrid histogram policy from
-/// https://www.usenix.org/conference/atc20/presentation/shahrad
+//! Coldstart policy implementation from "Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider" paper.
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
@@ -110,6 +109,7 @@ impl ApplicationData {
     }
 }
 
+/// Refer to <https://www.usenix.org/conference/atc20/presentation/shahrad>.
 pub struct HybridHistogramPolicy {
     range: f64,
     arima_margin: f64,
@@ -130,6 +130,7 @@ enum Pattern {
 }
 
 impl HybridHistogramPolicy {
+    /// Creates new HybridHistogramPolicy.
     pub fn new(range: f64, bin_len: f64, cv_thr: f64, oob_thr: f64, arima_margin: f64, hist_margin: f64) -> Self {
         let n_bins = (range / bin_len).round() as usize;
         Self {
@@ -146,6 +147,7 @@ impl HybridHistogramPolicy {
         }
     }
 
+    /// Creates policy from a map of strings containing policy parameters.
     pub fn from_options_map(options: &HashMap<String, String>) -> Self {
         let range = options.get("range").unwrap().parse::<f64>().unwrap();
         let bin_len = options
