@@ -63,7 +63,7 @@ struct Task {
     files: Vec<File>,
     // Machine used for task execution
     machine: Option<String>,
-    // Additional empty dependencies.
+    // Parent tasks.
     parents: Vec<String>,
 }
 
