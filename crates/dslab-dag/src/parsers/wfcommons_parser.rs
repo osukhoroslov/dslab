@@ -1,5 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 
@@ -194,9 +194,13 @@ impl DAG {
             }
         }
         for (task_id, task) in workflow.tasks().iter().enumerate() {
+            let mut predecessors: HashSet<usize> = HashSet::new();
             for file in task.files.iter() {
                 if file.link == "input" {
                     if let Some(data_item_id) = data_items.get(&file.name) {
+                        if let Some(producer) = dag.get_data_item(*data_item_id).producer {
+                            predecessors.insert(producer);
+                        }
                         dag.add_data_dependency(*data_item_id, task_id);
                     } else {
                         let data_item_id =
@@ -207,8 +211,12 @@ impl DAG {
                 }
             }
             for parent in task.parents.iter() {
-                let data_item_id = dag.add_task_output(task_ids[parent], &format!("{} -> {}", parent, task.name), 0.);
-                dag.add_data_dependency(data_item_id, task_id);
+                if !predecessors.contains(&task_ids[parent]) {
+                    let data_item_id =
+                        dag.add_task_output(task_ids[parent], &format!("{} -> {}", parent, task.name), 0.);
+                    dag.add_data_dependency(data_item_id, task_id);
+                    predecessors.insert(task_ids[parent]);
+                }
             }
         }
         dag
