@@ -6,7 +6,6 @@ class PingClient(Process):
         self._id = node_id
         self._server_id = server_id
         self._ping = None
-        self._delivered = None
 
     def on_local_message(self, msg: Message, ctx: Context):
         if msg.type == 'PING':
@@ -18,13 +17,12 @@ class PingClient(Process):
         # process messages from server
         if msg.type == 'PONG' and self._ping is not None:
             self._ping = None
-            self._delivered += 1
             ctx.cancel_timer('check_pong')
             ctx.send_local(msg)
 
     def on_timer(self, timer_name: str, ctx: Context):
         # process fired timers here
-        if timer_name == 'check_pong' and self._ping is not None:
+        if timer_name == 'check_pong':
             ctx.send(self._ping, self._server_id)
             ctx.set_timer('check_pong', 3)
 

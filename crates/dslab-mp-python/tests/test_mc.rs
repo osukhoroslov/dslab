@@ -61,11 +61,12 @@ fn build_system() -> System {
 fn python_runtime_error(#[case] strategy_name: &str) {
     let system = build_system();
     let data = r#"{"value": 0}"#.to_string();
-    let messages_expected = HashSet::<String>::from_iter([data.clone()]);
+    let data2 = r#"{"value": 1}"#.to_string();
+    let messages_expected = HashSet::<String>::from_iter([data.clone(), data2.clone()]);
 
     let strategy_config = StrategyConfig::default()
         .prune(prunes::sent_messages_limit(4))
-        .goal(goals::got_n_local_messages("client-node", "client", 1))
+        .goal(goals::got_n_local_messages("client-node", "client", 2))
         .invariant(invariants::all_invariants(vec![
             invariants::received_messages("client-node", "client", messages_expected),
             invariants::state_depth(20),
@@ -76,13 +77,13 @@ fn python_runtime_error(#[case] strategy_name: &str) {
             .send_local_message("client-node", "client", Message::new("PING", &data))
             .unwrap();
         system
-            .send_local_message("client-node", "client", Message::new("PING", &data))
+            .send_local_message("client-node", "client", Message::new("PING", &data2))
             .unwrap();
     });
 
     assert!(res.is_err());
     assert_eq!(
         res.err().unwrap().message(),
-        "TypeError: unsupported operand type(s) for +=: 'NoneType' and 'int'"
+        "AttributeError: 'NoneType' object has no attribute 'type'"
     );
 }
