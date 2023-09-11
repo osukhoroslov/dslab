@@ -74,12 +74,8 @@ fn python_runtime_error(#[case] strategy_name: &str) {
         ]));
 
     let res = run_mc!(&system, strategy_config, strategy_name, |system| {
-        system
-            .send_local_message("client-node", "client", Message::new("PING", &data))
-            .unwrap();
-        system
-            .send_local_message("client-node", "client", Message::new("PING", &data2))
-            .unwrap();
+        system.send_local_message("client-node", "client", Message::new("PING", &data));
+        system.send_local_message("client-node", "client", Message::new("PING", &data2));
     });
 
     assert!(res.is_err());
