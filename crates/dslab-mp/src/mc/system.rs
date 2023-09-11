@@ -10,15 +10,12 @@ use crate::logger::LogEntry;
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
-use crate::mc::pending_events::{PendingEvents, MessageDeliveryGuarantee};
+use crate::mc::pending_events::{MessageDeliveryGuarantee, PendingEvents};
 use crate::mc::state::McState;
 use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
 
 pub type McTime = OrderedFloat<f64>;
-
-
-
 
 #[derive(Clone)]
 pub struct McSystem {

@@ -77,11 +77,14 @@ impl PendingEvents {
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     pub(crate) fn available_events(&self, delivery_guarantee: &MessageDeliveryGuarantee) -> BTreeSet<McEventId> {
         match delivery_guarantee {
-            MessageDeliveryGuarantee::NoTimeLimit =>  {
-                self.available_events.clone()
-            }
-            MessageDeliveryGuarantee::FastDelivery =>  {
-                let only_messages = self.available_events.clone().into_iter().filter(|x| matches!(self.events[x], McEvent::MessageReceived { .. })).collect::<BTreeSet<McEventId>>();
+            MessageDeliveryGuarantee::NoTimeLimit => self.available_events.clone(),
+            MessageDeliveryGuarantee::FastDelivery => {
+                let only_messages = self
+                    .available_events
+                    .clone()
+                    .into_iter()
+                    .filter(|x| matches!(self.events[x], McEvent::MessageReceived { .. }))
+                    .collect::<BTreeSet<McEventId>>();
                 if only_messages.is_empty() {
                     self.available_events.clone()
                 } else {
@@ -152,7 +155,7 @@ mod tests {
     use rand::prelude::IteratorRandom;
 
     use crate::mc::events::McEvent;
-    use crate::mc::pending_events::{PendingEvents,MessageDeliveryGuarantee};
+    use crate::mc::pending_events::{MessageDeliveryGuarantee, PendingEvents};
     use crate::mc::system::McTime;
 
     #[test]
@@ -181,7 +184,11 @@ mod tests {
             }
         }
         println!("{:?}", rev_id);
-        while let Some(id) = pending_events.available_events(&MessageDeliveryGuarantee::NoTimeLimit).iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events
+            .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
+            .iter()
+            .choose(&mut rand::thread_rng())
+        {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);
@@ -244,7 +251,11 @@ mod tests {
             };
             rev_id[pending_events.push(event)] = 9 + node_id;
         }
-        while let Some(id) = pending_events.available_events(&MessageDeliveryGuarantee::NoTimeLimit).iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events
+            .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
+            .iter()
+            .choose(&mut rand::thread_rng())
+        {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);
