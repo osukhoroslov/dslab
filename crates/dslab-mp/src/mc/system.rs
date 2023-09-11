@@ -7,7 +7,6 @@ use std::rc::Rc;
 use ordered_float::OrderedFloat;
 
 use crate::logger::LogEntry;
-use crate::mc::error::McError;
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
@@ -43,7 +42,7 @@ impl McSystem {
         }
     }
 
-    pub fn apply_event(&mut self, event: McEvent) -> Result<(), McError> {
+    pub fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
@@ -66,14 +65,10 @@ impl McSystem {
             }
             _ => vec![],
         };
-
-        self.check_process_error(&new_events)?;
-
         self.add_events(new_events);
-        Ok(())
     }
 
-    pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message) -> Result<(), McError>
+    pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
     where
         S: Into<String>,
     {
@@ -91,11 +86,7 @@ impl McSystem {
             .get_mut(&node)
             .unwrap()
             .on_local_message_received(proc, msg, event_time, state_hash);
-
-        self.check_process_error(&new_events)?;
-
         self.add_events(new_events);
-        Ok(())
     }
 
     pub fn crash_node<S>(&mut self, node: S)
@@ -180,17 +171,5 @@ impl McSystem {
         let mut hasher = DefaultHasher::default();
         self.get_state().hash(&mut hasher);
         hasher.finish()
-    }
-
-    fn check_process_error(&self, events: &Vec<McEvent>) -> Result<(), McError> {
-        if events.is_empty() {
-            return Ok(());
-        }
-
-        if let McEvent::ProcessError { err } = &events[0] {
-            self.trace_handler.borrow_mut().push(events[0].to_log_entry());
-            return Err(McError::new(err.clone(), self.trace_handler.borrow().trace()));
-        };
-        Ok(())
     }
 }

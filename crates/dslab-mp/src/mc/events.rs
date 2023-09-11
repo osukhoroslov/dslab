@@ -99,12 +99,6 @@ pub enum McEvent {
         /// The id of original MessageReceived event.
         receive_event_id: McEventId,
     },
-
-    /// The event of runtime error during process code execution.
-    ProcessError {
-        /// The error text message.
-        err: String,
-    },
 }
 
 impl McEvent {
@@ -191,7 +185,6 @@ impl McEvent {
                 src: src.clone(),
                 dst: dst.clone(),
             },
-            McEvent::ProcessError { err } => LogEntry::ProcessError { err: err.clone() },
         }
     }
 }

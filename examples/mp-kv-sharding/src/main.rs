@@ -735,11 +735,11 @@ where
 
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
-            sys.send_local_message(proc.clone(), proc.clone(), msg.clone()).unwrap();
+            sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
         })
     } else {
         mc.run_with_change::<Bfs>(strategy_config, |sys| {
-            sys.send_local_message(proc.clone(), proc.clone(), msg).unwrap();
+            sys.send_local_message(proc.clone(), proc.clone(), msg);
         })
     };
     match res {
@@ -895,7 +895,7 @@ fn check_mc_node_removed(
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, move |sys| {
         let msg = Message::new("NODE_REMOVED", &format!(r#"{{"id": "{}"}}"#, removed_proc));
         for proc in process_names.clone() {
-            sys.send_local_message(proc.clone(), proc, msg.clone()).unwrap();
+            sys.send_local_message(proc.clone(), proc, msg.clone());
         }
     });
     match res {

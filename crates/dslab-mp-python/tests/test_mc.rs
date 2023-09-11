@@ -58,6 +58,7 @@ fn build_system() -> System {
 #[rstest]
 #[case("dfs")]
 #[case("bfs")]
+#[should_panic(expected = "Process error")]
 fn python_runtime_error(#[case] strategy_name: &str) {
     let system = build_system();
     let data = r#"{"value": 0}"#.to_string();

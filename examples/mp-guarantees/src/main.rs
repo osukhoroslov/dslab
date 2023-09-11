@@ -454,7 +454,7 @@ fn test_mc_reliable_network(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new(&sys);
     let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
-            sys.send_local_message("sender-node", "sender", message).unwrap();
+            sys.send_local_message("sender-node", "sender", message);
         }
     });
     if let Err(e) = res {
@@ -482,7 +482,7 @@ fn test_mc_message_drops(config: &TestConfig) -> TestResult {
     let mut mc = ModelChecker::new(&sys);
     let res = mc.run_with_change::<Bfs>(strategy_config, move |sys| {
         for message in messages {
-            sys.send_local_message("sender-node", "sender", message).unwrap();
+            sys.send_local_message("sender-node", "sender", message);
         }
     });
     if let Err(e) = res {
@@ -532,7 +532,7 @@ fn test_mc_unstable_network(config: &TestConfig) -> TestResult {
 
     let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
         for msg in messages {
-            sys.send_local_message("sender-node", "sender", msg.clone()).unwrap();
+            sys.send_local_message("sender-node", "sender", msg.clone());
         }
     });
     if let Err(e) = res {

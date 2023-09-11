@@ -3,11 +3,14 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+use colored::Colorize;
+
 use crate::context::Context;
 use crate::logger::LogEntry;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
+use crate::util::t;
 
 use crate::mc::events::McEvent;
 use crate::mc::network::DeliveryOptions;
@@ -115,7 +118,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx) {
-            return vec![McEvent::ProcessError { err: e }];
+            self.handle_process_err(e);
         }
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
@@ -129,7 +132,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_timer(timer, &mut proc_ctx) {
-            return vec![McEvent::ProcessError { err: e }];
+            self.handle_process_err(e);
         }
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
@@ -147,7 +150,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx) {
-            return vec![McEvent::ProcessError { err: e }];
+            self.handle_process_err(e);
         }
 
         self.handle_process_actions(proc, time, proc_ctx.actions())
@@ -240,5 +243,13 @@ impl McNode {
             }
         }
         new_events
+    }
+
+    fn handle_process_err(&self, err: String) {
+        for event in self.trace_handler.borrow().trace() {
+            event.print();
+        }
+        t!(err.red());
+        panic!("Process error");
     }
 }
