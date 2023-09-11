@@ -4,6 +4,15 @@ use std::collections::BTreeSet;
 use crate::mc::dependency::DependencyResolver;
 use crate::mc::events::{McEvent, McEventId};
 
+/// System can provide extra guarantees on message delivery
+#[derive(Clone)]
+pub enum MessageDeliveryGuarantee {
+    /// Default guarantee for delivery: messages can be delivered with any delay
+    NoTimeLimit,
+    /// Network is fast and communication occurs with almost-zero delay
+    FastDelivery,
+}
+
 /// Stores pending events and provides a convenient interface for working with them.  
 #[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct PendingEvents {
@@ -66,13 +75,25 @@ impl PendingEvents {
     }
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
-    pub fn available_events(&self) -> BTreeSet<McEventId> {
-        self.available_events.clone()
+    pub(crate) fn available_events(&self, delivery_guarantee: &MessageDeliveryGuarantee) -> BTreeSet<McEventId> {
+        match delivery_guarantee {
+            MessageDeliveryGuarantee::NoTimeLimit =>  {
+                self.available_events.clone()
+            }
+            MessageDeliveryGuarantee::FastDelivery =>  {
+                let only_messages = self.available_events.clone().into_iter().filter(|x| matches!(self.events[x], McEvent::MessageReceived { .. })).collect::<BTreeSet<McEventId>>();
+                if only_messages.is_empty() {
+                    self.available_events.clone()
+                } else {
+                    only_messages
+                }
+            }
+        }
     }
 
-    /// Returns the number of currently available events
-    pub fn available_events_num(&self) -> usize {
-        self.available_events.len()
+    /// Returns true if there exist at least ont available event
+    pub fn has_available_events(&self) -> bool {
+        !self.available_events.is_empty()
     }
 
     /// Cancels given timer and recalculates available events.
@@ -131,7 +152,7 @@ mod tests {
     use rand::prelude::IteratorRandom;
 
     use crate::mc::events::McEvent;
-    use crate::mc::pending_events::PendingEvents;
+    use crate::mc::pending_events::{PendingEvents,MessageDeliveryGuarantee};
     use crate::mc::system::McTime;
 
     #[test]
@@ -160,7 +181,7 @@ mod tests {
             }
         }
         println!("{:?}", rev_id);
-        while let Some(id) = pending_events.available_events().iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events.available_events(&MessageDeliveryGuarantee::NoTimeLimit).iter().choose(&mut rand::thread_rng()) {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);
@@ -201,7 +222,7 @@ mod tests {
         // - two timers with delays 2 and 3
         for _ in 0..7 {
             let id = *pending_events
-                .available_events()
+                .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
                 .iter()
                 .choose(&mut rand::thread_rng())
                 .unwrap();
@@ -223,7 +244,7 @@ mod tests {
             };
             rev_id[pending_events.push(event)] = 9 + node_id;
         }
-        while let Some(id) = pending_events.available_events().iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events.available_events(&MessageDeliveryGuarantee::NoTimeLimit).iter().choose(&mut rand::thread_rng()) {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);

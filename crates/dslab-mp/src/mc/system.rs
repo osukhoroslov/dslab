@@ -10,12 +10,15 @@ use crate::logger::LogEntry;
 use crate::mc::events::{McEvent, McEventId};
 use crate::mc::network::McNetwork;
 use crate::mc::node::McNode;
-use crate::mc::pending_events::PendingEvents;
+use crate::mc::pending_events::{PendingEvents, MessageDeliveryGuarantee};
 use crate::mc::state::McState;
 use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
 
 pub type McTime = OrderedFloat<f64>;
+
+
+
 
 #[derive(Clone)]
 pub struct McSystem {
@@ -23,6 +26,7 @@ pub struct McSystem {
     net: McNetwork,
     pub(crate) events: PendingEvents,
     depth: u64,
+    message_delivery: MessageDeliveryGuarantee,
     pub(crate) trace_handler: Rc<RefCell<TraceHandler>>,
 }
 
@@ -38,6 +42,7 @@ impl McSystem {
             net,
             events,
             depth: 0,
+            message_delivery: MessageDeliveryGuarantee::NoTimeLimit,
             trace_handler,
         }
     }
@@ -89,6 +94,10 @@ impl McSystem {
         self.add_events(new_events);
     }
 
+    pub fn set_message_delivery_mode(&mut self, mode: MessageDeliveryGuarantee) {
+        self.message_delivery = mode;
+    }
+
     pub fn crash_node<S>(&mut self, node: S)
     where
         S: Into<String>,
@@ -130,7 +139,7 @@ impl McSystem {
     }
 
     pub fn available_events(&self) -> BTreeSet<McEventId> {
-        self.events.available_events()
+        self.events.available_events(&self.message_delivery)
     }
 
     pub fn depth(&self) -> u64 {
