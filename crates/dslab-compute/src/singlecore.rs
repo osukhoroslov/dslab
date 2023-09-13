@@ -1,3 +1,5 @@
+//! Actor representing computing resource with a single core.
+
 use serde::Serialize;
 
 use dslab_core::cast;
@@ -25,21 +27,31 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Reason for failure.
 #[derive(Clone, Debug, Serialize)]
 pub enum FailReason {
-    NotEnoughResources { available_memory: u64 },
-    Other { reason: String },
+    /// Resource doesn't have enough memory.
+    NotEnoughResources {
+        /// Amount of currently available memory.
+        available_memory: u64,
+    },
 }
 
+/// Event to start a computation.
 #[derive(Clone, Serialize)]
 pub struct CompRequest {
+    /// Total computation size.
     pub flops: f64,
+    /// Total memory needed for a computation.
     pub memory: u64,
+    /// Id of actor to notify about events corresponding to this computation.
     pub requester: Id,
 }
 
+/// Event corresponding to successfully started computation.
 #[derive(Clone, Serialize)]
 pub struct CompStarted {
+    /// Id of the computation.
     pub id: u64,
 }
 
@@ -48,19 +60,25 @@ struct InternalCompFinished {
     computation: RunningComputation,
 }
 
+/// Event corresponding to successfully finished computation.
 #[derive(Clone, Serialize)]
 pub struct CompFinished {
+    /// Id of the computation.
     pub id: u64,
 }
 
+/// Event corresponding to failed computation.
 #[derive(Clone, Serialize)]
 pub struct CompFailed {
+    /// Id of the computation.
     pub id: u64,
+    /// Reason for failure.
     pub reason: FailReason,
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Represents compute actor with fixed memory and one core supporting arbitrary number of parallel tasks.
 pub struct Compute {
     #[allow(dead_code)]
     speed: f64,
@@ -73,6 +91,7 @@ pub struct Compute {
 }
 
 impl Compute {
+    /// Creates new compute actor.
     pub fn new(speed: f64, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             speed,
@@ -84,6 +103,7 @@ impl Compute {
         }
     }
 
+    /// Starts computation with given parameters and returns computation id.
     pub fn run(&mut self, flops: f64, memory: u64, requester: Id) -> u64 {
         let request = CompRequest {
             flops,

@@ -1,3 +1,5 @@
+//! Actor representing computing resource with multiple cores.
+
 use std::collections::HashMap;
 
 use serde::Serialize;
@@ -10,32 +12,43 @@ use dslab_core::handler::EventHandler;
 
 // STRUCTS /////////////////////////////////////////////////////////////////////////////////////////
 
+/// Parameters of an allocation.
 #[derive(Clone, Serialize)]
 pub struct Allocation {
+    /// Number of cores.
     pub cores: u32,
+    /// Amount of memory.
     pub memory: u64,
 }
 
 impl Allocation {
+    /// Creates new allocation.
     pub fn new(cores: u32, memory: u64) -> Self {
         Self { cores, memory }
     }
 }
 
-// [1 .. max_cores] -> [1, +inf]
+/// Function from `[1, max_cores]` to `[1, +inf]` describing dependency between number of cores used and achieved speedup.
 #[derive(Clone, Copy, Debug, Serialize)]
 pub enum CoresDependency {
+    /// Linear dependency: `speedup(cores) = cores`
     Linear,
+    /// Linear dependency with fixed part corresponding to Amdahl's law:
+    /// `speedup(cores) = 1 / (fixed_part + (1 - fixed_part) / cores)`
     LinearWithFixed {
+        /// Fraction of a computation which can't be parallelized.
         fixed_part: f64,
     },
+    /// Custom dependency.
     Custom {
         #[serde(skip_serializing)]
+        /// Custom speedup function.
         func: fn(u32) -> f64,
     },
 }
 
 impl CoresDependency {
+    /// Speedup achieved when using given number of cores compared to using one core.
     pub fn speedup(&self, cores: u32) -> f64 {
         match self {
             CoresDependency::Linear => cores as f64,
@@ -45,16 +58,19 @@ impl CoresDependency {
     }
 }
 
+/// Reason for failure.
 #[derive(Clone, Debug, Serialize)]
 pub enum FailReason {
+    /// Resource doesn't have enough memory or available cores.
     NotEnoughResources {
+        /// Currently available number of cores.
         available_cores: u32,
+        /// Currently available amount of memory.
         available_memory: u64,
+        /// Requested number of cores.
         requested_cores: u32,
+        /// Requested amount of memory.
         requested_memory: u64,
-    },
-    Other {
-        reason: String,
     },
 }
 
@@ -77,69 +93,105 @@ impl RunningComputation {
 
 // EVENTS //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Event to start a computation.
 #[derive(Clone, Serialize)]
 pub struct CompRequest {
+    /// Total computation size.
     pub flops: f64,
+    /// Total memory needed for a computation.
     pub memory: u64,
+    /// Minimum required number of cores.
     pub min_cores: u32,
+    /// Maximum required number of cores.
     pub max_cores: u32,
+    /// Function describing dependency between number of cores used and achieved speedup.
     pub cores_dependency: CoresDependency,
+    /// Id of actor to notify about events corresponding to this computation.
     pub requester: Id,
 }
 
+/// Event corresponding to successfully started computation.
 #[derive(Clone, Serialize)]
 pub struct CompStarted {
+    /// Id of the computation.
     pub id: u64,
+    /// Number of cores allocated to the computation.
+    /// This number equals to the minimum between number of available cores
+    /// and maximum number of allowed cores for the computation.
     pub cores: u32,
 }
 
+/// Event corresponding to successfully finished computation.
 #[derive(Clone, Serialize)]
 pub struct CompFinished {
+    /// Id of the computation.
     pub id: u64,
 }
 
+/// Event corresponding to failed computation.
 #[derive(Clone, Serialize)]
 pub struct CompFailed {
+    /// Id of the computation.
     pub id: u64,
+    /// Reason for failure.
     pub reason: FailReason,
 }
 
+/// Event to request an allocation.
 #[derive(Clone, Serialize)]
 pub struct AllocationRequest {
+    /// Allocation parameters.
     pub allocation: Allocation,
+    /// Id of actor to notify about events corresponding to this allocation.
     pub requester: Id,
 }
 
+/// Event corresponding to successful allocation.
 #[derive(Clone, Serialize)]
 pub struct AllocationSuccess {
+    /// Id of the allocation.
     pub id: u64,
 }
 
+/// Event corresponding to allocation failure.
 #[derive(Clone, Serialize)]
 pub struct AllocationFailed {
+    /// Id of the allocation.
     pub id: u64,
+    /// Reason for failure.
     pub reason: FailReason,
 }
 
+/// Event to request a deallocation.
 #[derive(Clone, Serialize)]
 pub struct DeallocationRequest {
+    /// Deallocation parameters.
     pub allocation: Allocation,
+    /// Id of actor to notify about events corresponding to this deallocation.
     pub requester: Id,
 }
 
+/// Event corresponding to successful deallocation.
 #[derive(Clone, Serialize)]
 pub struct DeallocationSuccess {
+    /// Id of the deallocation.
     pub id: u64,
 }
 
+/// Event corresponding to deallocation failure.
 #[derive(Clone, Serialize)]
 pub struct DeallocationFailed {
+    /// Id of the deallocation.
     pub id: u64,
+    /// Reason for failure.
     pub reason: FailReason,
 }
 
 // ACTORS //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Represent compute actor with fixed memory and fixed number of cores.
+///
+/// Each core can be only used by one computation, but one computation may use more than one core.
 pub struct Compute {
     speed: f64,
     cores_total: u32,
@@ -152,6 +204,7 @@ pub struct Compute {
 }
 
 impl Compute {
+    /// Creates new compute actor.
     pub fn new(speed: f64, cores: u32, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             speed,
@@ -165,26 +218,32 @@ impl Compute {
         }
     }
 
+    /// Returns speed of a single core.
     pub fn speed(&self) -> f64 {
         self.speed
     }
 
+    /// Returns total number of cores.
     pub fn cores_total(&self) -> u32 {
         self.cores_total
     }
 
+    /// Returns number of available cores.
     pub fn cores_available(&self) -> u32 {
         self.cores_available
     }
 
+    /// Returns total amount of memory.
     pub fn memory_total(&self) -> u64 {
         self.memory_total
     }
 
+    /// Returns amount of available memory.
     pub fn memory_available(&self) -> u64 {
         self.memory_available
     }
 
+    /// Starts computation with given parameters and returns computation id.
     pub fn run(
         &mut self,
         flops: f64,
@@ -205,6 +264,7 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
+    /// Requests memory allocation with given parameters and returns allocation id.
     pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = AllocationRequest {
             allocation: Allocation::new(cores, memory),
@@ -213,6 +273,7 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
+    /// Requests memory deallocation with given parameters and returns deallocation id.
     pub fn deallocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = DeallocationRequest {
             allocation: Allocation::new(cores, memory),
