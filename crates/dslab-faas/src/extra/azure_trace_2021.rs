@@ -12,6 +12,12 @@ use rand_pcg::Pcg64;
 use crate::extra::azure_trace_2019::{ApplicationRecord, AzureTrace, FunctionRecord};
 use crate::trace::RequestData;
 
+/// Samples one value from Burr(c, k, lambda) distribution.
+pub fn burr_sample<R: Rng>(c: f64, k: f64, lambda: f64, rng: &mut R) -> f64 {
+    let u: f64 = rng.gen();
+    lambda * ((1. - u).powf(-1. / k) - 1.).powf(1. / c)
+}
+
 /// Generator of application memory requirements.
 pub enum MemoryGenerator {
     /// All apps use fixed amount of memory.
@@ -52,11 +58,6 @@ impl Default for Azure2021TraceConfig {
             cold_start_latency: 1.,
         }
     }
-}
-
-fn burr_sample<R: Rng>(c: f64, k: f64, lambda: f64, rng: &mut R) -> f64 {
-    let u: f64 = rng.gen();
-    lambda * ((1. - u).powf(-1. / k) - 1.).powf(1. / c)
 }
 
 /// This function parses Azure Function 2021 trace and generates experiment.
