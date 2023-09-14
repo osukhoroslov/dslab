@@ -658,22 +658,24 @@ fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
             ),
         ]))
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
-        .collect(collects::any_collect(vec![            collects::no_events(),
-        collects::all_collects(
-            procs
-                .clone()
-                .into_iter()
-                .map(|proc_name| {
-                    collects::event_happened_n_times_current_run(
-                        move |log_entry| match log_entry {
-                            McMessageReceived { dst: proc, .. } => proc == &proc_name,
-                            _ => false,
-                        },
-                        3,
-                    )
-                })
-                .collect::<Vec<CollectFn>>(),
-        )]));
+        .collect(collects::any_collect(vec![
+            collects::no_events(),
+            collects::all_collects(
+                procs
+                    .clone()
+                    .into_iter()
+                    .map(|proc_name| {
+                        collects::event_happened_n_times_current_run(
+                            move |log_entry| match log_entry {
+                                McMessageReceived { dst: proc, .. } => proc == &proc_name,
+                                _ => false,
+                            },
+                            3,
+                        )
+                    })
+                    .collect::<Vec<CollectFn>>(),
+            ),
+        ]));
 
     let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
         sys.set_message_delivery_mode(MessageDeliveryGuarantee::FastDelivery);
@@ -694,12 +696,7 @@ fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
     }
 }
 
-fn mc_check_group(
-    sys: &mut System,
-    collected: HashSet<McState>,
-    procs: &[String],
-    group: Vec<String>,
-) -> TestResult {
+fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String], group: Vec<String>) -> TestResult {
     let mut mc = ModelChecker::new(sys);
     let strategy_config = StrategyConfig::default()
         .invariant(invariants::all_invariants(vec![
