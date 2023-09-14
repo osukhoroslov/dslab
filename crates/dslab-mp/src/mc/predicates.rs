@@ -347,8 +347,6 @@ pub mod collects {
 
     /// Checks if current state's depth exceeds the given value.
     pub fn state_depth(depth: u64) -> CollectFn {
-        boxed!(move |state: &McState| {
-            state.depth > depth
-        })
+        boxed!(move |state: &McState| { state.depth > depth })
     }
 }
