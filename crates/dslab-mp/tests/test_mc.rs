@@ -16,6 +16,7 @@ use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig, VisitedStates};
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
+use dslab_mp::run_mc;
 use dslab_mp::system::System;
 
 macro_rules! str_vec {
@@ -395,30 +396,6 @@ fn build_timer_resetting_system() -> System {
 
 fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> StrategyConfig {
     StrategyConfig::default().prune(prune).goal(goal).invariant(invariant)
-}
-
-macro_rules! run_mc {
-    ($sys:expr, $config:expr, $strategy:ident) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run::<Bfs>($config),
-            "dfs" => ModelChecker::new(&$sys).run::<Dfs>($config),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
-    ($sys:expr, $config:expr, $strategy:ident, $callback:expr) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run_with_change::<Bfs>($config, $callback),
-            "dfs" => ModelChecker::new(&$sys).run_with_change::<Dfs>($config, $callback),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
-    ($sys:expr, $config:expr, $strategy:ident, $states:ident, $callback:expr) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Bfs>($config, $states, $callback),
-            "dfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Dfs>($config, $states, $callback),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
 }
 
 fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {
