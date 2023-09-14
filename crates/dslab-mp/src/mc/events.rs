@@ -129,6 +129,7 @@ impl McEvent {
         }
     }
 
+    /// Modifyes event so it won't be duplicated in future
     pub fn disable_duplications(&mut self) {
         if let McEvent::MessageReceived {
             options: DeliveryOptions::PossibleFailures { max_dupl_count, .. },
@@ -139,6 +140,7 @@ impl McEvent {
         }
     }
 
+    /// Converts McEvent to LogEntry
     pub fn to_log_entry(&self) -> LogEntry {
         match self {
             Self::MessageReceived {
@@ -187,4 +189,13 @@ impl McEvent {
             },
         }
     }
+}
+
+/// System can provide extra guarantees on message delivery
+#[derive(Clone)]
+pub enum MessageDeliveryGuarantee {
+    /// Default guarantee for delivery: messages can be delivered with any delay
+    NoTimeLimit,
+    /// Network is fast and communication occurs with almost-zero delay
+    FastDelivery,
 }

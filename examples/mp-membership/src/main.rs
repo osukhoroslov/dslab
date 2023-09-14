@@ -11,6 +11,15 @@ use rand_pcg::Pcg64;
 use serde::{Deserialize, Serialize};
 use sugars::boxed;
 
+use dslab_mp::logger::LogEntry::{self, McMessageReceived};
+use dslab_mp::mc::events::MessageDeliveryGuarantee;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates::goals::got_n_local_messages;
+use dslab_mp::mc::predicates::invariants::state_depth;
+use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
+use dslab_mp::mc::state::McState;
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategy::{CollectFn, GoalFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
@@ -613,6 +622,148 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn mc_invariant_check_stabilized(state: &McState, group: Vec<String>) -> Result<(), String> {
+    let group = group.into_iter().collect::<HashSet<String>>();
+    for node in state.node_states.keys() {
+        if let Some(msg) = state.node_states[node].proc_states[node].local_outbox.first() {
+            if msg.tip != "MEMBERS" {
+                return Err("wrong message type".to_owned());
+            }
+            let data: MembersMessage = serde_json::from_str(&msg.data).unwrap();
+            let members = HashSet::from_iter(data.members.into_iter());
+            let mut correct = group.difference(&members).any(|_| true);
+            correct &= members.difference(&group).any(|_| true);
+            if !correct {
+                return Err("still not stabilized".to_owned());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
+    let procs = sys.process_names();
+    let mut mc = ModelChecker::new(sys);
+
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::any_prune(vec![
+            prunes::state_depth(20),
+            prunes::events_limit_per_proc(
+                |entry: &LogEntry, proc_name: &String| match entry {
+                    LogEntry::McTimerFired { proc, .. } => proc_name == proc,
+                    _ => false,
+                },
+                procs.clone(),
+                2,
+            ),
+        ]))
+        .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
+        .collect(collects::any_collect(vec![            collects::no_events(),
+        collects::all_collects(
+            procs
+                .clone()
+                .into_iter()
+                .map(|proc_name| {
+                    collects::event_happened_n_times_current_run(
+                        move |log_entry| match log_entry {
+                            McMessageReceived { dst: proc, .. } => proc == &proc_name,
+                            _ => false,
+                        },
+                        3,
+                    )
+                })
+                .collect::<Vec<CollectFn>>(),
+        )]));
+
+    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
+        sys.set_message_delivery_mode(MessageDeliveryGuarantee::FastDelivery);
+        let seed = &group[0];
+        for proc in &group {
+            sys.send_local_message(proc.clone(), proc.clone(), Message::json("JOIN", &JoinMessage { seed }));
+        }
+    });
+    match res {
+        Err(e) => {
+            e.print_trace();
+            Err(e.message())
+        }
+        Ok(stats) => {
+            // println!("collected {} states", stats.collected_states.len());
+            mc_check_group(sys, stats.collected_states, &procs, group)
+        }
+    }
+}
+
+fn mc_check_group(
+    sys: &mut System,
+    collected: HashSet<McState>,
+    procs: &[String],
+    group: Vec<String>,
+) -> TestResult {
+    let mut mc = ModelChecker::new(sys);
+    let strategy_config = StrategyConfig::default()
+        .invariant(invariants::all_invariants(vec![
+            invariants::state_depth_current_run(10),
+            boxed!(move |state| { mc_invariant_check_stabilized(state, group.clone()) }),
+        ]))
+        .goal(goals::all_goals(
+            procs
+                .iter()
+                .map(|proc| got_n_local_messages(proc, proc, 1))
+                .collect::<Vec<GoalFn>>(),
+        ));
+
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, collected, |sys| {
+        for node in procs.iter() {
+            sys.send_local_message(node, node, Message::json("GET_MEMBERS", &GetMembersMessage {}));
+        }
+    });
+    if let Err(e) = res {
+        e.print_trace();
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_mc_local_answer(config: &TestConfig) -> TestResult {
+    let sys = build_system(config);
+    let group = sys.process_names();
+    let mut mc = ModelChecker::new(&sys);
+
+    let strategy_config = StrategyConfig::default()
+        .goal(got_n_local_messages(&group[0], &group[0], 1))
+        .invariant(state_depth(5));
+    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
+        sys.send_local_message(
+            &group[0],
+            &group[0],
+            Message::json("JOIN", &JoinMessage { seed: &group[0] }),
+        );
+        sys.send_local_message(
+            &group[0],
+            &group[0],
+            Message::json("GET_MEMBERS", &GetMembersMessage {}),
+        );
+    });
+    if let Err(e) = res {
+        e.print_trace();
+        Err(e.message())
+    } else {
+        Ok(true)
+    }
+}
+
+fn test_mc_group(config: &TestConfig) -> TestResult {
+    let mut rand = Pcg64::seed_from_u64(config.seed);
+    let mut sys = build_system(config);
+    let mut group = sys.process_names();
+    group.shuffle(&mut rand);
+
+    mc_stabilize(&mut sys, group)?;
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Membership Homework Tests
@@ -654,7 +805,7 @@ fn main() {
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
     let process_factory = PyProcessFactory::new(&args.solution_path, "GroupMember");
-    let config = TestConfig {
+    let mut config = TestConfig {
         process_factory: &process_factory,
         process_count: args.process_count,
         seed: args.seed,
@@ -696,6 +847,11 @@ fn main() {
     }
     tests.add("SCALABILITY NORMAL", test_scalability_normal, config.clone());
     tests.add("SCALABILITY CRASH", test_scalability_crash, config.clone());
+
+    config.process_count = 3;
+
+    tests.add("MC LOCAL GET_MEMBERS", test_mc_local_answer, config.clone());
+    tests.add("MC NORMAL", test_mc_group, config.clone());
 
     if args.test.is_none() {
         tests.run();

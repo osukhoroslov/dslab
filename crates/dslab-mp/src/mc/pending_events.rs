@@ -2,16 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId};
-
-/// System can provide extra guarantees on message delivery
-#[derive(Clone)]
-pub enum MessageDeliveryGuarantee {
-    /// Default guarantee for delivery: messages can be delivered with any delay
-    NoTimeLimit,
-    /// Network is fast and communication occurs with almost-zero delay
-    FastDelivery,
-}
+use crate::mc::events::{McEvent, McEventId, MessageDeliveryGuarantee};
 
 /// Stores pending events and provides a convenient interface for working with them.  
 #[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]

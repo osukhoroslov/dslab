@@ -4,7 +4,7 @@
 
 mod dependency;
 pub mod error;
-mod events;
+pub mod events;
 pub mod model_checker;
 mod network;
 mod node;

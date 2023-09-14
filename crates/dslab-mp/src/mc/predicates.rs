@@ -317,6 +317,18 @@ pub mod collects {
         })
     }
 
+    /// Combines multiple collect functions by returning `true` iff all collects are satisfied.
+    pub fn all_collects(mut collects: Vec<CollectFn>) -> CollectFn {
+        boxed!(move |state: &McState| {
+            for collect in &mut collects {
+                if !collect(state) {
+                    return false;
+                }
+            }
+            true
+        })
+    }
+
     /// Checks if trace to given state has at least `n` events matching the predicate.
     pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
     where
@@ -331,5 +343,12 @@ pub mod collects {
     /// Checks if current state has no more active events.
     pub fn no_events() -> CollectFn {
         boxed!(|state: &McState| { !state.events.has_available_events() })
+    }
+
+    /// Checks if current state's depth exceeds the given value.
+    pub fn state_depth(depth: u64) -> CollectFn {
+        boxed!(move |state: &McState| {
+            state.depth > depth
+        })
     }
 }
