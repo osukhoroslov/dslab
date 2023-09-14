@@ -118,7 +118,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx) {
-            self.handle_process_err(e);
+            self.handle_process_err(e, proc.clone());
         }
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
@@ -132,7 +132,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_timer(timer, &mut proc_ctx) {
-            self.handle_process_err(e);
+            self.handle_process_err(e, proc.clone());
         }
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
@@ -150,7 +150,7 @@ impl McNode {
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
         if let Err(e) = proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx) {
-            self.handle_process_err(e);
+            self.handle_process_err(e, proc.clone());
         }
 
         self.handle_process_actions(proc, time, proc_ctx.actions())
@@ -245,10 +245,11 @@ impl McNode {
         new_events
     }
 
-    fn handle_process_err(&self, err: String) {
+    fn handle_process_err(&self, err: String, proc: String) {
         for event in self.trace_handler.borrow().trace() {
             event.print();
         }
+        t!(format!("!!! Error when calling process '{}':", proc));
         t!(err.red());
         panic!("Process error");
     }

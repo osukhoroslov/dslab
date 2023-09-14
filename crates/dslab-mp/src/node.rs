@@ -209,7 +209,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_local_message(msg, &mut proc_ctx)
-            .map_err(log_error)
+            .map_err(|e| log_error(e, proc.clone(), self.name.clone()))
             .unwrap();
 
         self.handle_process_actions(proc, time, proc_ctx.actions());
@@ -242,7 +242,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_message(msg, from, &mut proc_ctx)
-            .map_err(log_error)
+            .map_err(|e| log_error(e, proc.clone(), self.name.clone()))
             .unwrap();
 
         if self.logger.borrow().has_log_file() {
@@ -269,7 +269,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_timer(timer, &mut proc_ctx)
-            .map_err(log_error)
+            .map_err(|e| log_error(e, proc.clone(), self.name.clone()))
             .unwrap();
 
         if self.logger.borrow().has_log_file() {
@@ -379,8 +379,8 @@ impl EventHandler for Node {
     }
 }
 
-fn log_error(e: String) -> String {
-    eprintln!("\n!!! Error in process code:\n");
+fn log_error(e: String, proc: String, node: String) -> String {
+    eprintln!("\n!!! Error when calling process '{}' on node '{}':\n", proc, node);
     eprintln!("{}", e);
     eprintln!();
     e
