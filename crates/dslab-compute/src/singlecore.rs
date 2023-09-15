@@ -1,4 +1,4 @@
-//! Actor representing computing resource with a single core.
+//! Model of computing resource with a single core.
 
 use serde::Serialize;
 
@@ -10,7 +10,17 @@ use dslab_core::handler::EventHandler;
 
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
 
-// STRUCTS //////////////////////////////////////////////////////////////////////////////////////////
+// STRUCTS -------------------------------------------------------------------------------------------------------------
+
+/// Reason for computation failure.
+#[derive(Clone, Debug, Serialize)]
+pub enum FailReason {
+    /// Resource doesn't have enough memory.
+    NotEnoughResources {
+        /// Amount of currently available memory.
+        available_memory: u64,
+    },
+}
 
 #[derive(Serialize, Clone)]
 struct RunningComputation {
@@ -25,30 +35,20 @@ impl RunningComputation {
     }
 }
 
-// EVENTS //////////////////////////////////////////////////////////////////////////////////////////
+// EVENTS --------------------------------------------------------------------------------------------------------------
 
-/// Reason for failure.
-#[derive(Clone, Debug, Serialize)]
-pub enum FailReason {
-    /// Resource doesn't have enough memory.
-    NotEnoughResources {
-        /// Amount of currently available memory.
-        available_memory: u64,
-    },
-}
-
-/// Event to start a computation.
+/// Request to start a computation.
 #[derive(Clone, Serialize)]
 pub struct CompRequest {
     /// Total computation size.
     pub flops: f64,
     /// Total memory needed for a computation.
     pub memory: u64,
-    /// Id of actor to notify about events corresponding to this computation.
+    /// Id of simulation component to inform about the computation progress.
     pub requester: Id,
 }
 
-/// Event corresponding to successfully started computation.
+/// Computation is started successfully.
 #[derive(Clone, Serialize)]
 pub struct CompStarted {
     /// Id of the computation.
@@ -60,14 +60,14 @@ struct InternalCompFinished {
     computation: RunningComputation,
 }
 
-/// Event corresponding to successfully finished computation.
+/// Computation is finished successfully.
 #[derive(Clone, Serialize)]
 pub struct CompFinished {
     /// Id of the computation.
     pub id: u64,
 }
 
-/// Event corresponding to failed computation.
+/// Computation is failed.
 #[derive(Clone, Serialize)]
 pub struct CompFailed {
     /// Id of the computation.
@@ -76,9 +76,15 @@ pub struct CompFailed {
     pub reason: FailReason,
 }
 
-// ACTORS //////////////////////////////////////////////////////////////////////////////////////////
+// MODEL ---------------------------------------------------------------------------------------------------------------
 
-/// Represents compute actor with fixed memory and one core supporting arbitrary number of parallel tasks.
+/// Models computing resource with a single "core" supporting concurrent execution
+/// of arbitrary number of tasks.
+///
+/// The core speed is evenly shared between the currently running tasks.
+/// The task completion time is determined by the amount of computations and the core share.
+/// Each time a task is completed or a new task is submitted, the core shares and completion
+/// times of all running tasks are updated accordingly.
 pub struct Compute {
     #[allow(dead_code)]
     speed: f64,
@@ -91,7 +97,7 @@ pub struct Compute {
 }
 
 impl Compute {
-    /// Creates new compute actor.
+    /// Creates a new computing resource.
     pub fn new(speed: f64, memory: u64, ctx: SimulationContext) -> Self {
         Self {
             speed,
