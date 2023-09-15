@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use colored::*;
+
 use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 use crate::context::Context;
@@ -10,6 +12,7 @@ use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
 use crate::process::{Process, ProcessState};
+use crate::util::t;
 
 #[derive(Clone, Debug)]
 pub struct EventLogEntry {
@@ -381,6 +384,6 @@ impl EventHandler for Node {
 
 fn log_error(e: String, proc: String, node: String) -> String {
     t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, node).red());
-    t!(format!("{}", e).red());
+    t!(e.red());
     e
 }
