@@ -1,3 +1,5 @@
+//! Network implementation.
+
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -13,6 +15,7 @@ use crate::events::MessageReceived;
 use crate::logger::*;
 use crate::message::Message;
 
+/// Represents a network that transmits messages between processes located on different nodes.
 pub struct Network {
     min_delay: f64,
     max_delay: f64,
@@ -32,7 +35,7 @@ pub struct Network {
 }
 
 impl Network {
-    pub fn new(ctx: SimulationContext, logger: Rc<RefCell<Logger>>) -> Self {
+    pub(crate) fn new(ctx: SimulationContext, logger: Rc<RefCell<Logger>>) -> Self {
         Self {
             min_delay: 1.,
             max_delay: 1.,
@@ -52,60 +55,74 @@ impl Network {
         }
     }
 
+    /// Adds a new node to the network.
     pub fn add_node(&mut self, name: String, id: Id) {
         self.node_ids.insert(name, id);
     }
 
+    /// Returns a map with process locations (process -> node).
     pub fn proc_locations(&self) -> &HashMap<String, String> {
         &self.proc_locations
     }
 
+    /// Sets the process location.
     pub fn set_proc_location(&mut self, proc: String, node: String) {
         self.proc_locations.insert(proc, node);
     }
 
+    /// Returns the maximum network delay.
     pub fn max_delay(&self) -> f64 {
         self.max_delay
     }
 
+    /// Sets the fixed network delay.
     pub fn set_delay(&mut self, delay: f64) {
         self.min_delay = delay;
         self.max_delay = delay;
     }
 
+    /// Sets the minimum and maximum network delays.
     pub fn set_delays(&mut self, min_delay: f64, max_delay: f64) {
         self.min_delay = min_delay;
         self.max_delay = max_delay;
     }
 
+    /// Returns the message drop probability.
     pub fn drop_rate(&self) -> f64 {
         self.drop_rate
     }
 
+    /// Sets the message drop probability.
     pub fn set_drop_rate(&mut self, drop_rate: f64) {
         self.drop_rate = drop_rate;
     }
 
+    /// Returns the message duplication probability.
     pub fn dupl_rate(&self) -> f64 {
         self.dupl_rate
     }
 
+    /// Sets the message duplication probability.
     pub fn set_dupl_rate(&mut self, dupl_rate: f64) {
         self.dupl_rate = dupl_rate;
     }
 
+    /// Returns the message corruption probability.
     pub fn corrupt_rate(&self) -> f64 {
         self.corrupt_rate
     }
 
+    /// Sets the message corruption probability.
     pub fn set_corrupt_rate(&mut self, corrupt_rate: f64) {
         self.corrupt_rate = corrupt_rate;
     }
 
+    /// Returns nodes with enabled dropping of incoming messages.
     pub fn get_drop_incoming(&self) -> &HashSet<String> {
         &self.drop_incoming
     }
 
+    /// Enables dropping of incoming messages for a node.
     pub fn drop_incoming(&mut self, node: &str) {
         self.drop_incoming.insert(node.to_string());
 
@@ -115,6 +132,7 @@ impl Network {
         });
     }
 
+    /// Disables dropping of incoming messages for a node.
     pub fn pass_incoming(&mut self, node: &str) {
         self.drop_incoming.remove(node);
 
@@ -124,10 +142,12 @@ impl Network {
         });
     }
 
+    /// Returns nodes with enabled dropping of outgoing messages.
     pub fn get_drop_outgoing(&self) -> &HashSet<String> {
         &self.drop_outgoing
     }
 
+    /// Enables dropping of outgoing messages for a node.
     pub fn drop_outgoing(&mut self, node: &str) {
         self.drop_outgoing.insert(node.to_string());
 
@@ -137,6 +157,7 @@ impl Network {
         });
     }
 
+    /// Disables dropping of outgoing messages for a node.
     pub fn pass_outgoing(&mut self, node: &str) {
         self.drop_outgoing.remove(node);
 
@@ -146,6 +167,9 @@ impl Network {
         });
     }
 
+    /// Disconnects a node from the network.
+    ///
+    /// Equivalent to enabling dropping of both incoming and outgoing messages for a node.
     pub fn disconnect_node(&mut self, node: &str) {
         self.drop_incoming.insert(node.to_string());
         self.drop_outgoing.insert(node.to_string());
@@ -156,6 +180,9 @@ impl Network {
         });
     }
 
+    /// Connects a node to a network.
+    ///
+    /// Equivalent to disabling dropping of both incoming and outgoing messages for a node.
     pub fn connect_node(&mut self, node: &str) {
         self.drop_incoming.remove(node);
         self.drop_outgoing.remove(node);
@@ -166,10 +193,12 @@ impl Network {
         });
     }
 
+    /// Returns disabled links.
     pub fn disabled_links(&self) -> &HashSet<(String, String)> {
         &self.disabled_links
     }
 
+    /// Disables link between nodes `from` and `to` by dropping all messages sent in this direction.
     pub fn disable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.insert((from.to_string(), to.to_string()));
 
@@ -180,6 +209,7 @@ impl Network {
         });
     }
 
+    /// Enables link between nodes `from` and `to`.
     pub fn enable_link(&mut self, from: &str, to: &str) {
         self.disabled_links.remove(&(from.to_string(), to.to_string()));
 
@@ -190,6 +220,7 @@ impl Network {
         });
     }
 
+    /// Creates a network partition between two groups of nodes.
     pub fn make_partition(&mut self, group1: &[&str], group2: &[&str]) {
         for n1 in group1 {
             for n2 in group2 {
@@ -205,6 +236,10 @@ impl Network {
         });
     }
 
+    /// Resets the network links by enabling all links
+    /// and disabling dropping of incoming/outgoing messages for all nodes.
+    ///
+    /// Note that this does not affect the `drop_rate` setting.
     pub fn reset(&mut self) {
         self.disabled_links.clear();
         self.drop_incoming.clear();
@@ -215,10 +250,12 @@ impl Network {
             .log(LogEntry::NetworkReset { time: self.ctx.time() });
     }
 
+    /// Returns the total number of messages sent via the network.
     pub fn network_message_count(&self) -> u64 {
         self.network_message_count
     }
 
+    /// Returns the total size of messages sent via the network.
     pub fn traffic(&self) -> u64 {
         self.traffic
     }
@@ -250,7 +287,8 @@ impl Network {
         }
     }
 
-    pub fn send_message(&mut self, msg: Message, src: &str, dst: &str) {
+    /// Sends a message between two processes.
+    pub(crate) fn send_message(&mut self, msg: Message, src: &str, dst: &str) {
         let msg_size = msg.size();
         let src_node = self.proc_locations.get(src).unwrap();
         let dst_node = self.proc_locations.get(dst).unwrap();

@@ -1,3 +1,5 @@
+//! Logging facilities.
+
 use std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -10,20 +12,24 @@ use serde::Serialize;
 
 use crate::{message::Message, util::t};
 
+/// Implements logging of events to console and optionally to a file.
+/// Also provides the access to the list of all logged events (trace).  
 pub struct Logger {
     log_file: Option<File>,
     trace: Vec<LogEntry>,
 }
 
 impl Logger {
-    pub fn new() -> Self {
+    /// Creates a new console-only logger.
+    pub(crate) fn new() -> Self {
         Self {
             log_file: None,
             trace: vec![],
         }
     }
 
-    pub fn with_log_file(log_path: &Path) -> Self {
+    /// Creates a new logger writing events both to console and the specified file.
+    pub(crate) fn with_log_file(log_path: &Path) -> Self {
         let log_file = Some(
             OpenOptions::new()
                 .create(true)
@@ -38,11 +44,11 @@ impl Logger {
         }
     }
 
-    pub fn has_log_file(&self) -> bool {
+    pub(crate) fn has_log_file(&self) -> bool {
         self.log_file.is_some()
     }
 
-    pub fn log(&mut self, event: LogEntry) {
+    pub(crate) fn log(&mut self, event: LogEntry) {
         if let Some(log_file) = self.log_file.as_mut() {
             let serialized = serde_json::to_string(&event).unwrap();
             log_file.write_all(serialized.as_bytes()).unwrap();
@@ -54,6 +60,7 @@ impl Logger {
         event.print();
     }
 
+    /// Returns a reference to a vector with all logged events.
     pub fn trace(&self) -> &Vec<LogEntry> {
         &self.trace
     }
@@ -65,6 +72,8 @@ impl Default for Logger {
     }
 }
 
+/// Represents a logged event.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum LogEntry {
     NodeStarted {
@@ -104,13 +113,13 @@ pub enum LogEntry {
         time: f64,
         msg_id: String,
         #[serde(skip_serializing)]
-        src_proc: String,
-        #[serde(skip_serializing)]
         src_node: String,
         #[serde(skip_serializing)]
-        dst_proc: String,
+        src_proc: String,
         #[serde(skip_serializing)]
         dst_node: String,
+        #[serde(skip_serializing)]
+        dst_proc: String,
         #[serde(skip_serializing)]
         msg: Message,
     },
@@ -118,13 +127,13 @@ pub enum LogEntry {
         time: f64,
         msg_id: String,
         #[serde(skip_serializing)]
-        src_proc: String,
-        #[serde(skip_serializing)]
         src_node: String,
         #[serde(skip_serializing)]
-        dst_proc: String,
+        src_proc: String,
         #[serde(skip_serializing)]
         dst_node: String,
+        #[serde(skip_serializing)]
+        dst_proc: String,
         #[serde(skip_serializing)]
         msg: Message,
     },
@@ -172,46 +181,59 @@ pub enum LogEntry {
         #[serde(skip_serializing)]
         proc: String,
     },
+    /// Link between a pair of nodes is disabled.
     LinkDisabled {
         time: f64,
         from: String,
         to: String,
     },
+    /// Link between a pair of nodes is enabled.
     LinkEnabled {
         time: f64,
         from: String,
         to: String,
     },
+    /// Dropping of incoming messages for a node is enabled.
     DropIncoming {
         time: f64,
         node: String,
     },
+    /// Dropping of incoming messages for a node is disabled.
     PassIncoming {
         time: f64,
         node: String,
     },
+    /// Dropping of outgoing messages for a node is enabled.
     DropOutgoing {
         time: f64,
         node: String,
     },
+    /// Dropping of outgoing messages for a node is enabled.
     PassOutgoing {
         time: f64,
         node: String,
     },
+    /// Network partition is occurred between two groups of nodes.
     NetworkPartition {
         time: f64,
+        /// First group of nodes.
         group1: Vec<String>,
+        /// Second group of nodes.
         group2: Vec<String>,
     },
+    /// Network is reset to normal state (all links are working).
     NetworkReset {
         time: f64,
     },
+    /// Process state is updated.
     ProcessStateUpdated {
         time: f64,
         node: String,
         proc: String,
+        /// String representation of process state.
         state: String,
     },
+    /// Model checking session is started.
     McStarted {},
     McLocalMessageSent {
         msg: Message,
@@ -265,6 +287,7 @@ pub enum LogEntry {
 }
 
 impl LogEntry {
+    /// Prints log entry to console.
     pub fn print(&self) {
         match self {
             LogEntry::NodeStarted { .. } => {
@@ -428,30 +451,37 @@ impl LogEntry {
         }
     }
 
+    /// Checks if event is [`LogEntry::McMessageDropped`].
     pub fn is_mc_message_dropped(&self) -> bool {
         matches!(self, Self::McMessageDropped { .. })
     }
 
+    /// Checks if event is [`LogEntry::McMessageDuplicated`].
     pub fn is_mc_message_duplicated(&self) -> bool {
         matches!(self, Self::McMessageDuplicated { .. })
     }
 
+    /// Checks if event is [`LogEntry::McMessageSent`].
     pub fn is_mc_message_sent(&self) -> bool {
         matches!(self, Self::McMessageSent { .. })
     }
 
+    /// Checks if event is [`LogEntry::McLocalMessageSent`].
     pub fn is_mc_local_message_sent(&self) -> bool {
         matches!(self, Self::McLocalMessageSent { .. })
     }
 
+    /// Checks if event is [`LogEntry::McLocalMessageReceived`].
     pub fn is_mc_message_received(&self) -> bool {
         matches!(self, Self::McMessageReceived { .. })
     }
 
+    /// Checks if event is [`LogEntry::McTimerSet`].
     pub fn is_mc_timer_set(&self) -> bool {
         matches!(self, Self::McTimerSet { .. })
     }
 
+    /// Checks if event is [`LogEntry::McTimerFired`].
     pub fn is_mc_timer_fired(&self) -> bool {
         matches!(self, Self::McTimerFired { .. })
     }
