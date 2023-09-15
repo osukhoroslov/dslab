@@ -155,7 +155,13 @@ impl Node {
     }
 
     pub fn set_process_state(&mut self, proc: &str, state: Rc<dyn ProcessState>) {
-        self.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
+        self.processes
+            .get_mut(proc)
+            .unwrap()
+            .proc_impl
+            .set_state(state)
+            .map_err(|e| log_process_error(e, proc.to_string(), self.name.clone()))
+            .unwrap();
     }
 
     pub fn send_local_message(&mut self, proc: String, msg: Message) {
@@ -349,7 +355,14 @@ impl Node {
 
     fn log_process_state(&mut self, proc: &str) {
         let proc_entry = self.processes.get_mut(proc).unwrap();
-        let state = format!("{:?}", proc_entry.proc_impl.state());
+        let state = format!(
+            "{:?}",
+            proc_entry
+                .proc_impl
+                .state()
+                .map_err(|e| log_process_error(e, proc.to_string(), self.name.clone()))
+                .unwrap()
+        );
         if state != proc_entry.last_state {
             proc_entry.last_state = state.clone();
             self.logger.borrow_mut().log(LogEntry::ProcessStateUpdated {

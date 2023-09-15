@@ -51,9 +51,9 @@ fn build_system(config: &TestConfig) -> System {
         "retry" => (boxed!(RetryPingServer {}), boxed!(RetryPingClient::new("server"))),
         _ => {
             let server_f = PyProcessFactory::new(&config.impl_path, "PingServer");
-            let server = server_f.build(("server",), config.seed);
+            let server = server_f.build(("server",), config.seed).unwrap();
             let client_f = PyProcessFactory::new(&config.impl_path, "PingClient");
-            let client = client_f.build(("client", "server"), config.seed);
+            let client = client_f.build(("client", "server"), config.seed).unwrap();
             (boxed!(server), boxed!(client))
         }
     };

@@ -40,17 +40,17 @@ impl PyProcessFactory {
         }
     }
 
-    pub fn build(&self, args: impl IntoPy<Py<PyTuple>>, seed: u64) -> PyProcess {
-        let proc = Python::with_gil(|py| -> PyObject {
+    pub fn build(&self, args: impl IntoPy<Py<PyTuple>>, seed: u64) -> Result<PyProcess, String> {
+        let proc = Python::with_gil(|py| -> Result<PyObject, String> {
             py.run(format!("import random\nrandom.seed({})", seed).as_str(), None, None)
                 .unwrap();
-            self.proc_class
+            Ok(self
+                .proc_class
                 .call1(py, args)
-                .map_err(|e| log_python_error(e, py))
-                .unwrap()
-                .to_object(py)
-        });
-        PyProcess {
+                .map_err(|e| error_to_string(e, py))?
+                .to_object(py))
+        })?;
+        Ok(PyProcess {
             proc,
             msg_class: self.msg_class.clone(),
             ctx_class: self.ctx_class.clone(),
@@ -58,7 +58,7 @@ impl PyProcessFactory {
             max_size: 0,
             max_size_freq: 0,
             max_size_counter: 0,
-        }
+        })
     }
 }
 
@@ -116,7 +116,7 @@ impl PyProcess {
 
 impl Process for PyProcess {
     fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) -> Result<(), String> {
-        Python::with_gil(|py| -> Result<(), String> {
+        Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
                 .call_method1(py, "from_json", (msg.tip, msg.data))
@@ -132,7 +132,7 @@ impl Process for PyProcess {
     }
 
     fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String> {
-        Python::with_gil(|py| -> Result<(), String> {
+        Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
                 .call_method1(py, "from_json", (msg.tip, msg.data))
@@ -148,7 +148,7 @@ impl Process for PyProcess {
     }
 
     fn on_timer(&mut self, timer: String, ctx: &mut Context) -> Result<(), String> {
-        Python::with_gil(|py| -> Result<(), String> {
+        Python::with_gil(|py| {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_timer", (timer, &py_ctx))
@@ -164,33 +164,25 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn state(&self) -> Rc<dyn ProcessState> {
-        Python::with_gil(|py| {
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Python::with_gil(|py| -> Result<Rc<dyn ProcessState>, String> {
             let res = self
                 .proc
                 .call_method0(py, "get_state")
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
-            Rc::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string())
+                .map_err(|e| error_to_string(e, py))?;
+            Ok(Rc::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string()))
         })
     }
 
-    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) -> Result<(), String> {
         let data = state.downcast_rc::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
                 .call_method1(py, "set_state", ((*data).clone(),))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
-        });
+                .map_err(|e| error_to_string(e, py))?;
+            Ok(())
+        })
     }
-}
-
-fn log_python_error(e: PyErr, py: Python) -> PyErr {
-    eprintln!("\n!!! Error when calling Python code:\n");
-    e.print(py);
-    eprintln!();
-    e
 }
 
 fn get_size_fun(py: Python) -> Py<PyAny> {

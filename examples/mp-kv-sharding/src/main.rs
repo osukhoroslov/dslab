@@ -105,7 +105,8 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
         let proc_name = proc_names[n as usize].clone();
         let mut proc = config
             .process_factory
-            .build((proc_name.clone(), proc_names.clone()), config.seed);
+            .build((proc_name.clone(), proc_names.clone()), config.seed)
+            .unwrap();
         if measure_max_size {
             proc.set_max_size_freq(1000000);
         }
@@ -127,7 +128,8 @@ fn add_node(name: &str, sys: &mut System, config: &TestConfig) {
     proc_names.push(proc_name.clone());
     let proc = config
         .process_factory
-        .build((proc_name.clone(), proc_names), config.seed);
+        .build((proc_name.clone(), proc_names), config.seed)
+        .unwrap();
     let node_name = proc_name.clone();
     sys.add_node(&node_name);
     sys.add_process(&proc_name, boxed!(proc), &node_name);

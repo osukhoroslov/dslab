@@ -48,14 +48,14 @@ fn build_system(config: &TestConfig, measure_max_size: bool) -> System {
     sys.add_node("receiver-node");
 
     let sender_f = PyProcessFactory::new(config.impl_path, config.sender_class);
-    let mut sender = sender_f.build(("sender", "receiver"), config.seed);
+    let mut sender = sender_f.build(("sender", "receiver"), config.seed).unwrap();
     if measure_max_size {
         sender.set_max_size_freq(100);
     }
     sys.add_process("sender", boxed!(sender), "sender-node");
 
     let receiver_f = PyProcessFactory::new(config.impl_path, config.receiver_class);
-    let mut receiver = receiver_f.build(("receiver",), config.seed);
+    let mut receiver = receiver_f.build(("receiver",), config.seed).unwrap();
     if measure_max_size {
         receiver.set_max_size_freq(100);
     }

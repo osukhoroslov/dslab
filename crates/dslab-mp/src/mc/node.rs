@@ -46,24 +46,25 @@ impl Eq for ProcessEntryState {
 }
 
 impl ProcessEntry {
-    fn get_state(&self) -> ProcessEntryState {
-        ProcessEntryState {
-            proc_state: self.proc_impl.state(),
+    fn get_state(&self) -> Result<ProcessEntryState, String> {
+        Ok(ProcessEntryState {
+            proc_state: self.proc_impl.state()?,
             event_log: self.event_log.clone(),
             local_outbox: self.local_outbox.clone(),
             pending_timers: self.pending_timers.clone(),
             sent_message_count: self.sent_message_count,
             received_message_count: self.received_message_count,
-        }
+        })
     }
 
-    fn set_state(&mut self, state: ProcessEntryState) {
-        self.proc_impl.set_state(state.proc_state);
+    fn set_state(&mut self, state: ProcessEntryState) -> Result<(), String> {
+        self.proc_impl.set_state(state.proc_state)?;
         self.event_log = state.event_log;
         self.local_outbox = state.local_outbox;
         self.pending_timers = state.pending_timers;
         self.sent_message_count = state.sent_message_count;
         self.received_message_count = state.received_message_count;
+        Ok(())
     }
 }
 
@@ -166,7 +167,15 @@ impl McNode {
         let proc_states = self
             .processes
             .iter()
-            .map(|(proc, entry)| (proc.clone(), entry.get_state()))
+            .map(|(proc, entry)| {
+                (
+                    proc.clone(),
+                    entry
+                        .get_state()
+                        .map_err(|e| self.handle_process_error(e, proc.clone()))
+                        .unwrap(),
+                )
+            })
             .collect();
         McNodeState {
             proc_states,
@@ -176,7 +185,12 @@ impl McNode {
 
     pub fn set_state(&mut self, state: McNodeState) {
         for (proc, state) in state.proc_states {
-            self.processes.get_mut(&proc).unwrap().set_state(state);
+            self.processes
+                .get_mut(&proc)
+                .unwrap()
+                .set_state(state)
+                .map_err(|e| self.handle_process_error(e, proc.clone()))
+                .unwrap();
         }
         self.is_crashed = state.is_crashed;
     }

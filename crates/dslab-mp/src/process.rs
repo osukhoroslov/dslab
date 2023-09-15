@@ -50,12 +50,14 @@ pub trait Process: DynClone {
     }
 
     /// Returns the process state.
-    fn state(&self) -> Rc<dyn ProcessState> {
-        Rc::new(ProcessStateStub {})
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Ok(Rc::new(ProcessStateStub {}))
     }
 
     /// Restores the process state.
-    fn set_state(&mut self, _state: Rc<dyn ProcessState>) {}
+    fn set_state(&mut self, _state: Rc<dyn ProcessState>) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 clone_trait_object!(Process);
