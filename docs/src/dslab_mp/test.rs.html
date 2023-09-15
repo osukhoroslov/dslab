@@ -71,24 +71,41 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
-</pre></div><pre class="rust"><code><span class="kw">pub type </span>TestResult = <span class="prelude-ty">Result</span>&lt;bool, String&gt;;
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Testing facilities.
 
-<span class="kw">pub struct </span>Test&lt;T&gt; {
+/// A test result.
+</span><span class="kw">pub type </span>TestResult = <span class="prelude-ty">Result</span>&lt;bool, String&gt;;
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Test&lt;T&gt; {
     name: String,
     func: <span class="kw">fn</span>(<span class="kw-2">&amp;</span>T) -&gt; TestResult,
     config: T,
 }
 
-<span class="kw">pub struct </span>TestSuite&lt;T&gt; {
+<span class="doccomment">/// A set of tests supposed to be run together.
+</span><span class="kw">pub struct </span>TestSuite&lt;T&gt; {
     tests: Vec&lt;Test&lt;T&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;T&gt; TestSuite&lt;T&gt; {
-    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates an empty test suite.
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ tests: Vec::new() }
     }
 
-    <span class="kw">pub fn </span>add(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, f: <span class="kw">fn</span>(<span class="kw-2">&amp;</span>T) -&gt; TestResult, config: T) {
+    <span class="doccomment">/// Adds a test to the suite.
+    </span><span class="kw">pub fn </span>add(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, f: <span class="kw">fn</span>(<span class="kw-2">&amp;</span>T) -&gt; TestResult, config: T) {
         <span class="self">self</span>.tests.push(Test {
             name: name.to_string(),
             func: f,
@@ -96,7 +113,11 @@
         });
     }
 
-    <span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Executes the test suite by running each test in turn.
+    ///
+    /// Collects and prints the result of each test, and prints the summary in the end.  
+    /// Terminates the current process with exit code 0 if all tests have passed and 1 otherwise.
+    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">let </span><span class="kw-2">mut </span>passed_count = <span class="number">0</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>failed_tests = Vec::new();
         <span class="kw">for </span>test <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.tests {
@@ -126,7 +147,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>run_test(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Runs the specified test and prints its result.
+    </span><span class="kw">pub fn </span>run_test(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
         <span class="kw">for </span>test <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.tests {
             <span class="kw">if </span>test.name == name {
                 <span class="macro">println!</span>(<span class="string">&quot;\n--- {} ---\n&quot;</span>, test.name);

@@ -9,7 +9,13 @@
 <a href="#9" id="9">9</a>
 <a href="#10" id="10">10</a>
 <a href="#11" id="11">11</a>
-</pre></div><pre class="rust"><code><span class="kw">pub mod </span>context;
+<a href="#12" id="12">12</a>
+<a href="#13" id="13">13</a>
+<a href="#14" id="14">14</a>
+</pre></div><pre class="rust"><code><span class="attr">#![warn(missing_docs)]
+#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../readme.md&quot;</span>)]
+
+</span><span class="kw">pub mod </span>context;
 <span class="kw">pub mod </span>events;
 <span class="kw">pub mod </span>logger;
 <span class="kw">pub mod </span>mc;

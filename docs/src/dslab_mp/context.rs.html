@@ -110,7 +110,21 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Process context.
+
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>dslab_core::SimulationContext;
@@ -120,7 +134,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
 <span class="kw">use </span><span class="kw">crate</span>::node::{ProcessEvent, TimerBehavior};
 
-<span class="kw">pub struct </span>Context {
+<span class="doccomment">/// Proxy for interaction of a process with the system.
+</span><span class="kw">pub struct </span>Context {
     proc_name: String,
     time: f64,
     rng: Box&lt;<span class="kw">dyn </span>RandomProvider&gt;,
@@ -148,7 +163,8 @@
 }
 
 <span class="kw">impl </span>Context {
-    <span class="kw">pub fn </span>from_simulation(proc_name: String, sim_ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;, clock_skew: f64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a context used in simulation mode.
+    </span><span class="kw">pub fn </span>from_simulation(proc_name: String, sim_ctx: Rc&lt;RefCell&lt;SimulationContext&gt;&gt;, clock_skew: f64) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>time = sim_ctx.borrow().time() + clock_skew;
         <span class="self">Self </span>{
             proc_name,
@@ -158,7 +174,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>basic(proc_name: String, time: f64, clock_skew: f64, random_seed: u64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a context used in model checking mode.
+    </span><span class="kw">pub fn </span>basic(proc_name: String, time: f64, clock_skew: f64, random_seed: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             proc_name,
             time: time + clock_skew,
@@ -167,15 +184,18 @@
         }
     }
 
-    <span class="kw">pub fn </span>time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the current time from the local node clock.
+    </span><span class="kw">pub fn </span>time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.time
     }
 
-    <span class="kw">pub fn </span>rand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns a random float in the range `[0, 1)`.
+    </span><span class="kw">pub fn </span>rand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.rng.as_mut().rand()
     }
 
-    <span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, dst: String) {
+    <span class="doccomment">/// Sends a message to a process.
+    </span><span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, dst: String) {
         <span class="macro">assert!</span>(
             msg.tip.len() &lt;= <span class="number">50</span>,
             <span class="string">&quot;Message type length exceeds the limit of 50 characters&quot;
@@ -187,7 +207,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>send_local(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message) {
+    <span class="doccomment">/// Sends a local message.
+    </span><span class="kw">pub fn </span>send_local(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message) {
         <span class="macro">assert!</span>(
             msg.tip.len() &lt;= <span class="number">50</span>,
             <span class="string">&quot;Message type length exceeds the limit of 50 characters&quot;
@@ -195,7 +216,8 @@
         <span class="self">self</span>.actions.push(ProcessEvent::LocalMessageSent { msg });
     }
 
-    <span class="kw">pub fn </span>set_timer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
+    <span class="doccomment">/// Sets a timer with overriding delay of existing active timer.
+    </span><span class="kw">pub fn </span>set_timer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
         <span class="macro">assert!</span>(name.len() &lt;= <span class="number">50</span>, <span class="string">&quot;Timer name length exceeds the limit of 50 characters&quot;</span>);
         <span class="self">self</span>.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
@@ -204,7 +226,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>set_timer_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
+    <span class="doccomment">/// Sets a timer without overriding delay of existing active timer.
+    </span><span class="kw">pub fn </span>set_timer_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, delay: f64) {
         <span class="macro">assert!</span>(name.len() &lt;= <span class="number">50</span>, <span class="string">&quot;Timer name length exceeds the limit of 50 characters&quot;</span>);
         <span class="self">self</span>.actions.push(ProcessEvent::TimerSet {
             name: name.to_string(),
@@ -213,7 +236,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>cancel_timer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Cancels a timer.
+    </span><span class="kw">pub fn </span>cancel_timer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.actions
             .push(ProcessEvent::TimerCancelled { name: name.to_string() });
     }

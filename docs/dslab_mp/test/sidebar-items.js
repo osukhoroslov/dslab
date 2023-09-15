@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Test","TestSuite"],"type":["TestResult"]};
+window.SIDEBAR_ITEMS = {"struct":["TestSuite"],"type":["TestResult"]};

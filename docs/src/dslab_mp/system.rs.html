@@ -308,7 +308,69 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell, RefMut};
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! System implementation.
+
+</span><span class="kw">use </span>std::cell::{Ref, RefCell, RefMut};
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::rc::Rc;
@@ -324,7 +386,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::{EventLogEntry, Node};
 <span class="kw">use </span><span class="kw">crate</span>::process::Process;
 
-<span class="kw">pub struct </span>System {
+<span class="doccomment">/// Models distributed system consisting of multiple nodes connected via network.  
+</span><span class="kw">pub struct </span>System {
     sim: Simulation,
     net: Rc&lt;RefCell&lt;Network&gt;&gt;,
     nodes: HashMap&lt;String, Rc&lt;RefCell&lt;Node&gt;&gt;&gt;,
@@ -333,7 +396,8 @@
 }
 
 <span class="kw">impl </span>System {
-    <span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a system with specified random seed.
+    </span><span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>logger = Rc::new(RefCell::new(Logger::new()));
         <span class="kw">let </span><span class="kw-2">mut </span>sim = Simulation::new(seed);
         <span class="kw">let </span>net = Rc::new(RefCell::new(Network::new(sim.create_context(<span class="string">&quot;net&quot;</span>), logger.clone())));
@@ -346,7 +410,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>with_log_file(seed: u64, log_path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a system with logging events to file.
+    </span><span class="kw">pub fn </span>with_log_file(seed: u64, log_path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>logger = Rc::new(RefCell::new(Logger::with_log_file(log_path)));
         <span class="kw">let </span><span class="kw-2">mut </span>sim = Simulation::new(seed);
         <span class="kw">let </span>net = Rc::new(RefCell::new(Network::new(sim.create_context(<span class="string">&quot;net&quot;</span>), logger.clone())));
@@ -359,23 +424,29 @@
         }
     }
 
-    <span class="kw">pub fn </span>logger(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;Logger&gt; {
+    <span class="doccomment">/// Returns a mutable reference to system logger.
+    </span><span class="kw">pub fn </span>logger(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;Logger&gt; {
         <span class="self">self</span>.logger.borrow_mut()
     }
 
     <span class="comment">// Network ---------------------------------------------------------------------------------------------------------
 
+    </span><span class="doccomment">/// Returns a mutable reference to network.
     </span><span class="kw">pub fn </span>network(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;Network&gt; {
         <span class="self">self</span>.net.borrow_mut()
     }
 
     <span class="comment">// Nodes -----------------------------------------------------------------------------------------------------------
 
+    </span><span class="doccomment">/// Returns a list of node names.
     </span><span class="kw">pub fn </span>nodes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="self">self</span>.nodes.keys().cloned().collect()
     }
 
-    <span class="kw">pub fn </span>add_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Adds a node to the system.
+    ///
+    /// Note that node names must be unique.
+    </span><span class="kw">pub fn </span>add_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>node = Rc::new(RefCell::new(Node::new(
             name.to_string(),
             <span class="self">self</span>.net.clone(),
@@ -396,15 +467,20 @@
         });
     }
 
-    <span class="kw">pub fn </span>node_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
-        <span class="self">self</span>.nodes.keys().cloned().collect()
-    }
-
-    <span class="kw">pub fn </span>set_node_clock_skew(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str, clock_skew: f64) {
+    <span class="doccomment">/// Sets local clock skew of the node.
+    </span><span class="kw">pub fn </span>set_node_clock_skew(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str, clock_skew: f64) {
         <span class="self">self</span>.nodes[node].borrow_mut().set_clock_skew(clock_skew);
     }
 
-    <span class="kw">pub fn </span>crash_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node_name: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Crashes the specified node.
+    ///
+    /// All pending events created by the node will be discarded.
+    /// The undelivered messages sent by the node will be dropped.
+    /// All pending and future events destined to the node will be discarded.
+    ///
+    /// Processes running on the node are not cleared to allow working
+    /// with processes after the crash (i.e. examine event log).
+    </span><span class="kw">pub fn </span>crash_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node_name: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>node = <span class="self">self</span>.nodes.get(node_name).unwrap();
         <span class="comment">// remove the handler to discard all events sent to this node
         </span><span class="self">self</span>.sim.remove_handler(node_name);
@@ -442,7 +518,15 @@
         }
     }
 
-    <span class="kw">pub fn </span>recover_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node_name: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Recovers the previously crashed node.
+    ///
+    /// Processes running on the node before the crash are cleared.
+    /// The delivery of events to the node is enabled.
+    </span><span class="kw">pub fn </span>recover_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node_name: <span class="kw-2">&amp;</span>str) {
+        <span class="macro">assert!</span>(
+            <span class="self">self</span>.node_is_crashed(node_name),
+            <span class="string">&quot;Node is not crashed to be eligible for recovery&quot;
+        </span>);
         <span class="kw">let </span>node = <span class="self">self</span>.nodes.get(node_name).unwrap();
         node.borrow_mut().recover();
         <span class="self">self</span>.sim.add_handler(node_name, node.clone());
@@ -456,20 +540,26 @@
         });
     }
 
-    <span class="kw">pub fn </span>get_node(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;Node&gt;&gt; {
+    <span class="doccomment">/// Returns an immutable reference to the node.
+    </span><span class="kw">pub fn </span>get_node(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;Node&gt;&gt; {
         <span class="self">self</span>.nodes.get(name).map(|res| res.borrow())
     }
 
-    <span class="kw">pub fn </span>get_mut_node(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;Node&gt;&gt; {
+    <span class="doccomment">/// Returns a mutable reference to the node.
+    </span><span class="kw">pub fn </span>get_mut_node(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;Node&gt;&gt; {
         <span class="self">self</span>.nodes.get(name).map(|res| res.borrow_mut())
     }
 
-    <span class="kw">pub fn </span>node_is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="doccomment">/// Checks if the node is crashed.
+    </span><span class="kw">pub fn </span>node_is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) -&gt; bool {
         <span class="self">self</span>.nodes.get(node).unwrap().borrow().is_crashed()
     }
 
     <span class="comment">// Processes -------------------------------------------------------------------------------------------------------
 
+    </span><span class="doccomment">/// Adds a process executing on the node.
+    ///
+    /// Note that process names should be globally unique.
     </span><span class="kw">pub fn </span>add_process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, proc: Box&lt;<span class="kw">dyn </span>Process&gt;, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.nodes[node].borrow_mut().add_process(name, proc);
         <span class="self">self</span>.net
@@ -489,11 +579,13 @@
         });
     }
 
-    <span class="kw">pub fn </span>process_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+    <span class="doccomment">/// Returns the names of all processes in the system.
+    </span><span class="kw">pub fn </span>process_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="self">self</span>.proc_nodes.keys().cloned().collect()
     }
 
-    <span class="kw">pub fn </span>send_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, msg: Message) {
+    <span class="doccomment">/// Sends a local message to the process.
+    </span><span class="kw">pub fn </span>send_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, msg: Message) {
         <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="self">self</span>.proc_nodes[proc].borrow_mut();
         <span class="macro">assert!</span>(
             !node.is_crashed(),
@@ -504,68 +596,88 @@
         node.send_local_message(proc.to_string(), msg);
     }
 
-    <span class="kw">pub fn </span>read_local_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
+    <span class="doccomment">/// Reads and returns the local messages produced by the process.
+    </span><span class="kw">pub fn </span>read_local_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
         <span class="self">self</span>.proc_nodes[proc]
             .borrow_mut()
             .read_local_messages(proc)
             .unwrap_or_default()
     }
 
-    <span class="kw">pub fn </span>local_outbox(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
+    <span class="doccomment">/// Returns a copy of the local messages produced by the process.
+    ///
+    /// In contrast to [`Self::read_local_messages`], this method does not drain the process outbox.
+    </span><span class="kw">pub fn </span>local_outbox(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
         <span class="self">self</span>.proc_nodes[proc].borrow().local_outbox(proc)
     }
 
-    <span class="kw">pub fn </span>event_log(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;EventLogEntry&gt; {
+    <span class="doccomment">/// Returns the event log for the process.
+    </span><span class="kw">pub fn </span>event_log(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;EventLogEntry&gt; {
         <span class="self">self</span>.proc_nodes[proc].borrow().event_log(proc)
     }
 
-    <span class="kw">pub fn </span>max_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the maximum size of process inner data observed so far.
+    </span><span class="kw">pub fn </span>max_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.proc_nodes[proc].borrow_mut().max_size(proc)
     }
 
-    <span class="kw">pub fn </span>sent_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the number of messages sent by the process.
+    </span><span class="kw">pub fn </span>sent_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.proc_nodes[proc].borrow().sent_message_count(proc)
     }
 
-    <span class="kw">pub fn </span>received_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the number of messages received by the process.
+    </span><span class="kw">pub fn </span>received_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.proc_nodes[proc].borrow().received_message_count(proc)
     }
 
-    <span class="kw">pub fn </span>proc_node_name(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; String {
+    <span class="doccomment">/// Returns the name of node hosting the process.
+    </span><span class="kw">pub fn </span>proc_node_name(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; String {
         <span class="self">self</span>.proc_nodes[proc].borrow().name().to_owned()
     }
 
-    <span class="kw">pub fn </span>proc_node_is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="doccomment">/// Checks if the node hosting the process is crashed.
+    </span><span class="kw">pub fn </span>proc_node_is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; bool {
         <span class="self">self</span>.proc_nodes[proc].borrow().is_crashed()
     }
 
     <span class="comment">// Simulation ------------------------------------------------------------------------------------------------------
 
+    </span><span class="doccomment">/// Returns the reference to inner simulation.
     </span><span class="kw">pub fn </span>sim(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Simulation {
         <span class="kw-2">&amp;</span><span class="self">self</span>.sim
     }
 
-    <span class="kw">pub fn </span>time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the current simulation time.
+    </span><span class="kw">pub fn </span>time(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.sim.time()
     }
 
-    <span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Performs a single step through the simulation.
+    </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.sim.step()
     }
 
-    <span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
+    <span class="doccomment">/// Performs the specified number of steps through the simulation.
+    </span><span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
         <span class="self">self</span>.sim.steps(step_count)
     }
 
-    <span class="kw">pub fn </span>step_until_no_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Steps through the simulation until there are no pending events left.
+    </span><span class="kw">pub fn </span>step_until_no_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.sim.step_until_no_events()
     }
 
-    <span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: f64) -&gt; bool {
+    <span class="doccomment">/// Steps through the simulation with duration limit.
+    </span><span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: f64) -&gt; bool {
         <span class="self">self</span>.sim.step_for_duration(duration)
     }
 
-    <span class="kw">pub fn </span>step_until_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
+    <span class="doccomment">/// Steps through the simulation until the process produces local message(s)
+    /// or there are no pending events left.
+    ///
+    /// Returns the read local messages if any and error otherwise.
+    </span><span class="kw">pub fn </span>step_until_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
         <span class="kw">let </span>node = <span class="self">self</span>.proc_nodes[proc].clone();
         <span class="kw">loop </span>{
             <span class="kw">if let </span><span class="prelude-val">Some</span>(messages) = node.borrow_mut().read_local_messages(proc) {
@@ -577,7 +689,9 @@
         }
     }
 
-    <span class="kw">pub fn </span>step_until_local_message_max_steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, max_steps: u32) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
+    <span class="doccomment">/// Similar to [`Self::step_until_local_message`] but with additional limit
+    /// on the number of steps through the simulations.
+    </span><span class="kw">pub fn </span>step_until_local_message_max_steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, max_steps: u32) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="number">0</span>;
         <span class="kw">let </span>node = <span class="self">self</span>.proc_nodes[proc].clone();
         <span class="kw">while </span>steps &lt; max_steps {
@@ -592,7 +706,9 @@
         <span class="prelude-val">Err</span>(<span class="string">&quot;No messages&quot;</span>)
     }
 
-    <span class="kw">pub fn </span>step_until_local_message_timeout(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, timeout: f64) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
+    <span class="doccomment">/// Similar to [`Self::step_until_local_message`] but with additional limit
+    /// on the duration of waiting for local messages.
+    </span><span class="kw">pub fn </span>step_until_local_message_timeout(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, timeout: f64) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Message&gt;, <span class="kw-2">&amp;</span>str&gt; {
         <span class="kw">let </span>end_time = <span class="self">self</span>.time() + timeout;
         <span class="kw">let </span>node = <span class="self">self</span>.proc_nodes[proc].clone();
         <span class="kw">while </span><span class="self">self</span>.time() &lt; end_time {
@@ -606,7 +722,9 @@
         <span class="prelude-val">Err</span>(<span class="string">&quot;No messages&quot;</span>)
     }
 
-    <span class="kw">pub fn </span>gen_range&lt;T, R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: R) -&gt; T
+    <span class="doccomment">/// Returns a random number in the specified range
+    /// using the simulation-wide random number generator.
+    </span><span class="kw">pub fn </span>gen_range&lt;T, R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: R) -&gt; T
     <span class="kw">where
         </span>T: SampleUniform,
         R: SampleRange&lt;T&gt;,
@@ -614,7 +732,9 @@
         <span class="self">self</span>.sim.gen_range(range)
     }
 
-    <span class="kw">pub fn </span>random_string(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize) -&gt; String {
+    <span class="doccomment">/// Returns a random alphanumeric string of specified length
+    /// using the simulation-wide random number generator.
+    </span><span class="kw">pub fn </span>random_string(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize) -&gt; String {
         <span class="self">self</span>.sim.random_string(len)
     }
 }

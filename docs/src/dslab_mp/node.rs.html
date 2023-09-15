@@ -360,7 +360,48 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Node implementation.
+
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -373,25 +414,33 @@
 <span class="kw">use </span><span class="kw">crate</span>::network::Network;
 <span class="kw">use </span><span class="kw">crate</span>::process::{Process, ProcessState};
 
-<span class="attr">#[derive(Clone, Debug)]
+<span class="doccomment">/// Event log entry as a pair of time and event.
+</span><span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>EventLogEntry {
-    <span class="kw">pub </span>time: f64,
-    <span class="kw">pub </span>event: ProcessEvent,
+    <span class="doccomment">/// Event time.
+    </span><span class="kw">pub </span>time: f64,
+    <span class="doccomment">/// Event happened in a process.
+    </span><span class="kw">pub </span>event: ProcessEvent,
 }
 
 <span class="kw">impl </span>EventLogEntry {
-    <span class="kw">pub fn </span>new(time: f64, event: ProcessEvent) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(time: f64, event: ProcessEvent) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ time, event }
     }
 }
 
-<span class="attr">#[derive(Clone, PartialEq, Debug)]
+<span class="doccomment">/// Specifies the behaviour of timer set in the presence of existing active timer with this name.
+</span><span class="attr">#[derive(Clone, PartialEq, Debug)]
 </span><span class="kw">pub enum </span>TimerBehavior {
-    SetOnce,
-    OverrideExisting,
+    <span class="doccomment">/// Do not override the existing timer delay.
+    </span>SetOnce,
+    <span class="doccomment">/// Override the existing timer delay.
+    </span>OverrideExisting,
 }
 
-<span class="attr">#[derive(Clone, Debug)]
+<span class="doccomment">/// Represents an event happened in a process.
+</span><span class="attr">#[allow(missing_docs)]
+#[derive(Clone, Debug)]
 </span><span class="kw">pub enum </span>ProcessEvent {
     MessageSent {
         msg: Message,
@@ -447,9 +496,12 @@
     }
 }
 
-<span class="kw">pub struct </span>Node {
-    <span class="kw">pub </span>id: Id,
-    <span class="kw">pub </span>name: String,
+<span class="doccomment">/// Represents a node which is connected to the network and hosts one or more processes.
+</span><span class="kw">pub struct </span>Node {
+    <span class="doccomment">/// Identifier of simulation component.
+    </span><span class="kw">pub </span>id: Id,
+    <span class="doccomment">/// Unique node name.
+    </span><span class="kw">pub </span>name: String,
     processes: HashMap&lt;String, ProcessEntry&gt;,
     net: Rc&lt;RefCell&lt;Network&gt;&gt;,
     clock_skew: f64,
@@ -460,7 +512,12 @@
 }
 
 <span class="kw">impl </span>Node {
-    <span class="kw">pub fn </span>new(name: String, net: Rc&lt;RefCell&lt;Network&gt;&gt;, ctx: SimulationContext, logger: Rc&lt;RefCell&lt;Logger&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
+        name: String,
+        net: Rc&lt;RefCell&lt;Network&gt;&gt;,
+        ctx: SimulationContext,
+        logger: Rc&lt;RefCell&lt;Logger&gt;&gt;,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             id: ctx.id(),
             name,
@@ -474,54 +531,68 @@
         }
     }
 
-    <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+    <span class="doccomment">/// Returns the node name.
+    </span><span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="kw-2">&amp;</span><span class="self">self</span>.name
     }
 
-    <span class="kw">pub fn </span>set_clock_skew(<span class="kw-2">&amp;mut </span><span class="self">self</span>, clock_skew: f64) {
+    <span class="doccomment">/// Sets the node clock skew.
+    </span><span class="kw">pub fn </span>set_clock_skew(<span class="kw-2">&amp;mut </span><span class="self">self</span>, clock_skew: f64) {
         <span class="self">self</span>.clock_skew = clock_skew;
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>clock_skew(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the node clock skew.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>clock_skew(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.clock_skew
     }
 
-    <span class="kw">pub fn </span>is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Returns true if the node is crashed.
+    </span><span class="kw">pub fn </span>is_crashed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.is_crashed
     }
 
-    <span class="kw">pub fn </span>crash(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Marks the node as crashed.
+    </span><span class="kw">pub fn </span>crash(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.is_crashed = <span class="bool-val">true</span>;
     }
 
-    <span class="kw">pub fn </span>recover(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Recovers the node after crash.
+    </span><span class="kw">pub fn </span>recover(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="comment">// processes are cleared on recover instead of the crash
         // to allow working with processes after the crash (i.e. examine event log)
         </span><span class="self">self</span>.processes.clear();
         <span class="self">self</span>.is_crashed = <span class="bool-val">false</span>;
     }
 
-    <span class="kw">pub fn </span>add_process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, proc: Box&lt;<span class="kw">dyn </span>Process&gt;) {
+    <span class="doccomment">/// Spawns new process on the node.
+    </span><span class="kw">pub fn </span>add_process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, proc: Box&lt;<span class="kw">dyn </span>Process&gt;) {
         <span class="self">self</span>.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }
 
-    <span class="kw">pub fn </span>get_process(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Process&gt; {
+    <span class="doccomment">/// Returns a local process by its name.
+    </span><span class="kw">pub fn </span>get_process(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Process&gt; {
         <span class="self">self</span>.processes.get(name).map(|entry| <span class="kw-2">&amp;*</span>entry.proc_impl)
     }
 
-    <span class="kw">pub fn </span>process_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+    <span class="doccomment">/// Returns the names of all local processes.
+    </span><span class="kw">pub fn </span>process_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="self">self</span>.processes.keys().cloned().collect()
     }
 
-    <span class="kw">pub fn </span>set_process_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, state: Rc&lt;<span class="kw">dyn </span>ProcessState&gt;) {
+    <span class="doccomment">/// Sets the state of the process.
+    </span><span class="kw">pub fn </span>set_process_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str, state: Rc&lt;<span class="kw">dyn </span>ProcessState&gt;) {
         <span class="self">self</span>.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
     }
 
-    <span class="kw">pub fn </span>send_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, msg: Message) {
+    <span class="doccomment">/// Sends a local message to the process.
+    </span><span class="kw">pub fn </span>send_local_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, msg: Message) {
         <span class="self">self</span>.on_local_message_received(proc, msg);
     }
 
-    <span class="kw">pub fn </span>read_local_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Message&gt;&gt; {
+    <span class="doccomment">/// Reads and returns the local messages produced by the process.
+    ///
+    /// Returns `None` if there are no messages.   
+    </span><span class="kw">pub fn </span>read_local_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Message&gt;&gt; {
         <span class="kw">let </span>proc_entry = <span class="self">self</span>.processes.get_mut(proc).unwrap();
         <span class="kw">if </span>!proc_entry.local_outbox.is_empty() {
             <span class="prelude-val">Some</span>(proc_entry.local_outbox.drain(..).collect())
@@ -530,23 +601,30 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>local_outbox(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
+    <span class="doccomment">/// Returns a copy of the local messages produced by the process.
+    ///
+    /// In contrast to [`Self::read_local_messages`], this method does not drain the process outbox.
+    </span><span class="kw">pub fn </span>local_outbox(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Message&gt; {
         <span class="self">self</span>.processes[proc].local_outbox.clone()
     }
 
-    <span class="kw">pub fn </span>event_log(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;EventLogEntry&gt; {
+    <span class="doccomment">/// Returns the event log for the process.
+    </span><span class="kw">pub fn </span>event_log(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;EventLogEntry&gt; {
         <span class="self">self</span>.processes[proc].event_log.clone()
     }
 
-    <span class="kw">pub fn </span>max_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the maximum size of process inner data observed so far.
+    </span><span class="kw">pub fn </span>max_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.processes.get_mut(proc).unwrap().proc_impl.max_size()
     }
 
-    <span class="kw">pub fn </span>sent_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the number of messages sent by the process.
+    </span><span class="kw">pub fn </span>sent_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.processes[proc].sent_message_count
     }
 
-    <span class="kw">pub fn </span>received_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+    <span class="doccomment">/// Returns the number of messages received by the process.
+    </span><span class="kw">pub fn </span>received_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) -&gt; u64 {
         <span class="self">self</span>.processes[proc].received_message_count
     }
 

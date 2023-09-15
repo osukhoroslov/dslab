@@ -338,7 +338,47 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Network implementation.
+
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
 <span class="kw">use </span>std::rc::Rc;
 
@@ -353,7 +393,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::logger::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
 
-<span class="kw">pub struct </span>Network {
+<span class="doccomment">/// Represents a network that transmits messages between processes located on different nodes.
+</span><span class="kw">pub struct </span>Network {
     min_delay: f64,
     max_delay: f64,
     drop_rate: f64,
@@ -372,7 +413,7 @@
 }
 
 <span class="kw">impl </span>Network {
-    <span class="kw">pub fn </span>new(ctx: SimulationContext, logger: Rc&lt;RefCell&lt;Logger&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(ctx: SimulationContext, logger: Rc&lt;RefCell&lt;Logger&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             min_delay: <span class="number">1.</span>,
             max_delay: <span class="number">1.</span>,
@@ -392,61 +433,75 @@
         }
     }
 
-    <span class="kw">pub fn </span>add_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String, id: Id) {
+    <span class="doccomment">/// Adds a new node to the network.
+    </span><span class="kw">pub fn </span>add_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String, id: Id) {
         <span class="self">self</span>.node_ids.insert(name, id);
     }
 
-    <span class="kw">pub fn </span>proc_locations(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt; {
+    <span class="doccomment">/// Returns a map with process locations (process -&gt; node).
+    </span><span class="kw">pub fn </span>proc_locations(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.proc_locations
     }
 
-    <span class="kw">pub fn </span>set_proc_location(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, node: String) {
+    <span class="doccomment">/// Sets the process location.
+    </span><span class="kw">pub fn </span>set_proc_location(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: String, node: String) {
         <span class="self">self</span>.proc_locations.insert(proc, node);
     }
 
-    <span class="kw">pub fn </span>max_delay(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the maximum network delay.
+    </span><span class="kw">pub fn </span>max_delay(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.max_delay
     }
 
-    <span class="kw">pub fn </span>set_delay(<span class="kw-2">&amp;mut </span><span class="self">self</span>, delay: f64) {
+    <span class="doccomment">/// Sets the fixed network delay.
+    </span><span class="kw">pub fn </span>set_delay(<span class="kw-2">&amp;mut </span><span class="self">self</span>, delay: f64) {
         <span class="self">self</span>.min_delay = delay;
         <span class="self">self</span>.max_delay = delay;
     }
 
-    <span class="kw">pub fn </span>set_delays(<span class="kw-2">&amp;mut </span><span class="self">self</span>, min_delay: f64, max_delay: f64) {
+    <span class="doccomment">/// Sets the minimum and maximum network delays.
+    </span><span class="kw">pub fn </span>set_delays(<span class="kw-2">&amp;mut </span><span class="self">self</span>, min_delay: f64, max_delay: f64) {
         <span class="self">self</span>.min_delay = min_delay;
         <span class="self">self</span>.max_delay = max_delay;
     }
 
-    <span class="kw">pub fn </span>drop_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the message drop probability.
+    </span><span class="kw">pub fn </span>drop_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.drop_rate
     }
 
-    <span class="kw">pub fn </span>set_drop_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, drop_rate: f64) {
+    <span class="doccomment">/// Sets the message drop probability.
+    </span><span class="kw">pub fn </span>set_drop_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, drop_rate: f64) {
         <span class="self">self</span>.drop_rate = drop_rate;
     }
 
-    <span class="kw">pub fn </span>dupl_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the message duplication probability.
+    </span><span class="kw">pub fn </span>dupl_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.dupl_rate
     }
 
-    <span class="kw">pub fn </span>set_dupl_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dupl_rate: f64) {
+    <span class="doccomment">/// Sets the message duplication probability.
+    </span><span class="kw">pub fn </span>set_dupl_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dupl_rate: f64) {
         <span class="self">self</span>.dupl_rate = dupl_rate;
     }
 
-    <span class="kw">pub fn </span>corrupt_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+    <span class="doccomment">/// Returns the message corruption probability.
+    </span><span class="kw">pub fn </span>corrupt_rate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.corrupt_rate
     }
 
-    <span class="kw">pub fn </span>set_corrupt_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, corrupt_rate: f64) {
+    <span class="doccomment">/// Sets the message corruption probability.
+    </span><span class="kw">pub fn </span>set_corrupt_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, corrupt_rate: f64) {
         <span class="self">self</span>.corrupt_rate = corrupt_rate;
     }
 
-    <span class="kw">pub fn </span>get_drop_incoming(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;String&gt; {
+    <span class="doccomment">/// Returns nodes with enabled dropping of incoming messages.
+    </span><span class="kw">pub fn </span>get_drop_incoming(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;String&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.drop_incoming
     }
 
-    <span class="kw">pub fn </span>drop_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Enables dropping of incoming messages for a node.
+    </span><span class="kw">pub fn </span>drop_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_incoming.insert(node.to_string());
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::DropIncoming {
@@ -455,7 +510,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>pass_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Disables dropping of incoming messages for a node.
+    </span><span class="kw">pub fn </span>pass_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_incoming.remove(node);
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::PassIncoming {
@@ -464,11 +520,13 @@
         });
     }
 
-    <span class="kw">pub fn </span>get_drop_outgoing(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;String&gt; {
+    <span class="doccomment">/// Returns nodes with enabled dropping of outgoing messages.
+    </span><span class="kw">pub fn </span>get_drop_outgoing(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;String&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.drop_outgoing
     }
 
-    <span class="kw">pub fn </span>drop_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Enables dropping of outgoing messages for a node.
+    </span><span class="kw">pub fn </span>drop_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_outgoing.insert(node.to_string());
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::DropOutgoing {
@@ -477,7 +535,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>pass_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Disables dropping of outgoing messages for a node.
+    </span><span class="kw">pub fn </span>pass_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_outgoing.remove(node);
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::PassOutgoing {
@@ -486,7 +545,10 @@
         });
     }
 
-    <span class="kw">pub fn </span>disconnect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Disconnects a node from the network.
+    ///
+    /// Equivalent to enabling dropping of both incoming and outgoing messages for a node.
+    </span><span class="kw">pub fn </span>disconnect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_incoming.insert(node.to_string());
         <span class="self">self</span>.drop_outgoing.insert(node.to_string());
 
@@ -496,7 +558,10 @@
         });
     }
 
-    <span class="kw">pub fn </span>connect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Connects a node to a network.
+    ///
+    /// Equivalent to disabling dropping of both incoming and outgoing messages for a node.
+    </span><span class="kw">pub fn </span>connect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_incoming.remove(node);
         <span class="self">self</span>.drop_outgoing.remove(node);
 
@@ -506,11 +571,13 @@
         });
     }
 
-    <span class="kw">pub fn </span>disabled_links(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;(String, String)&gt; {
+    <span class="doccomment">/// Returns disabled links.
+    </span><span class="kw">pub fn </span>disabled_links(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashSet&lt;(String, String)&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.disabled_links
     }
 
-    <span class="kw">pub fn </span>disable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Disables link between nodes `from` and `to` by dropping all messages sent in this direction.
+    </span><span class="kw">pub fn </span>disable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.disabled_links.insert((from.to_string(), to.to_string()));
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::LinkDisabled {
@@ -520,7 +587,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>enable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Enables link between nodes `from` and `to`.
+    </span><span class="kw">pub fn </span>enable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.disabled_links.remove(<span class="kw-2">&amp;</span>(from.to_string(), to.to_string()));
 
         <span class="self">self</span>.logger.borrow_mut().log(LogEntry::LinkEnabled {
@@ -530,7 +598,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>make_partition(<span class="kw-2">&amp;mut </span><span class="self">self</span>, group1: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str], group2: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
+    <span class="doccomment">/// Creates a network partition between two groups of nodes.
+    </span><span class="kw">pub fn </span>make_partition(<span class="kw-2">&amp;mut </span><span class="self">self</span>, group1: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str], group2: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
         <span class="kw">for </span>n1 <span class="kw">in </span>group1 {
             <span class="kw">for </span>n2 <span class="kw">in </span>group2 {
                 <span class="self">self</span>.disabled_links.insert((n1.to_string(), n2.to_string()));
@@ -545,7 +614,11 @@
         });
     }
 
-    <span class="kw">pub fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Resets the network links by enabling all links
+    /// and disabling dropping of incoming/outgoing messages for all nodes.
+    ///
+    /// Note that this does not affect the `drop_rate` setting.
+    </span><span class="kw">pub fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.disabled_links.clear();
         <span class="self">self</span>.drop_incoming.clear();
         <span class="self">self</span>.drop_outgoing.clear();
@@ -555,11 +628,13 @@
             .log(LogEntry::NetworkReset { time: <span class="self">self</span>.ctx.time() });
     }
 
-    <span class="kw">pub fn </span>network_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="doccomment">/// Returns the total number of messages sent via the network.
+    </span><span class="kw">pub fn </span>network_message_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.network_message_count
     }
 
-    <span class="kw">pub fn </span>traffic(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="doccomment">/// Returns the total size of messages sent via the network.
+    </span><span class="kw">pub fn </span>traffic(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.traffic
     }
 
@@ -590,7 +665,8 @@
         </span>}
     }
 
-    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: <span class="kw-2">&amp;</span>str, dst: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Sends a message between two processes.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: <span class="kw-2">&amp;</span>str, dst: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>msg_size = msg.size();
         <span class="kw">let </span>src_node = <span class="self">self</span>.proc_locations.get(src).unwrap();
         <span class="kw">let </span>dst_node = <span class="self">self</span>.proc_locations.get(dst).unwrap();
