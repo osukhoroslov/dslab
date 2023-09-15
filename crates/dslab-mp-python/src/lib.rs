@@ -124,7 +124,7 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_message", (py_msg, from, &py_ctx))
-                .map_err(|e| to_string(e, py))?;
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
             Ok(())
@@ -140,7 +140,7 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_local_message", (py_msg, &py_ctx))
-                .map_err(|e| to_string(e, py))?;
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
             Ok(())
@@ -152,7 +152,7 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_timer", (timer, &py_ctx))
-                .map_err(|e| to_string(e, py))?;
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
             Ok(())
@@ -226,6 +226,6 @@ def get_size(obj, seen=None):
     .into()
 }
 
-fn to_string(err: PyErr, py: Python) -> String {
+fn error_to_string(err: PyErr, py: Python) -> String {
     err.to_string() + "\n" + &*err.traceback(py).unwrap().format().unwrap()
 }
