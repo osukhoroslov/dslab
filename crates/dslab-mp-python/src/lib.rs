@@ -227,5 +227,5 @@ def get_size(obj, seen=None):
 }
 
 fn error_to_string(err: PyErr, py: Python) -> String {
-    err.to_string() + "\n" + &*err.traceback(py).unwrap().format().unwrap()
+    err.to_string() + "\n" + &err.traceback(py).unwrap().format().unwrap()
 }
