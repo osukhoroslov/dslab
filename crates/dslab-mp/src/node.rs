@@ -1,3 +1,5 @@
+//! Node implementation.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -11,24 +13,32 @@ use crate::message::Message;
 use crate::network::Network;
 use crate::process::{Process, ProcessState};
 
+/// Event log entry as a pair of time and event.
 #[derive(Clone, Debug)]
 pub struct EventLogEntry {
+    /// Event time.
     pub time: f64,
+    /// Event happened in a process.
     pub event: ProcessEvent,
 }
 
 impl EventLogEntry {
-    pub fn new(time: f64, event: ProcessEvent) -> Self {
+    pub(crate) fn new(time: f64, event: ProcessEvent) -> Self {
         Self { time, event }
     }
 }
 
+/// Specifies the behaviour of timer set in the presence of existing active timer with this name.
 #[derive(Clone, PartialEq, Debug)]
 pub enum TimerBehavior {
+    /// Do not override the existing timer delay.
     SetOnce,
+    /// Override the existing timer delay.
     OverrideExisting,
 }
 
+/// Represents an event happened in a process.
+#[allow(missing_docs)]
 #[derive(Clone, Debug)]
 pub enum ProcessEvent {
     MessageSent {
@@ -85,8 +95,11 @@ impl ProcessEntry {
     }
 }
 
+/// Represents a node which is connected to the network and hosts one or more processes.
 pub struct Node {
+    /// Identifier of simulation component.
     pub id: Id,
+    /// Unique node name.
     pub name: String,
     processes: HashMap<String, ProcessEntry>,
     net: Rc<RefCell<Network>>,
@@ -98,7 +111,12 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(name: String, net: Rc<RefCell<Network>>, ctx: SimulationContext, logger: Rc<RefCell<Logger>>) -> Self {
+    pub(crate) fn new(
+        name: String,
+        net: Rc<RefCell<Network>>,
+        ctx: SimulationContext,
+        logger: Rc<RefCell<Logger>>,
+    ) -> Self {
         Self {
             id: ctx.id(),
             name,
@@ -112,26 +130,32 @@ impl Node {
         }
     }
 
+    /// Returns the node name.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Sets the node clock skew.
     pub fn set_clock_skew(&mut self, clock_skew: f64) {
         self.clock_skew = clock_skew;
     }
 
+    /// Returns the node clock skew.
     pub(crate) fn clock_skew(&self) -> f64 {
         self.clock_skew
     }
 
+    /// Returns true if the node is crashed.
     pub fn is_crashed(&self) -> bool {
         self.is_crashed
     }
 
+    /// Marks the node as crashed.
     pub fn crash(&mut self) {
         self.is_crashed = true;
     }
 
+    /// Recovers the node after crash.
     pub fn recover(&mut self) {
         // processes are cleared on recover instead of the crash
         // to allow working with processes after the crash (i.e. examine event log)
@@ -139,26 +163,34 @@ impl Node {
         self.is_crashed = false;
     }
 
+    /// Spawns new process on the node.
     pub fn add_process(&mut self, name: &str, proc: Box<dyn Process>) {
         self.processes.insert(name.to_string(), ProcessEntry::new(proc));
     }
 
+    /// Returns a local process by its name.
     pub fn get_process(&self, name: &str) -> Option<&dyn Process> {
         self.processes.get(name).map(|entry| &*entry.proc_impl)
     }
 
+    /// Returns the names of all local processes.
     pub fn process_names(&self) -> Vec<String> {
         self.processes.keys().cloned().collect()
     }
 
+    /// Sets the state of the process.
     pub fn set_process_state(&mut self, proc: &str, state: Rc<dyn ProcessState>) {
         self.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
     }
 
+    /// Sends a local message to the process.
     pub fn send_local_message(&mut self, proc: String, msg: Message) {
         self.on_local_message_received(proc, msg);
     }
 
+    /// Reads and returns the local messages produced by the process.
+    ///
+    /// Returns `None` if there are no messages.   
     pub fn read_local_messages(&mut self, proc: &str) -> Option<Vec<Message>> {
         let proc_entry = self.processes.get_mut(proc).unwrap();
         if !proc_entry.local_outbox.is_empty() {
@@ -168,22 +200,29 @@ impl Node {
         }
     }
 
+    /// Returns a copy of the local messages produced by the process.
+    ///
+    /// In contrast to [`Self::read_local_messages`], this method does not drain the process outbox.
     pub fn local_outbox(&self, proc: &str) -> Vec<Message> {
         self.processes[proc].local_outbox.clone()
     }
 
+    /// Returns the event log for the process.
     pub fn event_log(&self, proc: &str) -> Vec<EventLogEntry> {
         self.processes[proc].event_log.clone()
     }
 
+    /// Returns the maximum size of process inner data observed so far.
     pub fn max_size(&mut self, proc: &str) -> u64 {
         self.processes.get_mut(proc).unwrap().proc_impl.max_size()
     }
 
+    /// Returns the number of messages sent by the process.
     pub fn sent_message_count(&self, proc: &str) -> u64 {
         self.processes[proc].sent_message_count
     }
 
+    /// Returns the number of messages received by the process.
     pub fn received_message_count(&self, proc: &str) -> u64 {
         self.processes[proc].received_message_count
     }
