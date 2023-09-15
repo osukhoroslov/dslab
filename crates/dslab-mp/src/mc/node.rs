@@ -117,9 +117,11 @@ impl McNode {
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
-        if let Err(e) = proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx) {
-            self.handle_process_error(e, proc.clone());
-        }
+        proc_entry
+            .proc_impl
+            .on_message(msg, from, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
@@ -131,9 +133,11 @@ impl McNode {
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
-        if let Err(e) = proc_entry.proc_impl.on_timer(timer, &mut proc_ctx) {
-            self.handle_process_error(e, proc.clone());
-        }
+        proc_entry
+            .proc_impl
+            .on_timer(timer, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
 
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
@@ -149,9 +153,11 @@ impl McNode {
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
 
-        if let Err(e) = proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx) {
-            self.handle_process_error(e, proc.clone());
-        }
+        proc_entry
+            .proc_impl
+            .on_local_message(msg, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
 
         self.handle_process_actions(proc, time, proc_ctx.actions())
     }
