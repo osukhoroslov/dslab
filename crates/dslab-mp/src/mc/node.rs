@@ -249,7 +249,7 @@ impl McNode {
         for event in self.trace_handler.borrow().trace() {
             event.print();
         }
-        t!(format!("!!! Error when calling process '{}':", proc));
+        t!(format!("\n!!! Error when calling process '{}':\n", proc).red());
         t!(err.red());
         panic!("Process error");
     }

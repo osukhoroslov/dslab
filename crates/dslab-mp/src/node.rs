@@ -380,8 +380,7 @@ impl EventHandler for Node {
 }
 
 fn log_error(e: String, proc: String, node: String) -> String {
-    eprintln!("\n!!! Error when calling process '{}' on node '{}':\n", proc, node);
-    eprintln!("{}", e);
-    eprintln!();
+    t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, node).red());
+    t!(format!("{}", e).red());
     e
 }
