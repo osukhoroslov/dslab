@@ -321,23 +321,28 @@ impl Node {
                     self.local_message_count += 1;
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } => {
-                    if behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(&name) {
-                        let event = TimerFired {
-                            timer: name.clone(),
-                            proc: proc.clone(),
-                        };
-                        let event_id = self.ctx.borrow_mut().emit_self(event, delay);
-                        proc_entry.pending_timers.insert(name.clone(), event_id);
-
-                        self.logger.borrow_mut().log(LogEntry::TimerSet {
-                            time,
-                            timer_id: event_id.to_string(),
-                            timer_name: name.clone(),
-                            node: self.name.clone(),
-                            proc: proc.clone(),
-                            delay,
-                        });
+                    if let Some(event_id) = proc_entry.pending_timers.get(&name) {
+                        if behavior == TimerBehavior::OverrideExisting {
+                            self.ctx.borrow_mut().cancel_event(*event_id);
+                        } else {
+                            continue;
+                        }
                     }
+                    let event = TimerFired {
+                        timer: name.clone(),
+                        proc: proc.clone(),
+                    };
+                    let event_id = self.ctx.borrow_mut().emit_self(event, delay);
+                    proc_entry.pending_timers.insert(name.clone(), event_id);
+
+                    self.logger.borrow_mut().log(LogEntry::TimerSet {
+                        time,
+                        timer_id: event_id.to_string(),
+                        timer_name: name.clone(),
+                        node: self.name.clone(),
+                        proc: proc.clone(),
+                        delay,
+                    });
                 }
                 ProcessEvent::TimerCancelled { name } => {
                     if let Some(event_id) = proc_entry.pending_timers.remove(&name) {
