@@ -399,6 +399,11 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Node implementation.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -722,23 +727,28 @@
                     <span class="self">self</span>.local_message_count += <span class="number">1</span>;
                 }
                 ProcessEvent::TimerSet { name, delay, behavior } =&gt; {
-                    <span class="kw">if </span>behavior == TimerBehavior::OverrideExisting || !proc_entry.pending_timers.contains_key(<span class="kw-2">&amp;</span>name) {
-                        <span class="kw">let </span>event = TimerFired {
-                            timer: name.clone(),
-                            proc: proc.clone(),
-                        };
-                        <span class="kw">let </span>event_id = <span class="self">self</span>.ctx.borrow_mut().emit_self(event, delay);
-                        proc_entry.pending_timers.insert(name.clone(), event_id);
-
-                        <span class="self">self</span>.logger.borrow_mut().log(LogEntry::TimerSet {
-                            time,
-                            timer_id: event_id.to_string(),
-                            timer_name: name.clone(),
-                            node: <span class="self">self</span>.name.clone(),
-                            proc: proc.clone(),
-                            delay,
-                        });
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(event_id) = proc_entry.pending_timers.get(<span class="kw-2">&amp;</span>name) {
+                        <span class="kw">if </span>behavior == TimerBehavior::OverrideExisting {
+                            <span class="self">self</span>.ctx.borrow_mut().cancel_event(<span class="kw-2">*</span>event_id);
+                        } <span class="kw">else </span>{
+                            <span class="kw">continue</span>;
+                        }
                     }
+                    <span class="kw">let </span>event = TimerFired {
+                        timer: name.clone(),
+                        proc: proc.clone(),
+                    };
+                    <span class="kw">let </span>event_id = <span class="self">self</span>.ctx.borrow_mut().emit_self(event, delay);
+                    proc_entry.pending_timers.insert(name.clone(), event_id);
+
+                    <span class="self">self</span>.logger.borrow_mut().log(LogEntry::TimerSet {
+                        time,
+                        timer_id: event_id.to_string(),
+                        timer_name: name.clone(),
+                        node: <span class="self">self</span>.name.clone(),
+                        proc: proc.clone(),
+                        delay,
+                    });
                 }
                 ProcessEvent::TimerCancelled { name } =&gt; {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(event_id) = proc_entry.pending_timers.remove(<span class="kw-2">&amp;</span>name) {
