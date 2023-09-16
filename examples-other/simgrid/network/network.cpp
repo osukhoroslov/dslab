@@ -60,7 +60,6 @@ void Process(int id, sg4::Mailbox* in, std::vector<sg4::Mailbox*> peers) {
     delete msg;
     XBT_INFO("Started");
 
-    int done = 0;
     int acks_left = peers.size();
 
     std::vector<std::pair<int, sg4::Mailbox*>> peers_delay;
@@ -118,7 +117,7 @@ void make_full_mesh_topology(sg4::NetZone* zone, int host_count) {
 
 void make_star_topology(sg4::NetZone* zone, int host_count) {
     std::vector<sg4::Link*> links;
-    for (uint32_t i = 0; i < host_count; i++) {
+    for (int i = 0; i < host_count; i++) {
         auto link = zone->create_link("link-" + std::to_string(i), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         links.push_back(link);
     }
@@ -139,12 +138,12 @@ void make_tree_topology(sg4::NetZone* zone, int star_count, int hosts_per_star) 
     int host_count = star_count * hosts_per_star;
 
     std::vector<sg4::Link*> star_links;
-    for (uint32_t i = 0; i < star_count; i++) {
+    for (int i = 0; i < star_count; i++) {
         auto link = zone->create_link("link-" + std::to_string(i), std::to_string(1000 * hosts_per_star) + "MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         star_links.push_back(link);
     }
     std::vector<sg4::Link*> host_links;
-    for (uint32_t i = 0; i < hosts_per_star * star_count; i++) {
+    for (int i = 0; i < hosts_per_star * star_count; i++) {
         auto link = zone->create_link("link-host-" + std::to_string(i), "1000MBps")->set_latency(1e-4)->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
         host_links.push_back(link);
     }
@@ -176,8 +175,8 @@ void make_fat_tree_topology(sg4::NetZone* zone, int l2_switch_count, int l1_swit
     int host_count = l1_switch_count * hosts_per_switch;
 
     std::vector<std::vector<sg4::Link*>> uplinks(l1_switch_count);
-    for (uint32_t i = 0; i < l1_switch_count; i++) {
-        for (uint32_t j = 0; j < l2_switch_count; j++) {
+    for (int i = 0; i < l1_switch_count; i++) {
+        for (int j = 0; j < l2_switch_count; j++) {
             auto link = zone->create_link("uplink-" + std::to_string(i) + "-" + std::to_string(j), std::to_string(1000 * hosts_per_switch / l2_switch_count) + "MBps")
                 ->set_latency(1e-4)
                 ->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
@@ -185,8 +184,8 @@ void make_fat_tree_topology(sg4::NetZone* zone, int l2_switch_count, int l1_swit
         }
     }
     std::vector<std::vector<sg4::Link*>> downlinks(l1_switch_count);
-    for (uint32_t i = 0; i < l1_switch_count; i++) {
-        for (uint32_t j = 0; j < hosts_per_switch; ++j) {
+    for (int i = 0; i < l1_switch_count; i++) {
+        for (int j = 0; j < hosts_per_switch; ++j) {
             auto link = zone->create_link("downlink-" + std::to_string(i) + "-" + std::to_string(j), "1000MBps")
                 ->set_latency(1e-4)
                 ->set_sharing_policy(sg4::Link::SharingPolicy::SHARED);
@@ -247,7 +246,7 @@ int main(int argc, char* argv[]) {
         process_mailboxes.push_back(sg4::Mailbox::by_name(proc_name));
     }
 
-    for (uint32_t i = 0; i < host_count; i++) {
+    for (unsigned int i = 0; i < host_count; i++) {
         std::string hostname = "host-" + std::to_string(i);
         auto host = zone->create_host(hostname, 1);
         if (i == 0) {

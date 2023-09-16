@@ -27,5 +27,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(argparse)
 
 add_subdirectory(master-workers)
+add_subdirectory(network)
 add_subdirectory(ping-pong)
 add_subdirectory(storage)
