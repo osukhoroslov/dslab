@@ -76,6 +76,7 @@ pub struct McNodeState {
 
 #[derive(Clone)]
 pub struct McNode {
+    name: String,
     pub(crate) processes: HashMap<String, ProcessEntry>,
     trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
@@ -84,11 +85,13 @@ pub struct McNode {
 
 impl McNode {
     pub(crate) fn new(
+        name: String,
         processes: HashMap<String, ProcessEntry>,
         trace_handler: Rc<RefCell<TraceHandler>>,
         clock_skew: f64,
     ) -> Self {
         Self {
+            name,
             processes,
             trace_handler,
             clock_skew,
@@ -269,7 +272,7 @@ impl McNode {
         for event in self.trace_handler.borrow().trace() {
             event.print();
         }
-        t!(format!("\n!!! Error when calling process '{}':\n", proc).red());
+        t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, self.name).red());
         t!(err.red());
         panic!("Process error");
     }
