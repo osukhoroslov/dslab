@@ -160,7 +160,7 @@ impl Node {
             .unwrap()
             .proc_impl
             .set_state(state)
-            .map_err(|e| handle_process_error(e, proc.to_string(), self.name.clone()))
+            .map_err(|e| self.handle_process_error(e, proc.to_string()))
             .unwrap();
     }
 
@@ -218,7 +218,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_local_message(msg, &mut proc_ctx)
-            .map_err(|e| handle_process_error(e, proc.clone(), self.name.clone()))
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
             .unwrap();
 
         self.handle_process_actions(proc, time, proc_ctx.actions());
@@ -251,7 +251,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_message(msg, from, &mut proc_ctx)
-            .map_err(|e| handle_process_error(e, proc.clone(), self.name.clone()))
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
             .unwrap();
 
         if self.logger.borrow().has_log_file() {
@@ -278,7 +278,7 @@ impl Node {
         proc_entry
             .proc_impl
             .on_timer(timer, &mut proc_ctx)
-            .map_err(|e| handle_process_error(e, proc.clone(), self.name.clone()))
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
             .unwrap();
 
         if self.logger.borrow().has_log_file() {
@@ -354,17 +354,17 @@ impl Node {
     }
 
     fn log_process_state(&mut self, proc: &str) {
-        let proc_entry = self.processes.get_mut(proc).unwrap();
+        let proc_entry = self.processes.get(proc).unwrap();
         let state = format!(
             "{:?}",
             proc_entry
                 .proc_impl
                 .state()
-                .map_err(|e| handle_process_error(e, proc.to_string(), self.name.clone()))
+                .map_err(|e| self.handle_process_error(e, proc.to_string()))
                 .unwrap()
         );
         if state != proc_entry.last_state {
-            proc_entry.last_state = state.clone();
+            self.processes.get_mut(proc).unwrap().last_state = state.clone();
             self.logger.borrow_mut().log(LogEntry::ProcessStateUpdated {
                 time: self.ctx.borrow().time(),
                 node: self.name.clone(),
@@ -372,6 +372,12 @@ impl Node {
                 state,
             });
         }
+    }
+
+    fn handle_process_error(&self, err: String, proc: String) -> String {
+        t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, self.name).red());
+        t!(err.red());
+        "Error when calling process".to_string()
     }
 }
 
@@ -393,10 +399,4 @@ impl EventHandler for Node {
             }
         })
     }
-}
-
-fn handle_process_error(e: String, proc: String, node: String) -> String {
-    t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, node).red());
-    t!(e.red());
-    "Error when calling process".to_string()
 }
