@@ -268,12 +268,12 @@ impl McNode {
         new_events
     }
 
-    fn handle_process_error(&self, err: String, proc: String) {
+    fn handle_process_error(&self, err: String, proc: String) -> String {
         for event in self.trace_handler.borrow().trace() {
             event.print();
         }
         t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, self.name).red());
         t!(err.red());
-        panic!("Process error");
+        "Error when calling process".to_string()
     }
 }
