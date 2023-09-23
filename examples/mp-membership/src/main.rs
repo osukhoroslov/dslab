@@ -647,7 +647,7 @@ fn mc_invariant_check_stabilized(group: Vec<String>) -> InvariantFn {
                 let data: MembersMessage = serde_json::from_str(&msg.data).unwrap();
                 let members = HashSet::from_iter(data.members.into_iter());
                 if !members.eq(&group) {
-                    return Err("still not stabilized".to_owned());
+                    return Err(format!("expected a stabilized group {:?} but got {:?}", group, members));
                 }
             }
         }
