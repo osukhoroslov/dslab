@@ -92,7 +92,7 @@ pub mod invariants {
                     messages_expected.len()
                 ));
             }
-            if local_outbox.len() < messages_expected.len() && !state.events.has_available_events() {
+            if local_outbox.len() < messages_expected.len() && state.events.is_empty() {
                 return Err(format!(
                     "{proc} received {} messages in total but {} expected",
                     local_outbox.len(),
@@ -161,7 +161,7 @@ pub mod goals {
     /// Checks if current state has no more active events.
     pub fn no_events() -> GoalFn {
         boxed!(|state: &McState| {
-            if !state.events.has_available_events() {
+            if state.events.is_empty() {
                 Some("final state reached".to_string())
             } else {
                 None
@@ -347,7 +347,7 @@ pub mod collects {
 
     /// Checks if current state has no more active events.
     pub fn no_events() -> CollectFn {
-        boxed!(|state: &McState| { !state.events.has_available_events() })
+        boxed!(|state: &McState| { state.events.is_empty() })
     }
 
     /// Checks if current state's depth exceeds the given value.

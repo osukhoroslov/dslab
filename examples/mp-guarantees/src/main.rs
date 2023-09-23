@@ -425,7 +425,7 @@ fn mc_invariant_guarantees(messages_expected: Vec<Message>, config: TestConfig) 
         let delivered_msg_count = check_delivered_messages(delivered, &expected_msg_count, &messages_expected[0].tip)?;
 
         // check delivered message count according to expected guarantees
-        if config.reliable && !state.events.has_available_events() {
+        if config.reliable && state.events.is_empty() {
             check_message_delivery_reliable(&delivered_msg_count, &expected_msg_count)?;
         }
         if config.once {

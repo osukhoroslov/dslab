@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sugars::boxed;
 
 use dslab_mp::logger::LogEntry::{self, McMessageReceived};
-use dslab_mp::mc::events::MessageDeliveryGuarantee;
+use dslab_mp::mc::events::EventOrderingMode;
 use dslab_mp::mc::model_checker::ModelChecker;
 use dslab_mp::mc::predicates::{collects, goals, prunes};
 use dslab_mp::mc::state::McState;
@@ -41,7 +41,7 @@ struct MembersMessage {
     members: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct TestConfig<'a> {
     process_factory: &'a PyProcessFactory,
     process_count: u32,
@@ -491,7 +491,7 @@ fn test_scalability_normal(config: &TestConfig) -> TestResult {
     ];
     let mut measurements = Vec::new();
     for size in sys_sizes {
-        let mut run_config = config.clone();
+        let mut run_config = *config;
         run_config.process_count = size;
         let mut rand = Pcg64::seed_from_u64(config.seed);
         let mut sys = build_system(&run_config);
@@ -565,7 +565,7 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
     ];
     let mut measurements = Vec::new();
     for size in sys_sizes {
-        let mut run_config = config.clone();
+        let mut run_config = *config;
         run_config.process_count = size;
         let mut rand = Pcg64::seed_from_u64(config.seed);
         let mut sys = build_system(&run_config);
@@ -655,22 +655,19 @@ fn mc_invariant_check_stabilized(group: Vec<String>) -> InvariantFn {
     })
 }
 
-fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
+fn mc_stabilize(sys: &mut System, seed_proc: String) -> TestResult {
     let procs = sys.process_names();
     let mut mc = ModelChecker::new(sys);
 
     let strategy_config = StrategyConfig::default()
-        .prune(prunes::any_prune(vec![
-            prunes::state_depth(20),
-            prunes::events_limit_per_proc(
-                |entry: &LogEntry, proc_name: &String| match entry {
-                    LogEntry::McTimerFired { proc, .. } => proc_name == proc,
-                    _ => false,
-                },
-                procs.clone(),
-                2,
-            ),
-        ]))
+        .prune(prunes::events_limit_per_proc(
+            |entry: &LogEntry, proc_name: &String| match entry {
+                LogEntry::McTimerFired { proc, .. } => proc_name == proc,
+                _ => false,
+            },
+            procs.clone(),
+            2,
+        ))
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
         .collect(collects::any_collect(vec![
             collects::no_events(),
@@ -692,10 +689,13 @@ fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
         ]));
 
     let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
-        sys.set_message_delivery_mode(MessageDeliveryGuarantee::FastDelivery);
-        let seed = &group[0];
-        for proc in &group {
-            sys.send_local_message(proc.clone(), proc.clone(), Message::json("JOIN", &JoinMessage { seed }));
+        sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+        for proc in &procs {
+            sys.send_local_message(
+                proc.clone(),
+                proc.clone(),
+                Message::json("JOIN", &JoinMessage { seed: &seed_proc }),
+            );
         }
     });
     match res {
@@ -705,15 +705,15 @@ fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
         }
         Ok(stats) => {
             // println!("collected {} states", stats.collected_states.len());
-            mc_check_group(sys, stats.collected_states, &procs, group)
+            mc_check_group(sys, stats.collected_states, &procs)
         }
     }
 }
 
-fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String], group: Vec<String>) -> TestResult {
+fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String]) -> TestResult {
     let mut mc = ModelChecker::new(sys);
     let strategy_config = StrategyConfig::default()
-        .invariant(mc_invariant_check_stabilized(group.clone()))
+        .invariant(mc_invariant_check_stabilized(procs.to_vec()))
         .goal(goals::always_ok());
 
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, collected, |sys| {
@@ -732,10 +732,10 @@ fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String
 fn test_mc_group(config: &TestConfig) -> TestResult {
     let mut rand = Pcg64::seed_from_u64(config.seed);
     let mut sys = build_system(config);
-    let mut group = sys.process_names();
-    group.shuffle(&mut rand);
+    let group = sys.process_names();
+    let seed = group.choose(&mut rand).unwrap();
 
-    mc_stabilize(&mut sys, group)?;
+    mc_stabilize(&mut sys, seed.to_string())?;
     Ok(true)
 }
 
@@ -787,46 +787,42 @@ fn main() {
     };
     let mut tests = TestSuite::new();
 
-    tests.add("SIMPLE", test_simple, config.clone());
-    tests.add("GET MEMBERS SEMANTICS", test_get_members_semantics, config.clone());
-    tests.add("RANDOM SEED", test_random_seed, config.clone());
-    tests.add("PROCESS JOIN", test_process_join, config.clone());
-    tests.add("PROCESS LEAVE", test_process_leave, config.clone());
-    tests.add("PROCESS CRASH", test_process_crash, config.clone());
-    tests.add("SEED PROCESS CRASH", test_seed_process_crash, config.clone());
-    tests.add("PROCESS CRASH RECOVER", test_process_crash_recover, config.clone());
-    tests.add("PROCESS OFFLINE", test_process_offline, config.clone());
-    tests.add("SEED PROCESS OFFLINE", test_seed_process_offline, config.clone());
-    tests.add("PROCESS OFFLINE RECOVER", test_process_offline_recover, config.clone());
-    tests.add("PROCESS CANNOT RECEIVE", test_process_cannot_receive, config.clone());
-    tests.add("PROCESS CANNOT SEND", test_process_cannot_send, config.clone());
-    tests.add("NETWORK PARTITION", test_network_partition, config.clone());
-    tests.add(
-        "NETWORK PARTITION RECOVER",
-        test_network_partition_recover,
-        config.clone(),
-    );
+    tests.add("SIMPLE", test_simple, config);
+    tests.add("GET MEMBERS SEMANTICS", test_get_members_semantics, config);
+    tests.add("RANDOM SEED", test_random_seed, config);
+    tests.add("PROCESS JOIN", test_process_join, config);
+    tests.add("PROCESS LEAVE", test_process_leave, config);
+    tests.add("PROCESS CRASH", test_process_crash, config);
+    tests.add("SEED PROCESS CRASH", test_seed_process_crash, config);
+    tests.add("PROCESS CRASH RECOVER", test_process_crash_recover, config);
+    tests.add("PROCESS OFFLINE", test_process_offline, config);
+    tests.add("SEED PROCESS OFFLINE", test_seed_process_offline, config);
+    tests.add("PROCESS OFFLINE RECOVER", test_process_offline_recover, config);
+    tests.add("PROCESS CANNOT RECEIVE", test_process_cannot_receive, config);
+    tests.add("PROCESS CANNOT SEND", test_process_cannot_send, config);
+    tests.add("NETWORK PARTITION", test_network_partition, config);
+    tests.add("NETWORK PARTITION RECOVER", test_network_partition_recover, config);
     tests.add(
         "TWO PROCESSES CANNOT COMMUNICATE",
         test_two_processes_cannot_communicate,
-        config.clone(),
+        config,
     );
-    tests.add("SLOW NETWORK", test_slow_network, config.clone());
-    tests.add("FLAKY NETWORK", test_flaky_network, config.clone());
-    tests.add("FLAKY NETWORK ON START", test_flaky_network_on_start, config.clone());
-    tests.add("FLAKY NETWORK AND CRASH", test_flaky_network_and_crash, config.clone());
+    tests.add("SLOW NETWORK", test_slow_network, config);
+    tests.add("FLAKY NETWORK", test_flaky_network, config);
+    tests.add("FLAKY NETWORK ON START", test_flaky_network_on_start, config);
+    tests.add("FLAKY NETWORK AND CRASH", test_flaky_network_and_crash, config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
     for run in 1..=args.monkeys {
-        let mut run_config = config.clone();
+        let mut run_config = config;
         run_config.seed = rand.next_u64();
         tests.add(&format!("CHAOS MONKEY (run {})", run), test_chaos_monkey, run_config);
     }
-    tests.add("SCALABILITY NORMAL", test_scalability_normal, config.clone());
-    tests.add("SCALABILITY CRASH", test_scalability_crash, config.clone());
+    tests.add("SCALABILITY NORMAL", test_scalability_normal, config);
+    tests.add("SCALABILITY CRASH", test_scalability_crash, config);
 
     config.process_count = 3;
 
-    tests.add("MODEL CHECKING", test_mc_group, config.clone());
+    tests.add("MODEL CHECKING", test_mc_group, config);
 
     if args.test.is_none() {
         tests.run();

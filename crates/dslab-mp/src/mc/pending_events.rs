@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId, MessageDeliveryGuarantee};
+use crate::mc::events::{EventOrderingMode, McEvent, McEventId};
 
 /// Stores pending events and provides a convenient interface for working with them.  
 #[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
@@ -66,10 +66,10 @@ impl PendingEvents {
     }
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
-    pub(crate) fn available_events(&self, delivery_guarantee: &MessageDeliveryGuarantee) -> BTreeSet<McEventId> {
+    pub(crate) fn available_events(&self, delivery_guarantee: &EventOrderingMode) -> BTreeSet<McEventId> {
         match delivery_guarantee {
-            MessageDeliveryGuarantee::NoTimeLimit => self.available_events.clone(),
-            MessageDeliveryGuarantee::FastDelivery => {
+            EventOrderingMode::Normal => self.available_events.clone(),
+            EventOrderingMode::MessagesFirst => {
                 let only_messages = self
                     .available_events
                     .clone()
@@ -86,8 +86,8 @@ impl PendingEvents {
     }
 
     /// Returns true if there exist at least one available event.
-    pub fn has_available_events(&self) -> bool {
-        !self.available_events.is_empty()
+    pub fn is_empty(&self) -> bool {
+        self.available_events.is_empty()
     }
 
     /// Cancels given timer and recalculates available events.
@@ -146,7 +146,7 @@ mod tests {
     use rand::prelude::IteratorRandom;
 
     use crate::mc::events::McEvent;
-    use crate::mc::pending_events::{MessageDeliveryGuarantee, PendingEvents};
+    use crate::mc::pending_events::{EventOrderingMode, PendingEvents};
     use crate::mc::system::McTime;
 
     #[test]
@@ -176,7 +176,7 @@ mod tests {
         }
         println!("{:?}", rev_id);
         while let Some(id) = pending_events
-            .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
+            .available_events(&EventOrderingMode::Normal)
             .iter()
             .choose(&mut rand::thread_rng())
         {
@@ -220,7 +220,7 @@ mod tests {
         // - two timers with delays 2 and 3
         for _ in 0..7 {
             let id = *pending_events
-                .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
+                .available_events(&EventOrderingMode::Normal)
                 .iter()
                 .choose(&mut rand::thread_rng())
                 .unwrap();
@@ -243,7 +243,7 @@ mod tests {
             rev_id[pending_events.push(event)] = 9 + node_id;
         }
         while let Some(id) = pending_events
-            .available_events(&MessageDeliveryGuarantee::NoTimeLimit)
+            .available_events(&EventOrderingMode::Normal)
             .iter()
             .choose(&mut rand::thread_rng())
         {
