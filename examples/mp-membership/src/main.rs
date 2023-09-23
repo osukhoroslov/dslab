@@ -150,7 +150,7 @@ fn test_get_members_semantics(config: &TestConfig) -> TestResult {
         sys.send_local_message(&proc, Message::json("GET_MEMBERS", &GetMembersMessage {}));
         let msgs = sys.step_until_local_message_max_steps(&proc, 0)?;
         assume_eq!(msgs.len(), 1, "expected exactly one message")?;
-        assume_eq!(msgs[0].tip, "MEMBERS", "expected GET_MEMBERS message")?;
+        assume_eq!(msgs[0].tip, "MEMBERS", "expected MEMBERS message")?;
     }
     Ok(true)
 }
