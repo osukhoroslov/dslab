@@ -182,9 +182,7 @@ pub mod goals {
 
     /// This goal is used when start state is also a final state.
     pub fn always_ok() -> GoalFn {
-        boxed!(move |_: &McState| {
-            Some("ok".to_string())
-        })
+        boxed!(move |_: &McState| { Some("ok".to_string()) })
     }
 
     /// Checks if current run trace has at least `n` events matching the predicate.
