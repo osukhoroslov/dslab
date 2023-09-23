@@ -279,6 +279,9 @@ impl System {
             }
             steps += 1;
         }
+        if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+            return Ok(messages);
+        }
         Err("No messages")
     }
 

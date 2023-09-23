@@ -180,6 +180,13 @@ pub mod goals {
         })
     }
 
+    /// This goal is used when start state is also a final state.
+    pub fn always_ok() -> GoalFn {
+        boxed!(move |_: &McState| {
+            Some("ok".to_string())
+        })
+    }
+
     /// Checks if current run trace has at least `n` events matching the predicate.
     pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> GoalFn
     where

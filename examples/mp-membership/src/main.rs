@@ -14,12 +14,10 @@ use sugars::boxed;
 use dslab_mp::logger::LogEntry::{self, McMessageReceived};
 use dslab_mp::mc::events::MessageDeliveryGuarantee;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::goals::got_n_local_messages;
-use dslab_mp::mc::predicates::invariants::state_depth;
-use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
+use dslab_mp::mc::predicates::{collects, goals, prunes};
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
-use dslab_mp::mc::strategy::{CollectFn, GoalFn, StrategyConfig};
+use dslab_mp::mc::strategy::{CollectFn, InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
@@ -141,6 +139,20 @@ fn test_simple(config: &TestConfig) -> TestResult {
     let group = sys.process_names();
     let seed = &group[0];
     initialize_group(&mut sys, &group, seed)
+}
+
+fn test_get_members_semantics(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+    let group = sys.process_names();
+    let seed = &group[0];
+    initialize_group(&mut sys, &group, seed)?;
+    for proc in sys.process_names() {
+        sys.send_local_message(&proc, Message::json("GET_MEMBERS", &GetMembersMessage {}));
+        let msgs = sys.step_until_local_message_max_steps(&proc, 0)?;
+        assume_eq!(msgs.len(), 1, "expected exactly one message")?;
+        assume_eq!(msgs[0].tip, "MEMBERS", "expected GET_MEMBERS message")?;
+    }
+    Ok(true)
 }
 
 fn test_random_seed(config: &TestConfig) -> TestResult {
@@ -622,23 +634,25 @@ fn test_scalability_crash(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
-fn mc_invariant_check_stabilized(state: &McState, group: Vec<String>) -> Result<(), String> {
-    let group = group.into_iter().collect::<HashSet<String>>();
-    for node in state.node_states.keys() {
-        if let Some(msg) = state.node_states[node].proc_states[node].local_outbox.first() {
-            if msg.tip != "MEMBERS" {
-                return Err("wrong message type".to_owned());
-            }
-            let data: MembersMessage = serde_json::from_str(&msg.data).unwrap();
-            let members = HashSet::from_iter(data.members.into_iter());
-            let mut correct = group.difference(&members).any(|_| true);
-            correct &= members.difference(&group).any(|_| true);
-            if !correct {
-                return Err("still not stabilized".to_owned());
+// MODEL CHECKING ------------------------------------------------------------------------------------------------------
+
+fn mc_invariant_check_stabilized(group: Vec<String>) -> InvariantFn {
+    boxed!(move |state| {
+        let group = group.clone().into_iter().collect::<HashSet<String>>();
+        for node in state.node_states.keys() {
+            if let Some(msg) = state.node_states[node].proc_states[node].local_outbox.first() {
+                if msg.tip != "MEMBERS" {
+                    return Err("wrong message type".to_owned());
+                }
+                let data: MembersMessage = serde_json::from_str(&msg.data).unwrap();
+                let members = HashSet::from_iter(data.members.into_iter());
+                if !members.eq(&group) {
+                    return Err("still not stabilized".to_owned());
+                }
             }
         }
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
@@ -699,49 +713,13 @@ fn mc_stabilize(sys: &mut System, group: Vec<String>) -> TestResult {
 fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String], group: Vec<String>) -> TestResult {
     let mut mc = ModelChecker::new(sys);
     let strategy_config = StrategyConfig::default()
-        .invariant(invariants::all_invariants(vec![
-            invariants::state_depth_current_run(10),
-            boxed!(move |state| { mc_invariant_check_stabilized(state, group.clone()) }),
-        ]))
-        .goal(goals::all_goals(
-            procs
-                .iter()
-                .map(|proc| got_n_local_messages(proc, proc, 1))
-                .collect::<Vec<GoalFn>>(),
-        ));
+        .invariant(mc_invariant_check_stabilized(group.clone()))
+        .goal(goals::always_ok());
 
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, collected, |sys| {
         for node in procs.iter() {
             sys.send_local_message(node, node, Message::json("GET_MEMBERS", &GetMembersMessage {}));
         }
-    });
-    if let Err(e) = res {
-        e.print_trace();
-        Err(e.message())
-    } else {
-        Ok(true)
-    }
-}
-
-fn test_mc_local_answer(config: &TestConfig) -> TestResult {
-    let sys = build_system(config);
-    let group = sys.process_names();
-    let mut mc = ModelChecker::new(&sys);
-
-    let strategy_config = StrategyConfig::default()
-        .goal(got_n_local_messages(&group[0], &group[0], 1))
-        .invariant(state_depth(5));
-    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
-        sys.send_local_message(
-            &group[0],
-            &group[0],
-            Message::json("JOIN", &JoinMessage { seed: &group[0] }),
-        );
-        sys.send_local_message(
-            &group[0],
-            &group[0],
-            Message::json("GET_MEMBERS", &GetMembersMessage {}),
-        );
     });
     if let Err(e) = res {
         e.print_trace();
@@ -810,6 +788,7 @@ fn main() {
     let mut tests = TestSuite::new();
 
     tests.add("SIMPLE", test_simple, config.clone());
+    tests.add("GET MEMBERS SEMANTICS", test_get_members_semantics, config.clone());
     tests.add("RANDOM SEED", test_random_seed, config.clone());
     tests.add("PROCESS JOIN", test_process_join, config.clone());
     tests.add("PROCESS LEAVE", test_process_leave, config.clone());
@@ -847,8 +826,7 @@ fn main() {
 
     config.process_count = 3;
 
-    tests.add("MC LOCAL GET_MEMBERS", test_mc_local_answer, config.clone());
-    tests.add("MC NORMAL", test_mc_group, config.clone());
+    tests.add("MODEL CHECKING", test_mc_group, config.clone());
 
     if args.test.is_none() {
         tests.run();
