@@ -85,7 +85,7 @@ impl PendingEvents {
         }
     }
 
-    /// Returns true if there exist at least ont available event
+    /// Returns true if there exist at least one available event.
     pub fn has_available_events(&self) -> bool {
         !self.available_events.is_empty()
     }
