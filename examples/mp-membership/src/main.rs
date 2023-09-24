@@ -57,7 +57,7 @@ fn build_system(config: &TestConfig) -> System {
         sys.add_node(&name);
         let clock_skew = sys.gen_range(0.0..10.0);
         sys.set_node_clock_skew(&name, clock_skew);
-        let process = config.process_factory.build((&name,), config.seed).unwrap();
+        let process = config.process_factory.build((&name,), config.seed);
         sys.add_process(&name, boxed!(process), &name);
     }
     sys
@@ -77,7 +77,7 @@ fn crash_process(name: &str, sys: &mut System) {
 
 fn recover_process(name: &str, sys: &mut System, config: &TestConfig) {
     sys.recover_node(name);
-    let process = config.process_factory.build((name,), config.seed).unwrap();
+    let process = config.process_factory.build((name,), config.seed);
     sys.add_process(name, boxed!(process), name);
 }
 

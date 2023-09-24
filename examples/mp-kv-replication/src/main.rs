@@ -79,10 +79,7 @@ fn build_system(config: &TestConfig) -> System {
         proc_names.push(format!("{}", n));
     }
     for proc_name in proc_names.iter() {
-        let proc = config
-            .proc_factory
-            .build((proc_name, proc_names.clone()), config.seed)
-            .unwrap();
+        let proc = config.proc_factory.build((proc_name, proc_names.clone()), config.seed);
         // process and node on which it runs have the same name
         let node_name = proc_name.clone();
         sys.add_node(&node_name);

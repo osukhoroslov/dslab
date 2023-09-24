@@ -11,7 +11,7 @@ fn build_system() -> (System, Rc<dyn ProcessState>) {
     let mut sys = System::new(0);
     sys.add_node("node");
     let proc_f = PyProcessFactory::new("python-tests/process.py", "TestProcess");
-    let process = proc_f.build((), 1).unwrap();
+    let process = proc_f.build((), 1);
     let state = process.state().unwrap();
     sys.add_process("proc", Box::new(process), "node");
     (sys, state)

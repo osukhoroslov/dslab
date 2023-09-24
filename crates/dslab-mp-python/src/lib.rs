@@ -40,17 +40,17 @@ impl PyProcessFactory {
         }
     }
 
-    pub fn build(&self, args: impl IntoPy<Py<PyTuple>>, seed: u64) -> Result<PyProcess, String> {
-        let proc = Python::with_gil(|py| -> Result<PyObject, String> {
+    pub fn build(&self, args: impl IntoPy<Py<PyTuple>>, seed: u64) -> PyProcess {
+        let proc = Python::with_gil(|py| -> PyObject {
             py.run(format!("import random\nrandom.seed({})", seed).as_str(), None, None)
                 .unwrap();
-            Ok(self
-                .proc_class
+            self.proc_class
                 .call1(py, args)
-                .map_err(|e| error_to_string(e, py))?
-                .to_object(py))
-        })?;
-        Ok(PyProcess {
+                .map_err(|e| log_build_error(e, py))
+                .unwrap()
+                .to_object(py)
+        });
+        PyProcess {
             proc,
             msg_class: self.msg_class.clone(),
             ctx_class: self.ctx_class.clone(),
@@ -58,7 +58,7 @@ impl PyProcessFactory {
             max_size: 0,
             max_size_freq: 0,
             max_size_counter: 0,
-        })
+        }
     }
 }
 
@@ -183,6 +183,13 @@ impl Process for PyProcess {
             Ok(())
         })
     }
+}
+
+fn log_build_error(e: PyErr, py: Python) -> PyErr {
+    eprintln!("\n!!! Error when building Python process:\n");
+    e.print(py);
+    eprintln!();
+    e
 }
 
 fn get_size_fun(py: Python) -> Py<PyAny> {

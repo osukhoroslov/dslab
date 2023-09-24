@@ -23,9 +23,9 @@ fn build_system() -> System {
     let impl_path = env::var("PYTHONPATH").unwrap() + "/../tests/python/retry_runtime_error.py";
 
     let server_f = PyProcessFactory::new(impl_path.as_str(), "PingServer");
-    let server = boxed!(server_f.build(("server",), 12345).unwrap());
+    let server = boxed!(server_f.build(("server",), 12345));
     let client_f = PyProcessFactory::new(impl_path.as_str(), "PingClient");
-    let client = boxed!(client_f.build(("client", "server"), 12345).unwrap());
+    let client = boxed!(client_f.build(("client", "server"), 12345));
 
     sys.add_process("server", server, "server-node");
     sys.add_process("client", client, "client-node");
