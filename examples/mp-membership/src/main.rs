@@ -15,8 +15,8 @@ use sugars::boxed;
 use dslab_mp::logger::LogEntry::{self, McMessageReceived};
 use dslab_mp::mc::events::EventOrderingMode;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{collects, invariants, goals, prunes};
- use dslab_mp::mc::state::McState;
+use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
+use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::{CollectFn, InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
@@ -675,7 +675,7 @@ fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet
         // We can explore about 20 steps of simulation
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
         // And 2 minutes is more than enough for this.
-        .invariant(invariants::time_limit(Duration::from_secs(180)))
+        .invariant(invariants::time_limit(Duration::from_secs(120)))
         // We check for states in which group should be stabilized:
         // Either nothing is going to change or every process received at least 3 messages.
         // Considering we have 3 nodes in the system and network is stable, we can show this is enough:
