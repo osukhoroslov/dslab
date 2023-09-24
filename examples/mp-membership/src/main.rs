@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::Write;
+use std::time::Duration;
 
 use assertables::{assume, assume_eq};
 use clap::Parser;
@@ -14,8 +15,8 @@ use sugars::boxed;
 use dslab_mp::logger::LogEntry::{self, McMessageReceived};
 use dslab_mp::mc::events::EventOrderingMode;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{collects, goals, prunes};
-use dslab_mp::mc::state::McState;
+use dslab_mp::mc::predicates::{collects, invariants, goals, prunes};
+ use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::{CollectFn, InvariantFn, StrategyConfig};
 use dslab_mp::message::Message;
@@ -655,11 +656,14 @@ fn mc_invariant_check_stabilized(group: Vec<String>) -> InvariantFn {
     })
 }
 
-fn mc_stabilize(sys: &mut System, seed_proc: String) -> TestResult {
+fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet<McState>, String> {
     let procs = sys.process_names();
     let mut mc = ModelChecker::new(sys);
 
     let strategy_config = StrategyConfig::default()
+        // Every process fires no more than two timers
+        // so we expect each node to initialize communication with others at most 3 times:
+        // 1 times on a local message and 2 times on a timer
         .prune(prunes::events_limit_per_proc(
             |entry: &LogEntry, proc_name: &String| match entry {
                 LogEntry::McTimerFired { proc, .. } => proc_name == proc,
@@ -668,7 +672,19 @@ fn mc_stabilize(sys: &mut System, seed_proc: String) -> TestResult {
             procs.clone(),
             2,
         ))
+        // We can explore about 20 steps of simulation
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
+        // And 2 minutes is more than enough for this.
+        .invariant(invariants::time_limit(Duration::from_secs(180)))
+        // We check for states in which group should be stabilized:
+        // Either nothing is going to change or every process received at least 3 messages.
+        // Considering we have 3 nodes in the system and network is stable, we can show this is enough:
+        // * seed node (A) should get information from both _side_ nodes (B & C)
+        // * because one seed node joins earlier than another, the later will know full group as well
+        // * the early side node is able to get information about group either once again from seed,
+        // or directly from other seed, depending on implementation
+        // Technically, there exists a trace A <-> B (x3), A <-> C(x3) where B information becomes outdated,
+        // but we consider solution wrong if it can enter such trace.
         .collect(collects::any_collect(vec![
             collects::no_events(),
             collects::all_collects(
@@ -689,6 +705,7 @@ fn mc_stabilize(sys: &mut System, seed_proc: String) -> TestResult {
         ]));
 
     let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
+        // This event ordering mode prioritizes messages over timers: this emulates perfect network where timeouts do not occur.
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
         for proc in &procs {
             sys.send_local_message(
@@ -705,15 +722,16 @@ fn mc_stabilize(sys: &mut System, seed_proc: String) -> TestResult {
         }
         Ok(stats) => {
             // println!("collected {} states", stats.collected_states.len());
-            mc_check_group(sys, stats.collected_states, &procs)
+            Ok(stats.collected_states)
         }
     }
 }
 
-fn mc_check_group(sys: &mut System, collected: HashSet<McState>, procs: &[String]) -> TestResult {
+fn mc_check_members(sys: &mut System, collected: HashSet<McState>) -> TestResult {
+    let procs = sys.process_names();
     let mut mc = ModelChecker::new(sys);
     let strategy_config = StrategyConfig::default()
-        .invariant(mc_invariant_check_stabilized(procs.to_vec()))
+        .invariant(mc_invariant_check_stabilized(procs.clone()))
         .goal(goals::always_ok());
 
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, collected, |sys| {
@@ -735,8 +753,8 @@ fn test_mc_group(config: &TestConfig) -> TestResult {
     let group = sys.process_names();
     let seed = group.choose(&mut rand).unwrap();
 
-    mc_stabilize(&mut sys, seed.to_string())?;
-    Ok(true)
+    let collected_states = mc_explore_after_joins(&mut sys, seed.to_string())?;
+    mc_check_members(&mut sys, collected_states)
 }
 
 // CLI -----------------------------------------------------------------------------------------------------------------
