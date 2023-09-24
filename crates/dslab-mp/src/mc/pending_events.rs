@@ -144,10 +144,12 @@ impl PendingEvents {
 #[cfg(test)]
 mod tests {
     use rand::prelude::IteratorRandom;
+    use std::collections::BTreeSet;
 
     use crate::mc::events::McEvent;
     use crate::mc::pending_events::{EventOrderingMode, PendingEvents};
     use crate::mc::system::McTime;
+    use crate::message::Message;
 
     #[test]
     fn test_mc_time() {
@@ -260,5 +262,47 @@ mod tests {
             assert_eq!(timers[node as usize], time);
             timers[node as usize] += 1;
         }
+    }
+
+    #[test]
+    fn test_dependency_resolver_event_ordering() {
+        let mut pending_events = PendingEvents::new();
+        let id_timer = pending_events.push(McEvent::TimerFired {
+            proc: "proc".to_string(),
+            timer: "timer".to_string(),
+            timer_delay: ordered_float::OrderedFloat(0.0),
+        });
+        let id_message = pending_events.push(McEvent::MessageReceived {
+            msg: Message::new("TIP", "DATA"),
+            src: "src".to_string(),
+            dst: "dst".to_string(),
+            options: crate::mc::network::DeliveryOptions::NoFailures(ordered_float::OrderedFloat(0.0)),
+        });
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::from_iter([id_timer, id_message])
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::from_iter([id_message])
+        );
+        pending_events.pop(id_message);
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::from_iter([id_timer])
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::from_iter([id_timer])
+        );
+        pending_events.pop(id_timer);
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::new()
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::new()
+        );
     }
 }
