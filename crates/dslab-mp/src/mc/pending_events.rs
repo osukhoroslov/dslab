@@ -271,13 +271,13 @@ mod tests {
         let id_timer = pending_events.push(McEvent::TimerFired {
             proc: "proc".to_string(),
             timer: "timer".to_string(),
-            timer_delay: ordered_float::OrderedFloat(0.0),
+            timer_delay: McTime::from(0.0),
         });
         let id_message = pending_events.push(McEvent::MessageReceived {
             msg: Message::new("TIP", "DATA"),
             src: "src".to_string(),
             dst: "dst".to_string(),
-            options: DeliveryOptions::NoFailures(ordered_float::OrderedFloat(0.0)),
+            options: DeliveryOptions::NoFailures(McTime::from(0.0)),
         });
         assert_eq!(
             pending_events.available_events(&EventOrderingMode::Normal),
