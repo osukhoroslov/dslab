@@ -55,7 +55,7 @@ impl Client {
             self.ctx.emit_now(TaskRequest { flops, cores, memory }, self.worker_id);
 
             self.ctx
-                .async_wait_for(self.ctx.gen_range(1.0..=self.max_task_delay))
+                .async_sleep(self.ctx.gen_range(1.0..=self.max_task_delay))
                 .await;
         }
     }

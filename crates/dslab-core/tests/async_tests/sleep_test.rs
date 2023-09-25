@@ -3,7 +3,7 @@ use futures::{stream::FuturesUnordered, StreamExt};
 use dslab_core::Simulation;
 
 #[test]
-fn test_sleep() {
+fn test_wait_for() {
     let mut sim = Simulation::new(42);
     let ctx = sim.create_context("dummy_worker");
 

@@ -691,7 +691,7 @@ impl SimulationContext {
         ///
         ///     async fn step_waiting(&self, num_steps: u32) {
         ///         for _i in 0..num_steps {
-        ///             self.ctx.async_wait_for(1.).await;
+        ///             self.ctx.async_sleep(1.).await;
         ///         }
         ///     }
         /// }
@@ -738,7 +738,7 @@ impl SimulationContext {
         ///
         ///     async fn step_waiting(&self, num_steps: u32) {
         ///         for _i in 0..num_steps {
-        ///             self.ctx.async_wait_for(1.).await;
+        ///             self.ctx.async_sleep(1.).await;
         ///         }
         ///     }
         /// }
@@ -770,14 +770,14 @@ impl SimulationContext {
         ///
         /// sim.spawn(async move {
         ///     let initial_time = ctx.time();
-        ///     ctx.async_wait_for(5.).await;
+        ///     ctx.async_sleep(5.).await;
         ///
         ///     let mut expected_time = initial_time + 5.;
         ///     assert_eq!(expected_time, ctx.time());
         ///
         ///     let mut concurrent_futures = FuturesUnordered::new();
         ///     for i in 1..=10 {
-        ///         concurrent_futures.push(ctx.async_wait_for(i as f64));
+        ///         concurrent_futures.push(ctx.async_sleep(i as f64));
         ///     }
         ///
         ///     while let Some(_) = concurrent_futures.next().await {
@@ -789,10 +789,10 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(15., sim.time());
         /// ```
-        pub async fn async_wait_for(&self, timeout: f64) {
-            assert!(timeout >= 0., "timeout must be a positive value");
+        pub async fn async_sleep(&self, duration: f64) {
+            assert!(duration >= 0., "duration must be a positive value");
 
-            let future = self.sim_state.borrow_mut().wait_for(self.id, timeout);
+            let future = self.sim_state.borrow_mut().wait_for(self.id, duration);
             future.await;
         }
 
