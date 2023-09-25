@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 dslab-mp = { path = "../dslab-mp" }
+colored = "2.0.0"
 rstest = "0.18.1"
 serde = { version = "1.0", features = ["derive"] }
 sugars = "3.0.0"

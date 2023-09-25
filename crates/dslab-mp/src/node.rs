@@ -12,7 +12,6 @@ use crate::logger::{LogEntry, Logger};
 use crate::message::Message;
 use crate::network::Network;
 use crate::process::{Process, ProcessState};
-use crate::util::t;
 
 #[derive(Clone, Debug)]
 pub struct EventLogEntry {
@@ -374,10 +373,16 @@ impl Node {
         }
     }
 
-    fn handle_process_error(&self, err: String, proc: String) -> String {
-        t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, self.name).red());
-        t!(err.red());
-        "Error when calling process".to_string()
+    fn handle_process_error(&self, err: String, proc: String) -> &str {
+        eprintln!(
+            "{}",
+            format!(
+                "\n!!! Error when calling process '{}' on node '{}':\n\n{}",
+                proc, self.name, err
+            )
+            .red()
+        );
+        "Error when calling process"
     }
 }
 

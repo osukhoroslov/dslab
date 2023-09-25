@@ -1,6 +1,7 @@
 use std::fs;
 use std::rc::Rc;
 
+use colored::Colorize;
 use pyo3::prelude::*;
 use pyo3::types::{PyModule, PyString, PyTuple};
 
@@ -46,7 +47,11 @@ impl PyProcessFactory {
                 .unwrap();
             self.proc_class
                 .call1(py, args)
-                .map_err(|e| log_build_error(e, py))
+                .map_err(|e| {
+                    eprintln!("{}\n", "!!! Error when creating Python process:".red());
+                    eprintln!("{}", error_to_string(e, py).red());
+                    "Error when creating Python process"
+                })
                 .unwrap()
                 .to_object(py)
         });
@@ -183,13 +188,6 @@ impl Process for PyProcess {
             Ok(())
         })
     }
-}
-
-fn log_build_error(e: PyErr, py: Python) -> PyErr {
-    eprintln!("\n!!! Error when building Python process:\n");
-    e.print(py);
-    eprintln!();
-    e
 }
 
 fn get_size_fun(py: Python) -> Py<PyAny> {

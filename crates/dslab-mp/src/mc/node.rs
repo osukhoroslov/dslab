@@ -10,7 +10,6 @@ use crate::logger::LogEntry;
 use crate::message::Message;
 use crate::node::{EventLogEntry, ProcessEntry, ProcessEvent, TimerBehavior};
 use crate::process::ProcessState;
-use crate::util::t;
 
 use crate::mc::events::McEvent;
 use crate::mc::network::DeliveryOptions;
@@ -268,12 +267,18 @@ impl McNode {
         new_events
     }
 
-    fn handle_process_error(&self, err: String, proc: String) -> String {
+    fn handle_process_error(&self, err: String, proc: String) -> &str {
         for event in self.trace_handler.borrow().trace() {
             event.print();
         }
-        t!(format!("\n!!! Error when calling process '{}' on node '{}':\n", proc, self.name).red());
-        t!(err.red());
-        "Error when calling process".to_string()
+        eprintln!(
+            "{}",
+            format!(
+                "\n!!! Error when calling process '{}' on node '{}':\n\n{}",
+                proc, self.name, err
+            )
+            .red()
+        );
+        "Error when calling process"
     }
 }
