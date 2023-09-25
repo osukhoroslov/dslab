@@ -85,7 +85,7 @@ impl PendingEvents {
         }
     }
 
-    /// Returns true if there exist at least one available event.
+    /// Returns true if there are no available events.
     pub fn is_empty(&self) -> bool {
         self.available_events.is_empty()
     }
@@ -147,6 +147,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use crate::mc::events::McEvent;
+    use crate::mc::network::DeliveryOptions;
     use crate::mc::pending_events::{EventOrderingMode, PendingEvents};
     use crate::mc::system::McTime;
     use crate::message::Message;
@@ -276,7 +277,7 @@ mod tests {
             msg: Message::new("TIP", "DATA"),
             src: "src".to_string(),
             dst: "dst".to_string(),
-            options: crate::mc::network::DeliveryOptions::NoFailures(ordered_float::OrderedFloat(0.0)),
+            options: DeliveryOptions::NoFailures(ordered_float::OrderedFloat(0.0)),
         });
         assert_eq!(
             pending_events.available_events(&EventOrderingMode::Normal),
