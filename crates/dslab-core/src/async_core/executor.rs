@@ -1,20 +1,17 @@
 //! Executing tasks from ready_queue.
 
-use std::{
-    sync::{mpsc::Receiver, Arc},
-    task::Context,
-};
+use std::{rc::Rc, sync::mpsc::Receiver, task::Context};
 
 use super::{task::Task, waker};
 
 /// Polling tasks from queue.
 pub struct Executor {
-    ready_queue: Receiver<Arc<Task>>,
+    ready_queue: Receiver<Rc<Task>>,
 }
 
 impl Executor {
     /// Creates an executor.
-    pub fn new(ready_queue: Receiver<Arc<Task>>) -> Self {
+    pub fn new(ready_queue: Receiver<Rc<Task>>) -> Self {
         Self { ready_queue }
     }
 

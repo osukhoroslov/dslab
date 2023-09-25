@@ -16,7 +16,6 @@ async_enabled! {
     use std::collections::HashMap;
     use std::rc::Rc;
     use std::sync::mpsc::Sender;
-    use std::sync::Arc;
 
     use futures::Future;
 
@@ -61,7 +60,7 @@ async_enabled! {
         canceled_timers: HashSet<TimerId>,
         timer_count: u64,
 
-        task_sender: Sender<Arc<Task>>,
+        task_sender: Sender<Rc<Task>>,
     }
 }
 
@@ -79,7 +78,7 @@ impl SimulationState {
         }
     }
     async_enabled! {
-        pub fn new(seed: u64, task_sender: Sender<Arc<Task>>) -> Self {
+        pub fn new(seed: u64, task_sender: Sender<Rc<Task>>) -> Self {
             Self {
                 clock: 0.0,
                 rand: Pcg64::seed_from_u64(seed),
@@ -382,13 +381,11 @@ impl SimulationState {
             true
         }
 
-        #[allow(clippy::arc_with_non_send_sync)]
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
-            let task = Arc::new(Task::new(future, self.task_sender.clone()));
+            let task = Rc::new(Task::new(future, self.task_sender.clone()));
             self.task_sender.send(task).expect("channel is closed");
         }
 
-        #[allow(clippy::arc_with_non_send_sync)]
         pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
             assert!(
                 self.has_registered_handler(component_id),
@@ -396,7 +393,7 @@ impl SimulationState {
                 Register handler for component {} before spawning it (empty impl EventHandler is OK).",
                 component_id,
             );
-            let task = Arc::new(Task::new(future, self.task_sender.clone()));
+            let task = Rc::new(Task::new(future, self.task_sender.clone()));
             self.task_sender.send(task).expect("channel is closed");
         }
 
