@@ -1,11 +1,6 @@
 //! Task declaration.
 
-use std::{
-    cell::RefCell,
-    future::Future,
-    pin::Pin,
-    sync::{mpsc::Sender, Arc},
-};
+use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::mpsc::Sender};
 
 use super::waker::CustomWake;
 
@@ -15,7 +10,7 @@ pub struct Task {
     /// future to be polled by executor
     pub future: RefCell<Option<Pin<Box<dyn Future<Output = ()>>>>>,
 
-    task_sender: Sender<Arc<Task>>,
+    task_sender: Sender<Rc<Task>>,
 }
 
 impl Task {
@@ -29,7 +24,7 @@ impl Task {
     ///
     /// TODO: implement task cancellation to increase bug-safety of user space code.
     ///
-    pub fn new(future: impl Future<Output = ()>, task_sender: Sender<Arc<Task>>) -> Self {
+    pub fn new(future: impl Future<Output = ()>, task_sender: Sender<Rc<Task>>) -> Self {
         unsafe {
             let boxed: Box<dyn Future<Output = ()>> = Box::new(future);
             let converted: Box<dyn Future<Output = ()> + 'static> = std::mem::transmute(boxed);
@@ -42,7 +37,7 @@ impl Task {
 }
 
 impl CustomWake for Task {
-    fn wake_by_ref(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Rc<Self>) {
         let cloned = arc_self.clone();
         arc_self.task_sender.send(cloned).expect("channel is closed");
     }
