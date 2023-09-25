@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["context","events","logger","mc","message","network","node","process","system","test"]};
+window.SIDEBAR_ITEMS = {"macro":["run_mc"],"mod":["context","events","logger","mc","message","network","node","process","system","test"]};
