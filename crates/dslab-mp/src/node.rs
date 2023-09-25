@@ -4,6 +4,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use colored::*;
+
 use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 use crate::context::Context;
@@ -180,7 +182,13 @@ impl Node {
 
     /// Sets the state of the process.
     pub fn set_process_state(&mut self, proc: &str, state: Rc<dyn ProcessState>) {
-        self.processes.get_mut(proc).unwrap().proc_impl.set_state(state);
+        self.processes
+            .get_mut(proc)
+            .unwrap()
+            .proc_impl
+            .set_state(state)
+            .map_err(|e| self.handle_process_error(e, proc.to_string()))
+            .unwrap();
     }
 
     /// Sends a local message to the process.
@@ -244,7 +252,13 @@ impl Node {
             ProcessEvent::LocalMessageReceived { msg: msg.clone() },
         ));
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_local_message(msg, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         self.handle_process_actions(proc, time, proc_ctx.actions());
     }
 
@@ -271,7 +285,13 @@ impl Node {
         ));
         proc_entry.received_message_count += 1;
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_message(msg, from, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
         }
@@ -292,7 +312,13 @@ impl Node {
             });
         }
         let mut proc_ctx = Context::from_simulation(proc.clone(), self.ctx.clone(), self.clock_skew);
-        proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_timer(timer, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         if self.logger.borrow().has_log_file() {
             self.log_process_state(&proc);
         }
@@ -371,10 +397,17 @@ impl Node {
     }
 
     fn log_process_state(&mut self, proc: &str) {
-        let proc_entry = self.processes.get_mut(proc).unwrap();
-        let state = format!("{:?}", proc_entry.proc_impl.state());
+        let proc_entry = self.processes.get(proc).unwrap();
+        let state = format!(
+            "{:?}",
+            proc_entry
+                .proc_impl
+                .state()
+                .map_err(|e| self.handle_process_error(e, proc.to_string()))
+                .unwrap()
+        );
         if state != proc_entry.last_state {
-            proc_entry.last_state = state.clone();
+            self.processes.get_mut(proc).unwrap().last_state = state.clone();
             self.logger.borrow_mut().log(LogEntry::ProcessStateUpdated {
                 time: self.ctx.borrow().time(),
                 node: self.name.clone(),
@@ -382,6 +415,18 @@ impl Node {
                 state,
             });
         }
+    }
+
+    fn handle_process_error(&self, err: String, proc: String) -> &str {
+        eprintln!(
+            "{}",
+            format!(
+                "\n!!! Error when calling process '{}' on node '{}':\n\n{}",
+                proc, self.name, err
+            )
+            .red()
+        );
+        "Error when calling process"
     }
 }
 

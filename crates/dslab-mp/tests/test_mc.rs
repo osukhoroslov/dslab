@@ -16,6 +16,7 @@ use dslab_mp::mc::strategies::dfs::Dfs;
 use dslab_mp::mc::strategy::{GoalFn, InvariantFn, PruneFn, StrategyConfig, VisitedStates};
 use dslab_mp::message::Message;
 use dslab_mp::process::{Process, ProcessState, StringProcessState};
+use dslab_mp::run_mc;
 use dslab_mp::system::System;
 
 macro_rules! str_vec {
@@ -39,17 +40,21 @@ impl PingMessageNode {
 }
 
 impl Process for PingMessageNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(msg);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String> {
         for peer in &self.peers {
             ctx.send(msg.clone(), peer.clone());
         }
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -64,15 +69,20 @@ impl MiddleNode {
 }
 
 impl Process for MiddleNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         for peer in &self.peers {
             ctx.send(msg.clone(), peer.clone());
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) {}
+    fn on_local_message(&mut self, _msg: Message, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -91,24 +101,30 @@ impl CollectorNode {
 }
 
 impl Process for CollectorNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         self.cnt += 1;
         if self.cnt == 2 {
             ctx.send(Message::new("COLLECTED", "2"), self.other.clone());
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, _: &mut Context) {}
-
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
-
-    fn state(&self) -> Rc<dyn ProcessState> {
-        rc!(self.cnt.to_string())
+    fn on_local_message(&mut self, _: Message, _: &mut Context) -> Result<(), String> {
+        Ok(())
     }
 
-    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Ok(rc!(self.cnt.to_string()))
+    }
+
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) -> Result<(), String> {
         let data = (*state.downcast_rc::<StringProcessState>().unwrap()).clone();
         self.cnt = data.parse::<u64>().unwrap();
+        Ok(())
     }
 }
 
@@ -128,34 +144,38 @@ impl PostponedReceiverNode {
 }
 
 impl Process for PostponedReceiverNode {
-    fn on_message(&mut self, msg: Message, _: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _: String, ctx: &mut Context) -> Result<(), String> {
         if self.timer_fired {
             ctx.send_local(msg);
         } else {
             self.message = Some(msg);
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timeout", 1.0);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _: String, ctx: &mut Context) -> Result<(), String> {
         self.timer_fired = true;
         ctx.send_local(Message::new("TIMER", "timeout"));
         if let Some(msg) = self.message.take() {
             ctx.send_local(msg);
         }
+        Ok(())
     }
 
-    fn state(&self) -> Rc<dyn ProcessState> {
-        rc!(self.clone())
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Ok(rc!(self.clone()))
     }
 
-    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) -> Result<(), String> {
         let state = state.downcast_ref::<Self>().unwrap();
         self.timer_fired = state.timer_fired;
         self.message = state.message.clone();
+        Ok(())
     }
 }
 
@@ -163,16 +183,19 @@ impl Process for PostponedReceiverNode {
 struct DumbReceiverNode {}
 
 impl Process for DumbReceiverNode {
-    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(msg);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timeout", 1.0);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::new("TIMER", "timeout"));
+        Ok(())
     }
 }
 
@@ -192,15 +215,20 @@ impl SpammerNode {
 }
 
 impl Process for SpammerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) {}
+    fn on_message(&mut self, _msg: Message, _from: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         for i in 0..self.cnt {
             ctx.send(Message::new("MESSAGE".to_string(), i.to_string()), self.other.clone());
         }
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) {}
+    fn on_timer(&mut self, _timer: String, _ctx: &mut Context) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
@@ -209,28 +237,32 @@ struct TimerNode {
 }
 
 impl Process for TimerNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         if !self.timer_fired {
             ctx.cancel_timer("timer");
         }
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) -> Result<(), String> {
         self.timer_fired = true;
-        ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()))
+        ctx.send_local(Message::json("CURRENT_TIME", &ctx.time()));
+        Ok(())
     }
 
-    fn state(&self) -> Rc<dyn ProcessState> {
-        rc!(self.clone())
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Ok(rc!(self.clone()))
     }
 
-    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) -> Result<(), String> {
         let state = state.downcast_ref::<Self>().unwrap();
         self.timer_fired = state.timer_fired;
+        Ok(())
     }
 }
 
@@ -238,18 +270,21 @@ impl Process for TimerNode {
 struct TimerResettingNode {}
 
 impl Process for TimerResettingNode {
-    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) {
+    fn on_message(&mut self, _msg: Message, _from: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::json("MESSAGE", &ctx.time()));
         ctx.cancel_timer("timer");
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, _msg: Message, ctx: &mut Context) -> Result<(), String> {
         ctx.set_timer("timer", 0.1);
+        Ok(())
     }
 
-    fn on_timer(&mut self, _timer: String, ctx: &mut Context) {
+    fn on_timer(&mut self, _timer: String, ctx: &mut Context) -> Result<(), String> {
         ctx.send_local(Message::json("TIMEOUT", &ctx.time()));
+        Ok(())
     }
 }
 
@@ -364,30 +399,6 @@ fn build_timer_resetting_system() -> System {
 
 fn build_strategy_config(prune: PruneFn, goal: GoalFn, invariant: InvariantFn) -> StrategyConfig {
     StrategyConfig::default().prune(prune).goal(goal).invariant(invariant)
-}
-
-macro_rules! run_mc {
-    ($sys:expr, $config:expr, $strategy:ident) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run::<Bfs>($config),
-            "dfs" => ModelChecker::new(&$sys).run::<Dfs>($config),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
-    ($sys:expr, $config:expr, $strategy:ident, $callback:expr) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run_with_change::<Bfs>($config, $callback),
-            "dfs" => ModelChecker::new(&$sys).run_with_change::<Dfs>($config, $callback),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
-    ($sys:expr, $config:expr, $strategy:ident, $states:ident, $callback:expr) => {
-        match $strategy {
-            "bfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Bfs>($config, $states, $callback),
-            "dfs" => ModelChecker::new(&$sys).run_from_states_with_change::<Dfs>($config, $states, $callback),
-            s => panic!("Unknown strategy name: {}", s),
-        }
-    };
 }
 
 fn build_dumb_counter_invariant(count_states: Rc<RefCell<i32>>) -> InvariantFn {

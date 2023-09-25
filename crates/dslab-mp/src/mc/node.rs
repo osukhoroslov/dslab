@@ -3,6 +3,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+use colored::Colorize;
+
 use crate::context::Context;
 use crate::logger::LogEntry;
 use crate::message::Message;
@@ -43,24 +45,25 @@ impl Eq for ProcessEntryState {
 }
 
 impl ProcessEntry {
-    fn get_state(&self) -> ProcessEntryState {
-        ProcessEntryState {
-            proc_state: self.proc_impl.state(),
+    fn get_state(&self) -> Result<ProcessEntryState, String> {
+        Ok(ProcessEntryState {
+            proc_state: self.proc_impl.state()?,
             event_log: self.event_log.clone(),
             local_outbox: self.local_outbox.clone(),
             pending_timers: self.pending_timers.clone(),
             sent_message_count: self.sent_message_count,
             received_message_count: self.received_message_count,
-        }
+        })
     }
 
-    fn set_state(&mut self, state: ProcessEntryState) {
-        self.proc_impl.set_state(state.proc_state);
+    fn set_state(&mut self, state: ProcessEntryState) -> Result<(), String> {
+        self.proc_impl.set_state(state.proc_state)?;
         self.event_log = state.event_log;
         self.local_outbox = state.local_outbox;
         self.pending_timers = state.pending_timers;
         self.sent_message_count = state.sent_message_count;
         self.received_message_count = state.received_message_count;
+        Ok(())
     }
 }
 
@@ -72,6 +75,7 @@ pub struct McNodeState {
 
 #[derive(Clone)]
 pub struct McNode {
+    name: String,
     pub(crate) processes: HashMap<String, ProcessEntry>,
     trace_handler: Rc<RefCell<TraceHandler>>,
     clock_skew: f64,
@@ -80,11 +84,13 @@ pub struct McNode {
 
 impl McNode {
     pub(crate) fn new(
+        name: String,
         processes: HashMap<String, ProcessEntry>,
         trace_handler: Rc<RefCell<TraceHandler>>,
         clock_skew: f64,
     ) -> Self {
         Self {
+            name,
             processes,
             trace_handler,
             clock_skew,
@@ -113,7 +119,13 @@ impl McNode {
         proc_entry.received_message_count += 1;
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_message(msg, from, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_message(msg, from, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
@@ -123,7 +135,13 @@ impl McNode {
         proc_entry.pending_timers.remove(&timer);
 
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_timer(timer, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_timer(timer, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         self.handle_process_actions(proc, 0.0, proc_ctx.actions())
     }
 
@@ -137,7 +155,13 @@ impl McNode {
         assert!(!self.is_crashed, "should not receive local message on crashed node");
         let proc_entry = self.processes.get_mut(&proc).unwrap();
         let mut proc_ctx = Context::basic(proc.to_string(), time, self.clock_skew, random_seed);
-        proc_entry.proc_impl.on_local_message(msg, &mut proc_ctx);
+
+        proc_entry
+            .proc_impl
+            .on_local_message(msg, &mut proc_ctx)
+            .map_err(|e| self.handle_process_error(e, proc.clone()))
+            .unwrap();
+
         self.handle_process_actions(proc, time, proc_ctx.actions())
     }
 
@@ -145,7 +169,15 @@ impl McNode {
         let proc_states = self
             .processes
             .iter()
-            .map(|(proc, entry)| (proc.clone(), entry.get_state()))
+            .map(|(proc, entry)| {
+                (
+                    proc.clone(),
+                    entry
+                        .get_state()
+                        .map_err(|e| self.handle_process_error(e, proc.clone()))
+                        .unwrap(),
+                )
+            })
             .collect();
         McNodeState {
             proc_states,
@@ -155,7 +187,12 @@ impl McNode {
 
     pub fn set_state(&mut self, state: McNodeState) {
         for (proc, state) in state.proc_states {
-            self.processes.get_mut(&proc).unwrap().set_state(state);
+            self.processes
+                .get_mut(&proc)
+                .unwrap()
+                .set_state(state)
+                .map_err(|e| self.handle_process_error(e, proc.clone()))
+                .unwrap();
         }
         self.is_crashed = state.is_crashed;
     }
@@ -228,5 +265,20 @@ impl McNode {
             }
         }
         new_events
+    }
+
+    fn handle_process_error(&self, err: String, proc: String) -> &str {
+        for event in self.trace_handler.borrow().trace() {
+            event.print();
+        }
+        eprintln!(
+            "{}",
+            format!(
+                "\n!!! Error when calling process '{}' on node '{}':\n\n{}",
+                proc, self.name, err
+            )
+            .red()
+        );
+        "Error when calling process"
     }
 }

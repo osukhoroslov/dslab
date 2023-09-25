@@ -1,6 +1,7 @@
 use std::fs;
 use std::rc::Rc;
 
+use colored::Colorize;
 use pyo3::prelude::*;
 use pyo3::types::{PyModule, PyString, PyTuple};
 
@@ -46,7 +47,11 @@ impl PyProcessFactory {
                 .unwrap();
             self.proc_class
                 .call1(py, args)
-                .map_err(|e| log_python_error(e, py))
+                .map_err(|e| {
+                    eprintln!("{}\n", "!!! Error when creating Python process:".red());
+                    eprintln!("{}", error_to_string(e, py).red());
+                    "Error when creating Python process"
+                })
                 .unwrap()
                 .to_object(py)
         });
@@ -115,7 +120,7 @@ impl PyProcess {
 }
 
 impl Process for PyProcess {
-    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) {
+    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) -> Result<(), String> {
         Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
@@ -124,14 +129,14 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_message", (py_msg, from, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) {
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String> {
         Python::with_gil(|py| {
             let py_msg = self
                 .msg_class
@@ -140,23 +145,23 @@ impl Process for PyProcess {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_local_message", (py_msg, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
-    fn on_timer(&mut self, timer: String, ctx: &mut Context) {
+    fn on_timer(&mut self, timer: String, ctx: &mut Context) -> Result<(), String> {
         Python::with_gil(|py| {
             let py_ctx = self.ctx_class.call1(py, (ctx.time(),)).unwrap();
             self.proc
                 .call_method1(py, "on_timer", (timer, &py_ctx))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
+                .map_err(|e| error_to_string(e, py))?;
             PyProcess::handle_proc_actions(ctx, &py_ctx, py);
             self.update_max_size(py, false);
-        });
+            Ok(())
+        })
     }
 
     fn max_size(&mut self) -> u64 {
@@ -164,33 +169,25 @@ impl Process for PyProcess {
         self.max_size
     }
 
-    fn state(&self) -> Rc<dyn ProcessState> {
-        Python::with_gil(|py| {
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Python::with_gil(|py| -> Result<Rc<dyn ProcessState>, String> {
             let res = self
                 .proc
                 .call_method0(py, "get_state")
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
-            Rc::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string())
+                .map_err(|e| error_to_string(e, py))?;
+            Ok(Rc::new(res.as_ref(py).downcast::<PyString>().unwrap().to_string()))
         })
     }
 
-    fn set_state(&mut self, state: Rc<dyn ProcessState>) {
+    fn set_state(&mut self, state: Rc<dyn ProcessState>) -> Result<(), String> {
         let data = state.downcast_rc::<StringProcessState>().unwrap();
         Python::with_gil(|py| {
             self.proc
                 .call_method1(py, "set_state", ((*data).clone(),))
-                .map_err(|e| log_python_error(e, py))
-                .unwrap();
-        });
+                .map_err(|e| error_to_string(e, py))?;
+            Ok(())
+        })
     }
-}
-
-fn log_python_error(e: PyErr, py: Python) -> PyErr {
-    eprintln!("\n!!! Error when calling Python code:\n");
-    e.print(py);
-    eprintln!();
-    e
 }
 
 fn get_size_fun(py: Python) -> Py<PyAny> {
@@ -224,4 +221,8 @@ def get_size(obj, seen=None):
     .getattr("get_size")
     .unwrap()
     .into()
+}
+
+fn error_to_string(err: PyErr, py: Python) -> String {
+    err.to_string() + "\n" + &err.traceback(py).unwrap().format().unwrap()
 }

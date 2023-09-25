@@ -13,13 +13,13 @@ use crate::message::Message;
 /// A trait for process implementations.
 pub trait Process: DynClone {
     /// Called when a message is received.
-    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context);
+    fn on_message(&mut self, msg: Message, from: String, ctx: &mut Context) -> Result<(), String>;
 
     /// Called when a _local_ message is received.
-    fn on_local_message(&mut self, msg: Message, ctx: &mut Context);
+    fn on_local_message(&mut self, msg: Message, ctx: &mut Context) -> Result<(), String>;
 
     /// Called when a timer fires.
-    fn on_timer(&mut self, timer: String, ctx: &mut Context);
+    fn on_timer(&mut self, timer: String, ctx: &mut Context) -> Result<(), String>;
 
     /// Returns the maximum size of process inner data observed so far.
     fn max_size(&mut self) -> u64 {
@@ -27,12 +27,14 @@ pub trait Process: DynClone {
     }
 
     /// Returns the process state.
-    fn state(&self) -> Rc<dyn ProcessState> {
-        Rc::new(ProcessStateStub {})
+    fn state(&self) -> Result<Rc<dyn ProcessState>, String> {
+        Ok(Rc::new(ProcessStateStub {}))
     }
 
     /// Restores the process state.
-    fn set_state(&mut self, _state: Rc<dyn ProcessState>) {}
+    fn set_state(&mut self, _state: Rc<dyn ProcessState>) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 clone_trait_object!(Process);
