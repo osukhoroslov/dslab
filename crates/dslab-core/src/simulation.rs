@@ -542,7 +542,7 @@ impl Simulation {
         ///
         /// sim.spawn(async move {
         ///     let initial_time = ctx.time();
-        ///     ctx.async_wait_for(5.).await;
+        ///     ctx.async_sleep(5.).await;
         /// });
         ///
         /// sim.step_until_no_events();
@@ -716,7 +716,7 @@ impl Simulation {
         ///
         ///     async fn producer(&self) {
         ///         for i in 0..10 {
-        ///             self.ctx.async_wait_for(5.).await;
+        ///             self.ctx.async_sleep(5.).await;
         ///             self.queue.send(InternalMessage {payload: i});
         ///         }
         ///     }

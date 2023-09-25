@@ -39,7 +39,7 @@ impl SimpleExchanger {
             for i in 0..handlers {
                 self.ctx.emit_self_now(Message { details: i as u64 });
             }
-            self.ctx.async_wait_for(10.).await;
+            self.ctx.async_sleep(10.).await;
         }
     }
 
