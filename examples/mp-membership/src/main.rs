@@ -661,9 +661,9 @@ fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet
     let mut mc = ModelChecker::new(sys);
 
     let strategy_config = StrategyConfig::default()
-        // Every process fires no more than two timers
-        // so we expect each node to initialize communication with others at most 3 times:
-        // 1 times on a local message and 2 times on a timer
+        // Explore only states with up to 2 timer firings per process
+        // (we expect each process to communicate with others at most 3 times:
+        // 1 time on a local message and 2 times on a timer).
         .prune(prunes::events_limit_per_proc(
             |entry: &LogEntry, proc_name: &String| match entry {
                 LogEntry::McTimerFired { proc, .. } => proc_name == proc,
