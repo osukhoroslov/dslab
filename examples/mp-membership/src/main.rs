@@ -672,9 +672,9 @@ fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet
             procs.clone(),
             2,
         ))
-        // We can explore about 20 steps of simulation
+        // Stop when no events left or reached depth 20 (steps of simulation).
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
-        // And 2 minutes is more than enough for this.
+        // Time limit is set to 2 minutes, which should be more than enough.
         .invariant(invariants::time_limit(Duration::from_secs(120)))
         // Collect states in which the group should be stabilized, namely:
         // either no events left, or every process received at least 3 messages.
