@@ -706,7 +706,8 @@ fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet
         ]));
 
     let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
-        // This event ordering mode prioritizes messages over timers: this emulates perfect network where timeouts do not occur.
+        // Use event ordering mode which prioritizes messages over timers
+        // (this emulates perfect network where timeouts do not occur).
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
         for proc in &procs {
             sys.send_local_message(
