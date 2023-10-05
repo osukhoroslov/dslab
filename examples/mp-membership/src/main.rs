@@ -756,6 +756,9 @@ fn test_mc_group(config: &TestConfig) -> TestResult {
     let seed = group.choose(&mut rand).unwrap();
 
     let collected_states = mc_explore_after_joins(&mut sys, seed.to_string())?;
+    if collected_states.is_empty() {
+        return Err("no states collected during exploratory stage".to_string());
+    }
     mc_check_members(&mut sys, collected_states)
 }
 
@@ -788,6 +791,10 @@ struct Args {
     /// Number of chaos monkey runs
     #[clap(long, short, default_value = "100")]
     monkeys: u32,
+
+    /// Run MC tests
+    #[clap([long, short])]
+    mc_test: bool,
 }
 
 // MAIN --------------------------------------------------------------------------------------------
@@ -840,9 +847,10 @@ fn main() {
     tests.add("SCALABILITY NORMAL", test_scalability_normal, config);
     tests.add("SCALABILITY CRASH", test_scalability_crash, config);
 
-    config.process_count = 3;
-
-    tests.add("MODEL CHECKING", test_mc_group, config);
+    if args.mc_test {
+        config.process_count = 3;
+        tests.add("MODEL CHECKING", test_mc_group, config);
+    }
 
     if args.test.is_none() {
         tests.run();
