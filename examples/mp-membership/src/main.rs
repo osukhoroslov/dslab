@@ -676,15 +676,16 @@ fn mc_explore_after_joins(sys: &mut System, seed_proc: String) -> Result<HashSet
         .goal(goals::any_goal(vec![goals::no_events(), goals::depth_reached(20)]))
         // And 2 minutes is more than enough for this.
         .invariant(invariants::time_limit(Duration::from_secs(120)))
-        // We check for states in which group should be stabilized:
-        // Either nothing is going to change or every process received at least 3 messages.
-        // Considering we have 3 nodes in the system and network is stable, we can show this is enough:
-        // * seed node (A) should get information from both _side_ nodes (B & C)
-        // * because one seed node joins earlier than another, the later will know full group as well
-        // * the early side node is able to get information about group either once again from seed,
-        // or directly from other seed, depending on implementation
-        // Technically, there exists a trace A <-> B (x3), A <-> C(x3) where B information becomes outdated,
-        // but we consider solution wrong if it can enter such trace.
+        // Collect states in which the group should be stabilized, namely:
+        // either no events left, or every process received at least 3 messages.
+        //
+        // Considering a system with 3 processes and a stable network, we can show this is enough:
+        // * seed process (A) should get information from both other processes (B & C)
+        // * because C joins later than B, it will know the full group as well
+        // * B is able to get information about the full group either from A or C, depending on implementation
+        //
+        // Technically, there can be execution A <-> B (x3), A <-> C (x3) where B's information becomes outdated,
+        // but we consider solution wrong if it allows such execution.
         .collect(collects::any_collect(vec![
             collects::no_events(),
             collects::all_collects(
