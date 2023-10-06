@@ -793,8 +793,8 @@ struct Args {
     monkeys: u32,
 
     /// Run MC tests
-    #[clap([long, short = 'c'])]
-    mc: bool,
+    #[clap([long])]
+    disable_mc: bool,
 }
 
 // MAIN --------------------------------------------------------------------------------------------
@@ -847,7 +847,7 @@ fn main() {
     tests.add("SCALABILITY NORMAL", test_scalability_normal, config);
     tests.add("SCALABILITY CRASH", test_scalability_crash, config);
 
-    if args.mc_test {
+    if !args.disable_mc {
         config.process_count = 3;
         tests.add("MODEL CHECKING", test_mc_group, config);
     }
