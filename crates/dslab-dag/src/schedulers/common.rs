@@ -28,20 +28,18 @@ impl ScheduledTask {
     }
 }
 
-impl PartialOrd for ScheduledTask {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.start_time
-                .total_cmp(&other.start_time)
-                .then(self.finish_time.total_cmp(&other.finish_time))
-                .then(self.task.cmp(&other.task)),
-        )
+impl Ord for ScheduledTask {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start_time
+            .total_cmp(&other.start_time)
+            .then(self.finish_time.total_cmp(&other.finish_time))
+            .then(self.task.cmp(&other.task))
     }
 }
 
-impl Ord for ScheduledTask {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+impl PartialOrd for ScheduledTask {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
