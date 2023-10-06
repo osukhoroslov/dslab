@@ -793,7 +793,7 @@ struct Args {
     monkeys: u32,
 
     /// Run MC tests
-    #[clap([long])]
+    #[clap(long)]
     disable_mc: bool,
 }
 
