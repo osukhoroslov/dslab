@@ -1,4 +1,4 @@
-var sourcesIndex = JSON.parse('{\
+var srcIndex = JSON.parse('{\
 "dslab_compute":["",[],["lib.rs","multicore.rs","singlecore.rs"]],\
 "dslab_core":["",[],["component.rs","context.rs","event.rs","handler.rs","lib.rs","log.rs","simulation.rs","state.rs"]],\
 "dslab_dag":["",[["parsers",[],["config.rs","dax_parser.rs","dot_parser.rs","mod.rs","wfcommons_parser.rs","yaml_parser.rs"]],["schedulers",[],["common.rs","dls.rs","dynamic_list.rs","heft.rs","lookahead.rs","mod.rs","peft.rs","simple_scheduler.rs","simple_with_data.rs","treap.rs"]]],["dag.rs","dag_simulation.rs","dag_stats.rs","data_item.rs","experiment.rs","lib.rs","lower_bound.rs","network.rs","resource.rs","run_stats.rs","runner.rs","scheduler.rs","system.rs","task.rs","trace_log.rs"]],\
@@ -10,4 +10,4 @@ var sourcesIndex = JSON.parse('{\
 "dslab_network":["",[["models",[],["constant.rs","mod.rs","shared.rs","topology_aware.rs"]]],["lib.rs","link.rs","model.rs","network.rs","node.rs","routing.rs","topology.rs"]],\
 "dslab_storage":["",[],["disk.rs","events.rs","fs.rs","lib.rs","scheduler.rs","storage.rs"]]\
 }');
-createSourceSidebar();
+createSrcSidebar();
