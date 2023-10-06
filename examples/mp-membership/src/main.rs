@@ -757,7 +757,7 @@ fn test_mc_group(config: &TestConfig) -> TestResult {
 
     let collected_states = mc_explore_after_joins(&mut sys, seed.to_string())?;
     if collected_states.is_empty() {
-        return Err("no states collected during exploratory stage".to_string());
+        return Err("no states collected during explore stage".to_string());
     }
     mc_check_members(&mut sys, collected_states)
 }
@@ -793,8 +793,8 @@ struct Args {
     monkeys: u32,
 
     /// Run MC tests
-    #[clap([long, short])]
-    mc_test: bool,
+    #[clap([long, short = 'c'])]
+    mc: bool,
 }
 
 // MAIN --------------------------------------------------------------------------------------------
