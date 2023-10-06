@@ -92,7 +92,7 @@ pub mod invariants {
                     messages_expected.len()
                 ));
             }
-            if local_outbox.len() < messages_expected.len() && state.events.available_events_num() == 0 {
+            if local_outbox.len() < messages_expected.len() && state.events.is_empty() {
                 return Err(format!(
                     "{proc} received {} messages in total but {} expected",
                     local_outbox.len(),
@@ -161,7 +161,7 @@ pub mod goals {
     /// Checks if current state has no more active events.
     pub fn no_events() -> GoalFn {
         boxed!(|state: &McState| {
-            if state.events.available_events_num() == 0 {
+            if state.events.is_empty() {
                 Some("final state reached".to_string())
             } else {
                 None
@@ -178,6 +178,11 @@ pub mod goals {
                 None
             }
         })
+    }
+
+    /// This goal is used when start state is also a final state.
+    pub fn always_ok() -> GoalFn {
+        boxed!(move |_: &McState| { Some("ok".to_string()) })
     }
 
     /// Checks if current run trace has at least `n` events matching the predicate.
@@ -317,6 +322,18 @@ pub mod collects {
         })
     }
 
+    /// Combines multiple collect functions by returning `true` iff all collects are satisfied.
+    pub fn all_collects(mut collects: Vec<CollectFn>) -> CollectFn {
+        boxed!(move |state: &McState| {
+            for collect in &mut collects {
+                if !collect(state) {
+                    return false;
+                }
+            }
+            true
+        })
+    }
+
     /// Checks if trace to given state has at least `n` events matching the predicate.
     pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> CollectFn
     where
@@ -330,6 +347,11 @@ pub mod collects {
 
     /// Checks if current state has no more active events.
     pub fn no_events() -> CollectFn {
-        boxed!(|state: &McState| { state.events.available_events_num() == 0 })
+        boxed!(|state: &McState| { state.events.is_empty() })
+    }
+
+    /// Checks if current state's depth exceeds the given value.
+    pub fn state_depth(depth: u64) -> CollectFn {
+        boxed!(move |state: &McState| { state.depth > depth })
     }
 }

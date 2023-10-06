@@ -419,7 +419,7 @@ pub trait Strategy {
             // Execution branch is pruned
             self.on_final_state_reached(status);
             Some(Ok(()))
-        } else if state.events.available_events_num() == 0 {
+        } else if state.events.is_empty() {
             // exhausted without goal completed
             Some(Err(McError::new(
                 "nothing left to do to reach the goal".to_owned(),

@@ -431,7 +431,7 @@ fn build_one_message_get_data_goal(node: String, proc: String, goal_data: Rc<Ref
 
 fn build_no_events_left_goal() -> GoalFn {
     boxed!(|state: &McState| {
-        if state.events.available_events_num() == 0 {
+        if state.events.is_empty() {
             Some("final".to_string())
         } else {
             None
@@ -441,7 +441,7 @@ fn build_no_events_left_goal() -> GoalFn {
 
 fn build_reached_depth_goal(depth: u64) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.events.available_events_num() == 0 && state.depth >= depth {
+        if state.events.is_empty() && state.depth >= depth {
             Some("final".to_string())
         } else {
             None
@@ -451,7 +451,7 @@ fn build_reached_depth_goal(depth: u64) -> GoalFn {
 
 fn build_no_events_left_with_counter_goal(count_goal_states: Rc<RefCell<i32>>) -> GoalFn {
     boxed!(move |state: &McState| {
-        if state.events.available_events_num() == 0 {
+        if state.events.is_empty() {
             *count_goal_states.borrow_mut() += 1;
             Some("final".to_string())
         } else {
@@ -827,7 +827,7 @@ fn timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
             return Err("invalid order".to_string());
         }
 
-        if state.events.available_events_num() == 0 {
+        if state.events.is_empty() {
             if proc2_outbox.len() == 2 && proc2_outbox[1].tip == "PING" {
                 return Ok(());
             } else {
@@ -876,7 +876,7 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     let invariant = boxed!(move |state: &McState| {
         let proc2_outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
 
-        if state.events.available_events_num() == 0 {
+        if state.events.is_empty() {
             if !proc2_outbox.is_empty() && proc2_outbox[0].tip != "TIMER" {
                 return Err("invalid order".to_string());
             }
@@ -927,7 +927,7 @@ fn useless_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
 #[case("bfs")]
 fn many_dropped_messages(#[case] strategy_name: &str) {
     let invariant = boxed!(|state: &McState| {
-        if state.events.available_events_num() > 0 {
+        if !state.events.is_empty() {
             Err("MessageDropped events should appear in events list".to_owned())
         } else {
             Ok(())
@@ -1071,7 +1071,7 @@ fn cancel_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
     // 1) [TimerFired, MessageReceived]
     // 2) [MessageReceived, TimerCancelled]
     let invariant = boxed!(|state: &McState| {
-        if state.events.available_events_num() == 0 {
+        if state.events.is_empty() {
             assert!(!matches!(state.trace.last().unwrap(), LogEntry::McTimerFired { .. }));
         }
         Ok(())
@@ -1119,7 +1119,7 @@ fn reset_timer(#[case] strategy_name: &str, init_method: SystemInitMethod) {
 
     let invariant = boxed!(|state: &McState| {
         let outbox = &state.node_states["node2"].proc_states["process2"].local_outbox;
-        if outbox.len() == 1 && outbox[0].tip == "MESSAGE" && state.events.available_events_num() == 0 {
+        if outbox.len() == 1 && outbox[0].tip == "MESSAGE" && state.events.is_empty() {
             Err("no timer after reset".to_string())
         } else {
             Ok(())

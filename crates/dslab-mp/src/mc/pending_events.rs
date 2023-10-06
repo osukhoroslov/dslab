@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::mc::dependency::DependencyResolver;
-use crate::mc::events::{McEvent, McEventId};
+use crate::mc::events::{EventOrderingMode, McEvent, McEventId};
 
 /// Stores pending events and provides a convenient interface for working with them.  
 #[derive(Default, Clone, Hash, Eq, PartialEq, Debug)]
@@ -66,13 +66,28 @@ impl PendingEvents {
     }
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
-    pub fn available_events(&self) -> BTreeSet<McEventId> {
-        self.available_events.clone()
+    pub(crate) fn available_events(&self, delivery_guarantee: &EventOrderingMode) -> BTreeSet<McEventId> {
+        match delivery_guarantee {
+            EventOrderingMode::Normal => self.available_events.clone(),
+            EventOrderingMode::MessagesFirst => {
+                let only_messages = self
+                    .available_events
+                    .clone()
+                    .into_iter()
+                    .filter(|x| matches!(self.events[x], McEvent::MessageReceived { .. }))
+                    .collect::<BTreeSet<McEventId>>();
+                if only_messages.is_empty() {
+                    self.available_events.clone()
+                } else {
+                    only_messages
+                }
+            }
+        }
     }
 
-    /// Returns the number of currently available events
-    pub fn available_events_num(&self) -> usize {
-        self.available_events.len()
+    /// Returns true if there are no available events.
+    pub fn is_empty(&self) -> bool {
+        self.available_events.is_empty()
     }
 
     /// Cancels given timer and recalculates available events.
@@ -129,10 +144,13 @@ impl PendingEvents {
 #[cfg(test)]
 mod tests {
     use rand::prelude::IteratorRandom;
+    use std::collections::BTreeSet;
 
     use crate::mc::events::McEvent;
-    use crate::mc::pending_events::PendingEvents;
+    use crate::mc::network::DeliveryOptions;
+    use crate::mc::pending_events::{EventOrderingMode, PendingEvents};
     use crate::mc::system::McTime;
+    use crate::message::Message;
 
     #[test]
     fn test_mc_time() {
@@ -160,7 +178,11 @@ mod tests {
             }
         }
         println!("{:?}", rev_id);
-        while let Some(id) = pending_events.available_events().iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events
+            .available_events(&EventOrderingMode::Normal)
+            .iter()
+            .choose(&mut rand::thread_rng())
+        {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);
@@ -201,7 +223,7 @@ mod tests {
         // - two timers with delays 2 and 3
         for _ in 0..7 {
             let id = *pending_events
-                .available_events()
+                .available_events(&EventOrderingMode::Normal)
                 .iter()
                 .choose(&mut rand::thread_rng())
                 .unwrap();
@@ -223,7 +245,11 @@ mod tests {
             };
             rev_id[pending_events.push(event)] = 9 + node_id;
         }
-        while let Some(id) = pending_events.available_events().iter().choose(&mut rand::thread_rng()) {
+        while let Some(id) = pending_events
+            .available_events(&EventOrderingMode::Normal)
+            .iter()
+            .choose(&mut rand::thread_rng())
+        {
             let id = *id;
             sequence.push(rev_id[id]);
             pending_events.pop(id);
@@ -237,5 +263,47 @@ mod tests {
             assert_eq!(timers[node as usize], time);
             timers[node as usize] += 1;
         }
+    }
+
+    #[test]
+    fn test_dependency_resolver_event_ordering() {
+        let mut pending_events = PendingEvents::new();
+        let id_timer = pending_events.push(McEvent::TimerFired {
+            proc: "proc".to_string(),
+            timer: "timer".to_string(),
+            timer_delay: McTime::from(0.0),
+        });
+        let id_message = pending_events.push(McEvent::MessageReceived {
+            msg: Message::new("TIP", "DATA"),
+            src: "src".to_string(),
+            dst: "dst".to_string(),
+            options: DeliveryOptions::NoFailures(McTime::from(0.0)),
+        });
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::from_iter([id_timer, id_message])
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::from_iter([id_message])
+        );
+        pending_events.pop(id_message);
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::from_iter([id_timer])
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::from_iter([id_timer])
+        );
+        pending_events.pop(id_timer);
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::Normal),
+            BTreeSet::new()
+        );
+        assert_eq!(
+            pending_events.available_events(&EventOrderingMode::MessagesFirst),
+            BTreeSet::new()
+        );
     }
 }

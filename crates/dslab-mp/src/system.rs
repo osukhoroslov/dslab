@@ -324,12 +324,15 @@ impl System {
     pub fn step_until_local_message_max_steps(&mut self, proc: &str, max_steps: u32) -> Result<Vec<Message>, &str> {
         let mut steps = 0;
         let node = self.proc_nodes[proc].clone();
+        if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+            return Ok(messages);
+        }
         while steps < max_steps {
-            if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
-                return Ok(messages);
-            }
             if !self.step() {
                 break;
+            }
+            if let Some(messages) = node.borrow_mut().read_local_messages(proc) {
+                return Ok(messages);
             }
             steps += 1;
         }

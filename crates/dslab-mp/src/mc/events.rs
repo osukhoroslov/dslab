@@ -129,6 +129,7 @@ impl McEvent {
         }
     }
 
+    /// Modifies event so it won't be duplicated in future.
     pub fn disable_duplications(&mut self) {
         if let McEvent::MessageReceived {
             options: DeliveryOptions::PossibleFailures { max_dupl_count, .. },
@@ -139,6 +140,7 @@ impl McEvent {
         }
     }
 
+    /// Converts McEvent to LogEntry.
     pub fn to_log_entry(&self) -> LogEntry {
         match self {
             Self::MessageReceived {
@@ -187,4 +189,13 @@ impl McEvent {
             },
         }
     }
+}
+
+/// Defines possible orderings of events in the system.
+#[derive(Clone)]
+pub enum EventOrderingMode {
+    /// Events can be arbitrarily reordered (default mode).
+    Normal,
+    /// Message receive events always precede the timers (kind of fast network mode).
+    MessagesFirst,
 }
