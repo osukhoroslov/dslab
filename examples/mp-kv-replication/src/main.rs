@@ -1,9 +1,11 @@
+use std::collections::HashSet;
 use std::env;
 use std::io::Write;
 
 use assertables::{assume, assume_eq};
 use byteorder::{ByteOrder, LittleEndian};
 use clap::Parser;
+use dslab_mp::mc::events::EventOrderingMode;
 use env_logger::Builder;
 use log::LevelFilter;
 use rand::distributions::WeightedIndex;
@@ -11,6 +13,12 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use serde::{Deserialize, Serialize};
 
+use dslab_mp::logger::LogEntry;
+use dslab_mp::mc::model_checker::ModelChecker;
+use dslab_mp::mc::predicates::{collects, goals, prunes};
+use dslab_mp::mc::state::McState;
+use dslab_mp::mc::strategies::bfs::Bfs;
+use dslab_mp::mc::strategy::{InvariantFn, McStats, StrategyConfig};
 use dslab_mp::message::Message;
 use dslab_mp::system::System;
 use dslab_mp::test::{TestResult, TestSuite};
@@ -593,6 +601,394 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+fn mc_get_invariant<S>(node: S, proc: S, key: S, expected: Option<S>) -> InvariantFn
+where
+    S: Into<String>,
+{
+    let node = node.into();
+    let proc = proc.into();
+    let key = key.into();
+    let expected = expected.map(|x| x.into());
+    Box::new(move |state: &McState| -> Result<(), String> {
+        let messages = &state.node_states[&node].proc_states[&proc].local_outbox;
+        if let Some(message) = messages.get(0) {
+            if message.tip != "GET_RESP" {
+                return Err(format!("wrong type {}", message.tip));
+            }
+            let data: GetRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
+            if data.key != key {
+                return Err(format!("wrong key {}", data.key));
+            }
+            if data.value.map(|x| x.to_string()) != expected {
+                return Err(format!("wrong value {:?}", data.value));
+            }
+        }
+        Ok(())
+    })
+}
+
+fn mc_put_invariant<S>(node: S, proc: S, key: S, value: S) -> InvariantFn
+where
+    S: Into<String>,
+{
+    let node = node.into();
+    let proc = proc.into();
+    let key = key.into();
+    let value = value.into();
+    Box::new(move |state: &McState| -> Result<(), String> {
+        let messages = &state.node_states[&node].proc_states[&proc].local_outbox;
+        if let Some(message) = messages.get(0) {
+            if message.tip != "PUT_RESP" {
+                return Err(format!("wrong type {}", message.tip));
+            }
+            let data: PutRespMessage = serde_json::from_str(&message.data).map_err(|err| err.to_string())?;
+            if data.key != key {
+                return Err(format!("wrong key {}", data.key));
+            }
+            if data.value != value {
+                return Err(format!("wrong value {:?}", data.value));
+            }
+        }
+        Ok(())
+    })
+}
+
+fn mc_check_query(
+    sys: &mut System,
+    node: &str,
+    proc: &str,
+    invariant: InvariantFn,
+    msg: Message,
+    start_states: Option<HashSet<McState>>,
+) -> Result<McStats, String> {
+    let proc_name = proc.to_string();
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::any_prune(vec![
+            prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 5_usize),
+            prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 10_usize),
+        ]))
+        .goal(goals::got_n_local_messages(node, proc, 1))
+        .invariant(invariant)
+        .collect(collects::event_happened_n_times_current_run(
+            move |log_entry| match log_entry {
+                LogEntry::McLocalMessageSent { proc, .. } => proc == &proc_name,
+                _ => false,
+            },
+            1,
+        ));
+    let mut mc = ModelChecker::new(sys);
+
+    let res = if let Some(start_states) = start_states {
+        mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+            sys.send_local_message(node, proc, msg.clone());
+        })
+    } else {
+        mc.run_with_change::<Bfs>(strategy_config, |sys| {
+            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+            sys.send_local_message(node, proc, msg)
+        })
+    };
+    match res {
+        Err(e) => {
+            e.print_trace();
+            Err(e.message())
+        }
+        Ok(stats) => Ok(stats),
+    }
+}
+
+fn check_mc_get(
+    sys: &mut System,
+    node: &str,
+    proc: &str,
+    key: &str,
+    expected: Option<&str>,
+    quorum: u8,
+    start_states: Option<HashSet<McState>>,
+) -> Result<McStats, String> {
+    println!("check_mc_get");
+    let msg = Message::new("GET", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum));
+    mc_check_query(
+        sys,
+        node,
+        proc,
+        mc_get_invariant(node, proc, key, expected),
+        msg,
+        start_states,
+    )
+}
+
+fn check_mc_put(
+    sys: &mut System,
+    node: &str,
+    proc: &str,
+    key: &str,
+    value: &str,
+    quorum: u8,
+    start_states: Option<HashSet<McState>>,
+) -> Result<McStats, String> {
+    println!("check_mc_put");
+    let msg = Message::new(
+        "PUT",
+        &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, key, value, quorum),
+    );
+    mc_check_query(
+        sys,
+        node,
+        proc,
+        mc_put_invariant(node, proc, key, value),
+        msg,
+        start_states,
+    )
+}
+
+fn mc_stabilize(sys: &mut System, num_steps: u64, start_states: Option<HashSet<McState>>) -> Result<McStats, String> {
+    let strategy_config = StrategyConfig::default()
+        .prune(prunes::any_prune(vec![
+            prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
+            prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, (num_steps + 1) as usize),
+        ]))
+        .goal(goals::any_goal(vec![
+            goals::depth_reached(num_steps),
+            goals::no_events(),
+        ]))
+        .collect(collects::any_collect(vec![
+            collects::no_events(),
+            collects::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
+            collects::event_happened_n_times_current_run(LogEntry::is_mc_message_received, (num_steps + 1) as usize),
+        ]));
+    let mut mc = ModelChecker::new(sys);
+    let res = if let Some(start_states) = start_states {
+        mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+            sys.network().reset();
+        })
+    } else {
+        mc.run_with_change::<Bfs>(strategy_config, |sys| {
+            sys.network().reset();
+            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+        })
+    };
+    match res {
+        Err(e) => {
+            e.print_trace();
+            Err(e.message())
+        }
+        Ok(stats) => Ok(stats),
+    }
+}
+
+fn test_mc_basic(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+
+    let mut procs = sys.process_names();
+    procs.sort();
+
+    let key = "ZXSA0H2K";
+    let replicas = key_replicas(key, &sys);
+    let non_replicas = key_non_replicas(key, &sys);
+
+    println!("Key {} replicas: {:?}", key, replicas);
+    println!("Key {} non-replicas: {:?}", key, non_replicas);
+
+    let mut start_states: HashSet<McState>;
+    // get key from the first node
+    start_states = check_mc_get(&mut sys, &procs[0], &procs[0], key, None, 2, None)?.collected_states;
+    println!("stage 1: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 1 has no positive outcomes".to_owned());
+    }
+
+    // put key from the first replica
+    let value = "9ps2p1ua";
+    start_states = check_mc_put(&mut sys, &replicas[0], &replicas[0], key, value, 2, None)?.collected_states;
+    println!("stage 2: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 2 has no positive outcomes".to_owned());
+    }
+
+    start_states = mc_stabilize(&mut sys, 15, Some(start_states))?.collected_states;
+    println!("stage 3: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 3 has no positive outcomes".to_owned());
+    }
+
+    // get key from the last replica
+    start_states = check_mc_get(
+        &mut sys,
+        &replicas[2],
+        &replicas[2],
+        key,
+        Some(value),
+        2,
+        Some(start_states),
+    )?
+    .collected_states;
+    println!("stage 4: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 4 has no positive outcomes".to_owned());
+    }
+    Ok(true)
+}
+
+fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+
+    let mut procs = sys.process_names();
+    procs.sort();
+
+    let key = "ZXSA0H2K";
+    let replicas = key_replicas(key, &sys);
+    let non_replicas = key_non_replicas(key, &sys);
+
+    println!("Key {} replicas: {:?}", key, replicas);
+    println!("Key {} non-replicas: {:?}", key, non_replicas);
+
+    sys.network()
+        .make_partition(&[&replicas[0], &non_replicas[0]], &[&replicas[1], &replicas[2]]);
+
+    let mut start_states: HashSet<McState>;
+    // get key from the first node
+    start_states = check_mc_get(&mut sys, &replicas[0], &replicas[0], key, None, 2, None)?.collected_states;
+    println!("stage 1: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 1 has no positive outcomes".to_owned());
+    }
+    // put key from the first replica
+    let value = "9ps2p1ua";
+    start_states = check_mc_put(&mut sys, &replicas[0], &replicas[0], key, value, 2, None)?.collected_states;
+    println!("stage 2: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 2 has no positive outcomes".to_owned());
+    }
+
+    sys.network().reset();
+
+    start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
+    println!("stage 3: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 3 has no positive outcomes".to_owned());
+    }
+
+    sys.network()
+        .make_partition(&[&replicas[0], &non_replicas[0]], &[&replicas[1], &replicas[2]]);
+    start_states = start_states
+        .into_iter()
+        .map(|mut state| {
+            state.network.disable_link(&replicas[0], &replicas[1]);
+            state.network.disable_link(&replicas[0], &replicas[2]);
+            state.network.disable_link(&non_replicas[0], &replicas[1]);
+            state.network.disable_link(&non_replicas[0], &replicas[2]);
+            state
+        })
+        .collect();
+    // get key from the last replica
+    start_states = check_mc_get(
+        &mut sys,
+        &replicas[2],
+        &replicas[2],
+        key,
+        Some(value),
+        2,
+        Some(start_states),
+    )?
+    .collected_states;
+    println!("stage 4: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 4 has no positive outcomes".to_owned());
+    }
+    Ok(true)
+}
+
+fn test_mc_concurrent(config: &TestConfig) -> TestResult {
+    let mut sys = build_system(config);
+
+    let mut procs = sys.process_names();
+    procs.sort();
+
+    let key = "ZXSA0H2K";
+    let replicas = key_replicas(key, &sys);
+    let non_replicas = key_non_replicas(key, &sys);
+
+    println!("Key {} replicas: {:?}", key, replicas);
+    println!("Key {} non-replicas: {:?}", key, non_replicas);
+
+    // put key to the first replica
+    let value = "9ps2p1ua";
+    let value2 = "8ab54uye";
+
+    sys.network().disconnect_node(&replicas[0]);
+    sys.network().disconnect_node(&replicas[1]);
+
+    let strategy_config = StrategyConfig::default()
+        .goal(goals::got_n_local_messages(&replicas[0], &replicas[0], 1))
+        .collect(collects::got_n_local_messages(&replicas[0], &replicas[0], 1));
+
+    let mut mc = ModelChecker::new(&sys);
+    let res = mc.run_with_change::<Bfs>(strategy_config, |sys| {
+        sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+        sys.send_local_message(
+            replicas[0].clone(),
+            replicas[0].clone(),
+            Message::json("PUT", &PutReqMessage { quorum: 1, key, value }),
+        )
+    });
+    if let Err(e) = res {
+        e.print_trace();
+        return Err(e.message());
+    }
+    let start_states = res.unwrap().collected_states;
+    println!("stage 1: {}", start_states.len());
+    let strategy_config = StrategyConfig::default()
+        .goal(goals::got_n_local_messages(&replicas[1], &replicas[1], 1))
+        .collect(collects::got_n_local_messages(&replicas[1], &replicas[1], 1));
+
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+        sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+        sys.send_local_message(
+            replicas[1].clone(),
+            replicas[1].clone(),
+            Message::json(
+                "PUT",
+                &PutReqMessage {
+                    quorum: 1,
+                    key,
+                    value: value2,
+                },
+            ),
+        )
+    });
+    if let Err(e) = res {
+        e.print_trace();
+        return Err(e.message());
+    }
+
+    let mut start_states = res.unwrap().collected_states;
+    start_states = start_states
+        .into_iter()
+        .map(|mut state| {
+            state.network.reset();
+            state
+        })
+        .collect();
+    start_states = check_mc_get(
+        &mut sys,
+        &replicas[2],
+        &replicas[2],
+        key,
+        Some(value2),
+        3,
+        Some(start_states),
+    )?
+    .collected_states;
+    println!("stage 2: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err("stage 2 has no positive outcomes".to_owned());
+    }
+    Ok(true)
+}
+
 // CLI -----------------------------------------------------------------------------------------------------------------
 
 /// Replicated KV Store Homework Tests
@@ -631,7 +1027,7 @@ fn main() {
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
 
     let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
-    let config = TestConfig {
+    let mut config = TestConfig {
         proc_factory: &proc_factory,
         proc_count: args.proc_count,
         seed: args.seed,
@@ -650,6 +1046,15 @@ fn main() {
     tests.add("SLOPPY QUORUM TRICKY", test_sloppy_quorum_tricky, config);
     tests.add("PARTITION CLIENTS", test_partition_clients, config);
     tests.add("PARTITION MIXED", test_partition_mixed, config);
+
+    config.proc_count = 4;
+    tests.add("MC BASIC", test_mc_basic, config);
+    tests.add(
+        "MC SLOPPY_QUORUM HINTED_HANDOFF",
+        test_mc_sloppy_quorum_hinted_handoff,
+        config,
+    );
+    tests.add("MC CONCURRENT", test_mc_concurrent, config);
 
     if args.test.is_none() {
         tests.run();

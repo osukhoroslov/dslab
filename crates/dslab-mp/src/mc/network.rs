@@ -119,4 +119,10 @@ impl McNetwork {
     pub fn max_delay(&self) -> f64 {
         self.max_delay
     }
+
+    pub fn reset(&mut self) {
+        self.disabled_links.clear();
+        self.drop_incoming.clear();
+        self.drop_outgoing.clear();
+    }
 }

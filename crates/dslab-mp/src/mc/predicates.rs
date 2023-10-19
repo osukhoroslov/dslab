@@ -248,6 +248,21 @@ pub mod prunes {
         })
     }
 
+    /// Prunes state with at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> PruneFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
+            if event_count >= n {
+                Some(format!("event occured {n} times"))
+            } else {
+                None
+            }
+        })
+    }
+
     /// Prunes states where the number of events matching the predicate is more than the limit.
     pub fn events_limit<F>(predicate: F, limit: usize) -> PruneFn
     where
@@ -353,5 +368,22 @@ pub mod collects {
     /// Checks if current state's depth exceeds the given value.
     pub fn state_depth(depth: u64) -> CollectFn {
         boxed!(move |state: &McState| { state.depth > depth })
+    }
+    /// Collects states where the number of events matching the predicate is more than the limit.
+    pub fn events_limit<F>(predicate: F, limit: usize) -> CollectFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = count_events_in_trace(&predicate, state);
+            event_count > limit
+        })
+    }
+
+    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
+    where
+        F: Fn(&LogEntry) -> bool,
+    {
+        state.trace.iter().filter(|x| predicate(x)).count()
     }
 }
