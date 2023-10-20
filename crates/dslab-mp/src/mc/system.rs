@@ -113,10 +113,8 @@ impl McSystem {
     }
 
     pub fn network_reset(&mut self) {
-        self.trace_handler
-            .borrow_mut()
-            .push(LogEntry::McNetworkReset {  });
-        
+        self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
+
         self.net.reset();
     }
 
@@ -125,7 +123,6 @@ impl McSystem {
         self.trace_handler
             .borrow_mut()
             .push(LogEntry::McNetworkPartition { group1, group2 });
-        
     }
 
     pub fn get_state(&self) -> McState {

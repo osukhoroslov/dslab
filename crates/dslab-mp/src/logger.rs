@@ -453,7 +453,7 @@ impl LogEntry {
             LogEntry::McNodeCrashed { node } => {
                 t!(format!("node crashed: {}", node).red());
             }
-            LogEntry::McNetworkReset {  } => {
+            LogEntry::McNetworkReset {} => {
                 t!("network reset, all problems healed".to_string().green());
             }
             LogEntry::McNetworkPartition { group1, group2 } => {
