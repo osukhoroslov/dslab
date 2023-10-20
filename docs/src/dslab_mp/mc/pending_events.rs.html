@@ -307,6 +307,10 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::BTreeMap;
 <span class="kw">use </span>std::collections::BTreeSet;
 
@@ -376,6 +380,8 @@
 
     <span class="doccomment">/// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>available_events(<span class="kw-2">&amp;</span><span class="self">self</span>, delivery_guarantee: <span class="kw-2">&amp;</span>EventOrderingMode) -&gt; BTreeSet&lt;McEventId&gt; {
+        <span class="macro">assert!</span>(!<span class="self">self</span>.available_events.is_empty() || <span class="self">self</span>.events.is_empty());
+
         <span class="kw">match </span>delivery_guarantee {
             EventOrderingMode::Normal =&gt; <span class="self">self</span>.available_events.clone(),
             EventOrderingMode::MessagesFirst =&gt; {
@@ -396,6 +402,8 @@
 
     <span class="doccomment">/// Returns true if there are no available events.
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">assert!</span>(!<span class="self">self</span>.available_events.is_empty() || <span class="self">self</span>.events.is_empty());
+
         <span class="self">self</span>.available_events.is_empty()
     }
 
