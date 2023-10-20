@@ -125,4 +125,12 @@ impl McNetwork {
         self.drop_incoming.clear();
         self.drop_outgoing.clear();
     }
+
+    pub fn partition(&mut self, group1: &Vec<String>, group2: &Vec<String>) {
+        for node1 in group1 {
+            for node2 in group2 {
+                self.disable_link(node1, node2);
+            }
+        }
+    }
 }

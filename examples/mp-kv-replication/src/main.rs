@@ -667,7 +667,10 @@ fn mc_query_strategy(node: &str, proc: &str, query_data: McQueryPlaceholder) -> 
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 5_usize),
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 10_usize),
         ]))
-        .goal(goals::event_happened_n_times_current_run(LogEntry::is_mc_local_message_sent, 1))
+        .goal(goals::event_happened_n_times_current_run(
+            LogEntry::is_mc_local_message_sent,
+            1,
+        ))
         .invariant(invariant)
         .collect(collects::event_happened_n_times_current_run(
             move |log_entry| match log_entry {
