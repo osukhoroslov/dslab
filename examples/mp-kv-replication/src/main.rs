@@ -601,14 +601,12 @@ fn test_partition_mixed(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
-fn mc_get_invariant<S>(node: S, proc: S, key: S, expected: Option<S>) -> InvariantFn
+fn mc_get_invariant<S>(node: S, proc: S, key: String, expected: Option<String>) -> InvariantFn
 where
     S: Into<String>,
 {
     let node = node.into();
     let proc = proc.into();
-    let key = key.into();
-    let expected = expected.map(|x| x.into());
     Box::new(move |state: &McState| -> Result<(), String> {
         let messages = &state.node_states[&node].proc_states[&proc].local_outbox;
         if let Some(message) = messages.get(0) {
@@ -627,14 +625,12 @@ where
     })
 }
 
-fn mc_put_invariant<S>(node: S, proc: S, key: S, value: S) -> InvariantFn
+fn mc_put_invariant<S>(node: S, proc: S, key: String, value: String) -> InvariantFn
 where
     S: Into<String>,
 {
     let node = node.into();
     let proc = proc.into();
-    let key = key.into();
-    let value = value.into();
     Box::new(move |state: &McState| -> Result<(), String> {
         let messages = &state.node_states[&node].proc_states[&proc].local_outbox;
         if let Some(message) = messages.get(0) {
@@ -653,21 +649,25 @@ where
     })
 }
 
-fn mc_check_query(
-    sys: &mut System,
-    node: &str,
-    proc: &str,
-    invariant: InvariantFn,
-    msg: Message,
-    start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
+enum McQueryPlaceholder {
+    GetQuery(String, Option<String>),
+    PutQuery(String, String),
+}
+
+fn mc_query_strategy(node: &str, proc: &str, query_data: McQueryPlaceholder) -> StrategyConfig {
     let proc_name = proc.to_string();
-    let strategy_config = StrategyConfig::default()
+
+    let invariant = match query_data {
+        McQueryPlaceholder::GetQuery(key, expected) => mc_get_invariant(node, proc, key, expected),
+        McQueryPlaceholder::PutQuery(key, value) => mc_put_invariant(node, proc, key, value),
+    };
+
+    StrategyConfig::default()
         .prune(prunes::any_prune(vec![
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 5_usize),
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 10_usize),
         ]))
-        .goal(goals::got_n_local_messages(node, proc, 1))
+        .goal(goals::event_happened_n_times_current_run(LogEntry::is_mc_local_message_sent, 1))
         .invariant(invariant)
         .collect(collects::event_happened_n_times_current_run(
             move |log_entry| match log_entry {
@@ -675,18 +675,46 @@ fn mc_check_query(
                 _ => false,
             },
             1,
-        ));
-    let mut mc = ModelChecker::new(sys);
+        ))
+}
 
+fn run_mc<S>(
+    mc: &mut ModelChecker,
+    strategy_config: StrategyConfig,
+    node: S,
+    proc: S,
+    msg: Option<Message>,
+    partition: Option<[[String; 2]; 2]>,
+    start_states: Option<HashSet<McState>>,
+) -> Result<McStats, String>
+where
+    S: Into<String>,
+{
+    let node = node.into();
+    let proc = proc.into();
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+            if let Some([part1, part2]) = &partition {
+                sys.network_partition(part1.to_vec(), part2.to_vec());
+            } else {
+                sys.network_reset();
+            }
             sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
-            sys.send_local_message(node, proc, msg.clone());
+            if let Some(msg) = &msg {
+                sys.send_local_message(node.clone(), proc.clone(), msg.clone());
+            }
         })
     } else {
         mc.run_with_change::<Bfs>(strategy_config, |sys| {
+            if let Some([part1, part2]) = &partition {
+                sys.network_partition(part1.to_vec(), part2.to_vec());
+            } else {
+                sys.network_reset();
+            }
             sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
-            sys.send_local_message(node, proc, msg)
+            if let Some(msg) = msg {
+                sys.send_local_message(node, proc, msg);
+            }
         })
     };
     match res {
@@ -696,51 +724,6 @@ fn mc_check_query(
         }
         Ok(stats) => Ok(stats),
     }
-}
-
-fn check_mc_get(
-    sys: &mut System,
-    node: &str,
-    proc: &str,
-    key: &str,
-    expected: Option<&str>,
-    quorum: u8,
-    start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
-    println!("check_mc_get");
-    let msg = Message::new("GET", &format!(r#"{{"key": "{}", "quorum": {}}}"#, key, quorum));
-    mc_check_query(
-        sys,
-        node,
-        proc,
-        mc_get_invariant(node, proc, key, expected),
-        msg,
-        start_states,
-    )
-}
-
-fn check_mc_put(
-    sys: &mut System,
-    node: &str,
-    proc: &str,
-    key: &str,
-    value: &str,
-    quorum: u8,
-    start_states: Option<HashSet<McState>>,
-) -> Result<McStats, String> {
-    println!("check_mc_put");
-    let msg = Message::new(
-        "PUT",
-        &format!(r#"{{"key": "{}", "value": "{}", "quorum": {}}}"#, key, value, quorum),
-    );
-    mc_check_query(
-        sys,
-        node,
-        proc,
-        mc_put_invariant(node, proc, key, value),
-        msg,
-        start_states,
-    )
 }
 
 fn mc_stabilize(sys: &mut System, num_steps: u64, start_states: Option<HashSet<McState>>) -> Result<McStats, String> {
@@ -761,8 +744,8 @@ fn mc_stabilize(sys: &mut System, num_steps: u64, start_states: Option<HashSet<M
     let mut mc = ModelChecker::new(sys);
     let res = if let Some(start_states) = start_states {
         mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
-            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
             sys.network().reset();
+            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
         })
     } else {
         mc.run_with_change::<Bfs>(strategy_config, |sys| {
@@ -784,44 +767,85 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
 
     let mut procs = sys.process_names();
     procs.sort();
+    let mut mc = ModelChecker::new(&sys);
 
-    let key = "ZXSA0H2K";
-    let replicas = key_replicas(key, &sys);
-    let non_replicas = key_non_replicas(key, &sys);
+    let key = "ZXSA0H2K".to_string();
+    let replicas = key_replicas(&key, &sys);
+    let non_replicas = key_non_replicas(&key, &sys);
 
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
-    let mut start_states: HashSet<McState>;
-    // get key from the first node
-    start_states = check_mc_get(&mut sys, &procs[0], &procs[0], key, None, 2, None)?.collected_states;
+    // stage 1: get key from the first node
+    let first_stage_strategy = mc_query_strategy(&procs[0], &procs[0], McQueryPlaceholder::GetQuery(key.clone(), None));
+    let first_stage_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
+    let start_states = run_mc(
+        &mut mc,
+        first_stage_strategy,
+        &procs[0],
+        &procs[0],
+        Some(first_stage_msg),
+        None,
+        None,
+    )?
+    .collected_states;
     println!("stage 1: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 1 has no positive outcomes".to_owned());
     }
 
-    // put key from the first replica
-    let value = "9ps2p1ua";
-    start_states = check_mc_put(&mut sys, &replicas[0], &replicas[0], key, value, 2, None)?.collected_states;
+    // stage 2: put key to the first replica
+    let value = "9ps2p1ua".to_string();
+
+    let second_stage_strategy = mc_query_strategy(
+        &replicas[0],
+        &replicas[0],
+        McQueryPlaceholder::PutQuery(key.clone(), value.clone()),
+    );
+    let second_stage_msg = Message::json(
+        "PUT",
+        &PutReqMessage {
+            key: &key,
+            value: &value,
+            quorum: 2,
+        },
+    );
+    let start_states = run_mc(
+        &mut mc,
+        second_stage_strategy,
+        &replicas[0],
+        &replicas[0],
+        Some(second_stage_msg),
+        None,
+        None,
+    )?
+    .collected_states;
     println!("stage 2: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 2 has no positive outcomes".to_owned());
     }
 
-    start_states = mc_stabilize(&mut sys, 15, Some(start_states))?.collected_states;
+    // stage 3: let data propagate to all replicas
+    let start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
     println!("stage 3: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 3 has no positive outcomes".to_owned());
     }
 
-    // get key from the last replica
-    start_states = check_mc_get(
-        &mut sys,
+    // stage 4: get key from the last replica
+    let fourth_stage_strategy = mc_query_strategy(
         &replicas[2],
         &replicas[2],
-        key,
-        Some(value),
-        2,
+        McQueryPlaceholder::GetQuery(key.clone(), None),
+    );
+    let fourth_stage_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
+    let start_states = run_mc(
+        &mut mc,
+        fourth_stage_strategy,
+        &replicas[2],
+        &replicas[2],
+        Some(fourth_stage_msg),
+        None,
         Some(start_states),
     )?
     .collected_states;
@@ -837,60 +861,91 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
 
     let mut procs = sys.process_names();
     procs.sort();
+    let mut mc = ModelChecker::new(&sys);
 
-    let key = "ZXSA0H2K";
-    let replicas = key_replicas(key, &sys);
-    let non_replicas = key_non_replicas(key, &sys);
+    let key = "ZXSA0H2K".to_string();
+    let replicas = key_replicas(&key, &sys);
+    let non_replicas = key_non_replicas(&key, &sys);
 
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
-    sys.network()
-        .make_partition(&[&replicas[0], &non_replicas[0]], &[&replicas[1], &replicas[2]]);
-
-    let mut start_states: HashSet<McState>;
-    // get key from the first node
-    start_states = check_mc_get(&mut sys, &replicas[0], &replicas[0], key, None, 2, None)?.collected_states;
+    // stage 1: get key from the first node (with partition of network)
+    let first_stage_strategy = mc_query_strategy(&procs[0], &procs[0], McQueryPlaceholder::GetQuery(key.clone(), None));
+    let first_stage_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
+    let start_states = run_mc(
+        &mut mc,
+        first_stage_strategy,
+        &procs[0],
+        &procs[0],
+        Some(first_stage_msg),
+        Some([
+            [replicas[0].clone(), non_replicas[0].clone()],
+            [replicas[1].clone(), replicas[2].clone()],
+        ]),
+        None,
+    )?
+    .collected_states;
     println!("stage 1: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 1 has no positive outcomes".to_owned());
     }
-    // put key from the first replica
-    let value = "9ps2p1ua";
-    start_states = check_mc_put(&mut sys, &replicas[0], &replicas[0], key, value, 2, None)?.collected_states;
+
+    // stage 2: put key to the first replica
+    let value = "9ps2p1ua".to_string();
+
+    let second_stage_strategy = mc_query_strategy(
+        &replicas[0],
+        &replicas[0],
+        McQueryPlaceholder::PutQuery(key.clone(), value.clone()),
+    );
+    let second_stage_msg = Message::json(
+        "PUT",
+        &PutReqMessage {
+            key: &key,
+            value: &value,
+            quorum: 2,
+        },
+    );
+    let start_states = run_mc(
+        &mut mc,
+        second_stage_strategy,
+        &replicas[0],
+        &replicas[0],
+        Some(second_stage_msg),
+        None,
+        None,
+    )?
+    .collected_states;
     println!("stage 2: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 2 has no positive outcomes".to_owned());
     }
 
-    sys.network().reset();
-
-    start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
+    // stage 3: recover network and let data propagate to all replicas
+    let start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
     println!("stage 3: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 3 has no positive outcomes".to_owned());
     }
 
-    sys.network()
-        .make_partition(&[&replicas[0], &non_replicas[0]], &[&replicas[1], &replicas[2]]);
-    start_states = start_states
-        .into_iter()
-        .map(|mut state| {
-            state.network.disable_link(&replicas[0], &replicas[1]);
-            state.network.disable_link(&replicas[0], &replicas[2]);
-            state.network.disable_link(&non_replicas[0], &replicas[1]);
-            state.network.disable_link(&non_replicas[0], &replicas[2]);
-            state
-        })
-        .collect();
-    // get key from the last replica
-    start_states = check_mc_get(
-        &mut sys,
+    // stage 4: get key from the last replica (again after network partition)
+    let fourth_stage_strategy = mc_query_strategy(
         &replicas[2],
         &replicas[2],
-        key,
-        Some(value),
-        2,
+        McQueryPlaceholder::GetQuery(key.clone(), None),
+    );
+    let fourth_stage_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
+    let start_states = run_mc(
+        &mut mc,
+        fourth_stage_strategy,
+        &replicas[2],
+        &replicas[2],
+        Some(fourth_stage_msg),
+        Some([
+            [replicas[0].clone(), non_replicas[0].clone()],
+            [replicas[1].clone(), replicas[2].clone()],
+        ]),
         Some(start_states),
     )?
     .collected_states;
@@ -902,7 +957,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
 }
 
 fn test_mc_concurrent(config: &TestConfig) -> TestResult {
-    let mut sys = build_system(config);
+    let sys = build_system(config);
 
     let mut procs = sys.process_names();
     procs.sort();
@@ -914,12 +969,14 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
-    // put key to the first replica
-    let value = "9ps2p1ua";
-    let value2 = "8ab54uye";
-
+    // isolate replicas
     sys.network().disconnect_node(&replicas[0]);
     sys.network().disconnect_node(&replicas[1]);
+
+    // put (key, value) to the first replica
+    // and then put (key, value2) to the second replica
+    let value = "9ps2p1ua";
+    let value2 = "8ab54uye";
 
     let strategy_config = StrategyConfig::default()
         .goal(goals::got_n_local_messages(&replicas[0], &replicas[0], 1))
@@ -939,7 +996,10 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         return Err(e.message());
     }
     let start_states = res.unwrap().collected_states;
-    println!("stage 1: {}", start_states.len());
+    if start_states.is_empty() {
+        return Err(format!("put({key}, {value}) has no positive outcomes"));
+    }
+
     let strategy_config = StrategyConfig::default()
         .goal(goals::got_n_local_messages(&replicas[1], &replicas[1], 1))
         .collect(collects::got_n_local_messages(&replicas[1], &replicas[1], 1));
@@ -963,28 +1023,30 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         e.print_trace();
         return Err(e.message());
     }
-
-    let mut start_states = res.unwrap().collected_states;
-    start_states = start_states
-        .into_iter()
-        .map(|mut state| {
-            state.network.reset();
-            state
-        })
-        .collect();
-    start_states = check_mc_get(
-        &mut sys,
+    let start_states = res.unwrap().collected_states;
+    if start_states.is_empty() {
+        return Err(format!("put({key}, {value2}) has no positive outcomes"));
+    }
+    // Now reset the network state and ask all replicas to agree about value for key
+    // We expect the later one to be agreed on which is value2
+    let strategy_config = mc_query_strategy(
         &replicas[2],
         &replicas[2],
-        key,
-        Some(value2),
-        3,
+        McQueryPlaceholder::GetQuery(key.to_string(), Some(value2.to_string())),
+    );
+    let msg = Message::json("GET", &GetReqMessage { key, quorum: 3 });
+    let start_states = run_mc(
+        &mut mc,
+        strategy_config,
+        &replicas[2],
+        &replicas[2],
+        Some(msg),
+        None,
         Some(start_states),
     )?
     .collected_states;
-    println!("stage 2: {}", start_states.len());
     if start_states.is_empty() {
-        return Err("stage 2 has no positive outcomes".to_owned());
+        return Err(format!("get({key}) has no positive outcomes"));
     }
     Ok(true)
 }
