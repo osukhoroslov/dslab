@@ -67,6 +67,8 @@ impl PendingEvents {
 
     /// Returns currently available events, i.e. not blocked by other events (see DependencyResolver).
     pub(crate) fn available_events(&self, delivery_guarantee: &EventOrderingMode) -> BTreeSet<McEventId> {
+        assert!(!self.available_events.is_empty() || self.events.is_empty());
+
         match delivery_guarantee {
             EventOrderingMode::Normal => self.available_events.clone(),
             EventOrderingMode::MessagesFirst => {
@@ -87,6 +89,8 @@ impl PendingEvents {
 
     /// Returns true if there are no available events.
     pub fn is_empty(&self) -> bool {
+        assert!(!self.available_events.is_empty() || self.events.is_empty());
+
         self.available_events.is_empty()
     }
 
