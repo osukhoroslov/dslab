@@ -729,33 +729,26 @@ where
     }
 }
 
-fn mc_stabilize(sys: &mut System, num_steps: u64, start_states: Option<HashSet<McState>>) -> Result<McStats, String> {
+fn mc_stabilize(sys: &mut System, start_states: HashSet<McState>) -> Result<McStats, String> {
     let strategy_config = StrategyConfig::default()
         .prune(prunes::any_prune(vec![
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
-            prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, (num_steps + 1) as usize),
+            prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
         ]))
         .goal(goals::any_goal(vec![
-            goals::depth_reached(num_steps),
+            goals::depth_reached(30),
             goals::no_events(),
         ]))
         .collect(collects::any_collect(vec![
             collects::no_events(),
             collects::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
-            collects::event_happened_n_times_current_run(LogEntry::is_mc_message_received, (num_steps + 1) as usize),
+            collects::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
         ]));
     let mut mc = ModelChecker::new(sys);
-    let res = if let Some(start_states) = start_states {
-        mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
-            sys.network().reset();
-            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
-        })
-    } else {
-        mc.run_with_change::<Bfs>(strategy_config, |sys| {
-            sys.network().reset();
-            sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
-        })
-    };
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+        sys.network().reset();
+        sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
+    });
     match res {
         Err(e) => {
             e.print_trace();
@@ -829,7 +822,7 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     }
 
     // stage 3: let data propagate to all replicas
-    let start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
+    let start_states = mc_stabilize(&mut sys, start_states)?.collected_states;
     println!("stage 3: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 3 has no positive outcomes".to_owned());
@@ -926,7 +919,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
     }
 
     // stage 3: recover network and let data propagate to all replicas
-    let start_states = mc_stabilize(&mut sys, 30, Some(start_states))?.collected_states;
+    let start_states = mc_stabilize(&mut sys, start_states)?.collected_states;
     println!("stage 3: {}", start_states.len());
     if start_states.is_empty() {
         return Err("stage 3 has no positive outcomes".to_owned());
