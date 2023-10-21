@@ -735,10 +735,7 @@ fn mc_stabilize(sys: &mut System, start_states: HashSet<McState>) -> Result<McSt
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
             prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
         ]))
-        .goal(goals::any_goal(vec![
-            goals::depth_reached(30),
-            goals::no_events(),
-        ]))
+        .goal(goals::any_goal(vec![goals::depth_reached(30), goals::no_events()]))
         .collect(collects::any_collect(vec![
             collects::no_events(),
             collects::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 6),
