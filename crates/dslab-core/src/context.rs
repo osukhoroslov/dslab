@@ -664,7 +664,8 @@ impl SimulationContext {
     async_enabled! {
         /// Spawns a background async task.
         ///
-        /// # Examples:
+        /// # Examples
+        ///
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
@@ -755,9 +756,9 @@ impl SimulationContext {
             self.sim_state.borrow_mut().spawn_component(self.id(), future);
         }
 
-        /// Wait for the given timeout.
+        /// Waits until `duration` has elapsed.
         ///
-        /// # Example:
+        /// # Examples
         ///
         /// ```rust
         /// use futures::{stream::FuturesUnordered, StreamExt};
@@ -799,7 +800,8 @@ impl SimulationContext {
 
         /// Waits for any event of type `T` from component `src` until the specified timeout.
         ///
-        /// # Example
+        /// # Examples
+        ///
         /// ```rust
         /// use serde::Serialize;
         ///
@@ -855,7 +857,7 @@ impl SimulationContext {
 
         /// Waits for any event of type `T` from component `src` without timeout.
         ///
-        /// # Example:
+        /// # Examples
         ///
         /// ```rust
         /// use serde::Serialize;
@@ -896,7 +898,7 @@ impl SimulationContext {
 
         /// Waits for an event of type T from self.
         ///
-        /// # Example:
+        /// # Examples
         ///
         /// ```rust
         /// use serde::Serialize;
@@ -942,7 +944,8 @@ impl SimulationContext {
 
         /// Waits for any event of type `T` from component `src` and given `details` until the specified timeout.
         ///
-        /// # Example
+        /// # Examples
+        ///
         /// ```rust
         /// use std::cell::RefCell;
         /// use std::rc::Rc;
@@ -1048,6 +1051,7 @@ impl SimulationContext {
         ///
         /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
         /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
+        /// ```
         pub async fn async_detailed_wait_event_for<T>(&self, src: Id, details: DetailsKey, timeout: f64) -> AwaitResult<T>
         where
             T: EventData,

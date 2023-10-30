@@ -531,7 +531,7 @@ impl Simulation {
         /// Spawns the background process. Similar to "launch a new thread".
         /// Only 'static Futures are allowed. To spawn methods of components use `SimulationContext::spawn`
         ///
-        /// # Example:
+        /// # Examples
         ///
         /// ```rust
         /// use dslab_core::Simulation;
@@ -558,6 +558,7 @@ impl Simulation {
         /// function with type `T`.
         ///
         /// # Example
+        ///
         /// ```rust
         /// use std::cell::RefCell;
         /// use std::rc::Rc;
@@ -641,23 +642,20 @@ impl Simulation {
         ///     event.request_id as DetailsKey
         /// }
         ///
-        ///
-        ///
         /// let mut sim = Simulation::new(42);
-        ///
-        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
-        ///
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
         ///
         /// let root_ctx = sim.create_context("root");
         ///
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
         /// let client = Rc::new(RefCell::new(Client {
         ///     ctx: client_ctx,
         ///     root_id: root_ctx.id(),
         ///     actions_finished: RefCell::new(0),
         /// }));
         /// sim.add_handler("client", client.clone());
+        ///
+        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
         ///
         /// root_ctx.emit_now(Start {}, client_id);
         /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);
@@ -667,7 +665,6 @@ impl Simulation {
         ///
         /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
         /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
-        ///
         /// ```
         pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
             self.sim_state
@@ -677,17 +674,16 @@ impl Simulation {
 
         /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
         ///
-        /// The purpose of this queue is enabling convenient communication
-        /// between different asynchronous tasks within a single component.
-        /// This allows for the operation of numerous "parallel activities" within one component.
+        /// This queue is designed to support convenient communication between several asynchronous tasks
+        /// within a single simulation component.
+        /// This enables implementing the component logic as a set of communicating concurrent activities.
         ///
-        /// Certainly, it could also serve as a mail-box for events between multiple components,
-        /// but such a perspective is highly not recommended. For multi-component communication another components
-        /// should be used (for example dslab-network).
+        /// The use of this primitive for inter-component communication is discouraged in favor of passing events
+        /// directly or via intermediate components.
         ///
-        /// # Examples:
+        /// # Examples
+        ///
         /// ```rust
-        //)/
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
         ///
