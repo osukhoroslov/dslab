@@ -112,17 +112,15 @@ impl McSystem {
         self.nodes.get_mut(&node).unwrap().crash();
     }
 
-    pub fn network_reset(&mut self) {
-        self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
-
-        self.net.reset();
-    }
-
     pub fn network_partition(&mut self, group1: Vec<String>, group2: Vec<String>) {
         self.net.partition(&group1, &group2);
         self.trace_handler
             .borrow_mut()
             .push(LogEntry::McNetworkPartition { group1, group2 });
+    }
+    pub fn network_reset(&mut self) {
+        self.net.reset();
+        self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
     }
 
     pub fn get_state(&self) -> McState {

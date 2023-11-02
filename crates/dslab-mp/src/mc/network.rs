@@ -130,6 +130,7 @@ impl McNetwork {
         for node1 in group1 {
             for node2 in group2 {
                 self.disable_link(node1, node2);
+                self.disable_link(node2, node1);
             }
         }
     }
