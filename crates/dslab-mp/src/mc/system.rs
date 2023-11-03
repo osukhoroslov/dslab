@@ -97,7 +97,7 @@ impl McSystem {
         self.add_events(new_events);
     }
 
-    /// Change event ordering mode for a system to change MC behavior. 
+    /// Change event ordering mode for a system to change MC behavior.
     pub fn set_event_ordering_mode(&mut self, mode: EventOrderingMode) {
         self.event_ordering_mode = mode;
     }
@@ -164,7 +164,6 @@ impl McSystem {
     pub(crate) fn depth(&self) -> u64 {
         self.depth
     }
-
 
     /// Returns network state
     pub fn network(&mut self) -> &mut McNetwork {

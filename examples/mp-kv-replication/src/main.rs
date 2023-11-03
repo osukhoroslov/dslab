@@ -716,7 +716,7 @@ where
             McNetworkPlaceholder::NoChanges => {}
         }
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
-            sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
+        sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
     };
 
     let res = if let Some(states) = states {
@@ -978,7 +978,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     }
     println!("put({key}, {value}): {} states collected", states.len());
 
-
     let strategy_config = mc_query_strategy(&replicas[1], McQueryPlaceholder::PutQuery(key.clone(), value2.clone()));
     let msg2 = Message::json(
         "PUT",
@@ -1002,7 +1001,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         return Err(format!("put({key}, {value2}) response is not received"));
     }
     println!("put({key}, {value2}): {} states collected", states.len());
-
 
     // now reset the network state and ask the third replica about the key's value
     // we expect the value written later (value2) to be returned
