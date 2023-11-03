@@ -13,6 +13,6 @@ pub mod predicates;
 pub mod state;
 pub mod strategies;
 pub mod strategy;
-mod system;
+pub mod system;
 mod trace_handler;
 mod util;

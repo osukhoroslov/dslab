@@ -1,3 +1,5 @@
+//! Distributed system dslab-mp model implementation for model checker.
+
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
@@ -15,8 +17,10 @@ use crate::mc::state::McState;
 use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
 
+/// McTime is used for specifying delays in McSystem.
 pub type McTime = OrderedFloat<f64>;
 
+/// McSystem is used to provide dslab-mp-like System entity with model checker support.
 #[derive(Clone)]
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
@@ -28,6 +32,7 @@ pub struct McSystem {
 }
 
 impl McSystem {
+    /// Creates a new McSystem.
     pub fn new(
         nodes: HashMap<String, McNode>,
         net: McNetwork,
@@ -44,7 +49,7 @@ impl McSystem {
         }
     }
 
-    pub fn apply_event(&mut self, event: McEvent) {
+    pub(crate) fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
@@ -70,6 +75,7 @@ impl McSystem {
         self.add_events(new_events);
     }
 
+    /// Sends a local message to the process.
     pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
     where
         S: Into<String>,
@@ -91,10 +97,12 @@ impl McSystem {
         self.add_events(new_events);
     }
 
+    /// Change event ordering mode for a system to change MC behavior. 
     pub fn set_event_ordering_mode(&mut self, mode: EventOrderingMode) {
         self.event_ordering_mode = mode;
     }
 
+    /// Crashes the specified node.
     pub fn crash_node<S>(&mut self, node: S)
     where
         S: Into<String>,
@@ -112,18 +120,21 @@ impl McSystem {
         self.nodes.get_mut(&node).unwrap().crash();
     }
 
+    /// Creates a network partition between two groups of nodes.
     pub fn network_partition(&mut self, group1: Vec<String>, group2: Vec<String>) {
         self.net.partition(&group1, &group2);
         self.trace_handler
             .borrow_mut()
             .push(LogEntry::McNetworkPartition { group1, group2 });
     }
+
+    /// Resets network.
     pub fn network_reset(&mut self) {
         self.net.reset();
         self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
     }
 
-    pub fn get_state(&self) -> McState {
+    pub(crate) fn get_state(&self) -> McState {
         let mut state = McState::new(
             self.events.clone(),
             self.depth,
@@ -136,7 +147,7 @@ impl McSystem {
         state
     }
 
-    pub fn set_state(&mut self, state: McState) {
+    pub(crate) fn set_state(&mut self, state: McState) {
         for (name, node_state) in state.node_states {
             self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
@@ -146,14 +157,16 @@ impl McSystem {
         self.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
-    pub fn available_events(&self) -> BTreeSet<McEventId> {
+    pub(crate) fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events(&self.event_ordering_mode)
     }
 
-    pub fn depth(&self) -> u64 {
+    pub(crate) fn depth(&self) -> u64 {
         self.depth
     }
 
+
+    /// Returns network state
     pub fn network(&mut self) -> &mut McNetwork {
         &mut self.net
     }
