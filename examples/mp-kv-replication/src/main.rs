@@ -758,6 +758,7 @@ fn mc_stabilize(sys: &mut System, states: HashSet<McState>) -> Result<McStats, S
 
 fn test_mc_basic(config: &TestConfig) -> TestResult {
     let sys = build_system(config);
+    let procs = sys.process_names();
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
     let mut mc = ModelChecker::new(&sys);
@@ -769,7 +770,7 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
     // stage 1: get key from the first node
-    let stage1_strategy = mc_query_strategy(&replicas[0], McQueryPlaceholder::GetQuery(key.clone(), None));
+    let stage1_strategy = mc_query_strategy(&procs[0], McQueryPlaceholder::GetQuery(key.clone(), None));
     let stage1_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage1_states = run_mc(&mut mc, stage1_strategy, &replicas[0], stage1_msg, None, None)?.collected_states;
     println!("stage 1: {}", stage1_states.len());
@@ -821,13 +822,13 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
 
     let mut mc = ModelChecker::new(&sys);
 
-    let key: String = random_string(8, &mut rand).to_uppercase();
+    let key = random_string(8, &mut rand).to_uppercase();
     let replicas = key_replicas(&key, &sys);
     let non_replicas = key_non_replicas(&key, &sys);
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
-    // stage 1: get key from the first node (with partition of network)
+    // stage 1: get key from the first replica (during the network partition)
     let stage1_strategy = mc_query_strategy(&replicas[0], McQueryPlaceholder::GetQuery(key.clone(), None));
     let stage1_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage1_states = run_mc(
@@ -852,7 +853,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
         return Err("stage 1 has no positive outcomes".to_owned());
     }
 
-    // stage 2: put key to the first replica
+    // stage 2: put key from the first replica (network partition still exists)
     let value = random_string(8, &mut rand);
     mc = ModelChecker::new(&sys);
 
@@ -878,7 +879,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
         return Err("stage 3 has no positive outcomes".to_owned());
     }
 
-    // stage 4: get key from the last replica (again after network partition)
+    // stage 4: get key from the last replica (again during the network partition)
     let stage4_strategy = mc_query_strategy(&replicas[2], McQueryPlaceholder::GetQuery(key.clone(), Some(value)));
     let stage4_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage4_states = run_mc(
@@ -909,16 +910,17 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     let sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
+    let mut mc = ModelChecker::new(&sys);
+
     let key = random_string(8, &mut rand).to_uppercase();
     let replicas = key_replicas(&key, &sys);
     let non_replicas = key_non_replicas(&key, &sys);
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
-    // isolate replicas
+    // isolate the first two replicas
     sys.network().disconnect_node(&replicas[0]);
     sys.network().disconnect_node(&replicas[1]);
-    let mut mc = ModelChecker::new(&sys);
 
     // put (key, value) to the first replica
     // and then put (key, value2) to the second replica
@@ -948,8 +950,8 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         e.print_trace();
         return Err(e.message());
     }
-    let start_states = res.unwrap().collected_states;
-    if start_states.is_empty() {
+    let states = res.unwrap().collected_states;
+    if states.is_empty() {
         return Err(format!("put({key}, {value}) has no positive outcomes"));
     }
 
@@ -957,7 +959,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         .goal(goals::got_n_local_messages(&replicas[1], &replicas[1], 1))
         .collect(collects::got_n_local_messages(&replicas[1], &replicas[1], 1));
 
-    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, start_states, |sys| {
+    let res = mc.run_from_states_with_change::<Bfs>(strategy_config, states, |sys| {
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
         sys.send_local_message(
             replicas[1].clone(),
@@ -976,19 +978,20 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         e.print_trace();
         return Err(e.message());
     }
-    let start_states = res.unwrap().collected_states;
-    if start_states.is_empty() {
+    let states = res.unwrap().collected_states;
+    if states.is_empty() {
         return Err(format!("put({key}, {value2}) has no positive outcomes"));
     }
-    // Now reset the network state and ask all replicas to agree about value for key
-    // We expect the later one to be agreed on which is value2
+
+    // now reset the network state and ask the third replica about the key's value
+    // we expect the value written later (value2) to be returned
     let strategy_config = mc_query_strategy(
         &replicas[2],
         McQueryPlaceholder::GetQuery(key.to_string(), Some(value2.to_string())),
     );
     let msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 3 });
-    let start_states = run_mc(&mut mc, strategy_config, &replicas[2], msg, None, Some(start_states))?.collected_states;
-    if start_states.is_empty() {
+    let states = run_mc(&mut mc, strategy_config, &replicas[2], msg, None, Some(states))?.collected_states;
+    if states.is_empty() {
         return Err(format!("get({key}) has no positive outcomes"));
     }
     Ok(true)
