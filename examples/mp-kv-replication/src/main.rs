@@ -772,7 +772,7 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     // stage 1: get key from the first node
     let stage1_strategy = mc_query_strategy(&procs[0], McQueryPlaceholder::GetQuery(key.clone(), None));
     let stage1_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
-    let stage1_states = run_mc(&mut mc, stage1_strategy, &replicas[0], stage1_msg, None, None)?.collected_states;
+    let stage1_states = run_mc(&mut mc, stage1_strategy, &procs[0], stage1_msg, None, None)?.collected_states;
     println!("stage 1: {}", stage1_states.len());
     if stage1_states.is_empty() {
         return Err("stage 1 has no positive outcomes".to_owned());
