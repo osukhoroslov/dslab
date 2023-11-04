@@ -369,6 +369,7 @@ pub mod collects {
     pub fn state_depth(depth: u64) -> CollectFn {
         boxed!(move |state: &McState| { state.depth > depth })
     }
+
     /// Collects states where the number of events matching the predicate is more than the limit.
     pub fn events_limit<F>(predicate: F, limit: usize) -> CollectFn
     where
