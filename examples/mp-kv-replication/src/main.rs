@@ -937,7 +937,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     let sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-    let mut mc = ModelChecker::new(&sys);
 
     let key = random_string(8, &mut rand).to_uppercase();
     let replicas = key_replicas(&key, &sys);
@@ -949,6 +948,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     for proc in sys.process_names() {
         sys.network().disconnect_node(&proc);
     }
+    let mut mc = ModelChecker::new(&sys);
 
     // put (key, value) to the first replica
     // and then put (key, value2) to the second replica
@@ -1064,7 +1064,7 @@ fn main() {
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
 
     let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
-    let mut config = TestConfig {
+    let config = TestConfig {
         proc_factory: &proc_factory,
         proc_count: args.proc_count,
         seed: args.seed,
@@ -1089,7 +1089,6 @@ fn main() {
         test_mc_sloppy_quorum_hinted_handoff,
         config,
     );
-    config.proc_count = 4;
     tests.add("MC CONCURRENT", test_mc_concurrent, config);
 
     if args.test.is_none() {
