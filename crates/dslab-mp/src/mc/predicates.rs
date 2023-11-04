@@ -1,6 +1,6 @@
 //! Standard predicate implementations that can be used in model checking strategy.
 
-use crate::mc::state::McState;
+use crate::{logger::LogEntry, mc::state::McState};
 
 pub(crate) fn default_prune(_: &McState) -> Option<String> {
     None
@@ -16,6 +16,13 @@ pub(crate) fn default_invariant(_: &McState) -> Result<(), String> {
 
 pub(crate) fn default_collect(_: &McState) -> bool {
     false
+}
+
+pub(crate) fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
+where
+    F: Fn(&LogEntry) -> bool,
+{
+    state.trace.iter().filter(|x| predicate(x)).count()
 }
 
 /// Invariants check whether state is correct or not.
@@ -206,6 +213,7 @@ pub mod prunes {
     use sugars::boxed;
 
     use crate::logger::LogEntry;
+    use crate::mc::predicates::count_events_in_trace;
     use crate::mc::state::McState;
     use crate::mc::strategy::PruneFn;
 
@@ -298,13 +306,6 @@ pub mod prunes {
             None
         })
     }
-
-    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
-    where
-        F: Fn(&LogEntry) -> bool,
-    {
-        state.trace.iter().filter(|x| predicate(x)).count()
-    }
 }
 
 /// Collects select states that should be collected for complex pipelining in MC.
@@ -312,6 +313,7 @@ pub mod collects {
     use sugars::boxed;
 
     use crate::logger::LogEntry;
+    use crate::mc::predicates::count_events_in_trace;
     use crate::mc::state::McState;
     use crate::mc::strategy::CollectFn;
 
@@ -379,12 +381,5 @@ pub mod collects {
             let event_count = count_events_in_trace(&predicate, state);
             event_count > limit
         })
-    }
-
-    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
-    where
-        F: Fn(&LogEntry) -> bool,
-    {
-        state.trace.iter().filter(|x| predicate(x)).count()
     }
 }
