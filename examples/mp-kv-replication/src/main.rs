@@ -937,7 +937,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     let sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
 
-
     let key = random_string(8, &mut rand).to_uppercase();
     let replicas = key_replicas(&key, &sys);
     let non_replicas = key_non_replicas(&key, &sys);
