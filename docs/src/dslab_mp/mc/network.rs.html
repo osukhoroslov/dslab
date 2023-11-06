@@ -120,7 +120,49 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefMut;
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Network implementation for model checking mode.
+
+</span><span class="kw">use </span>std::cell::RefMut;
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
 
 <span class="kw">use </span>serde::Serialize;
@@ -132,19 +174,26 @@
 
 <span class="kw">const </span>DUPL_COUNT: u32 = <span class="number">2</span>;
 
-<span class="attr">#[derive(Serialize, Clone, PartialEq, Eq, Hash, Debug)]
+<span class="doccomment">/// Specifies expected network behaviour regarding delivery of a message.
+</span><span class="attr">#[derive(Serialize, Clone, PartialEq, Eq, Hash, Debug)]
 </span><span class="kw">pub enum </span>DeliveryOptions {
     <span class="doccomment">/// Message will be received exactly once without corruption with specified max delay
     </span>NoFailures(McTime),
     <span class="doccomment">/// Message delivery may be subject to some failures
     </span>PossibleFailures {
-        can_be_dropped: bool,
-        max_dupl_count: u32,
-        can_be_corrupted: bool,
+        <span class="doccomment">/// Specifies whether the message can be dropped.
+        </span>can_be_dropped: bool,
+        <span class="doccomment">/// Specifies the maximum number of message duplicates.
+        </span>max_dupl_count: u32,
+        <span class="doccomment">/// Specifies whether the message can be corrupted.
+        </span>can_be_corrupted: bool,
     },
 }
 
-<span class="attr">#[derive(Debug, Clone)]
+<span class="doccomment">/// Represents a network that transmits messages between processes located on different nodes.
+///
+/// Analogue of [`crate::network::Network`] for model checking mode.
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>McNetwork {
     corrupt_rate: f64,
     dupl_rate: f64,
@@ -170,16 +219,75 @@
         }
     }
 
-    <span class="kw">pub fn </span>get_proc_node(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>String) -&gt; <span class="kw-2">&amp;</span>String {
+    <span class="doccomment">/// Returns the name of node hosting the process.
+    </span><span class="kw">pub fn </span>get_proc_node(<span class="kw-2">&amp;</span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>String) -&gt; <span class="kw-2">&amp;</span>String {
         <span class="kw-2">&amp;</span><span class="self">self</span>.proc_locations[proc]
     }
 
-    <span class="kw">pub fn </span>disconnect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) {
+    <span class="doccomment">/// Returns the maximum network delay.
+    </span><span class="kw">pub fn </span>max_delay(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
+        <span class="self">self</span>.max_delay
+    }
+
+    <span class="doccomment">/// Sets the message drop probability.
+    </span><span class="kw">pub fn </span>set_drop_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, drop_rate: f64) {
+        <span class="self">self</span>.drop_rate = drop_rate;
+    }
+
+    <span class="doccomment">/// Sets the message duplication probability.
+    </span><span class="kw">pub fn </span>set_dupl_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dupl_rate: f64) {
+        <span class="self">self</span>.dupl_rate = dupl_rate;
+    }
+
+    <span class="doccomment">/// Sets the message corruption probability.
+    </span><span class="kw">pub fn </span>set_corrupt_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, corrupt_rate: f64) {
+        <span class="self">self</span>.corrupt_rate = corrupt_rate;
+    }
+
+    <span class="doccomment">/// Enables dropping of incoming messages for a node.
+    </span><span class="kw">pub fn </span>drop_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.drop_incoming.insert(node.to_string());
+    }
+
+    <span class="doccomment">/// Enables dropping of outgoing messages for a node.
+    </span><span class="kw">pub fn </span>drop_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.drop_outgoing.insert(node.to_string());
+    }
+
+    <span class="doccomment">/// Disconnects a node from the network.
+    ///
+    /// Equivalent to enabling dropping of both incoming and outgoing messages for a node.
+    </span><span class="kw">pub fn </span>disconnect_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, proc: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.drop_incoming.insert(proc.to_string());
         <span class="self">self</span>.drop_outgoing.insert(proc.to_string());
     }
 
-    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: String, dst: String) -&gt; McEvent {
+    <span class="doccomment">/// Disables link between nodes `from` and `to` by dropping all messages sent in this direction.
+    </span><span class="kw">pub fn </span>disable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.disabled_links.insert((from.to_string(), to.to_string()));
+    }
+
+    <span class="doccomment">/// Creates a network partition between two groups of nodes.
+    </span><span class="kw">pub fn </span>partition(<span class="kw-2">&amp;mut </span><span class="self">self</span>, group1: <span class="kw-2">&amp;</span>Vec&lt;String&gt;, group2: <span class="kw-2">&amp;</span>Vec&lt;String&gt;) {
+        <span class="kw">for </span>node1 <span class="kw">in </span>group1 {
+            <span class="kw">for </span>node2 <span class="kw">in </span>group2 {
+                <span class="self">self</span>.disable_link(node1, node2);
+                <span class="self">self</span>.disable_link(node2, node1);
+            }
+        }
+    }
+
+    <span class="doccomment">/// Resets the network links by enabling all links
+    /// and disabling dropping of incoming/outgoing messages for all nodes.
+    ///
+    /// Note that this does not affect the `drop_rate` setting.
+    </span><span class="kw">pub fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.disabled_links.clear();
+        <span class="self">self</span>.drop_incoming.clear();
+        <span class="self">self</span>.drop_outgoing.clear();
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>send_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, src: String, dst: String) -&gt; McEvent {
         <span class="kw">let </span>src_node = <span class="self">self</span>.get_proc_node(<span class="kw-2">&amp;</span>src).clone();
         <span class="kw">let </span>dst_node = <span class="self">self</span>.get_proc_node(<span class="kw-2">&amp;</span>dst).clone();
 
@@ -212,34 +320,6 @@
                 receive_event_id: <span class="prelude-val">None</span>,
             }
         }
-    }
-
-    <span class="kw">pub fn </span>drop_outgoing(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
-        <span class="self">self</span>.drop_outgoing.insert(node.to_string());
-    }
-
-    <span class="kw">pub fn </span>drop_incoming(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>str) {
-        <span class="self">self</span>.drop_incoming.insert(node.to_string());
-    }
-
-    <span class="kw">pub fn </span>disable_link(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: <span class="kw-2">&amp;</span>str, to: <span class="kw-2">&amp;</span>str) {
-        <span class="self">self</span>.disabled_links.insert((from.to_string(), to.to_string()));
-    }
-
-    <span class="kw">pub fn </span>set_corrupt_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, corrupt_rate: f64) {
-        <span class="self">self</span>.corrupt_rate = corrupt_rate;
-    }
-
-    <span class="kw">pub fn </span>set_dupl_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dupl_rate: f64) {
-        <span class="self">self</span>.dupl_rate = dupl_rate;
-    }
-
-    <span class="kw">pub fn </span>set_drop_rate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, drop_rate: f64) {
-        <span class="self">self</span>.drop_rate = drop_rate;
-    }
-
-    <span class="kw">pub fn </span>max_delay(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f64 {
-        <span class="self">self</span>.max_delay
     }
 }
 </code></pre></div></section></main></body></html>

@@ -486,6 +486,17 @@
 <a href="#486" id="486">486</a>
 <a href="#487" id="487">487</a>
 <a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Logging facilities.
 
 </span><span class="kw">use </span>std::{
@@ -772,6 +783,11 @@
     McNodeCrashed {
         node: String,
     },
+    McNetworkReset {},
+    McNetworkPartition {
+        group1: Vec&lt;String&gt;,
+        group2: Vec&lt;String&gt;,
+    },
 }
 
 <span class="kw">impl </span>LogEntry {
@@ -935,6 +951,12 @@
             }
             LogEntry::McNodeCrashed { node } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;node crashed: {}&quot;</span>, node).red());
+            }
+            LogEntry::McNetworkReset {} =&gt; {
+                <span class="macro">t!</span>(<span class="string">&quot;network reset, all problems healed&quot;</span>.to_string().green());
+            }
+            LogEntry::McNetworkPartition { group1, group2 } =&gt; {
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;network partition: {:?} -x- {:?}&quot;</span>, group1, group2).red());
             }
         }
     }

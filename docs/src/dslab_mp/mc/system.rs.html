@@ -179,7 +179,20 @@
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! System implementation for model checking mode.
+
+</span><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::hash_map::DefaultHasher;
 <span class="kw">use </span>std::collections::{BTreeSet, HashMap};
 <span class="kw">use </span>std::hash::{Hash, Hasher};
@@ -196,9 +209,13 @@
 <span class="kw">use </span><span class="kw">crate</span>::mc::trace_handler::TraceHandler;
 <span class="kw">use </span><span class="kw">crate</span>::message::Message;
 
-<span class="kw">pub type </span>McTime = OrderedFloat&lt;f64&gt;;
+<span class="doccomment">/// Used for specifying delays.
+</span><span class="kw">pub type </span>McTime = OrderedFloat&lt;f64&gt;;
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// Models distributed system consisting of multiple nodes connected via network.
+///
+/// Analogue of [`crate::system::System`] for model checking mode.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>McSystem {
     nodes: HashMap&lt;String, McNode&gt;,
     net: McNetwork,
@@ -209,7 +226,8 @@
 }
 
 <span class="kw">impl </span>McSystem {
-    <span class="kw">pub fn </span>new(
+    <span class="doccomment">/// Creates a new system.
+    </span><span class="kw">pub fn </span>new(
         nodes: HashMap&lt;String, McNode&gt;,
         net: McNetwork,
         events: PendingEvents,
@@ -225,7 +243,57 @@
         }
     }
 
-    <span class="kw">pub fn </span>apply_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: McEvent) {
+    <span class="doccomment">/// Sends a local message to the process.
+    </span><span class="kw">pub fn </span>send_local_message&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: S, proc: S, msg: Message)
+    <span class="kw">where
+        </span>S: Into&lt;String&gt;,
+    {
+        <span class="kw">let </span>node = node.into();
+        <span class="kw">let </span>proc = proc.into();
+        <span class="kw">let </span>event_time = <span class="self">Self</span>::get_approximate_event_time(<span class="self">self</span>.depth);
+        <span class="kw">let </span>state_hash = <span class="self">self</span>.get_state_hash();
+
+        <span class="self">self</span>.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
+            msg: msg.clone(),
+            proc: proc.clone(),
+        });
+        <span class="kw">let </span>new_events = <span class="self">self
+            </span>.nodes
+            .get_mut(<span class="kw-2">&amp;</span>node)
+            .unwrap()
+            .on_local_message_received(proc, msg, event_time, state_hash);
+        <span class="self">self</span>.add_events(new_events);
+    }
+
+    <span class="doccomment">/// Sets the used [`EventOrderingMode`].
+    </span><span class="kw">pub fn </span>set_event_ordering_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mode: EventOrderingMode) {
+        <span class="self">self</span>.event_ordering_mode = mode;
+    }
+
+    <span class="doccomment">/// Crashes the specified node.
+    </span><span class="kw">pub fn </span>crash_node&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: S)
+    <span class="kw">where
+        </span>S: Into&lt;String&gt;,
+    {
+        <span class="kw">let </span>node = node.into();
+        <span class="self">self</span>.trace_handler
+            .borrow_mut()
+            .push(LogEntry::McNodeCrashed { node: node.clone() });
+        <span class="self">self</span>.net.disconnect_node(<span class="kw-2">&amp;</span>node);
+        <span class="kw">for </span>proc <span class="kw">in </span><span class="self">self</span>.nodes[<span class="kw-2">&amp;</span>node].processes.keys() {
+            <span class="kw">for </span>destruction_event <span class="kw">in </span><span class="self">self</span>.events.cancel_proc_events(proc) {
+                <span class="self">self</span>.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
+            }
+        }
+        <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>node).unwrap().crash();
+    }
+
+    <span class="doccomment">/// Returns a mutable reference to [`McNetwork`].
+    </span><span class="kw">pub fn </span>network(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>McNetwork {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.net
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>apply_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: McEvent) {
         <span class="self">self</span>.depth += <span class="number">1</span>;
         <span class="self">self</span>.trace_handler.borrow_mut().push(event.to_log_entry());
         <span class="kw">let </span>event_time = <span class="self">Self</span>::get_approximate_event_time(<span class="self">self</span>.depth);
@@ -251,49 +319,7 @@
         <span class="self">self</span>.add_events(new_events);
     }
 
-    <span class="kw">pub fn </span>send_local_message&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: S, proc: S, msg: Message)
-    <span class="kw">where
-        </span>S: Into&lt;String&gt;,
-    {
-        <span class="kw">let </span>node = node.into();
-        <span class="kw">let </span>proc = proc.into();
-        <span class="kw">let </span>event_time = <span class="self">Self</span>::get_approximate_event_time(<span class="self">self</span>.depth);
-        <span class="kw">let </span>state_hash = <span class="self">self</span>.get_state_hash();
-
-        <span class="self">self</span>.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
-            msg: msg.clone(),
-            proc: proc.clone(),
-        });
-        <span class="kw">let </span>new_events = <span class="self">self
-            </span>.nodes
-            .get_mut(<span class="kw-2">&amp;</span>node)
-            .unwrap()
-            .on_local_message_received(proc, msg, event_time, state_hash);
-        <span class="self">self</span>.add_events(new_events);
-    }
-
-    <span class="kw">pub fn </span>set_event_ordering_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mode: EventOrderingMode) {
-        <span class="self">self</span>.event_ordering_mode = mode;
-    }
-
-    <span class="kw">pub fn </span>crash_node&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: S)
-    <span class="kw">where
-        </span>S: Into&lt;String&gt;,
-    {
-        <span class="kw">let </span>node = node.into();
-        <span class="self">self</span>.trace_handler
-            .borrow_mut()
-            .push(LogEntry::McNodeCrashed { node: node.clone() });
-        <span class="self">self</span>.net.disconnect_node(<span class="kw-2">&amp;</span>node);
-        <span class="kw">for </span>proc <span class="kw">in </span><span class="self">self</span>.nodes[<span class="kw-2">&amp;</span>node].processes.keys() {
-            <span class="kw">for </span>destruction_event <span class="kw">in </span><span class="self">self</span>.events.cancel_proc_events(proc) {
-                <span class="self">self</span>.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
-            }
-        }
-        <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>node).unwrap().crash();
-    }
-
-    <span class="kw">pub fn </span>get_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; McState {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; McState {
         <span class="kw">let </span><span class="kw-2">mut </span>state = McState::new(
             <span class="self">self</span>.events.clone(),
             <span class="self">self</span>.depth,
@@ -306,7 +332,7 @@
         state
     }
 
-    <span class="kw">pub fn </span>set_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: McState) {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: McState) {
         <span class="kw">for </span>(name, node_state) <span class="kw">in </span>state.node_states {
             <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>name).unwrap().set_state(node_state);
         }
@@ -316,16 +342,12 @@
         <span class="self">self</span>.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
-    <span class="kw">pub fn </span>available_events(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BTreeSet&lt;McEventId&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>available_events(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BTreeSet&lt;McEventId&gt; {
         <span class="self">self</span>.events.available_events(<span class="kw-2">&amp;</span><span class="self">self</span>.event_ordering_mode)
     }
 
-    <span class="kw">pub fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.depth
-    }
-
-    <span class="kw">pub fn </span>network(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>McNetwork {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.net
     }
 
     <span class="kw">fn </span>add_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>, events: Vec&lt;McEvent&gt;) {

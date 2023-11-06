@@ -355,9 +355,37 @@
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Standard predicate implementations that can be used in model checking strategy.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
+</span><span class="kw">use crate</span>::{logger::LogEntry, mc::state::McState};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>default_prune(<span class="kw">_</span>: <span class="kw-2">&amp;</span>McState) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="prelude-val">None
@@ -374,6 +402,13 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>default_collect(<span class="kw">_</span>: <span class="kw-2">&amp;</span>McState) -&gt; bool {
     <span class="bool-val">false
 </span>}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>count_events_in_trace&lt;F&gt;(predicate: F, state: <span class="kw-2">&amp;</span>McState) -&gt; usize
+<span class="kw">where
+    </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool,
+{
+    state.trace.iter().filter(|x| predicate(x)).count()
+}
 
 <span class="doccomment">/// Invariants check whether state is correct or not.
 </span><span class="kw">pub mod </span>invariants {
@@ -563,6 +598,7 @@
     <span class="kw">use </span>sugars::boxed;
 
     <span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
+    <span class="kw">use </span><span class="kw">crate</span>::mc::predicates::count_events_in_trace;
     <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
     <span class="kw">use </span><span class="kw">crate</span>::mc::strategy::PruneFn;
 
@@ -605,6 +641,21 @@
         </span>})
     }
 
+    <span class="doccomment">/// Prunes state with at least `n` events matching the predicate.
+    </span><span class="kw">pub fn </span>event_happened_n_times_current_run&lt;F&gt;(predicate: F, n: usize) -&gt; PruneFn
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+    {
+        <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
+            <span class="kw">let </span>event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
+            <span class="kw">if </span>event_count &gt;= n {
+                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;event occured {n} times&quot;</span>))
+            } <span class="kw">else </span>{
+                <span class="prelude-val">None
+            </span>}
+        })
+    }
+
     <span class="doccomment">/// Prunes states where the number of events matching the predicate is more than the limit.
     </span><span class="kw">pub fn </span>events_limit&lt;F&gt;(predicate: F, limit: usize) -&gt; PruneFn
     <span class="kw">where
@@ -640,13 +691,6 @@
             <span class="prelude-val">None
         </span>})
     }
-
-    <span class="kw">fn </span>count_events_in_trace&lt;F&gt;(predicate: F, state: <span class="kw-2">&amp;</span>McState) -&gt; usize
-    <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool,
-    {
-        state.trace.iter().filter(|x| predicate(x)).count()
-    }
 }
 
 <span class="doccomment">/// Collects select states that should be collected for complex pipelining in MC.
@@ -654,6 +698,7 @@
     <span class="kw">use </span>sugars::boxed;
 
     <span class="kw">use </span><span class="kw">crate</span>::logger::LogEntry;
+    <span class="kw">use </span><span class="kw">crate</span>::mc::predicates::count_events_in_trace;
     <span class="kw">use </span><span class="kw">crate</span>::mc::state::McState;
     <span class="kw">use </span><span class="kw">crate</span>::mc::strategy::CollectFn;
 
@@ -710,6 +755,17 @@
     <span class="doccomment">/// Checks if current state&#39;s depth exceeds the given value.
     </span><span class="kw">pub fn </span>state_depth(depth: u64) -&gt; CollectFn {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| { state.depth &gt; depth })
+    }
+
+    <span class="doccomment">/// Collects states where the number of events matching the predicate is more than the limit.
+    </span><span class="kw">pub fn </span>events_limit&lt;F&gt;(predicate: F, limit: usize) -&gt; CollectFn
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+    {
+        <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
+            <span class="kw">let </span>event_count = count_events_in_trace(<span class="kw-2">&amp;</span>predicate, state);
+            event_count &gt; limit
+        })
     }
 }
 </code></pre></div></section></main></body></html>
