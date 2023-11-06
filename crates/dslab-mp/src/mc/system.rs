@@ -96,22 +96,7 @@ impl McSystem {
         self.nodes.get_mut(&node).unwrap().crash();
     }
 
-    /// Creates a network partition between two groups of nodes.
-    pub fn network_partition(&mut self, group1: Vec<String>, group2: Vec<String>) {
-        self.net.partition(&group1, &group2);
-        self.trace_handler
-            .borrow_mut()
-            .push(LogEntry::McNetworkPartition { group1, group2 });
-    }
-
-    /// Resets the network links by enabling all links
-    /// and disabling dropping of incoming/outgoing messages for all nodes.
-    pub fn network_reset(&mut self) {
-        self.net.reset();
-        self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
-    }
-
-    /// Returns network state
+    /// Returns a mutable reference to [`McNetwork`].
     pub fn network(&mut self) -> &mut McNetwork {
         &mut self.net
     }

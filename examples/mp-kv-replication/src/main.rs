@@ -711,8 +711,8 @@ where
 
     let callback = |sys: &mut McSystem| {
         match &network_change {
-            McNetworkChange::Partition([part1, part2]) => sys.network_partition(part1.clone(), part2.clone()),
-            McNetworkChange::Reset => sys.network_reset(),
+            McNetworkChange::Partition([part1, part2]) => sys.network().partition(&part1, &part2),
+            McNetworkChange::Reset => sys.network().reset(),
             McNetworkChange::None => {}
         }
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
@@ -747,7 +747,7 @@ fn mc_stabilize(sys: &mut System, states: HashSet<McState>) -> Result<McStats, S
         ]));
     let mut mc = ModelChecker::new(sys);
     let res = mc.run_from_states_with_change::<Bfs>(strategy_config, states, |sys| {
-        sys.network_reset();
+        sys.network().reset();
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
     });
     match res {

@@ -6,7 +6,7 @@ mod dependency;
 pub mod error;
 pub mod events;
 pub mod model_checker;
-mod network;
+pub mod network;
 mod node;
 mod pending_events;
 pub mod predicates;
