@@ -711,7 +711,7 @@ where
 
     let callback = |sys: &mut McSystem| {
         match &network_change {
-            McNetworkChange::Partition([part1, part2]) => sys.network().partition(&part1, &part2),
+            McNetworkChange::Partition([part1, part2]) => sys.network().partition(part1, part2),
             McNetworkChange::Reset => sys.network().reset(),
             McNetworkChange::None => {}
         }
