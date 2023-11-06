@@ -1,6 +1,6 @@
 //! Standard predicate implementations that can be used in model checking strategy.
 
-use crate::mc::state::McState;
+use crate::{logger::LogEntry, mc::state::McState};
 
 pub(crate) fn default_prune(_: &McState) -> Option<String> {
     None
@@ -16,6 +16,13 @@ pub(crate) fn default_invariant(_: &McState) -> Result<(), String> {
 
 pub(crate) fn default_collect(_: &McState) -> bool {
     false
+}
+
+pub(crate) fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
+where
+    F: Fn(&LogEntry) -> bool,
+{
+    state.trace.iter().filter(|x| predicate(x)).count()
 }
 
 /// Invariants check whether state is correct or not.
@@ -206,6 +213,7 @@ pub mod prunes {
     use sugars::boxed;
 
     use crate::logger::LogEntry;
+    use crate::mc::predicates::count_events_in_trace;
     use crate::mc::state::McState;
     use crate::mc::strategy::PruneFn;
 
@@ -248,6 +256,21 @@ pub mod prunes {
         })
     }
 
+    /// Prunes state with at least `n` events matching the predicate.
+    pub fn event_happened_n_times_current_run<F>(predicate: F, n: usize) -> PruneFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
+            if event_count >= n {
+                Some(format!("event occured {n} times"))
+            } else {
+                None
+            }
+        })
+    }
+
     /// Prunes states where the number of events matching the predicate is more than the limit.
     pub fn events_limit<F>(predicate: F, limit: usize) -> PruneFn
     where
@@ -283,13 +306,6 @@ pub mod prunes {
             None
         })
     }
-
-    fn count_events_in_trace<F>(predicate: F, state: &McState) -> usize
-    where
-        F: Fn(&LogEntry) -> bool,
-    {
-        state.trace.iter().filter(|x| predicate(x)).count()
-    }
 }
 
 /// Collects select states that should be collected for complex pipelining in MC.
@@ -297,6 +313,7 @@ pub mod collects {
     use sugars::boxed;
 
     use crate::logger::LogEntry;
+    use crate::mc::predicates::count_events_in_trace;
     use crate::mc::state::McState;
     use crate::mc::strategy::CollectFn;
 
@@ -353,5 +370,16 @@ pub mod collects {
     /// Checks if current state's depth exceeds the given value.
     pub fn state_depth(depth: u64) -> CollectFn {
         boxed!(move |state: &McState| { state.depth > depth })
+    }
+
+    /// Collects states where the number of events matching the predicate is more than the limit.
+    pub fn events_limit<F>(predicate: F, limit: usize) -> CollectFn
+    where
+        F: Fn(&LogEntry) -> bool + 'static,
+    {
+        boxed!(move |state: &McState| {
+            let event_count = count_events_in_trace(&predicate, state);
+            event_count > limit
+        })
     }
 }

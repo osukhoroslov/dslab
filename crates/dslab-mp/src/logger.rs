@@ -284,6 +284,11 @@ pub enum LogEntry {
     McNodeCrashed {
         node: String,
     },
+    McNetworkReset {},
+    McNetworkPartition {
+        group1: Vec<String>,
+        group2: Vec<String>,
+    },
 }
 
 impl LogEntry {
@@ -447,6 +452,12 @@ impl LogEntry {
             }
             LogEntry::McNodeCrashed { node } => {
                 t!(format!("node crashed: {}", node).red());
+            }
+            LogEntry::McNetworkReset {} => {
+                t!("network reset, all problems healed".to_string().green());
+            }
+            LogEntry::McNetworkPartition { group1, group2 } => {
+                t!(format!("network partition: {:?} -x- {:?}", group1, group2).red());
             }
         }
     }

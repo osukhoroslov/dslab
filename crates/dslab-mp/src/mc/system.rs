@@ -1,3 +1,5 @@
+//! System implementation for model checking mode.
+
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
@@ -15,8 +17,12 @@ use crate::mc::state::McState;
 use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
 
+/// Used for specifying delays.
 pub type McTime = OrderedFloat<f64>;
 
+/// Models distributed system consisting of multiple nodes connected via network.
+///
+/// Analogue of [`crate::system::System`] for model checking mode.
 #[derive(Clone)]
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
@@ -28,6 +34,7 @@ pub struct McSystem {
 }
 
 impl McSystem {
+    /// Creates a new system.
     pub fn new(
         nodes: HashMap<String, McNode>,
         net: McNetwork,
@@ -44,7 +51,57 @@ impl McSystem {
         }
     }
 
-    pub fn apply_event(&mut self, event: McEvent) {
+    /// Sends a local message to the process.
+    pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        let proc = proc.into();
+        let event_time = Self::get_approximate_event_time(self.depth);
+        let state_hash = self.get_state_hash();
+
+        self.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
+            msg: msg.clone(),
+            proc: proc.clone(),
+        });
+        let new_events = self
+            .nodes
+            .get_mut(&node)
+            .unwrap()
+            .on_local_message_received(proc, msg, event_time, state_hash);
+        self.add_events(new_events);
+    }
+
+    /// Sets the used [`EventOrderingMode`].
+    pub fn set_event_ordering_mode(&mut self, mode: EventOrderingMode) {
+        self.event_ordering_mode = mode;
+    }
+
+    /// Crashes the specified node.
+    pub fn crash_node<S>(&mut self, node: S)
+    where
+        S: Into<String>,
+    {
+        let node = node.into();
+        self.trace_handler
+            .borrow_mut()
+            .push(LogEntry::McNodeCrashed { node: node.clone() });
+        self.net.disconnect_node(&node);
+        for proc in self.nodes[&node].processes.keys() {
+            for destruction_event in self.events.cancel_proc_events(proc) {
+                self.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
+            }
+        }
+        self.nodes.get_mut(&node).unwrap().crash();
+    }
+
+    /// Returns a mutable reference to [`McNetwork`].
+    pub fn network(&mut self) -> &mut McNetwork {
+        &mut self.net
+    }
+
+    pub(crate) fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
         let event_time = Self::get_approximate_event_time(self.depth);
@@ -70,49 +127,7 @@ impl McSystem {
         self.add_events(new_events);
     }
 
-    pub fn send_local_message<S>(&mut self, node: S, proc: S, msg: Message)
-    where
-        S: Into<String>,
-    {
-        let node = node.into();
-        let proc = proc.into();
-        let event_time = Self::get_approximate_event_time(self.depth);
-        let state_hash = self.get_state_hash();
-
-        self.trace_handler.borrow_mut().push(LogEntry::McLocalMessageReceived {
-            msg: msg.clone(),
-            proc: proc.clone(),
-        });
-        let new_events = self
-            .nodes
-            .get_mut(&node)
-            .unwrap()
-            .on_local_message_received(proc, msg, event_time, state_hash);
-        self.add_events(new_events);
-    }
-
-    pub fn set_event_ordering_mode(&mut self, mode: EventOrderingMode) {
-        self.event_ordering_mode = mode;
-    }
-
-    pub fn crash_node<S>(&mut self, node: S)
-    where
-        S: Into<String>,
-    {
-        let node = node.into();
-        self.trace_handler
-            .borrow_mut()
-            .push(LogEntry::McNodeCrashed { node: node.clone() });
-        self.net.disconnect_node(&node);
-        for proc in self.nodes[&node].processes.keys() {
-            for destruction_event in self.events.cancel_proc_events(proc) {
-                self.trace_handler.borrow_mut().push(destruction_event.to_log_entry());
-            }
-        }
-        self.nodes.get_mut(&node).unwrap().crash();
-    }
-
-    pub fn get_state(&self) -> McState {
+    pub(crate) fn get_state(&self) -> McState {
         let mut state = McState::new(
             self.events.clone(),
             self.depth,
@@ -125,7 +140,7 @@ impl McSystem {
         state
     }
 
-    pub fn set_state(&mut self, state: McState) {
+    pub(crate) fn set_state(&mut self, state: McState) {
         for (name, node_state) in state.node_states {
             self.nodes.get_mut(&name).unwrap().set_state(node_state);
         }
@@ -135,16 +150,12 @@ impl McSystem {
         self.trace_handler.borrow_mut().set_trace(state.trace);
     }
 
-    pub fn available_events(&self) -> BTreeSet<McEventId> {
+    pub(crate) fn available_events(&self) -> BTreeSet<McEventId> {
         self.events.available_events(&self.event_ordering_mode)
     }
 
-    pub fn depth(&self) -> u64 {
+    pub(crate) fn depth(&self) -> u64 {
         self.depth
-    }
-
-    pub fn network(&mut self) -> &mut McNetwork {
-        &mut self.net
     }
 
     fn add_events(&mut self, events: Vec<McEvent>) {
