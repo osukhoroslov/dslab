@@ -658,23 +658,23 @@ where
     })
 }
 
-enum McQueryPlaceholder {
-    GetQuery(String, Option<String>),
-    PutQuery(String, String),
+enum McQuery {
+    Get(String, Option<String>),
+    Put(String, String),
 }
 
-enum McNetworkPlaceholder {
-    NoChanges,
+enum McNetworkChange {
+    None,
     Reset,
     Partition([Vec<String>; 2]),
 }
 
-fn mc_query_strategy(proc: &str, query_data: McQueryPlaceholder) -> StrategyConfig {
+fn mc_query_strategy(proc: &str, query_data: McQuery) -> StrategyConfig {
     let proc_name = proc.to_string();
 
     let invariant = match query_data {
-        McQueryPlaceholder::GetQuery(key, expected) => mc_get_invariant(proc, key, expected),
-        McQueryPlaceholder::PutQuery(key, value) => mc_put_invariant(proc, key, value),
+        McQuery::Get(key, expected) => mc_get_invariant(proc, key, expected),
+        McQuery::Put(key, value) => mc_put_invariant(proc, key, value),
     };
 
     StrategyConfig::default()
@@ -701,7 +701,7 @@ fn run_mc<S>(
     strategy_config: StrategyConfig,
     proc: S,
     msg: Message,
-    network: McNetworkPlaceholder,
+    network_change: McNetworkChange,
     states: Option<HashSet<McState>>,
 ) -> Result<McStats, String>
 where
@@ -710,10 +710,10 @@ where
     let proc = proc.into();
 
     let callback = |sys: &mut McSystem| {
-        match &network {
-            McNetworkPlaceholder::Partition([part1, part2]) => sys.network_partition(part1.clone(), part2.clone()),
-            McNetworkPlaceholder::Reset => sys.network_reset(),
-            McNetworkPlaceholder::NoChanges => {}
+        match &network_change {
+            McNetworkChange::Partition([part1, part2]) => sys.network_partition(part1.clone(), part2.clone()),
+            McNetworkChange::Reset => sys.network_reset(),
+            McNetworkChange::None => {}
         }
         sys.set_event_ordering_mode(EventOrderingMode::MessagesFirst);
         sys.send_local_message(proc.clone(), proc.clone(), msg.clone());
@@ -773,14 +773,14 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
     // stage 1: get key from the first node
-    let stage1_strategy = mc_query_strategy(&procs[0], McQueryPlaceholder::GetQuery(key.clone(), None));
+    let stage1_strategy = mc_query_strategy(&procs[0], McQuery::Get(key.clone(), None));
     let stage1_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage1_states = run_mc(
         &mut mc,
         stage1_strategy,
         &procs[0],
         stage1_msg,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         None,
     )?
     .collected_states;
@@ -793,7 +793,7 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     mc = ModelChecker::new(&sys);
 
-    let stage2_strategy = mc_query_strategy(&replicas[0], McQueryPlaceholder::PutQuery(key.clone(), value.clone()));
+    let stage2_strategy = mc_query_strategy(&replicas[0], McQuery::Put(key.clone(), value.clone()));
     let stage2_msg = Message::json(
         "PUT",
         &PutReqMessage {
@@ -807,7 +807,7 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
         stage2_strategy,
         &replicas[0],
         stage2_msg,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         None,
     )?
     .collected_states;
@@ -817,14 +817,14 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     }
 
     // stage 3: get key from the last replica
-    let stage3_strategy = mc_query_strategy(&replicas[2], McQueryPlaceholder::GetQuery(key.clone(), Some(value)));
+    let stage3_strategy = mc_query_strategy(&replicas[2], McQuery::Get(key.clone(), Some(value)));
     let stage3_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage3_states = run_mc(
         &mut mc,
         stage3_strategy,
         &replicas[2],
         stage3_msg,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         Some(stage2_states),
     )?
     .collected_states;
@@ -848,14 +848,14 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
     // stage 1: get key from the first replica (during the network partition)
-    let stage1_strategy = mc_query_strategy(&replicas[0], McQueryPlaceholder::GetQuery(key.clone(), None));
+    let stage1_strategy = mc_query_strategy(&replicas[0], McQuery::Get(key.clone(), None));
     let stage1_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage1_states = run_mc(
         &mut mc,
         stage1_strategy,
         &replicas[0],
         stage1_msg,
-        McNetworkPlaceholder::Partition([
+        McNetworkChange::Partition([
             vec![
                 replicas[0].clone(),
                 non_replicas[0].clone(),
@@ -876,7 +876,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     mc = ModelChecker::new(&sys);
 
-    let stage2_strategy = mc_query_strategy(&replicas[0], McQueryPlaceholder::PutQuery(key.clone(), value.clone()));
+    let stage2_strategy = mc_query_strategy(&replicas[0], McQuery::Put(key.clone(), value.clone()));
     let stage2_msg = Message::json(
         "PUT",
         &PutReqMessage {
@@ -890,7 +890,7 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
         stage2_strategy,
         &replicas[0],
         stage2_msg,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         None,
     )?
     .collected_states;
@@ -907,14 +907,14 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
     }
 
     // stage 4: get key from the last replica (again during the network partition)
-    let stage4_strategy = mc_query_strategy(&replicas[2], McQueryPlaceholder::GetQuery(key.clone(), Some(value)));
+    let stage4_strategy = mc_query_strategy(&replicas[2], McQuery::Get(key.clone(), Some(value)));
     let stage4_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage4_states = run_mc(
         &mut mc,
         stage4_strategy,
         &replicas[2],
         stage4_msg,
-        McNetworkPlaceholder::Partition([
+        McNetworkChange::Partition([
             vec![
                 replicas[0].clone(),
                 non_replicas[0].clone(),
@@ -954,7 +954,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     let value = random_string(8, &mut rand);
     let value2 = random_string(8, &mut rand);
 
-    let strategy_config = mc_query_strategy(&replicas[0], McQueryPlaceholder::PutQuery(key.clone(), value.clone()));
+    let strategy_config = mc_query_strategy(&replicas[0], McQuery::Put(key.clone(), value.clone()));
     let msg1 = Message::json(
         "PUT",
         &PutReqMessage {
@@ -968,7 +968,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         strategy_config,
         &replicas[0],
         msg1,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         None,
     )?
     .collected_states;
@@ -977,7 +977,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     }
     println!("put({key}, {value}): {} states collected", states.len());
 
-    let strategy_config = mc_query_strategy(&replicas[1], McQueryPlaceholder::PutQuery(key.clone(), value2.clone()));
+    let strategy_config = mc_query_strategy(&replicas[1], McQuery::Put(key.clone(), value2.clone()));
     let msg2 = Message::json(
         "PUT",
         &PutReqMessage {
@@ -991,7 +991,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         strategy_config,
         &replicas[1],
         msg2,
-        McNetworkPlaceholder::NoChanges,
+        McNetworkChange::None,
         Some(states),
     )?
     .collected_states;
@@ -1003,17 +1003,14 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
 
     // now reset the network state and ask the third replica about the key's value
     // we expect the value written later (value2) to be returned
-    let strategy_config = mc_query_strategy(
-        &replicas[2],
-        McQueryPlaceholder::GetQuery(key.to_string(), Some(value2.to_string())),
-    );
+    let strategy_config = mc_query_strategy(&replicas[2], McQuery::Get(key.to_string(), Some(value2.to_string())));
     let msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 3 });
     let states = run_mc(
         &mut mc,
         strategy_config,
         &replicas[2],
         msg,
-        McNetworkPlaceholder::Reset,
+        McNetworkChange::Reset,
         Some(states),
     )?
     .collected_states;
