@@ -1,4 +1,4 @@
-//! Distributed system dslab-mp model implementation for model checker.
+//! System implementation for model checking mode.
 
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
@@ -17,10 +17,12 @@ use crate::mc::state::McState;
 use crate::mc::trace_handler::TraceHandler;
 use crate::message::Message;
 
-/// McTime is used for specifying delays in McSystem.
+/// Used for specifying delays.
 pub type McTime = OrderedFloat<f64>;
 
-/// McSystem is used to provide dslab-mp-like System entity with model checker support.
+/// Models distributed system consisting of multiple nodes connected via network.
+///
+/// Analogue of [`crate::system::System`] for model checking mode.
 #[derive(Clone)]
 pub struct McSystem {
     nodes: HashMap<String, McNode>,
@@ -32,7 +34,7 @@ pub struct McSystem {
 }
 
 impl McSystem {
-    /// Creates a new McSystem.
+    /// Creates a new system.
     pub fn new(
         nodes: HashMap<String, McNode>,
         net: McNetwork,
@@ -47,32 +49,6 @@ impl McSystem {
             event_ordering_mode: EventOrderingMode::Normal,
             trace_handler,
         }
-    }
-
-    pub(crate) fn apply_event(&mut self, event: McEvent) {
-        self.depth += 1;
-        self.trace_handler.borrow_mut().push(event.to_log_entry());
-        let event_time = Self::get_approximate_event_time(self.depth);
-        let state_hash = self.get_state_hash();
-
-        let new_events = match event {
-            McEvent::MessageReceived { msg, src, dst, .. } => {
-                let name = self.net.get_proc_node(&dst).clone();
-                self.nodes
-                    .get_mut(&name)
-                    .unwrap()
-                    .on_message_received(dst, msg, src, event_time, state_hash)
-            }
-            McEvent::TimerFired { proc, timer, .. } => {
-                let name = self.net.get_proc_node(&proc).clone();
-                self.nodes
-                    .get_mut(&name)
-                    .unwrap()
-                    .on_timer_fired(proc, timer, event_time, state_hash)
-            }
-            _ => vec![],
-        };
-        self.add_events(new_events);
     }
 
     /// Sends a local message to the process.
@@ -97,7 +73,7 @@ impl McSystem {
         self.add_events(new_events);
     }
 
-    /// Change event ordering mode for a system to change MC behavior.
+    /// Sets the used [`EventOrderingMode`].
     pub fn set_event_ordering_mode(&mut self, mode: EventOrderingMode) {
         self.event_ordering_mode = mode;
     }
@@ -128,10 +104,42 @@ impl McSystem {
             .push(LogEntry::McNetworkPartition { group1, group2 });
     }
 
-    /// Resets network.
+    /// Resets the network links by enabling all links
+    /// and disabling dropping of incoming/outgoing messages for all nodes.
     pub fn network_reset(&mut self) {
         self.net.reset();
         self.trace_handler.borrow_mut().push(LogEntry::McNetworkReset {});
+    }
+
+    /// Returns network state
+    pub fn network(&mut self) -> &mut McNetwork {
+        &mut self.net
+    }
+
+    pub(crate) fn apply_event(&mut self, event: McEvent) {
+        self.depth += 1;
+        self.trace_handler.borrow_mut().push(event.to_log_entry());
+        let event_time = Self::get_approximate_event_time(self.depth);
+        let state_hash = self.get_state_hash();
+
+        let new_events = match event {
+            McEvent::MessageReceived { msg, src, dst, .. } => {
+                let name = self.net.get_proc_node(&dst).clone();
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_message_received(dst, msg, src, event_time, state_hash)
+            }
+            McEvent::TimerFired { proc, timer, .. } => {
+                let name = self.net.get_proc_node(&proc).clone();
+                self.nodes
+                    .get_mut(&name)
+                    .unwrap()
+                    .on_timer_fired(proc, timer, event_time, state_hash)
+            }
+            _ => vec![],
+        };
+        self.add_events(new_events);
     }
 
     pub(crate) fn get_state(&self) -> McState {
@@ -163,11 +171,6 @@ impl McSystem {
 
     pub(crate) fn depth(&self) -> u64 {
         self.depth
-    }
-
-    /// Returns network state
-    pub fn network(&mut self) -> &mut McNetwork {
-        &mut self.net
     }
 
     fn add_events(&mut self, events: Vec<McEvent>) {
