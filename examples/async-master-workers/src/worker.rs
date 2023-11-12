@@ -119,7 +119,7 @@ impl AsyncWorker {
                 .borrow_mut()
                 .transfer_data(self.master_id, self.id, task.req.input_size as f64, self.id);
         self.ctx
-            .async_detailed_wait_event::<DataTransferCompleted>(self.net_id, transfer_id as DetailsKey)
+            .async_wait_event_detailed::<DataTransferCompleted>(self.net_id, transfer_id as DetailsKey)
             .await;
         log_debug!(self.ctx, "downloaded input data for task: {}", task.req.id);
     }
@@ -127,7 +127,7 @@ impl AsyncWorker {
     async fn read_data(&self, task: &TaskInfo) {
         let read_id = self.disk.borrow_mut().read(task.req.input_size, self.id);
         self.ctx
-            .async_detailed_wait_event::<DataReadCompleted>(self.disk_id, read_id)
+            .async_wait_event_detailed::<DataReadCompleted>(self.disk_id, read_id)
             .await;
         log_debug!(self.ctx, "read input data for task: {}", task.req.id);
     }
@@ -142,12 +142,12 @@ impl AsyncWorker {
             self.id,
         );
         self.ctx
-            .async_detailed_wait_event::<CompStarted>(self.compute_id, comp_id as DetailsKey)
+            .async_wait_event_detailed::<CompStarted>(self.compute_id, comp_id as DetailsKey)
             .await;
         log_debug!(self.ctx, "started execution of task: {}", task.req.id);
 
         self.ctx
-            .async_detailed_wait_event::<CompFinished>(self.compute_id, comp_id as DetailsKey)
+            .async_wait_event_detailed::<CompFinished>(self.compute_id, comp_id as DetailsKey)
             .await;
         log_debug!(self.ctx, "completed execution of task: {}", task.req.id);
     }
@@ -155,7 +155,7 @@ impl AsyncWorker {
     async fn write_data(&self, task: &TaskInfo) {
         let write_id = self.disk.borrow_mut().write(task.req.output_size, self.id);
         self.ctx
-            .async_detailed_wait_event::<DataWriteCompleted>(self.disk_id, write_id)
+            .async_wait_event_detailed::<DataWriteCompleted>(self.disk_id, write_id)
             .await;
         log_debug!(self.ctx, "wrote output data for task: {}", task.req.id);
     }
@@ -166,7 +166,7 @@ impl AsyncWorker {
                 .borrow_mut()
                 .transfer_data(self.id, self.master_id, task.req.output_size as f64, self.id);
         self.ctx
-            .async_detailed_wait_event::<DataTransferCompleted>(self.net_id, transfer_id as DetailsKey)
+            .async_wait_event_detailed::<DataTransferCompleted>(self.net_id, transfer_id as DetailsKey)
             .await;
         log_debug!(self.ctx, "uploaded output data for task: {}", task.req.id);
         self.disk

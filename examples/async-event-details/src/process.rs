@@ -77,7 +77,7 @@ impl Worker {
         let key = self.run_task(task_info);
 
         select! {
-            _ = self.ctx.async_detailed_wait_event::<CompStarted>(self.compute_id, key).fuse() => {
+            _ = self.ctx.async_wait_event_detailed::<CompStarted>(self.compute_id, key).fuse() => {
 
                 log_debug!(self.ctx, format!("try_process_task : task with key {} started", key));
 
@@ -85,7 +85,7 @@ impl Worker {
 
                 true
             },
-            (_, failed) = self.ctx.async_detailed_wait_event::<CompFailed>(self.compute_id, key).fuse() => {
+            (_, failed) = self.ctx.async_wait_event_detailed::<CompFailed>(self.compute_id, key).fuse() => {
                 log_debug!(self.ctx, format!("try_process_task : task with key {} failed: {}", key, json!(failed)));
                 false
             }
@@ -94,7 +94,7 @@ impl Worker {
 
     async fn process_task(&self, key: DetailsKey) {
         self.ctx
-            .async_detailed_wait_event::<CompFinished>(self.compute_id, key)
+            .async_wait_event_detailed::<CompFinished>(self.compute_id, key)
             .await;
 
         log_debug!(self.ctx, format!("process_task : task with key {} completed", key));

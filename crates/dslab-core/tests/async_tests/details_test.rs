@@ -45,13 +45,13 @@ impl SimpleExchanger {
 
     async fn listener(&self, details: u64, iterations: u32) {
         for _i in 0..iterations {
-            let (event, data) = self.ctx.async_detailed_wait_event_from_self::<Message>(details).await;
+            let (event, data) = self.ctx.async_wait_event_detailed_from_self::<Message>(details).await;
             assert!(event.src == self.ctx.id());
             assert!(event.dst == self.ctx.id());
             assert!(data.details == details);
         }
 
-        self.ctx.async_detailed_wait_event_from_self::<Message>(details).await;
+        self.ctx.async_wait_event_detailed_from_self::<Message>(details).await;
 
         panic!("unreachable handle");
     }

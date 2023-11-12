@@ -315,21 +315,33 @@ impl Simulation {
     /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
-    ///
-    /// Implementation is feature-defined
     pub fn remove_handler<S>(&mut self, name: S)
     where
         S: AsRef<str>,
     {
-        self.remove_handler_inner(name);
+        let id = self.lookup_id(name.as_ref());
+        self.remove_handler_inner(id);
+
+        debug!(
+            target: "simulation",
+            "[{:.3} {} simulation] Removed handler: {}",
+            self.time(),
+            crate::log::get_colored("DEBUG", colored::Color::Blue),
+            json!({"name": name.as_ref(), "id": id})
+        );
+    }
+
+    async_disabled! {
+        fn remove_handler_inner(&mut self, id: u32) {
+            self.handlers[id as usize] = None;
+
+            // cancel pending events related to the removed component
+            self.cancel_events(|e| e.src == id || e.dst == id);
+        }
     }
 
     async_enabled! {
-        fn remove_handler_inner<S>(&mut self, name: S)
-        where
-            S: AsRef<str>,
-        {
-            let id = self.lookup_id(name.as_ref());
+        fn remove_handler_inner(&mut self, id: u32) {
             self.handlers[id as usize] = None;
             self.sim_state.borrow_mut().mark_removed_handler(id);
 
@@ -339,34 +351,6 @@ impl Simulation {
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
 
-            debug!(
-                target: "simulation",
-                "[{:.3} {} simulation] Removed handler: {}",
-                self.time(),
-                crate::log::get_colored("DEBUG", colored::Color::Blue),
-                json!({"name": name.as_ref(), "id": id})
-            );
-        }
-    }
-
-    async_disabled! {
-        fn remove_handler_inner<S>(&mut self, name: S)
-        where
-            S: AsRef<str>,
-        {
-            let id = self.lookup_id(name.as_ref());
-            self.handlers[id as usize] = None;
-
-            // cancel pending events related to the removed component
-            self.cancel_events(|e| e.src == id || e.dst == id);
-
-            debug!(
-                target: "simulation",
-                "[{:.3} {} simulation] Removed handler: {}",
-                self.time(),
-                crate::log::get_colored("DEBUG", colored::Color::Blue),
-                json!({"name": name.as_ref(), "id": id})
-            );
         }
     }
 
@@ -422,8 +406,6 @@ impl Simulation {
     /// status = sim.step();
     /// assert!(!status);
     /// ```
-    ///
-    /// Definition of step is different for different build features of dslab-core.
     pub fn step(&self) -> bool {
         self.step_inner()
     }
@@ -438,6 +420,34 @@ impl Simulation {
                 }
                 None => false,
             }
+        }
+    }
+
+    fn deliver_event_via_handler(&self, event: Event) {
+        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+            self.log_trace_event(&event);
+            if let Some(handler) = handler_opt {
+                handler.borrow_mut().on(event);
+            } else {
+                log_undelivered_event(event);
+            }
+        } else {
+            log_undelivered_event(event);
+        }
+    }
+
+    fn log_trace_event(&self, event: &Event) {
+        if log_enabled!(Trace) {
+            let src_name = self.lookup_name(event.src);
+            let dst_name = self.lookup_name(event.dst);
+            trace!(
+                target: &dst_name,
+                "[{:.3} {} {}] {}",
+                event.time,
+                crate::log::get_colored("EVENT", colored::Color::BrightBlack),
+                dst_name,
+                json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
+            );
         }
     }
 
@@ -477,21 +487,18 @@ impl Simulation {
         fn process_event(&self) -> bool {
             let event = self.sim_state.borrow_mut().next_event().unwrap();
 
-            let await_key = self.get_await_key(&event);
+            let await_key = match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
+                Some(getter) => AwaitKey::new_with_details_by_ref(
+                    event.src,
+                    event.dst,
+                    event.data.as_ref(),
+                    getter(event.data.as_ref()),
+                ),
+                None => AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref()),
+            };
 
             if self.sim_state.borrow().has_handler_on_key(&await_key) {
-                if log_enabled!(Trace) {
-                    let src_name = self.lookup_name(event.src);
-                    let dst_name = self.lookup_name(event.dst);
-                    trace!(
-                        target: &dst_name,
-                        "[{:.3} {} {}] {}",
-                        event.time,
-                        crate::log::get_colored("EVENT", colored::Color::BrightBlack),
-                        dst_name,
-                        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
-                    );
-                }
+                self.log_trace_event(&event);
 
                 self.sim_state.borrow_mut().set_event_for_await_key(&await_key, event);
 
@@ -514,22 +521,12 @@ impl Simulation {
             self.process_task();
         }
 
-
-
-        fn get_await_key(&self, event: &Event) -> AwaitKey {
-            match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
-                Some(getter) => AwaitKey::new_with_details_by_ref(
-                    event.src,
-                    event.dst,
-                    event.data.as_ref(),
-                    getter(event.data.as_ref()),
-                ),
-                None => AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref()),
-            }
-        }
-
-        /// Spawns the background process. Similar to "launch a new thread".
-        /// Only 'static Futures are allowed. To spawn methods of components use `SimulationContext::spawn`
+        /// Spawns a new asynchronous task.
+        ///
+        /// The task's type lifetime must be `'static`.
+        /// This means that the spawned task must not contain any references to data owned outside the task.
+        ///
+        /// To spawn methods inside simulation components use [`SimulationContext::spawn`].
         ///
         /// # Examples
         ///
@@ -554,118 +551,10 @@ impl Simulation {
 
         /// Registers a function that extracts [`DetailsKey`] from events of specific type `T`.
         ///
-        /// This is required step before using the [`SimulationContext::async_detailed_wait_event`]
+        /// This is required step before using the [`SimulationContext::async_wait_event_detailed`]
         /// function with type `T`.
         ///
-        /// # Example
-        ///
-        /// ```rust
-        /// use std::cell::RefCell;
-        /// use std::rc::Rc;
-        ///
-        /// use serde::Serialize;
-        ///
-        /// use dslab_core::async_core::{AwaitResult, DetailsKey};
-        /// use dslab_core::event::EventData;
-        /// use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
-        ///
-        /// #[derive(Clone, Serialize)]
-        /// struct SomeEvent {
-        ///     request_id: u64,
-        /// }
-        ///
-        /// #[derive(Clone, Serialize)]
-        /// struct Start {}
-        ///
-        /// struct Client {
-        ///     ctx: SimulationContext,
-        ///     root_id: Id,
-        ///     actions_finished: RefCell<u32>,
-        /// }
-        ///
-        /// impl Client {
-        ///     fn on_start(&self) {
-        ///         self.ctx.spawn(self.listen_first());
-        ///         self.ctx.spawn(self.listen_second());
-        ///     }
-        ///
-        ///     async fn listen_first(&self) {
-        ///         let mut result = self
-        ///             .ctx
-        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 10.)
-        ///             .await;
-        ///         if let AwaitResult::Timeout(e) = result {
-        ///             assert_eq!(e.src, self.root_id);
-        ///         } else {
-        ///             panic!("expect result timeout here");
-        ///         }
-        ///         result = self
-        ///             .ctx
-        ///             .async_detailed_wait_event_for::<SomeEvent>(self.root_id, 1, 100.)
-        ///             .await;
-        ///         if let AwaitResult::Ok((e, data)) = result {
-        ///             assert_eq!(e.src, self.root_id);
-        ///             assert_eq!(data.request_id, 1);
-        ///         } else {
-        ///             panic!("expected result ok");
-        ///         }
-        ///         *self.actions_finished.borrow_mut() += 1;
-        ///     }
-        ///
-        ///     async fn listen_second(&self) {
-        ///         let (e, data) = self.ctx.async_detailed_wait_event::<SomeEvent>(self.root_id, 2).await;
-        ///         assert_eq!(e.src, self.root_id);
-        ///         assert_eq!(data.request_id, 2);
-        ///         *self.actions_finished.borrow_mut() += 1;
-        ///     }
-        /// }
-        ///
-        /// impl EventHandler for Client {
-        ///     fn on(&mut self, event: Event) {
-        ///         cast!(match event.data {
-        ///             Start {} => {
-        ///                 self.on_start();
-        ///             }
-        ///             SomeEvent { request_id } => {
-        ///                 panic!(
-        ///                     "unexpected handling SomeEvent with request id {} at time {}",
-        ///                     request_id,
-        ///                     self.ctx.time()
-        ///                 );
-        ///             }
-        ///         })
-        ///     }
-        /// }
-        ///
-        /// pub fn get_some_event_details(data: &dyn EventData) -> DetailsKey {
-        ///     let event = data.downcast_ref::<SomeEvent>().unwrap();
-        ///     event.request_id as DetailsKey
-        /// }
-        ///
-        /// let mut sim = Simulation::new(42);
-        ///
-        /// let root_ctx = sim.create_context("root");
-        ///
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let client = Rc::new(RefCell::new(Client {
-        ///     ctx: client_ctx,
-        ///     root_id: root_ctx.id(),
-        ///     actions_finished: RefCell::new(0),
-        /// }));
-        /// sim.add_handler("client", client.clone());
-        ///
-        /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
-        ///
-        /// root_ctx.emit_now(Start {}, client_id);
-        /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);
-        /// root_ctx.emit(SomeEvent { request_id: 2 }, client_id, 60.);
-        ///
-        /// sim.step_until_no_events();
-        ///
-        /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
-        /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
-        /// ```
+        /// See [`SimulationContext::async_wait_event_detailed_for`].
         pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
             self.sim_state
                 .borrow_mut()
@@ -757,30 +646,6 @@ impl Simulation {
             S: AsRef<str>,
         {
             UnboundedBlockingQueue::new(self.create_context(name))
-        }
-    }
-
-    fn deliver_event_via_handler(&self, event: Event) {
-        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
-            if log_enabled!(Trace) {
-                let src_name = self.lookup_name(event.src);
-                let dst_name = self.lookup_name(event.dst);
-                trace!(
-                    target: &dst_name,
-                    "[{:.3} {} {}] {}",
-                    event.time,
-                    crate::log::get_colored("EVENT", colored::Color::BrightBlack),
-                    dst_name,
-                    json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
-                );
-            }
-            if let Some(handler) = handler_opt {
-                handler.borrow_mut().on(event);
-            } else {
-                log_undelivered_event(event);
-            }
-        } else {
-            log_undelivered_event(event);
         }
     }
 

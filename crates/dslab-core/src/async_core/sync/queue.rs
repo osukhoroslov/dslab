@@ -57,7 +57,7 @@ impl<T> UnboundedBlockingQueue<T> {
         self.receive_ticket.next();
         if self.queue.borrow().is_empty() {
             self.ctx
-                .async_detailed_wait_event_from_self::<Notify>(self.receive_ticket.value())
+                .async_wait_event_detailed_from_self::<Notify>(self.receive_ticket.value())
                 .await;
         }
 
