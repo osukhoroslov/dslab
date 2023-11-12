@@ -381,6 +381,10 @@ impl SimulationState {
             true
         }
 
+        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
+            self.awaiters.insert(key, state);
+        }
+
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
             let task = Rc::new(Task::new(future, self.task_sender.clone()));
             self.task_sender.send(task).expect("channel is closed");
@@ -399,9 +403,7 @@ impl SimulationState {
 
         pub fn wait_for(&mut self, component_id: Id, timeout: f64) -> TimerFuture {
             let state = Rc::new(RefCell::new(AwaitEventSharedState::<EmptyData>::default()));
-            let timer = self.get_timer(component_id, self.time() + timeout, state.clone());
-
-            self.timers.push(timer);
+            self.add_timer_on_state(component_id, timeout, state.clone());
 
             TimerFuture { state }
         }
@@ -412,17 +414,9 @@ impl SimulationState {
             timeout: f64,
             state: Rc<RefCell<dyn AwaitResultSetter>>,
         ) {
-            let timer = self.get_timer(component_id, self.time() + timeout, state);
-            self.timers.push(timer);
-        }
-
-        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
-            self.awaiters.insert(key, state);
-        }
-
-        fn get_timer(&mut self, component_id: Id, time: f64, state: Rc<RefCell<dyn AwaitResultSetter>>) -> Timer {
             self.timer_count += 1;
-            Timer::new(self.timer_count, component_id, time, state)
+            let timer = Timer::new(self.timer_count, component_id, self.time() + timeout, state);
+            self.timers.push(timer);
         }
 
         pub fn get_details_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> DetailsKey> {
