@@ -924,7 +924,7 @@ where
             McNetworkChange::Partition([part1, part2]) => sys.network().partition(part1, part2),
             McNetworkChange::Reset => sys.network().reset(),
             McNetworkChange::Isolation => {
-                for node in sys.nodes_names() {
+                for node in sys.nodes() {
                     sys.network().disconnect_node(&node)
                 }
             }
@@ -1439,7 +1439,7 @@ fn test_mc_concurrent_xcart(config: &TestConfig) -> TestResult {
 #[clap(about, long_about = None)]
 struct Args {
     /// Path to Python file with solution
-    #[clap(long = "impl", short = 'i', default_value = "../python/solution.py")]
+    #[clap(long = "impl", short = 'i', default_value = "python/solution.py")]
     solution_path: String,
 
     /// Test to run (optional)
@@ -1469,7 +1469,7 @@ fn main() {
     env::set_var("PYTHONPATH", "../../crates/dslab-mp-python/python");
     env::set_var("PYTHONHASHSEED", args.seed.to_string());
 
-    let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageProcess");
+    let proc_factory = PyProcessFactory::new(&args.solution_path, "StorageNode");
     let config = TestConfig {
         proc_factory: &proc_factory,
         proc_count: args.proc_count,
