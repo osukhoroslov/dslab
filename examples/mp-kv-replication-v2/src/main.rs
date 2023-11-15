@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::env;
 use std::io::Write;
+use std::time::Duration;
 
 use assertables::{assume, assume_eq};
 use byteorder::{ByteOrder, LittleEndian};
@@ -16,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use dslab_mp::logger::LogEntry;
 use dslab_mp::mc::events::EventOrderingMode;
 use dslab_mp::mc::model_checker::ModelChecker;
-use dslab_mp::mc::predicates::{collects, goals, prunes};
+use dslab_mp::mc::predicates::{collects, goals, invariants, prunes};
 use dslab_mp::mc::state::McState;
 use dslab_mp::mc::strategies::bfs::Bfs;
 use dslab_mp::mc::strategy::{InvariantFn, McStats, StrategyConfig};
@@ -896,7 +897,10 @@ fn mc_query_strategy(proc: &str, query_data: McQuery) -> StrategyConfig {
             LogEntry::is_mc_local_message_sent,
             1,
         ))
-        .invariant(invariant)
+        .invariant(invariants::all_invariants(vec![
+            invariant,
+            invariants::time_limit(Duration::from_secs(120)),
+        ]))
         .collect(collects::event_happened_n_times_current_run(
             move |log_entry| match log_entry {
                 LogEntry::McLocalMessageSent { proc, .. } => proc == &proc_name,
@@ -1010,6 +1014,11 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     mc = ModelChecker::new(&sys);
 
     let stage2_strategy = mc_query_strategy(&replicas[0], McQuery::Put(key.clone(), vec![value.clone()]));
+    let stage2_strategy = stage2_strategy.prune(prunes::any_prune(vec![
+        prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 2),
+        prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
+        prunes::proc_permutations(&replicas),
+    ]));
     let stage2_msg = Message::json(
         "PUT",
         &PutReqMessage {
@@ -1035,6 +1044,11 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
 
     // stage 3: get key from the last replica
     let stage3_strategy = mc_query_strategy(&replicas[2], McQuery::Get(key.clone(), vec![value]));
+    let stage3_strategy = stage3_strategy.prune(prunes::any_prune(vec![
+        prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 4),
+        prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
+        prunes::proc_permutations(&[replicas[2].clone(), replicas[0].clone(), replicas[1].clone()]),
+    ]));
     let stage3_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
     let stage3_states = run_mc(
         &mut mc,
