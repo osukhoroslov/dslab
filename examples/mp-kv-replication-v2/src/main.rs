@@ -1478,21 +1478,21 @@ fn main() {
 
     let mut tests = TestSuite::new();
     tests.add("BASIC", test_basic, config);
+    tests.add("MC BASIC", test_mc_basic, config);
     tests.add("STALE REPLICA", test_stale_replica, config);
     tests.add("CONCURRENT WRITES 1", test_concurrent_writes_1, config);
     tests.add("CONCURRENT WRITES 2", test_concurrent_writes_2, config);
     tests.add("CONCURRENT WRITES 3", test_concurrent_writes_3, config);
+    tests.add("MC CONCURRENT", test_mc_concurrent, config);
     tests.add("DIVERGED REPLICAS", test_diverged_replicas, config);
     tests.add("SLOPPY QUORUM", test_sloppy_quorum, config);
+    tests.add("MC SLOPPY QUORUM", test_mc_sloppy_quorum_hinted_handoff, config);
     tests.add("PARTITIONED CLIENTS", test_partitioned_clients, config);
     tests.add("SHOPPING CART 1", test_shopping_cart_1, config);
     tests.add("SHOPPING CART 2", test_shopping_cart_2, config);
+    tests.add("MC CONCURRENT CART", test_mc_concurrent_cart, config);
     tests.add("SHOPPING XCART 1", test_shopping_xcart_1, config);
     tests.add("SHOPPING XCART 2", test_shopping_xcart_2, config);
-    tests.add("MC BASIC", test_mc_basic, config);
-    tests.add("MC SLOPPY QUORUM", test_mc_sloppy_quorum_hinted_handoff, config);
-    tests.add("MC CONCURRENT", test_mc_concurrent, config);
-    tests.add("MC CONCURRENT CART", test_mc_concurrent_cart, config);
     tests.add("MC CONCURRENT XCART", test_mc_concurrent_xcart, config);
     if args.test.is_none() {
         tests.run();
