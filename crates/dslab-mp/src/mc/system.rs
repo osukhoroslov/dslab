@@ -101,8 +101,8 @@ impl McSystem {
         &mut self.net
     }
 
-    /// Returns the names of all nodes in the system.
-    pub fn nodes_names(&self) -> Vec<String> {
+    /// Returns a list of node names.
+    pub fn nodes(&self) -> Vec<String> {
         self.nodes.keys().cloned().collect()
     }
 
