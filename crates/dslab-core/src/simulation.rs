@@ -1,7 +1,6 @@
 //! Simulation configuration and execution.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use log::Level::Trace;
@@ -34,8 +33,6 @@ async_disabled! {
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
-        name_to_id: HashMap<String, Id>,
-        names: Rc<RefCell<Vec<String>>>,
         handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
     }
 }
@@ -44,8 +41,6 @@ async_enabled! {
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
-        name_to_id: HashMap<String, Id>,
-        names: Rc<RefCell<Vec<String>>>,
         handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
 
         executor: Executor,
@@ -58,8 +53,6 @@ impl Simulation {
         pub fn new(seed: u64) -> Self {
             Self {
                 sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
-                name_to_id: HashMap::new(),
-                names: Rc::new(RefCell::new(Vec::new())),
                 handlers: Vec::new(),
             }
         }
@@ -71,8 +64,6 @@ impl Simulation {
             let (task_sender, ready_queue) = channel();
             Self {
                 sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
-                name_to_id: HashMap::new(),
-                names: Rc::new(RefCell::new(Vec::new())),
                 handlers: Vec::new(),
                 executor: Executor::new(ready_queue),
             }
@@ -80,13 +71,10 @@ impl Simulation {
     }
 
     fn register(&mut self, name: &str) -> Id {
-        if let Some(&id) = self.name_to_id.get(name) {
-            return id;
+        let id = self.sim_state.borrow_mut().register(name);
+        if id as usize == self.handlers.len() {
+            self.handlers.push(None);
         }
-        let id = self.name_to_id.len() as Id;
-        self.name_to_id.insert(name.to_owned(), id);
-        self.names.borrow_mut().push(name.to_owned());
-        self.handlers.push(None);
         id
     }
 
@@ -113,7 +101,7 @@ impl Simulation {
     /// let comp1_id = sim.lookup_id("comp1");
     /// ```
     pub fn lookup_id(&self, name: &str) -> Id {
-        *self.name_to_id.get(name).unwrap()
+        self.sim_state.borrow().lookup_id(name)
     }
 
     /// Returns the name of component by its identifier.
@@ -139,7 +127,7 @@ impl Simulation {
     /// let comp_name = sim.lookup_name(comp_ctx.id() + 1);
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
-        self.names.borrow()[id as usize].clone()
+        self.sim_state.borrow().lookup_name(id)
     }
 
     /// Creates a new simulation context with specified name.
@@ -162,7 +150,7 @@ impl Simulation {
             self.register(name.as_ref()),
             name.as_ref(),
             self.sim_state.clone(),
-            self.names.clone(),
+            self.sim_state.borrow().get_names(),
         );
         debug!(
             target: "simulation",
