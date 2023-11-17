@@ -890,7 +890,15 @@ fn test_mc_sloppy_quorum_hinted_handoff(config: &TestConfig) -> TestResult {
         stage2_strategy,
         &replicas[0],
         stage2_msg,
-        McNetworkChange::None,
+        McNetworkChange::Partition([
+            vec![
+                replicas[0].clone(),
+                non_replicas[0].clone(),
+                non_replicas[1].clone(),
+                non_replicas[2].clone(),
+            ],
+            vec![replicas[1].clone(), replicas[2].clone()],
+        ]),
         None,
     )?
     .collected_states;
