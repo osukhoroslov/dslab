@@ -1047,6 +1047,9 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     let stage3_strategy = stage3_strategy.prune(prunes::any_prune(vec![
         prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 4),
         prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
+
+        // symmetry-breaking constraint: log starts with replica 2 (because it received the query)
+        // and then the replica 0 should be earlier in the log than replica 1.
         prunes::proc_permutations(&[replicas[2].clone(), replicas[0].clone(), replicas[1].clone()]),
     ]));
     let stage3_msg = Message::json("GET", &GetReqMessage { key: &key, quorum: 2 });
@@ -1240,7 +1243,7 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
     println!("put({key}, {value2}): {} states collected", states.len());
 
     // now reset the network state and ask the third replica about the key's value
-    // we expect the value written later (value2) to be returned
+    // we expect both values in the response
     let strategy_config = mc_query_strategy(
         &replicas[2],
         McQuery::Get(key.to_string(), vec![value.to_string(), value2.to_string()]),
@@ -1332,7 +1335,7 @@ fn test_mc_concurrent_cart(config: &TestConfig) -> TestResult {
     // We expect the combination of "a,b,c" and "b,c,d"
     let strategy_config = mc_query_strategy(&replicas[2], McQuery::Get(key.to_string(), vec!["a,b,c,d".to_string()]));
     let msg3 = Message::json("GET", &GetReqMessage { key: &key, quorum: 3 });
-    let start_states = run_mc(
+    let states = run_mc(
         &mut mc,
         strategy_config,
         &replicas[2],
@@ -1341,9 +1344,10 @@ fn test_mc_concurrent_cart(config: &TestConfig) -> TestResult {
         Some(states),
     )?
     .collected_states;
-    if start_states.is_empty() {
+    if states.is_empty() {
         return Err(format!("get({key}) has no positive outcomes"));
     }
+    println!("get({key}): {} states collected", states.len());
     Ok(true)
 }
 
@@ -1382,8 +1386,10 @@ fn test_mc_concurrent_xcart(config: &TestConfig) -> TestResult {
     if states.is_empty() {
         return Err(format!("put({key}, \"{value1}\") response is not received"));
     }
+    println!("get({key}): {} states collected", states.len());
 
     let states = mc_stabilize(&mut sys, states)?.collected_states;
+    println!("after stabilization: {} states collected", states.len());
 
     for state in &states {
         let msg = &state.node_states[&replicas[2]].proc_states[&replicas[2]].local_outbox[0];
