@@ -210,6 +210,8 @@ pub mod goals {
 
 /// Prunes cut execution branches if further analysis is considered unnecessary or computation-heavy.
 pub mod prunes {
+    use std::collections::HashSet;
+
     use sugars::boxed;
 
     use crate::logger::LogEntry;
@@ -301,6 +303,33 @@ pub mod prunes {
                     return Some(format!(
                         "event occured {event_count} times on proc {proc} but expected at most {limit} times"
                     ));
+                }
+            }
+            None
+        })
+    }
+
+    /// Prunes states where processes are mentioned in any permutation except the given one.
+    /// It helps to create symmetry-breaking constraints
+    pub fn proc_permutations(equivalent_procs: &[String]) -> PruneFn {
+        let equivalent_procs = equivalent_procs.to_vec();
+        boxed!(move |state| {
+            let proc_names = HashSet::<String>::from_iter(equivalent_procs.clone().into_iter());
+            let mut used_proc_names = HashSet::<String>::new();
+            let mut waiting_for_proc = 0;
+            for entry in state.current_run_trace() {
+                match entry {
+                    LogEntry::McMessageReceived { src: proc, .. } | LogEntry::McTimerFired { proc, .. } => {
+                        if used_proc_names.contains(proc) || !proc_names.contains(proc) {
+                            continue;
+                        }
+                        if equivalent_procs[waiting_for_proc] != *proc {
+                            return Some("state is the same as another state with renumerated processes".to_owned());
+                        }
+                        used_proc_names.insert(proc.clone());
+                        waiting_for_proc += 1;
+                    }
+                    _ => {}
                 }
             }
             None

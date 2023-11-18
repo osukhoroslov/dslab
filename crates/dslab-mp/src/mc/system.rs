@@ -101,6 +101,11 @@ impl McSystem {
         &mut self.net
     }
 
+    /// Returns a list of node names.
+    pub fn nodes(&self) -> Vec<String> {
+        self.nodes.keys().cloned().collect()
+    }
+
     pub(crate) fn apply_event(&mut self, event: McEvent) {
         self.depth += 1;
         self.trace_handler.borrow_mut().push(event.to_log_entry());
