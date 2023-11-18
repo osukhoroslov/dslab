@@ -1047,7 +1047,6 @@ fn test_mc_basic(config: &TestConfig) -> TestResult {
     let stage3_strategy = stage3_strategy.prune(prunes::any_prune(vec![
         prunes::event_happened_n_times_current_run(LogEntry::is_mc_timer_fired, 4),
         prunes::event_happened_n_times_current_run(LogEntry::is_mc_message_received, 24),
-
         // symmetry-breaking constraint: log starts with replica 2 (because it received the query)
         // and then the replica 0 should be earlier in the log than replica 1.
         prunes::proc_permutations(&[replicas[2].clone(), replicas[0].clone(), replicas[1].clone()]),
