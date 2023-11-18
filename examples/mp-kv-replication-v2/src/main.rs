@@ -1236,7 +1236,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         Some(states),
     )?
     .collected_states;
-
     if states.is_empty() {
         return Err(format!("put({key}, {value2}) response is not received"));
     }
@@ -1262,7 +1261,6 @@ fn test_mc_concurrent(config: &TestConfig) -> TestResult {
         return Err(format!("get({key}) response is not received"));
     }
     println!("get({key}): {} states collected", states.len());
-
     Ok(true)
 }
 
@@ -1273,7 +1271,6 @@ fn test_mc_concurrent_cart(config: &TestConfig) -> TestResult {
     let key = format!("CART_{}", random_string(8, &mut rand).to_uppercase());
     let replicas = key_replicas(&key, &sys);
     let non_replicas = key_non_replicas(&key, &sys);
-
     println!("Key {} replicas: {:?}", key, replicas);
     println!("Key {} non-replicas: {:?}", key, non_replicas);
 
