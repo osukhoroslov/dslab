@@ -338,7 +338,6 @@ impl Simulation {
 
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
-
         }
     }
 

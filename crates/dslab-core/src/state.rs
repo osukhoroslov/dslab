@@ -395,6 +395,10 @@ impl SimulationState {
             }
         }
 
+        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
+            self.awaiters.insert(key, state);
+        }
+
         pub(crate) fn has_handler_on_key(&self, key: &AwaitKey) -> bool {
             self.awaiters.contains_key(key)
         }
@@ -406,10 +410,6 @@ impl SimulationState {
             let shared_state = self.awaiters.remove(key).unwrap();
             shared_state.borrow_mut().set_ok_completed_with_event(event);
             true
-        }
-
-        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
-            self.awaiters.insert(key, state);
         }
 
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
