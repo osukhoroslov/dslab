@@ -346,6 +346,7 @@ impl EventHandler for Host {
             }
             ContainerEndEvent { id } => {
                 self.on_container_end(id, event.time);
+                self.dequeue_requests(event.time);
             }
             InvocationEndEvent { id } => {
                 self.on_invocation_end(id, event.time);
