@@ -223,6 +223,7 @@ impl Compute {
         }
     }
 
+    /// Returns id of corresponding simulation component.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }
