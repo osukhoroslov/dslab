@@ -68,7 +68,7 @@ impl Network {
         }
     }
 
-    /// Returns component id in the simulation.
+    /// Returns id of corresponding simulation component.
     pub fn id(&self) -> Id {
         self.ctx.id()
     }
