@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 
+use dslab_core::handler::EventCancellation;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
 use dslab_core::{cast, Simulation};
@@ -113,7 +114,7 @@ impl System {
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
         // remove the handler to discard all events sent to this node
-        self.sim.remove_handler(node_name);
+        self.sim.remove_handler(node_name, EventCancellation::Incoming);
         node.borrow_mut().crash();
 
         self.logger.borrow_mut().log(LogEntry::NodeCrashed {
