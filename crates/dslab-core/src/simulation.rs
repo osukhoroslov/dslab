@@ -42,7 +42,7 @@ async_enabled! {
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
         handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
-
+        // Async stuff
         executor: Executor,
     }
 }
@@ -254,7 +254,7 @@ impl Simulation {
     {
         let id = self.register(name.as_ref());
         self.handlers[id as usize] = Some(handler);
-        self.sim_state.borrow_mut().mark_registered_handler(id);
+        self.sim_state.borrow_mut().on_handler_added(id);
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -310,6 +310,8 @@ impl Simulation {
         S: AsRef<str>,
     {
         let id = self.lookup_id(name.as_ref());
+        self.handlers[id as usize] = None;
+        self.sim_state.borrow_mut().on_handler_removed(id);
         self.remove_handler_inner(id);
 
         // cancel pending events related to the removed component based on the cancellation policy
@@ -330,16 +332,11 @@ impl Simulation {
     }
 
     async_disabled! {
-        fn remove_handler_inner(&mut self, id: u32) {
-            self.handlers[id as usize] = None;
-        }
+        fn remove_handler_inner(&mut self, _id: u32) {}
     }
 
     async_enabled! {
         fn remove_handler_inner(&mut self, id: u32) {
-            self.handlers[id as usize] = None;
-            self.sim_state.borrow_mut().mark_removed_handler(id);
-
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
         }

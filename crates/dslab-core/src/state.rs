@@ -94,6 +94,7 @@ impl SimulationState {
                 event_count: 0,
                 name_to_id: HashMap::new(),
                 names: Rc::new(RefCell::new(Vec::new())),
+                // Async stuff
                 registered_handlers: Vec::new(),
                 awaiters: HashMap::new(),
                 details_getters: HashMap::new(),
@@ -124,7 +125,7 @@ impl SimulationState {
         let id = self.name_to_id.len() as Id;
         self.name_to_id.insert(name.to_owned(), id);
         self.names.borrow_mut().push(name.to_owned());
-        self.extend_registered_handlers();
+        self.on_register();
         id
     }
 
@@ -337,21 +338,22 @@ impl SimulationState {
     }
 
     async_disabled! {
-        pub fn mark_registered_handler(&mut self, _id: Id) {}
-        fn extend_registered_handlers(&mut self) {}
+        fn on_register(&mut self) {}
+        pub fn on_handler_added(&mut self, _id: Id) {}
+        pub fn on_handler_removed(&mut self, _id: Id) {}
     }
 
     async_enabled! {
-        pub fn mark_registered_handler(&mut self, id: Id) {
+        fn on_register(&mut self) {
+            self.registered_handlers.push(false)
+        }
+
+        pub fn on_handler_added(&mut self, id: Id) {
             self.registered_handlers[id as usize] = true;
         }
 
-        pub fn mark_removed_handler(&mut self, id: Id) {
+        pub fn on_handler_removed(&mut self, id: Id) {
             self.registered_handlers[id as usize] = false;
-        }
-
-        fn extend_registered_handlers(&mut self) {
-            self.registered_handlers.push(false)
         }
 
         fn has_registered_handler(&self, component_id: Id) -> bool {
