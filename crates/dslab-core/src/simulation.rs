@@ -12,7 +12,7 @@ use serde_type_name::type_name;
 
 use crate::component::Id;
 use crate::context::SimulationContext;
-use crate::handler::{EventCancellation, EventHandler};
+use crate::handler::{EventCancellationPolicy, EventHandler};
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 use crate::{async_disabled, async_enabled, Event};
@@ -269,7 +269,7 @@ impl Simulation {
     ///
     /// All subsequent events destined for this component will not be delivered until the handler is added again.
     ///
-    /// It is possible to cancel incoming/outgoing events (or both) by passing the EventCancellation option.
+    /// Pending events to be cancelled upon the handler removal are specified via [`crate::handler::EventCancellationPolicy`].
     ///
     /// # Examples
     ///
@@ -277,8 +277,7 @@ impl Simulation {
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
     /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
-    /// use dslab_core::handler::EventCancellation;
+    /// use dslab_core::{cast, Event, EventCancellationPolicy, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
     /// pub struct SomeEvent {
@@ -301,23 +300,23 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let comp = Rc::new(RefCell::new(Component { }));
     /// let comp_id1 = sim.add_handler("comp", comp.clone());
-    /// sim.remove_handler("comp", EventCancellation::None);
+    /// sim.remove_handler("comp", EventCancellationPolicy::None);
     /// // Assigned component Id is not changed if we call `add_handler` again.
     /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
-    pub fn remove_handler<S>(&mut self, name: S, cancellation: EventCancellation)
+    pub fn remove_handler<S>(&mut self, name: S, cancel_policy: EventCancellationPolicy)
     where
         S: AsRef<str>,
     {
         let id = self.lookup_id(name.as_ref());
         self.remove_handler_inner(id);
 
-        // cancel pending events related to the removed component based on given cancellation policy
-        match cancellation {
-            EventCancellation::Both => self.cancel_events(|e| e.src == id || e.dst == id),
-            EventCancellation::Incoming => self.cancel_events(|e| e.dst == id),
-            EventCancellation::Outgoing => self.cancel_events(|e| e.src == id),
+        // cancel pending events related to the removed component based on the cancellation policy
+        match cancel_policy {
+            EventCancellationPolicy::All => self.cancel_events(|e| e.src == id || e.dst == id),
+            EventCancellationPolicy::Incoming => self.cancel_events(|e| e.dst == id),
+            EventCancellationPolicy::Outgoing => self.cancel_events(|e| e.src == id),
             _ => {}
         }
 
