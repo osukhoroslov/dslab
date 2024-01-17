@@ -118,14 +118,14 @@ macro_rules! cast {
     }
 }
 
-/// Representation of event cancellation policy on handler-removing.
-pub enum EventCancellation {
-    /// Cancel only incoming events.
+/// Specifies which pending events are cancelled on event handler removal.
+pub enum EventCancellationPolicy {
+    /// Cancel events destined to the component.
     Incoming,
-    /// Cancel only outgoing evetns.
+    /// Cancel events produced by the component.
     Outgoing,
     /// Cancel all events related to the component.
-    Both,
+    All,
     /// Do not cancel events.
     None,
 }

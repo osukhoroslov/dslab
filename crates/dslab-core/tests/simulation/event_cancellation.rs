@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use dslab_core::{event::EventId, handler::EventCancellation, Event, EventHandler, Simulation, SimulationContext};
 use serde::Serialize;
+
+use dslab_core::{event::EventId, Event, EventCancellationPolicy, EventHandler, Simulation};
 
 #[derive(Clone, Serialize)]
 struct TestEvent {}
@@ -37,7 +38,7 @@ fn cancel_nothing() {
     let mut sim = prepare_test("first", "second");
 
     let events = sim.dump_events();
-    sim.remove_handler("first", EventCancellation::None);
+    sim.remove_handler("first", EventCancellationPolicy::None);
 
     assert_eq!(sim.dump_events().len(), events.len());
 }
@@ -56,7 +57,7 @@ fn cancel_incoming() {
 
     event_ids_to_check.sort();
 
-    sim.remove_handler("first", EventCancellation::Incoming);
+    sim.remove_handler("first", EventCancellationPolicy::Incoming);
 
     let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
     events_after.sort();
@@ -78,7 +79,7 @@ fn cancel_outgoing() {
 
     event_ids_to_check.sort();
 
-    sim.remove_handler("first", EventCancellation::Outgoing);
+    sim.remove_handler("first", EventCancellationPolicy::Outgoing);
 
     let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
     events_after.sort();
@@ -87,7 +88,7 @@ fn cancel_outgoing() {
 }
 
 #[test]
-fn cancel_both() {
+fn cancel_all() {
     let mut sim = prepare_test("first", "second");
 
     let first_id = sim.lookup_id("first");
@@ -100,7 +101,7 @@ fn cancel_both() {
 
     event_ids_to_check.sort();
 
-    sim.remove_handler("first", EventCancellation::Both);
+    sim.remove_handler("first", EventCancellationPolicy::All);
 
     let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
     events_after.sort();
