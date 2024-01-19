@@ -31,7 +31,12 @@ impl SimpleListener {
 
     async fn listen_with_timeout(&self, timeout: f64) {
         while self.continue_listening {
-            match self.ctx.async_wait_event_for::<Message>(self.system_id, timeout).await {
+            match self
+                .ctx
+                .async_wait_event::<Message>(self.system_id)
+                .with_timeout(timeout)
+                .await
+            {
                 AwaitResult::Ok((event, data)) => {
                     assert!(event.src == self.system_id);
                     assert!(!self.expect_timeout);
