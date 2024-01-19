@@ -431,7 +431,7 @@ impl SimulationState {
         }
 
         pub fn wait_for(&mut self, component_id: Id, timeout: f64) -> TimerFuture {
-            let state = Rc::new(RefCell::new(AwaitEventSharedState::<EmptyData>::default()));
+            let state = Rc::new(RefCell::new(AwaitEventSharedState::<EmptyData>::new(component_id)));
             self.add_timer_on_state(component_id, timeout, state.clone());
 
             TimerFuture { state }
