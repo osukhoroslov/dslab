@@ -18,7 +18,7 @@ async_enabled! {
 
     use futures::Future;
 
-    use crate::async_core::await_details::DetailsKey;
+    use crate::async_core::await_details::EventKey;
     use crate::async_core::shared_state::{AwaitEventSharedState, EmptyData, TimerFuture};
     use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter};
     use crate::async_core::task::Task;
@@ -58,7 +58,7 @@ async_enabled! {
         registered_handlers: Vec<bool>,
 
         awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
-        details_getters: HashMap<TypeId, fn(&dyn EventData) -> DetailsKey>,
+        key_getters: HashMap<TypeId, fn(&dyn EventData) -> EventKey>,
 
         timers: BinaryHeap<Timer>,
         canceled_timers: HashSet<TimerId>,
@@ -97,7 +97,7 @@ impl SimulationState {
                 // Async stuff
                 registered_handlers: Vec::new(),
                 awaiters: HashMap::new(),
-                details_getters: HashMap::new(),
+                key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),
                 timer_count: 0,
@@ -448,12 +448,12 @@ impl SimulationState {
             self.timers.push(timer);
         }
 
-        pub fn get_details_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> DetailsKey> {
-            self.details_getters.get(&type_id).copied()
+        pub fn get_key_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> EventKey> {
+            self.key_getters.get(&type_id).copied()
         }
 
-        pub fn register_details_getter_for<T: EventData>(&mut self, details_getter: fn(&dyn EventData) -> DetailsKey) {
-            self.details_getters.insert(TypeId::of::<T>(), details_getter);
+        pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: fn(&dyn EventData) -> EventKey) {
+            self.key_getters.insert(TypeId::of::<T>(), key_getter);
         }
     }
 }

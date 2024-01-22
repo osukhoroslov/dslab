@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde_json::json;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
-use dslab_core::async_core::await_details::DetailsKey;
+use dslab_core::async_core::await_details::EventKey;
 use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
 use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
 
@@ -64,7 +64,7 @@ impl Worker {
             let task_info = self.task_chan.receive().await;
 
             while !self.try_start_process_task(&task_info).await {
-                self.ctx.async_wait_event_from_self::<TaskCompleted>().await;
+                self.ctx.recv_event_from_self::<TaskCompleted>().await;
             }
 
             tasks_completed += 1;
@@ -77,7 +77,7 @@ impl Worker {
         let key = self.run_task(task_info);
 
         select! {
-            _ = self.ctx.async_wait_event_detailed::<CompStarted>(self.compute_id, key).fuse() => {
+            _ = self.ctx.recv_event_by_key::<CompStarted>(self.compute_id, key).fuse() => {
 
                 log_debug!(self.ctx, format!("try_process_task : task with key {} started", key));
 
@@ -85,24 +85,22 @@ impl Worker {
 
                 true
             },
-            (_, failed) = self.ctx.async_wait_event_detailed::<CompFailed>(self.compute_id, key).fuse() => {
+            (_, failed) = self.ctx.recv_event_by_key::<CompFailed>(self.compute_id, key).fuse() => {
                 log_debug!(self.ctx, format!("try_process_task : task with key {} failed: {}", key, json!(failed)));
                 false
             }
         }
     }
 
-    async fn process_task(&self, key: DetailsKey) {
-        self.ctx
-            .async_wait_event_detailed::<CompFinished>(self.compute_id, key)
-            .await;
+    async fn process_task(&self, key: EventKey) {
+        self.ctx.recv_event_by_key::<CompFinished>(self.compute_id, key).await;
 
         log_debug!(self.ctx, format!("process_task : task with key {} completed", key));
 
         self.ctx.emit_self_now(TaskCompleted {});
     }
 
-    fn run_task(&self, task_info: &TaskInfo) -> DetailsKey {
+    fn run_task(&self, task_info: &TaskInfo) -> EventKey {
         self.compute.borrow_mut().run(
             task_info.flops,
             task_info.memory,
@@ -110,7 +108,7 @@ impl Worker {
             task_info.cores,
             dslab_compute::multicore::CoresDependency::Linear,
             self.id(),
-        ) as DetailsKey
+        ) as EventKey
     }
 }
 

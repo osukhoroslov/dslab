@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::VecDeque};
 
 use serde::Serialize;
 
-use crate::{async_core::await_details::DetailsKey, event::EventData, SimulationContext};
+use crate::{async_core::await_details::EventKey, event::EventData, SimulationContext};
 
 type TicketID = u64;
 
@@ -13,9 +13,9 @@ struct Notify {
     ticket_id: TicketID,
 }
 
-fn get_notify_details(data: &dyn EventData) -> DetailsKey {
+fn get_notify_details(data: &dyn EventData) -> EventKey {
     let notify = data.downcast_ref::<Notify>().unwrap();
-    notify.ticket_id as DetailsKey
+    notify.ticket_id as EventKey
 }
 
 /// MPMC Unbounded queue with blocking receives for any type of data.
@@ -32,7 +32,7 @@ pub struct UnboundedBlockingQueue<T> {
 
 impl<T> UnboundedBlockingQueue<T> {
     pub(crate) fn new(ctx: SimulationContext) -> Self {
-        ctx.register_details_getter_for::<Notify>(get_notify_details);
+        ctx.register_key_getter_for::<Notify>(get_notify_details);
         Self {
             ctx,
             queue: RefCell::new(VecDeque::new()),
@@ -57,7 +57,7 @@ impl<T> UnboundedBlockingQueue<T> {
         self.receive_ticket.next();
         if self.queue.borrow().is_empty() {
             self.ctx
-                .async_wait_event_detailed_from_self::<Notify>(self.receive_ticket.value())
+                .recv_event_by_key_from_self::<Notify>(self.receive_ticket.value())
                 .await;
         }
 

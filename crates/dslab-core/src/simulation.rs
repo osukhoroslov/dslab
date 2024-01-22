@@ -25,7 +25,7 @@ async_enabled! {
     use crate::async_core::shared_state::AwaitKey;
     use crate::async_core::executor::Executor;
     use crate::event::EventData;
-    use crate::async_core::await_details::DetailsKey;
+    use crate::async_core::await_details::EventKey;
     use crate::async_core::sync::queue::UnboundedBlockingQueue;
 }
 
@@ -475,8 +475,8 @@ impl Simulation {
         fn process_event(&self) -> bool {
             let event = self.sim_state.borrow_mut().next_event().unwrap();
 
-            let await_key = match self.sim_state.borrow().get_details_getter(event.data.type_id()) {
-                Some(getter) => AwaitKey::new_with_details_by_ref(
+            let await_key = match self.sim_state.borrow().get_key_getter(event.data.type_id()) {
+                Some(getter) => AwaitKey::new_with_event_key_by_ref(
                     event.src,
                     event.dst,
                     event.data.as_ref(),
@@ -527,7 +527,7 @@ impl Simulation {
         ///
         /// sim.spawn(async move {
         ///     let initial_time = ctx.time();
-        ///     ctx.async_sleep(5.).await;
+        ///     ctx.sleep(5.).await;
         /// });
         ///
         /// sim.step_until_no_events();
@@ -537,16 +537,16 @@ impl Simulation {
             self.sim_state.borrow_mut().spawn(future);
         }
 
-        /// Registers a function that extracts [`DetailsKey`] from events of specific type `T`.
+        /// Registers a function that extracts [`EventKey`] from events of specific type `T`.
         ///
-        /// This is required step before using the [`SimulationContext::async_wait_event_detailed`]
+        /// This is required step before using the [`SimulationContext::recv_event_by_key`]
         /// function with type `T`.
         ///
         /// See [`SimulationContext::async_wait_event_detailed_for`].
-        pub fn register_details_getter_for<T: EventData>(&self, details_getter: fn(&dyn EventData) -> DetailsKey) {
+        pub fn register_key_getter_for<T: EventData>(&self, key_getter: fn(&dyn EventData) -> EventKey) {
             self.sim_state
                 .borrow_mut()
-                .register_details_getter_for::<T>(details_getter);
+                .register_key_getter_for::<T>(key_getter);
         }
 
         /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
@@ -589,7 +589,7 @@ impl Simulation {
         ///
         ///     async fn producer(&self) {
         ///         for i in 0..10 {
-        ///             self.ctx.async_sleep(5.).await;
+        ///             self.ctx.sleep(5.).await;
         ///             self.queue.send(InternalMessage {payload: i});
         ///         }
         ///     }

@@ -13,6 +13,6 @@ async_enabled! {
     pub(crate) mod timer;
     pub(crate) mod waker;
 
-    pub use await_details::DetailsKey;
+    pub use await_details::EventKey;
     pub use await_details::AwaitResult;
 }

@@ -57,7 +57,7 @@ impl Process {
                 },
                 peer,
             );
-            self.ctx.async_wait_event::<Pong>(peer).await;
+            self.ctx.recv_event::<Pong>(peer).await;
         }
     }
 
@@ -133,7 +133,7 @@ impl NetworkProcess {
 
             self.send_ping(peer);
 
-            self.ctx.async_wait_event::<Pong>(peer).await;
+            self.ctx.recv_event::<Pong>(peer).await;
         }
     }
 
