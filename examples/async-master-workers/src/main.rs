@@ -75,11 +75,11 @@ fn main() {
     let client = sim.create_context("client");
 
     // register key getters for events
-    sim.register_key_getter_for::<DataTransferCompleted>(get_data_transfer_completed_details);
-    sim.register_key_getter_for::<DataReadCompleted>(get_data_read_completed_details);
-    sim.register_key_getter_for::<DataWriteCompleted>(get_data_write_completed_details);
-    sim.register_key_getter_for::<CompStarted>(get_compute_start_details);
-    sim.register_key_getter_for::<CompFinished>(get_compute_finished_details);
+    sim.register_key_getter_for::<DataTransferCompleted>(&get_data_transfer_completed_details);
+    sim.register_key_getter_for::<DataReadCompleted>(&get_data_read_completed_details);
+    sim.register_key_getter_for::<DataWriteCompleted>(&get_data_write_completed_details);
+    sim.register_key_getter_for::<CompStarted>(&get_compute_start_details);
+    sim.register_key_getter_for::<CompFinished>(&get_compute_finished_details);
 
     // create network and add hosts
     let network_model: Box<dyn NetworkModel> = if use_shared_network {

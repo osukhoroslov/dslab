@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted};
-use dslab_core::{async_core::await_details::EventKey, event::EventData};
+use dslab_core::async_core::await_details::EventKey;
 
 #[derive(Serialize, Clone)]
 pub struct Start {}
@@ -16,17 +16,14 @@ pub struct TaskRequest {
     pub cores: u32,
 }
 
-pub fn get_compute_start_id(data: &dyn EventData) -> EventKey {
-    let event = data.downcast_ref::<CompStarted>().unwrap();
+pub fn get_compute_start_id(event: &CompStarted) -> EventKey {
     event.id
 }
 
-pub fn get_compute_finished_id(data: &dyn EventData) -> EventKey {
-    let event = data.downcast_ref::<CompFinished>().unwrap();
+pub fn get_compute_finished_id(event: &CompFinished) -> EventKey {
     event.id
 }
 
-pub fn get_compute_failed_id(data: &dyn EventData) -> EventKey {
-    let event = data.downcast_ref::<CompFailed>().unwrap();
+pub fn get_compute_failed_id(event: &CompFailed) -> EventKey {
     event.id
 }

@@ -2,17 +2,14 @@ use std::{cell::RefCell, rc::Rc};
 
 use serde::Serialize;
 
-use dslab_core::{
-    async_core::await_details::EventKey, cast, event::EventData, Event, EventHandler, Simulation, SimulationContext,
-};
+use dslab_core::{async_core::await_details::EventKey, cast, Event, EventHandler, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize)]
 struct Message {
     key: u64,
 }
 
-fn get_message_key(data: &dyn EventData) -> EventKey {
-    let msg = data.downcast_ref::<Message>().unwrap();
+fn get_message_key(msg: &Message) -> EventKey {
     msg.key as EventKey
 }
 
@@ -74,7 +71,7 @@ impl EventHandler for SimpleExchanger {
 fn async_wait_for_details_test() {
     let mut sim = Simulation::new(42);
 
-    sim.register_key_getter_for::<Message>(get_message_key);
+    sim.register_key_getter_for::<Message>(&get_message_key);
 
     let exchanger_context = sim.create_context("exchanger");
     let exchanger_id = exchanger_context.id();

@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::VecDeque};
 
 use serde::Serialize;
 
-use crate::{async_core::await_details::EventKey, event::EventData, SimulationContext};
+use crate::{async_core::await_details::EventKey, SimulationContext};
 
 type TicketID = u64;
 
@@ -13,8 +13,7 @@ struct Notify {
     ticket_id: TicketID,
 }
 
-fn get_notify_details(data: &dyn EventData) -> EventKey {
-    let notify = data.downcast_ref::<Notify>().unwrap();
+fn get_notify_details(notify: &Notify) -> EventKey {
     notify.ticket_id as EventKey
 }
 
@@ -32,7 +31,7 @@ pub struct UnboundedBlockingQueue<T> {
 
 impl<T> UnboundedBlockingQueue<T> {
     pub(crate) fn new(ctx: SimulationContext) -> Self {
-        ctx.register_key_getter_for::<Notify>(get_notify_details);
+        ctx.register_key_getter_for::<Notify>(&get_notify_details);
         Self {
             ctx,
             queue: RefCell::new(VecDeque::new()),
