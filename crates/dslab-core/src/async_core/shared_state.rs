@@ -235,10 +235,6 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     /// }
     ///
-    /// pub fn get_some_event_key(event: &SomeEvent) -> EventKey {
-    ///     event.request_id as EventKey
-    /// }
-    ///
     /// let mut sim = Simulation::new(42);
     ///
     /// let root_ctx = sim.create_context("root");
@@ -251,7 +247,7 @@ impl<T: EventData> EventFuture<T> {
     /// }));
     /// sim.add_handler("client", client.clone());
     ///
-    /// sim.register_key_getter_for::<SomeEvent>(&get_some_event_key);
+    /// sim.register_key_getter_for::<SomeEvent>(|event| event.request_id as EventKey);
     ///
     /// root_ctx.emit_now(Start {}, client_id);
     /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);

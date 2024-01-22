@@ -13,10 +13,6 @@ struct Notify {
     ticket_id: TicketID,
 }
 
-fn get_notify_details(notify: &Notify) -> EventKey {
-    notify.ticket_id as EventKey
-}
-
 /// MPMC Unbounded queue with blocking receives for any type of data.
 ///
 /// Data is guarantied to be delivered in order that receivers call their .receive() method.
@@ -31,7 +27,7 @@ pub struct UnboundedBlockingQueue<T> {
 
 impl<T> UnboundedBlockingQueue<T> {
     pub(crate) fn new(ctx: SimulationContext) -> Self {
-        ctx.register_key_getter_for::<Notify>(&get_notify_details);
+        ctx.register_key_getter_for::<Notify>(|notify| notify.ticket_id as EventKey);
         Self {
             ctx,
             queue: RefCell::new(VecDeque::new()),

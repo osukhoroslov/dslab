@@ -454,8 +454,8 @@ impl SimulationState {
             self.key_getters.get(&type_id).cloned()
         }
 
-        pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: &'static dyn Fn(&T) -> EventKey) {
-            self.key_getters.insert(TypeId::of::<T>(), Rc::new(|raw_data| {
+        pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: impl Fn(&T) -> EventKey + 'static) {
+            self.key_getters.insert(TypeId::of::<T>(), Rc::new(move |raw_data| {
                 if let Some(data) = raw_data.downcast_ref::<T>() {
                     key_getter(data)
                 } else {

@@ -1,5 +1,4 @@
 mod common;
-mod events;
 mod master;
 mod task;
 mod worker;
@@ -14,6 +13,7 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use dslab_compute::multicore::{CompFinished, CompStarted, Compute, CoresDependency};
+use dslab_core::async_core::EventKey;
 use dslab_core::simulation::Simulation;
 use dslab_network::model::{DataTransferCompleted, NetworkModel};
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
@@ -22,10 +22,6 @@ use dslab_storage::disk::DiskBuilder;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
 use crate::common::Start;
-use crate::events::{
-    get_compute_finished_details, get_compute_start_details, get_data_read_completed_details,
-    get_data_transfer_completed_details, get_data_write_completed_details,
-};
 use crate::master::Master;
 use crate::task::TaskRequest;
 use crate::worker::AsyncWorker;
@@ -75,11 +71,11 @@ fn main() {
     let client = sim.create_context("client");
 
     // register key getters for events
-    sim.register_key_getter_for::<DataTransferCompleted>(&get_data_transfer_completed_details);
-    sim.register_key_getter_for::<DataReadCompleted>(&get_data_read_completed_details);
-    sim.register_key_getter_for::<DataWriteCompleted>(&get_data_write_completed_details);
-    sim.register_key_getter_for::<CompStarted>(&get_compute_start_details);
-    sim.register_key_getter_for::<CompFinished>(&get_compute_finished_details);
+    sim.register_key_getter_for::<DataTransferCompleted>(|e| e.dt.id as EventKey);
+    sim.register_key_getter_for::<DataReadCompleted>(|e| e.request_id as EventKey);
+    sim.register_key_getter_for::<DataWriteCompleted>(|e| e.request_id as EventKey);
+    sim.register_key_getter_for::<CompStarted>(|e| e.id as EventKey);
+    sim.register_key_getter_for::<CompFinished>(|e| e.id as EventKey);
 
     // create network and add hosts
     let network_model: Box<dyn NetworkModel> = if use_shared_network {
