@@ -878,7 +878,7 @@ impl SimulationContext {
         /// Self::recv_event_by_key
         ///
         /// See [`Self::recv_event_by_key`].
-        pub fn register_key_getter_for<T: EventData>(&self, key_getter: fn(&dyn EventData) -> EventKey) {
+        pub fn register_key_getter_for<T: EventData>(&self, key_getter: &'static dyn Fn(&T) -> EventKey) {
             self.sim_state
                 .borrow_mut()
                 .register_key_getter_for::<T>(key_getter);
@@ -903,9 +903,8 @@ impl SimulationContext {
         ///     payload: EventKey,
         /// }
         ///
-        /// fn get_message_key(data: &dyn EventData) -> EventKey {
-        ///     let event = data.downcast_ref::<Message>().unwrap();
-        ///     event.payload
+        /// fn get_message_key(msg: &Message) -> EventKey {
+        ///     msg.payload
         /// }
         ///
         /// #[derive(Clone, Serialize)]
@@ -934,7 +933,7 @@ impl SimulationContext {
         ///     }
         /// }
         /// let mut sim = Simulation::new(42);
-        /// sim.register_key_getter_for::<Message>(get_message_key);
+        /// sim.register_key_getter_for::<Message>(&get_message_key);
         /// let client_ctx = sim.create_context("client");
         /// let client_id = client_ctx.id();
         /// let root_ctx = sim.create_context("root");

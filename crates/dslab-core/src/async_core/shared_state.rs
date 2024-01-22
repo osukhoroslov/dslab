@@ -235,8 +235,7 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     /// }
     ///
-    /// pub fn get_some_event_details(data: &dyn EventData) -> EventKey {
-    ///     let event = data.downcast_ref::<SomeEvent>().unwrap();
+    /// pub fn get_some_event_key(event: &SomeEvent) -> EventKey {
     ///     event.request_id as EventKey
     /// }
     ///
@@ -252,7 +251,7 @@ impl<T: EventData> EventFuture<T> {
     /// }));
     /// sim.add_handler("client", client.clone());
     ///
-    /// sim.register_key_getter_for::<SomeEvent>(get_some_event_details);
+    /// sim.register_key_getter_for::<SomeEvent>(&get_some_event_key);
     ///
     /// root_ctx.emit_now(Start {}, client_id);
     /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);

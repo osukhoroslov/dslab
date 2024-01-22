@@ -44,6 +44,8 @@ async_disabled! {
 }
 
 async_enabled! {
+    type KeyGetterFunction = Rc<dyn Fn(&dyn EventData) -> EventKey>;
+
     #[derive(Clone)]
     pub struct SimulationState {
         clock: f64,
@@ -58,7 +60,7 @@ async_enabled! {
         registered_handlers: Vec<bool>,
 
         awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
-        key_getters: HashMap<TypeId, fn(&dyn EventData) -> EventKey>,
+        key_getters: HashMap<TypeId, KeyGetterFunction>,
 
         timers: BinaryHeap<Timer>,
         canceled_timers: HashSet<TimerId>,
@@ -448,12 +450,22 @@ impl SimulationState {
             self.timers.push(timer);
         }
 
-        pub fn get_key_getter(&self, type_id: TypeId) -> Option<fn(&dyn EventData) -> EventKey> {
-            self.key_getters.get(&type_id).copied()
+        pub fn get_key_getter(&self, type_id: TypeId) -> Option<KeyGetterFunction> {
+            self.key_getters.get(&type_id).cloned()
         }
 
-        pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: fn(&dyn EventData) -> EventKey) {
-            self.key_getters.insert(TypeId::of::<T>(), key_getter);
+        pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: &'static dyn Fn(&T) -> EventKey) {
+            self.key_getters.insert(TypeId::of::<T>(), Rc::new(|raw_data| {
+                if let Some(data) = raw_data.downcast_ref::<T>() {
+                    key_getter(data)
+                } else {
+                    panic!(
+                        "internal error: key getter for type {} is incorrectly used for type {}",
+                        std::any::type_name::<T>(),
+                        serde_type_name::type_name(&raw_data).unwrap(),
+                    );
+                }
+            }));
         }
     }
 }

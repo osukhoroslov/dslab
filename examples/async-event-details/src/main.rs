@@ -64,9 +64,9 @@ impl EventHandler for Client {
 }
 
 fn register_key_getters(sim: &Simulation) {
-    sim.register_key_getter_for::<CompStarted>(get_compute_start_id);
-    sim.register_key_getter_for::<CompFailed>(get_compute_failed_id);
-    sim.register_key_getter_for::<CompFinished>(get_compute_finished_id);
+    sim.register_key_getter_for::<CompStarted>(&get_compute_start_id);
+    sim.register_key_getter_for::<CompFailed>(&get_compute_failed_id);
+    sim.register_key_getter_for::<CompFinished>(&get_compute_finished_id);
 }
 
 fn main() {

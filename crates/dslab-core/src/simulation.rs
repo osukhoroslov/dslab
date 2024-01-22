@@ -543,7 +543,7 @@ impl Simulation {
         /// function with type `T`.
         ///
         /// See [`SimulationContext::async_wait_event_detailed_for`].
-        pub fn register_key_getter_for<T: EventData>(&self, key_getter: fn(&dyn EventData) -> EventKey) {
+        pub fn register_key_getter_for<T: EventData>(&self, key_getter: &'static dyn Fn(&T) -> EventKey) {
             self.sim_state
                 .borrow_mut()
                 .register_key_getter_for::<T>(key_getter);
