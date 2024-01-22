@@ -3,17 +3,17 @@ use std::{cell::RefCell, rc::Rc};
 use serde::Serialize;
 
 use dslab_core::{
-    async_core::await_details::DetailsKey, cast, event::EventData, Event, EventHandler, Simulation, SimulationContext,
+    async_core::await_details::EventKey, cast, event::EventData, Event, EventHandler, Simulation, SimulationContext,
 };
 
 #[derive(Clone, Serialize)]
 struct Message {
-    details: u64,
+    key: u64,
 }
 
-fn get_message_details(data: &dyn EventData) -> DetailsKey {
+fn get_message_key(data: &dyn EventData) -> EventKey {
     let msg = data.downcast_ref::<Message>().unwrap();
-    msg.details as DetailsKey
+    msg.key as EventKey
 }
 
 #[derive(Clone, Serialize)]
@@ -37,21 +37,21 @@ impl SimpleExchanger {
     async fn spawner(&self, handlers: u32, iterations: u32) {
         for _i in 0..iterations {
             for i in 0..handlers {
-                self.ctx.emit_self_now(Message { details: i as u64 });
+                self.ctx.emit_self_now(Message { key: i as u64 });
             }
-            self.ctx.async_sleep(10.).await;
+            self.ctx.sleep(10.).await;
         }
     }
 
-    async fn listener(&self, details: u64, iterations: u32) {
+    async fn listener(&self, key: u64, iterations: u32) {
         for _i in 0..iterations {
-            let (event, data) = self.ctx.async_wait_event_detailed_from_self::<Message>(details).await;
+            let (event, data) = self.ctx.recv_event_by_key_from_self::<Message>(key).await;
             assert!(event.src == self.ctx.id());
             assert!(event.dst == self.ctx.id());
-            assert!(data.details == details);
+            assert!(data.key == key);
         }
 
-        self.ctx.async_wait_event_detailed_from_self::<Message>(details).await;
+        self.ctx.recv_event_by_key_from_self::<Message>(key).await;
 
         panic!("unreachable handle");
     }
@@ -60,7 +60,7 @@ impl SimpleExchanger {
 impl EventHandler for SimpleExchanger {
     fn on(&mut self, event: Event) {
         cast!(match event.data {
-            Message { details: _ } => {
+            Message { key: _ } => {
                 panic!("standard event handling must be unreachable");
             }
             Start { handlers, iterations } => {
@@ -74,7 +74,7 @@ impl EventHandler for SimpleExchanger {
 fn async_wait_for_details_test() {
     let mut sim = Simulation::new(42);
 
-    sim.register_details_getter_for::<Message>(get_message_details);
+    sim.register_key_getter_for::<Message>(get_message_key);
 
     let exchanger_context = sim.create_context("exchanger");
     let exchanger_id = exchanger_context.id();

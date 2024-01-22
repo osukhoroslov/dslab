@@ -14,13 +14,13 @@ fn test_wait_for() {
         let start_time = ctx.time();
         assert!(start_time == 0.);
 
-        ctx.async_sleep(time_wait_step).await;
+        ctx.sleep(time_wait_step).await;
 
         assert!(ctx.time() == time_wait_step);
 
         let mut futures = FuturesUnordered::new();
         for i in 0..=concurrent_wait_items {
-            futures.push(ctx.async_sleep(i as f64 * time_wait_step));
+            futures.push(ctx.sleep(i as f64 * time_wait_step));
         }
 
         let mut expected_next_time = time_wait_step;

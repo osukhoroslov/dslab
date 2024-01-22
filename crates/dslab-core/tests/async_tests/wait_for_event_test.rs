@@ -33,7 +33,7 @@ impl SimpleListener {
         while self.continue_listening {
             match self
                 .ctx
-                .async_wait_event::<Message>(self.system_id)
+                .recv_event::<Message>(self.system_id)
                 .with_timeout(timeout)
                 .await
             {
@@ -98,9 +98,7 @@ fn test_async_wait_for_event() {
 
     sim.spawn(async move {
         let start_test_time = 202.;
-        system_context
-            .async_sleep(start_test_time - system_context.time())
-            .await;
+        system_context.sleep(start_test_time - system_context.time()).await;
 
         assert!(system_context.time() == start_test_time);
 
@@ -115,13 +113,13 @@ fn test_async_wait_for_event() {
 
             system_context.emit_now(Message { id: next_message_id }, listener_id);
 
-            system_context.async_sleep(message_timeout - 1.).await;
+            system_context.sleep(message_timeout - 1.).await;
         }
 
         listener.borrow_mut().expect_timeout = true;
         listener.borrow_mut().continue_listening = false;
 
-        system_context.async_sleep(100.).await;
+        system_context.sleep(100.).await;
         listener.borrow_mut().expect_timeout = false;
 
         for _i in 0..=5 {
@@ -131,7 +129,7 @@ fn test_async_wait_for_event() {
 
             system_context.emit_now(Message { id: next_message_id }, listener_id);
 
-            system_context.async_sleep(message_timeout + 1.).await;
+            system_context.sleep(message_timeout + 1.).await;
         }
     });
 

@@ -10,7 +10,7 @@ use std::{
 
 use serde::Serialize;
 
-use crate::async_core::await_details::{AwaitResult, DetailsKey};
+use crate::async_core::await_details::{AwaitResult, EventKey};
 use crate::event::EventData;
 use crate::state::SimulationState;
 use crate::{Event, Id};
@@ -106,7 +106,7 @@ impl<T: EventData> Future for EventFuture<T> {
 }
 
 impl<T: EventData> EventFuture<T> {
-    /// Ads timeout to any waiting future or event
+    /// Adds timeout to any EventFuture.
     ///
     /// # Examples
     ///
@@ -132,7 +132,7 @@ impl<T: EventData> EventFuture<T> {
     /// });
     ///
     /// sim.spawn(async move {
-    ///     let mut res = client_ctx.async_wait_event::<Message>(root_id).with_timeout(10.).await;
+    ///     let mut res = client_ctx.recv_event::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
     ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
     ///         AwaitResult::Timeout(e) => {
@@ -141,7 +141,7 @@ impl<T: EventData> EventFuture<T> {
     ///         }
     ///     }
     ///
-    ///     res = client_ctx.async_wait_event::<Message>(root_id).with_timeout(50.).await;
+    ///     res = client_ctx.recv_event::<Message>(root_id).with_timeout(50.).await;
     ///     match res {
     ///         AwaitResult::Ok((e, data)) => {
     ///             assert_eq!(e.src, root_id);
@@ -155,7 +155,7 @@ impl<T: EventData> EventFuture<T> {
     /// assert_eq!(sim.time(), 60.);
     /// ```
     ///
-    /// # Example with detailed waiting
+    /// # Example with waiting by key
     ///
     /// ```rust
     /// use std::cell::RefCell;
@@ -163,7 +163,7 @@ impl<T: EventData> EventFuture<T> {
     ///
     /// use serde::Serialize;
     ///
-    /// use dslab_core::async_core::{AwaitResult, DetailsKey};
+    /// use dslab_core::async_core::{AwaitResult, EventKey};
     /// use dslab_core::event::EventData;
     /// use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
     ///
@@ -190,7 +190,7 @@ impl<T: EventData> EventFuture<T> {
     ///     async fn listen_first(&self) {
     ///         let mut result = self
     ///             .ctx
-    ///             .async_wait_event_detailed::<SomeEvent>(self.root_id, 1).with_timeout(10.)
+    ///             .recv_event_by_key::<SomeEvent>(self.root_id, 1).with_timeout(10.)
     ///             .await;
     ///         if let AwaitResult::Timeout(e) = result {
     ///             assert_eq!(e.src, self.root_id);
@@ -199,7 +199,7 @@ impl<T: EventData> EventFuture<T> {
     ///         }
     ///         result = self
     ///             .ctx
-    ///             .async_wait_event_detailed::<SomeEvent>(self.root_id, 1).with_timeout(100.)
+    ///             .recv_event_by_key::<SomeEvent>(self.root_id, 1).with_timeout(100.)
     ///             .await;
     ///         if let AwaitResult::Ok((e, data)) = result {
     ///             assert_eq!(e.src, self.root_id);
@@ -211,7 +211,7 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     ///
     ///     async fn listen_second(&self) {
-    ///         let (e, data) = self.ctx.async_wait_event_detailed::<SomeEvent>(self.root_id, 2).await;
+    ///         let (e, data) = self.ctx.recv_event_by_key::<SomeEvent>(self.root_id, 2).await;
     ///         assert_eq!(e.src, self.root_id);
     ///         assert_eq!(data.request_id, 2);
     ///         *self.actions_finished.borrow_mut() += 1;
@@ -235,9 +235,9 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     /// }
     ///
-    /// pub fn get_some_event_details(data: &dyn EventData) -> DetailsKey {
+    /// pub fn get_some_event_details(data: &dyn EventData) -> EventKey {
     ///     let event = data.downcast_ref::<SomeEvent>().unwrap();
-    ///     event.request_id as DetailsKey
+    ///     event.request_id as EventKey
     /// }
     ///
     /// let mut sim = Simulation::new(42);
@@ -252,7 +252,7 @@ impl<T: EventData> EventFuture<T> {
     /// }));
     /// sim.add_handler("client", client.clone());
     ///
-    /// sim.register_details_getter_for::<SomeEvent>(get_some_event_details);
+    /// sim.register_key_getter_for::<SomeEvent>(get_some_event_details);
     ///
     /// root_ctx.emit_now(Start {}, client_id);
     /// root_ctx.emit(SomeEvent { request_id: 1 }, client_id, 50.);
@@ -300,7 +300,7 @@ pub(crate) struct AwaitKey {
     pub from: Id,
     pub to: Id,
     pub msg_type: TypeId,
-    details: DetailsKey,
+    event_key: EventKey,
 }
 
 impl AwaitKey {
@@ -309,7 +309,7 @@ impl AwaitKey {
             from,
             to,
             msg_type: TypeId::of::<T>(),
-            details: 0,
+            event_key: 0,
         }
     }
 
@@ -318,25 +318,25 @@ impl AwaitKey {
             from,
             to,
             msg_type: data.type_id(),
-            details: 0,
+            event_key: 0,
         }
     }
 
-    pub fn new_with_details<T: EventData>(from: Id, to: Id, details: DetailsKey) -> Self {
+    pub fn new_with_event_key<T: EventData>(from: Id, to: Id, event_key: EventKey) -> Self {
         Self {
             from,
             to,
             msg_type: TypeId::of::<T>(),
-            details,
+            event_key,
         }
     }
 
-    pub fn new_with_details_by_ref(from: Id, to: Id, data: &dyn EventData, details: DetailsKey) -> Self {
+    pub fn new_with_event_key_by_ref(from: Id, to: Id, data: &dyn EventData, event_key: EventKey) -> Self {
         Self {
             from,
             to,
             msg_type: data.type_id(),
-            details,
+            event_key,
         }
     }
 }

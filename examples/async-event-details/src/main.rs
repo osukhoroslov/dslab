@@ -54,9 +54,7 @@ impl Client {
 
             self.ctx.emit_now(TaskRequest { flops, cores, memory }, self.worker_id);
 
-            self.ctx
-                .async_sleep(self.ctx.gen_range(1.0..=self.max_task_delay))
-                .await;
+            self.ctx.sleep(self.ctx.gen_range(1.0..=self.max_task_delay)).await;
         }
     }
 }
@@ -65,10 +63,10 @@ impl EventHandler for Client {
     fn on(&mut self, _event: Event) {}
 }
 
-fn register_deails_getters(sim: &Simulation) {
-    sim.register_details_getter_for::<CompStarted>(get_compute_start_id);
-    sim.register_details_getter_for::<CompFailed>(get_compute_failed_id);
-    sim.register_details_getter_for::<CompFinished>(get_compute_finished_id);
+fn register_key_getters(sim: &Simulation) {
+    sim.register_key_getter_for::<CompStarted>(get_compute_start_id);
+    sim.register_key_getter_for::<CompFailed>(get_compute_failed_id);
+    sim.register_key_getter_for::<CompFinished>(get_compute_finished_id);
 }
 
 fn main() {
@@ -113,7 +111,7 @@ fn main() {
 
     sim.add_handler(worker_name, worker.clone());
 
-    register_deails_getters(&sim);
+    register_key_getters(&sim);
 
     admin.emit_now(Start {}, worker.borrow().id());
 
