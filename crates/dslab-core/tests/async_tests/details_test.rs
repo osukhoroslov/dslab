@@ -71,7 +71,7 @@ impl EventHandler for SimpleExchanger {
 fn async_wait_for_details_test() {
     let mut sim = Simulation::new(42);
 
-    sim.register_key_getter_for::<Message>(&get_message_key);
+    sim.register_key_getter_for::<Message>(get_message_key);
 
     let exchanger_context = sim.create_context("exchanger");
     let exchanger_id = exchanger_context.id();
