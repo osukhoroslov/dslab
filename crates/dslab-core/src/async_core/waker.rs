@@ -11,7 +11,7 @@ use std::{
 use core::mem::ManuallyDrop;
 use futures::task::WakerRef;
 
-pub(super) trait CustomWake {
+pub(super) trait RcWake {
     fn wake(self: Rc<Self>) {
         Self::wake_by_ref(&self)
     }
@@ -21,7 +21,7 @@ pub(super) trait CustomWake {
 
 pub(super) fn waker_ref<W>(wake: &Rc<W>) -> WakerRef<'_>
 where
-    W: CustomWake,
+    W: RcWake,
 {
     // simply copy the pointer instead of using Rc::into_raw,
     // as we don't actually keep a refcount by using ManuallyDrop.<
@@ -31,7 +31,7 @@ where
     WakerRef::new_unowned(waker)
 }
 
-pub(super) fn waker_vtable<W: CustomWake>() -> &'static RawWakerVTable {
+pub(super) fn waker_vtable<W: RcWake>() -> &'static RawWakerVTable {
     &RawWakerVTable::new(
         clone_rc_raw::<W>,
         wake_rc_raw::<W>,
@@ -41,7 +41,7 @@ pub(super) fn waker_vtable<W: CustomWake>() -> &'static RawWakerVTable {
 }
 
 #[allow(clippy::redundant_clone)] // The clone here isn't actually redundant.
-unsafe fn increase_refcount<T: CustomWake>(data: *const ()) {
+unsafe fn increase_refcount<T: RcWake>(data: *const ()) {
     // Retain Rc, but don't touch refcount by wrapping in ManuallyDrop
     let rc = ManuallyDrop::new(Rc::<T>::from_raw(data.cast::<T>()));
     // Now increase refcount, but don't drop new refcount either
@@ -49,23 +49,23 @@ unsafe fn increase_refcount<T: CustomWake>(data: *const ()) {
 }
 
 // used by `waker_ref`
-unsafe fn clone_rc_raw<T: CustomWake>(data: *const ()) -> RawWaker {
+unsafe fn clone_rc_raw<T: RcWake>(data: *const ()) -> RawWaker {
     increase_refcount::<T>(data);
     RawWaker::new(data, waker_vtable::<T>())
 }
 
-unsafe fn wake_rc_raw<T: CustomWake>(data: *const ()) {
+unsafe fn wake_rc_raw<T: RcWake>(data: *const ()) {
     let rc: Rc<T> = Rc::from_raw(data.cast::<T>());
-    CustomWake::wake(rc);
+    RcWake::wake(rc);
 }
 
 // used by `waker_ref`
-unsafe fn wake_by_ref_rc_raw<T: CustomWake>(data: *const ()) {
+unsafe fn wake_by_ref_rc_raw<T: RcWake>(data: *const ()) {
     // Retain Rc, but don't touch refcount by wrapping in ManuallyDrop
     let rc = ManuallyDrop::new(Rc::<T>::from_raw(data.cast::<T>()));
-    CustomWake::wake_by_ref(&rc);
+    RcWake::wake_by_ref(&rc);
 }
 
-unsafe fn drop_rc_raw<T: CustomWake>(data: *const ()) {
+unsafe fn drop_rc_raw<T: RcWake>(data: *const ()) {
     drop(Rc::<T>::from_raw(data.cast::<T>()))
 }
