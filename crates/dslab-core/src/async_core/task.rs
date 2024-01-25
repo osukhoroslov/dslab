@@ -1,8 +1,8 @@
 //! Task declaration.
 
-use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::mpsc::Sender};
+use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::mpsc::Sender, task::Context};
 
-use super::waker::CustomWake;
+use super::waker::{waker_ref, RcWake};
 
 /// Abstract task that contains future and sends itself to the executor on
 /// wake-up notification
@@ -10,7 +10,7 @@ pub struct Task {
     /// future to be polled by executor
     pub future: RefCell<Option<Pin<Box<dyn Future<Output = ()>>>>>,
 
-    task_sender: Sender<Rc<Task>>,
+    executor: Sender<Rc<Task>>,
 }
 
 impl Task {
@@ -24,21 +24,51 @@ impl Task {
     ///
     /// TODO: implement task cancellation to increase bug-safety of user space code.
     ///
-    pub fn new(future: impl Future<Output = ()>, task_sender: Sender<Rc<Task>>) -> Self {
+    pub fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
         unsafe {
             let boxed: Box<dyn Future<Output = ()>> = Box::new(future);
             let converted: Box<dyn Future<Output = ()> + 'static> = std::mem::transmute(boxed);
             Self {
                 future: RefCell::new(Some(Box::into_pin(converted))),
-                task_sender,
+                executor,
             }
         }
     }
+
+    /// Polls the task.
+    ///
+    /// This method is called by the executor when the task is woken up.
+    pub fn poll(self: Rc<Self>) {
+        let mut future_slot = self.future.borrow_mut();
+
+        if let Some(mut future) = future_slot.take() {
+            // Create a waker from the task itself
+            let waker = waker_ref(&self);
+
+            let context = &mut Context::from_waker(&waker);
+
+            if future.as_mut().poll(context).is_pending() {
+                *future_slot = Some(future);
+            }
+        } else {
+            panic!("internal error: task polled after completion")
+        }
+    }
+
+    /// Sends the task to the executor.
+    pub fn schedule(self: &Rc<Self>) {
+        self.executor.send(self.clone()).expect("channel is closed");
+    }
+
+    /// Converts the future into a task and sends it to the executor.
+    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
+        let task = Rc::new(Task::new(future, executor));
+        task.schedule();
+    }
 }
 
-impl CustomWake for Task {
-    fn wake_by_ref(arc_self: &Rc<Self>) {
-        let cloned = arc_self.clone();
-        arc_self.task_sender.send(cloned).expect("channel is closed");
+impl RcWake for Task {
+    fn wake_by_ref(rc_self: &Rc<Self>) {
+        rc_self.schedule();
     }
 }

@@ -66,7 +66,7 @@ async_enabled! {
         canceled_timers: HashSet<TimerId>,
         timer_count: u64,
 
-        task_sender: Sender<Rc<Task>>,
+        executor: Sender<Rc<Task>>,
     }
 }
 
@@ -103,7 +103,7 @@ impl SimulationState {
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),
                 timer_count: 0,
-                task_sender,
+                executor: task_sender,
             }
         }
     }
@@ -417,8 +417,7 @@ impl SimulationState {
         }
 
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
-            let task = Rc::new(Task::new(future, self.task_sender.clone()));
-            self.task_sender.send(task).expect("channel is closed");
+            Task::spawn(future, self.executor.clone());
         }
 
         pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
@@ -428,8 +427,7 @@ impl SimulationState {
                 Register handler for component {} before spawning it (empty impl EventHandler is OK).",
                 component_id,
             );
-            let task = Rc::new(Task::new(future, self.task_sender.clone()));
-            self.task_sender.send(task).expect("channel is closed");
+            Task::spawn(future, self.executor.clone());
         }
 
         pub fn wait_for(&mut self, component_id: Id, timeout: f64) -> TimerFuture {
