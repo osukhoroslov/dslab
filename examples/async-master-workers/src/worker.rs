@@ -37,9 +37,6 @@ pub struct AsyncWorker {
     disk: Rc<RefCell<Disk>>,
     net: Rc<RefCell<Network>>,
     master_id: Id,
-    net_id: Id,
-    compute_id: Id,
-    disk_id: Id,
     ctx: SimulationContext,
 }
 
@@ -51,17 +48,11 @@ impl AsyncWorker {
         master_id: Id,
         ctx: SimulationContext,
     ) -> Self {
-        let net_id = net.borrow().id();
-        let compute_id = compute.borrow().id();
-        let disk_id = disk.borrow().id();
         Self {
             id: ctx.id(),
             compute,
             disk,
             net,
-            net_id,
-            compute_id,
-            disk_id,
             master_id,
             ctx,
         }
@@ -119,16 +110,14 @@ impl AsyncWorker {
                 .borrow_mut()
                 .transfer_data(self.master_id, self.id, task.req.input_size as f64, self.id);
         self.ctx
-            .recv_event_by_key::<DataTransferCompleted>(self.net_id, transfer_id as EventKey)
+            .recv_event_by_key::<DataTransferCompleted>(transfer_id as EventKey)
             .await;
         log_debug!(self.ctx, "downloaded input data for task: {}", task.req.id);
     }
 
     async fn read_data(&self, task: &TaskInfo) {
         let read_id = self.disk.borrow_mut().read(task.req.input_size, self.id);
-        self.ctx
-            .recv_event_by_key::<DataReadCompleted>(self.disk_id, read_id)
-            .await;
+        self.ctx.recv_event_by_key::<DataReadCompleted>(read_id).await;
         log_debug!(self.ctx, "read input data for task: {}", task.req.id);
     }
 
@@ -141,22 +130,16 @@ impl AsyncWorker {
             task.req.cores_dependency,
             self.id,
         );
-        self.ctx
-            .recv_event_by_key::<CompStarted>(self.compute_id, comp_id as EventKey)
-            .await;
+        self.ctx.recv_event_by_key::<CompStarted>(comp_id as EventKey).await;
         log_debug!(self.ctx, "started execution of task: {}", task.req.id);
 
-        self.ctx
-            .recv_event_by_key::<CompFinished>(self.compute_id, comp_id as EventKey)
-            .await;
+        self.ctx.recv_event_by_key::<CompFinished>(comp_id as EventKey).await;
         log_debug!(self.ctx, "completed execution of task: {}", task.req.id);
     }
 
     async fn write_data(&self, task: &TaskInfo) {
         let write_id = self.disk.borrow_mut().write(task.req.output_size, self.id);
-        self.ctx
-            .recv_event_by_key::<DataWriteCompleted>(self.disk_id, write_id)
-            .await;
+        self.ctx.recv_event_by_key::<DataWriteCompleted>(write_id).await;
         log_debug!(self.ctx, "wrote output data for task: {}", task.req.id);
     }
 
@@ -166,7 +149,7 @@ impl AsyncWorker {
                 .borrow_mut()
                 .transfer_data(self.id, self.master_id, task.req.output_size as f64, self.id);
         self.ctx
-            .recv_event_by_key::<DataTransferCompleted>(self.net_id, transfer_id as EventKey)
+            .recv_event_by_key::<DataTransferCompleted>(transfer_id as EventKey)
             .await;
         log_debug!(self.ctx, "uploaded output data for task: {}", task.req.id);
         self.disk

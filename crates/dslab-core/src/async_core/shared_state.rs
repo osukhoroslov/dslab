@@ -132,7 +132,7 @@ impl<T: EventData> EventFuture<T> {
     /// });
     ///
     /// sim.spawn(async move {
-    ///     let mut res = client_ctx.recv_event::<Message>(root_id).with_timeout(10.).await;
+    ///     let mut res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
     ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
     ///         AwaitResult::Timeout(e) => {
@@ -141,7 +141,7 @@ impl<T: EventData> EventFuture<T> {
     ///         }
     ///     }
     ///
-    ///     res = client_ctx.recv_event::<Message>(root_id).with_timeout(50.).await;
+    ///     res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(50.).await;
     ///     match res {
     ///         AwaitResult::Ok((e, data)) => {
     ///             assert_eq!(e.src, root_id);
@@ -190,7 +190,7 @@ impl<T: EventData> EventFuture<T> {
     ///     async fn listen_first(&self) {
     ///         let mut result = self
     ///             .ctx
-    ///             .recv_event_by_key::<SomeEvent>(self.root_id, 1).with_timeout(10.)
+    ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(10.)
     ///             .await;
     ///         if let AwaitResult::Timeout(e) = result {
     ///             assert_eq!(e.src, self.root_id);
@@ -199,7 +199,7 @@ impl<T: EventData> EventFuture<T> {
     ///         }
     ///         result = self
     ///             .ctx
-    ///             .recv_event_by_key::<SomeEvent>(self.root_id, 1).with_timeout(100.)
+    ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(100.)
     ///             .await;
     ///         if let AwaitResult::Ok((e, data)) = result {
     ///             assert_eq!(e.src, self.root_id);
@@ -211,7 +211,7 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     ///
     ///     async fn listen_second(&self) {
-    ///         let (e, data) = self.ctx.recv_event_by_key::<SomeEvent>(self.root_id, 2).await;
+    ///         let (e, data) = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, 2).await;
     ///         assert_eq!(e.src, self.root_id);
     ///         assert_eq!(data.request_id, 2);
     ///         *self.actions_finished.borrow_mut() += 1;
@@ -265,7 +265,6 @@ impl<T: EventData> EventFuture<T> {
         self.sim_state
             .borrow_mut()
             .add_timer_on_state(component_id, timeout, self.state.clone());
-
         EventWithTimeoutFuture { state: self.state }.await
     }
 }
@@ -290,45 +289,40 @@ impl Future for TimerFuture {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+#[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 pub(crate) struct AwaitKey {
-    pub from: Id,
     pub to: Id,
     pub msg_type: TypeId,
     event_key: EventKey,
 }
 
 impl AwaitKey {
-    pub fn new<T: EventData>(from: Id, to: Id) -> Self {
+    pub fn new<T: EventData>(to: Id) -> Self {
         Self {
-            from,
             to,
             msg_type: TypeId::of::<T>(),
             event_key: 0,
         }
     }
 
-    pub fn new_by_ref(from: Id, to: Id, data: &dyn EventData) -> Self {
+    pub fn new_by_ref(to: Id, data: &dyn EventData) -> Self {
         Self {
-            from,
             to,
             msg_type: data.type_id(),
             event_key: 0,
         }
     }
 
-    pub fn new_with_event_key<T: EventData>(from: Id, to: Id, event_key: EventKey) -> Self {
+    pub fn new_with_event_key<T: EventData>(to: Id, event_key: EventKey) -> Self {
         Self {
-            from,
             to,
             msg_type: TypeId::of::<T>(),
             event_key,
         }
     }
 
-    pub fn new_with_event_key_by_ref(from: Id, to: Id, data: &dyn EventData, event_key: EventKey) -> Self {
+    pub fn new_with_event_key_by_ref(to: Id, data: &dyn EventData, event_key: EventKey) -> Self {
         Self {
-            from,
             to,
             msg_type: data.type_id(),
             event_key,

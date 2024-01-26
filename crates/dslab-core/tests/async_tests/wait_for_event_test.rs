@@ -33,7 +33,7 @@ impl SimpleListener {
         while self.continue_listening {
             match self
                 .ctx
-                .recv_event::<Message>(self.system_id)
+                .recv_event_from::<Message>(self.system_id)
                 .with_timeout(timeout)
                 .await
             {

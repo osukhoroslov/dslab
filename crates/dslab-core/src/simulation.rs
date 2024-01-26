@@ -441,6 +441,8 @@ impl Simulation {
 
     async_enabled! {
         fn step_inner(&self) -> bool {
+            self.sim_state.borrow_mut().cleanup_empty_awaiters();
+
             if self.process_task() {
                 return true;
             }
@@ -477,18 +479,17 @@ impl Simulation {
 
             let await_key = match self.sim_state.borrow().get_key_getter(event.data.type_id()) {
                 Some(getter) => AwaitKey::new_with_event_key_by_ref(
-                    event.src,
                     event.dst,
                     event.data.as_ref(),
                     getter(event.data.as_ref()),
                 ),
-                None => AwaitKey::new_by_ref(event.src, event.dst, event.data.as_ref()),
+                None => AwaitKey::new_by_ref(event.dst, event.data.as_ref()),
             };
 
-            if self.sim_state.borrow().has_handler_on_key(&await_key) {
+            if self.sim_state.borrow_mut().has_handler_on_key(&event.src, &await_key) {
                 self.log_trace_event(&event);
 
-                self.sim_state.borrow_mut().set_event_for_await_key(&await_key, event);
+                self.sim_state.borrow_mut().set_event_for_await_key(event.src, &await_key, event);
 
                 self.process_task();
                 return true;
@@ -506,6 +507,8 @@ impl Simulation {
         fn process_timer(&self) {
             let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
             next_timer.state.as_ref().borrow_mut().set_completed();
+            // drop timer to release the pointer to the state
+            drop(next_timer);
             self.process_task();
         }
 
@@ -539,7 +542,7 @@ impl Simulation {
 
         /// Registers a function that extracts [`EventKey`] from events of specific type `T`.
         ///
-        /// This is required step before using the [`SimulationContext::recv_event_by_key`]
+        /// This is required step before using the [`SimulationContext::recv_event_by_key_from`]
         /// function with type `T`.
         ///
         /// See [`SimulationContext::async_wait_event_detailed_for`].

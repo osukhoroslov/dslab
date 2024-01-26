@@ -19,6 +19,7 @@ async_enabled! {
     use futures::Future;
 
     use crate::async_core::await_details::EventKey;
+    use crate::async_core::awaiters::{Awaiter, AwaitersWithSourceStorage};
     use crate::async_core::shared_state::{AwaitEventSharedState, EmptyData, TimerFuture};
     use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter};
     use crate::async_core::task::Task;
@@ -59,7 +60,9 @@ async_enabled! {
         names: Rc<RefCell<Vec<String>>>,
         registered_handlers: Vec<bool>,
 
-        awaiters: HashMap<AwaitKey, Rc<RefCell<dyn AwaitResultSetter>>>,
+        awaiters: HashMap<AwaitKey, Awaiter>,
+        awaiters_with_source: AwaitersWithSourceStorage,
+        awaiters_capacity: usize,
         key_getters: HashMap<TypeId, KeyGetterFunction>,
 
         timers: BinaryHeap<Timer>,
@@ -99,6 +102,8 @@ impl SimulationState {
                 // Async stuff
                 registered_handlers: Vec::new(),
                 awaiters: HashMap::new(),
+                awaiters_with_source: AwaitersWithSourceStorage::new(),
+                awaiters_capacity: 4,
                 key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),
@@ -399,20 +404,49 @@ impl SimulationState {
             }
         }
 
-        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, state: Rc<RefCell<dyn AwaitResultSetter>>) {
-            self.awaiters.insert(key, state);
-        }
-
-        pub(crate) fn has_handler_on_key(&self, key: &AwaitKey) -> bool {
-            self.awaiters.contains_key(key)
-        }
-
-        pub(crate) fn set_event_for_await_key(&mut self, key: &AwaitKey, event: Event) -> bool {
-            if !self.has_handler_on_key(key) {
-                return false;
+        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, src_opt: Option<Id>, state: Rc<RefCell<dyn AwaitResultSetter>>) {
+            if let Some(src) = src_opt {
+                if let Some(awaiter) = self.awaiters.get(&key) {
+                    if awaiter.is_shared() {
+                        panic!("awaiter for key {:?} (without source) already exists", key);
+                    } else {
+                        self.awaiters.remove(&key);
+                    }
+                }
+                if let Some(awaiter) = self.awaiters_with_source.insert(key, src, Awaiter { state }) {
+                    if awaiter.is_shared() {
+                        panic!("awaiter for key {:?} and source {} already exists", key, src);
+                    }
+                }
+            } else {
+                if let Some(src) = self.awaiters_with_source.has_any_shared_awaiter_on_key(&key) {
+                    panic!("awaiter for key {:?} with source {} already exists", key, src);
+                }
+                if let Some(awaiter) = self.awaiters.insert(key, Awaiter { state }) {
+                    if awaiter.is_shared() {
+                        panic!("awaiter for key {:?} (without source) already exists", key);
+                    }
+                }
             }
-            let shared_state = self.awaiters.remove(key).unwrap();
-            shared_state.borrow_mut().set_ok_completed_with_event(event);
+        }
+
+        pub(crate) fn has_handler_on_key(&mut self, src: &Id, key: &AwaitKey) -> bool {
+            if let Some(awaiter) = self.awaiters.get(key) {
+                if awaiter.is_shared() {
+                    return true;
+                } else {
+                    self.awaiters.remove(key);
+                }
+            }
+            self.awaiters_with_source.has_shared_awaiter_on_key_with_source(key, src)
+        }
+
+        pub(crate) fn set_event_for_await_key(&mut self, src: Id, key: &AwaitKey, event: Event) -> bool {
+            // panics if there is no awaiter
+            let awaiter = self.awaiters.remove(key).unwrap_or_else(|| self.awaiters_with_source.remove(key, &src).unwrap());
+            assert!(awaiter.is_shared(), "internal error: trying to set event for awaiter that is not shared");
+
+            awaiter.state.borrow_mut().set_ok_completed_with_event(event);
             true
         }
 
@@ -464,6 +498,19 @@ impl SimulationState {
                     );
                 }
             }));
+        }
+
+        pub fn cleanup_empty_awaiters(&mut self) {
+            if self.awaiters.len() + self.awaiters_with_source.len() < self.awaiters_capacity {
+                return;
+            }
+            self.awaiters.retain(|_key, awaiter| awaiter.is_shared());
+            self.awaiters_with_source.remove_not_shared_awaiters();
+
+            // Extend capacity if it is too small to keep all shared awaiters
+            if self.awaiters.len() + self.awaiters_with_source.len() >= self.awaiters_capacity / 2 {
+                self.awaiters_capacity *= 2;
+            }
         }
     }
 }
