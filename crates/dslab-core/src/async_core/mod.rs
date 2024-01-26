@@ -7,6 +7,7 @@ async_enabled! {
     pub mod await_details;
     pub mod sync;
 
+    pub(crate) mod awaiters;
     pub(crate) mod executor;
     pub(crate) mod shared_state;
     pub(crate) mod task;

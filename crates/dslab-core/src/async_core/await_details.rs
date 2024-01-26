@@ -28,11 +28,13 @@ impl<T: EventData> Default for AwaitResult<T> {
 
 impl<T: EventData> AwaitResult<T> {
     /// Creates a Timeout result with specified source and destination.
-    pub(crate) fn timeout_with(src: Id, dst: Id) -> Self {
+    /// If source is None, then it is set to Id of destination component.
+    /// It means that source of timeout will be indicated as source of caller.
+    pub(crate) fn timeout_with(src: Option<Id>, dst: Id) -> Self {
         Self::Timeout(Event {
             id: 0,
             time: 0.,
-            src,
+            src: src.unwrap_or(Id::MAX),
             dst,
             data: Box::new(EmptyData {}),
         })

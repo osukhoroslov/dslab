@@ -797,6 +797,97 @@ impl SimulationContext {
             future.await;
         }
 
+        /// Async receive any event of type `T` from any component.
+        ///
+        /// Might be used for convenient waiting where source component is obvious or there are
+        /// several possible sources. The actual source component will be returned in the event.
+        ///
+        /// If this future is used with timeout and timeout fires, the returned event will have
+        /// `src` equal to `Id::MAX` (unknown Id).
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(e.src, root_id);
+        ///     assert_eq!(data.payload, 42);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
+        ///
+        /// # Example with multiple components sending events
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_1_ctx = sim.create_context("root_1");
+        /// let root_1_id = root_1_ctx.id();
+        /// let root_2_ctx = sim.create_context("root_2");
+        /// let root_2_id = root_2_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_1_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///    root_2_ctx.emit(Message{ payload: 43 }, client_id, 100.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(client_ctx.time(), 50.);
+        ///     assert_eq!(e.src, root_1_id);
+        ///     assert_eq!(data.payload, 42);
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(client_ctx.time(), 100.);
+        ///     assert_eq!(e.src, root_2_id);
+        ///     assert_eq!(data.payload, 43);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 100.);
+        /// ```
+        pub fn recv_event<T>(&self) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_to::<T>(None, self.id)
+        }
+
         /// Async receive any event of type `T` from component `src`.
         ///
         /// # Examples
@@ -823,7 +914,7 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = client_ctx.recv_event::<Message>(root_id).await;
+        ///     let (e, data) = client_ctx.recv_event_from::<Message>(root_id).await;
         ///     assert_eq!(e.src, root_id);
         ///     assert_eq!(data.payload, 42);
         /// });
@@ -831,11 +922,11 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 50.);
         /// ```
-        pub fn recv_event<T>(&self, src: Id) -> EventFuture<T>
+        pub fn recv_event_from<T>(&self, src: Id) -> EventFuture<T>
         where
             T: EventData,
         {
-            self.recv_event_to::<T>(src, self.id)
+            self.recv_event_to::<T>(Some(src), self.id)
         }
 
         /// Async receive an event of type T from self.
@@ -871,17 +962,27 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_to::<T>(self.id, self.id)
+            self.recv_event_to::<T>(Some(self.id), self.id)
         }
 
         /// Register the function for a type of EventData to get await key to further call
-        /// Self::recv_event_by_key
+        /// Self::recv_event_by_key_from
         ///
-        /// See [`Self::recv_event_by_key`].
+        /// See [`Self::recv_event_by_key_from`].
         pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
             self.sim_state
                 .borrow_mut()
                 .register_key_getter_for::<T>(key_getter);
+        }
+
+        /// Async receive event of type T from any component with specific key.
+        ///
+        /// See [`Self::recv_event_from_by_key`] and [`Self::recv_event`].
+        pub fn recv_event_by_key<T>(&self, key: EventKey) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_by_key_to::<T>(None, self.id, key)
         }
 
         /// Async receive event of type T from src component with specific key.
@@ -913,7 +1014,7 @@ impl SimulationContext {
         ///
         /// impl Client {
         ///     async fn recv_payload(&self, payload: EventKey) {
-        ///         let (e, data) = self.ctx.recv_event_by_key::<Message>(self.root_id, payload).await;
+        ///         let (e, data) = self.ctx.recv_event_by_key_from::<Message>(self.root_id, payload).await;
         ///         assert_eq!(data.payload, payload);
         ///     }
         /// }
@@ -944,11 +1045,11 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 100.);
         /// ```
-        pub fn recv_event_by_key<T>(&self, src: Id, key: EventKey) -> EventFuture<T>
+        pub fn recv_event_by_key_from<T>(&self, src: Id, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
         {
-            self.recv_event_by_key_to::<T>(src, self.id, key)
+            self.recv_event_by_key_to::<T>(Some(src), self.id, key)
         }
 
         /// Async handling event from self by key.
@@ -957,10 +1058,10 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_by_key_to::<T>(self.id, self.id, key)
+            self.recv_event_by_key_to::<T>(Some(self.id), self.id, key)
         }
 
-        fn recv_event_to<T>(&self, src: Id, dst: Id) -> EventFuture<T>
+        fn recv_event_to<T>(&self, src: Option<Id>, dst: Id) -> EventFuture<T>
         where
             T: EventData,
         {
@@ -969,14 +1070,14 @@ impl SimulationContext {
                 "try to async handle event that has key handling, use async handlers by key"
             );
 
-            let await_key = AwaitKey::new::<T>(src, dst);
+            let await_key = AwaitKey::new::<T>(dst);
 
-            self.create_event_future(await_key)
+            self.create_event_future(await_key, src)
         }
 
         fn recv_event_by_key_to<T>(
             &self,
-            src: Id,
+            src: Option<Id>,
             dst: Id,
             key: EventKey,
         ) -> EventFuture<T>
@@ -989,21 +1090,21 @@ impl SimulationContext {
                 type_name::<T>()
             );
 
-            let await_key = AwaitKey::new_with_event_key::<T>(src, dst, key);
+            let await_key = AwaitKey::new_with_event_key::<T>(dst, key);
 
-            self.create_event_future(await_key)
+            self.create_event_future(await_key, src)
         }
 
-        fn create_event_future<T>(&self, await_key: AwaitKey) -> EventFuture<T>
+        fn create_event_future<T>(&self, await_key: AwaitKey, src: Option<Id>) -> EventFuture<T>
         where
             T: EventData,
         {
             let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::new(await_key.to)));
-            state.borrow_mut().shared_content = AwaitResult::timeout_with(await_key.from, await_key.to);
+            state.borrow_mut().shared_content = AwaitResult::timeout_with(src, await_key.to);
 
             self.sim_state
                 .borrow_mut()
-                .add_awaiter_handler(await_key, state.clone());
+                .add_awaiter_handler(await_key, src, state.clone());
 
             EventFuture { state, sim_state: self.sim_state.clone() }
         }
