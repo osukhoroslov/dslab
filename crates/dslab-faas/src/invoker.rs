@@ -60,10 +60,10 @@ fn try_invoke(app: &Application, cm: &mut ContainerManager, time: f64) -> Invoke
         }
     }
     if let Some(id) = nearest {
-        if cm.get_container(id).unwrap().status == ContainerStatus::Idle {
-            return InvokerDecision::Warm(id);
-        } else {
+        if cm.get_container(id).unwrap().status == ContainerStatus::Deploying {
             return InvokerDecision::Cold((id, wait));
+        } else {
+            return InvokerDecision::Warm(id);
         }
     }
     if let Some((id, delay)) = cm.try_deploy(app, time) {
