@@ -148,8 +148,8 @@ impl CloudSimulation {
                 VmDatasetType::Azure => {
                     let mut dataset = AzureDatasetReader::new(
                         sim.sim_config.simulation_length,
-                        sim.sim_config.hosts.get(0).unwrap().cpus as f64,
-                        sim.sim_config.hosts.get(0).unwrap().memory as f64,
+                        sim.sim_config.hosts.first().unwrap().cpus as f64,
+                        sim.sim_config.hosts.first().unwrap().memory as f64,
                     );
                     dataset.parse(
                         format!("{}/vm_types.csv", dataset_config.path),

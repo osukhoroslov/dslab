@@ -322,6 +322,7 @@ fn test_stale_replica(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+#[allow(clippy::get_first)]
 fn test_concurrent_writes_1(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
@@ -349,6 +350,7 @@ fn test_concurrent_writes_1(config: &TestConfig) -> TestResult {
     Ok(true)
 }
 
+#[allow(clippy::get_first)]
 fn test_concurrent_writes_2(config: &TestConfig) -> TestResult {
     let mut sys = build_system(config);
     let mut rand = Pcg64::seed_from_u64(config.seed);
