@@ -725,8 +725,8 @@
                 VmDatasetType::Azure =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>dataset = AzureDatasetReader::new(
                         sim.sim_config.simulation_length,
-                        sim.sim_config.hosts.get(<span class="number">0</span>).unwrap().cpus <span class="kw">as </span>f64,
-                        sim.sim_config.hosts.get(<span class="number">0</span>).unwrap().memory <span class="kw">as </span>f64,
+                        sim.sim_config.hosts.first().unwrap().cpus <span class="kw">as </span>f64,
+                        sim.sim_config.hosts.first().unwrap().memory <span class="kw">as </span>f64,
                     );
                     dataset.parse(
                         <span class="macro">format!</span>(<span class="string">&quot;{}/vm_types.csv&quot;</span>, dataset_config.path),
