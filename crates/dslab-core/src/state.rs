@@ -407,6 +407,20 @@ impl SimulationState {
             }
         }
 
+        pub(crate) fn create_timer(
+            &mut self,
+            component_id: Id,
+            timeout: f64,
+            sim_state: Rc<RefCell<SimulationState>>,
+        ) -> TimerFuture {
+            self.timer_count += 1;
+            let timer_promise = TimerPromise::new(self.timer_count, component_id, self.time() + timeout);
+            let timer_future = timer_promise.future(sim_state);
+            self.timers.push(timer_promise);
+
+            timer_future
+        }
+
         pub(crate) fn create_event_future<T: EventData>(
             &mut self,
             key: AwaitKey,
@@ -465,20 +479,6 @@ impl SimulationState {
                 component_id,
             );
             Task::spawn(future, self.executor.clone());
-        }
-
-        pub(crate) fn create_timer(
-            &mut self,
-            component_id: Id,
-            timeout: f64,
-            sim_state: Rc<RefCell<SimulationState>>,
-        ) -> TimerFuture {
-            self.timer_count += 1;
-            let timer_promise = TimerPromise::new(self.timer_count, component_id, self.time() + timeout);
-            let timer_future = timer_promise.future(sim_state);
-            self.timers.push(timer_promise);
-
-            timer_future
         }
 
         pub fn get_key_getter(&self, type_id: TypeId) -> Option<KeyGetterFunction> {
