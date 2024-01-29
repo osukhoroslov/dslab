@@ -8,9 +8,10 @@ use std::{
     task::{Poll, Waker},
 };
 
+use futures::{select, FutureExt};
 use serde::Serialize;
 
-use crate::async_core::await_details::{AwaitResult, EventKey};
+use crate::async_core::await_details::{AwaitResult, EventKey, TimeoutInfo};
 use crate::event::EventData;
 use crate::state::SimulationState;
 use crate::{Event, Id};
@@ -18,70 +19,97 @@ use crate::{Event, Id};
 #[derive(Serialize, Clone)]
 pub(crate) struct EmptyData {}
 
+#[derive(Clone)]
+pub struct EventPromise {
+    state: Rc<RefCell<dyn EventResultSetter>>,
+}
+
+impl EventPromise {
+    pub fn contract<T: EventData>(
+        sim_state: Rc<RefCell<SimulationState>>,
+        await_key: AwaitKey,
+        requested_src: Option<Id>,
+    ) -> (Self, EventFuture<T>) {
+        let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
+        let future = EventFuture::new(state.clone(), sim_state, await_key, requested_src);
+        (Self { state }, future)
+    }
+
+    pub fn is_shared(&self) -> bool {
+        Rc::strong_count(&self.state) > 1
+    }
+
+    pub fn set_completed(&self, e: Event) {
+        self.state.borrow_mut().set_completed(e);
+    }
+}
+
 pub struct AwaitEventSharedState<T: EventData> {
     pub completed: bool,
-    pub component_id: Id,
     pub waker: Option<Waker>,
-    pub shared_content: AwaitResult<T>,
+    pub shared_content: Option<(Event, T)>,
 }
 
-impl<T: EventData> AwaitEventSharedState<T> {
-    pub fn new(component_id: Id) -> Self {
+impl<T: EventData> Default for AwaitEventSharedState<T> {
+    fn default() -> Self {
         Self {
             completed: false,
-            component_id,
             waker: None,
-            shared_content: AwaitResult::<T>::default(),
+            shared_content: None,
         }
     }
 }
 
-pub trait AwaitResultSetter: Any {
-    fn is_completed(&self) -> bool;
-    fn set_completed(&mut self);
-    fn set_ok_completed_with_event(&mut self, e: Event);
+pub trait EventResultSetter: Any {
+    fn set_completed(&mut self, event: Event);
 }
 
-impl<T: EventData> AwaitResultSetter for AwaitEventSharedState<T> {
-    fn is_completed(&self) -> bool {
-        self.completed
-    }
-
-    fn set_completed(&mut self) {
+impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
+    fn set_completed(&mut self, mut e: Event) {
         if self.completed {
-            return;
+            panic!("internal error: try to complete already completed state")
         }
         self.completed = true;
-        if let Some(waker) = self.waker.take() {
-            waker.wake()
-        }
-    }
-
-    fn set_ok_completed_with_event(&mut self, mut e: Event) {
-        if self.completed {
-            return;
-        }
-
         let downcast_result = e.data.downcast::<T>();
 
         e.data = Box::new(EmptyData {});
         match downcast_result {
             Ok(data) => {
-                self.shared_content = AwaitResult::Ok((e, *data));
-                self.set_completed();
+                self.shared_content = Some((e, *data));
             }
             Err(_) => {
                 panic!("internal downcast conversion error");
             }
         };
+        if let Some(waker) = self.waker.take() {
+            waker.wake()
+        }
     }
 }
 
 /// Future that represents AwaitResult for event (Ok or Timeout).
 pub struct EventFuture<T: EventData> {
     /// State with event data.
-    pub(crate) state: Rc<RefCell<AwaitEventSharedState<T>>>,
-    pub(crate) sim_state: Rc<RefCell<SimulationState>>,
+    state: Rc<RefCell<AwaitEventSharedState<T>>>,
+    sim_state: Rc<RefCell<SimulationState>>,
+    await_key: AwaitKey,
+    requested_src: Option<Id>,
+}
+
+impl<T: EventData> EventFuture<T> {
+    pub(crate) fn new(
+        state: Rc<RefCell<AwaitEventSharedState<T>>>,
+        sim_state: Rc<RefCell<SimulationState>>,
+        await_key: AwaitKey,
+        requested_src: Option<Id>,
+    ) -> Self {
+        Self {
+            state,
+            sim_state,
+            await_key,
+            requested_src,
+        }
+    }
 }
 
 impl<T: EventData> Future for EventFuture<T> {
@@ -94,13 +122,20 @@ impl<T: EventData> Future for EventFuture<T> {
             return Poll::Pending;
         }
 
-        let mut filler = AwaitResult::default();
-        std::mem::swap(&mut filler, &mut state.shared_content);
-
-        if let AwaitResult::Ok(data) = filler {
+        if let Some(data) = std::mem::take(&mut state.shared_content) {
             Poll::Ready(data)
         } else {
             panic!("internal error: unexpected timeout on future ready")
+        }
+    }
+}
+
+impl<T: EventData> Drop for EventFuture<T> {
+    fn drop(&mut self) {
+        if !self.state.borrow().completed {
+            self.sim_state
+                .borrow_mut()
+                .on_incomplete_event_future_drop(self.await_key, self.requested_src)
         }
     }
 }
@@ -135,9 +170,8 @@ impl<T: EventData> EventFuture<T> {
     ///     let mut res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
     ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
-    ///         AwaitResult::Timeout(e) => {
-    ///             assert_eq!(e.src, root_id);
-    ///             assert_eq!(e.dst, client_ctx.id());
+    ///         AwaitResult::Timeout(info) => {
+    ///             assert_eq!(info.src, Some(root_id));
     ///         }
     ///     }
     ///
@@ -152,7 +186,7 @@ impl<T: EventData> EventFuture<T> {
     /// });
     ///
     /// sim.step_until_no_events();
-    /// assert_eq!(sim.time(), 60.);
+    /// assert_eq!(sim.time(), 50.);
     /// ```
     ///
     /// # Example with waiting by key
@@ -192,8 +226,9 @@ impl<T: EventData> EventFuture<T> {
     ///             .ctx
     ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(10.)
     ///             .await;
-    ///         if let AwaitResult::Timeout(e) = result {
-    ///             assert_eq!(e.src, self.root_id);
+    ///         if let AwaitResult::Timeout(info) = result {
+    ///             assert_eq!(info.src, Some(self.root_id));
+    ///             assert_eq!(info.event_key, Some(1));
     ///         } else {
     ///             panic!("expect result timeout here");
     ///         }
@@ -256,36 +291,30 @@ impl<T: EventData> EventFuture<T> {
     /// sim.step_until_no_events();
     ///
     /// assert_eq!(*client.borrow().actions_finished.borrow(), 2);
-    /// assert_eq!(sim.time(), 110.); // because of timers in listen_first
+    /// assert_eq!(sim.time(), 60.);
     /// ```
     pub async fn with_timeout(self, timeout: f64) -> AwaitResult<T> {
         assert!(timeout >= 0., "timeout must be a positive value");
 
-        let component_id = self.state.borrow().component_id;
-        self.sim_state
+        let component_id = self.await_key.to;
+        let timer_future = self
+            .sim_state
             .borrow_mut()
-            .add_timer_on_state(component_id, timeout, self.state.clone());
-        EventWithTimeoutFuture { state: self.state }.await
-    }
-}
+            .create_timer(component_id, timeout, self.sim_state.clone());
 
-/// Future that represents timer from simulation.
-pub struct TimerFuture {
-    /// State that should be completed after timer fired.
-    pub(crate) state: Rc<RefCell<AwaitEventSharedState<EmptyData>>>,
-}
-
-impl Future for TimerFuture {
-    type Output = ();
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let mut state = self.state.as_ref().borrow_mut();
-
-        if !state.completed {
-            state.waker = Some(cx.waker().clone());
-            return Poll::Pending;
+        let timeout_info = TimeoutInfo {
+            timeout,
+            event_key: self.await_key.event_key,
+            src: self.requested_src,
+        };
+        select! {
+            data = self.fuse() => {
+                AwaitResult::Ok(data)
+            }
+            _ = timer_future.fuse() => {
+                AwaitResult::Timeout(timeout_info)
+            }
         }
-
-        Poll::Ready(())
     }
 }
 
@@ -293,7 +322,7 @@ impl Future for TimerFuture {
 pub(crate) struct AwaitKey {
     pub to: Id,
     pub msg_type: TypeId,
-    event_key: EventKey,
+    event_key: Option<EventKey>,
 }
 
 impl AwaitKey {
@@ -301,7 +330,7 @@ impl AwaitKey {
         Self {
             to,
             msg_type: TypeId::of::<T>(),
-            event_key: 0,
+            event_key: None,
         }
     }
 
@@ -309,7 +338,7 @@ impl AwaitKey {
         Self {
             to,
             msg_type: data.type_id(),
-            event_key: 0,
+            event_key: None,
         }
     }
 
@@ -317,7 +346,7 @@ impl AwaitKey {
         Self {
             to,
             msg_type: TypeId::of::<T>(),
-            event_key,
+            event_key: Some(event_key),
         }
     }
 
@@ -325,28 +354,7 @@ impl AwaitKey {
         Self {
             to,
             msg_type: data.type_id(),
-            event_key,
+            event_key: Some(event_key),
         }
-    }
-}
-
-struct EventWithTimeoutFuture<T: EventData> {
-    pub state: Rc<RefCell<AwaitEventSharedState<T>>>,
-}
-
-impl<T: EventData> Future for EventWithTimeoutFuture<T> {
-    type Output = AwaitResult<T>;
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let mut state = self.state.as_ref().borrow_mut();
-
-        if !state.completed {
-            state.waker = Some(cx.waker().clone());
-            return Poll::Pending;
-        }
-
-        let mut filler = AwaitResult::default();
-        std::mem::swap(&mut filler, &mut state.shared_content);
-
-        Poll::Ready(filler)
     }
 }

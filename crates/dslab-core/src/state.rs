@@ -19,11 +19,10 @@ async_enabled! {
     use futures::Future;
 
     use crate::async_core::await_details::EventKey;
-    use crate::async_core::awaiters::{Awaiter, AwaitersWithSourceStorage};
-    use crate::async_core::shared_state::{AwaitEventSharedState, EmptyData, TimerFuture};
-    use crate::async_core::shared_state::{AwaitKey, AwaitResultSetter};
+    use crate::async_core::promise_storage::EventPromisesStorage;
+    use crate::async_core::shared_state::{EventFuture, EventPromise, AwaitKey};
     use crate::async_core::task::Task;
-    use crate::async_core::timer::{Timer, TimerId};
+    use crate::async_core::timer::{TimerPromise, TimerId, TimerFuture};
 }
 
 /// Epsilon to compare floating point values for equality.
@@ -60,12 +59,11 @@ async_enabled! {
         names: Rc<RefCell<Vec<String>>>,
         registered_handlers: Vec<bool>,
 
-        awaiters: HashMap<AwaitKey, Awaiter>,
-        awaiters_with_source: AwaitersWithSourceStorage,
-        awaiters_capacity: usize,
+        event_promises: HashMap<AwaitKey, EventPromise>,
+        event_promises_with_source: EventPromisesStorage,
         key_getters: HashMap<TypeId, KeyGetterFunction>,
 
-        timers: BinaryHeap<Timer>,
+        timers: BinaryHeap<TimerPromise>,
         canceled_timers: HashSet<TimerId>,
         timer_count: u64,
 
@@ -89,7 +87,7 @@ impl SimulationState {
         }
     }
     async_enabled! {
-        pub fn new(seed: u64, task_sender: Sender<Rc<Task>>) -> Self {
+        pub fn new(seed: u64, executor: Sender<Rc<Task>>) -> Self {
             Self {
                 clock: 0.0,
                 rand: Pcg64::seed_from_u64(seed),
@@ -101,14 +99,13 @@ impl SimulationState {
                 names: Rc::new(RefCell::new(Vec::new())),
                 // Async stuff
                 registered_handlers: Vec::new(),
-                awaiters: HashMap::new(),
-                awaiters_with_source: AwaitersWithSourceStorage::new(),
-                awaiters_capacity: 4,
+                event_promises: HashMap::new(),
+                event_promises_with_source: EventPromisesStorage::new(),
                 key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),
                 timer_count: 0,
-                executor: task_sender,
+                executor,
             }
         }
     }
@@ -372,18 +369,24 @@ impl SimulationState {
         }
 
         pub fn cancel_component_timers(&mut self, component_id: Id) {
-            for timer in self.timers.iter() {
-                if timer.component_id == component_id {
-                    self.canceled_timers.insert(timer.id);
-                }
-            }
+            self.timers.retain(|timer| timer.component_id != component_id);
         }
 
-        pub fn peek_timer(&mut self) -> Option<&Timer> {
+        pub fn cancel_component_promises(&mut self, component_id: Id) {
+            self.event_promises_with_source.remove_component_promises(component_id);
+            self.event_promises.retain(|key, _promise| key.to != component_id);
+        }
+
+        pub fn peek_timer(&mut self) -> Option<&TimerPromise> {
             loop {
-                if let Some(timer) = self.timers.peek() {
-                    if !self.canceled_timers.remove(&timer.id) {
-                        return Some(timer);
+                let maybe_timer = self.timers.peek();
+                let timer_id = maybe_timer.map(|t| t.id).unwrap_or(0);
+
+                if  maybe_timer.is_some() {
+                    if self.canceled_timers.remove(&timer_id) {
+                        self.timers.pop();
+                    } else {
+                        return self.timers.peek();
                     }
                 } else {
                     return None;
@@ -391,7 +394,7 @@ impl SimulationState {
             }
         }
 
-        pub fn next_timer(&mut self) -> Option<Timer> {
+        pub fn next_timer(&mut self) -> Option<TimerPromise> {
             loop {
                 if let Some(timer) = self.timers.pop() {
                     if !self.canceled_timers.remove(&timer.id) {
@@ -404,50 +407,50 @@ impl SimulationState {
             }
         }
 
-        pub(crate) fn add_awaiter_handler(&mut self, key: AwaitKey, src_opt: Option<Id>, state: Rc<RefCell<dyn AwaitResultSetter>>) {
+        pub(crate) fn create_event_future<T: EventData>(
+            &mut self,
+            key: AwaitKey,
+            src_opt: Option<Id>,
+            sim_state: Rc<RefCell<SimulationState>>,
+        ) -> EventFuture<T> {
+
+            let (promise, future) = EventPromise::contract(sim_state, key, src_opt);
+            self.add_event_promise(key, src_opt, promise);
+
+            future
+        }
+
+        pub(crate) fn add_event_promise(&mut self, key: AwaitKey, src_opt: Option<Id>, promise: EventPromise) {
             if let Some(src) = src_opt {
-                if let Some(awaiter) = self.awaiters.get(&key) {
-                    if awaiter.is_shared() {
-                        panic!("awaiter for key {:?} (without source) already exists", key);
-                    } else {
-                        self.awaiters.remove(&key);
-                    }
+                if self.event_promises.contains_key(&key) {
+                    panic!("awaiter for key {:?} (without source) already exists", key);
                 }
-                if let Some(awaiter) = self.awaiters_with_source.insert(key, src, Awaiter { state }) {
-                    if awaiter.is_shared() {
-                        panic!("awaiter for key {:?} and source {} already exists", key, src);
-                    }
+                if let Some(_awaiter) = self.event_promises_with_source.insert(key, src, promise) {
+                    panic!("awaiter for key {:?} and source {} already exists", key, src);
                 }
             } else {
-                if let Some(src) = self.awaiters_with_source.has_any_shared_awaiter_on_key(&key) {
+                if let Some(src) = self.event_promises_with_source.has_any_promise_on_key(&key) {
                     panic!("awaiter for key {:?} with source {} already exists", key, src);
                 }
-                if let Some(awaiter) = self.awaiters.insert(key, Awaiter { state }) {
-                    if awaiter.is_shared() {
-                        panic!("awaiter for key {:?} (without source) already exists", key);
-                    }
+                if let Some(_awaiter) = self.event_promises.insert(key, promise) {
+                    panic!("awaiter for key {:?} (without source) already exists", key);
                 }
             }
         }
 
-        pub(crate) fn has_handler_on_key(&mut self, src: &Id, key: &AwaitKey) -> bool {
-            if let Some(awaiter) = self.awaiters.get(key) {
-                if awaiter.is_shared() {
-                    return true;
-                } else {
-                    self.awaiters.remove(key);
-                }
-            }
-            self.awaiters_with_source.has_shared_awaiter_on_key_with_source(key, src)
+        pub(crate) fn has_promise_on_key(&mut self, src: &Id, key: &AwaitKey) -> bool {
+            self.event_promises.contains_key(key) || self.event_promises_with_source.has_promise_on_key(key, src)
         }
 
-        pub(crate) fn set_event_for_await_key(&mut self, src: Id, key: &AwaitKey, event: Event) -> bool {
-            // panics if there is no awaiter
-            let awaiter = self.awaiters.remove(key).unwrap_or_else(|| self.awaiters_with_source.remove(key, &src).unwrap());
-            assert!(awaiter.is_shared(), "internal error: trying to set event for awaiter that is not shared");
+        pub(crate) fn complete_event_promise(&mut self, src: Id, key: &AwaitKey, event: Event) {
+            // panics if there is no promise
+            let promise = self
+                .event_promises
+                .remove(key)
+                .unwrap_or_else(|| self.event_promises_with_source.remove(key, &src).unwrap());
+            assert!(promise.is_shared(), "internal error: trying to set event for awaiter that is not shared");
 
-            awaiter.state.borrow_mut().set_ok_completed_with_event(event);
-            true
+            promise.set_completed(event);
         }
 
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
@@ -464,22 +467,18 @@ impl SimulationState {
             Task::spawn(future, self.executor.clone());
         }
 
-        pub fn wait_for(&mut self, component_id: Id, timeout: f64) -> TimerFuture {
-            let state = Rc::new(RefCell::new(AwaitEventSharedState::<EmptyData>::new(component_id)));
-            self.add_timer_on_state(component_id, timeout, state.clone());
-
-            TimerFuture { state }
-        }
-
-        pub(crate) fn add_timer_on_state(
+        pub(crate) fn create_timer(
             &mut self,
             component_id: Id,
             timeout: f64,
-            state: Rc<RefCell<dyn AwaitResultSetter>>,
-        ) {
+            sim_state: Rc<RefCell<SimulationState>>,
+        ) -> TimerFuture {
             self.timer_count += 1;
-            let timer = Timer::new(self.timer_count, component_id, self.time() + timeout, state);
-            self.timers.push(timer);
+            let timer_promise = TimerPromise::new(self.timer_count, component_id, self.time() + timeout);
+            let timer_future = timer_promise.future(sim_state);
+            self.timers.push(timer_promise);
+
+            timer_future
         }
 
         pub fn get_key_getter(&self, type_id: TypeId) -> Option<KeyGetterFunction> {
@@ -500,16 +499,17 @@ impl SimulationState {
             }));
         }
 
-        pub fn cleanup_empty_awaiters(&mut self) {
-            if self.awaiters.len() + self.awaiters_with_source.len() < self.awaiters_capacity {
-                return;
-            }
-            self.awaiters.retain(|_key, awaiter| awaiter.is_shared());
-            self.awaiters_with_source.remove_not_shared_awaiters();
+        // Called by dropped TimerFuture that was not completed.
+        pub(crate) fn on_incomplete_timer_future_drop(&mut self, timer_id: TimerId) {
+            self.canceled_timers.insert(timer_id);
+        }
 
-            // Extend capacity if it is too small to keep all shared awaiters
-            if self.awaiters.len() + self.awaiters_with_source.len() >= self.awaiters_capacity / 2 {
-                self.awaiters_capacity *= 2;
+        // Called by dropped EventFuture that was not completed.
+        pub(crate) fn on_incomplete_event_future_drop(&mut self, key: AwaitKey, src: Option<Id>) {
+            if let Some(src) = src {
+                self.event_promises_with_source.remove(&key, &src);
+            } else {
+                self.event_promises.remove(&key);
             }
         }
     }
