@@ -975,7 +975,7 @@ impl SimulationContext {
                 .register_key_getter_for::<T>(key_getter);
         }
 
-        /// Async receive event of type T from any component with specific key.
+        /// Async receive event of type `T` with specific key from any component.
         ///
         /// See [`Self::recv_event_from_by_key`] and [`Self::recv_event`].
         pub fn recv_event_by_key<T>(&self, key: EventKey) -> EventFuture<T>
