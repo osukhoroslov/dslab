@@ -38,12 +38,12 @@ impl SimpleListener {
                 .await
             {
                 AwaitResult::Ok((event, data)) => {
-                    assert!(event.src == self.system_id);
+                    assert_eq!(event.src, self.system_id);
                     assert!(!self.expect_timeout);
-                    assert!(data.id == self.next_expected_message_id);
+                    assert_eq!(data.id, self.next_expected_message_id);
                 }
-                AwaitResult::Timeout(event) => {
-                    assert!(event.src == self.system_id);
+                AwaitResult::Timeout(info) => {
+                    assert_eq!(info.src, Some(self.system_id));
                     assert!(self.expect_timeout);
                 }
             }

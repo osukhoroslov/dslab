@@ -339,6 +339,7 @@ impl Simulation {
         fn remove_handler_inner(&mut self, id: u32) {
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
+            self.sim_state.borrow_mut().cancel_component_promises(id);
         }
     }
 
@@ -441,8 +442,6 @@ impl Simulation {
 
     async_enabled! {
         fn step_inner(&self) -> bool {
-            self.sim_state.borrow_mut().cleanup_empty_awaiters();
-
             if self.process_task() {
                 return true;
             }
@@ -486,10 +485,10 @@ impl Simulation {
                 None => AwaitKey::new_by_ref(event.dst, event.data.as_ref()),
             };
 
-            if self.sim_state.borrow_mut().has_handler_on_key(&event.src, &await_key) {
+            if self.sim_state.borrow_mut().has_promise_on_key(&event.src, &await_key) {
                 self.log_trace_event(&event);
 
-                self.sim_state.borrow_mut().set_event_for_await_key(event.src, &await_key, event);
+                self.sim_state.borrow_mut().complete_event_promise(event.src, &await_key, event);
 
                 self.process_task();
                 return true;
@@ -506,7 +505,7 @@ impl Simulation {
 
         fn process_timer(&self) {
             let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
-            next_timer.state.as_ref().borrow_mut().set_completed();
+            next_timer.set_completed();
             // drop timer to release the pointer to the state
             drop(next_timer);
             self.process_task();

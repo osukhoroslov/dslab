@@ -17,8 +17,8 @@ async_enabled! {
 
     use futures::Future;
 
-    use crate::async_core::shared_state::{AwaitEventSharedState, AwaitKey, EventFuture};
-    use crate::async_core::await_details::{AwaitResult, EventKey};
+    use crate::async_core::shared_state::{AwaitKey, EventFuture};
+    use crate::async_core::await_details::EventKey;
 }
 
 /// A facade for accessing the simulation state and producing events from simulation components.
@@ -793,8 +793,8 @@ impl SimulationContext {
         pub async fn sleep(&self, duration: f64) {
             assert!(duration >= 0., "duration must be a positive value");
 
-            let future = self.sim_state.borrow_mut().wait_for(self.id, duration);
-            future.await;
+            let timer_future = self.sim_state.borrow_mut().create_timer(self.id, duration, self.sim_state.clone());
+            timer_future.await;
         }
 
         /// Async receive any event of type `T` from any component.
@@ -1099,14 +1099,9 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::new(await_key.to)));
-            state.borrow_mut().shared_content = AwaitResult::timeout_with(src, await_key.to);
+            let event_future = self.sim_state.borrow_mut().create_event_future::<T>(await_key, src, self.sim_state.clone());
 
-            self.sim_state
-                .borrow_mut()
-                .add_awaiter_handler(await_key, src, state.clone());
-
-            EventFuture { state, sim_state: self.sim_state.clone() }
+            event_future
         }
     }
 }

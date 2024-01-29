@@ -91,8 +91,6 @@ fn main() {
 
     let compute_context = sim.create_context(&compute_name);
 
-    let compute_id = compute_context.id();
-
     let compute = rc!(refcell!(Compute::new(
         rand.gen_range(1..=10) as f64,
         rand.gen_range(1..=8) + 8,
@@ -104,7 +102,6 @@ fn main() {
 
     let worker = rc!(refcell!(Worker::new(
         compute,
-        compute_id,
         sim.create_context(&worker_name),
         sim.create_queue::<TaskInfo, &String>(&worker_chan_name),
     )));

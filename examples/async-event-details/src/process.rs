@@ -22,7 +22,6 @@ pub struct TaskInfo {
 pub struct Worker {
     id: Id,
     compute: Rc<RefCell<Compute>>,
-    compute_id: Id,
     ctx: SimulationContext,
     task_chan: UnboundedBlockingQueue<TaskInfo>,
 }
@@ -30,14 +29,12 @@ pub struct Worker {
 impl Worker {
     pub fn new(
         compute: Rc<RefCell<Compute>>,
-        compute_id: Id,
         ctx: SimulationContext,
         task_chan: UnboundedBlockingQueue<TaskInfo>,
     ) -> Self {
         Self {
             id: ctx.id(),
             compute,
-            compute_id,
             ctx,
             task_chan,
         }
@@ -77,7 +74,7 @@ impl Worker {
         let key = self.run_task(task_info);
 
         select! {
-            _ = self.ctx.recv_event_by_key_from::<CompStarted>(self.compute_id, key).fuse() => {
+            _ = self.ctx.recv_event_by_key::<CompStarted>(key).fuse() => {
 
                 log_debug!(self.ctx, format!("try_process_task : task with key {} started", key));
 
@@ -85,7 +82,7 @@ impl Worker {
 
                 true
             },
-            (_, failed) = self.ctx.recv_event_by_key_from::<CompFailed>(self.compute_id, key).fuse() => {
+            (_, failed) = self.ctx.recv_event_by_key::<CompFailed>(key).fuse() => {
                 log_debug!(self.ctx, format!("try_process_task : task with key {} failed: {}", key, json!(failed)));
                 false
             }
@@ -93,9 +90,7 @@ impl Worker {
     }
 
     async fn process_task(&self, key: EventKey) {
-        self.ctx
-            .recv_event_by_key_from::<CompFinished>(self.compute_id, key)
-            .await;
+        self.ctx.recv_event_by_key::<CompFinished>(key).await;
 
         log_debug!(self.ctx, format!("process_task : task with key {} completed", key));
 

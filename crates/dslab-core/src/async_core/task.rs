@@ -8,12 +8,18 @@ use super::waker::{waker_ref, RcWake};
 /// wake-up notification
 pub struct Task {
     /// future to be polled by executor
-    pub future: RefCell<Option<Pin<Box<dyn Future<Output = ()>>>>>,
+    future: RefCell<Option<Pin<Box<dyn Future<Output = ()>>>>>,
 
     executor: Sender<Rc<Task>>,
 }
 
 impl Task {
+    /// Converts the future into a task and sends it to the executor.
+    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
+        let task = Rc::new(Task::new(future, executor));
+        task.schedule();
+    }
+
     /// Creates a new task from future.
     ///
     /// Unsafe is required here to make possible spawning components methods as tasks.
@@ -35,9 +41,10 @@ impl Task {
         }
     }
 
-    /// Polls the task.
+    /// Polls the internal future and passes waker to it.
     ///
-    /// This method is called by the executor when the task is woken up.
+    /// This method is called by the executor when the task is created or woken up.
+    /// Calling this method after the task completion will result in panic.
     pub fn poll(self: Rc<Self>) {
         let mut future_slot = self.future.borrow_mut();
 
@@ -58,12 +65,6 @@ impl Task {
     /// Sends the task to the executor.
     pub fn schedule(self: &Rc<Self>) {
         self.executor.send(self.clone()).expect("channel is closed");
-    }
-
-    /// Converts the future into a task and sends it to the executor.
-    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
-        let task = Rc::new(Task::new(future, executor));
-        task.schedule();
     }
 }
 
