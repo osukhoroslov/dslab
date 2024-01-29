@@ -985,7 +985,7 @@ impl SimulationContext {
             self.recv_event_by_key_to::<T>(None, self.id, key)
         }
 
-        /// Async receive event of type T from src component with specific key.
+        /// Async receive event of type `T` with specific key from `src` component.
         ///
         /// # Examples
         ///
