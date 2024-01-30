@@ -48,6 +48,13 @@ impl EventPromise {
     pub fn set_completed(&self, e: Event) {
         self.state.borrow_mut().set_completed(e);
     }
+
+    /// In case we need to cancel async activity we need to break reference
+    /// cycle between EventFuture and Task. As far as Task is stored inside AwaitEventSharedState<T>
+    /// as Waker, we take it out here and drop when state borrow is released.
+    pub fn drop_shared_state(&mut self) {
+        let _waker = self.state.borrow_mut().drop_state();
+    }
 }
 
 pub struct AwaitEventSharedState<T: EventData> {
@@ -68,6 +75,7 @@ impl<T: EventData> Default for AwaitEventSharedState<T> {
 
 pub trait EventResultSetter: Any {
     fn set_completed(&mut self, event: Event);
+    fn drop_state(&mut self) -> Option<Waker>;
 }
 
 impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
@@ -90,6 +98,15 @@ impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
         if let Some(waker) = self.waker.take() {
             waker.wake()
         }
+    }
+
+    fn drop_state(&mut self) -> Option<Waker> {
+        // Set completed to true to prevent calling callback on EventFuture drop.
+        self.completed = true;
+        self.shared_content = None;
+        // Take waker out of scope to release &mut self first and avoid several mutable borrows.
+        // Next borrow() appears in EventFuture::drop to check if state is completed.
+        self.waker.take()
     }
 }
 
@@ -145,7 +162,7 @@ impl<T: EventData> Drop for EventFuture<T> {
             let await_key = AwaitKey::new::<T>(self.component_id, self.event_key);
             self.sim_state
                 .borrow_mut()
-                .on_incomplete_event_future_drop(&await_key, &self.requested_src)
+                .on_incomplete_event_future_drop(&await_key, &self.requested_src);
         }
     }
 }

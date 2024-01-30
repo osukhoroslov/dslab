@@ -43,6 +43,15 @@ impl EventPromisesStorage {
     }
 
     pub fn remove_component_promises(&mut self, component_id: Id) {
-        self.promises.retain(|key, _| key.to != component_id);
+        self.promises.retain(|key, promises| {
+            if key.to == component_id {
+                promises.iter_mut().for_each(|(_, promise)| {
+                    promise.drop_shared_state();
+                });
+                return false;
+            }
+
+            true
+        });
     }
 }

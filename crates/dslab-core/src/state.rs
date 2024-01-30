@@ -374,7 +374,13 @@ impl SimulationState {
 
         pub fn cancel_component_promises(&mut self, component_id: Id) {
             self.event_promises_with_source.remove_component_promises(component_id);
-            self.event_promises.retain(|key, _promise| key.to != component_id);
+            self.event_promises.retain(|key, promise| {
+                if key.to == component_id {
+                    promise.drop_shared_state();
+                    return false;
+                }
+                true
+            });
         }
 
         pub fn peek_timer(&mut self) -> Option<&TimerPromise> {
