@@ -271,6 +271,10 @@ impl Simulation {
     ///
     /// Pending events to be cancelled upon the handler removal are specified via [`crate::handler::EventCancellationPolicy`].
     ///
+    /// If the `async_core` feature is enabled, all pending timers and async activities related to this component are cancelled.
+    /// In order to continue receiving events asynchronously, new async tasks must be spawned using [`SimulationContext::spawn()`].
+    /// Otherwise, the simulation will deliver events via [`EventHandler::on()`] method as usual.
+    ///
     /// # Examples
     ///
     /// ```rust
