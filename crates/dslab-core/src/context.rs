@@ -1070,7 +1070,7 @@ impl SimulationContext {
                 "try to async handle event that has key handling, use async handlers by key"
             );
 
-            let await_key = AwaitKey::new::<T>(dst);
+            let await_key = AwaitKey::new::<T>(dst, None);
 
             self.create_event_future(await_key, src)
         }
@@ -1090,7 +1090,7 @@ impl SimulationContext {
                 type_name::<T>()
             );
 
-            let await_key = AwaitKey::new_with_event_key::<T>(dst, key);
+            let await_key = AwaitKey::new::<T>(dst, Some(key));
 
             self.create_event_future(await_key, src)
         }

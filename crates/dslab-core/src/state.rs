@@ -428,7 +428,7 @@ impl SimulationState {
             sim_state: Rc<RefCell<SimulationState>>,
         ) -> EventFuture<T> {
 
-            let (promise, future) = EventPromise::contract(sim_state, key, src_opt);
+            let (promise, future) = EventPromise::contract(sim_state, &key, src_opt);
             self.add_event_promise(key, src_opt, promise);
 
             future
@@ -505,11 +505,11 @@ impl SimulationState {
         }
 
         // Called by dropped EventFuture that was not completed.
-        pub(crate) fn on_incomplete_event_future_drop(&mut self, key: AwaitKey, src: Option<Id>) {
+        pub(crate) fn on_incomplete_event_future_drop(&mut self, key: &AwaitKey, src: &Option<Id>) {
             if let Some(src) = src {
-                self.event_promises_with_source.remove(&key, &src);
+                self.event_promises_with_source.remove(key, src);
             } else {
-                self.event_promises.remove(&key);
+                self.event_promises.remove(key);
             }
         }
     }
