@@ -27,11 +27,17 @@ pub struct EventPromise {
 impl EventPromise {
     pub fn contract<T: EventData>(
         sim_state: Rc<RefCell<SimulationState>>,
-        await_key: AwaitKey,
+        await_key: &AwaitKey,
         requested_src: Option<Id>,
     ) -> (Self, EventFuture<T>) {
         let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
-        let future = EventFuture::new(state.clone(), sim_state, await_key, requested_src);
+        let future = EventFuture::new(
+            state.clone(),
+            sim_state,
+            await_key.to,
+            requested_src,
+            await_key.event_key,
+        );
         (Self { state }, future)
     }
 
@@ -92,7 +98,8 @@ pub struct EventFuture<T: EventData> {
     /// State with event data.
     state: Rc<RefCell<AwaitEventSharedState<T>>>,
     sim_state: Rc<RefCell<SimulationState>>,
-    await_key: AwaitKey,
+    component_id: Id,
+    event_key: Option<EventKey>,
     requested_src: Option<Id>,
 }
 
@@ -100,14 +107,16 @@ impl<T: EventData> EventFuture<T> {
     pub(crate) fn new(
         state: Rc<RefCell<AwaitEventSharedState<T>>>,
         sim_state: Rc<RefCell<SimulationState>>,
-        await_key: AwaitKey,
+        component_id: Id,
         requested_src: Option<Id>,
+        event_key: Option<EventKey>,
     ) -> Self {
         Self {
             state,
             sim_state,
-            await_key,
             requested_src,
+            component_id,
+            event_key,
         }
     }
 }
@@ -133,9 +142,10 @@ impl<T: EventData> Future for EventFuture<T> {
 impl<T: EventData> Drop for EventFuture<T> {
     fn drop(&mut self) {
         if !self.state.borrow().completed {
+            let await_key = AwaitKey::new::<T>(self.component_id, self.event_key);
             self.sim_state
                 .borrow_mut()
-                .on_incomplete_event_future_drop(self.await_key, self.requested_src)
+                .on_incomplete_event_future_drop(&await_key, &self.requested_src)
         }
     }
 }
@@ -296,7 +306,7 @@ impl<T: EventData> EventFuture<T> {
     pub async fn with_timeout(self, timeout: f64) -> AwaitResult<T> {
         assert!(timeout >= 0., "timeout must be a positive value");
 
-        let component_id = self.await_key.to;
+        let component_id = self.component_id;
         let timer_future = self
             .sim_state
             .borrow_mut()
@@ -304,7 +314,7 @@ impl<T: EventData> EventFuture<T> {
 
         let timeout_info = TimeoutInfo {
             timeout,
-            event_key: self.await_key.event_key,
+            event_key: self.event_key,
             src: self.requested_src,
         };
         select! {
@@ -326,35 +336,19 @@ pub(crate) struct AwaitKey {
 }
 
 impl AwaitKey {
-    pub fn new<T: EventData>(to: Id) -> Self {
+    pub fn new<T: EventData>(to: Id, event_key: Option<EventKey>) -> Self {
         Self {
             to,
             msg_type: TypeId::of::<T>(),
-            event_key: None,
+            event_key,
         }
     }
 
-    pub fn new_by_ref(to: Id, data: &dyn EventData) -> Self {
+    pub fn new_by_ref(to: Id, data: &dyn EventData, event_key: Option<EventKey>) -> Self {
         Self {
             to,
             msg_type: data.type_id(),
-            event_key: None,
-        }
-    }
-
-    pub fn new_with_event_key<T: EventData>(to: Id, event_key: EventKey) -> Self {
-        Self {
-            to,
-            msg_type: TypeId::of::<T>(),
-            event_key: Some(event_key),
-        }
-    }
-
-    pub fn new_with_event_key_by_ref(to: Id, data: &dyn EventData, event_key: EventKey) -> Self {
-        Self {
-            to,
-            msg_type: data.type_id(),
-            event_key: Some(event_key),
+            event_key,
         }
     }
 }

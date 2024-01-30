@@ -477,12 +477,12 @@ impl Simulation {
             let event = self.sim_state.borrow_mut().next_event().unwrap();
 
             let await_key = match self.sim_state.borrow().get_key_getter(event.data.type_id()) {
-                Some(getter) => AwaitKey::new_with_event_key_by_ref(
+                Some(getter) => AwaitKey::new_by_ref(
                     event.dst,
                     event.data.as_ref(),
-                    getter(event.data.as_ref()),
+                    Some(getter(event.data.as_ref())),
                 ),
-                None => AwaitKey::new_by_ref(event.dst, event.data.as_ref()),
+                None => AwaitKey::new_by_ref(event.dst, event.data.as_ref(), None),
             };
 
             if self.sim_state.borrow_mut().has_promise_on_key(&event.src, &await_key) {
