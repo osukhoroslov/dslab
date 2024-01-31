@@ -44,7 +44,7 @@ async_disabled! {
 }
 
 async_enabled! {
-    type KeyGetterFunction = Rc<dyn Fn(&dyn EventData) -> EventKey>;
+    type KeyGetterFn = Rc<dyn Fn(&dyn EventData) -> EventKey>;
 
     #[derive(Clone)]
     pub struct SimulationState {
@@ -59,9 +59,8 @@ async_enabled! {
         names: Rc<RefCell<Vec<String>>>,
         registered_handlers: Vec<bool>,
 
-        event_promises: HashMap<AwaitKey, EventPromise>,
-        event_promises_with_source: EventPromisesStorage,
-        key_getters: HashMap<TypeId, KeyGetterFunction>,
+        event_promises: EventPromisesStorage,
+        key_getters: HashMap<TypeId, KeyGetterFn>,
 
         timers: BinaryHeap<TimerPromise>,
         canceled_timers: HashSet<TimerId>,
@@ -99,8 +98,7 @@ impl SimulationState {
                 names: Rc::new(RefCell::new(Vec::new())),
                 // Async stuff
                 registered_handlers: Vec::new(),
-                event_promises: HashMap::new(),
-                event_promises_with_source: EventPromisesStorage::new(),
+                event_promises: EventPromisesStorage::new(),
                 key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),
@@ -373,14 +371,7 @@ impl SimulationState {
         }
 
         pub fn cancel_component_promises(&mut self, component_id: Id) {
-            self.event_promises_with_source.remove_component_promises(component_id);
-            self.event_promises.retain(|key, promise| {
-                if key.to == component_id {
-                    promise.drop_shared_state();
-                    return false;
-                }
-                true
-            });
+            self.event_promises.remove_component_promises(component_id);
         }
 
         pub fn peek_timer(&mut self) -> Option<&TimerPromise> {
@@ -436,38 +427,20 @@ impl SimulationState {
 
             let (promise, future) = EventPromise::contract(sim_state, &key, src_opt);
             self.add_event_promise(key, src_opt, promise);
-
             future
         }
 
         pub(crate) fn add_event_promise(&mut self, key: AwaitKey, src_opt: Option<Id>, promise: EventPromise) {
-            if let Some(src) = src_opt {
-                if self.event_promises.contains_key(&key) {
-                    panic!("awaiter for key {:?} (without source) already exists", key);
-                }
-                if let Some(_awaiter) = self.event_promises_with_source.insert(key, src, promise) {
-                    panic!("awaiter for key {:?} and source {} already exists", key, src);
-                }
-            } else {
-                if let Some(src) = self.event_promises_with_source.has_any_promise_on_key(&key) {
-                    panic!("awaiter for key {:?} with source {} already exists", key, src);
-                }
-                if let Some(_awaiter) = self.event_promises.insert(key, promise) {
-                    panic!("awaiter for key {:?} (without source) already exists", key);
-                }
-            }
+            self.event_promises.insert(key, src_opt, promise)
         }
 
         pub(crate) fn has_promise_on_key(&mut self, src: &Id, key: &AwaitKey) -> bool {
-            self.event_promises.contains_key(key) || self.event_promises_with_source.has_promise_on_key(key, src)
+            self.event_promises.has_promise_on_key(key, src)
         }
 
         pub(crate) fn complete_event_promise(&mut self, src: Id, key: &AwaitKey, event: Event) {
             // panics if there is no promise
-            let promise = self
-                .event_promises
-                .remove(key)
-                .unwrap_or_else(|| self.event_promises_with_source.remove(key, &src).unwrap());
+            let promise = self.event_promises.extract_promise(key, &src).unwrap();
             assert!(promise.is_shared(), "internal error: trying to set event for awaiter that is not shared");
 
             promise.set_completed(event);
@@ -487,7 +460,7 @@ impl SimulationState {
             Task::spawn(future, self.executor.clone());
         }
 
-        pub fn get_key_getter(&self, type_id: TypeId) -> Option<KeyGetterFunction> {
+        pub fn get_key_getter(&self, type_id: TypeId) -> Option<KeyGetterFn> {
             self.key_getters.get(&type_id).cloned()
         }
 
@@ -512,11 +485,7 @@ impl SimulationState {
 
         // Called by dropped EventFuture that was not completed.
         pub(crate) fn on_incomplete_event_future_drop(&mut self, key: &AwaitKey, src: &Option<Id>) {
-            if let Some(src) = src {
-                self.event_promises_with_source.remove(key, src);
-            } else {
-                self.event_promises.remove(key);
-            }
+            self.event_promises.remove(key, src);
         }
     }
 }
