@@ -12,7 +12,7 @@ use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
 use crate::{async_disabled, async_enabled};
 
-async_enabled! {
+async_enabled!(
     use std::any::TypeId;
     use std::sync::mpsc::Sender;
 
@@ -20,15 +20,15 @@ async_enabled! {
 
     use crate::async_core::await_details::EventKey;
     use crate::async_core::promise_storage::EventPromisesStorage;
-    use crate::async_core::shared_state::{EventFuture, EventPromise, AwaitKey};
+    use crate::async_core::event_future::{EventFuture, EventPromise};
     use crate::async_core::task::Task;
-    use crate::async_core::timer::{TimerPromise, TimerId, TimerFuture};
-}
+    use crate::async_core::timer_future::{TimerPromise, TimerId, TimerFuture};
+);
 
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
-async_disabled! {
+async_disabled!(
     #[derive(Clone)]
     pub struct SimulationState {
         clock: f64,
@@ -41,9 +41,9 @@ async_disabled! {
         name_to_id: HashMap<String, Id>,
         names: Rc<RefCell<Vec<String>>>,
     }
-}
+);
 
-async_enabled! {
+async_enabled!(
     type KeyGetterFn = Rc<dyn Fn(&dyn EventData) -> EventKey>;
 
     #[derive(Clone)]
@@ -68,10 +68,10 @@ async_enabled! {
 
         executor: Sender<Rc<Task>>,
     }
-}
+);
 
 impl SimulationState {
-    async_disabled! {
+    async_disabled!(
         pub fn new(seed: u64) -> Self {
             Self {
                 clock: 0.0,
@@ -84,8 +84,8 @@ impl SimulationState {
                 names: Rc::new(RefCell::new(Vec::new())),
             }
         }
-    }
-    async_enabled! {
+    );
+    async_enabled!(
         pub fn new(seed: u64, executor: Sender<Rc<Task>>) -> Self {
             Self {
                 clock: 0.0,
@@ -106,7 +106,7 @@ impl SimulationState {
                 executor,
             }
         }
-    }
+    );
 
     pub fn get_names(&self) -> Rc<RefCell<Vec<String>>> {
         self.names.clone()
@@ -339,13 +339,13 @@ impl SimulationState {
         output
     }
 
-    async_disabled! {
+    async_disabled!(
         fn on_register(&mut self) {}
         pub fn on_handler_added(&mut self, _id: Id) {}
         pub fn on_handler_removed(&mut self, _id: Id) {}
-    }
+    );
 
-    async_enabled! {
+    async_enabled!(
         fn on_register(&mut self) {
             self.registered_handlers.push(false)
         }
@@ -367,11 +367,39 @@ impl SimulationState {
         }
 
         pub fn cancel_component_timers(&mut self, component_id: Id) {
-            self.timers.retain(|timer| timer.component_id != component_id);
+            let mut cancelled_count = 0;
+            self.timers.retain(|timer_promise| {
+                if timer_promise.component_id == component_id {
+                    timer_promise.drop_shared_state();
+                    cancelled_count += 1;
+                    return false;
+                }
+                true
+            });
+            if cancelled_count > 0 {
+                log::warn!(
+                    target: "simulation",
+                    "[{:.3} {} simulation] All active timers for component `{}` are cancelled ({} timers total)",
+                    self.time(),
+                    crate::log::get_colored("WARN", colored::Color::Yellow),
+                    self.lookup_name(component_id),
+                    cancelled_count,
+                )
+            }
         }
 
         pub fn cancel_component_promises(&mut self, component_id: Id) {
-            self.event_promises.remove_component_promises(component_id);
+            let cancelled_count = self.event_promises.remove_component_promises(component_id);
+            if cancelled_count > 0 {
+                log::warn!(
+                    target: "simulation",
+                    "[{:.3} {} simulation] All async activities for component `{}` are canceled: removed {} active event handlers",
+                    self.time(),
+                    crate::log::get_colored("WARN", colored::Color::Yellow),
+                    self.lookup_name(component_id),
+                    cancelled_count,
+                )
+            }
         }
 
         pub fn peek_timer(&mut self) -> Option<&TimerPromise> {
@@ -379,7 +407,7 @@ impl SimulationState {
                 let maybe_timer = self.timers.peek();
                 let timer_id = maybe_timer.map(|t| t.id).unwrap_or(0);
 
-                if  maybe_timer.is_some() {
+                if maybe_timer.is_some() {
                     if self.canceled_timers.remove(&timer_id) {
                         self.timers.pop();
                     } else {
@@ -420,28 +448,27 @@ impl SimulationState {
 
         pub(crate) fn create_event_future<T: EventData>(
             &mut self,
-            key: AwaitKey,
+            dst: Id,
+            key_opt: Option<EventKey>,
             src_opt: Option<Id>,
             sim_state: Rc<RefCell<SimulationState>>,
         ) -> EventFuture<T> {
-
-            let (promise, future) = EventPromise::contract(sim_state, &key, src_opt);
-            self.add_event_promise(key, src_opt, promise);
+            let (promise, future) = EventPromise::contract(sim_state, dst, key_opt, src_opt);
+            self.event_promises.insert::<T>(dst, key_opt, src_opt, promise);
             future
         }
 
-        pub(crate) fn add_event_promise(&mut self, key: AwaitKey, src_opt: Option<Id>, promise: EventPromise) {
-            self.event_promises.insert(key, src_opt, promise)
+        pub(crate) fn has_event_promise_for(&self, event: &Event, event_key: Option<EventKey>) -> bool {
+            self.event_promises.has_promise_for(event, event_key)
         }
 
-        pub(crate) fn has_promise_on_key(&mut self, src: &Id, key: &AwaitKey) -> bool {
-            self.event_promises.has_promise_on_key(key, src)
-        }
-
-        pub(crate) fn complete_event_promise(&mut self, src: Id, key: &AwaitKey, event: Event) {
+        pub(crate) fn complete_event_promise(&mut self, event: Event, event_key: Option<EventKey>) {
             // panics if there is no promise
-            let promise = self.event_promises.extract_promise(key, &src).unwrap();
-            assert!(promise.is_shared(), "internal error: trying to set event for awaiter that is not shared");
+            let promise = self.event_promises.extract_promise_for(&event, event_key).unwrap();
+            assert!(
+                promise.is_shared(),
+                "internal error: trying to set event for awaiter that is not shared"
+            );
 
             promise.set_completed(event);
         }
@@ -465,17 +492,20 @@ impl SimulationState {
         }
 
         pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: impl Fn(&T) -> EventKey + 'static) {
-            self.key_getters.insert(TypeId::of::<T>(), Rc::new(move |raw_data| {
-                if let Some(data) = raw_data.downcast_ref::<T>() {
-                    key_getter(data)
-                } else {
-                    panic!(
-                        "internal error: key getter for type {} is incorrectly used for type {}",
-                        std::any::type_name::<T>(),
-                        serde_type_name::type_name(&raw_data).unwrap(),
-                    );
-                }
-            }));
+            self.key_getters.insert(
+                TypeId::of::<T>(),
+                Rc::new(move |raw_data| {
+                    if let Some(data) = raw_data.downcast_ref::<T>() {
+                        key_getter(data)
+                    } else {
+                        panic!(
+                            "internal error: key getter for type {} is incorrectly used for type {}",
+                            std::any::type_name::<T>(),
+                            serde_type_name::type_name(&raw_data).unwrap(),
+                        );
+                    }
+                }),
+            );
         }
 
         // Called by dropped TimerFuture that was not completed.
@@ -484,8 +514,13 @@ impl SimulationState {
         }
 
         // Called by dropped EventFuture that was not completed.
-        pub(crate) fn on_incomplete_event_future_drop(&mut self, key: &AwaitKey, src: &Option<Id>) {
-            self.event_promises.remove(key, src);
+        pub(crate) fn on_incomplete_event_future_drop<T: EventData>(
+            &mut self,
+            dst: Id,
+            event_key: Option<EventKey>,
+            src: &Option<Id>,
+        ) {
+            self.event_promises.remove::<T>(dst, event_key, src);
         }
-    }
+    );
 }

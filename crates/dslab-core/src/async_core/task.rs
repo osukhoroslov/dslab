@@ -4,22 +4,18 @@ use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::mpsc::Sender, t
 
 use super::waker::{waker_ref, RcWake};
 
+type BoxedFuture = Pin<Box<dyn Future<Output = ()>>>;
+
 /// Abstract task that contains future and sends itself to the executor on
 /// wake-up notification
 pub struct Task {
     /// future to be polled by executor
-    future: RefCell<Option<Pin<Box<dyn Future<Output = ()>>>>>,
+    future: RefCell<Option<BoxedFuture>>,
 
     executor: Sender<Rc<Task>>,
 }
 
 impl Task {
-    /// Converts the future into a task and sends it to the executor.
-    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
-        let task = Rc::new(Task::new(future, executor));
-        task.schedule();
-    }
-
     /// Creates a new task from future.
     ///
     /// Unsafe is required here to make possible spawning components methods as tasks.
@@ -39,6 +35,12 @@ impl Task {
                 executor,
             }
         }
+    }
+
+    /// Converts the future into a task and sends it to the executor.
+    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
+        let task = Rc::new(Task::new(future, executor));
+        task.schedule();
     }
 
     /// Polls the internal future and passes waker to it.
