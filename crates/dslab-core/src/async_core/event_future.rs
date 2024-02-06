@@ -1,6 +1,6 @@
 //! Shared state and event notification.
 
-use std::any::{Any, TypeId};
+use std::any::Any;
 use std::rc::Rc;
 use std::{cell::RefCell, future::Future, task::Context};
 use std::{
@@ -15,100 +15,6 @@ use crate::async_core::await_details::{AwaitResult, EventKey, TimeoutInfo};
 use crate::event::EventData;
 use crate::state::SimulationState;
 use crate::{Event, Id};
-
-#[derive(Serialize, Clone)]
-pub(crate) struct EmptyData {}
-
-#[derive(Clone)]
-pub struct EventPromise {
-    state: Rc<RefCell<dyn EventResultSetter>>,
-}
-
-impl EventPromise {
-    pub fn contract<T: EventData>(
-        sim_state: Rc<RefCell<SimulationState>>,
-        await_key: &AwaitKey,
-        requested_src: Option<Id>,
-    ) -> (Self, EventFuture<T>) {
-        let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
-        let future = EventFuture::new(
-            state.clone(),
-            sim_state,
-            await_key.to,
-            requested_src,
-            await_key.event_key,
-        );
-        (Self { state }, future)
-    }
-
-    pub fn is_shared(&self) -> bool {
-        Rc::strong_count(&self.state) > 1
-    }
-
-    pub fn set_completed(&self, e: Event) {
-        self.state.borrow_mut().set_completed(e);
-    }
-
-    /// In case we need to cancel async activity we need to break reference
-    /// cycle between EventFuture and Task. As far as Task is stored inside AwaitEventSharedState<T>
-    /// as Waker, we take it out here and drop when state borrow is released.
-    pub fn drop_shared_state(&mut self) {
-        let _waker = self.state.borrow_mut().drop_state();
-    }
-}
-
-pub struct AwaitEventSharedState<T: EventData> {
-    pub completed: bool,
-    pub waker: Option<Waker>,
-    pub shared_content: Option<(Event, T)>,
-}
-
-impl<T: EventData> Default for AwaitEventSharedState<T> {
-    fn default() -> Self {
-        Self {
-            completed: false,
-            waker: None,
-            shared_content: None,
-        }
-    }
-}
-
-pub trait EventResultSetter: Any {
-    fn set_completed(&mut self, event: Event);
-    fn drop_state(&mut self) -> Option<Waker>;
-}
-
-impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
-    fn set_completed(&mut self, mut e: Event) {
-        if self.completed {
-            panic!("internal error: try to complete already completed state")
-        }
-        self.completed = true;
-        let downcast_result = e.data.downcast::<T>();
-
-        e.data = Box::new(EmptyData {});
-        match downcast_result {
-            Ok(data) => {
-                self.shared_content = Some((e, *data));
-            }
-            Err(_) => {
-                panic!("internal downcast conversion error");
-            }
-        };
-        if let Some(waker) = self.waker.take() {
-            waker.wake()
-        }
-    }
-
-    fn drop_state(&mut self) -> Option<Waker> {
-        // Set completed to true to prevent calling callback on EventFuture drop.
-        self.completed = true;
-        self.shared_content = None;
-        // Take waker out of scope to release &mut self first and avoid several mutable borrows.
-        // Next borrow() appears in EventFuture::drop to check if state is completed.
-        self.waker.take()
-    }
-}
 
 /// Future that represents AwaitResult for event (Ok or Timeout).
 pub struct EventFuture<T: EventData> {
@@ -159,10 +65,11 @@ impl<T: EventData> Future for EventFuture<T> {
 impl<T: EventData> Drop for EventFuture<T> {
     fn drop(&mut self) {
         if !self.state.borrow().completed {
-            let await_key = AwaitKey::new::<T>(self.component_id, self.event_key);
-            self.sim_state
-                .borrow_mut()
-                .on_incomplete_event_future_drop(&await_key, &self.requested_src);
+            self.sim_state.borrow_mut().on_incomplete_event_future_drop::<T>(
+                self.component_id,
+                self.event_key,
+                &self.requested_src,
+            );
         }
     }
 }
@@ -345,27 +252,91 @@ impl<T: EventData> EventFuture<T> {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
-pub(crate) struct AwaitKey {
-    pub to: Id,
-    pub msg_type: TypeId,
-    event_key: Option<EventKey>,
+#[derive(Serialize, Clone)]
+pub(crate) struct EmptyData {}
+
+#[derive(Clone)]
+pub(crate) struct EventPromise {
+    state: Rc<RefCell<dyn EventResultSetter>>,
 }
 
-impl AwaitKey {
-    pub fn new<T: EventData>(to: Id, event_key: Option<EventKey>) -> Self {
+impl EventPromise {
+    pub fn contract<T: EventData>(
+        sim_state: Rc<RefCell<SimulationState>>,
+        dst: Id,
+        event_key: Option<EventKey>,
+        requested_src: Option<Id>,
+    ) -> (Self, EventFuture<T>) {
+        let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
+        let future = EventFuture::new(state.clone(), sim_state, dst, requested_src, event_key);
+        (Self { state }, future)
+    }
+
+    pub fn is_shared(&self) -> bool {
+        Rc::strong_count(&self.state) > 1
+    }
+
+    pub fn set_completed(&self, e: Event) {
+        self.state.borrow_mut().set_completed(e);
+    }
+
+    /// In case we need to cancel async activity we need to break reference
+    /// cycle between EventFuture and Task. As far as Task is stored inside AwaitEventSharedState<T>
+    /// as Waker, we take it out here and drop when state borrow is released.
+    pub fn drop_shared_state(&mut self) {
+        let _waker = self.state.borrow_mut().drop_state();
+    }
+}
+
+pub(crate) struct AwaitEventSharedState<T: EventData> {
+    pub completed: bool,
+    pub waker: Option<Waker>,
+    pub shared_content: Option<(Event, T)>,
+}
+
+impl<T: EventData> Default for AwaitEventSharedState<T> {
+    fn default() -> Self {
         Self {
-            to,
-            msg_type: TypeId::of::<T>(),
-            event_key,
+            completed: false,
+            waker: None,
+            shared_content: None,
+        }
+    }
+}
+
+pub(crate) trait EventResultSetter: Any {
+    fn set_completed(&mut self, event: Event);
+    fn drop_state(&mut self) -> Option<Waker>;
+}
+
+impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
+    fn set_completed(&mut self, mut e: Event) {
+        if self.completed {
+            panic!("internal error: try to complete already completed state")
+        }
+        self.completed = true;
+        let downcast_result = e.data.downcast::<T>();
+
+        e.data = Box::new(EmptyData {});
+        match downcast_result {
+            Ok(data) => {
+                self.shared_content = Some((e, *data));
+            }
+            Err(_) => {
+                panic!("internal downcast conversion error");
+            }
+        };
+        if let Some(waker) = self.waker.take() {
+            waker.wake()
         }
     }
 
-    pub fn new_by_ref(to: Id, data: &dyn EventData, event_key: Option<EventKey>) -> Self {
-        Self {
-            to,
-            msg_type: data.type_id(),
-            event_key,
-        }
+    fn drop_state(&mut self) -> Option<Waker> {
+        // Set completed to true to prevent calling callback on EventFuture drop.
+        self.completed = true;
+        self.shared_content = None;
+        // Take waker out of scope to release &mut self first and avoid several mutable borrows.
+        // Next borrow() appears in EventFuture::drop to check if state is completed.
+        self.waker.take()
     }
 }

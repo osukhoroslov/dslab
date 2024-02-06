@@ -17,27 +17,26 @@ use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 use crate::{async_disabled, async_enabled, Event};
 
-async_enabled! {
+async_enabled!(
     use std::sync::mpsc::channel;
 
     use futures::Future;
 
-    use crate::async_core::shared_state::AwaitKey;
     use crate::async_core::executor::Executor;
     use crate::event::EventData;
     use crate::async_core::await_details::EventKey;
     use crate::async_core::sync::queue::UnboundedBlockingQueue;
-}
+);
 
-async_disabled! {
+async_disabled!(
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
         handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
     }
-}
+);
 
-async_enabled! {
+async_enabled!(
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
@@ -45,10 +44,10 @@ async_enabled! {
         // Async stuff
         executor: Executor,
     }
-}
+);
 
 impl Simulation {
-    async_disabled! {
+    async_disabled!(
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             Self {
@@ -56,9 +55,9 @@ impl Simulation {
                 handlers: Vec::new(),
             }
         }
-    }
+    );
 
-    async_enabled! {
+    async_enabled!(
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             let (task_sender, ready_queue) = channel();
@@ -68,7 +67,7 @@ impl Simulation {
                 executor: Executor::new(ready_queue),
             }
         }
-    }
+    );
 
     fn register(&mut self, name: &str) -> Id {
         let id = self.sim_state.borrow_mut().register(name);
@@ -335,17 +334,17 @@ impl Simulation {
         );
     }
 
-    async_disabled! {
+    async_disabled!(
         fn remove_handler_inner(&mut self, _id: u32) {}
-    }
+    );
 
-    async_enabled! {
+    async_enabled!(
         fn remove_handler_inner(&mut self, id: u32) {
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
             self.sim_state.borrow_mut().cancel_component_promises(id);
         }
-    }
+    );
 
     /// Returns the current simulation time.
     ///
@@ -403,7 +402,7 @@ impl Simulation {
         self.step_inner()
     }
 
-    async_disabled! {
+    async_disabled!(
         fn step_inner(&self) -> bool {
             let event_opt = self.sim_state.borrow_mut().next_event();
             match event_opt {
@@ -414,7 +413,7 @@ impl Simulation {
                 None => false,
             }
         }
-    }
+    );
 
     fn deliver_event_via_handler(&self, event: Event) {
         if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
@@ -444,7 +443,7 @@ impl Simulation {
         }
     }
 
-    async_enabled! {
+    async_enabled!(
         fn step_inner(&self) -> bool {
             if self.process_task() {
                 return true;
@@ -479,20 +478,15 @@ impl Simulation {
 
         fn process_event(&self) -> bool {
             let event = self.sim_state.borrow_mut().next_event().unwrap();
-
-            let await_key = match self.sim_state.borrow().get_key_getter(event.data.type_id()) {
-                Some(getter) => AwaitKey::new_by_ref(
-                    event.dst,
-                    event.data.as_ref(),
-                    Some(getter(event.data.as_ref())),
-                ),
-                None => AwaitKey::new_by_ref(event.dst, event.data.as_ref(), None),
-            };
-
-            if self.sim_state.borrow_mut().has_promise_on_key(&event.src, &await_key) {
+            let event_key = self
+                .sim_state
+                .borrow()
+                .get_key_getter(event.data.type_id())
+                .map(|getter| getter(event.data.as_ref()));
+            if self.sim_state.borrow().has_event_promise_for(&event, event_key) {
                 self.log_trace_event(&event);
 
-                self.sim_state.borrow_mut().complete_event_promise(event.src, &await_key, event);
+                self.sim_state.borrow_mut().complete_event_promise(event, event_key);
 
                 self.process_task();
                 return true;
@@ -550,9 +544,7 @@ impl Simulation {
         ///
         /// See [`SimulationContext::async_wait_event_detailed_for`].
         pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
-            self.sim_state
-                .borrow_mut()
-                .register_key_getter_for::<T>(key_getter);
+            self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
         }
 
         /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
@@ -641,7 +633,7 @@ impl Simulation {
         {
             UnboundedBlockingQueue::new(self.create_context(name))
         }
-    }
+    );
 
     /// Performs the specified number of steps through the simulation.
     ///
@@ -784,7 +776,7 @@ impl Simulation {
         self.step_until_time_inner(time)
     }
 
-    async_disabled! {
+    async_disabled!(
         fn step_until_time_inner(&mut self, time: f64) -> bool {
             let mut result = true;
             loop {
@@ -801,9 +793,9 @@ impl Simulation {
             self.sim_state.borrow_mut().set_time(time);
             result
         }
-    }
+    );
 
-    async_enabled! {
+    async_enabled!(
         fn step_until_time_inner(&mut self, time: f64) -> bool {
             let mut result;
             loop {
@@ -835,7 +827,7 @@ impl Simulation {
             self.sim_state.borrow_mut().set_time(time);
             result
         }
-    }
+    );
 
     /// Returns a random float in the range _[0, 1)_
     /// using the simulation-wide random number generator.

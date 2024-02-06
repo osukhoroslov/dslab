@@ -11,15 +11,16 @@ use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
-async_enabled! {
+async_enabled!(
     use std::any::TypeId;
     use std::any::type_name;
 
     use futures::Future;
 
-    use crate::async_core::shared_state::{AwaitKey, EventFuture};
+    use crate::async_core::event_future::EventFuture;
     use crate::async_core::await_details::EventKey;
-}
+    use crate::async_core::timer_future::TimerFuture;
+);
 
 /// A facade for accessing the simulation state and producing events from simulation components.
 #[derive(Clone)]
@@ -661,7 +662,7 @@ impl SimulationContext {
         self.names.borrow()[id as usize].clone()
     }
 
-    async_enabled! {
+    async_enabled!(
         /// Spawns a background async task.
         ///
         /// # Examples
@@ -790,11 +791,14 @@ impl SimulationContext {
         /// sim.step_until_no_events();
         /// assert_eq!(15., sim.time());
         /// ```
-        pub async fn sleep(&self, duration: f64) {
+        pub fn sleep(&self, duration: f64) -> TimerFuture {
             assert!(duration >= 0., "duration must be a positive value");
 
-            let timer_future = self.sim_state.borrow_mut().create_timer(self.id, duration, self.sim_state.clone());
-            timer_future.await;
+            let timer_future = self
+                .sim_state
+                .borrow_mut()
+                .create_timer(self.id, duration, self.sim_state.clone());
+            timer_future
         }
 
         /// Async receive any event of type `T` from any component.
@@ -970,9 +974,7 @@ impl SimulationContext {
         ///
         /// See [`Self::recv_event_by_key_from`].
         pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
-            self.sim_state
-                .borrow_mut()
-                .register_key_getter_for::<T>(key_getter);
+            self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
         }
 
         /// Async receive event of type `T` with specific key from any component.
@@ -1070,17 +1072,10 @@ impl SimulationContext {
                 "try to async handle event that has key handling, use async handlers by key"
             );
 
-            let await_key = AwaitKey::new::<T>(dst, None);
-
-            self.create_event_future(await_key, src)
+            self.create_event_future(dst, None, src)
         }
 
-        fn recv_event_by_key_to<T>(
-            &self,
-            src: Option<Id>,
-            dst: Id,
-            key: EventKey,
-        ) -> EventFuture<T>
+        fn recv_event_by_key_to<T>(&self, src: Option<Id>, dst: Id, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
         {
@@ -1090,18 +1085,18 @@ impl SimulationContext {
                 type_name::<T>()
             );
 
-            let await_key = AwaitKey::new::<T>(dst, Some(key));
-
-            self.create_event_future(await_key, src)
+            self.create_event_future(dst, Some(key), src)
         }
 
-        fn create_event_future<T>(&self, await_key: AwaitKey, src: Option<Id>) -> EventFuture<T>
+        fn create_event_future<T>(&self, dst: Id, key: Option<EventKey>, src: Option<Id>) -> EventFuture<T>
         where
             T: EventData,
         {
-            let event_future = self.sim_state.borrow_mut().create_event_future::<T>(await_key, src, self.sim_state.clone());
-
+            let event_future =
+                self.sim_state
+                    .borrow_mut()
+                    .create_event_future::<T>(dst, key, src, self.sim_state.clone());
             event_future
         }
-    }
+    );
 }

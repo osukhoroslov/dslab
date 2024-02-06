@@ -84,6 +84,14 @@ struct Start {
     async_count: u32,
 }
 
+#[derive(Clone, Serialize)]
+struct StartWithTimeout {
+    async_count: u32,
+    timeout: f64,
+    #[serde(skip)]
+    rc: Rc<RefCell<u32>>,
+}
+
 struct SimpleComponent {
     ctx: SimulationContext,
     on_handler_messages: u32,
@@ -98,8 +106,22 @@ impl SimpleComponent {
         // Check that all async activities have received the copy of rc.
         assert_eq!(Rc::strong_count(&data.rc), 1 + async_count as usize);
 
-        let (_, data) = self.ctx.recv_event_by_key::<MessageWithRc>(key).await;
-        *data.rc.borrow_mut() -= 1;
+        // Never completed because of remove_handler.
+        let _ = self.ctx.recv_event_by_key::<MessageWithRc>(key).await;
+        panic!("unreachable");
+    }
+
+    async fn wait_for_timeout(&self, timeout: f64, async_count: u32, rc: Rc<RefCell<u32>>) {
+        self.ctx.sleep(timeout).await;
+
+        *rc.borrow_mut() += 1;
+        // Check that all async activities have received the copy of rc.
+        assert_eq!(Rc::strong_count(&rc), 1 + async_count as usize);
+
+        // Never completed because of remove_handler.
+        self.ctx.sleep(1000. * timeout).await;
+
+        panic!("unreachable");
     }
 }
 
@@ -111,6 +133,15 @@ impl EventHandler for SimpleComponent {
                     self.ctx.spawn(self.wait_on_key(i as EventKey, async_count));
                 }
             }
+            StartWithTimeout {
+                async_count,
+                timeout,
+                rc,
+            } => {
+                for _ in 0..async_count {
+                    self.ctx.spawn(self.wait_for_timeout(timeout, async_count, rc.clone()));
+                }
+            }
             MessageWithRc { .. } => {
                 self.on_handler_messages += 1;
             }
@@ -119,7 +150,9 @@ impl EventHandler for SimpleComponent {
 }
 
 #[test]
-fn test_futures_drop_on_remove_handler() {
+fn test_event_futures_drop_on_remove_handler() {
+    let _ = env_logger::try_init();
+
     let mut sim = Simulation::new(42);
 
     sim.register_key_getter_for::<MessageWithRc>(|m| m.key);
@@ -165,6 +198,7 @@ fn test_futures_drop_on_remove_handler() {
 
     assert_eq!(sim.time(), 20.);
     assert_eq!(sim.event_count(), 1 + async_count as u64);
+    assert_eq!(Rc::strong_count(&rc), 1);
 
     sim.add_handler("simple_component", component.clone());
 
@@ -188,4 +222,60 @@ fn test_futures_drop_on_remove_handler() {
     assert_eq!(sim.time(), 25.);
     // Check that all new events are delivered via EventHandler.
     assert_eq!(component.borrow().on_handler_messages, async_count);
+}
+
+#[test]
+fn test_timer_future_drops_on_remove_handler() {
+    let _ = env_logger::try_init();
+
+    let mut sim = Simulation::new(42);
+
+    let component_ctx = sim.create_context("simple_component");
+    let root_ctx = sim.create_context("root");
+    let component_id = component_ctx.id();
+
+    let component = Rc::new(RefCell::new(SimpleComponent {
+        ctx: component_ctx,
+        on_handler_messages: 0,
+    }));
+
+    sim.add_handler("simple_component", component.clone());
+
+    let async_count = 10;
+    let timeout = 10.;
+    let rc = Rc::new(RefCell::new(0));
+
+    assert_eq!(Rc::strong_count(&rc), 1);
+
+    root_ctx.emit(
+        StartWithTimeout {
+            async_count,
+            timeout,
+            rc: rc.clone(),
+        },
+        component_id,
+        5.,
+    );
+
+    assert_eq!(sim.time(), 0.);
+
+    sim.step_until_time(30.);
+
+    assert_eq!(sim.time(), 30.);
+    assert_eq!(Rc::strong_count(&rc), 1 + async_count as usize);
+    assert_eq!(*rc.borrow(), async_count);
+
+    sim.remove_handler("simple_component", EventCancellationPolicy::None);
+
+    assert_eq!(sim.event_count(), 1);
+    assert_eq!(Rc::strong_count(&rc), 1);
+
+    sim.add_handler("simple_component", component.clone());
+
+    assert_eq!(Rc::strong_count(&rc), 1);
+    assert_eq!(*rc.borrow(), async_count);
+
+    sim.step_until_no_events();
+
+    assert_eq!(sim.time(), 30.);
 }
