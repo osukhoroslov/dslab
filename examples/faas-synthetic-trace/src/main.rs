@@ -1,58 +1,22 @@
 use std::boxed::Box;
 
-use rand_distr::{Distribution, Exp, LogNormal};
-use rand_pcg::Pcg64;
+use rand_distr::{Exp, LogNormal};
 
 use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::{Config, HostConfig};
 use dslab_faas::extra::synthetic_trace::{
-    generate_synthetic_trace, ArrivalGenerator, DistributionWrapper, DurationGenerator, MemoryGenerator,
-    SyntheticTraceAppConfig, SyntheticTraceConfig,
+    generate_synthetic_trace, ArrivalGenerator, DurationGenerator, MemoryGenerator, SyntheticTraceAppConfig,
+    SyntheticTraceConfig,
 };
 use dslab_faas::simulation::ServerlessSimulation;
-
-struct ExpWrapper {
-    exp: Exp<f64>,
-}
-
-impl ExpWrapper {
-    pub fn new(lambda: f64) -> Self {
-        Self {
-            exp: Exp::<f64>::new(lambda).unwrap(),
-        }
-    }
-}
-
-impl DistributionWrapper<f64, Pcg64> for ExpWrapper {
-    fn sample(&self, rng: &mut Pcg64) -> f64 {
-        self.exp.sample(rng)
-    }
-}
-
-struct LogNormalWrapper {
-    lognorm: LogNormal<f64>,
-}
-
-impl LogNormalWrapper {
-    pub fn new(mu: f64, sigma: f64) -> Self {
-        Self {
-            lognorm: LogNormal::<f64>::new(mu, sigma).unwrap(),
-        }
-    }
-}
-
-impl DistributionWrapper<f64, Pcg64> for LogNormalWrapper {
-    fn sample(&self, rng: &mut Pcg64) -> f64 {
-        self.lognorm.sample(rng)
-    }
-}
 
 fn main() {
     let apps = vec![
         SyntheticTraceAppConfig {
             activity_window: (0., 100.),
-            arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(1.))),
+            arrival_generator: ArrivalGenerator::Random(Box::new(Exp::<f64>::new(1.).unwrap())),
+            //arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(1.))),
             cold_start_latency: 0.1,
             concurrency_level: 1,
             cpu_share: 1.,
@@ -61,11 +25,13 @@ fn main() {
         },
         SyntheticTraceAppConfig {
             activity_window: (0., 100.),
-            arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(2.))),
+            //arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(2.))),
+            arrival_generator: ArrivalGenerator::Random(Box::new(Exp::<f64>::new(2.).unwrap())),
             cold_start_latency: 0.1,
             concurrency_level: 1,
             cpu_share: 1.,
-            duration_generator: DurationGenerator::Random(Box::new(LogNormalWrapper::new(-0.38, 2.36))),
+            //duration_generator: DurationGenerator::Random(Box::new(LogNormalWrapper::new(-0.38, 2.36))),
+            duration_generator: DurationGenerator::Random(Box::new(LogNormal::<f64>::new(-0.38, 2.36).unwrap())),
             memory_generator: MemoryGenerator::Fixed(128),
         },
     ];

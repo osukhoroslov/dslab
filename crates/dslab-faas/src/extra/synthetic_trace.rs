@@ -16,6 +16,16 @@ where
     fn sample(&self, rng: &mut R) -> T;
 }
 
+impl<T, R, D> DistributionWrapper<T, R> for D
+where
+    D: Distribution<T>,
+    R: Rng + ?Sized,
+{
+    fn sample(&self, rng: &mut R) -> T {
+        self.sample(rng)
+    }
+}
+
 /// Generator of invocation arrival times.
 pub enum ArrivalGenerator {
     /// Random arrival times.
@@ -155,6 +165,7 @@ pub fn generate_synthetic_trace(mut config: SyntheticTraceConfig) -> SyntheticTr
                 if vec.len() != arrivals.len() {
                     panic!("Error: fixed duration vector has different number of elements than arrivals.");
                 }
+                durations = vec;
             }
         }
         for (time, duration) in zip(arrivals, durations) {
