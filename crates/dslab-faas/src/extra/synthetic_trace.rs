@@ -7,29 +7,22 @@ use rand_pcg::Pcg64;
 
 use crate::trace::{ApplicationData, RequestData, Trace};
 
-/// Wrapper to make rand::Distribution object-safe.
-pub trait DistributionWrapper<T, R>
-where
-    R: Rng + ?Sized,
-{
-    /// Samples one number from the distribution.
-    fn sample(&self, rng: &mut R) -> T;
+/// Type erased version of rand::Distribution trait.
+pub trait ErasedDistribution<T> {
+    /// Generate a random value of T, using rng as the source of randomness.
+    fn sample(&self, rng: &mut dyn rand::RngCore) -> T;
 }
 
-impl<T, R, D> DistributionWrapper<T, R> for D
-where
-    D: Distribution<T>,
-    R: Rng + ?Sized,
-{
-    fn sample(&self, rng: &mut R) -> T {
-        self.sample(rng)
+impl<T, D: Distribution<T> + ?Sized> ErasedDistribution<T> for D {
+    fn sample(&self, rng: &mut dyn rand::RngCore) -> T {
+        <Self as Distribution<T>>::sample(self, rng)
     }
 }
 
 /// Generator of invocation arrival times.
 pub enum ArrivalGenerator {
     /// Random arrival times.
-    Random(Box<dyn DistributionWrapper<f64, Pcg64>>),
+    Random(Box<dyn ErasedDistribution<f64>>),
     /// Generates equally spaced arrival times with given interval between consecutive arrivals.
     EquallySpaced(f64),
     /// Explicitly given arrivals.
@@ -39,7 +32,7 @@ pub enum ArrivalGenerator {
 /// Generator of invocation durations.
 pub enum DurationGenerator {
     /// Random durations.
-    Random(Box<dyn DistributionWrapper<f64, Pcg64>>),
+    Random(Box<dyn ErasedDistribution<f64>>),
     /// Equal durations.
     Equal(f64),
     /// Explicitly given durations.
@@ -49,7 +42,7 @@ pub enum DurationGenerator {
 /// Generator of container memory requirements.
 pub enum MemoryGenerator {
     /// Random requirements.
-    Random(Box<dyn DistributionWrapper<u64, Pcg64>>),
+    Random(Box<dyn ErasedDistribution<u64>>),
     /// Fixed requirement.
     Fixed(u64),
 }

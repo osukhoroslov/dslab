@@ -16,7 +16,6 @@ fn main() {
         SyntheticTraceAppConfig {
             activity_window: (0., 100.),
             arrival_generator: ArrivalGenerator::Random(Box::new(Exp::<f64>::new(1.).unwrap())),
-            //arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(1.))),
             cold_start_latency: 0.1,
             concurrency_level: 1,
             cpu_share: 1.,
@@ -25,12 +24,10 @@ fn main() {
         },
         SyntheticTraceAppConfig {
             activity_window: (0., 100.),
-            //arrival_generator: ArrivalGenerator::Random(Box::new(ExpWrapper::new(2.))),
             arrival_generator: ArrivalGenerator::Random(Box::new(Exp::<f64>::new(2.).unwrap())),
             cold_start_latency: 0.1,
             concurrency_level: 1,
             cpu_share: 1.,
-            //duration_generator: DurationGenerator::Random(Box::new(LogNormalWrapper::new(-0.38, 2.36))),
             duration_generator: DurationGenerator::Random(Box::new(LogNormal::<f64>::new(-0.38, 2.36).unwrap())),
             memory_generator: MemoryGenerator::Fixed(128),
         },
