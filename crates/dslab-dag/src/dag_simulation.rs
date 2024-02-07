@@ -40,13 +40,25 @@ impl DagSimulation {
         }
     }
 
-    /// Adds a resource with provided parameters.
+    /// Adds a resource with provided parameters and zero price.
     pub fn add_resource(&mut self, name: &str, speed: f64, cores: u32, memory: u64) {
         self.resource_configs.push(ResourceConfig {
             name: name.to_string(),
             speed,
             cores,
             memory,
+            price: 0.0
+        });
+    }
+
+    /// Adds a resource with provided parameters.
+    pub fn add_resource_with_price(&mut self, name: &str, speed: f64, cores: u32, memory: u64, price: f64) {
+        self.resource_configs.push(ResourceConfig {
+            name: name.to_string(),
+            speed,
+            cores,
+            memory,
+            price
         });
     }
 
@@ -78,6 +90,7 @@ impl DagSimulation {
                     cores_available: r.cores,
                     memory: r.memory,
                     memory_available: r.memory,
+                    price: r.price,
                 }
             })
             .collect::<Vec<_>>();

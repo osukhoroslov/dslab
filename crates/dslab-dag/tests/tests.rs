@@ -98,6 +98,7 @@ fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -
             } else {
                 rng.gen_range(32..1024)
             },
+            price: 0.0,
         })
         .collect()
 }
@@ -118,6 +119,7 @@ fn simple_test() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -140,6 +142,7 @@ fn test_1() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -162,6 +165,7 @@ fn test_2() {
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -184,6 +188,7 @@ fn test_3() {
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            pricing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -238,6 +243,7 @@ fn test_4() {
             Rc::new(RefCell::new(scheduler)),
             Config {
                 data_transfer_mode: DataTransferMode::Direct,
+                pricing_interval: 1.0,
             },
         );
         sim.add_resource("0", 1., 1, 0);
@@ -301,6 +307,7 @@ fn test_chain_1() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
         },
     );
     sim.add_resource("0", 5., 10, 1024);
@@ -344,6 +351,7 @@ fn test_chain_2() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            pricing_interval: 1.0,
         },
     );
     sim.add_resource("0", 5., 10, 1024);
@@ -382,6 +390,7 @@ fn test_fork_join() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
         },
     );
     for i in 0..5 {

@@ -3,6 +3,7 @@ use std::cell::Cell;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
+#[derive(Clone)]
 struct Node {
     value: u64,
     mx: u64,
@@ -203,6 +204,18 @@ impl Treap {
 impl Default for Treap {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Clone for Treap {
+    fn clone(&self) -> Self {
+        let root = self.root.take();
+        let new = Self {
+            root: Cell::new(root.clone()),
+            rand: self.rand.clone(),
+        };
+        self.root.set(root);
+        new
     }
 }
 

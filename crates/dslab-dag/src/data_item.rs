@@ -80,6 +80,7 @@ impl DataTransferMode {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DataTransferStrategy {
     Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
     Lazy,  // data transfer starts only when the destination node is ready to execute the task

@@ -29,6 +29,8 @@ pub struct Resource {
     /// Memory size in MB.
     pub memory: u64,
     pub memory_available: u64,
+    /// Price of resource per billing interval.
+    pub price: f64,
 }
 
 /// Contains parameters of computing resource, can be used later to create a compute resource instance.
@@ -40,6 +42,9 @@ pub struct ResourceConfig {
     pub cores: u32,
     /// Memory size in MB.
     pub memory: u64,
+    /// Price of resource per billing interval.
+    #[serde(default)]
+    pub price: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

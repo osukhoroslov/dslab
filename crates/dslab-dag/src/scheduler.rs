@@ -23,7 +23,7 @@ use crate::schedulers::peft::PeftScheduler;
 use crate::schedulers::simple_scheduler::SimpleScheduler;
 
 /// Represents an action ordered by the scheduler.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Action {
     /// Execute the task on the resource using a given *number* of cores.
     ScheduleTask {
@@ -44,7 +44,7 @@ pub enum Action {
     TransferData { data_item: usize, from: Id, to: Id },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TimeSpan {
     start: f64,
     finish: f64,

@@ -32,6 +32,7 @@ use crate::trace_log::{Event as TraceEvent, Resource as TraceResource, TraceLog}
 #[derive(Clone)]
 pub struct Config {
     pub data_transfer_mode: DataTransferMode,
+    pub pricing_interval: f64,
 }
 
 /// Represents a transfer of data item between resources.
@@ -105,6 +106,7 @@ impl DAGRunner {
             .enumerate()
             .map(|(idx, resource)| (resource.id, idx))
             .collect();
+        let resource_price = resources.iter().enumerate().map(|(idx, resource)| (idx, resource.price)).collect();
         let available_cores = resources
             .iter()
             .map(|resource| (0..resource.compute.borrow().cores_total()).collect())
@@ -132,7 +134,7 @@ impl DAGRunner {
             resource_data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
-            run_stats: RunStats::new(),
+            run_stats: RunStats::new(config.pricing_interval, resource_price),
             config,
             ctx,
         }
@@ -141,6 +143,21 @@ impl DAGRunner {
     /// Enables or disables [trace log](TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
+    }
+
+    /// Returns resources for this runner.
+    pub fn get_resources<'a>(&'a self) -> &'a Vec<Resource> {
+        &self.resources
+    }
+
+    /// Returns network for this runner.
+    pub fn get_network<'a>(&'a self) -> Rc<RefCell<Network>> {
+        self.network.clone()
+    }
+
+    /// Returns simulation context for this runner.
+    pub fn get_context<'a>(&'a self) -> &'a SimulationContext {
+        &self.ctx
     }
 
     /// Starts DAG execution.

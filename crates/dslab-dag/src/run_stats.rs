@@ -44,6 +44,12 @@ pub struct RunStats {
     pub cpu_utilization_active: f64,
     /// Average memory utilization for active resources only (analogous to cpu_utilization_active).
     pub memory_utilization_active: f64,
+    /// Total cost of used resources.
+    pub total_resource_cost: f64,
+    /// Total cost of all data transfers.
+    pub total_data_transfer_cost: f64,
+    /// Total cost of DAG execution.
+    pub total_execution_cost: f64,
 
     #[serde(skip)]
     task_starts: HashMap<usize, (u32, u64, f64)>,
@@ -58,14 +64,26 @@ pub struct RunStats {
     #[serde(skip)]
     task_resource: HashMap<usize, usize>,
     #[serde(skip)]
+    resource_price: HashMap<usize, f64>,
+    #[serde(skip)]
     resource_first_used: HashMap<usize, f64>,
     #[serde(skip)]
     resource_last_used: HashMap<usize, f64>,
+    #[serde(skip)]
+    resource_pricing_start: HashMap<usize, f64>,
+    #[serde(skip)]
+    resource_tasks_running: HashMap<usize, usize>,
+    #[serde(skip)]
+    pricing_interval: f64,
 }
 
 impl RunStats {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(pricing_interval: f64, resource_price: HashMap<usize, f64>) -> Self {
+        Self {
+            resource_price,
+            pricing_interval,
+            ..Default::default()
+        }
     }
 
     pub fn set_expected_makespan(&mut self, makespan: f64) {
@@ -85,6 +103,11 @@ impl RunStats {
         self.used_resources.insert(resource);
         self.task_resource.insert(task, resource);
         self.resource_first_used.entry(resource).or_insert(time);
+        let entry = self.resource_tasks_running.entry(resource).or_default();
+        if *entry == 0 {
+            self.resource_pricing_start.insert(resource, time);
+        }
+        *entry += 1;
     }
 
     pub fn set_task_finish(&mut self, task: usize, time: f64) {
@@ -94,7 +117,17 @@ impl RunStats {
         self.total_task_time += time - start_time;
         self.cpu_utilization += (time - start_time) * cores as f64;
         self.memory_utilization += (time - start_time) * memory as f64;
-        self.resource_last_used.insert(self.task_resource[&task], time);
+        let resource = self.task_resource[&task];
+        self.resource_last_used.insert(resource, time);
+        let item = self.resource_tasks_running.get_mut(&resource).unwrap();
+        *item -= 1;
+        if *item == 0 {
+            let length = time - *self.resource_pricing_start.get(&resource).unwrap();
+            let n_intervals = (length - 1e-9).div_euclid(self.pricing_interval) + 1.0;
+            let current_cost = n_intervals * (*self.resource_price.get(&resource).unwrap());
+            self.total_resource_cost += current_cost;
+            self.total_execution_cost += current_cost;
+        }
     }
 
     pub fn set_transfer_start(&mut self, data_item: usize, size: f64, time: f64) {
