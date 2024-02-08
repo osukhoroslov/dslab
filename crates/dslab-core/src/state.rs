@@ -379,11 +379,11 @@ impl SimulationState {
             if cancelled_count > 0 {
                 log::warn!(
                     target: "simulation",
-                    "[{:.3} {} simulation] All active timers for component `{}` are cancelled ({} timers total)",
+                    "[{:.3} {} simulation] {} active timers for component `{}` are cancelled",
                     self.time(),
                     crate::log::get_colored("WARN", colored::Color::Yellow),
-                    self.lookup_name(component_id),
                     cancelled_count,
+                    self.lookup_name(component_id),
                 )
             }
         }
@@ -393,11 +393,11 @@ impl SimulationState {
             if cancelled_count > 0 {
                 log::warn!(
                     target: "simulation",
-                    "[{:.3} {} simulation] All async activities for component `{}` are canceled: removed {} active event handlers",
+                    "[{:.3} {} simulation] {} active evnet promises for component `{}` are cancelled",
                     self.time(),
                     crate::log::get_colored("WARN", colored::Color::Yellow),
-                    self.lookup_name(component_id),
                     cancelled_count,
+                    self.lookup_name(component_id),
                 )
             }
         }
