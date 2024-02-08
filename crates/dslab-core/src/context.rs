@@ -794,11 +794,9 @@ impl SimulationContext {
         pub fn sleep(&self, duration: f64) -> TimerFuture {
             assert!(duration >= 0., "duration must be a positive value");
 
-            let timer_future = self
-                .sim_state
+            self.sim_state
                 .borrow_mut()
-                .create_timer(self.id, duration, self.sim_state.clone());
-            timer_future
+                .create_timer(self.id, duration, self.sim_state.clone())
         }
 
         /// Async receive any event of type `T` from any component.
@@ -1092,11 +1090,9 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            let event_future =
-                self.sim_state
-                    .borrow_mut()
-                    .create_event_future::<T>(dst, key, src, self.sim_state.clone());
-            event_future
+            self.sim_state
+                .borrow_mut()
+                .create_event_future::<T>(dst, key, src, self.sim_state.clone())
         }
     );
 }
