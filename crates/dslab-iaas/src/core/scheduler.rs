@@ -80,7 +80,7 @@ impl Scheduler {
     /// Computes the placements (hosts) for a set of allocations using the configured placement algorithm.
     ///
     /// Returns None is it is not possible to satisfy all allocations.
-    fn compute_placements(&mut self, allocations: &Vec<Allocation>) -> Option<Vec<u32>> {
+    fn compute_placements(&mut self, allocations: &[Allocation]) -> Option<Vec<u32>> {
         match &self.vm_placement_algorithm {
             VMPlacementAlgorithm::Single(alg) => {
                 if allocations.len() == 1 {
