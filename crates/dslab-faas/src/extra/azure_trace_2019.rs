@@ -87,7 +87,7 @@ impl Trace for AzureTrace {
     }
 }
 
-fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &Vec<f64>, vals: &Vec<T>) -> T {
+fn gen_sample<T: Copy>(gen: &mut Pcg64, perc: &[f64], vals: &[T]) -> T {
     let p = gen.gen_range(0.0..1.0);
     if p < perc[0] {
         return vals[0];
