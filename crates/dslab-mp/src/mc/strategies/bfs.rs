@@ -24,7 +24,8 @@ pub struct Bfs {
 impl Bfs {
     fn bfs(&mut self, system: &mut McSystem) -> Result<(), McError> {
         // Start search from initial state
-        self.states_queue.push_back(system.get_state());
+        let initial_state = system.get_state();
+        self.states_queue.push_back(initial_state.clone());
 
         while !self.states_queue.is_empty() {
             let state = self.states_queue.pop_front().unwrap();
@@ -40,7 +41,7 @@ impl Bfs {
                 self.process_event(system, event_id)?;
             }
         }
-
+        system.set_state(initial_state);
         Ok(())
     }
 }
