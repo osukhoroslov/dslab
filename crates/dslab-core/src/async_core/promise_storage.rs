@@ -130,7 +130,7 @@ impl EventPromisesStorage {
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
-pub(crate) struct AwaitKey {
+struct AwaitKey {
     pub to: Id,
     pub msg_type: TypeId,
     event_key: Option<EventKey>,
