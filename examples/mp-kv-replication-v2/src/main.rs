@@ -184,7 +184,7 @@ fn check_put_result(sys: &mut System, proc: &str, key: &str, max_steps: u32) -> 
     Ok(true)
 }
 
-fn check_cart_values(values: &Vec<String>, expected: &HashSet<&str>) -> TestResult {
+fn check_cart_values(values: &[String], expected: &HashSet<&str>) -> TestResult {
     assume_eq!(values.len(), 1, "Expected single value")?;
     let items: Vec<&str> = values[0].split(',').collect();
     assume_eq!(
