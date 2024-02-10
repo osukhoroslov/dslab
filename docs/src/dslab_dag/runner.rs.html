@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/runner.rs`."><title>runner.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/runner.rs`."><title>runner.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -880,7 +881,7 @@
 
         <span class="kw">for </span>(id, data_item) <span class="kw">in </span><span class="self">self</span>.dag.get_data_items().iter().enumerate() {
             <span class="kw">if </span>data_item.state == DataItemState::Ready {
-                <span class="macro">assert!</span>(data_item.producer.is_none(), <span class="string">&quot;Non-input data item has Ready state&quot;</span>);
+                <span class="macro">assert!</span>(data_item.producer.is_none(), <span class="string">"Non-input data item has Ready state"</span>);
                 <span class="self">self</span>.data_location.insert(id, <span class="self">self</span>.id);
                 <span class="self">self</span>.resource_data_items.entry(<span class="self">self</span>.id).or_default().insert(id);
             } <span class="kw">else if </span>data_item.consumers.is_empty() {
@@ -890,7 +891,7 @@
 
         <span class="macro">log_info!</span>(
             <span class="self">self</span>.ctx,
-            <span class="string">&quot;started DAG execution: total {} resources, {} tasks, {} data items&quot;</span>,
+            <span class="string">"started DAG execution: total {} resources, {} tasks, {} data items"</span>,
             <span class="self">self</span>.resources.len(),
             <span class="self">self</span>.dag.get_tasks().len(),
             <span class="self">self</span>.dag.get_data_items().len()
@@ -907,7 +908,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.ctx,
         );
         <span class="kw">let </span>scheduling_time = time.elapsed();
-        <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;initial schedule built in {:.2?}&quot;</span>, scheduling_time);
+        <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">"initial schedule built in {:.2?}"</span>, scheduling_time);
         <span class="self">self</span>.run_stats.add_scheduling_time(scheduling_time.as_secs_f64());
         <span class="kw">if let </span><span class="prelude-val">Some</span>(makespan) = actions
             .iter()
@@ -919,7 +920,7 @@
             })
             .max_by(|a, b| a.total_cmp(b))
         {
-            <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;expected makespan: {}&quot;</span>, makespan);
+            <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">"expected makespan: {}"</span>, makespan);
             <span class="self">self</span>.run_stats.set_expected_makespan(makespan);
         }
         <span class="self">self</span>.actions.extend(actions);
@@ -943,10 +944,10 @@
                     .filter(|task| task.state == task_state)
                     .count();
                 <span class="kw">if </span>cnt != <span class="number">0 </span>{
-                    states.push(<span class="macro">format!</span>(<span class="string">&quot;{} {:?}&quot;</span>, cnt, task_state));
+                    states.push(<span class="macro">format!</span>(<span class="string">"{} {:?}"</span>, cnt, task_state));
                 }
             }
-            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;DAG is not completed, currently {} tasks&quot;</span>, states.join(<span class="string">&quot;, &quot;</span>));
+            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"DAG is not completed, currently {} tasks"</span>, states.join(<span class="string">", "</span>));
         }
     }
 
@@ -976,7 +977,7 @@
         <span class="kw">if </span><span class="self">self</span>.dag.get_tasks().iter().map(|task| task.min_cores).max()
             &gt; <span class="self">self</span>.resources.iter().map(|r| r.compute.borrow().cores_total()).max()
         {
-            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;some tasks require more cores than any resource can provide&quot;</span>);
+            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"some tasks require more cores than any resource can provide"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="bool-val">true
@@ -1010,7 +1011,7 @@
         <span class="kw">if </span>!task.is_allowed_on(resource) {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,
-                <span class="string">&quot;Wrong action, task {} isn&#39;t allowed to run on resource {} because of restriction: {:?}&quot;</span>,
+                <span class="string">"Wrong action, task {} isn't allowed to run on resource {} because of restriction: {:?}"</span>,
                 task_id,
                 resource,
                 task.resource_restriction,
@@ -1020,7 +1021,7 @@
         <span class="kw">if </span>need_cores &gt; <span class="self">self</span>.resources[resource].compute.borrow().cores_total() {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,
-                <span class="string">&quot;Wrong action, resource {} doesn&#39;t have enough cores&quot;</span>,
+                <span class="string">"Wrong action, resource {} doesn't have enough cores"</span>,
                 resource
             );
             <span class="kw">return</span>;
@@ -1028,7 +1029,7 @@
         <span class="kw">if </span>task.memory &gt; <span class="self">self</span>.resources[resource].compute.borrow().memory_total() {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,
-                <span class="string">&quot;Wrong action, resource {} doesn&#39;t have enough memory&quot;</span>,
+                <span class="string">"Wrong action, resource {} doesn't have enough memory"</span>,
                 resource
             );
             <span class="kw">return</span>;
@@ -1036,7 +1037,7 @@
         <span class="kw">if </span>need_cores &lt; task.min_cores || task.max_cores &lt; need_cores {
             <span class="macro">log_error!</span>(
                 <span class="self">self</span>.ctx,
-                <span class="string">&quot;Wrong action, task {} doesn&#39;t support {} cores&quot;</span>,
+                <span class="string">"Wrong action, task {} doesn't support {} cores"</span>,
                 task_id,
                 need_cores
             );
@@ -1047,7 +1048,7 @@
         } <span class="kw">else if </span>task.state == TaskState::Pending {
             <span class="self">self</span>.dag.update_task_state(task_id, TaskState::Scheduled);
         } <span class="kw">else </span>{
-            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Can&#39;t schedule task with state {:?}&quot;</span>, task.state);
+            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Can't schedule task with state {:?}"</span>, task.state);
             <span class="kw">return</span>;
         }
         <span class="kw">let </span>data_items = <span class="self">self</span>.dag.get_task(task_id).inputs.clone();
@@ -1075,7 +1076,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(time_span) = expected_span {
             <span class="macro">log_debug!</span>(
                 <span class="self">self</span>.ctx,
-                <span class="string">&quot;Expected span for task {} is {} - {}&quot;</span>,
+                <span class="string">"Expected span for task {} is {} - {}"</span>,
                 task_id,
                 time_span.start(),
                 time_span.finish()
@@ -1089,7 +1090,7 @@
             <span class="self">self</span>.process_resource_queue(i);
         }
         <span class="kw">while let </span><span class="prelude-val">Some</span>(action) = <span class="self">self</span>.actions.pop_front() {
-            <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Got action: {:?}&quot;</span>, action);
+            <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">"Got action: {:?}"</span>, action);
             <span class="kw">match </span>action {
                 Action::ScheduleTask {
                     task,
@@ -1109,7 +1110,7 @@
                 } =&gt; {
                     cores.sort();
                     <span class="kw">if </span>cores.windows(<span class="number">2</span>).any(|window| window[<span class="number">0</span>] == window[<span class="number">1</span>]) {
-                        <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Wrong action, cores list {:?} contains same cores&quot;</span>, cores);
+                        <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Wrong action, cores list {:?} contains same cores"</span>, cores);
                         <span class="kw">return</span>;
                     }
                     <span class="self">self</span>.process_schedule_action(task, resource, cores.len() <span class="kw">as </span>u32, cores, expected_span);
@@ -1431,7 +1432,7 @@
                     network: <span class="kw-2">&amp;</span><span class="self">self</span>.network.borrow(),
                 },
             );
-            <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;finished DAG execution&quot;</span>);
+            <span class="macro">log_info!</span>(<span class="self">self</span>.ctx, <span class="string">"finished DAG execution"</span>);
         }
     }
 }

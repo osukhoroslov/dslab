@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-faas/src/scheduler.rs`."><title>scheduler.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_faas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-faas/src/scheduler.rs`."><title>scheduler.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_faas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -341,7 +342,7 @@
     </span><span class="kw">fn </span>select_host(<span class="kw-2">&amp;mut </span><span class="self">self</span>, app: <span class="kw-2">&amp;</span>Application, hosts: <span class="kw-2">&amp;</span>[Rc&lt;RefCell&lt;Host&gt;&gt;]) -&gt; usize;
     <span class="doccomment">/// Returns a string with scheduler description.
     </span><span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="string">&quot;STUB SCHEDULER NAME&quot;</span>.to_string()
+        <span class="string">"STUB SCHEDULER NAME"</span>.to_string()
     }
 }
 
@@ -364,7 +365,7 @@
     </span>}
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="string">&quot;BasicScheduler&quot;</span>.to_string()
+        <span class="string">"BasicScheduler"</span>.to_string()
     }
 }
 
@@ -380,28 +381,28 @@
     <span class="kw">type </span><span class="prelude-val">Err </span>= String;
 
     <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
-        <span class="kw">if </span>s.eq_ignore_ascii_case(<span class="string">&quot;identity&quot;</span>) {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(Box::new(|a| a), <span class="string">&quot;Identity&quot;</span>.to_string()));
+        <span class="kw">if </span>s.eq_ignore_ascii_case(<span class="string">"identity"</span>) {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(Box::new(|a| a), <span class="string">"Identity"</span>.to_string()));
         }
         <span class="kw">let </span><span class="kw-2">mut </span>a: u64 = <span class="number">0</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>b: u64 = <span class="number">0</span>;
-        <span class="kw">for </span>(i, x) <span class="kw">in </span>s.split(<span class="string">&#39;.&#39;</span>).enumerate() {
+        <span class="kw">for </span>(i, x) <span class="kw">in </span>s.split(<span class="string">'.'</span>).enumerate() {
             <span class="kw">if </span>i &gt;= <span class="number">2 </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Too many tokens in hasher string.&quot;</span>.to_string());
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Too many tokens in hasher string."</span>.to_string());
             }
             <span class="kw">if </span>i == <span class="number">0 </span>{
                 <span class="kw">if let </span><span class="prelude-val">Ok</span>(y) = x.parse::&lt;u64&gt;() {
                     a = y;
                 } <span class="kw">else </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t parse parameter &#39;a&#39;&quot;</span>.to_string());
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Couldn't parse parameter 'a'"</span>.to_string());
                 }
             } <span class="kw">else if let </span><span class="prelude-val">Ok</span>(y) = x.parse::&lt;u64&gt;() {
                 b = y;
             } <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t parse parameter &#39;b&#39;&quot;</span>.to_string());
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Couldn't parse parameter 'b'"</span>.to_string());
             }
         }
-        <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;Linear[{} * x + {}]&quot;</span>, a, b);
+        <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">"Linear[{} * x + {}]"</span>, a, b);
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(Box::new(<span class="kw">move </span>|x| a.wrapping_mul(x).wrapping_add(b)), name))
     }
 }
@@ -418,7 +419,7 @@
     }
 }
 
-<span class="doccomment">/// Picks a host based on the application hash. In case host number `i` can&#39;t invoke, the scheduler considers host number `(i + step) % hosts.len()`.
+<span class="doccomment">/// Picks a host based on the application hash. In case host number `i` can't invoke, the scheduler considers host number `(i + step) % hosts.len()`.
 </span><span class="kw">pub struct </span>LocalityBasedScheduler {
     hasher: ApplicationHasher,
     step: usize,
@@ -428,7 +429,7 @@
 <span class="kw">impl </span>LocalityBasedScheduler {
     <span class="doccomment">/// Creates new LocalityBasedScheduler.
     </span><span class="kw">pub fn </span>new(hasher: <span class="prelude-ty">Option</span>&lt;ApplicationHasher&gt;, step: <span class="prelude-ty">Option</span>&lt;usize&gt;, warm_only: bool) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), <span class="string">&quot;Identity&quot;</span>.to_string()));
+        <span class="kw">let </span>f = hasher.unwrap_or_else(|| ApplicationHasher::new(Box::new(|a| a), <span class="string">"Identity"</span>.to_string()));
         <span class="kw">let </span>s = step.unwrap_or(<span class="number">1</span>);
         <span class="self">Self </span>{
             hasher: f,
@@ -440,9 +441,9 @@
     <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
     </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>hasher =
-            ApplicationHasher::from_str(options.get(<span class="string">&quot;hasher&quot;</span>).map(|a| a.deref()).unwrap_or(<span class="string">&quot;Identity&quot;</span>)).unwrap();
-        <span class="kw">let </span>warm_only = options.get(<span class="string">&quot;warm_only&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
-        <span class="kw">let </span>step = options.get(<span class="string">&quot;step&quot;</span>).map(|s| s.parse::&lt;usize&gt;().unwrap());
+            ApplicationHasher::from_str(options.get(<span class="string">"hasher"</span>).map(|a| a.deref()).unwrap_or(<span class="string">"Identity"</span>)).unwrap();
+        <span class="kw">let </span>warm_only = options.get(<span class="string">"warm_only"</span>).unwrap().parse::&lt;bool&gt;().unwrap();
+        <span class="kw">let </span>step = options.get(<span class="string">"step"</span>).map(|s| s.parse::&lt;usize&gt;().unwrap());
         <span class="self">Self</span>::new(<span class="prelude-val">Some</span>(hasher), step, warm_only)
     }
 }
@@ -482,7 +483,7 @@
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(
-            <span class="string">&quot;LocalityBasedScheduler[hasher=[{}],step={},warm_only={}]&quot;</span>,
+            <span class="string">"LocalityBasedScheduler[hasher=[{}],step={},warm_only={}]"</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.hasher.name, <span class="self">self</span>.step, <span class="self">self</span>.warm_only
         )
     }
@@ -503,7 +504,7 @@
 
     <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
     </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>seed = options.get(<span class="string">&quot;seed&quot;</span>).unwrap().parse::&lt;u64&gt;().unwrap();
+        <span class="kw">let </span>seed = options.get(<span class="string">"seed"</span>).unwrap().parse::&lt;u64&gt;().unwrap();
         <span class="self">Self</span>::new(seed)
     }
 }
@@ -514,7 +515,7 @@
     }
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="string">&quot;RandomScheduler&quot;</span>.to_string()
+        <span class="string">"RandomScheduler"</span>.to_string()
     }
 }
 
@@ -524,7 +525,7 @@
     </span>prefer_warm: bool,
     <span class="doccomment">/// Use total invocation count instead of CPU load.
     </span>use_invocation_count: bool,
-    <span class="doccomment">/// Strictly prefer hosts where the request won&#39;t get queued.
+    <span class="doccomment">/// Strictly prefer hosts where the request won't get queued.
     </span>avoid_queueing: bool,
 }
 
@@ -540,9 +541,9 @@
 
     <span class="doccomment">/// Creates scheduler from a map of strings containing scheduler parameters.
     </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>prefer_warm = options.get(<span class="string">&quot;prefer_warm&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
-        <span class="kw">let </span>use_invocation_count = options.get(<span class="string">&quot;use_invocation_count&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
-        <span class="kw">let </span>avoid_queueing = options.get(<span class="string">&quot;avoid_queueing&quot;</span>).unwrap().parse::&lt;bool&gt;().unwrap();
+        <span class="kw">let </span>prefer_warm = options.get(<span class="string">"prefer_warm"</span>).unwrap().parse::&lt;bool&gt;().unwrap();
+        <span class="kw">let </span>use_invocation_count = options.get(<span class="string">"use_invocation_count"</span>).unwrap().parse::&lt;bool&gt;().unwrap();
+        <span class="kw">let </span>avoid_queueing = options.get(<span class="string">"avoid_queueing"</span>).unwrap().parse::&lt;bool&gt;().unwrap();
         <span class="self">Self</span>::new(prefer_warm, use_invocation_count, avoid_queueing)
     }
 }
@@ -588,7 +589,7 @@
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(
-            <span class="string">&quot;LeastLoadedScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]&quot;</span>,
+            <span class="string">"LeastLoadedScheduler[prefer_warm={},use_invocation_count={},avoid_queueing={}]"</span>,
             <span class="self">self</span>.prefer_warm, <span class="self">self</span>.use_invocation_count, <span class="self">self</span>.avoid_queueing
         )
     }
@@ -616,30 +617,30 @@
     }
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="string">&quot;RoundRobinScheduler&quot;</span>.to_string()
+        <span class="string">"RoundRobinScheduler"</span>.to_string()
     }
 }
 
 <span class="doccomment">/// Creates [`Scheduler`] from a string containing its name and parameters.
 </span><span class="kw">pub fn </span>default_scheduler_resolver(s: <span class="kw-2">&amp;</span>str) -&gt; Box&lt;<span class="kw">dyn </span>Scheduler&gt; {
-    <span class="kw">if </span>s == <span class="string">&quot;BasicScheduler&quot; </span>{
+    <span class="kw">if </span>s == <span class="string">"BasicScheduler" </span>{
         <span class="kw">return </span>Box::new(BasicScheduler {});
     }
-    <span class="kw">if </span>s == <span class="string">&quot;RoundRobinScheduler&quot; </span>{
+    <span class="kw">if </span>s == <span class="string">"RoundRobinScheduler" </span>{
         <span class="kw">return </span>Box::new(RoundRobinScheduler::new());
     }
-    <span class="kw">if </span>s.len() &gt;= <span class="number">17 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">16</span>] == <span class="string">&quot;RandomScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
+    <span class="kw">if </span>s.len() &gt;= <span class="number">17 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">16</span>] == <span class="string">"RandomScheduler[" </span>&amp;&amp; s.ends_with(<span class="string">']'</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">16</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(RandomScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
     }
-    <span class="kw">if </span>s.len() &gt;= <span class="number">22 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">21</span>] == <span class="string">&quot;LeastLoadedScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
+    <span class="kw">if </span>s.len() &gt;= <span class="number">22 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">21</span>] == <span class="string">"LeastLoadedScheduler[" </span>&amp;&amp; s.ends_with(<span class="string">']'</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">21</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(LeastLoadedScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
     }
-    <span class="kw">if </span>s.len() &gt;= <span class="number">24 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">23</span>] == <span class="string">&quot;LocalityBasedScheduler[&quot; </span>&amp;&amp; s.ends_with(<span class="string">&#39;]&#39;</span>) {
+    <span class="kw">if </span>s.len() &gt;= <span class="number">24 </span>&amp;&amp; <span class="kw-2">&amp;</span>s[<span class="number">0</span>..<span class="number">23</span>] == <span class="string">"LocalityBasedScheduler[" </span>&amp;&amp; s.ends_with(<span class="string">']'</span>) {
         <span class="kw">let </span>opts = parse_options(<span class="kw-2">&amp;</span>s[<span class="number">23</span>..s.len() - <span class="number">1</span>]);
         <span class="kw">return </span>Box::new(LocalityBasedScheduler::from_options_map(<span class="kw-2">&amp;</span>opts));
     }
-    <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t resolve: {}&quot;</span>, s);
+    <span class="macro">panic!</span>(<span class="string">"Can't resolve: {}"</span>, s);
 }
 </code></pre></div></section></main></body></html>

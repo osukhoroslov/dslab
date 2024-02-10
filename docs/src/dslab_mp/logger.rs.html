@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-mp/src/logger.rs`."><title>logger.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_mp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-mp/src/logger.rs`."><title>logger.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_mp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -551,7 +552,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(log_file) = <span class="self">self</span>.log_file.as_mut() {
             <span class="kw">let </span>serialized = serde_json::to_string(<span class="kw-2">&amp;</span>event).unwrap();
             log_file.write_all(serialized.as_bytes()).unwrap();
-            log_file.write_all(<span class="string">&quot;\n&quot;</span>.as_bytes()).unwrap();
+            log_file.write_all(<span class="string">"\n"</span>.as_bytes()).unwrap();
         }
 
         <span class="self">self</span>.trace.push(event.clone());
@@ -795,10 +796,10 @@
     </span><span class="kw">pub fn </span>print(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">match </span><span class="self">self </span>{
             LogEntry::NodeStarted { .. } =&gt; {
-                <span class="comment">// t!(format!(&quot;{:&gt;9.3} - node started: {}&quot;, time, node));
+                <span class="comment">// t!(format!("{:&gt;9.3} - node started: {}", time, node));
             </span>}
             LogEntry::ProcessStarted { .. } =&gt; {
-                <span class="comment">// t!(format!(&quot;{:&gt;9.3} - process started: {} @ {}&quot;, time, proc, node));
+                <span class="comment">// t!(format!("{:&gt;9.3} - process started: {} @ {}", time, proc, node));
             </span>}
             LogEntry::LocalMessageSent {
                 time,
@@ -807,7 +808,7 @@
                 proc,
                 msg,
             } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} {:&gt;10} &gt;&gt;&gt; {:&lt;10} {:?}&quot;</span>, time, proc, <span class="string">&quot;local&quot;</span>, msg).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} {:&gt;10} &gt;&gt;&gt; {:&lt;10} {:?}"</span>, time, proc, <span class="string">"local"</span>, msg).green());
             }
             LogEntry::LocalMessageReceived {
                 time,
@@ -816,7 +817,7 @@
                 proc,
                 msg,
             } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} {:&gt;10} &lt;&lt;&lt; {:&lt;10} {:?}&quot;</span>, time, proc, <span class="string">&quot;local&quot;</span>, msg).cyan());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} {:&gt;10} &lt;&lt;&lt; {:&lt;10} {:?}"</span>, time, proc, <span class="string">"local"</span>, msg).cyan());
             }
             LogEntry::MessageSent {
                 time,
@@ -827,7 +828,7 @@
                 dst_proc,
                 msg,
             } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} {:&gt;10} --&gt; {:&lt;10} {:?}&quot;</span>, time, src_proc, dst_proc, msg));
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} {:&gt;10} --&gt; {:&lt;10} {:?}"</span>, time, src_proc, dst_proc, msg));
             }
             LogEntry::MessageReceived {
                 time,
@@ -838,7 +839,7 @@
                 dst_node: <span class="kw">_</span>,
                 msg,
             } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} {:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, time, dst_proc, src_proc, msg))
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} {:&gt;10} &lt;-- {:&lt;10} {:?}"</span>, time, dst_proc, src_proc, msg))
             }
             LogEntry::MessageDropped {
                 time: <span class="kw">_</span>,
@@ -850,22 +851,22 @@
                 msg,
             } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{:&gt;9} {:&gt;10} --x {:&lt;10} {:?} &lt;-- message dropped&quot;</span>,
-                    <span class="string">&quot;!!!&quot;</span>, src_proc, dst_proc, msg
+                    <span class="string">"{:&gt;9} {:&gt;10} --x {:&lt;10} {:?} &lt;-- message dropped"</span>,
+                    <span class="string">"!!!"</span>, src_proc, dst_proc, msg
                 )
                 .red());
             }
             LogEntry::NodeConnected { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - connected node: {}&quot;</span>, time, node).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - connected node: {}"</span>, time, node).green());
             }
             LogEntry::NodeDisconnected { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - disconnected node: {}&quot;</span>, time, node).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - disconnected node: {}"</span>, time, node).red());
             }
             LogEntry::NodeCrashed { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - node crashed: {}&quot;</span>, time, node).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - node crashed: {}"</span>, time, node).red());
             }
             LogEntry::NodeRecovered { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - node recovered: {}&quot;</span>, time, node).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - node recovered: {}"</span>, time, node).green());
             }
             LogEntry::TimerSet { .. } =&gt; {}
             LogEntry::TimerFired {
@@ -875,51 +876,51 @@
                 node: <span class="kw">_</span>,
                 proc,
             } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} {:&gt;10} !-- {:&lt;10}&quot;</span>, time, proc, timer_name).yellow());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} {:&gt;10} !-- {:&lt;10}"</span>, time, proc, timer_name).yellow());
             }
             LogEntry::TimerCancelled { .. } =&gt; {}
             LogEntry::LinkDisabled { time, from, to } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - disabled link: {:&gt;10} --&gt; {:&lt;10}&quot;</span>, time, from, to).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - disabled link: {:&gt;10} --&gt; {:&lt;10}"</span>, time, from, to).red());
             }
             LogEntry::LinkEnabled { time, from, to } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - enabled link: {:&gt;10} --&gt; {:&lt;10}&quot;</span>, time, from, to).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - enabled link: {:&gt;10} --&gt; {:&lt;10}"</span>, time, from, to).green());
             }
             LogEntry::DropIncoming { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - drop messages to {}&quot;</span>, time, node).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - drop messages to {}"</span>, time, node).red());
             }
             LogEntry::PassIncoming { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - pass messages to {}&quot;</span>, time, node).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - pass messages to {}"</span>, time, node).green());
             }
             LogEntry::DropOutgoing { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - drop messages from {}&quot;</span>, time, node).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - drop messages from {}"</span>, time, node).red());
             }
             LogEntry::PassOutgoing { time, node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - pass messages from {}&quot;</span>, time, node).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - pass messages from {}"</span>, time, node).green());
             }
             LogEntry::NetworkPartition { time, group1, group2 } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - network partition: {:?} -x- {:?}&quot;</span>, time, group1, group2).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - network partition: {:?} -x- {:?}"</span>, time, group1, group2).red());
             }
             LogEntry::NetworkReset { time } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;9.3} - network reset, all problems healed&quot;</span>, time).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;9.3} - network reset, all problems healed"</span>, time).green());
             }
             LogEntry::ProcessStateUpdated { .. } =&gt; {}
             LogEntry::McStarted { .. } =&gt; {
-                <span class="comment">// t!(&quot;MODEL CHECKING STARTED&quot;);
+                <span class="comment">// t!("MODEL CHECKING STARTED");
             </span>}
             LogEntry::McLocalMessageSent { msg, proc } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} &gt;&gt;&gt; {:&lt;10} {:?}&quot;</span>, proc, <span class="string">&quot;local&quot;</span>, msg).green());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} &gt;&gt;&gt; {:&lt;10} {:?}"</span>, proc, <span class="string">"local"</span>, msg).green());
             }
             LogEntry::McLocalMessageReceived { msg, proc } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} &lt;&lt;&lt; {:&lt;10} {:?}&quot;</span>, <span class="string">&quot;local&quot;</span>, proc, msg).cyan());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} &lt;&lt;&lt; {:&lt;10} {:?}"</span>, <span class="string">"local"</span>, proc, msg).cyan());
             }
             LogEntry::McMessageSent { msg, src, dst } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} --&gt; {:&lt;10} {:?}&quot;</span>, src, dst, msg));
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} --&gt; {:&lt;10} {:?}"</span>, src, dst, msg));
             }
             LogEntry::McMessageReceived { msg, src, dst } =&gt; {
-                <span class="macro">t!</span>(<span class="string">&quot;{:&gt;10} &lt;-- {:&lt;10} {:?}&quot;</span>, dst, src, msg);
+                <span class="macro">t!</span>(<span class="string">"{:&gt;10} &lt;-- {:&lt;10} {:?}"</span>, dst, src, msg);
             }
             LogEntry::McMessageDropped { msg, src, dst } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} --x {:&lt;10} {:?} &lt;-- message dropped&quot;</span>, src, dst, msg).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} --x {:&lt;10} {:?} &lt;-- message dropped"</span>, src, dst, msg).red());
             }
             LogEntry::McMessageCorrupted {
                 msg,
@@ -928,35 +929,35 @@
                 dst,
             } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{:&gt;10} -x- {:&lt;10} {:?} ~~&gt; {:?} &lt;-- message corrupted&quot;</span>,
+                    <span class="string">"{:&gt;10} -x- {:&lt;10} {:?} ~~&gt; {:?} &lt;-- message corrupted"</span>,
                     src, dst, msg, corrupted_msg
                 )
                 .blue());
             }
             LogEntry::McMessageDuplicated { msg, src, dst } =&gt; {
                 <span class="macro">t!</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{:&gt;9} {:&gt;10} -=≡ {:&lt;10} {:?} &lt;-- message duplicated&quot;</span>,
-                    <span class="string">&quot;~~~&quot;</span>, src, dst, msg
+                    <span class="string">"{:&gt;9} {:&gt;10} -=≡ {:&lt;10} {:?} &lt;-- message duplicated"</span>,
+                    <span class="string">"~~~"</span>, src, dst, msg
                 )
                 .blue());
             }
             LogEntry::McTimerSet { proc, timer } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} +++ {:&lt;10} &lt;-- timer set&quot;</span>, proc, timer));
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} +++ {:&lt;10} &lt;-- timer set"</span>, proc, timer));
             }
             LogEntry::McTimerFired { proc, timer } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} !-- {:&lt;10} &lt;-- timer fired&quot;</span>, proc, timer).yellow());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} !-- {:&lt;10} &lt;-- timer fired"</span>, proc, timer).yellow());
             }
             LogEntry::McTimerCancelled { proc, timer } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:&gt;10} xxx {:&lt;10} &lt;-- timer cancelled&quot;</span>, proc, timer).yellow());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"{:&gt;10} xxx {:&lt;10} &lt;-- timer cancelled"</span>, proc, timer).yellow());
             }
             LogEntry::McNodeCrashed { node } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;node crashed: {}&quot;</span>, node).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"node crashed: {}"</span>, node).red());
             }
             LogEntry::McNetworkReset {} =&gt; {
-                <span class="macro">t!</span>(<span class="string">&quot;network reset, all problems healed&quot;</span>.to_string().green());
+                <span class="macro">t!</span>(<span class="string">"network reset, all problems healed"</span>.to_string().green());
             }
             LogEntry::McNetworkPartition { group1, group2 } =&gt; {
-                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">&quot;network partition: {:?} -x- {:?}&quot;</span>, group1, group2).red());
+                <span class="macro">t!</span>(<span class="macro">format!</span>(<span class="string">"network partition: {:?} -x- {:?}"</span>, group1, group2).red());
             }
         }
     }

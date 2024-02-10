@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-core/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-core/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -752,7 +753,7 @@
     /// use dslab_core::Simulation;
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// let comp_id = sim.lookup_id(comp_ctx.name());
     /// assert_eq!(comp_id, 0);
     /// ```
@@ -761,8 +762,8 @@
     /// use dslab_core::Simulation;
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
-    /// let comp1_id = sim.lookup_id(&quot;comp1&quot;);
+    /// let comp_ctx = sim.create_context("comp");
+    /// let comp1_id = sim.lookup_id("comp1");
     /// ```
     </span><span class="kw">pub fn </span>lookup_id(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; Id {
         <span class="kw-2">*</span><span class="self">self</span>.name_to_id.get(name).unwrap()
@@ -778,16 +779,16 @@
     /// use dslab_core::Simulation;
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// let comp_name = sim.lookup_name(comp_ctx.id());
-    /// assert_eq!(comp_name, &quot;comp&quot;);
+    /// assert_eq!(comp_name, "comp");
     /// ```
     ///
     /// ```should_panic
     /// use dslab_core::Simulation;
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// let comp_name = sim.lookup_name(comp_ctx.id() + 1);
     /// ```
     </span><span class="kw">pub fn </span>lookup_name(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Id) -&gt; String {
@@ -802,9 +803,9 @@
     /// use dslab_core::Simulation;
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// assert_eq!(comp_ctx.id(), 0); // component ids are assigned sequentially starting from 0
-    /// assert_eq!(comp_ctx.name(), &quot;comp&quot;);
+    /// assert_eq!(comp_ctx.name(), "comp");
     /// ```
     </span><span class="kw">pub fn </span>create_context&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S) -&gt; SimulationContext
     <span class="kw">where
@@ -817,11 +818,11 @@
             <span class="self">self</span>.names.clone(),
         );
         <span class="macro">debug!</span>(
-            target: <span class="string">&quot;simulation&quot;</span>,
-            <span class="string">&quot;[{:.3} {} simulation] Created context: {}&quot;</span>,
+            target: <span class="string">"simulation"</span>,
+            <span class="string">"[{:.3} {} simulation] Created context: {}"</span>,
             <span class="self">self</span>.time(),
-            <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;DEBUG&quot;</span>, colored::Color::Blue),
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: ctx.name(), <span class="string">&quot;id&quot;</span>: ctx.id()})
+            <span class="kw">crate</span>::log::get_colored(<span class="string">"DEBUG"</span>, colored::Color::Blue),
+            <span class="macro">json!</span>({<span class="string">"name"</span>: ctx.name(), <span class="string">"id"</span>: ctx.id()})
         );
         ctx
     }
@@ -856,12 +857,12 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// assert_eq!(comp_ctx.id(), 0);
     /// let comp = Rc::new(RefCell::new(Component { ctx: comp_ctx }));
     /// // When the handler is registered for component with existing context,
     /// // the component Id assigned in create_context() is reused.
-    /// let comp_id = sim.add_handler(&quot;comp&quot;, comp);
+    /// let comp_id = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id, 0);
     /// ```
     ///
@@ -893,7 +894,7 @@
     /// let comp = Rc::new(RefCell::new(Component { }));
     /// // It is possible to register event handler for component without context.
     /// // In this case the component Id is assigned inside add_handler().
-    /// let comp_id = sim.add_handler(&quot;comp&quot;, comp);
+    /// let comp_id = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id, 0);
     /// ```
     ///
@@ -907,10 +908,10 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let comp_ctx = sim.create_context("comp");
     /// let comp = Rc::new(RefCell::new(Component { ctx: comp_ctx }));
     /// // should not compile because Component does not implement EventHandler trait
-    /// let comp_id = sim.add_handler(&quot;comp&quot;, comp);
+    /// let comp_id = sim.add_handler("comp", comp);
     /// ```
     </span><span class="kw">pub fn </span>add_handler&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S, handler: Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;) -&gt; Id
     <span class="kw">where
@@ -919,11 +920,11 @@
         <span class="kw">let </span>id = <span class="self">self</span>.register(name.as_ref());
         <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(handler);
         <span class="macro">debug!</span>(
-            target: <span class="string">&quot;simulation&quot;</span>,
-            <span class="string">&quot;[{:.3} {} simulation] Added handler: {}&quot;</span>,
+            target: <span class="string">"simulation"</span>,
+            <span class="string">"[{:.3} {} simulation] Added handler: {}"</span>,
             <span class="self">self</span>.time(),
-            <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;DEBUG&quot;</span>, colored::Color::Blue),
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: name.as_ref(), <span class="string">&quot;id&quot;</span>: id})
+            <span class="kw">crate</span>::log::get_colored(<span class="string">"DEBUG"</span>, colored::Color::Blue),
+            <span class="macro">json!</span>({<span class="string">"name"</span>: name.as_ref(), <span class="string">"id"</span>: id})
         );
         id
     }
@@ -960,10 +961,10 @@
     ///
     /// let mut sim = Simulation::new(123);
     /// let comp = Rc::new(RefCell::new(Component { }));
-    /// let comp_id1 = sim.add_handler(&quot;comp&quot;, comp.clone());
-    /// sim.remove_handler(&quot;comp&quot;);
+    /// let comp_id1 = sim.add_handler("comp", comp.clone());
+    /// sim.remove_handler("comp");
     /// // Assigned component Id is not changed if we call `add_handler` again.
-    /// let comp_id2 = sim.add_handler(&quot;comp&quot;, comp);
+    /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
     </span><span class="kw">pub fn </span>remove_handler&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S)
@@ -973,11 +974,11 @@
         <span class="kw">let </span>id = <span class="self">self</span>.lookup_id(name.as_ref());
         <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">None</span>;
         <span class="macro">debug!</span>(
-            target: <span class="string">&quot;simulation&quot;</span>,
-            <span class="string">&quot;[{:.3} {} simulation] Removed handler: {}&quot;</span>,
+            target: <span class="string">"simulation"</span>,
+            <span class="string">"[{:.3} {} simulation] Removed handler: {}"</span>,
             <span class="self">self</span>.time(),
-            <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;DEBUG&quot;</span>, colored::Color::Blue),
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: name.as_ref(), <span class="string">&quot;id&quot;</span>: id})
+            <span class="kw">crate</span>::log::get_colored(<span class="string">"DEBUG"</span>, colored::Color::Blue),
+            <span class="macro">json!</span>({<span class="string">"name"</span>: name.as_ref(), <span class="string">"id"</span>: id})
         );
     }
 
@@ -994,7 +995,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
     /// sim.step();
@@ -1024,7 +1025,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
     /// let mut status = sim.step();
@@ -1042,11 +1043,11 @@
                     <span class="kw">let </span>dst_name = <span class="self">self</span>.lookup_name(event.dst);
                     <span class="macro">trace!</span>(
                         target: <span class="kw-2">&amp;</span>dst_name,
-                        <span class="string">&quot;[{:.3} {} {}] {}&quot;</span>,
+                        <span class="string">"[{:.3} {} {}] {}"</span>,
                         event.time,
-                        <span class="kw">crate</span>::log::get_colored(<span class="string">&quot;EVENT&quot;</span>, colored::Color::BrightBlack),
+                        <span class="kw">crate</span>::log::get_colored(<span class="string">"EVENT"</span>, colored::Color::BrightBlack),
                         dst_name,
-                        <span class="macro">json!</span>({<span class="string">&quot;type&quot;</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">&quot;data&quot;</span>: event.data, <span class="string">&quot;src&quot;</span>: src_name})
+                        <span class="macro">json!</span>({<span class="string">"type"</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">"data"</span>: event.data, <span class="string">"src"</span>: src_name})
                     );
                 }
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
@@ -1081,7 +1082,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
@@ -1117,7 +1118,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
@@ -1151,7 +1152,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
@@ -1188,7 +1189,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
@@ -1282,7 +1283,7 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp_ctx = sim.create_context(&quot;comp&quot;);
+    /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
     /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
@@ -1308,8 +1309,8 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp1_ctx = sim.create_context(&quot;comp1&quot;);
-    /// let mut comp2_ctx = sim.create_context(&quot;comp2&quot;);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
@@ -1339,8 +1340,8 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut comp1_ctx = sim.create_context(&quot;comp1&quot;);
-    /// let mut comp2_ctx = sim.create_context(&quot;comp2&quot;);
+    /// let mut comp1_ctx = sim.create_context("comp1");
+    /// let mut comp2_ctx = sim.create_context("comp2");
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
     /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
@@ -1371,8 +1372,8 @@
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let mut ctx1 = sim.create_context(&quot;comp1&quot;);
-    /// let mut ctx2 = sim.create_context(&quot;comp2&quot;);
+    /// let mut ctx1 = sim.create_context("comp1");
+    /// let mut ctx2 = sim.create_context("comp2");
     /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
     /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 1.0);
     /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 2.0);

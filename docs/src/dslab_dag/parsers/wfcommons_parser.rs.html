@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/parsers/wfcommons_parser.rs`."><title>wfcommons_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/parsers/wfcommons_parser.rs`."><title>wfcommons_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -259,9 +260,9 @@
 <span class="attr">#[derive(Serialize, Deserialize)]
 </span><span class="kw">struct </span>Machine {
     <span class="comment">// Machine node name
-    </span><span class="attr">#[serde(rename = <span class="string">&quot;nodeName&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">"nodeName"</span>)]
     </span>name: String,
-    <span class="comment">// Machine&#39;s CPU information
+    <span class="comment">// Machine's CPU information
     </span>cpu: Cpu,
 }
 
@@ -270,7 +271,7 @@
     <span class="comment">// A human-readable name for the file
     </span>name: String,
     <span class="comment">// File size in KB (schema v1.3) or in bytes (schema v1.4)
-    </span><span class="attr">#[serde(alias = <span class="string">&quot;sizeInBytes&quot;</span>)]
+    </span><span class="attr">#[serde(alias = <span class="string">"sizeInBytes"</span>)]
     </span>size: u64,
     <span class="comment">// Whether it is an input or output data
     </span>link: String,
@@ -281,19 +282,19 @@
     <span class="comment">// Task name
     </span>name: String,
     <span class="comment">// Task runtime in seconds
-    </span><span class="attr">#[serde(alias = <span class="string">&quot;runtimeInSeconds&quot;</span>)]
+    </span><span class="attr">#[serde(alias = <span class="string">"runtimeInSeconds"</span>)]
     </span>runtime: f64,
     <span class="comment">// Number of cores required by the task
-    </span>cores: <span class="prelude-ty">Option</span>&lt;f64&gt;, <span class="comment">// some files specify cores as &quot;1.0&quot;
+    </span>cores: <span class="prelude-ty">Option</span>&lt;f64&gt;, <span class="comment">// some files specify cores as "1.0"
     // Memory (resident set) size of the process in KB (schema v1.3) or in bytes (schema v1.4)
     //
     // TODO: Uncomment after this issue is fixed: https://github.com/wfcommons/makeflow-instances/issues/1
     //
-    // #[serde(alias = &quot;memoryInBytes&quot;)]
+    // #[serde(alias = "memoryInBytes")]
     // memory: Option&lt;u64&gt;,
     //
     // Until then we have to resort to using both `memory_in_bytes` and `memory`.
-    </span><span class="attr">#[serde(rename = <span class="string">&quot;memoryInBytes&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">"memoryInBytes"</span>)]
     </span>memory_in_bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     memory: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     <span class="comment">// Task input/output files
@@ -308,7 +309,7 @@
 </span><span class="kw">struct </span>Workflow {
     jobs: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;,  <span class="comment">// schema v1.2
     </span>tasks: <span class="prelude-ty">Option</span>&lt;Vec&lt;Task&gt;&gt;, <span class="comment">// schema v1.3
-    </span><span class="attr">#[serde(default = <span class="string">&quot;Vec::new&quot;</span>)]
+    </span><span class="attr">#[serde(default = <span class="string">"Vec::new"</span>)]
     </span>machines: Vec&lt;Machine&gt;,
 }
 
@@ -328,7 +329,7 @@
 
 <span class="attr">#[derive(Serialize, Deserialize)]
 </span><span class="kw">struct </span>Json {
-    <span class="attr">#[serde(rename = <span class="string">&quot;schemaVersion&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"schemaVersion"</span>)]
     </span>schema_version: String,
     workflow: Workflow,
     wms: Wms,
@@ -339,14 +340,14 @@
     </span><span class="kw">pub fn </span>from_wfcommons&lt;P: AsRef&lt;Path&gt;&gt;(file: P, config: <span class="kw-2">&amp;</span>ParserConfig) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = DefaultHasher::new();
         <span class="kw">let </span>str =
-            <span class="kw-2">&amp;</span>std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t read file {}&quot;</span>, file.as_ref().display()));
+            <span class="kw-2">&amp;</span>std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"Can't read file {}"</span>, file.as_ref().display()));
         str.hash(<span class="kw-2">&amp;mut </span>hasher);
         <span class="kw">let </span>hash = hasher.finish();
         <span class="kw">let </span><span class="kw-2">mut </span>rand = Pcg64::seed_from_u64(hash + config.seed.unwrap_or(<span class="number">123</span>));
 
         <span class="kw">let </span>json: Json = from_str(str).unwrap_or_else(|e| {
             <span class="macro">panic!</span>(
-                <span class="string">&quot;Can&#39;t parse WfCommons json from file {}: {}&quot;</span>,
+                <span class="string">"Can't parse WfCommons json from file {}: {}"</span>,
                 file.as_ref().display(),
                 e
             )
@@ -369,7 +370,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>stage_cores: HashMap&lt;String, u32&gt; = HashMap::new();
         <span class="kw">let </span><span class="kw-2">mut </span>task_ids: HashMap&lt;String, usize&gt; = HashMap::new();
         <span class="kw">for </span>task <span class="kw">in </span>workflow.tasks().iter() {
-            <span class="kw">let </span>stage = task.name.split(<span class="string">&#39;_&#39;</span>).next().unwrap().to_string();
+            <span class="kw">let </span>stage = task.name.split(<span class="string">'_'</span>).next().unwrap().to_string();
 
             <span class="kw">let </span>cores = <span class="kw">if let </span><span class="prelude-val">Some</span>(cores_conf) = <span class="kw-2">&amp;</span>config.generate_cores {
                 <span class="kw">if </span>cores_conf.regular &amp;&amp; stage_cores.contains_key(<span class="kw-2">&amp;</span>stage) {
@@ -400,7 +401,7 @@
             } <span class="kw">else </span>{
                 <span class="comment">// TODO: Uncomment after this issue is fixed: https://github.com/wfcommons/makeflow-instances/issues/1
                 // let memory = task.memory.unwrap_or(0);
-                // if schema_version == &quot;1.4&quot; {
+                // if schema_version == "1.4" {
                 //     (memory as f64 / 1e6).ceil() as u64 // convert bytes to MB (round up to nearest)
                 // } else {
                 //     (memory as f64 / 1e3).ceil() as u64 // convert KB to MB (round up to nearest)
@@ -422,7 +423,7 @@
             <span class="kw">let </span>task_id = dag.add_task(<span class="kw-2">&amp;</span>task.name, flops, memory, cores, cores, CoresDependency::Linear);
             task_ids.insert(task.name.clone(), task_id);
             <span class="kw">for </span>file <span class="kw">in </span>task.files.iter() {
-                <span class="kw">if </span>file.link == <span class="string">&quot;output&quot; </span>{
+                <span class="kw">if </span>file.link == <span class="string">"output" </span>{
                     data_items.insert(
                         file.name.clone(),
                         dag.add_task_output(task_id, <span class="kw-2">&amp;</span>file.name, file_size_in_mb(file.size, <span class="kw-2">&amp;</span>schema_version, <span class="kw-2">&amp;</span>wms)),
@@ -433,7 +434,7 @@
         <span class="kw">for </span>(task_id, task) <span class="kw">in </span>workflow.tasks().iter().enumerate() {
             <span class="kw">let </span><span class="kw-2">mut </span>predecessors: HashSet&lt;usize&gt; = HashSet::new();
             <span class="kw">for </span>file <span class="kw">in </span>task.files.iter() {
-                <span class="kw">if </span>file.link == <span class="string">&quot;input&quot; </span>{
+                <span class="kw">if </span>file.link == <span class="string">"input" </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(data_item_id) = data_items.get(<span class="kw-2">&amp;</span>file.name) {
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(producer) = dag.get_data_item(<span class="kw-2">*</span>data_item_id).producer {
                             predecessors.insert(producer);
@@ -450,7 +451,7 @@
             <span class="kw">for </span>parent <span class="kw">in </span>task.parents.iter() {
                 <span class="kw">if </span>!predecessors.contains(<span class="kw-2">&amp;</span>task_ids[parent]) {
                     <span class="kw">let </span>data_item_id =
-                        dag.add_task_output(task_ids[parent], <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{} -&gt; {}&quot;</span>, parent, task.name), <span class="number">0.</span>);
+                        dag.add_task_output(task_ids[parent], <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{} -&gt; {}"</span>, parent, task.name), <span class="number">0.</span>);
                     dag.add_data_dependency(data_item_id, task_id);
                     predecessors.insert(task_ids[parent]);
                 }
@@ -466,7 +467,7 @@
     //
     // TODO: Makeflow 1.4 instances still have sizes in KB, until this issue is fixed:
     // https://github.com/wfcommons/makeflow-instances/issues/1
-    </span><span class="kw">if </span>(schema_version == <span class="string">&quot;1.4&quot; </span>&amp;&amp; wms != <span class="string">&quot;Makeflow&quot;</span>) || wms == <span class="string">&quot;Pegasus&quot; </span>{
+    </span><span class="kw">if </span>(schema_version == <span class="string">"1.4" </span>&amp;&amp; wms != <span class="string">"Makeflow"</span>) || wms == <span class="string">"Pegasus" </span>{
         size <span class="kw">as </span>f64 / <span class="number">1e6 </span><span class="comment">// convert bytes to MB
     </span>} <span class="kw">else </span>{
         size <span class="kw">as </span>f64 / <span class="number">1e3 </span><span class="comment">// convert KB to MB

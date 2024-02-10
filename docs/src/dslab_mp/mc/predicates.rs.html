@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-mp/src/mc/predicates.rs`."><title>predicates.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_mp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-mp/src/mc/predicates.rs`."><title>predicates.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_mp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -463,7 +464,7 @@
     </span><span class="kw">pub fn </span>state_depth(depth: u64) -&gt; InvariantFn {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.depth &gt; depth {
-                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;state depth exceeds maximum allowed depth {depth}&quot;</span>))
+                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"state depth exceeds maximum allowed depth {depth}"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">Ok</span>(())
             }
@@ -474,7 +475,7 @@
     </span><span class="kw">pub fn </span>state_depth_current_run(depth: u64) -&gt; InvariantFn {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.current_run_trace().len() &gt; depth <span class="kw">as </span>usize {
-                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;state depth exceeds maximum allowed depth {depth}&quot;</span>))
+                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"state depth exceeds maximum allowed depth {depth}"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">Ok</span>(())
             }
@@ -488,7 +489,7 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>counter: u8 = <span class="number">0</span>;
         <span class="macro">boxed!</span>(<span class="kw">move </span>|<span class="kw">_</span>: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>counter == <span class="number">0 </span>&amp;&amp; start_time.elapsed() &gt; time_limit {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;time limit of {}s exceeded&quot;</span>, time_limit.as_secs_f32()));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"time limit of {}s exceeded"</span>, time_limit.as_secs_f32()));
             }
             counter = counter.wrapping_add(<span class="number">1</span>);
             <span class="prelude-val">Ok</span>(())
@@ -508,24 +509,24 @@
             <span class="kw">let </span><span class="kw-2">mut </span>messages_got = HashSet::&lt;String&gt;::default();
             <span class="kw">if </span>local_outbox.len() &gt; messages_expected.len() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{proc} received at least {} messages but only {} expected&quot;</span>,
+                    <span class="string">"{proc} received at least {} messages but only {} expected"</span>,
                     local_outbox.len(),
                     messages_expected.len()
                 ));
             }
             <span class="kw">if </span>local_outbox.len() &lt; messages_expected.len() &amp;&amp; state.events.is_empty() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;{proc} received {} messages in total but {} expected&quot;</span>,
+                    <span class="string">"{proc} received {} messages in total but {} expected"</span>,
                     local_outbox.len(),
                     messages_expected.len()
                 ));
             }
             <span class="kw">for </span>message <span class="kw">in </span>local_outbox {
                 <span class="kw">if </span>!messages_got.insert(message.data.clone()) {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;message {:?} was duplicated&quot;</span>, message));
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"message {:?} was duplicated"</span>, message));
                 }
                 <span class="kw">if </span>!messages_expected.contains(<span class="kw-2">&amp;</span>message.data) {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;message {:?} is not expected&quot;</span>, message));
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"message {:?} is not expected"</span>, message));
                 }
             }
             <span class="prelude-val">Ok</span>(())
@@ -559,7 +560,7 @@
             <span class="kw">for </span>goal <span class="kw">in </span><span class="kw-2">&amp;mut </span>goals {
                 goal(state)<span class="question-mark">?</span>;
             }
-            <span class="prelude-val">Some</span>(<span class="string">&quot;combined goal is reached&quot;</span>.to_string())
+            <span class="prelude-val">Some</span>(<span class="string">"combined goal is reached"</span>.to_string())
         })
     }
 
@@ -572,7 +573,7 @@
         <span class="kw">let </span>proc = proc.into();
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.node_states[<span class="kw-2">&amp;</span>node].proc_states[<span class="kw-2">&amp;</span>proc].local_outbox.len() == n {
-                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{proc} produced {n} local messages&quot;</span>))
+                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{proc} produced {n} local messages"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -583,7 +584,7 @@
     </span><span class="kw">pub fn </span>no_events() -&gt; GoalFn {
         <span class="macro">boxed!</span>(|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.events.is_empty() {
-                <span class="prelude-val">Some</span>(<span class="string">&quot;final state reached&quot;</span>.to_string())
+                <span class="prelude-val">Some</span>(<span class="string">"final state reached"</span>.to_string())
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -594,7 +595,7 @@
     </span><span class="kw">pub fn </span>depth_reached(depth: u64) -&gt; GoalFn {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.depth &gt;= depth {
-                <span class="prelude-val">Some</span>(<span class="string">&quot;final depth reached&quot;</span>.to_string())
+                <span class="prelude-val">Some</span>(<span class="string">"final depth reached"</span>.to_string())
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -603,18 +604,18 @@
 
     <span class="doccomment">/// This goal is used when start state is also a final state.
     </span><span class="kw">pub fn </span>always_ok() -&gt; GoalFn {
-        <span class="macro">boxed!</span>(<span class="kw">move </span>|<span class="kw">_</span>: <span class="kw-2">&amp;</span>McState| { <span class="prelude-val">Some</span>(<span class="string">&quot;ok&quot;</span>.to_string()) })
+        <span class="macro">boxed!</span>(<span class="kw">move </span>|<span class="kw">_</span>: <span class="kw-2">&amp;</span>McState| { <span class="prelude-val">Some</span>(<span class="string">"ok"</span>.to_string()) })
     }
 
     <span class="doccomment">/// Checks if current run trace has at least `n` events matching the predicate.
     </span><span class="kw">pub fn </span>event_happened_n_times_current_run&lt;F&gt;(predicate: F, n: usize) -&gt; GoalFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">let </span>event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
             <span class="kw">if </span>event_count &gt;= n {
-                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;event occured {event_count} &gt;= {n} times&quot;</span>))
+                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"event occured {event_count} &gt;= {n} times"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -650,7 +651,7 @@
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">if </span>state.depth &gt; depth {
                 <span class="prelude-val">Some</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;state depth exceeds maximum depth {depth} that is under consideration&quot;
+                    <span class="string">"state depth exceeds maximum depth {depth} that is under consideration"
                 </span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
@@ -664,7 +665,7 @@
             <span class="kw">for </span>(<span class="kw">_</span>, node) <span class="kw">in </span>state.node_states.iter() {
                 <span class="kw">for </span>(proc_name, proc) <span class="kw">in </span>node.proc_states.iter() {
                     <span class="kw">if </span>proc.sent_message_count &gt; max_allowed_messages {
-                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;too many messages sent by {proc_name}&quot;</span>));
+                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"too many messages sent by {proc_name}"</span>));
                     }
                 }
             }
@@ -675,12 +676,12 @@
     <span class="doccomment">/// Prunes state with at least `n` events matching the predicate.
     </span><span class="kw">pub fn </span>event_happened_n_times_current_run&lt;F&gt;(predicate: F, n: usize) -&gt; PruneFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">let </span>event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
             <span class="kw">if </span>event_count &gt;= n {
-                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;event occured {n} times&quot;</span>))
+                <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"event occured {n} times"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -690,13 +691,13 @@
     <span class="doccomment">/// Prunes states where the number of events matching the predicate is more than the limit.
     </span><span class="kw">pub fn </span>events_limit&lt;F&gt;(predicate: F, limit: usize) -&gt; PruneFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">let </span>event_count = count_events_in_trace(<span class="kw-2">&amp;</span>predicate, state);
             <span class="kw">if </span>event_count &gt; limit {
                 <span class="prelude-val">Some</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;event occured {event_count} times but expected at most {limit} times&quot;
+                    <span class="string">"event occured {event_count} times but expected at most {limit} times"
                 </span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
@@ -707,7 +708,7 @@
     <span class="doccomment">/// Prunes states where the number of events matching the predicate is more than the limit for any of processes.
     </span><span class="kw">pub fn </span>events_limit_per_proc&lt;F&gt;(predicate: F, process_names: Vec&lt;String&gt;, limit: usize) -&gt; PruneFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry, <span class="kw-2">&amp;</span>String) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry, <span class="kw-2">&amp;</span>String) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">for </span>proc <span class="kw">in </span><span class="kw-2">&amp;</span>process_names {
@@ -715,7 +716,7 @@
                 <span class="kw">let </span>event_count = count_events_in_trace(proc_predicate, state);
                 <span class="kw">if </span>event_count &gt; limit {
                     <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">format!</span>(
-                        <span class="string">&quot;event occured {event_count} times on proc {proc} but expected at most {limit} times&quot;
+                        <span class="string">"event occured {event_count} times on proc {proc} but expected at most {limit} times"
                     </span>));
                 }
             }
@@ -738,7 +739,7 @@
                             <span class="kw">continue</span>;
                         }
                         <span class="kw">if </span>equivalent_procs[waiting_for_proc] != <span class="kw-2">*</span>proc {
-                            <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="string">&quot;state is the same as another state with renumerated processes&quot;</span>.to_owned());
+                            <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="string">"state is the same as another state with renumerated processes"</span>.to_owned());
                         }
                         used_proc_names.insert(proc.clone());
                         waiting_for_proc += <span class="number">1</span>;
@@ -797,7 +798,7 @@
     <span class="doccomment">/// Checks if trace to given state has at least `n` events matching the predicate.
     </span><span class="kw">pub fn </span>event_happened_n_times_current_run&lt;F&gt;(predicate: F, n: usize) -&gt; CollectFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">let </span>event_count = state.current_run_trace().iter().filter(|x| predicate(x)).count();
@@ -810,7 +811,7 @@
         <span class="macro">boxed!</span>(|state: <span class="kw-2">&amp;</span>McState| { state.events.is_empty() })
     }
 
-    <span class="doccomment">/// Checks if current state&#39;s depth exceeds the given value.
+    <span class="doccomment">/// Checks if current state's depth exceeds the given value.
     </span><span class="kw">pub fn </span>state_depth(depth: u64) -&gt; CollectFn {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| { state.depth &gt; depth })
     }
@@ -818,7 +819,7 @@
     <span class="doccomment">/// Collects states where the number of events matching the predicate is more than the limit.
     </span><span class="kw">pub fn </span>events_limit&lt;F&gt;(predicate: F, limit: usize) -&gt; CollectFn
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(<span class="kw-2">&amp;</span>LogEntry) -&gt; bool + <span class="lifetime">'static</span>,
     {
         <span class="macro">boxed!</span>(<span class="kw">move </span>|state: <span class="kw-2">&amp;</span>McState| {
             <span class="kw">let </span>event_count = count_events_in_trace(<span class="kw-2">&amp;</span>predicate, state);

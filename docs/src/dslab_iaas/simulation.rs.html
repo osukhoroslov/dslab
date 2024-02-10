@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-iaas/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_iaas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-iaas/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_iaas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -648,24 +649,24 @@
         <span class="kw">let </span>logger: Rc&lt;RefCell&lt;Box&lt;<span class="kw">dyn </span>Logger&gt;&gt;&gt; = <span class="macro">rc!</span>(<span class="macro">refcell!</span>(logger));
 
         <span class="kw">let </span>monitoring = <span class="macro">rc!</span>(<span class="macro">refcell!</span>(Monitoring::new(
-            sim.create_context(<span class="string">&quot;monitoring&quot;</span>),
+            sim.create_context(<span class="string">"monitoring"</span>),
             logger.clone()
         )));
-        sim.add_handler(<span class="string">&quot;monitoring&quot;</span>, monitoring.clone());
+        sim.add_handler(<span class="string">"monitoring"</span>, monitoring.clone());
 
-        <span class="kw">let </span>vm_api = <span class="macro">rc!</span>(<span class="macro">refcell!</span>(VmAPI::new(sim.create_context(<span class="string">&quot;vm_api&quot;</span>))));
-        sim.add_handler(<span class="string">&quot;vm_api&quot;</span>, vm_api.clone());
+        <span class="kw">let </span>vm_api = <span class="macro">rc!</span>(<span class="macro">refcell!</span>(VmAPI::new(sim.create_context(<span class="string">"vm_api"</span>))));
+        sim.add_handler(<span class="string">"vm_api"</span>, vm_api.clone());
 
         <span class="kw">let </span>placement_store = <span class="macro">rc!</span>(<span class="macro">refcell!</span>(PlacementStore::new(
             sim_config.allow_vm_overcommit,
             vm_api.clone(),
-            sim.create_context(<span class="string">&quot;placement_store&quot;</span>),
+            sim.create_context(<span class="string">"placement_store"</span>),
             logger.clone(),
             sim_config.clone(),
         )));
-        sim.add_handler(<span class="string">&quot;placement_store&quot;</span>, placement_store.clone());
+        sim.add_handler(<span class="string">"placement_store"</span>, placement_store.clone());
 
-        <span class="kw">let </span>ctx = sim.create_context(<span class="string">&quot;simulation&quot;</span>);
+        <span class="kw">let </span>ctx = sim.create_context(<span class="string">"simulation"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>sim = <span class="self">Self </span>{
             monitoring,
             vm_api,
@@ -694,7 +695,7 @@
             } <span class="kw">else </span>{
                 <span class="kw">let </span>prefix = host_config.name_prefix.unwrap();
                 <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..count {
-                    <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix, i + <span class="number">1</span>);
+                    <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">"{}{}"</span>, prefix, i + <span class="number">1</span>);
                     sim.add_host(<span class="kw-2">&amp;</span>name, host_config.cpus, host_config.memory);
                 }
             }
@@ -710,7 +711,7 @@
             } <span class="kw">else </span>{
                 <span class="kw">let </span>prefix = scheduler_config.name_prefix.unwrap();
                 <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..scheduler_config.count.unwrap_or(<span class="number">1</span>) {
-                    <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix, i + <span class="number">1</span>);
+                    <span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">"{}{}"</span>, prefix, i + <span class="number">1</span>);
                     <span class="kw">let </span>alg = placement_algorithm_resolver(scheduler_config.algorithm.clone());
                     sim.add_scheduler(<span class="kw-2">&amp;</span>name, alg);
                 }
@@ -729,14 +730,14 @@
                         sim.sim_config.hosts.first().unwrap().memory <span class="kw">as </span>f64,
                     );
                     dataset.parse(
-                        <span class="macro">format!</span>(<span class="string">&quot;{}/vm_types.csv&quot;</span>, dataset_config.path),
-                        <span class="macro">format!</span>(<span class="string">&quot;{}/vm_instances.csv&quot;</span>, dataset_config.path),
+                        <span class="macro">format!</span>(<span class="string">"{}/vm_types.csv"</span>, dataset_config.path),
+                        <span class="macro">format!</span>(<span class="string">"{}/vm_instances.csv"</span>, dataset_config.path),
                     );
                     sim.spawn_vms_from_dataset(<span class="kw-2">*</span>sim.schedulers.iter().next().unwrap().<span class="number">0</span>, <span class="kw-2">&amp;mut </span>dataset);
                 }
                 VmDatasetType::Huawei =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>dataset = HuaweiDatasetReader::new(sim.sim_config.simulation_length);
-                    dataset.parse(<span class="macro">format!</span>(<span class="string">&quot;{}/Huawei-East-1.csv&quot;</span>, dataset_config.path));
+                    dataset.parse(<span class="macro">format!</span>(<span class="string">"{}/Huawei-East-1.csv"</span>, dataset_config.path));
                     sim.spawn_vms_from_dataset(<span class="kw-2">*</span>sim.schedulers.iter().next().unwrap().<span class="number">0</span>, <span class="kw-2">&amp;mut </span>dataset);
                 }
             }
@@ -893,15 +894,15 @@
     /// The subsequent invocations of `spawn_vm_now` will not spawn VM immediately but will add it to the batch.
     /// After the batch is completed it can be submitted using the `spawn_batch` method.
     </span><span class="kw">pub fn </span>begin_batch(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="macro">assert!</span>(!<span class="self">self</span>.batch_mode, <span class="string">&quot;Batch mode is already enabled&quot;</span>);
+        <span class="macro">assert!</span>(!<span class="self">self</span>.batch_mode, <span class="string">"Batch mode is already enabled"</span>);
         <span class="self">self</span>.batch_mode = <span class="bool-val">true</span>;
     }
 
     <span class="doccomment">/// Spawns the current batch as a single multi-VM requests and disables the batch mode.
     /// Returns the IDs of spawned VMs.
     </span><span class="kw">pub fn </span>spawn_batch(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;u32&gt; {
-        <span class="macro">assert!</span>(<span class="self">self</span>.batch_mode, <span class="string">&quot;Batch mode is not enabled&quot;</span>);
-        <span class="macro">assert!</span>(!<span class="self">self</span>.batch_buffer.is_empty(), <span class="string">&quot;Batch buffer is empty&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.batch_mode, <span class="string">"Batch mode is not enabled"</span>);
+        <span class="macro">assert!</span>(!<span class="self">self</span>.batch_buffer.is_empty(), <span class="string">"Batch buffer is empty"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>vm_ids = Vec::new();
         <span class="kw">let </span>scheduler_id = <span class="self">self</span>.batch_buffer[<span class="number">0</span>].scheduler_id;
         <span class="kw">for </span>req <span class="kw">in </span><span class="self">self</span>.batch_buffer.drain(..) {
@@ -916,7 +917,7 @@
             vm_ids.push(req.vm_id);
             <span class="macro">assert_eq!</span>(
                 req.scheduler_id, scheduler_id,
-                <span class="string">&quot;Requests in batch have different scheduler ids&quot;
+                <span class="string">"Requests in batch have different scheduler ids"
             </span>);
         }
         <span class="self">self</span>.ctx
@@ -930,7 +931,7 @@
         <span class="kw">let </span>vm_api = <span class="self">self</span>.vm_api.borrow();
         <span class="kw">let </span>source_host = vm_api
             .find_host_by_vm(vm_id)
-            .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;Cannot migrate VM {}: source host is not found&quot;</span>, vm_id));
+            .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">"Cannot migrate VM {}: source host is not found"</span>, vm_id));
         <span class="self">self</span>.ctx.emit(
             MigrationRequest { source_host, vm_id },
             target_host,
@@ -939,7 +940,7 @@
     }
 
     <span class="doccomment">/// Creates custom component and adds it to the simulation.
-    </span><span class="kw">pub fn </span>build_custom_component&lt;Component: <span class="lifetime">&#39;static </span>+ CustomComponent&gt;(
+    </span><span class="kw">pub fn </span>build_custom_component&lt;Component: <span class="lifetime">'static </span>+ CustomComponent&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         name: <span class="kw-2">&amp;</span>str,
     ) -&gt; Rc&lt;RefCell&lt;Component&gt;&gt; {

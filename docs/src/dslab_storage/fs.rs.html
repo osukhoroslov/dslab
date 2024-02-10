@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-storage/src/fs.rs`."><title>fs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_storage" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-storage/src/fs.rs`."><title>fs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_storage" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -478,9 +479,9 @@
 
     <span class="doccomment">/// Mounts `disk` to `mount_point` if it is not taken yet.
     </span><span class="kw">pub fn </span>mount_disk(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mount_point: <span class="kw-2">&amp;</span>str, disk: Rc&lt;RefCell&lt;<span class="kw">dyn </span>Storage&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Received mount disk request, mount_point: [{}]&quot;</span>, mount_point);
+        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">"Received mount disk request, mount_point: [{}]"</span>, mount_point);
         <span class="kw">if </span><span class="self">self</span>.disks.get(mount_point).is_some() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;mount point [{}] is already is use&quot;</span>, mount_point));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"mount point [{}] is already is use"</span>, mount_point));
         }
         <span class="self">self</span>.disks.insert(mount_point.to_string(), disk);
         <span class="prelude-val">Ok</span>(())
@@ -490,11 +491,11 @@
     </span><span class="kw">pub fn </span>unmount_disk(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mount_point: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
         <span class="macro">log_debug!</span>(
             <span class="self">self</span>.ctx,
-            <span class="string">&quot;Received unmount disk request, mount_point: [{}]&quot;</span>,
+            <span class="string">"Received unmount disk request, mount_point: [{}]"</span>,
             mount_point
         );
         <span class="kw">if </span><span class="self">self</span>.disks.remove(mount_point).is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;unknown mount point [{}]&quot;</span>, mount_point));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"unknown mount point [{}]"</span>, mount_point));
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -505,7 +506,7 @@
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(disk.clone());
             }
         }
-        <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;cannot resolve on which disk file [{}] is located&quot;</span>, file_path))
+        <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"cannot resolve on which disk file [{}] is located"</span>, file_path))
     }
 
     <span class="kw">fn </span>make_unique_request_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; u64 {
@@ -523,7 +524,7 @@
     </span><span class="kw">pub fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str, size: u64, requester: Id) -&gt; u64 {
         <span class="macro">log_debug!</span>(
             <span class="self">self</span>.ctx,
-            <span class="string">&quot;Received read request, size: {}, file: [{}], requester: {}&quot;</span>,
+            <span class="string">"Received read request, size: {}, file: [{}], requester: {}"</span>,
             size,
             file_path,
             requester
@@ -539,7 +540,7 @@
     </span><span class="kw">pub fn </span>read_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str, requester: Id) -&gt; u64 {
         <span class="macro">log_debug!</span>(
             <span class="self">self</span>.ctx,
-            <span class="string">&quot;Received read request, size: all, file: [{}], requester: {}&quot;</span>,
+            <span class="string">"Received read request, size: all, file: [{}], requester: {}"</span>,
             file_path,
             requester
         );
@@ -553,8 +554,8 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = <span class="self">self</span>.files.get_mut(file_path) {
                     <span class="kw">let </span>size_to_read = <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = size {
                         <span class="kw">if </span>file.size &lt; value {
-                            <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">&quot;requested read size {} is more than file size {}&quot;</span>, value, file.size);
-                            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Failed reading: {}&quot;</span>, error,);
+                            <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">"requested read size {} is more than file size {}"</span>, value, file.size);
+                            <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Failed reading: {}"</span>, error,);
                             <span class="self">self</span>.ctx.emit_now(
                                 FileReadFailed {
                                     request_id,
@@ -578,8 +579,8 @@
                         (request_id, requester, file_path.into()),
                     );
                 } <span class="kw">else </span>{
-                    <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">&quot;file [{}] does not exist&quot;</span>, file_path);
-                    <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Failed reading: {}&quot;</span>, error,);
+                    <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">"file [{}] does not exist"</span>, file_path);
+                    <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Failed reading: {}"</span>, error,);
                     <span class="self">self</span>.ctx.emit_now(
                         FileReadFailed {
                             request_id,
@@ -591,7 +592,7 @@
                 }
             }
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Failed reading: {}&quot;</span>, error,);
+                <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Failed reading: {}"</span>, error,);
                 <span class="self">self</span>.ctx.emit_now(
                     FileReadFailed {
                         request_id,
@@ -614,7 +615,7 @@
     </span><span class="kw">pub fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str, size: u64, requester: Id) -&gt; u64 {
         <span class="macro">log_debug!</span>(
             <span class="self">self</span>.ctx,
-            <span class="string">&quot;Received write request, size: {}, file: [{}], requester: {}&quot;</span>,
+            <span class="string">"Received write request, size: {}, file: [{}], requester: {}"</span>,
             size,
             file_path,
             requester,
@@ -630,8 +631,8 @@
                         (request_id, requester, file_path.into()),
                     );
                 } <span class="kw">else </span>{
-                    <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">&quot;file [{}] does not exist&quot;</span>, file_path);
-                    <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Failed writing: {}&quot;</span>, error,);
+                    <span class="kw">let </span>error = <span class="macro">format!</span>(<span class="string">"file [{}] does not exist"</span>, file_path);
+                    <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Failed writing: {}"</span>, error,);
                     <span class="self">self</span>.ctx.emit_now(
                         FileWriteFailed {
                             request_id,
@@ -643,7 +644,7 @@
                 }
             }
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Failed writing: {}&quot;</span>, error,);
+                <span class="macro">log_error!</span>(<span class="self">self</span>.ctx, <span class="string">"Failed writing: {}"</span>, error,);
                 <span class="self">self</span>.ctx.emit_now(
                     FileWriteFailed {
                         request_id,
@@ -659,9 +660,9 @@
 
     <span class="doccomment">/// Creates file at `file_path` if it doesn’t already exist.
     </span><span class="kw">pub fn </span>create_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Received create file request, file_path: [{}]&quot;</span>, file_path);
+        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">"Received create file request, file_path: [{}]"</span>, file_path);
         <span class="kw">if </span><span class="self">self</span>.files.get(file_path).is_some() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;file [{}] already exists&quot;</span>, file_path));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"file [{}] already exists"</span>, file_path));
         }
         <span class="self">self</span>.resolve_disk(file_path)<span class="question-mark">?</span>;
         <span class="self">self</span>.files.insert(file_path.to_string(), File::new(<span class="number">0</span>));
@@ -672,7 +673,7 @@
     </span><span class="kw">pub fn </span>file_size(<span class="kw-2">&amp;</span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;u64, String&gt; {
         <span class="self">self</span>.files
             .get(file_path)
-            .ok_or(<span class="macro">format!</span>(<span class="string">&quot;file [{}] does not exist&quot;</span>, file_path))
+            .ok_or(<span class="macro">format!</span>(<span class="string">"file [{}] does not exist"</span>, file_path))
             .map(|f| f.size)
     }
 
@@ -711,14 +712,14 @@
 
     <span class="doccomment">/// Deletes file located at `file_path` if there is any.    
     </span><span class="kw">pub fn </span>delete_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">&quot;Received delete file request, file_path: [{}]&quot;</span>, file_path);
+        <span class="macro">log_debug!</span>(<span class="self">self</span>.ctx, <span class="string">"Received delete file request, file_path: [{}]"</span>, file_path);
         <span class="kw">let </span>disk = <span class="self">self</span>.resolve_disk(file_path)<span class="question-mark">?</span>;
         <span class="kw">let </span>file = <span class="self">self
             </span>.files
             .get(file_path)
-            .ok_or(<span class="macro">format!</span>(<span class="string">&quot;file [{}] does not exist&quot;</span>, file_path))<span class="question-mark">?</span>;
+            .ok_or(<span class="macro">format!</span>(<span class="string">"file [{}] does not exist"</span>, file_path))<span class="question-mark">?</span>;
         <span class="kw">if </span>file.cnt_actions &gt; <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;file [{}] is busy and cannot be removed&quot;</span>, file_path));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"file [{}] is busy and cannot be removed"</span>, file_path));
         }
         disk.borrow_mut().mark_free(file.size)<span class="question-mark">?</span>;
         <span class="self">self</span>.files.remove(file_path);
@@ -738,7 +739,7 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = <span class="self">self</span>.files.get_mut(file_path) {
                         <span class="macro">log_debug!</span>(
                             <span class="self">self</span>.ctx,
-                            <span class="string">&quot;Completed reading from file [{}], read size: {}&quot;</span>,
+                            <span class="string">"Completed reading from file [{}], read size: {}"</span>,
                             file_path,
                             size,
                         );
@@ -753,10 +754,10 @@
                         );
                         <span class="self">self</span>.requests.remove(<span class="kw-2">&amp;</span>key);
                     } <span class="kw">else </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;File [{}] was lost while reading&quot;</span>, file_path);
+                        <span class="macro">panic!</span>(<span class="string">"File [{}] was lost while reading"</span>, file_path);
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;Request ({},{}) not found&quot;</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
+                    <span class="macro">panic!</span>(<span class="string">"Request ({},{}) not found"</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
                 }
             }
             DataReadFailed {
@@ -768,7 +769,7 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = <span class="self">self</span>.files.get_mut(file_path) {
                         <span class="macro">log_error!</span>(
                             <span class="self">self</span>.ctx,
-                            <span class="string">&quot;Disk failed reading from file [{}], error: {}&quot;</span>,
+                            <span class="string">"Disk failed reading from file [{}], error: {}"</span>,
                             file_path,
                             error
                         );
@@ -783,10 +784,10 @@
                         );
                         <span class="self">self</span>.requests.remove(<span class="kw-2">&amp;</span>key);
                     } <span class="kw">else </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;File [{}] was lost while reading&quot;</span>, file_path);
+                        <span class="macro">panic!</span>(<span class="string">"File [{}] was lost while reading"</span>, file_path);
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;Request ({},{}) not found&quot;</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
+                    <span class="macro">panic!</span>(<span class="string">"Request ({},{}) not found"</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
                 }
             }
             DataWriteCompleted {
@@ -800,7 +801,7 @@
                         file.cnt_actions -= <span class="number">1</span>;
                         <span class="macro">log_debug!</span>(
                             <span class="self">self</span>.ctx,
-                            <span class="string">&quot;Completed writing to file [{}], written size: {}, new size: {}&quot;</span>,
+                            <span class="string">"Completed writing to file [{}], written size: {}, new size: {}"</span>,
                             file_path,
                             size,
                             file.size,
@@ -815,10 +816,10 @@
                         );
                         <span class="self">self</span>.requests.remove(<span class="kw-2">&amp;</span>key);
                     } <span class="kw">else </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;File [{}] was lost while writing&quot;</span>, file_path);
+                        <span class="macro">panic!</span>(<span class="string">"File [{}] was lost while writing"</span>, file_path);
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;Request ({},{}) not found&quot;</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
+                    <span class="macro">panic!</span>(<span class="string">"Request ({},{}) not found"</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
                 }
             }
             DataWriteFailed {
@@ -831,7 +832,7 @@
                         file.cnt_actions -= <span class="number">1</span>;
                         <span class="macro">log_error!</span>(
                             <span class="self">self</span>.ctx,
-                            <span class="string">&quot;Disk failed writing to file [{}], error: {}&quot;</span>,
+                            <span class="string">"Disk failed writing to file [{}], error: {}"</span>,
                             file_path,
                             error,
                         );
@@ -845,10 +846,10 @@
                         );
                         <span class="self">self</span>.requests.remove(<span class="kw-2">&amp;</span>key);
                     } <span class="kw">else </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;File [{}] was lost while writing&quot;</span>, file_path);
+                        <span class="macro">panic!</span>(<span class="string">"File [{}] was lost while writing"</span>, file_path);
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;Request ({},{}) not found&quot;</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
+                    <span class="macro">panic!</span>(<span class="string">"Request ({},{}) not found"</span>, key.<span class="number">0</span>, key.<span class="number">1</span>);
                 }
             }
         })

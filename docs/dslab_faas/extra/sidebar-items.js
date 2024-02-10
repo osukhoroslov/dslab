@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["azure_trace_2019","azure_trace_2021","hermod","hybrid_histogram","opendc_trace","resolvers"]};
+window.SIDEBAR_ITEMS = {"mod":["azure_trace_2019","azure_trace_2021","hermod","hybrid_histogram","opendc_trace","resolvers","synthetic_trace"]};

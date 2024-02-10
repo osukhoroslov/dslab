@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/parsers/dot_parser.rs`."><title>dot_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-dag/src/parsers/dot_parser.rs`."><title>dot_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_dag" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -197,15 +198,15 @@
 
 <span class="kw">fn </span>parse_params(s: <span class="kw-2">&amp;</span>[char]) -&gt; HashMap&lt;String, String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>result = HashMap::new();
-    <span class="kw">for </span>item <span class="kw">in </span>s.split(|<span class="kw-2">&amp;</span>c| c == <span class="string">&#39;,&#39;</span>) {
-        <span class="kw">let </span>mid = item.iter().position(|<span class="kw-2">&amp;</span>c| c == <span class="string">&#39;=&#39;</span>);
+    <span class="kw">for </span>item <span class="kw">in </span>s.split(|<span class="kw-2">&amp;</span>c| c == <span class="string">','</span>) {
+        <span class="kw">let </span>mid = item.iter().position(|<span class="kw-2">&amp;</span>c| c == <span class="string">'='</span>);
         <span class="kw">if </span>mid.is_none() {
             <span class="kw">continue</span>;
         }
         <span class="kw">let </span>mid = mid.unwrap();
         <span class="kw">let </span>name = <span class="kw-2">&amp;</span>item[<span class="number">0</span>..mid];
         <span class="kw">let </span>value = <span class="kw-2">&amp;</span>item[mid + <span class="number">1</span>..];
-        <span class="kw">if </span>value.is_empty() || value[<span class="number">0</span>] != <span class="string">&#39;&quot;&#39; </span>|| value[value.len() - <span class="number">1</span>] != <span class="string">&#39;&quot;&#39; </span>{
+        <span class="kw">if </span>value.is_empty() || value[<span class="number">0</span>] != <span class="string">'"' </span>|| value[value.len() - <span class="number">1</span>] != <span class="string">'"' </span>{
             <span class="kw">continue</span>;
         }
         <span class="kw">let </span>value = <span class="kw-2">&amp;</span>value[<span class="number">1</span>..value.len() - <span class="number">1</span>];
@@ -218,10 +219,10 @@
     <span class="doccomment">/// Reads DAG from a file in [DOT format](https://graphviz.org/doc/info/lang.html).
     </span><span class="kw">pub fn </span>from_dot&lt;P: AsRef&lt;Path&gt;&gt;(file: P) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>data =
-            std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t read file {}&quot;</span>, file.as_ref().display()));
-        <span class="kw">let </span>lines = data.trim().split(<span class="string">&#39;\n&#39;</span>).map(|x| x.to_string());
+            std::fs::read_to_string(<span class="kw-2">&amp;</span>file).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"Can't read file {}"</span>, file.as_ref().display()));
+        <span class="kw">let </span>lines = data.trim().split(<span class="string">'\n'</span>).map(|x| x.to_string());
 
-        <span class="kw">let </span>is_word_char = |c: char| -&gt; bool { c.is_ascii_alphanumeric() || c == <span class="string">&#39;_&#39; </span>};
+        <span class="kw">let </span>is_word_char = |c: char| -&gt; bool { c.is_ascii_alphanumeric() || c == <span class="string">'_' </span>};
 
         <span class="kw">let </span><span class="kw-2">mut </span>nodes: Vec&lt;Node&gt; = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>edges: Vec&lt;Edge&gt; = Vec::new();
@@ -241,7 +242,7 @@
                 <span class="kw">continue</span>;
             }
             <span class="kw">let </span>token1 = <span class="kw-2">&amp;</span>chars[<span class="number">0</span>..i];
-            <span class="kw">if </span>token1.iter().collect::&lt;String&gt;() == <span class="string">&quot;edge&quot; </span>|| token1.iter().collect::&lt;String&gt;() == <span class="string">&quot;node&quot; </span>{
+            <span class="kw">if </span>token1.iter().collect::&lt;String&gt;() == <span class="string">"edge" </span>|| token1.iter().collect::&lt;String&gt;() == <span class="string">"node" </span>{
                 <span class="comment">// reserved special name
                 </span><span class="kw">continue</span>;
             }
@@ -251,11 +252,11 @@
             <span class="kw">if </span>i == chars.len() {
                 <span class="kw">continue</span>;
             }
-            <span class="kw">if </span>chars[i] == <span class="string">&#39;-&#39; </span>{
+            <span class="kw">if </span>chars[i] == <span class="string">'-' </span>{
                 <span class="comment">// edge
-                // token1 -&gt; token2 [label=&quot;1-&gt;2&quot;,size=&quot;1.5&quot;]
+                // token1 -&gt; token2 [label="1-&gt;2",size="1.5"]
                 </span>i += <span class="number">1</span>;
-                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">&#39;&gt;&#39; </span>{
+                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">'&gt;' </span>{
                     <span class="kw">continue</span>;
                 }
                 i += <span class="number">1</span>;
@@ -273,11 +274,11 @@
                 <span class="kw">while </span>i &lt; chars.len() &amp;&amp; chars[i].is_ascii_whitespace() {
                     i += <span class="number">1</span>;
                 }
-                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">&#39;[&#39; </span>{
+                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">'[' </span>{
                     <span class="kw">continue</span>;
                 }
                 <span class="kw">let </span><span class="kw-2">mut </span>r = chars.len() - <span class="number">1</span>;
-                <span class="kw">while </span>r &gt; i &amp;&amp; chars[r] != <span class="string">&#39;]&#39; </span>{
+                <span class="kw">while </span>r &gt; i &amp;&amp; chars[r] != <span class="string">']' </span>{
                     r -= <span class="number">1</span>;
                 }
                 <span class="kw">if </span>r &lt;= i {
@@ -287,20 +288,20 @@
                 edges.push(Edge {
                     from: token1.iter().collect(),
                     to: token2.iter().collect(),
-                    label: params.remove(<span class="string">&quot;label&quot;</span>),
-                    size: params.get(<span class="string">&quot;size&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap() / <span class="number">1e6</span>, <span class="comment">// convert to MB
+                    label: params.remove(<span class="string">"label"</span>),
+                    size: params.get(<span class="string">"size"</span>).unwrap().parse::&lt;f64&gt;().unwrap() / <span class="number">1e6</span>, <span class="comment">// convert to MB
                 </span>});
             } <span class="kw">else </span>{
                 <span class="comment">// node
-                // token1 [label=&quot;node123&quot;,size=&quot;1.5&quot;]
+                // token1 [label="node123",size="1.5"]
                 </span><span class="kw">while </span>i &lt; chars.len() &amp;&amp; chars[i].is_ascii_whitespace() {
                     i += <span class="number">1</span>;
                 }
-                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">&#39;[&#39; </span>{
+                <span class="kw">if </span>i == chars.len() || chars[i] != <span class="string">'[' </span>{
                     <span class="kw">continue</span>;
                 }
                 <span class="kw">let </span><span class="kw-2">mut </span>r = chars.len() - <span class="number">1</span>;
-                <span class="kw">while </span>r &gt; i &amp;&amp; chars[r] != <span class="string">&#39;]&#39; </span>{
+                <span class="kw">while </span>r &gt; i &amp;&amp; chars[r] != <span class="string">']' </span>{
                     r -= <span class="number">1</span>;
                 }
                 <span class="kw">if </span>r &lt;= i {
@@ -309,8 +310,8 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>params = parse_params(<span class="kw-2">&amp;</span>chars[i + <span class="number">1</span>..r]);
                 nodes.push(Node {
                     name: token1.iter().collect(),
-                    label: params.remove(<span class="string">&quot;label&quot;</span>),
-                    size: params.get(<span class="string">&quot;size&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap() / <span class="number">1e9</span>, <span class="comment">// convert to Gflops
+                    label: params.remove(<span class="string">"label"</span>),
+                    size: params.get(<span class="string">"size"</span>).unwrap().parse::&lt;f64&gt;().unwrap() / <span class="number">1e9</span>, <span class="comment">// convert to Gflops
                 </span>});
             }
         }
@@ -335,7 +336,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>data_items: HashMap&lt;String, usize&gt; = HashMap::new();
 
         <span class="kw">for </span>edge <span class="kw">in </span>edges.into_iter() {
-            <span class="kw">let </span>label = edge.label.unwrap_or(<span class="macro">format!</span>(<span class="string">&quot;{} -&gt; {}&quot;</span>, edge.from, edge.to));
+            <span class="kw">let </span>label = edge.label.unwrap_or(<span class="macro">format!</span>(<span class="string">"{} -&gt; {}"</span>, edge.from, edge.to));
             <span class="kw">let </span>from = <span class="kw-2">*</span>task_ids.get(<span class="kw-2">&amp;</span>edge.from).unwrap();
             <span class="kw">let </span>to = <span class="kw-2">*</span>task_ids.get(<span class="kw-2">&amp;</span>edge.to).unwrap();
 

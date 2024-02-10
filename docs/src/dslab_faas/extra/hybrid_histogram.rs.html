@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-faas/src/extra/hybrid_histogram.rs`."><title>hybrid_histogram.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_faas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-faas/src/extra/hybrid_histogram.rs`."><title>hybrid_histogram.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="dslab_faas" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -244,7 +245,7 @@
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! Coldstart policy implementation from &quot;Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider&quot; paper.
+</pre></div><pre class="rust"><code><span class="doccomment">//! Coldstart policy implementation from "Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider" paper.
 </span><span class="kw">use </span>std::collections::hash_map::Entry;
 <span class="kw">use </span>std::collections::HashMap;
 
@@ -286,9 +287,9 @@
         <span class="kw">if </span><span class="self">self</span>.raw.len() == <span class="number">1 </span>{
             <span class="kw">return </span><span class="self">self</span>.raw[<span class="number">0</span>];
         }
-        <span class="comment">//println!(&quot;called arima with {} samples&quot;, self.raw.len());
+        <span class="comment">//println!("called arima with {} samples", self.raw.len());
         //arima sucks
-        //pray that it doesn&#39;t crash (it can and it will)
+        //pray that it doesn't crash (it can and it will)
         </span><span class="kw">let </span>(coeff, ar_order, <span class="kw">_</span>) = autofit(<span class="kw-2">&amp;</span><span class="self">self</span>.raw, <span class="number">1</span>).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>ar = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>ma = Vec::new();
@@ -395,19 +396,19 @@
 
     <span class="doccomment">/// Creates policy from a map of strings containing policy parameters.
     </span><span class="kw">pub fn </span>from_options_map(options: <span class="kw-2">&amp;</span>HashMap&lt;String, String&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>range = options.get(<span class="string">&quot;range&quot;</span>).unwrap().parse::&lt;f64&gt;().unwrap();
+        <span class="kw">let </span>range = options.get(<span class="string">"range"</span>).unwrap().parse::&lt;f64&gt;().unwrap();
         <span class="kw">let </span>bin_len = options
-            .get(<span class="string">&quot;bin_len&quot;</span>)
+            .get(<span class="string">"bin_len"</span>)
             .map(|s| s.parse::&lt;f64&gt;().unwrap())
             .unwrap_or(<span class="number">60.0</span>);
-        <span class="kw">let </span>cv_thr = options.get(<span class="string">&quot;cv_thr&quot;</span>).map(|s| s.parse::&lt;f64&gt;().unwrap()).unwrap_or(<span class="number">2.0</span>);
-        <span class="kw">let </span>oob_thr = options.get(<span class="string">&quot;oob_thr&quot;</span>).map(|s| s.parse::&lt;f64&gt;().unwrap()).unwrap_or(<span class="number">0.5</span>);
+        <span class="kw">let </span>cv_thr = options.get(<span class="string">"cv_thr"</span>).map(|s| s.parse::&lt;f64&gt;().unwrap()).unwrap_or(<span class="number">2.0</span>);
+        <span class="kw">let </span>oob_thr = options.get(<span class="string">"oob_thr"</span>).map(|s| s.parse::&lt;f64&gt;().unwrap()).unwrap_or(<span class="number">0.5</span>);
         <span class="kw">let </span>arima_margin = options
-            .get(<span class="string">&quot;arima_margin&quot;</span>)
+            .get(<span class="string">"arima_margin"</span>)
             .map(|s| s.parse::&lt;f64&gt;().unwrap())
             .unwrap_or(<span class="number">0.15</span>);
         <span class="kw">let </span>hist_margin = options
-            .get(<span class="string">&quot;hist_margin&quot;</span>)
+            .get(<span class="string">"hist_margin"</span>)
             .map(|s| s.parse::&lt;f64&gt;().unwrap())
             .unwrap_or(<span class="number">0.1</span>);
         <span class="self">Self</span>::new(range, bin_len, cv_thr, oob_thr, arima_margin, hist_margin)
@@ -487,7 +488,7 @@
     }
 
     <span class="kw">fn </span>to_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="macro">format!</span>(<span class="string">&quot;HybridHistogramPolicy[range={:.2},bin_len={:.2},cv_thr={:.2},oob_thr={:.2},arima_margin={:.2},hist_margin={:.2}]&quot;</span>, <span class="self">self</span>.range, <span class="self">self</span>.bin_len, <span class="self">self</span>.cv_thr, <span class="self">self</span>.oob_thr, <span class="self">self</span>.arima_margin, <span class="self">self</span>.hist_margin)
+        <span class="macro">format!</span>(<span class="string">"HybridHistogramPolicy[range={:.2},bin_len={:.2},cv_thr={:.2},oob_thr={:.2},arima_margin={:.2},hist_margin={:.2}]"</span>, <span class="self">self</span>.range, <span class="self">self</span>.bin_len, <span class="self">self</span>.cv_thr, <span class="self">self</span>.oob_thr, <span class="self">self</span>.arima_margin, <span class="self">self</span>.hist_margin)
     }
 }
 </code></pre></div></section></main></body></html>
