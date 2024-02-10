@@ -6,3 +6,4 @@ pub mod hermod;
 pub mod hybrid_histogram;
 pub mod opendc_trace;
 pub mod resolvers;
+pub mod synthetic_trace;
