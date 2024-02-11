@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use rand::prelude::*;
@@ -19,6 +20,7 @@ use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::lookahead::LookaheadScheduler;
 use dslab_dag::schedulers::peft::PeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_dag::task::ResourceRestriction;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
 
@@ -402,4 +404,37 @@ fn test_fork_join() {
 
     let result = sim.time();
     assert_float_eq(result, correct_result, EPSILON);
+}
+
+#[test]
+fn test_resource_cost() {
+    let mut dag = DAG::new();
+    dag.add_task("0", 0.9, 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("1", 0.9, 1, 1, 1, CoresDependency::Linear);
+    let id = dag.add_task_output(0, "0", 0.3);
+    dag.add_data_dependency(id, 1);
+    let input = dag.add_data_item("input", 1.);
+    dag.add_data_dependency(input, 0);
+    dag.add_task_output(1, "output", 1.);
+
+    dag.get_task_mut(0).resource_restriction = Some(ResourceRestriction::Only(BTreeSet::from([0])));
+    dag.get_task_mut(1).resource_restriction = Some(ResourceRestriction::Only(BTreeSet::from([1])));
+
+    let mut sim = DagSimulation::new(
+        123,
+        Vec::new(),
+        NetworkConfig::constant(1., 0.),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+            pricing_interval: 1.0,
+        },
+    );
+    sim.add_resource_with_price("0", 1., 1, 1, 1.);
+    sim.add_resource_with_price("1", 1., 1, 1, 1.);
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    assert_float_eq(runner.borrow().run_stats().total_resource_cost, 4., EPSILON);
 }
