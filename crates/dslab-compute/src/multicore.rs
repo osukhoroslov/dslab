@@ -223,6 +223,11 @@ impl Compute {
         }
     }
 
+    /// Returns id of corresponding simulation component.
+    pub fn id(&self) -> Id {
+        self.ctx.id()
+    }
+
     /// Returns the core speed.
     pub fn speed(&self) -> f64 {
         self.speed

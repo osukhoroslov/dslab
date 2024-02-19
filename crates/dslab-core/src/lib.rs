@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../readme.md")]
 
+pub mod async_core;
 pub mod component;
 pub mod context;
 pub mod event;
@@ -13,6 +14,6 @@ pub use colored;
 pub use component::Id;
 pub use context::SimulationContext;
 pub use event::Event;
-pub use handler::EventHandler;
+pub use handler::{EventCancellationPolicy, EventHandler};
 pub use simulation::Simulation;
 pub use state::EPSILON;

@@ -6,11 +6,24 @@ use std::rc::Rc;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
+use crate::async_enabled;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
+async_enabled!(
+    use std::any::TypeId;
+    use std::any::type_name;
+
+    use futures::Future;
+
+    use crate::async_core::event_future::EventFuture;
+    use crate::async_core::await_details::EventKey;
+    use crate::async_core::timer_future::TimerFuture;
+);
+
 /// A facade for accessing the simulation state and producing events from simulation components.
+#[derive(Clone)]
 pub struct SimulationContext {
     id: Id,
     name: String,
@@ -648,4 +661,438 @@ impl SimulationContext {
     pub fn lookup_name(&self, id: Id) -> String {
         self.names.borrow()[id as usize].clone()
     }
+
+    async_enabled!(
+        /// Spawns a background async task.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        ///
+        /// struct Client {
+        ///     ctx: SimulationContext,
+        /// }
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {
+        ///     jobs: u32,
+        /// }
+        ///
+        /// impl Client {
+        ///     fn on_start(&self, jobs: u32) {
+        ///        for i in 1..=jobs {
+        ///             self.ctx.spawn(self.step_waiting(i));
+        ///        }
+        ///     }
+        ///
+        ///     async fn step_waiting(&self, num_steps: u32) {
+        ///         for _i in 0..num_steps {
+        ///             self.ctx.sleep(1.).await;
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Client {
+        ///     fn on(&mut self, event: Event) {
+        ///         cast!(match event.data {
+        ///             Start { jobs } => {
+        ///                 self.on_start(jobs);
+        ///             }
+        ///         })
+        ///     }
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let client = Rc::new(RefCell::new(Client {ctx: client_ctx }));
+        ///
+        /// sim.add_handler("client", client);
+        ///
+        /// let root_ctx = sim.create_context("root");
+        /// root_ctx.emit(Start{ jobs: 10 }, client_id, 10.);
+        ///
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(sim.time(), 20.);
+        /// ```
+        ///
+        /// ```should_panic
+        /// use dslab_core::{Simulation, SimulationContext};
+        ///
+        /// struct Client {
+        ///     ctx: SimulationContext,
+        /// }
+        ///
+        /// impl Client {
+        ///     fn start(&self, jobs: u32) {
+        ///        for i in 1..=jobs {
+        ///             self.ctx.spawn(self.step_waiting(i));
+        ///        }
+        ///     }
+        ///
+        ///     async fn step_waiting(&self, num_steps: u32) {
+        ///         for _i in 0..num_steps {
+        ///             self.ctx.sleep(1.).await;
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let mut client = Client { ctx: sim.create_context("client") };
+        ///
+        /// // Panics because spawning async tasks by a component without event handler
+        /// // is prohibited due to safety reasons.
+        /// // Register Client via Simulation::add_handler as in the previous example.
+        /// client.start(10);
+        /// ```
+        pub fn spawn(&self, future: impl Future<Output = ()>) {
+            self.sim_state.borrow_mut().spawn_component(self.id(), future);
+        }
+
+        /// Waits until `duration` has elapsed.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use futures::{stream::FuturesUnordered, StreamExt};
+        ///
+        /// use dslab_core::Simulation;
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// let ctx = sim.create_context("client");
+        ///
+        /// sim.spawn(async move {
+        ///     let initial_time = ctx.time();
+        ///     ctx.sleep(5.).await;
+        ///
+        ///     let mut expected_time = initial_time + 5.;
+        ///     assert_eq!(expected_time, ctx.time());
+        ///
+        ///     let mut concurrent_futures = FuturesUnordered::new();
+        ///     for i in 1..=10 {
+        ///         concurrent_futures.push(ctx.sleep(i as f64));
+        ///     }
+        ///
+        ///     while let Some(_) = concurrent_futures.next().await {
+        ///         expected_time += 1.;
+        ///         assert_eq!(expected_time, ctx.time());
+        ///     }
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(15., sim.time());
+        /// ```
+        pub fn sleep(&self, duration: f64) -> TimerFuture {
+            assert!(duration >= 0., "duration must be a positive value");
+
+            self.sim_state
+                .borrow_mut()
+                .create_timer(self.id, duration, self.sim_state.clone())
+        }
+
+        /// Async receive any event of type `T` from any component.
+        ///
+        /// Might be used for convenient waiting where source component is obvious or there are
+        /// several possible sources. The actual source component will be returned in the event.
+        ///
+        /// If this future is used with timeout and timeout fires, the returned event will have
+        /// `src` equal to `Id::MAX` (unknown Id).
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(e.src, root_id);
+        ///     assert_eq!(data.payload, 42);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
+        ///
+        /// # Example with multiple components sending events
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_1_ctx = sim.create_context("root_1");
+        /// let root_1_id = root_1_ctx.id();
+        /// let root_2_ctx = sim.create_context("root_2");
+        /// let root_2_id = root_2_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_1_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///    root_2_ctx.emit(Message{ payload: 43 }, client_id, 100.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(client_ctx.time(), 50.);
+        ///     assert_eq!(e.src, root_1_id);
+        ///     assert_eq!(data.payload, 42);
+        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(client_ctx.time(), 100.);
+        ///     assert_eq!(e.src, root_2_id);
+        ///     assert_eq!(data.payload, 43);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 100.);
+        /// ```
+        pub fn recv_event<T>(&self) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_to::<T>(None, self.id)
+        }
+
+        /// Async receive any event of type `T` from component `src`.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        /// use dslab_core::async_core::AwaitResult;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message{
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.spawn(async move {
+        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        /// });
+        ///
+        /// sim.spawn(async move {
+        ///     let (e, data) = client_ctx.recv_event_from::<Message>(root_id).await;
+        ///     assert_eq!(e.src, root_id);
+        ///     assert_eq!(data.payload, 42);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
+        pub fn recv_event_from<T>(&self, src: Id) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_to::<T>(Some(src), self.id)
+        }
+
+        /// Async receive an event of type T from self.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::Simulation;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct SomeEvent {
+        ///     payload: u32,
+        /// }
+        ///
+        /// let mut sim = Simulation::new(42);
+        ///
+        /// let client_ctx = sim.create_context("client");
+        ///
+        /// sim.spawn(async move {
+        ///     client_ctx.emit_self(SomeEvent{payload: 23}, 10.);
+        ///
+        ///     let (e, data) = client_ctx.recv_event_from_self::<SomeEvent>().await;
+        ///     assert_eq!(data.payload, 23);
+        ///     assert_eq!(client_ctx.time(), 10.)
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 10.);
+        /// ```
+        pub fn recv_event_from_self<T>(&self) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_to::<T>(Some(self.id), self.id)
+        }
+
+        /// Register the function for a type of EventData to get await key to further call
+        /// Self::recv_event_by_key_from
+        ///
+        /// See [`Self::recv_event_by_key_from`].
+        pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
+            self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
+        }
+
+        /// Async receive event of type `T` with specific key from any component.
+        ///
+        /// See [`Self::recv_event_from_by_key`] and [`Self::recv_event`].
+        pub fn recv_event_by_key<T>(&self, key: EventKey) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_by_key_to::<T>(None, self.id, key)
+        }
+
+        /// Async receive event of type `T` with specific key from `src` component.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use std::{cell::RefCell, rc::Rc};
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::{
+        ///     cast, Id, Event, EventHandler, Simulation, SimulationContext, event::EventData,
+        /// };
+        /// use dslab_core::async_core::{AwaitResult, EventKey};
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Message {
+        ///     payload: EventKey,
+        /// }
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {}
+        ///
+        /// struct Client {
+        ///     ctx: SimulationContext,
+        ///     root_id: Id,
+        /// }
+        ///
+        /// impl Client {
+        ///     async fn recv_payload(&self, payload: EventKey) {
+        ///         let (e, data) = self.ctx.recv_event_by_key_from::<Message>(self.root_id, payload).await;
+        ///         assert_eq!(data.payload, payload);
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Client {
+        ///     fn on(&mut self, event: Event) {
+        ///         cast!(match event.data {
+        ///             Start {} => {
+        ///                 self.ctx.spawn(self.recv_payload(1));
+        ///                 self.ctx.spawn(self.recv_payload(2));
+        ///             }
+        ///         })
+        ///     }
+        /// }
+        /// let mut sim = Simulation::new(42);
+        /// sim.register_key_getter_for::<Message>(|message| message.payload);
+        /// let client_ctx = sim.create_context("client");
+        /// let client_id = client_ctx.id();
+        /// let root_ctx = sim.create_context("root");
+        /// let root_id = root_ctx.id();
+        ///
+        /// sim.add_handler("client", Rc::new(RefCell::new(Client {ctx: client_ctx, root_id})));
+        ///
+        /// root_ctx.emit_now(Start {}, client_id);
+        /// root_ctx.emit(Message{ payload: 1 }, client_id, 50.);
+        /// root_ctx.emit(Message{ payload: 2 }, client_id, 100.);
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 100.);
+        /// ```
+        pub fn recv_event_by_key_from<T>(&self, src: Id, key: EventKey) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_by_key_to::<T>(Some(src), self.id, key)
+        }
+
+        /// Async handling event from self by key.
+        /// See [`Self::recv_event_from_self`]
+        pub fn recv_event_by_key_from_self<T>(&self, key: EventKey) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.recv_event_by_key_to::<T>(Some(self.id), self.id, key)
+        }
+
+        fn recv_event_to<T>(&self, src: Option<Id>, dst: Id) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            assert!(
+                self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_none(),
+                "try to async handle event that has key handling, use async handlers by key"
+            );
+
+            self.create_event_future(dst, None, src)
+        }
+
+        fn recv_event_by_key_to<T>(&self, src: Option<Id>, dst: Id, key: EventKey) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            assert!(
+                self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_some(),
+                "simulation does not have key getter for type {}, register it before using async receivers by key",
+                type_name::<T>()
+            );
+
+            self.create_event_future(dst, Some(key), src)
+        }
+
+        fn create_event_future<T>(&self, dst: Id, key: Option<EventKey>, src: Option<Id>) -> EventFuture<T>
+        where
+            T: EventData,
+        {
+            self.sim_state
+                .borrow_mut()
+                .create_event_future::<T>(dst, key, src, self.sim_state.clone())
+        }
+    );
 }
