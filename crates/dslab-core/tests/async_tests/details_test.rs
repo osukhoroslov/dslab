@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use serde::Serialize;
 
-use dslab_core::{async_core::await_details::EventKey, cast, Event, EventHandler, Simulation, SimulationContext};
+use dslab_core::{async_mode::await_details::EventKey, cast, Event, EventHandler, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize)]
 struct Message {

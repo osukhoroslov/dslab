@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core", features = ["async_core"] } 
+dslab-core = { path = "../../crates/dslab-core", features = ["async_mode"] }
 dslab-network = {path = "../../crates/dslab-network" }
 futures = "0.3"
 

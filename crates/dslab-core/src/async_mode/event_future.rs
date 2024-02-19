@@ -11,7 +11,7 @@ use std::{
 use futures::{select, FutureExt};
 use serde::Serialize;
 
-use crate::async_core::await_details::{AwaitResult, EventKey, TimeoutInfo};
+use crate::async_mode::await_details::{AwaitResult, EventKey, TimeoutInfo};
 use crate::event::EventData;
 use crate::state::SimulationState;
 use crate::{Event, Id};
@@ -83,7 +83,7 @@ impl<T: EventData> EventFuture<T> {
     /// use serde::Serialize;
     ///
     /// use dslab_core::Simulation;
-    /// use dslab_core::async_core::AwaitResult;
+    /// use dslab_core::async_mode::AwaitResult;
     ///
     /// #[derive(Clone, Serialize)]
     /// struct Message{
@@ -131,7 +131,7 @@ impl<T: EventData> EventFuture<T> {
     ///
     /// use serde::Serialize;
     ///
-    /// use dslab_core::async_core::{AwaitResult, EventKey};
+    /// use dslab_core::async_mode::{AwaitResult, EventKey};
     /// use dslab_core::event::EventData;
     /// use dslab_core::{cast, Event, EventHandler, Id, Simulation, SimulationContext};
     ///

@@ -1,4 +1,4 @@
-//! Contains public interfaces of async_core functionality.
+//! Contains public interfaces of async mode functionality.
 
 use crate::{event::EventData, Event, Id};
 

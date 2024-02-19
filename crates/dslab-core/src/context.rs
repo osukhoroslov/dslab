@@ -17,9 +17,9 @@ async_enabled!(
 
     use futures::Future;
 
-    use crate::async_core::event_future::EventFuture;
-    use crate::async_core::await_details::EventKey;
-    use crate::async_core::timer_future::TimerFuture;
+    use crate::async_mode::event_future::EventFuture;
+    use crate::async_mode::await_details::EventKey;
+    use crate::async_mode::timer_future::TimerFuture;
 );
 
 /// A facade for accessing the simulation state and producing events from simulation components.
@@ -813,7 +813,7 @@ impl SimulationContext {
         /// use serde::Serialize;
         ///
         /// use dslab_core::Simulation;
-        /// use dslab_core::async_core::AwaitResult;
+        /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Message{
@@ -846,7 +846,7 @@ impl SimulationContext {
         /// use serde::Serialize;
         ///
         /// use dslab_core::Simulation;
-        /// use dslab_core::async_core::AwaitResult;
+        /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Message{
@@ -898,7 +898,7 @@ impl SimulationContext {
         /// use serde::Serialize;
         ///
         /// use dslab_core::Simulation;
-        /// use dslab_core::async_core::AwaitResult;
+        /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Message{
@@ -997,7 +997,7 @@ impl SimulationContext {
         /// use dslab_core::{
         ///     cast, Id, Event, EventHandler, Simulation, SimulationContext, event::EventData,
         /// };
-        /// use dslab_core::async_core::{AwaitResult, EventKey};
+        /// use dslab_core::async_mode::{AwaitResult, EventKey};
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Message {

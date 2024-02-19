@@ -5,7 +5,7 @@ use futures::select;
 use futures::FutureExt;
 use serde::Serialize;
 
-use dslab_core::async_core::{AwaitResult, EventKey};
+use dslab_core::async_mode::{AwaitResult, EventKey};
 use dslab_core::{cast, EventCancellationPolicy, EventHandler, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize)]

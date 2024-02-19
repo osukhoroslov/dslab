@@ -22,10 +22,10 @@ async_enabled!(
 
     use futures::Future;
 
-    use crate::async_core::executor::Executor;
+    use crate::async_mode::executor::Executor;
     use crate::event::EventData;
-    use crate::async_core::await_details::EventKey;
-    use crate::async_core::sync::queue::UnboundedBlockingQueue;
+    use crate::async_mode::await_details::EventKey;
+    use crate::async_mode::sync::queue::UnboundedBlockingQueue;
 );
 
 async_disabled!(
@@ -270,7 +270,7 @@ impl Simulation {
     ///
     /// Pending events to be cancelled upon the handler removal are specified via [`crate::handler::EventCancellationPolicy`].
     ///
-    /// If the `async_core` feature is enabled, all pending timers and async activities related to this component are cancelled.
+    /// If the `async_mode` feature is enabled, all pending timers and async activities related to this component are cancelled.
     /// In order to continue receiving events asynchronously, new async tasks must be spawned using [`SimulationContext::spawn()`].
     /// Otherwise, the simulation will deliver events via [`EventHandler::on()`] method as usual.
     ///
@@ -565,7 +565,7 @@ impl Simulation {
         /// use serde::Serialize;
         ///
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
-        /// use dslab_core::async_core::sync::queue::UnboundedBlockingQueue;
+        /// use dslab_core::async_mode::sync::queue::UnboundedBlockingQueue;
         ///
         /// struct InternalMessage {
         ///     payload: u32,

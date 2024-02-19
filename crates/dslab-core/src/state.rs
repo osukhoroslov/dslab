@@ -18,11 +18,11 @@ async_enabled!(
 
     use futures::Future;
 
-    use crate::async_core::await_details::EventKey;
-    use crate::async_core::promise_storage::EventPromisesStorage;
-    use crate::async_core::event_future::{EventFuture, EventPromise};
-    use crate::async_core::task::Task;
-    use crate::async_core::timer_future::{TimerPromise, TimerId, TimerFuture};
+    use crate::async_mode::await_details::EventKey;
+    use crate::async_mode::promise_storage::EventPromisesStorage;
+    use crate::async_mode::event_future::{EventFuture, EventPromise};
+    use crate::async_mode::task::Task;
+    use crate::async_mode::timer_future::{TimerPromise, TimerId, TimerFuture};
 );
 
 /// Epsilon to compare floating point values for equality.

@@ -13,7 +13,7 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use dslab_compute::multicore::{CompFinished, CompStarted, Compute, CoresDependency};
-use dslab_core::async_core::EventKey;
+use dslab_core::async_mode::EventKey;
 use dslab_core::simulation::Simulation;
 use dslab_network::model::{DataTransferCompleted, NetworkModel};
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};

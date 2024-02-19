@@ -4,7 +4,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
-use dslab_core::async_core::await_details::EventKey;
+use dslab_core::async_mode::await_details::EventKey;
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;

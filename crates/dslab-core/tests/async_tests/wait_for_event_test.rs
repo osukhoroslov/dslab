@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use serde::Serialize;
 
 use dslab_core::{
-    async_core::await_details::AwaitResult, cast, Event, EventHandler, Id, Simulation, SimulationContext,
+    async_mode::await_details::AwaitResult, cast, Event, EventHandler, Id, Simulation, SimulationContext,
 };
 
 struct SimpleListener {

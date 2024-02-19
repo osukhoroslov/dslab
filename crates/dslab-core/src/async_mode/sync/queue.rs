@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::VecDeque};
 
 use serde::Serialize;
 
-use crate::{async_core::await_details::EventKey, SimulationContext};
+use crate::{async_mode::await_details::EventKey, SimulationContext};
 
 type TicketID = u64;
 
