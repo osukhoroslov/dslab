@@ -106,7 +106,11 @@ impl DAGRunner {
             .enumerate()
             .map(|(idx, resource)| (resource.id, idx))
             .collect();
-        let resource_price = resources.iter().enumerate().map(|(idx, resource)| (idx, resource.price)).collect();
+        let resource_price = resources
+            .iter()
+            .enumerate()
+            .map(|(idx, resource)| (idx, resource.price))
+            .collect();
         let available_cores = resources
             .iter()
             .map(|resource| (0..resource.compute.borrow().cores_total()).collect())
@@ -143,6 +147,11 @@ impl DAGRunner {
     /// Enables or disables [trace log](TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
+    }
+
+    /// Returns DAG for this runner.
+    pub fn get_dag<'a>(&'a self) -> &'a DAG {
+        &self.dag
     }
 
     /// Returns resources for this runner.

@@ -13,51 +13,73 @@ use crate::dag_simulation::DagSimulation;
 use crate::data_item::DataTransferMode;
 use crate::network::NetworkConfig;
 use crate::resource::ResourceConfig;
-use crate::runner::Config;
 use crate::run_stats::RunStats;
-use crate::scheduler::{Action, Scheduler, SchedulerParams};
+use crate::runner::Config;
+use crate::scheduler::{Action, Scheduler};
 use crate::system::System;
 
 /// This trait allows implementing multiobjective schedulers that find several schedules at once
 /// (so-called Pareto front). These schedulers are always static.
 pub trait ParetoScheduler {
-    fn find_pareto_front(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Vec<Action>>;
+    fn find_pareto_front(
+        &mut self,
+        dag: &DAG,
+        system: System,
+        config: Config,
+        ctx: &SimulationContext,
+    ) -> Vec<Vec<Action>>;
 }
 
-pub struct ParetoRunResult {
-    pub dag: String,
-    pub system: String,
-    pub scheduler: String,
+pub struct ParetoSimulationResult {
     pub exec_time: f64,
     pub run_stats: Vec<RunStats>,
 }
 
-pub struct ParetoRun {
-    dag_name: String,
+pub struct ParetoSimulation {
     dag: DAG,
-    system_name: String,
     resources: Vec<ResourceConfig>,
     network: NetworkConfig,
-    scheduler: SchedulerParams,
+    scheduler: Rc<RefCell<dyn ParetoScheduler>>,
     data_transfer_mode: DataTransferMode,
-    scheduler_resolver: fn(&SchedulerParams) -> Option<Rc<RefCell<dyn ParetoScheduler>>>,
     pricing_interval: Option<f64>,
 }
 
-impl ParetoRun {
+impl ParetoSimulation {
+    pub fn new(
+        dag: DAG,
+        resources: Vec<ResourceConfig>,
+        network: NetworkConfig,
+        scheduler: Rc<RefCell<dyn ParetoScheduler>>,
+        data_transfer_mode: DataTransferMode,
+        pricing_interval: Option<f64>,
+    ) -> Self {
+        Self {
+            dag,
+            resources,
+            network,
+            scheduler,
+            data_transfer_mode,
+            pricing_interval,
+        }
+    }
     /// Pareto schedulers are run as follows:
     /// 1) Run the scheduler in a fake simulation to produce Pareto front.
     /// 2) Run a separate simulation for each schedule in the Pareto front by using the stub scheduler.
     /// Note that since the simulation is fake and the scheduler is static, the scheduler should not
     /// emit any events or modify the simulation in any other way.
-    pub fn run(&self, num_threads: usize) -> ParetoRunResult {
-        let scheduler = (self.scheduler_resolver)(&self.scheduler).expect(&format!("Can't resolve Pareto scheduler from params {:?}", &self.scheduler));
+    pub fn run(&self, num_threads: usize) -> ParetoSimulationResult {
         let config = Config {
             data_transfer_mode: self.data_transfer_mode.clone(),
             pricing_interval: self.pricing_interval.unwrap_or(1.0),
         };
 
-        let mut fake_sim = DagSimulation::new(1, self.resources.clone(), self.network.clone(), Rc::new(RefCell::new(PredefinedActionsScheduler::new(Vec::new()))), config.clone());
+        let mut fake_sim = DagSimulation::new(
+            1,
+            self.resources.clone(),
+            self.network.clone(),
+            Rc::new(RefCell::new(PredefinedActionsScheduler::new(Vec::new()))),
+            config.clone(),
+        );
         let fake_runner_rc = fake_sim.init(self.dag.clone());
         let fake_runner = fake_runner_rc.borrow();
         let fake_network = fake_runner.get_network();
@@ -66,7 +88,13 @@ impl ParetoRun {
             network: &fake_network.borrow(),
         };
         let start = Instant::now();
-        let schedulers = scheduler.borrow_mut().find_pareto_front(&self.dag, system, config, fake_runner.get_context()).into_iter().map(|x| Box::new(PredefinedActionsScheduler::new(x))).collect::<Vec<_>>();
+        let schedulers = self
+            .scheduler
+            .borrow_mut()
+            .find_pareto_front(fake_runner.get_dag(), system, config, fake_runner.get_context())
+            .into_iter()
+            .map(|x| Box::new(PredefinedActionsScheduler::new(x)))
+            .collect::<Vec<_>>();
         let pool = ThreadPool::new(num_threads);
         let results = Arc::new(Mutex::new(Vec::new()));
         for scheduler_box in schedulers.into_iter() {
@@ -86,7 +114,7 @@ impl ParetoRun {
                     scheduler,
                     Config {
                         data_transfer_mode: data_transfer_mode,
-                        pricing_interval: pricing_interval.unwrap_or(1.0)
+                        pricing_interval: pricing_interval.unwrap_or(1.0),
                     },
                 );
 
@@ -99,10 +127,8 @@ impl ParetoRun {
                 results.lock().unwrap().push(runner.borrow().run_stats().clone());
             });
         }
-        ParetoRunResult {
-            dag: self.dag_name.clone(),
-            system: self.system_name.clone(),
-            scheduler: self.scheduler.to_string(),
+        pool.join();
+        ParetoSimulationResult {
             exec_time: start.elapsed().as_secs_f64(),
             run_stats: Arc::try_unwrap(results).unwrap().into_inner().unwrap(),
         }

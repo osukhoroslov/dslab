@@ -19,6 +19,8 @@ pub struct RunStats {
     pub total_network_traffic: f64,
     /// Total time of data transfers over the network (in seconds).
     pub total_network_time: f64,
+    /// Workload makespan, calculated as the last event time.
+    pub makespan: f64,
     /// Maximum number of cores used at once.
     pub max_used_cores: u32,
     /// Maximum amount of memory used at once.
@@ -113,6 +115,7 @@ impl RunStats {
         self.memory_utilization += (time - start_time) * memory as f64;
         let resource = self.task_resource[&task];
         self.resource_last_used.insert(resource, time);
+        self.makespan = self.makespan.max(time);
     }
 
     pub fn set_transfer_start(&mut self, data_item: usize, size: f64, time: f64) {
@@ -123,6 +126,7 @@ impl RunStats {
     pub fn set_transfer_finish(&mut self, data_item: usize, time: f64) {
         self.total_network_time += time - *self.transfer_starts.get(&data_item).unwrap();
         self.transfer_ends.insert(data_item, time);
+        self.makespan = self.makespan.max(time);
     }
 
     pub fn finalize(&mut self, time: f64, dag: &DAG, system: System) {

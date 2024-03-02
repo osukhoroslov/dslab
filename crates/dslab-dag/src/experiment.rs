@@ -206,7 +206,7 @@ impl Experiment {
                     scheduler,
                     Config {
                         data_transfer_mode: self.data_transfer_mode,
-                        pricing_interval: self.pricing_interval.unwrap_or(1.0)
+                        pricing_interval: self.pricing_interval.unwrap_or(1.0),
                     },
                 );
 

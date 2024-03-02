@@ -47,7 +47,7 @@ impl DagSimulation {
             speed,
             cores,
             memory,
-            price: 0.0
+            price: 0.0,
         });
     }
 
@@ -58,7 +58,7 @@ impl DagSimulation {
             speed,
             cores,
             memory,
-            price
+            price,
         });
     }
 

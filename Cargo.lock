@@ -683,6 +683,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dag-multiobjective"
+version = "0.1.0"
+dependencies = [
+ "clap 4.2.1",
+ "dslab-compute",
+ "dslab-dag",
+ "env_logger 0.9.3",
+ "log 0.4.17",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "reqwest",
+ "serde_json",
+ "sugars",
+]
+
+[[package]]
 name = "dag-portfolio"
 version = "0.1.0"
 dependencies = [
