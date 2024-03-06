@@ -171,10 +171,10 @@ struct PartialSchedule<'a> {
     pub memory_usage: Vec<Treap>,
     pub data_locations: HashMap<usize, Id>,
     pub task_locations: HashMap<usize, Id>,
+    pub task_resource: Vec<usize>,
     pub scheduled_tasks: Vec<Vec<BTreeSet<ScheduledTask>>>,
     pub resource_start: Vec<f64>,
     pub resource_end: Vec<f64>,
-    pub resource_cost: Vec<f64>,
     pub makespan: f64,
     pub cost: f64,
 }
@@ -198,6 +198,7 @@ impl<'a> PartialSchedule<'a> {
             memory_usage: (0..system.resources.len()).map(|_| Treap::new()).collect(),
             data_locations: HashMap::new(),
             task_locations: HashMap::new(),
+            task_resource: vec![0; dag.get_tasks().len()],
             scheduled_tasks: system
                 .resources
                 .iter()
@@ -205,13 +206,13 @@ impl<'a> PartialSchedule<'a> {
                 .collect(),
             resource_start: vec![f64::INFINITY; system.resources.len()],
             resource_end: vec![-f64::INFINITY; system.resources.len()],
-            resource_cost: vec![0f64; system.resources.len()],
             makespan: 0.0,
             cost: 0.0,
         }
     }
 
     pub fn assign_task(&mut self, task: usize, resource: usize) {
+        self.task_resource[task] = resource;
         let res = evaluate_assignment(
             task,
             resource,
@@ -238,11 +239,67 @@ impl<'a> PartialSchedule<'a> {
         for &output in self.dag.get_task(task).outputs.iter() {
             self.data_locations.insert(output, self.system.resources[resource].id);
         }
-        self.cost -= self.resource_cost[resource];
+        self.cost -= self.compute_resource_cost(resource);
         self.resource_start[resource] = self.resource_start[resource].min(start_time);
         self.resource_end[resource] = self.resource_end[resource].max(finish_time);
-        self.resource_cost[resource] = self.resource_end[resource] - self.resource_start[resource];
-        self.cost += self.resource_cost[resource];
+        for item_id in self.dag.get_task(task).inputs.iter().copied() {
+            let item = self.dag.get_data_item(item_id);
+            if let Some(producer) = item.producer {
+                assert!(self.task_locations.contains_key(&producer)); // parents must be scheduled
+                let prev_resource = self.task_resource[producer];
+                // TODO: properly update master node in DataTransferMode::ViaMasterNode (note that the paper uses DataTransferMode::Direct)
+                match self.data_transfer {
+                    DataTransferStrategy::Eager => {
+                        let transfer = item.size
+                            * self.config.data_transfer_mode.net_time(
+                                self.system.network,
+                                self.system.resources[prev_resource].id,
+                                self.system.resources[resource].id,
+                                self.ctx.id(),
+                            );
+                        self.resource_start[resource] = self.resource_start[resource].min(self.finish_time[producer]);
+                        self.resource_end[prev_resource] =
+                            self.resource_end[prev_resource].max(self.finish_time[producer] + transfer);
+                    }
+                    DataTransferStrategy::Lazy => {
+                        let download_time = match self.config.data_transfer_mode {
+                            DataTransferMode::ViaMasterNode => {
+                                self.system
+                                    .network
+                                    .latency(self.ctx.id(), self.system.resources[resource].id)
+                                    + item.size
+                                        / self
+                                            .system
+                                            .network
+                                            .bandwidth(self.ctx.id(), self.system.resources[resource].id)
+                            }
+                            DataTransferMode::Direct => {
+                                if prev_resource == resource {
+                                    0.
+                                } else {
+                                    self.system.network.latency(
+                                        self.system.resources[prev_resource].id,
+                                        self.system.resources[resource].id,
+                                    ) + item.size
+                                        / self.system.network.bandwidth(
+                                            self.system.resources[prev_resource].id,
+                                            self.system.resources[resource].id,
+                                        )
+                                }
+                            }
+                            DataTransferMode::Manual => 0.,
+                        };
+                        if prev_resource != resource {
+                            self.cost -= self.compute_resource_cost(prev_resource);
+                            self.resource_end[prev_resource] =
+                                self.resource_end[prev_resource].max(download_time + start_time);
+                            self.cost += self.compute_resource_cost(prev_resource);
+                        }
+                    }
+                }
+            }
+        }
+        self.cost += self.compute_resource_cost(resource);
         self.task_locations.insert(task, self.system.resources[resource].id);
         self.actions.push((
             start_time,
@@ -253,6 +310,15 @@ impl<'a> PartialSchedule<'a> {
                 expected_span: Some(TimeSpan::new(start_time, finish_time)),
             },
         ));
+    }
+
+    fn compute_resource_cost(&self, resource: usize) -> f64 {
+        if self.resource_end[resource].is_infinite() || self.resource_start[resource].is_infinite() {
+            return 0.;
+        }
+        let duration = self.resource_end[resource] - self.resource_start[resource];
+        let n_intervals = (duration - 1e-9).div_euclid(self.config.pricing_interval) + 1.0;
+        n_intervals * self.system.resources[resource].price
     }
 }
 

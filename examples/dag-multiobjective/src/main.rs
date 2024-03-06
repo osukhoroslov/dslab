@@ -68,7 +68,8 @@ fn main() {
         DataTransferMode::Direct,
         Some(3600.0),
     );
-    let results = moheft_sim.run(8);
+    let mut results = moheft_sim.run(8);
+    results.run_stats.sort_by(|x, y| x.makespan.total_cmp(&y.makespan));
     println!("MOHEFT solutions:");
     for result in &results.run_stats {
         println!(
