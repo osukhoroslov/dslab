@@ -67,8 +67,8 @@ impl<T: EventData> Drop for EventFuture<T> {
         if !self.state.borrow().completed {
             self.sim_state.borrow_mut().on_incomplete_event_future_drop::<T>(
                 self.component_id,
-                self.event_key,
                 &self.requested_src,
+                self.event_key,
             );
         }
     }
@@ -264,8 +264,8 @@ impl EventPromise {
     pub fn contract<T: EventData>(
         sim_state: Rc<RefCell<SimulationState>>,
         dst: Id,
-        event_key: Option<EventKey>,
         requested_src: Option<Id>,
+        event_key: Option<EventKey>,
     ) -> (Self, EventFuture<T>) {
         let state = Rc::new(RefCell::new(AwaitEventSharedState::<T>::default()));
         let future = EventFuture::new(state.clone(), sim_state, dst, requested_src, event_key);

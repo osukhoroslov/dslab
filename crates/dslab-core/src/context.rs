@@ -27,21 +27,14 @@ pub struct SimulationContext {
     id: Id,
     name: String,
     sim_state: Rc<RefCell<SimulationState>>,
-    names: Rc<RefCell<Vec<String>>>,
 }
 
 impl SimulationContext {
-    pub(crate) fn new(
-        id: Id,
-        name: &str,
-        sim_state: Rc<RefCell<SimulationState>>,
-        names: Rc<RefCell<Vec<String>>>,
-    ) -> Self {
+    pub(crate) fn new(id: Id, name: &str, sim_state: Rc<RefCell<SimulationState>>) -> Self {
         Self {
             id,
             name: name.to_owned(),
             sim_state,
-            names,
         }
     }
 
@@ -658,7 +651,7 @@ impl SimulationContext {
     /// sim.step();
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
-        self.names.borrow()[id as usize].clone()
+        self.sim_state.borrow().lookup_name(id)
     }
 
     async_mode_enabled!(
@@ -1098,7 +1091,7 @@ impl SimulationContext {
         {
             self.sim_state
                 .borrow_mut()
-                .create_event_future::<T>(dst, key, src, self.sim_state.clone())
+                .create_event_future::<T>(dst, src, key, self.sim_state.clone())
         }
     );
 }

@@ -41,7 +41,7 @@ async_mode_enabled!(
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
         handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
-        // Async stuff
+        // Specific to async mode
         executor: Executor,
     }
 );
@@ -64,6 +64,7 @@ impl Simulation {
             Self {
                 sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
                 handlers: Vec::new(),
+                // Specific to async mode
                 executor: Executor::new(task_receiver),
             }
         }
@@ -145,12 +146,7 @@ impl Simulation {
     where
         S: AsRef<str>,
     {
-        let ctx = SimulationContext::new(
-            self.register(name.as_ref()),
-            name.as_ref(),
-            self.sim_state.clone(),
-            self.sim_state.borrow().get_names(),
-        );
+        let ctx = SimulationContext::new(self.register(name.as_ref()), name.as_ref(), self.sim_state.clone());
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Created context: {}",

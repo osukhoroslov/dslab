@@ -20,8 +20,8 @@ impl EventPromisesStorage {
     pub fn insert<T: EventData>(
         &mut self,
         dst: Id,
-        event_key: Option<EventKey>,
         src_opt: Option<Id>,
+        event_key: Option<EventKey>,
         promise: EventPromise,
     ) {
         let key = AwaitKey::new::<T>(dst, event_key);
@@ -57,8 +57,8 @@ impl EventPromisesStorage {
     pub fn remove<T: EventData>(
         &mut self,
         dst: Id,
-        event_key: Option<EventKey>,
         src_opt: &Option<Id>,
+        event_key: Option<EventKey>,
     ) -> Option<EventPromise> {
         let key = AwaitKey::new::<T>(dst, event_key);
         if let Some(source) = src_opt {
