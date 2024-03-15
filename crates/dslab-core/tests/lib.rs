@@ -1,7 +1,7 @@
-use dslab_core::async_enabled;
+use dslab_core::async_mode_enabled;
 
 mod simulation;
 
-async_enabled! {
+async_mode_enabled! {
     mod async_tests;
 }

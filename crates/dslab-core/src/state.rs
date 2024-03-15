@@ -10,9 +10,9 @@ use rand_pcg::Pcg64;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::log::log_incorrect_event;
-use crate::{async_disabled, async_enabled};
+use crate::{async_mode_disabled, async_mode_enabled};
 
-async_enabled!(
+async_mode_enabled!(
     use std::any::TypeId;
     use std::sync::mpsc::Sender;
 
@@ -28,7 +28,7 @@ async_enabled!(
 /// Epsilon to compare floating point values for equality.
 pub const EPSILON: f64 = 1e-12;
 
-async_disabled!(
+async_mode_disabled!(
     #[derive(Clone)]
     pub struct SimulationState {
         clock: f64,
@@ -43,7 +43,7 @@ async_disabled!(
     }
 );
 
-async_enabled!(
+async_mode_enabled!(
     type KeyGetterFn = Rc<dyn Fn(&dyn EventData) -> EventKey>;
 
     #[derive(Clone)]
@@ -71,7 +71,7 @@ async_enabled!(
 );
 
 impl SimulationState {
-    async_disabled!(
+    async_mode_disabled!(
         pub fn new(seed: u64) -> Self {
             Self {
                 clock: 0.0,
@@ -85,7 +85,7 @@ impl SimulationState {
             }
         }
     );
-    async_enabled!(
+    async_mode_enabled!(
         pub fn new(seed: u64, executor: Sender<Rc<Task>>) -> Self {
             Self {
                 clock: 0.0,
@@ -339,13 +339,13 @@ impl SimulationState {
         output
     }
 
-    async_disabled!(
+    async_mode_disabled!(
         fn on_register(&mut self) {}
         pub fn on_handler_added(&mut self, _id: Id) {}
         pub fn on_handler_removed(&mut self, _id: Id) {}
     );
 
-    async_enabled!(
+    async_mode_enabled!(
         fn on_register(&mut self) {
             self.registered_handlers.push(false)
         }

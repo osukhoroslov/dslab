@@ -1,9 +1,9 @@
 //! Asynchronous programming support.
 
-use crate::async_enabled;
+use crate::async_mode_enabled;
 pub(crate) mod build_macro_rules;
 
-async_enabled!(
+async_mode_enabled!(
     pub mod await_details;
     pub mod sync;
 

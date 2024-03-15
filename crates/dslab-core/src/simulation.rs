@@ -15,9 +15,9 @@ use crate::context::SimulationContext;
 use crate::handler::{EventCancellationPolicy, EventHandler};
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
-use crate::{async_disabled, async_enabled, Event};
+use crate::{async_mode_disabled, async_mode_enabled, Event};
 
-async_enabled!(
+async_mode_enabled!(
     use std::sync::mpsc::channel;
 
     use futures::Future;
@@ -28,7 +28,7 @@ async_enabled!(
     use crate::async_mode::sync::queue::UnboundedBlockingQueue;
 );
 
-async_disabled!(
+async_mode_disabled!(
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
@@ -36,7 +36,7 @@ async_disabled!(
     }
 );
 
-async_enabled!(
+async_mode_enabled!(
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
@@ -47,7 +47,7 @@ async_enabled!(
 );
 
 impl Simulation {
-    async_disabled!(
+    async_mode_disabled!(
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             Self {
@@ -57,7 +57,7 @@ impl Simulation {
         }
     );
 
-    async_enabled!(
+    async_mode_enabled!(
         /// Creates a new simulation with specified random seed.
         pub fn new(seed: u64) -> Self {
             let (task_sender, task_receiver) = channel();
@@ -301,11 +301,11 @@ impl Simulation {
         );
     }
 
-    async_disabled!(
+    async_mode_disabled!(
         fn remove_handler_inner(&mut self, _id: u32) {}
     );
 
-    async_enabled!(
+    async_mode_enabled!(
         fn remove_handler_inner(&mut self, id: u32) {
             // cancel pending timers related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
@@ -328,7 +328,7 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// sim.step();
     /// assert_eq!(sim.time(), 1.2);
     /// ```
@@ -358,7 +358,7 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// let mut status = sim.step();
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.2);
@@ -369,7 +369,7 @@ impl Simulation {
         self.step_inner()
     }
 
-    async_disabled!(
+    async_mode_disabled!(
         fn step_inner(&self) -> bool {
             let event_opt = self.sim_state.borrow_mut().next_event();
             match event_opt {
@@ -382,7 +382,7 @@ impl Simulation {
         }
     );
 
-    async_enabled!(
+    async_mode_enabled!(
         fn step_inner(&self) -> bool {
             if self.process_task() {
                 return true;
@@ -477,7 +477,7 @@ impl Simulation {
         }
     }
 
-    async_enabled!(
+    async_mode_enabled!(
         /// Spawns a new asynchronous task.
         ///
         /// The task's type lifetime must be `'static`.
@@ -490,13 +490,14 @@ impl Simulation {
         /// ```rust
         /// use dslab_core::Simulation;
         ///
-        /// let mut sim = Simulation::new(42);
+        /// let mut sim = Simulation::new(123);
         ///
         /// let ctx = sim.create_context("client");
         ///
         /// sim.spawn(async move {
         ///     let initial_time = ctx.time();
         ///     ctx.sleep(5.).await;
+        ///     assert_eq!(ctx.time(), 5.);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -534,19 +535,19 @@ impl Simulation {
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
         /// use dslab_core::async_mode::sync::queue::UnboundedBlockingQueue;
         ///
-        /// struct InternalMessage {
-        ///     payload: u32,
-        /// }
-        ///
         /// #[derive(Clone, Serialize)]
         /// struct Start {}
         ///
-        /// struct Client {
-        ///     ctx: SimulationContext,
-        ///     queue: UnboundedBlockingQueue<InternalMessage>,
+        /// struct Message {
+        ///     payload: u32,
         /// }
         ///
-        /// impl Client {
+        /// struct Component {
+        ///     ctx: SimulationContext,
+        ///     queue: UnboundedBlockingQueue<Message>,
+        /// }
+        ///
+        /// impl Component {
         ///     fn on_start(&self) {
         ///         self.ctx.spawn(self.producer());
         ///         self.ctx.spawn(self.consumer());
@@ -555,7 +556,7 @@ impl Simulation {
         ///     async fn producer(&self) {
         ///         for i in 0..10 {
         ///             self.ctx.sleep(5.).await;
-        ///             self.queue.send(InternalMessage {payload: i});
+        ///             self.queue.send(Message {payload: i});
         ///         }
         ///     }
         ///
@@ -567,7 +568,7 @@ impl Simulation {
         ///     }
         /// }
         ///
-        /// impl EventHandler for Client {
+        /// impl EventHandler for Component {
         ///     fn on(&mut self, event: Event) {
         ///         cast!(match event.data {
         ///             Start {} => {
@@ -577,18 +578,14 @@ impl Simulation {
         ///     }
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
+        /// let mut sim = Simulation::new(123);
         ///
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        ///
-        /// let queue: UnboundedBlockingQueue<InternalMessage> = sim.create_queue("client_queue");
-        /// let client = Rc::new(RefCell::new(Client {ctx: client_ctx, queue }));
-        ///
-        /// sim.add_handler("client", client);
+        /// let comp_ctx = sim.create_context("comp");
+        /// let queue: UnboundedBlockingQueue<Message> = sim.create_queue("_queue");
+        /// let comp_id = sim.add_handler("comp", Rc::new(RefCell::new(Component {ctx: comp_ctx, queue })));
         ///
         /// let root_ctx = sim.create_context("root");
-        /// root_ctx.emit(Start{}, client_id, 10.);
+        /// root_ctx.emit(Start {}, comp_id, 10.);
         ///
         /// sim.step_until_no_events();
         ///
@@ -622,9 +619,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// let mut status = sim.steps(2);
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.3);
@@ -658,9 +655,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// sim.step_until_no_events();
     /// assert_eq!(sim.time(), 1.4);
     /// ```
@@ -692,9 +689,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_for_duration(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -729,9 +726,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_until_time(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -743,7 +740,7 @@ impl Simulation {
         self.step_until_time_inner(time)
     }
 
-    async_disabled!(
+    async_mode_disabled!(
         fn step_until_time_inner(&mut self, time: f64) -> bool {
             let mut result = true;
             loop {
@@ -762,7 +759,7 @@ impl Simulation {
         }
     );
 
-    async_enabled!(
+    async_mode_enabled!(
         fn step_until_time_inner(&mut self, time: f64) -> bool {
             let mut result;
             loop {
@@ -863,9 +860,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{}, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// assert_eq!(sim.event_count(), 3);
     /// ```
     pub fn event_count(&self) -> u64 {
@@ -889,9 +886,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// sim.cancel_events(|e| e.id < 2);
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
@@ -920,9 +917,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// let cancelled = sim.cancel_and_get_events(|e| e.id < 2);
     /// assert_eq!(cancelled.len(), 2);
     /// sim.step();
@@ -952,9 +949,9 @@ impl Simulation {
     /// let mut sim = Simulation::new(123);
     /// let mut ctx1 = sim.create_context("comp1");
     /// let mut ctx2 = sim.create_context("comp2");
-    /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
-    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 1.0);
-    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 2.0);
+    /// let event1 = ctx1.emit(SomeEvent {}, ctx2.id(), 1.0);
+    /// let event2 = ctx2.emit(SomeEvent {}, ctx1.id(), 1.0);
+    /// let event3 = ctx1.emit(SomeEvent {}, ctx2.id(), 2.0);
     /// let events = sim.dump_events();
     /// assert_eq!(events.len(), 3);
     /// assert_eq!((events[0].id, events[0].time), (event1, 1.0));

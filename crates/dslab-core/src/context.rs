@@ -6,12 +6,12 @@ use std::rc::Rc;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::prelude::Distribution;
 
-use crate::async_enabled;
+use crate::async_mode_enabled;
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
 use crate::state::SimulationState;
 
-async_enabled!(
+async_mode_enabled!(
     use std::any::TypeId;
     use std::any::type_name;
 
@@ -23,7 +23,6 @@ async_enabled!(
 );
 
 /// A facade for accessing the simulation state and producing events from simulation components.
-#[derive(Clone)]
 pub struct SimulationContext {
     id: Id,
     name: String,
@@ -662,8 +661,8 @@ impl SimulationContext {
         self.names.borrow()[id as usize].clone()
     }
 
-    async_enabled!(
-        /// Spawns a background async task.
+    async_mode_enabled!(
+        /// Spawns a new asynchronous task.
         ///
         /// # Examples
         ///
@@ -675,49 +674,46 @@ impl SimulationContext {
         ///
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
         ///
-        /// struct Client {
+        /// #[derive(Clone, Serialize)]
+        /// struct Start {
+        ///     tasks: u32,
+        /// }
+        ///
+        /// struct Component {
         ///     ctx: SimulationContext,
         /// }
         ///
-        /// #[derive(Clone, Serialize)]
-        /// struct Start {
-        ///     jobs: u32,
-        /// }
-        ///
-        /// impl Client {
-        ///     fn on_start(&self, jobs: u32) {
-        ///        for i in 1..=jobs {
+        /// impl Component {
+        ///     fn on_start(&self, tasks: u32) {
+        ///        for i in 1..=tasks {
         ///             self.ctx.spawn(self.step_waiting(i));
         ///        }
         ///     }
         ///
         ///     async fn step_waiting(&self, num_steps: u32) {
-        ///         for _i in 0..num_steps {
+        ///         for _ in 0..num_steps {
         ///             self.ctx.sleep(1.).await;
         ///         }
         ///     }
         /// }
         ///
-        /// impl EventHandler for Client {
+        /// impl EventHandler for Component {
         ///     fn on(&mut self, event: Event) {
         ///         cast!(match event.data {
-        ///             Start { jobs } => {
-        ///                 self.on_start(jobs);
+        ///             Start { tasks } => {
+        ///                 self.on_start(tasks);
         ///             }
         ///         })
         ///     }
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
+        /// let mut sim = Simulation::new(123);
         ///
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let client = Rc::new(RefCell::new(Client {ctx: client_ctx }));
-        ///
-        /// sim.add_handler("client", client);
+        /// let comp_ctx = sim.create_context("comp");
+        /// let comp_id = sim.add_handler("comp", Rc::new(RefCell::new(Component {ctx: comp_ctx })));
         ///
         /// let root_ctx = sim.create_context("root");
-        /// root_ctx.emit(Start{ jobs: 10 }, client_id, 10.);
+        /// root_ctx.emit(Start { tasks: 10 }, comp_id, 10.);
         ///
         /// sim.step_until_no_events();
         ///
@@ -727,13 +723,13 @@ impl SimulationContext {
         /// ```should_panic
         /// use dslab_core::{Simulation, SimulationContext};
         ///
-        /// struct Client {
+        /// struct Component {
         ///     ctx: SimulationContext,
         /// }
         ///
-        /// impl Client {
-        ///     fn start(&self, jobs: u32) {
-        ///        for i in 1..=jobs {
+        /// impl Component {
+        ///     fn start(&self, tasks: u32) {
+        ///        for i in 1..=tasks {
         ///             self.ctx.spawn(self.step_waiting(i));
         ///        }
         ///     }
@@ -745,19 +741,19 @@ impl SimulationContext {
         ///     }
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
-        /// let mut client = Client { ctx: sim.create_context("client") };
+        /// let mut sim = Simulation::new(123);
+        /// let mut comp = Component { ctx: sim.create_context("comp") };
         ///
-        /// // Panics because spawning async tasks by a component without event handler
-        /// // is prohibited due to safety reasons.
-        /// // Register Client via Simulation::add_handler as in the previous example.
-        /// client.start(10);
+        /// // Panics because spawning async tasks by a component without event handler is prohibited
+        /// // due to safety reasons.
+        /// // Register Component via Simulation::add_handler as in the previous example.
+        /// comp.start(10);
         /// ```
         pub fn spawn(&self, future: impl Future<Output = ()>) {
             self.sim_state.borrow_mut().spawn_component(self.id(), future);
         }
 
-        /// Waits until `duration` has elapsed.
+        /// Waits (asynchronously) until `duration` seconds have elapsed.
         ///
         /// # Examples
         ///
@@ -766,9 +762,9 @@ impl SimulationContext {
         ///
         /// use dslab_core::Simulation;
         ///
-        /// let mut sim = Simulation::new(42);
+        /// let mut sim = Simulation::new(123);
         ///
-        /// let ctx = sim.create_context("client");
+        /// let ctx = sim.create_context("comp");
         ///
         /// sim.spawn(async move {
         ///     let initial_time = ctx.time();
@@ -777,12 +773,12 @@ impl SimulationContext {
         ///     let mut expected_time = initial_time + 5.;
         ///     assert_eq!(expected_time, ctx.time());
         ///
-        ///     let mut concurrent_futures = FuturesUnordered::new();
+        ///     let mut futures = FuturesUnordered::new();
         ///     for i in 1..=10 {
-        ///         concurrent_futures.push(ctx.sleep(i as f64));
+        ///         futures.push(ctx.sleep(i as f64));
         ///     }
         ///
-        ///     while let Some(_) = concurrent_futures.next().await {
+        ///     while let Some(_) = futures.next().await {
         ///         expected_time += 1.;
         ///         assert_eq!(expected_time, ctx.time());
         ///     }
@@ -792,20 +788,17 @@ impl SimulationContext {
         /// assert_eq!(15., sim.time());
         /// ```
         pub fn sleep(&self, duration: f64) -> TimerFuture {
-            assert!(duration >= 0., "duration must be a positive value");
-
+            assert!(duration >= 0., "Duration must be a positive value");
             self.sim_state
                 .borrow_mut()
                 .create_timer(self.id, duration, self.sim_state.clone())
         }
 
-        /// Async receive any event of type `T` from any component.
+        /// Waits (asynchronously) for event of type `T` from any component.
         ///
-        /// Might be used for convenient waiting where source component is obvious or there are
-        /// several possible sources. The actual source component will be returned in the event.
+        /// The returned future outputs the received event and event data.
         ///
-        /// If this future is used with timeout and timeout fires, the returned event will have
-        /// `src` equal to `Id::MAX` (unknown Id).
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
         /// # Examples
         ///
@@ -816,31 +809,29 @@ impl SimulationContext {
         /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
-        /// struct Message{
+        /// struct Message {
         ///     payload: u32,
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let root_ctx = sim.create_context("root");
-        /// let root_id = root_ctx.id();
+        /// let mut sim = Simulation::new(123);
+        /// let sender_ctx = sim.create_context("sender");
+        /// let sender_id = sender_ctx.id();
+        /// let receiver_ctx = sim.create_context("receiver");
+        /// let receiver_id = receiver_ctx.id();
         ///
         /// sim.spawn(async move {
-        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        ///     sender_ctx.emit(Message { payload: 321 }, receiver_id, 50.);
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
-        ///     assert_eq!(e.src, root_id);
-        ///     assert_eq!(data.payload, 42);
+        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(e.src, sender_id);
+        ///     assert_eq!(data.payload, 321);
         /// });
         ///
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 50.);
         /// ```
-        ///
-        /// # Example with multiple components sending events
         ///
         /// ```rust
         /// use serde::Serialize;
@@ -849,35 +840,35 @@ impl SimulationContext {
         /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
-        /// struct Message{
+        /// struct Message {
         ///     payload: u32,
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let root_1_ctx = sim.create_context("root_1");
-        /// let root_1_id = root_1_ctx.id();
-        /// let root_2_ctx = sim.create_context("root_2");
-        /// let root_2_id = root_2_ctx.id();
+        /// let mut sim = Simulation::new(123);
+        /// let sender1_ctx = sim.create_context("sender1");
+        /// let sender1_id = sender1_ctx.id();
+        /// let sender2_ctx = sim.create_context("sender2");
+        /// let sender2_id = sender2_ctx.id();
+        /// let receiver_ctx = sim.create_context("receiver");
+        /// let receiver_id = receiver_ctx.id();
         ///
         /// sim.spawn(async move {
-        ///     root_1_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        ///     sender1_ctx.emit(Message { payload: 321 }, receiver_id, 50.);
         /// });
         ///
         /// sim.spawn(async move {
-        ///    root_2_ctx.emit(Message{ payload: 43 }, client_id, 100.);
+        ///    sender2_ctx.emit(Message { payload: 322 }, receiver_id, 100.);
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
-        ///     assert_eq!(client_ctx.time(), 50.);
-        ///     assert_eq!(e.src, root_1_id);
-        ///     assert_eq!(data.payload, 42);
-        ///     let (e, data) = client_ctx.recv_event::<Message>().await;
-        ///     assert_eq!(client_ctx.time(), 100.);
-        ///     assert_eq!(e.src, root_2_id);
-        ///     assert_eq!(data.payload, 43);
+        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(receiver_ctx.time(), 50.);
+        ///     assert_eq!(e.src, sender1_id);
+        ///     assert_eq!(data.payload, 321);
+        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(receiver_ctx.time(), 100.);
+        ///     assert_eq!(e.src, sender2_id);
+        ///     assert_eq!(data.payload, 322);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -890,7 +881,11 @@ impl SimulationContext {
             self.recv_event_to::<T>(None, self.id)
         }
 
-        /// Async receive any event of type `T` from component `src`.
+        /// Waits (asynchronously) for event of type `T` from component `src`.
+        ///
+        /// The returned future outputs the received event and event data.
+        ///
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
         /// # Examples
         ///
@@ -901,24 +896,24 @@ impl SimulationContext {
         /// use dslab_core::async_mode::AwaitResult;
         ///
         /// #[derive(Clone, Serialize)]
-        /// struct Message{
+        /// struct Message {
         ///     payload: u32,
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let root_ctx = sim.create_context("root");
-        /// let root_id = root_ctx.id();
+        /// let mut sim = Simulation::new(123);
+        /// let sender_ctx = sim.create_context("sender");
+        /// let sender_id = sender_ctx.id();
+        /// let receiver_ctx = sim.create_context("receiver");
+        /// let receiver_id = receiver_ctx.id();
         ///
         /// sim.spawn(async move {
-        ///     root_ctx.emit(Message{ payload: 42 }, client_id, 50.);
+        ///     sender_ctx.emit(Message { payload: 321 }, receiver_id, 50.);
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = client_ctx.recv_event_from::<Message>(root_id).await;
-        ///     assert_eq!(e.src, root_id);
-        ///     assert_eq!(data.payload, 42);
+        ///     let (e, data) = receiver_ctx.recv_event_from::<Message>(sender_id).await;
+        ///     assert_eq!(e.src, sender_id);
+        ///     assert_eq!(data.payload, 321);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -931,7 +926,11 @@ impl SimulationContext {
             self.recv_event_to::<T>(Some(src), self.id)
         }
 
-        /// Async receive an event of type T from self.
+        /// Waits (asynchronously) for event of type `T` from self.
+        ///
+        /// The returned future outputs the received event and event data.
+        ///
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
         /// # Examples
         ///
@@ -945,16 +944,15 @@ impl SimulationContext {
         ///     payload: u32,
         /// }
         ///
-        /// let mut sim = Simulation::new(42);
-        ///
-        /// let client_ctx = sim.create_context("client");
+        /// let mut sim = Simulation::new(123);
+        /// let ctx = sim.create_context("comp");
         ///
         /// sim.spawn(async move {
-        ///     client_ctx.emit_self(SomeEvent{payload: 23}, 10.);
+        ///     ctx.emit_self(SomeEvent { payload: 321 }, 10.);
         ///
-        ///     let (e, data) = client_ctx.recv_event_from_self::<SomeEvent>().await;
-        ///     assert_eq!(data.payload, 23);
-        ///     assert_eq!(client_ctx.time(), 10.)
+        ///     let (e, data) = ctx.recv_event_from_self::<SomeEvent>().await;
+        ///     assert_eq!(data.payload, 321);
+        ///     assert_eq!(ctx.time(), 10.)
         /// });
         ///
         /// sim.step_until_no_events();
@@ -967,17 +965,19 @@ impl SimulationContext {
             self.recv_event_to::<T>(Some(self.id), self.id)
         }
 
-        /// Register the function for a type of EventData to get await key to further call
-        /// Self::recv_event_by_key_from
-        ///
-        /// See [`Self::recv_event_by_key_from`].
+        /// Registers a key getter function for event type `T` to be used with [`Self::recv_event_by_key`] and
+        /// [`Self::recv_event_by_key_from`].
         pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
             self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
         }
 
-        /// Async receive event of type `T` with specific key from any component.
+        /// Waits (asynchronously) for event of type `T` with key `key` from any component.
         ///
-        /// See [`Self::recv_event_from_by_key`] and [`Self::recv_event`].
+        /// The returned future outputs the received event and event data.
+        ///
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
+        ///
+        /// See [`Self::recv_event_by_key_from`] and [`Self::recv_event`] for examples.
         pub fn recv_event_by_key<T>(&self, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
@@ -985,7 +985,11 @@ impl SimulationContext {
             self.recv_event_by_key_to::<T>(None, self.id, key)
         }
 
-        /// Async receive event of type `T` with specific key from `src` component.
+        /// Waits (asynchronously) for event of type `T` with key `key` from component `src`.
+        ///
+        /// The returned future outputs the received event and event data.
+        ///
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
         /// # Examples
         ///
@@ -1000,47 +1004,46 @@ impl SimulationContext {
         /// use dslab_core::async_mode::{AwaitResult, EventKey};
         ///
         /// #[derive(Clone, Serialize)]
-        /// struct Message {
-        ///     payload: EventKey,
+        /// struct SomeEvent {
+        ///     key: u64,
+        ///     payload: u32,
         /// }
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Start {}
         ///
-        /// struct Client {
+        /// struct Component {
         ///     ctx: SimulationContext,
         ///     root_id: Id,
         /// }
         ///
-        /// impl Client {
-        ///     async fn recv_payload(&self, payload: EventKey) {
-        ///         let (e, data) = self.ctx.recv_event_by_key_from::<Message>(self.root_id, payload).await;
-        ///         assert_eq!(data.payload, payload);
+        /// impl Component {
+        ///     async fn recv_event_for_key(&self, key: EventKey) {
+        ///         let (e, data) = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, key).await;
+        ///         assert_eq!(data.key, key);
         ///     }
         /// }
         ///
-        /// impl EventHandler for Client {
+        /// impl EventHandler for Component {
         ///     fn on(&mut self, event: Event) {
         ///         cast!(match event.data {
         ///             Start {} => {
-        ///                 self.ctx.spawn(self.recv_payload(1));
-        ///                 self.ctx.spawn(self.recv_payload(2));
+        ///                 self.ctx.spawn(self.recv_event_for_key(1));
+        ///                 self.ctx.spawn(self.recv_event_for_key(2));
         ///             }
         ///         })
         ///     }
         /// }
-        /// let mut sim = Simulation::new(42);
-        /// sim.register_key_getter_for::<Message>(|message| message.payload);
-        /// let client_ctx = sim.create_context("client");
-        /// let client_id = client_ctx.id();
-        /// let root_ctx = sim.create_context("root");
-        /// let root_id = root_ctx.id();
+        /// let mut sim = Simulation::new(124);
+        /// let root_ctx = sim.create_context("sender");
+        /// let comp_ctx = sim.create_context("comp");
+        /// let comp_id =  sim.add_handler("comp", Rc::new(RefCell::new(Component { ctx: comp_ctx, root_id: root_ctx.id() })));
         ///
-        /// sim.add_handler("client", Rc::new(RefCell::new(Client {ctx: client_ctx, root_id})));
+        /// sim.register_key_getter_for::<SomeEvent>(|message| message.key);
         ///
-        /// root_ctx.emit_now(Start {}, client_id);
-        /// root_ctx.emit(Message{ payload: 1 }, client_id, 50.);
-        /// root_ctx.emit(Message{ payload: 2 }, client_id, 100.);
+        /// root_ctx.emit_now(Start {}, comp_id);
+        /// root_ctx.emit(SomeEvent { key: 1, payload: 321 }, comp_id, 50.);
+        /// root_ctx.emit(SomeEvent { key: 2, payload: 322 }, comp_id, 100.);
         ///
         /// sim.step_until_no_events();
         /// assert_eq!(sim.time(), 100.);
@@ -1052,8 +1055,13 @@ impl SimulationContext {
             self.recv_event_by_key_to::<T>(Some(src), self.id, key)
         }
 
-        /// Async handling event from self by key.
-        /// See [`Self::recv_event_from_self`]
+        /// Waits (asynchronously) for event of type `T` with key `key` from self.
+        ///
+        /// The returned future outputs the received event and event data.
+        ///
+        /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
+        ///
+        /// See [`Self::recv_event_by_key_from`] and [`Self::recv_event_from_self`] for examples.
         pub fn recv_event_by_key_from_self<T>(&self, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
@@ -1067,9 +1075,8 @@ impl SimulationContext {
         {
             assert!(
                 self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_none(),
-                "try to async handle event that has key handling, use async handlers by key"
+                "Trying to receive event of type with registered key getter, use receive by key for such events"
             );
-
             self.create_event_future(dst, None, src)
         }
 
@@ -1079,10 +1086,9 @@ impl SimulationContext {
         {
             assert!(
                 self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_some(),
-                "simulation does not have key getter for type {}, register it before using async receivers by key",
+                "Trying to receive event by key for type {} without key getter, register it before using this feature",
                 type_name::<T>()
             );
-
             self.create_event_future(dst, Some(key), src)
         }
 
