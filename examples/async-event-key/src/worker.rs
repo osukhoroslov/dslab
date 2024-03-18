@@ -59,18 +59,18 @@ impl Worker {
     }
 
     async fn work_loop(&self) {
-        let mut tasks_completed = 0;
+        let mut tasks_dispatched = 0;
         loop {
             let task_info = self.task_queue.receive().await;
-            while !self.try_process_task(&task_info).await {
+            while !self.try_dispatch_task(&task_info).await {
                 self.ctx.recv_event_from_self::<TaskCompleted>().await;
             }
-            tasks_completed += 1;
-            log_debug!(self.ctx, format!("work_loop : {} tasks completed", tasks_completed));
+            tasks_dispatched += 1;
+            log_debug!(self.ctx, format!("work_loop : {} tasks dispatched", tasks_dispatched));
         }
     }
 
-    async fn try_process_task(&self, task_info: &TaskInfo) -> bool {
+    async fn try_dispatch_task(&self, task_info: &TaskInfo) -> bool {
         // pass task to compute and obtain request id used further as event key
         let req_id = self.compute.borrow_mut().run(
             task_info.flops,
@@ -83,17 +83,24 @@ impl Worker {
 
         select! {
             _ = self.ctx.recv_event_by_key::<CompStarted>(req_id).fuse() => {
-                log_debug!(self.ctx, format!("try_process_task : task with key {} is started", req_id));
-                self.ctx.recv_event_by_key::<CompFinished>(req_id).await;
-                log_debug!(self.ctx, format!("process_task : task with key {} is completed", req_id));
-                self.ctx.emit_self_now(TaskCompleted {});
+                log_debug!(self.ctx, format!("try_dispatch_task : task with key {} is started", req_id));
+                self.ctx.spawn(self.track_task_state(req_id));
                 true
             },
             (_, failed) = self.ctx.recv_event_by_key::<CompFailed>(req_id).fuse() => {
-                log_debug!(self.ctx, format!("try_process_task : task with key {} is failed: {}", req_id, json!(failed)));
+                log_debug!(self.ctx, format!("try_dispatch_task : task with key {} is failed: {}", req_id, json!(failed)));
                 false
             }
         }
+    }
+
+    async fn track_task_state(&self, req_id: EventKey) {
+        self.ctx.recv_event_by_key::<CompFinished>(req_id).await;
+        log_debug!(
+            self.ctx,
+            format!("track_task_state : task with key {} is completed", req_id)
+        );
+        self.ctx.emit_self_now(TaskCompleted {});
     }
 }
 
@@ -106,7 +113,6 @@ impl EventHandler for Worker {
             Start {} => {
                 self.on_start();
             }
-            // TODO: why can't remove it?
             TaskCompleted {} => {}
         })
     }
