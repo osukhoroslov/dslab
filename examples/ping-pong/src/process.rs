@@ -1,12 +1,11 @@
-use serde::Serialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use serde::Serialize;
+
 use dslab_core::cast;
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::{Event, EventData};
-use dslab_core::handler::EventHandler;
+use dslab_core::event::EventData;
+use dslab_core::{Event, EventHandler, Id, SimulationContext};
 use dslab_network::Network;
 
 #[derive(Clone, Serialize)]
@@ -43,7 +42,7 @@ impl Process {
         }
     }
 
-    fn on_start(&mut self) {
+    fn on_start(&self) {
         if self.is_pinger {
             let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
             self.send(
@@ -55,7 +54,7 @@ impl Process {
         }
     }
 
-    fn on_ping(&mut self, from: Id) {
+    fn on_ping(&self, from: Id) {
         self.send(
             Pong {
                 payload: self.ctx.time(),
@@ -81,7 +80,7 @@ impl Process {
         }
     }
 
-    fn send<T: EventData>(&mut self, event: T, to: Id) {
+    fn send<T: EventData>(&self, event: T, to: Id) {
         let delay = if self.rand_delay { self.ctx.rand() } else { 1. };
         self.ctx.emit(event, to, delay);
     }
@@ -132,7 +131,7 @@ impl NetworkProcess {
         }
     }
 
-    fn on_start(&mut self) {
+    fn on_start(&self) {
         if self.is_pinger {
             let peer = self.peers[self.ctx.gen_range(0..self.peer_count)];
             self.net.borrow_mut().send_event(
@@ -145,7 +144,7 @@ impl NetworkProcess {
         }
     }
 
-    fn on_ping(&mut self, from: Id) {
+    fn on_ping(&self, from: Id) {
         self.net.borrow_mut().send_event(
             Pong {
                 payload: self.ctx.time(),

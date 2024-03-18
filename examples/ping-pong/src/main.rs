@@ -8,7 +8,7 @@ use clap::Parser;
 use env_logger::Builder;
 use sugars::{boxed, rc, refcell};
 
-use dslab_core::simulation::Simulation;
+use dslab_core::Simulation;
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
 use dslab_network::Network;
 
@@ -61,6 +61,7 @@ fn main() {
             sim.create_context("net")
         )));
         sim.add_handler("net", network.clone());
+
         network
             .borrow_mut()
             .add_node("host1", Box::new(SharedBandwidthNetworkModel::new(1000., 0.)));

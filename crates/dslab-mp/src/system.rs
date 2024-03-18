@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 
-use dslab_core::handler::EventCancellationPolicy;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
+use dslab_core::handler::EventCancellationPolicy;
 use dslab_core::{cast, Simulation};
 
 use crate::events::MessageReceived;

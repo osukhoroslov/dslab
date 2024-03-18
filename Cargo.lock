@@ -166,44 +166,8 @@ dependencies = [
  "env_logger 0.9.3",
  "futures",
  "log 0.4.20",
- "priority-queue",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
  "serde",
  "serde_json",
- "sugars",
-]
-
-[[package]]
-name = "async-master-workers"
-version = "0.1.0"
-dependencies = [
- "clap 3.2.25",
- "dslab-compute",
- "dslab-core",
- "dslab-network",
- "dslab-storage",
- "env_logger 0.9.3",
- "futures",
- "log 0.4.20",
- "priority-queue",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "sugars",
-]
-
-[[package]]
-name = "async-ping-pong"
-version = "0.1.0"
-dependencies = [
- "clap 3.2.25",
- "dslab-core",
- "dslab-network",
- "env_logger 0.9.3",
- "futures",
- "log 0.4.20",
- "serde",
  "sugars",
 ]
 
@@ -2143,6 +2107,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "master-workers-async"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.25",
+ "dslab-compute",
+ "dslab-core",
+ "dslab-network",
+ "dslab-storage",
+ "env_logger 0.9.3",
+ "futures",
+ "log 0.4.20",
+ "priority-queue",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2822,6 +2805,20 @@ dependencies = [
  "dslab-core",
  "dslab-network",
  "env_logger 0.9.3",
+ "log 0.4.20",
+ "serde",
+ "sugars",
+]
+
+[[package]]
+name = "ping-pong-async"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.25",
+ "dslab-core",
+ "dslab-network",
+ "env_logger 0.9.3",
+ "futures",
  "log 0.4.20",
  "serde",
  "sugars",

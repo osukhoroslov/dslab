@@ -8,12 +8,9 @@ use log::Level::Info;
 use priority_queue::PriorityQueue;
 use serde::Serialize;
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug, log_info, log_trace};
-use dslab_network::network::Network;
+use dslab_core::{Event, EventHandler, Id, SimulationContext};
+use dslab_network::Network;
 
 use crate::common::Start;
 use crate::task::*;
@@ -89,7 +86,7 @@ impl Master {
         }
     }
 
-    fn on_started(&mut self) {
+    fn on_started(&self) {
         log_debug!(self.ctx, "started");
         self.ctx.emit_self(ScheduleTasks {}, 1.);
         if log_enabled!(Info) {
@@ -200,7 +197,7 @@ impl Master {
         }
     }
 
-    fn report_status(&mut self) {
+    fn report_status(&self) {
         log_info!(
             self.ctx,
             "CPU: {:.2} / MEMORY: {:.2} / UNASSIGNED: {} / ASSIGNED: {} / COMPLETED: {}",

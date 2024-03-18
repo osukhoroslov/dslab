@@ -5,11 +5,8 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
 use dslab_core::{cast, log_debug};
+use dslab_core::{Event, EventHandler, Id, SimulationContext};
 use dslab_network::{DataTransfer, DataTransferCompleted, Network};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
@@ -69,7 +66,7 @@ impl Worker {
         }
     }
 
-    fn on_start(&mut self) {
+    fn on_start(&self) {
         log_debug!(self.ctx, "started");
         self.ctx.emit(
             WorkerRegister {
@@ -138,7 +135,7 @@ impl Worker {
         self.computations.insert(comp_id, task_id);
     }
 
-    fn on_comp_started(&mut self, comp_id: u64) {
+    fn on_comp_started(&self, comp_id: u64) {
         let task_id = self.computations.get(&comp_id).unwrap();
         log_debug!(self.ctx, "started execution of task: {}", task_id);
     }

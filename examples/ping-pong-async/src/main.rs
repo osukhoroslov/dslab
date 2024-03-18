@@ -6,14 +6,15 @@ use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Builder;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
 use dslab_core::Simulation;
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
-use dslab_network::network::Network;
+use dslab_network::Network;
 
-use process::{NetworkProcess, Process, StartMessage};
+use crate::process::{NetworkProcess, Process, Start};
 
+/// Ping-pong example (version using async mode)
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -51,12 +52,14 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(42);
+    let mut sim = Simulation::new(123);
     let root = sim.create_context("root");
 
     let network_opt = if args.use_network {
-        let network_model = Box::new(ConstantBandwidthNetworkModel::new(1000., 0.001));
-        let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
+        let network = rc!(refcell!(Network::new(
+            boxed!(ConstantBandwidthNetworkModel::new(1000., 0.001)),
+            sim.create_context("net")
+        )));
         sim.add_handler("net", network.clone());
 
         network
@@ -69,7 +72,6 @@ fn main() {
     } else {
         None
     };
-
     let id_offset = args.use_network as u32;
 
     for i in 1..=proc_count {
@@ -109,12 +111,11 @@ fn main() {
             );
             sim.add_handler(&proc_name, rc!(refcell!(proc)));
         }
-        root.emit(StartMessage {}, proc_id, 0.);
+        root.emit(Start {}, proc_id, 0.);
     }
 
     let t = Instant::now();
     sim.step_until_no_events();
-
     let elapsed = t.elapsed().as_secs_f64();
     println!(
         "Processed {} iterations in {:.2?}s ({:.2} iter/s)",

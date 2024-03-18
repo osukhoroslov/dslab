@@ -10,23 +10,20 @@ use clap::Parser;
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use sugars::{rc, refcell};
+use sugars::{boxed, rc, refcell};
 
-use dslab_compute::multicore::{CompFinished, CompStarted, Compute, CoresDependency};
-use dslab_core::async_mode::EventKey;
+use dslab_compute::multicore::{Compute, CoresDependency};
 use dslab_core::simulation::Simulation;
-use dslab_network::model::{DataTransferCompleted, NetworkModel};
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
-use dslab_network::network::Network;
+use dslab_network::{Network, NetworkModel};
 use dslab_storage::disk::DiskBuilder;
-use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 
 use crate::common::Start;
 use crate::master::Master;
 use crate::task::TaskRequest;
 use crate::worker::AsyncWorker;
 
-/// Master-workers example
+/// Master-workers example (version using async mode)
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -70,28 +67,19 @@ fn main() {
     // client context for submitting tasks
     let client = sim.create_context("client");
 
-    // register key getters for events
-    sim.register_key_getter_for::<DataTransferCompleted>(|e| e.dt.id as EventKey);
-    sim.register_key_getter_for::<DataReadCompleted>(|e| e.request_id as EventKey);
-    sim.register_key_getter_for::<DataWriteCompleted>(|e| e.request_id as EventKey);
-    sim.register_key_getter_for::<CompStarted>(|e| e.id as EventKey);
-    sim.register_key_getter_for::<CompFinished>(|e| e.id as EventKey);
-
     // create network and add hosts
     let network_model: Box<dyn NetworkModel> = if use_shared_network {
-        Box::new(SharedBandwidthNetworkModel::new(
+        boxed!(SharedBandwidthNetworkModel::new(
             network_bandwidth as f64,
-            network_latency,
+            network_latency
         ))
     } else {
-        Box::new(ConstantBandwidthNetworkModel::new(
+        boxed!(ConstantBandwidthNetworkModel::new(
             network_bandwidth as f64,
-            network_latency,
+            network_latency
         ))
     };
-
-    let network_ctx = sim.create_context("net");
-    let network = rc!(refcell!(Network::new(network_model, network_ctx)));
+    let network = rc!(refcell!(Network::new(network_model, sim.create_context("net"))));
     sim.add_handler("net", network.clone());
     for i in 0..host_count {
         network.borrow_mut().add_node(
@@ -142,6 +130,8 @@ fn main() {
         network.borrow_mut().set_location(worker_id, host);
         admin.emit_now(Start {}, worker_id);
     }
+    // register event key getters used by async implementation
+    AsyncWorker::register_key_getters(&sim);
 
     // submit tasks
     for i in 0..task_count {

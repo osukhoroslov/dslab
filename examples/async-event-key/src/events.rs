@@ -4,11 +4,11 @@ use serde::Serialize;
 pub struct Start {}
 
 #[derive(Serialize, Clone)]
-pub struct TaskCompleted {}
+pub struct TaskRequest {
+    pub cores: u32,
+    pub memory: u64,
+    pub flops: f64,
+}
 
 #[derive(Serialize, Clone)]
-pub struct TaskRequest {
-    pub flops: f64,
-    pub memory: u64,
-    pub cores: u32,
-}
+pub struct TaskCompleted {}

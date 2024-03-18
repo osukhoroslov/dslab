@@ -1,4 +1,4 @@
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
+#[derive(Clone, Serialize)]
 pub struct Start {}

@@ -17,5 +17,5 @@ fn launch(args: &[&str]) {
 
 #[test]
 fn test_launching() {
-    launch(&["--tasks-count", "1000"]);
+    launch(&["--task-count", "1000"]);
 }
