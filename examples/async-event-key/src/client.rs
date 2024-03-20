@@ -24,12 +24,20 @@ impl Client {
     }
 
     async fn submit_tasks(&self) {
-        for _ in 0..self.task_count {
+        for i in 0..self.task_count {
             // submit new task
             let cores = self.ctx.gen_range(1..=8);
             let memory = self.ctx.gen_range(1..=4) * 1024_u64;
             let flops = self.ctx.gen_range(1..=3000) as f64;
-            self.ctx.emit_now(TaskRequest { cores, memory, flops }, self.worker_id);
+            self.ctx.emit_now(
+                TaskRequest {
+                    id: i as u64,
+                    cores,
+                    memory,
+                    flops,
+                },
+                self.worker_id,
+            );
 
             // sleep with random delay
             self.ctx.sleep(self.ctx.gen_range(1.0..=self.max_task_delay)).await;

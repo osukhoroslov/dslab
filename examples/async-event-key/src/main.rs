@@ -45,11 +45,7 @@ fn main() {
         sim.create_context("compute"),
     )));
     sim.add_handler("compute", compute.clone());
-    let worker = rc!(refcell!(Worker::new(
-        compute,
-        sim.create_queue("task_queue"),
-        sim.create_context("worker"),
-    )));
+    let worker = rc!(refcell!(Worker::new(compute, sim.create_context("worker"),)));
     let worker_id = sim.add_handler("worker", worker);
 
     // Create client component which submits tasks
