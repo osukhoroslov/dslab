@@ -46,8 +46,8 @@ impl Worker {
                     pending_tasks.push_back(task);
                     pending_tasks.len() == 1
                 },
-                (_, event) = self.ctx.recv_event::<CompFinished>().fuse() => {
-                    log_debug!(self.ctx, format!("task with key {} is completed", event.id));
+                (_, comp_finished_info) = self.ctx.recv_event::<CompFinished>().fuse() => {
+                    log_debug!(self.ctx, format!("task with key {} is completed", comp_finished_info.id));
                     true
                 }
             };
