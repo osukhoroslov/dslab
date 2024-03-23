@@ -48,7 +48,7 @@ impl Worker {
                 },
                 (_, comp_finished_info) = self.ctx.recv_event::<CompFinished>().fuse() => {
                     log_debug!(self.ctx, format!("task with key {} is completed", comp_finished_info.id));
-                    true
+                    pending_tasks.len() > 0
                 }
             };
             if try_dispatch {
