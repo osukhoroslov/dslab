@@ -1,6 +1,7 @@
 //! Accessing simulation from components.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
@@ -15,7 +16,7 @@ pub struct SimulationContext {
     id: Id,
     name: String,
     sim_state: Rc<RefCell<SimulationState>>,
-    names: Rc<RefCell<Vec<String>>>,
+    names: Rc<RefCell<HashMap<Id, String>>>,
 }
 
 impl SimulationContext {
@@ -23,7 +24,7 @@ impl SimulationContext {
         id: Id,
         name: &str,
         sim_state: Rc<RefCell<SimulationState>>,
-        names: Rc<RefCell<Vec<String>>>,
+        names: Rc<RefCell<HashMap<Id, String>>>,
     ) -> Self {
         Self {
             id,
@@ -646,6 +647,6 @@ impl SimulationContext {
     /// sim.step();
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
-        self.names.borrow()[id as usize].clone()
+        self.names.borrow().get(&id).unwrap().clone()
     }
 }
