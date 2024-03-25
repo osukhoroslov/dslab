@@ -40,7 +40,7 @@ pub struct ServerlessSimulation {
 
 impl ServerlessSimulation {
     /// Creates new simulation.
-    pub fn new(mut sim: Simulation, config: Config) -> Self {
+    pub fn new(sim: Simulation, config: Config) -> Self {
         let stats = Rc::new(RefCell::new(Default::default()));
         let ctx = sim.create_context("entry point");
         let function_registry: Rc<RefCell<FunctionRegistry>> = Rc::new(RefCell::new(Default::default()));

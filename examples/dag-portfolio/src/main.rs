@@ -134,7 +134,7 @@ fn run_experiments(args: &Args) {
 
     // up to 3 clusters for each platform, each triple means (nodes, speed in Gflop/s, bandwidth in MB/s)
     // currently different bandwidth for different clusters is not supported
-    let platform_configs = vec![
+    let platform_configs = [
         vec![(96, 10., 100.)],
         vec![(48, 5., 100.), (48, 15., 100.)],
         vec![(48, 5., 100.), (48, 40., 10.)],

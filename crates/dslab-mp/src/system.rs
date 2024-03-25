@@ -29,7 +29,7 @@ impl System {
     /// Creates a system with specified random seed.
     pub fn new(seed: u64) -> Self {
         let logger = Rc::new(RefCell::new(Logger::new()));
-        let mut sim = Simulation::new(seed);
+        let sim = Simulation::new(seed);
         let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"), logger.clone())));
         Self {
             sim,
@@ -43,7 +43,7 @@ impl System {
     /// Creates a system with logging events to file.
     pub fn with_log_file(seed: u64, log_path: &Path) -> Self {
         let logger = Rc::new(RefCell::new(Logger::with_log_file(log_path)));
-        let mut sim = Simulation::new(seed);
+        let sim = Simulation::new(seed);
         let net = Rc::new(RefCell::new(Network::new(sim.create_context("net"), logger.clone())));
         Self {
             sim,

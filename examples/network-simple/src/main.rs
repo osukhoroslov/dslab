@@ -32,7 +32,7 @@ fn main() {
         .init();
     let args = Args::parse();
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     // create network with specified model, add nodes and register in simulation
     println!("Used network model: {:?}BandwidthNetworkModel", args.model);

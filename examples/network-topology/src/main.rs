@@ -15,7 +15,7 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     // create network and define its topology by adding nodes and links
     let mut net = Network::new(boxed!(TopologyAwareNetworkModel::new()), sim.create_context("net"));

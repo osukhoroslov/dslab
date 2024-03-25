@@ -60,7 +60,7 @@ fn main() {
     let use_shared_network = args.use_shared_network;
     let seed = 123;
 
-    let mut sim = Simulation::new(seed);
+    let sim = Simulation::new(seed);
     let mut rand = Pcg64::seed_from_u64(seed);
     // admin context for starting master and workers
     let admin = sim.create_context("admin");

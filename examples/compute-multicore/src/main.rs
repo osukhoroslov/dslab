@@ -179,7 +179,7 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     let compute = rc!(refcell!(Compute::new(1., 10, 1024, sim.create_context("compute"))));
     sim.add_handler("compute", compute.clone());

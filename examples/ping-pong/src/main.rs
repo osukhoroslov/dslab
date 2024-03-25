@@ -52,7 +52,7 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
     let root = sim.create_context("root");
 
     let network_opt = if args.use_network {
