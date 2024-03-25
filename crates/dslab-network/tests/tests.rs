@@ -71,7 +71,7 @@ fn run_link_test(
 ) -> f64 {
     // two nodes, one link (or two directional), [lr_transfers] transfers from 1 to 2, [rl_transfers] from 2 to 1
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
@@ -189,7 +189,7 @@ fn test_links(
 
 #[rstest]
 fn test_triangle(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] routing: RoutingImpl) {
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),
@@ -252,7 +252,7 @@ fn test_triangle(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] ro
 
 #[rstest]
 fn test_diamond(#[values(RoutingImpl::Dijkstra, RoutingImpl::FloydWarshall)] routing: RoutingImpl) {
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
 
     let routing: Box<dyn RoutingAlgorithm> = match routing {
         RoutingImpl::Dijkstra => Box::new(ShortestPathDijkstra::default()),

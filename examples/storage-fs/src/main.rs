@@ -159,7 +159,7 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(SEED);
+    let sim = Simulation::new(SEED);
 
     // Creating two disks for file system
     let disk1 = rc!(refcell!(DiskBuilder::simple(

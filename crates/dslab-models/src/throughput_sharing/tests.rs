@@ -25,7 +25,7 @@ struct ModelsTester {
 
 impl ModelsTester {
     fn with_fixed_throughput(bandwidth: f64) -> Self {
-        let mut sim = Simulation::new(123);
+        let sim = Simulation::new(123);
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
@@ -36,7 +36,7 @@ impl ModelsTester {
     }
 
     pub fn with_dynamic_throughput(throughput_function: fn(usize) -> f64) -> Self {
-        let mut sim = Simulation::new(123);
+        let sim = Simulation::new(123);
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
@@ -203,7 +203,7 @@ impl ActivityFactorFn<u32> for TestThroughputFactorFunction {
 
 #[test]
 fn throughput_factor() {
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
     let mut ctx = sim.create_context("test");
     let tf = make_constant_throughput_fn(100.);
     let mut model: FairThroughputSharingModel<u32> =
@@ -228,7 +228,7 @@ fn throughput_factor_and_degradation() {
         }
     }
 
-    let mut sim = Simulation::new(123);
+    let sim = Simulation::new(123);
     let mut ctx = sim.create_context("test");
     let mut model: FairThroughputSharingModel<u32> =
         FairThroughputSharingModel::new(boxed!(throughput_function), boxed!(TestThroughputFactorFunction {}));

@@ -67,7 +67,7 @@ impl CloudSimulation {
     }
 
     /// Creates a simulation with specified config.
-    pub fn with_logger(mut sim: Simulation, sim_config: SimulationConfig, logger: Box<dyn Logger>) -> Self {
+    pub fn with_logger(sim: Simulation, sim_config: SimulationConfig, logger: Box<dyn Logger>) -> Self {
         let logger: Rc<RefCell<Box<dyn Logger>>> = rc!(refcell!(logger));
 
         let monitoring = rc!(refcell!(Monitoring::new(

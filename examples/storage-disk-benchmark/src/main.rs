@@ -169,7 +169,7 @@ fn main() {
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
-    let mut sim = Simulation::new(SEED);
+    let sim = Simulation::new(SEED);
     let mut disks = vec![];
 
     for i in 0..args.disks {

@@ -35,7 +35,7 @@ fn main() {
         .init();
 
     // Build a simulation with a disk and a client
-    let mut sim = Simulation::new(SEED);
+    let sim = Simulation::new(SEED);
 
     let disk = rc!(refcell!(DiskBuilder::simple(
         DISK_CAPACITY,

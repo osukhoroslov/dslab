@@ -70,7 +70,7 @@ fn main() {
 }
 
 fn run_simulation(disk_builder: DiskBuilder) {
-    let mut sim = Simulation::new(SEED);
+    let sim = Simulation::new(SEED);
 
     let disk = rc!(refcell!(disk_builder.build(sim.create_context(DISK_NAME))));
     sim.add_handler(DISK_NAME, disk.clone());

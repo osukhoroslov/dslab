@@ -18,12 +18,16 @@ use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
 use crate::Event;
 
+type Handlers = HashMap<Id, Option<Rc<RefCell<dyn EventHandler>>>>;
+
 /// Represents a simulation, provides methods for its configuration and execution.
 pub struct Simulation {
     sim_state: Rc<RefCell<SimulationState>>,
-    name_to_id: HashMap<String, Id>,
-    names: Rc<RefCell<Vec<String>>>,
-    handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+    name_to_id: RefCell<HashMap<String, Id>>,
+    names: Rc<RefCell<HashMap<Id, String>>>,
+
+    handlers: RefCell<Handlers>,
+    to_register_handlers: RefCell<Handlers>,
 }
 
 impl Simulation {
@@ -31,20 +35,28 @@ impl Simulation {
     pub fn new(seed: u64) -> Self {
         Self {
             sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
-            name_to_id: HashMap::new(),
-            names: Rc::new(RefCell::new(Vec::new())),
-            handlers: Vec::new(),
+            name_to_id: RefCell::new(HashMap::new()),
+            names: Rc::new(RefCell::new(HashMap::new())),
+            handlers: RefCell::new(HashMap::new()),
+            to_register_handlers: RefCell::new(HashMap::new()),
         }
     }
 
-    fn register(&mut self, name: &str) -> Id {
-        if let Some(&id) = self.name_to_id.get(name) {
+    fn register(&self, name: &str) -> Id {
+        if let Some(&id) = self.name_to_id.borrow().get(name) {
             return id;
         }
-        let id = self.name_to_id.len() as Id;
-        self.name_to_id.insert(name.to_owned(), id);
-        self.names.borrow_mut().push(name.to_owned());
-        self.handlers.push(None);
+        let id = self.name_to_id.borrow().len() as Id;
+        self.name_to_id.borrow_mut().insert(name.to_owned(), id);
+        self.names.borrow_mut().insert(id, name.to_owned());
+
+        if let Ok(mut handlers) = self.handlers.try_borrow_mut() {
+            // if we could acquire borrow mut ref, then we are not inside event handler
+            handlers.insert(id, None);
+        } else {
+            // otherwise put new handler to other storage and add to handlers after event handling finishes
+            self.to_register_handlers.borrow_mut().insert(id, None);
+        }
         id
     }
 
@@ -71,7 +83,7 @@ impl Simulation {
     /// let comp1_id = sim.lookup_id("comp1");
     /// ```
     pub fn lookup_id(&self, name: &str) -> Id {
-        *self.name_to_id.get(name).unwrap()
+        *self.name_to_id.borrow().get(name).unwrap()
     }
 
     /// Returns the name of component by its identifier.
@@ -97,7 +109,7 @@ impl Simulation {
     /// let comp_name = sim.lookup_name(comp_ctx.id() + 1);
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
-        self.names.borrow()[id as usize].clone()
+        self.names.borrow().get(&id).unwrap().clone()
     }
 
     /// Creates a new simulation context with specified name.
@@ -112,7 +124,7 @@ impl Simulation {
     /// assert_eq!(comp_ctx.id(), 0); // component ids are assigned sequentially starting from 0
     /// assert_eq!(comp_ctx.name(), "comp");
     /// ```
-    pub fn create_context<S>(&mut self, name: S) -> SimulationContext
+    pub fn create_context<S>(&self, name: S) -> SimulationContext
     where
         S: AsRef<str>,
     {
@@ -130,6 +142,13 @@ impl Simulation {
             json!({"name": ctx.name(), "id": ctx.id()})
         );
         ctx
+    }
+
+    fn process_unregistered_handlers(&self) {
+        let mut handlers = self.handlers.borrow_mut();
+        for (id, handler) in self.to_register_handlers.take().into_iter() {
+            handlers.insert(id, handler);
+        }
     }
 
     /// Registers the event handler implementation for component with specified name, returns the component Id.
@@ -218,12 +237,19 @@ impl Simulation {
     /// // should not compile because Component does not implement EventHandler trait
     /// let comp_id = sim.add_handler("comp", comp);
     /// ```
-    pub fn add_handler<S>(&mut self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> Id
+    pub fn add_handler<S>(&self, name: S, handler: Rc<RefCell<dyn EventHandler>>) -> Id
     where
         S: AsRef<str>,
     {
         let id = self.register(name.as_ref());
-        self.handlers[id as usize] = Some(handler);
+        if let Ok(mut handlers) = self.handlers.try_borrow_mut() {
+            *handlers.get_mut(&id).unwrap() = Some(handler);
+        } else {
+            // if this option is None then we already moved handler with such id to handlers
+            if let Some(handler_opt) = self.to_register_handlers.borrow_mut().get_mut(&id) {
+                *handler_opt = Some(handler);
+            }
+        }
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -276,8 +302,13 @@ impl Simulation {
     where
         S: AsRef<str>,
     {
+        self.process_unregistered_handlers();
         let id = self.lookup_id(name.as_ref());
-        self.handlers[id as usize] = None;
+        if let Ok(mut handlers) = self.handlers.try_borrow_mut() {
+            *handlers.get_mut(&id).unwrap() = None;
+        } else {
+            *self.to_register_handlers.borrow_mut().get_mut(&id).unwrap() = None;
+        }
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Removed handler: {}",
@@ -339,10 +370,10 @@ impl Simulation {
     /// status = sim.step();
     /// assert!(!status);
     /// ```
-    pub fn step(&mut self) -> bool {
+    pub fn step(&self) -> bool {
         let next = self.sim_state.borrow_mut().next_event();
         if let Some(event) = next {
-            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+            if let Some(handler_opt) = self.handlers.borrow().get(&event.dst) {
                 if log_enabled!(Trace) {
                     let src_name = self.lookup_name(event.src);
                     let dst_name = self.lookup_name(event.dst);
@@ -363,6 +394,7 @@ impl Simulation {
             } else {
                 log_undelivered_event(event);
             }
+            self.process_unregistered_handlers();
             true
         } else {
             false
@@ -399,7 +431,7 @@ impl Simulation {
     /// assert!(!status);
     /// assert_eq!(sim.time(), 1.4);
     /// ```
-    pub fn steps(&mut self, step_count: u64) -> bool {
+    pub fn steps(&self, step_count: u64) -> bool {
         for _ in 0..step_count {
             if !self.step() {
                 return false;
@@ -431,7 +463,7 @@ impl Simulation {
     /// sim.step_until_no_events();
     /// assert_eq!(sim.time(), 1.4);
     /// ```
-    pub fn step_until_no_events(&mut self) {
+    pub fn step_until_no_events(&self) {
         while self.step() {}
     }
 
@@ -469,7 +501,7 @@ impl Simulation {
     /// assert_eq!(sim.time(), 3.6);
     /// assert!(!status); // there are no more events
     /// ```
-    pub fn step_for_duration(&mut self, duration: f64) -> bool {
+    pub fn step_for_duration(&self, duration: f64) -> bool {
         let end_time = self.sim_state.borrow().time() + duration;
         self.step_until_time(end_time)
     }
@@ -506,7 +538,7 @@ impl Simulation {
     /// assert_eq!(sim.time(), 3.6);
     /// assert!(!status); // there are no more events
     /// ```
-    pub fn step_until_time(&mut self, time: f64) -> bool {
+    pub fn step_until_time(&self, time: f64) -> bool {
         let mut result = true;
         loop {
             if let Some(event) = self.sim_state.borrow().peek_event() {
@@ -623,7 +655,7 @@ impl Simulation {
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
     /// ```
-    pub fn cancel_events<F>(&mut self, pred: F)
+    pub fn cancel_events<F>(&self, pred: F)
     where
         F: Fn(&Event) -> bool,
     {
@@ -655,7 +687,7 @@ impl Simulation {
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
     /// ```
-    pub fn cancel_and_get_events<F>(&mut self, pred: F) -> Vec<Event>
+    pub fn cancel_and_get_events<F>(&self, pred: F) -> Vec<Event>
     where
         F: Fn(&Event) -> bool,
     {
