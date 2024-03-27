@@ -4,7 +4,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
-use dslab_core::async_mode::await_details::EventKey;
+use dslab_core::async_mode::EventKey;
 use dslab_core::{cast, log_debug};
 use dslab_core::{Event, EventHandler, Id, Simulation, SimulationContext};
 use dslab_network::{DataTransferCompleted, Network};

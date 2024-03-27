@@ -11,7 +11,12 @@ use std::{
 
 use crate::{state::SimulationState, Id};
 
-/// Future that represents timer from simulation.
+/// Timer identifier.
+pub(crate) type TimerId = u64;
+
+// Timer future --------------------------------------------------------------------------------------------------------
+
+/// Future that represents asynchronous waiting for timer completion.
 pub struct TimerFuture {
     /// State that should be completed after timer fired.
     state: Rc<RefCell<AwaitTimerSharedState>>,
@@ -33,16 +38,6 @@ impl TimerFuture {
     }
 }
 
-impl Drop for TimerFuture {
-    fn drop(&mut self) {
-        if !self.state.borrow().completed {
-            self.sim_state
-                .borrow_mut()
-                .on_incomplete_timer_future_drop(self.timer_id);
-        }
-    }
-}
-
 impl Future for TimerFuture {
     type Output = ();
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
@@ -57,8 +52,17 @@ impl Future for TimerFuture {
     }
 }
 
-/// Timer identifier.
-pub(crate) type TimerId = u64;
+impl Drop for TimerFuture {
+    fn drop(&mut self) {
+        if !self.state.borrow().completed {
+            self.sim_state
+                .borrow_mut()
+                .on_incomplete_timer_future_drop(self.timer_id);
+        }
+    }
+}
+
+// Timer promise -------------------------------------------------------------------------------------------------------
 
 /// Timer will set the given `state` as completed at time.
 #[derive(Clone)]

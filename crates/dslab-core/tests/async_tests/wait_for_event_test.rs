@@ -2,9 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use serde::Serialize;
 
-use dslab_core::{
-    async_mode::await_details::AwaitResult, cast, Event, EventHandler, Id, Simulation, SimulationContext,
-};
+use dslab_core::{async_mode::AwaitResult, cast, Event, EventHandler, Id, Simulation, SimulationContext};
 
 struct SimpleListener {
     ctx: SimulationContext,
@@ -37,13 +35,13 @@ impl SimpleListener {
                 .with_timeout(timeout)
                 .await
             {
-                AwaitResult::Ok((event, data)) => {
+                AwaitResult::Ok { event, data } => {
                     assert_eq!(event.src, self.system_id);
                     assert!(!self.expect_timeout);
                     assert_eq!(data.id, self.next_expected_message_id);
                 }
-                AwaitResult::Timeout(info) => {
-                    assert_eq!(info.src, Some(self.system_id));
+                AwaitResult::Timeout { src, .. } => {
+                    assert_eq!(src, Some(self.system_id));
                     assert!(self.expect_timeout);
                 }
             }
@@ -58,7 +56,7 @@ impl EventHandler for SimpleListener {
                 self.on_start(timeout);
             }
             Message { id } => {
-                assert!(id == self.next_expected_message_id);
+                assert_eq!(id, self.next_expected_message_id);
             }
         })
     }
@@ -100,7 +98,7 @@ fn test_async_wait_for_event() {
         let start_test_time = 202.;
         system_context.sleep(start_test_time - system_context.time()).await;
 
-        assert!(system_context.time() == start_test_time);
+        assert_eq!(system_context.time(), start_test_time);
 
         let mut next_message_id = 1;
 

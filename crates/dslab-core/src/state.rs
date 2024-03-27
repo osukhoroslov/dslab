@@ -18,7 +18,7 @@ async_mode_enabled!(
 
     use futures::Future;
 
-    use crate::async_mode::await_details::EventKey;
+    use crate::async_mode::EventKey;
     use crate::async_mode::promise_storage::EventPromisesStorage;
     use crate::async_mode::event_future::{EventFuture, EventPromise};
     use crate::async_mode::task::Task;

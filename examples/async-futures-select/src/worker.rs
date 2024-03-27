@@ -6,7 +6,7 @@ use futures::select;
 use serde_json::json;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
-use dslab_core::async_mode::await_details::EventKey;
+use dslab_core::async_mode::EventKey;
 use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
 
 use crate::events::{Start, TaskRequest};

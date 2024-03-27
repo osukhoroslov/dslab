@@ -1,4 +1,4 @@
-//! Shared state and event notification.
+//! Asynchronous waiting for events.
 
 use std::any::Any;
 use std::rc::Rc;
@@ -11,12 +11,37 @@ use std::{
 use futures::{select, FutureExt};
 use serde::Serialize;
 
-use crate::async_mode::await_details::{AwaitResult, EventKey, TimeoutInfo};
 use crate::event::EventData;
 use crate::state::SimulationState;
 use crate::{Event, Id};
 
-/// Future that represents AwaitResult for event (Ok or Timeout).
+/// Type of key that represents the specific details of event to wait for.
+pub type EventKey = u64;
+
+/// Represents a result of asynchronous waiting for event with timeout
+/// (see `EventFuture::with_timeout`).
+pub enum AwaitResult<T: EventData> {
+    /// Corresponds to successful event receipt.
+    Ok {
+        /// The received event without data (see `data` field).
+        event: Event,
+        /// Data from the received event.
+        data: T,
+    },
+    /// Corresponds to timeout expiration.
+    Timeout {
+        /// Source of the awaited event (None if it was not specified).
+        src: Option<Id>,
+        /// Key of the awaited event (None if it was not specified).
+        event_key: Option<EventKey>,
+        /// Timeout value.
+        timeout: f64,
+    },
+}
+
+// Event future --------------------------------------------------------------------------------------------------------
+
+/// Future that represents asynchronous waiting for specific event.
 pub struct EventFuture<T: EventData> {
     /// State with event data.
     state: Rc<RefCell<AwaitEventSharedState<T>>>,
@@ -42,40 +67,8 @@ impl<T: EventData> EventFuture<T> {
             event_key,
         }
     }
-}
 
-impl<T: EventData> Future for EventFuture<T> {
-    type Output = (Event, T);
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let mut state = self.state.as_ref().borrow_mut();
-
-        if !state.completed {
-            state.waker = Some(cx.waker().clone());
-            return Poll::Pending;
-        }
-
-        if let Some(data) = std::mem::take(&mut state.shared_content) {
-            Poll::Ready(data)
-        } else {
-            panic!("internal error: unexpected timeout on future ready")
-        }
-    }
-}
-
-impl<T: EventData> Drop for EventFuture<T> {
-    fn drop(&mut self) {
-        if !self.state.borrow().completed {
-            self.sim_state.borrow_mut().on_incomplete_event_future_drop::<T>(
-                self.component_id,
-                &self.requested_src,
-                self.event_key,
-            );
-        }
-    }
-}
-
-impl<T: EventData> EventFuture<T> {
-    /// Adds timeout to any EventFuture.
+    /// Waits for `EventFuture` with specified timeout and returns `AwaitResult`.
     ///
     /// # Examples
     ///
@@ -103,19 +96,19 @@ impl<T: EventData> EventFuture<T> {
     /// sim.spawn(async move {
     ///     let mut res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
-    ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
-    ///         AwaitResult::Timeout(info) => {
-    ///             assert_eq!(info.src, Some(root_id));
+    ///         AwaitResult::Ok {..} => panic!("expect timeout here"),
+    ///         AwaitResult::Timeout {src, ..} => {
+    ///             assert_eq!(src, Some(root_id));
     ///         }
     ///     }
     ///
     ///     res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(50.).await;
     ///     match res {
-    ///         AwaitResult::Ok((e, data)) => {
-    ///             assert_eq!(e.src, root_id);
+    ///         AwaitResult::Ok { event, data } => {
+    ///             assert_eq!(event.src, root_id);
     ///             assert_eq!(data.payload, 42);
     ///         }
-    ///         AwaitResult::Timeout(..) => panic!("expect ok here"),
+    ///         AwaitResult::Timeout {..} => panic!("expect ok here"),
     ///     }
     /// });
     ///
@@ -160,9 +153,9 @@ impl<T: EventData> EventFuture<T> {
     ///             .ctx
     ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(10.)
     ///             .await;
-    ///         if let AwaitResult::Timeout(info) = result {
-    ///             assert_eq!(info.src, Some(self.root_id));
-    ///             assert_eq!(info.event_key, Some(1));
+    ///         if let AwaitResult::Timeout { src, event_key, .. } = result {
+    ///             assert_eq!(src, Some(self.root_id));
+    ///             assert_eq!(event_key, Some(1));
     ///         } else {
     ///             panic!("expect result timeout here");
     ///         }
@@ -170,8 +163,8 @@ impl<T: EventData> EventFuture<T> {
     ///             .ctx
     ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(100.)
     ///             .await;
-    ///         if let AwaitResult::Ok((e, data)) = result {
-    ///             assert_eq!(e.src, self.root_id);
+    ///         if let AwaitResult::Ok { event, data } = result {
+    ///             assert_eq!(event.src, self.root_id);
     ///             assert_eq!(data.request_id, 1);
     ///         } else {
     ///             panic!("expected result ok");
@@ -236,24 +229,50 @@ impl<T: EventData> EventFuture<T> {
             .borrow_mut()
             .create_timer(component_id, timeout, self.sim_state.clone());
 
-        let timeout_info = TimeoutInfo {
-            timeout,
-            event_key: self.event_key,
-            src: self.requested_src,
-        };
+        let src = self.requested_src;
+        let event_key = self.event_key;
         select! {
-            data = self.fuse() => {
-                AwaitResult::Ok(data)
+            (event, data) = self.fuse() => {
+                AwaitResult::Ok { event, data }
             }
             _ = timer_future.fuse() => {
-                AwaitResult::Timeout(timeout_info)
+                AwaitResult::Timeout { src, event_key, timeout }
             }
         }
     }
 }
 
-#[derive(Serialize, Clone)]
-pub(crate) struct EmptyData {}
+impl<T: EventData> Future for EventFuture<T> {
+    type Output = (Event, T);
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let mut state = self.state.as_ref().borrow_mut();
+
+        if !state.completed {
+            state.waker = Some(cx.waker().clone());
+            return Poll::Pending;
+        }
+
+        if let Some(data) = std::mem::take(&mut state.shared_content) {
+            Poll::Ready(data)
+        } else {
+            panic!("internal error: unexpected timeout on future ready")
+        }
+    }
+}
+
+impl<T: EventData> Drop for EventFuture<T> {
+    fn drop(&mut self) {
+        if !self.state.borrow().completed {
+            self.sim_state.borrow_mut().on_incomplete_event_future_drop::<T>(
+                self.component_id,
+                &self.requested_src,
+                self.event_key,
+            );
+        }
+    }
+}
+
+// Event promise -------------------------------------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub(crate) struct EventPromise {
@@ -308,6 +327,9 @@ pub(crate) trait EventResultSetter: Any {
     fn set_completed(&mut self, event: Event);
     fn drop_state(&mut self) -> Option<Waker>;
 }
+
+#[derive(Serialize, Clone)]
+pub(crate) struct EmptyData {}
 
 impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
     fn set_completed(&mut self, mut e: Event) {

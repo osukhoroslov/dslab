@@ -24,8 +24,8 @@ async_mode_enabled!(
 
     use crate::async_mode::executor::Executor;
     use crate::event::EventData;
-    use crate::async_mode::await_details::EventKey;
-    use crate::async_mode::sync::queue::UnboundedBlockingQueue;
+    use crate::async_mode::EventKey;
+    use crate::async_mode::queue::UnboundedBlockingQueue;
 );
 
 async_mode_disabled!(
@@ -529,7 +529,7 @@ impl Simulation {
         /// use serde::Serialize;
         ///
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
-        /// use dslab_core::async_mode::sync::queue::UnboundedBlockingQueue;
+        /// use dslab_core::async_mode::queue::UnboundedBlockingQueue;
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Start {}
