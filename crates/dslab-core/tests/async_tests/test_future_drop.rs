@@ -99,12 +99,12 @@ struct SimpleComponent {
 
 impl SimpleComponent {
     async fn wait_on_key(&self, key: EventKey, async_count: u32) {
-        let (_, data) = self.ctx.recv_event_by_key::<MessageWithRc>(key).await;
-        *data.rc.borrow_mut() += 1;
+        let e = self.ctx.recv_event_by_key::<MessageWithRc>(key).await;
+        *e.data.rc.borrow_mut() += 1;
         self.ctx.sleep(10.).await;
 
         // Check that all async activities have received the copy of rc.
-        assert_eq!(Rc::strong_count(&data.rc), 1 + async_count as usize);
+        assert_eq!(Rc::strong_count(&e.data.rc), 1 + async_count as usize);
 
         // Never completed because of remove_handler.
         let _ = self.ctx.recv_event_by_key::<MessageWithRc>(key).await;

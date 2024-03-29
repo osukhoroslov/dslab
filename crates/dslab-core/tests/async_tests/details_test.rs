@@ -42,10 +42,10 @@ impl SimpleExchanger {
 
     async fn listener(&self, key: u64, iterations: u32) {
         for _i in 0..iterations {
-            let (event, data) = self.ctx.recv_event_by_key_from_self::<Message>(key).await;
+            let event = self.ctx.recv_event_by_key_from_self::<Message>(key).await;
             assert!(event.src == self.ctx.id());
             assert!(event.dst == self.ctx.id());
-            assert!(data.key == key);
+            assert!(event.data.key == key);
         }
 
         self.ctx.recv_event_by_key_from_self::<Message>(key).await;

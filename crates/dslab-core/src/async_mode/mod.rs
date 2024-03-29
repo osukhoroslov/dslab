@@ -13,6 +13,6 @@ async_mode_enabled!(
     pub(crate) mod task;
     pub(crate) mod waker;
 
-    pub use event_future::EventKey;
-    pub use event_future::AwaitResult;
+    pub use event_future::{AwaitResult, EventFuture, EventKey};
+    pub use timer_future::TimerFuture;
 );

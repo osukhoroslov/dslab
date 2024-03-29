@@ -11,23 +11,17 @@ use std::{
 use futures::{select, FutureExt};
 use serde::Serialize;
 
-use crate::event::EventData;
+use crate::event::{EventData, TypedEvent};
 use crate::state::SimulationState;
 use crate::{Event, Id};
 
-/// Type of key that represents the specific details of event to wait for.
+/// Type of key that represents the specific details of awaited event.
 pub type EventKey = u64;
 
-/// Represents a result of asynchronous waiting for event with timeout
-/// (see `EventFuture::with_timeout`).
+/// Represents a result of asynchronous waiting for event with timeout (see [`EventFuture::with_timeout`]).
 pub enum AwaitResult<T: EventData> {
     /// Corresponds to successful event receipt.
-    Ok {
-        /// The received event without data (see `data` field).
-        event: Event,
-        /// Data from the received event.
-        data: T,
-    },
+    Ok(TypedEvent<T>),
     /// Corresponds to timeout expiration.
     Timeout {
         /// Source of the awaited event (None if it was not specified).
@@ -96,7 +90,7 @@ impl<T: EventData> EventFuture<T> {
     /// sim.spawn(async move {
     ///     let mut res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
-    ///         AwaitResult::Ok {..} => panic!("expect timeout here"),
+    ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
     ///         AwaitResult::Timeout {src, ..} => {
     ///             assert_eq!(src, Some(root_id));
     ///         }
@@ -104,9 +98,9 @@ impl<T: EventData> EventFuture<T> {
     ///
     ///     res = client_ctx.recv_event_from::<Message>(root_id).with_timeout(50.).await;
     ///     match res {
-    ///         AwaitResult::Ok { event, data } => {
+    ///         AwaitResult::Ok(event) => {
     ///             assert_eq!(event.src, root_id);
-    ///             assert_eq!(data.payload, 42);
+    ///             assert_eq!(event.data.payload, 42);
     ///         }
     ///         AwaitResult::Timeout {..} => panic!("expect ok here"),
     ///     }
@@ -163,9 +157,9 @@ impl<T: EventData> EventFuture<T> {
     ///             .ctx
     ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(100.)
     ///             .await;
-    ///         if let AwaitResult::Ok { event, data } = result {
+    ///         if let AwaitResult::Ok(event) = result {
     ///             assert_eq!(event.src, self.root_id);
-    ///             assert_eq!(data.request_id, 1);
+    ///             assert_eq!(event.data.request_id, 1);
     ///         } else {
     ///             panic!("expected result ok");
     ///         }
@@ -173,9 +167,9 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     ///
     ///     async fn listen_second(&self) {
-    ///         let (e, data) = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, 2).await;
+    ///         let e = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, 2).await;
     ///         assert_eq!(e.src, self.root_id);
-    ///         assert_eq!(data.request_id, 2);
+    ///         assert_eq!(e.data.request_id, 2);
     ///         *self.actions_finished.borrow_mut() += 1;
     ///     }
     /// }
@@ -232,8 +226,8 @@ impl<T: EventData> EventFuture<T> {
         let src = self.requested_src;
         let event_key = self.event_key;
         select! {
-            (event, data) = self.fuse() => {
-                AwaitResult::Ok { event, data }
+            event = self.fuse() => {
+                AwaitResult::Ok(event)
             }
             _ = timer_future.fuse() => {
                 AwaitResult::Timeout { src, event_key, timeout }
@@ -243,7 +237,7 @@ impl<T: EventData> EventFuture<T> {
 }
 
 impl<T: EventData> Future for EventFuture<T> {
-    type Output = (Event, T);
+    type Output = TypedEvent<T>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut state = self.state.as_ref().borrow_mut();
 
@@ -307,10 +301,12 @@ impl EventPromise {
     }
 }
 
+// State shared between future and promise -----------------------------------------------------------------------------
+
 pub(crate) struct AwaitEventSharedState<T: EventData> {
     pub completed: bool,
     pub waker: Option<Waker>,
-    pub shared_content: Option<(Event, T)>,
+    pub shared_content: Option<TypedEvent<T>>,
 }
 
 impl<T: EventData> Default for AwaitEventSharedState<T> {
@@ -332,22 +328,12 @@ pub(crate) trait EventResultSetter: Any {
 pub(crate) struct EmptyData {}
 
 impl<T: EventData> EventResultSetter for AwaitEventSharedState<T> {
-    fn set_completed(&mut self, mut e: Event) {
+    fn set_completed(&mut self, e: Event) {
         if self.completed {
             panic!("internal error: try to complete already completed state")
         }
         self.completed = true;
-        let downcast_result = e.data.downcast::<T>();
-
-        e.data = Box::new(EmptyData {});
-        match downcast_result {
-            Ok(data) => {
-                self.shared_content = Some((e, *data));
-            }
-            Err(_) => {
-                panic!("internal downcast conversion error");
-            }
-        };
+        self.shared_content = Some(Event::downcast::<T>(e));
         if let Some(waker) = self.waker.take() {
             waker.wake()
         }

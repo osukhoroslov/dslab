@@ -816,9 +816,9 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     let e = receiver_ctx.recv_event::<Message>().await;
         ///     assert_eq!(e.src, sender_id);
-        ///     assert_eq!(data.payload, 321);
+        ///     assert_eq!(e.data.payload, 321);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -852,14 +852,14 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     let e = receiver_ctx.recv_event::<Message>().await;
         ///     assert_eq!(receiver_ctx.time(), 50.);
         ///     assert_eq!(e.src, sender1_id);
-        ///     assert_eq!(data.payload, 321);
-        ///     let (e, data) = receiver_ctx.recv_event::<Message>().await;
+        ///     assert_eq!(e.data.payload, 321);
+        ///     let e = receiver_ctx.recv_event::<Message>().await;
         ///     assert_eq!(receiver_ctx.time(), 100.);
         ///     assert_eq!(e.src, sender2_id);
-        ///     assert_eq!(data.payload, 322);
+        ///     assert_eq!(e.data.payload, 322);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -901,9 +901,9 @@ impl SimulationContext {
         /// });
         ///
         /// sim.spawn(async move {
-        ///     let (e, data) = receiver_ctx.recv_event_from::<Message>(sender_id).await;
+        ///     let e = receiver_ctx.recv_event_from::<Message>(sender_id).await;
         ///     assert_eq!(e.src, sender_id);
-        ///     assert_eq!(data.payload, 321);
+        ///     assert_eq!(e.data.payload, 321);
         /// });
         ///
         /// sim.step_until_no_events();
@@ -940,8 +940,8 @@ impl SimulationContext {
         /// sim.spawn(async move {
         ///     ctx.emit_self(SomeEvent { payload: 321 }, 10.);
         ///
-        ///     let (e, data) = ctx.recv_event_from_self::<SomeEvent>().await;
-        ///     assert_eq!(data.payload, 321);
+        ///     let e = ctx.recv_event_from_self::<SomeEvent>().await;
+        ///     assert_eq!(e.data.payload, 321);
         ///     assert_eq!(ctx.time(), 10.)
         /// });
         ///
@@ -1009,8 +1009,8 @@ impl SimulationContext {
         ///
         /// impl Component {
         ///     async fn recv_event_for_key(&self, key: EventKey) {
-        ///         let (e, data) = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, key).await;
-        ///         assert_eq!(data.key, key);
+        ///         let e = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, key).await;
+        ///         assert_eq!(e.data.key, key);
         ///     }
         /// }
         ///
