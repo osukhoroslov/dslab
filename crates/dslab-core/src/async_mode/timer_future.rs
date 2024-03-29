@@ -1,13 +1,11 @@
-//! Timers for simulation.
+//! Asynchronous waiting for timers.
 
-use std::{
-    cell::RefCell,
-    cmp::Ordering,
-    future::Future,
-    pin::Pin,
-    rc::Rc,
-    task::{Context, Poll, Waker},
-};
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::future::Future;
+use std::pin::Pin;
+use std::rc::Rc;
+use std::task::{Context, Poll, Waker};
 
 use crate::{state::SimulationState, Id};
 
@@ -18,37 +16,33 @@ pub(crate) type TimerId = u64;
 
 /// Future that represents asynchronous waiting for timer completion.
 pub struct TimerFuture {
-    /// State that should be completed after timer fired.
-    state: Rc<RefCell<AwaitTimerSharedState>>,
-    sim_state: Rc<RefCell<SimulationState>>,
+    /// Unique timer identifier.
     timer_id: TimerId,
+    /// State with completion info shared with [`TimerPromise`].
+    state: Rc<RefCell<TimerAwaitState>>,
+    sim_state: Rc<RefCell<SimulationState>>,
 }
 
 impl TimerFuture {
-    pub(crate) fn new(
-        state: Rc<RefCell<AwaitTimerSharedState>>,
-        sim_state: Rc<RefCell<SimulationState>>,
-        timer_id: TimerId,
-    ) -> Self {
+    fn new(timer_id: TimerId, state: Rc<RefCell<TimerAwaitState>>, sim_state: Rc<RefCell<SimulationState>>) -> Self {
         Self {
+            timer_id,
             state,
             sim_state,
-            timer_id,
         }
     }
 }
 
 impl Future for TimerFuture {
     type Output = ();
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, async_ctx: &mut Context) -> Poll<Self::Output> {
         let mut state = self.state.as_ref().borrow_mut();
-
-        if !state.completed {
-            state.waker = Some(cx.waker().clone());
-            return Poll::Pending;
+        if state.completed {
+            Poll::Ready(())
+        } else {
+            state.waker = Some(async_ctx.waker().clone());
+            Poll::Pending
         }
-
-        Poll::Ready(())
     }
 }
 
@@ -64,54 +58,52 @@ impl Drop for TimerFuture {
 
 // Timer promise -------------------------------------------------------------------------------------------------------
 
-/// Timer will set the given `state` as completed at time.
 #[derive(Clone)]
 pub(crate) struct TimerPromise {
-    /// Unique identifier of timer.
+    /// Unique timer identifier.
     pub id: TimerId,
     /// Id of simulation component that set the timer.
     pub component_id: Id,
     /// The time when the timer will be fired.
     pub time: f64,
-    /// State to set completed after the timer is fired.
-    state: Rc<RefCell<AwaitTimerSharedState>>,
+    /// State with completion info shared with [`TimerFuture`].
+    state: Rc<RefCell<TimerAwaitState>>,
 }
 
 impl TimerPromise {
-    /// Creates a timer.
     pub(crate) fn new(id: TimerId, component_id: Id, time: f64) -> Self {
         Self {
             id,
             component_id,
             time,
-            state: Rc::new(RefCell::new(AwaitTimerSharedState::new())),
+            state: Rc::new(RefCell::new(TimerAwaitState::new())),
         }
     }
 
     pub fn future(&self, sim_state: Rc<RefCell<SimulationState>>) -> TimerFuture {
-        let timer_id = self.id;
-        TimerFuture::new(self.state.clone(), sim_state, timer_id)
+        TimerFuture::new(self.id, self.state.clone(), sim_state)
     }
 
-    pub fn set_completed(&self) {
-        self.state.borrow_mut().set_completed();
+    pub fn complete(&self) {
+        self.state.borrow_mut().complete();
     }
 
-    /// In case we need to cancel async activity we need to break reference
-    /// cycle between TimerFuture and Task. As far as Task is stored inside AwaitTimerSharedState
-    /// as Waker, we take it out here and drop when state borrow is released.
+    /// When cancelling asynchronous waiting for timer we need to break a reference cycle
+    /// between [`TimerFuture`] and [`super::task::Task`].
+    /// Since `Task` is stored inside [`TimerAwaitState`] as a [`std::task::Waker`],
+    /// we take it out here and drop when the state borrow is released.
     pub fn drop_shared_state(&self) {
         let _waker = self.state.borrow_mut().drop_state();
     }
 }
 
+impl Eq for TimerPromise {}
+
 impl PartialEq for TimerPromise {
     fn eq(&self, other: &Self) -> bool {
-        self.time == other.time
+        self.id == other.id
     }
 }
-
-impl Eq for TimerPromise {}
 
 impl Ord for TimerPromise {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -125,12 +117,12 @@ impl PartialOrd for TimerPromise {
     }
 }
 
-pub(crate) struct AwaitTimerSharedState {
+struct TimerAwaitState {
     pub completed: bool,
     pub waker: Option<Waker>,
 }
 
-impl AwaitTimerSharedState {
+impl TimerAwaitState {
     pub fn new() -> Self {
         Self {
             completed: false,
@@ -138,7 +130,7 @@ impl AwaitTimerSharedState {
         }
     }
 
-    pub fn set_completed(&mut self) {
+    pub fn complete(&mut self) {
         self.completed = true;
         if let Some(waker) = self.waker.take() {
             waker.wake();
@@ -146,6 +138,7 @@ impl AwaitTimerSharedState {
     }
 
     pub fn drop_state(&mut self) -> Option<Waker> {
+        // TODO: ???
         // Set completed to true to prevent calling callback on TimerFuture drop.
         self.completed = true;
         // Take waker out of scope to release &mut self first and avoid several mutable borrows.

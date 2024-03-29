@@ -1,32 +1,37 @@
-//! Task declaration.
+//! Asynchronous task.
 
-use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::mpsc::Sender, task::Context};
+use std::cell::RefCell;
+use std::future::Future;
+use std::pin::Pin;
+use std::rc::Rc;
+use std::sync::mpsc::Sender;
+use std::task::Context;
 
 use super::waker::{waker_ref, RcWake};
 
 type BoxedFuture = Pin<Box<dyn Future<Output = ()>>>;
 
-/// Abstract task that contains future and sends itself to the executor on
-/// wake-up notification
-pub struct Task {
-    /// future to be polled by executor
+/// Represents an asynchronous task spawned via [`crate::Simulation::spawn`] or [`crate::SimulationContext::spawn`].
+///
+/// Holds the corresponding future and schedules itself for polling by [`super::executor::Executor`]
+/// on wake-up notification.
+pub(crate) struct Task {
     future: RefCell<Option<BoxedFuture>>,
-
     executor: Sender<Rc<Task>>,
 }
 
 impl Task {
-    /// Creates a new task from future.
+    /// Creates a new task from a future.
     ///
-    /// Unsafe is required here to make possible spawning components methods as tasks.
-    /// &self as argument prevents any method to have 'static lifetime, but following the simulation
-    /// logic tasks always should finish before components are deleted:
-    /// - Deleting components are supposed to be done only through the Simulation::remove_handler method.
-    /// - Components are not supposed to be moved because they are located in the Heap memory under Rc<RefCell<...>>
+    /// TODO: ???
+    /// Unsafe is required here to make possible spawning components' methods as tasks.
+    /// &self argument prevents any method to have 'static lifetime, but following the simulation logic
+    /// tasks always should finish before their components are deleted:
+    /// - deletion of components is supposed to be done only through the [`crate::Simulation::remove_handler`] method,
+    /// - components are not supposed to be moved because they are allocated in the heap under `Rc<RefCell<...>>`.
     ///
     /// TODO: implement task cancellation to increase bug-safety of user space code.
-    ///
-    pub fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
+    fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
         unsafe {
             let boxed: Box<dyn Future<Output = ()>> = Box::new(future);
             let converted: Box<dyn Future<Output = ()> + 'static> = std::mem::transmute(boxed);
@@ -37,7 +42,7 @@ impl Task {
         }
     }
 
-    /// Converts the future into a task and sends it to the executor.
+    /// Converts a future into a task and sends it to executor.
     pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
         let task = Rc::new(Task::new(future, executor));
         task.schedule();
@@ -49,23 +54,22 @@ impl Task {
     /// Calling this method after the task completion will result in panic.
     pub fn poll(self: Rc<Self>) {
         let mut future_slot = self.future.borrow_mut();
-
         if let Some(mut future) = future_slot.take() {
             // Create a waker from the task itself
             let waker = waker_ref(&self);
-
-            let context = &mut Context::from_waker(&waker);
-
-            if future.as_mut().poll(context).is_pending() {
+            // Create async context with waker and poll future with it
+            let async_ctx = &mut Context::from_waker(&waker);
+            if future.as_mut().poll(async_ctx).is_pending() {
+                // Keep storing pending future
                 *future_slot = Some(future);
             }
         } else {
-            panic!("internal error: task polled after completion")
+            panic!("Task is polled after completion")
         }
     }
 
-    /// Sends the task to the executor.
-    pub fn schedule(self: &Rc<Self>) {
+    /// Schedules the task for polling by sending it to the executor.
+    fn schedule(self: &Rc<Self>) {
         self.executor.send(self.clone()).expect("channel is closed");
     }
 }

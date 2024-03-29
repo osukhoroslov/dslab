@@ -438,7 +438,7 @@ impl Simulation {
 
         fn process_timer(&self) {
             let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
-            next_timer.set_completed();
+            next_timer.complete();
             // drop timer to release the pointer to the state
             drop(next_timer);
             self.process_task();

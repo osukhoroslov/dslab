@@ -13,7 +13,7 @@ mod state;
 pub use colored;
 pub use component::Id;
 pub use context::SimulationContext;
-pub use event::Event;
+pub use event::{Event, EventData, TypedEvent};
 pub use handler::{EventCancellationPolicy, EventHandler};
 pub use simulation::Simulation;
 pub use state::EPSILON;

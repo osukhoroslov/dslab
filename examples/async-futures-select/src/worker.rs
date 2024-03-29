@@ -43,14 +43,15 @@ impl Worker {
         let mut dispatched_tasks: HashMap<u64, TaskRequest> = HashMap::new();
         loop {
             let try_dispatch = select! {
-                (_, task) = self.ctx.recv_event::<TaskRequest>().fuse() => {
-                    pending_tasks.push_back(task);
+                task_req = self.ctx.recv_event::<TaskRequest>().fuse() => {
+                    pending_tasks.push_back(task_req.data);
                     pending_tasks.len() == 1
                 },
-                (_, finished_info) = self.ctx.recv_event::<CompFinished>().fuse() => {
-                    let task = dispatched_tasks.remove(&finished_info.id).unwrap();
-                    log_debug!(self.ctx, format!("task {} with key {} is completed", task.id, finished_info.id));
-                    pending_tasks.len() > 0
+                finished = self.ctx.recv_event::<CompFinished>().fuse() => {
+                    let req_id = finished.data.id;
+                    let task = dispatched_tasks.remove(&req_id).unwrap();
+                    log_debug!(self.ctx, format!("task {} with key {} is completed", task.id, req_id));
+                    pending_tasks.is_empty()
                 }
             };
             if try_dispatch {
@@ -85,8 +86,8 @@ impl Worker {
                 log_debug!(self.ctx, format!("task {} with key {} is started", task.id, req_id));
                 Some(req_id)
             },
-            (_, failed) = self.ctx.recv_event_by_key::<CompFailed>(req_id).fuse() => {
-                log_debug!(self.ctx, format!("task {} with key {} is failed: {}", task.id, req_id, json!(failed)));
+            failed = self.ctx.recv_event_by_key::<CompFailed>(req_id).fuse() => {
+                log_debug!(self.ctx, format!("task {} with key {} is failed: {}", task.id, req_id, json!(failed.data)));
                 None
             }
         }

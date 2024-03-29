@@ -344,7 +344,7 @@ impl SimulationState {
     );
 
     async_mode_enabled!(
-        // Components
+        // Components --------------------------------------------------------------------------------------------------
 
         fn on_register(&mut self) {
             self.registered_handlers.push(false)
@@ -364,7 +364,7 @@ impl SimulationState {
                 .map_or_else(|| false, |flag| *flag)
         }
 
-        // Spawning async tasks
+        // Spawning async tasks ----------------------------------------------------------------------------------------
 
         pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
             Task::spawn(future, self.executor.clone());
@@ -380,7 +380,7 @@ impl SimulationState {
             Task::spawn(future, self.executor.clone());
         }
 
-        // Timers
+        // Timers ------------------------------------------------------------------------------------------------------
 
         pub fn create_timer(
             &mut self,
@@ -452,17 +452,17 @@ impl SimulationState {
             self.canceled_timers.insert(timer_id);
         }
 
-        // Event futures and promises
+        // Event futures and promises ----------------------------------------------------------------------------------
 
         pub fn create_event_future<T: EventData>(
             &mut self,
             dst: Id,
-            src_opt: Option<Id>,
-            key_opt: Option<EventKey>,
+            src: Option<Id>,
+            key: Option<EventKey>,
             sim_state: Rc<RefCell<SimulationState>>,
         ) -> EventFuture<T> {
-            let (promise, future) = EventPromise::contract(sim_state, dst, src_opt, key_opt);
-            self.event_promises.insert::<T>(dst, src_opt, key_opt, promise);
+            let (promise, future) = EventPromise::contract(dst, src, key, sim_state);
+            self.event_promises.insert::<T>(dst, src, key, promise);
             future
         }
 
@@ -473,11 +473,7 @@ impl SimulationState {
         pub fn complete_event_promise(&mut self, event: Event, event_key: Option<EventKey>) {
             // panics if there is no promise
             let promise = self.event_promises.extract_promise_for(&event, event_key).unwrap();
-            assert!(
-                promise.is_shared(),
-                "Trying to set event for promise that is not shared"
-            );
-            promise.set_completed(event);
+            promise.complete(event);
         }
 
         pub fn cancel_component_promises(&mut self, component_id: Id) {
@@ -504,7 +500,7 @@ impl SimulationState {
             self.event_promises.remove::<T>(dst, src, event_key);
         }
 
-        // Key getters
+        // Event key getters -------------------------------------------------------------------------------------------
 
         pub fn register_key_getter_for<T: EventData>(&mut self, key_getter: impl Fn(&T) -> EventKey + 'static) {
             self.key_getters.insert(
