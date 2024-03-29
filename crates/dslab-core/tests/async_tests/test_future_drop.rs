@@ -30,7 +30,7 @@ fn test_drop_future_with_timers() {
                 _ = test_future(&ctx1, 2, 11.).fuse() => {
                     println!("received second")
                 }
-            };
+            }
         }
     });
 
@@ -57,7 +57,7 @@ fn test_drop_completed_future_with_timers() {
                 _ = test_future(&ctx1, 2, 11.).fuse() => {
                     println!("received second");
                 }
-            };
+            }
         }
     });
 
