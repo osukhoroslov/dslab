@@ -1,5 +1,3 @@
-//! Polling asynchronous tasks to advance their state.
-
 use std::{rc::Rc, sync::mpsc::Receiver};
 
 use super::task::Task;

@@ -1,10 +1,11 @@
-use std::{any::TypeId, collections::HashMap};
+use std::any::TypeId;
+use std::collections::HashMap;
 
 use super::{event_future::EventPromise, EventKey};
-use crate::{event::EventData, Event, Id};
+use crate::{Event, EventData, Id};
 
 #[derive(Clone)]
-pub struct EventPromisesStorage {
+pub(crate) struct EventPromisesStorage {
     promises: HashMap<AwaitKey, EventPromise>,
     promises_with_source: HashMap<AwaitKey, HashMap<Id, EventPromise>>,
 }
@@ -20,50 +21,41 @@ impl EventPromisesStorage {
     pub fn insert<T: EventData>(
         &mut self,
         dst: Id,
-        src_opt: Option<Id>,
+        src: Option<Id>,
         event_key: Option<EventKey>,
         promise: EventPromise,
     ) {
         let key = AwaitKey::new::<T>(dst, event_key);
-        if let Some(src) = src_opt {
-            if self.promises.contains_key(&key) {
-                panic!("Async event handler for key {:?} (without source) already exists", key);
+
+        // check that promise with such key (with or without source) doesn't exist yet
+        if self.promises.contains_key(&key) {
+            panic!("Event promise {:?} already exists", key);
+        }
+        if let Some(promises) = self.promises_with_source.get(&key) {
+            if !promises.is_empty() {
+                let src = promises.keys().next().unwrap();
+                panic!("Event promise {:?} with source {} already exists", key, src);
             }
-            if self
-                .promises_with_source
-                .entry(key)
-                .or_default()
-                .insert(src, promise)
-                .is_some()
-            {
-                panic!(
-                    "Async event handler for key {:?} and source {} already exists",
-                    key, src
-                );
-            }
+        }
+
+        // store promise
+        if let Some(src) = src {
+            self.promises_with_source.entry(key).or_default().insert(src, promise);
         } else {
-            if let Some(src) = self.has_any_promise_on_key(&key) {
-                panic!(
-                    "Async event handler for key {:?} with source {} already exists",
-                    key, src
-                );
-            }
-            if self.promises.insert(key, promise).is_some() {
-                panic!("Async event handler for key {:?} (without source) already exists", key);
-            }
+            self.promises.insert(key, promise);
         }
     }
 
     pub fn remove<T: EventData>(
         &mut self,
         dst: Id,
-        src_opt: &Option<Id>,
+        src: &Option<Id>,
         event_key: Option<EventKey>,
     ) -> Option<EventPromise> {
         let key = AwaitKey::new::<T>(dst, event_key);
-        if let Some(source) = src_opt {
+        if let Some(src) = src {
             if let Some(promises) = self.promises_with_source.get_mut(&key) {
-                promises.remove(source)
+                promises.remove(src)
             } else {
                 None
             }
@@ -83,7 +75,7 @@ impl EventPromisesStorage {
         false
     }
 
-    pub fn extract_promise_for(&mut self, event: &Event, event_key: Option<EventKey>) -> Option<EventPromise> {
+    pub fn remove_promise_for(&mut self, event: &Event, event_key: Option<EventKey>) -> Option<EventPromise> {
         let key = AwaitKey::new_by_ref(event.dst, event.data.as_ref(), event_key);
         if let Some(promise) = self.promises.remove(&key) {
             return Some(promise);
@@ -94,61 +86,50 @@ impl EventPromisesStorage {
         None
     }
 
-    pub fn remove_component_promises(&mut self, component_id: Id) -> u32 {
+    pub fn remove_promises_by_dst(&mut self, dst: Id) -> u32 {
         let mut removed_count = 0;
-        self.promises_with_source.retain(|key, promises| {
-            if key.to == component_id {
-                promises.iter_mut().for_each(|(_, promise)| {
-                    promise.drop_shared_state();
-                    removed_count += 1;
-                });
-                return false;
-            }
-
-            true
-        });
         self.promises.retain(|key, promise| {
-            if key.to == component_id {
+            if key.dst == dst {
                 promise.drop_shared_state();
                 removed_count += 1;
                 return false;
             }
             true
         });
-
-        removed_count
-    }
-
-    fn has_any_promise_on_key(&self, key: &AwaitKey) -> Option<Id> {
-        if let Some(promises) = self.promises_with_source.get(key) {
-            if !promises.is_empty() {
-                return Some(*promises.keys().next().unwrap());
+        self.promises_with_source.retain(|key, promises| {
+            if key.dst == dst {
+                promises.iter_mut().for_each(|(_, promise)| {
+                    promise.drop_shared_state();
+                    removed_count += 1;
+                });
+                return false;
             }
-        }
-        None
+            true
+        });
+        removed_count
     }
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 struct AwaitKey {
-    pub to: Id,
-    pub msg_type: TypeId,
+    pub dst: Id,
+    pub data_type: TypeId,
     event_key: Option<EventKey>,
 }
 
 impl AwaitKey {
-    pub fn new<T: EventData>(to: Id, event_key: Option<EventKey>) -> Self {
+    pub fn new<T: EventData>(dst: Id, event_key: Option<EventKey>) -> Self {
         Self {
-            to,
-            msg_type: TypeId::of::<T>(),
+            dst,
+            data_type: TypeId::of::<T>(),
             event_key,
         }
     }
 
-    pub fn new_by_ref(to: Id, data: &dyn EventData, event_key: Option<EventKey>) -> Self {
+    pub fn new_by_ref(dst: Id, data: &dyn EventData, event_key: Option<EventKey>) -> Self {
         Self {
-            to,
-            msg_type: data.type_id(),
+            dst,
+            data_type: data.type_id(),
             event_key,
         }
     }

@@ -472,12 +472,12 @@ impl SimulationState {
 
         pub fn complete_event_promise(&mut self, event: Event, event_key: Option<EventKey>) {
             // panics if there is no promise
-            let promise = self.event_promises.extract_promise_for(&event, event_key).unwrap();
+            let promise = self.event_promises.remove_promise_for(&event, event_key).unwrap();
             promise.complete(event);
         }
 
         pub fn cancel_component_promises(&mut self, component_id: Id) {
-            let cancelled_count = self.event_promises.remove_component_promises(component_id);
+            let cancelled_count = self.event_promises.remove_promises_by_dst(component_id);
             if cancelled_count > 0 {
                 log::warn!(
                     target: "simulation",
