@@ -14,7 +14,7 @@ type BoxedFuture = Pin<Box<dyn Future<Output = ()>>>;
 /// Represents an asynchronous task spawned via [`crate::Simulation::spawn`] or [`crate::SimulationContext::spawn`].
 ///
 /// Holds the corresponding future and schedules itself for polling by [`super::executor::Executor`]
-/// on wake-up notification.
+/// on wake-up notifications.
 pub(crate) struct Task {
     future: RefCell<Option<BoxedFuture>>,
     executor: Sender<Rc<Task>>,
@@ -23,14 +23,11 @@ pub(crate) struct Task {
 impl Task {
     /// Creates a new task from a future.
     ///
-    /// TODO: ???
-    /// Unsafe is required here to make possible spawning components' methods as tasks.
-    /// &self argument prevents any method to have 'static lifetime, but following the simulation logic
-    /// tasks always should finish before their components are deleted:
+    /// Unsafe is used to make possible spawning components' methods as tasks via [`crate::SimulationContext::spawn`].
+    /// `&self` argument prevents any method to have a `'static` lifetime, but following the simulation logic
+    /// the spawned tasks should always finish before the corresponding components are deleted:
     /// - deletion of components is supposed to be done only through the [`crate::Simulation::remove_handler`] method,
     /// - components are not supposed to be moved because they are allocated in the heap under `Rc<RefCell<...>>`.
-    ///
-    /// TODO: implement task cancellation to increase bug-safety of user space code.
     fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
         unsafe {
             let boxed: Box<dyn Future<Output = ()>> = Box::new(future);

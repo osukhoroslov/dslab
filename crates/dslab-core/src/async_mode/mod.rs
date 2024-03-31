@@ -1,5 +1,7 @@
 //! Asynchronous programming support.
 
+#![warn(unsafe_op_in_unsafe_fn)]
+
 use crate::async_mode_enabled;
 pub(crate) mod macros;
 
@@ -11,8 +13,10 @@ async_mode_enabled!(
     pub(crate) mod executor;
     pub(crate) mod promise_store;
     pub(crate) mod task;
-    pub(crate) mod waker;
+
+    mod waker;
 
     pub use event_future::{AwaitResult, EventFuture, EventKey};
     pub use timer_future::TimerFuture;
+    pub use queue::UnboundedQueue;
 );

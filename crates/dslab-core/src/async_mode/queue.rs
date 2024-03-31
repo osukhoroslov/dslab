@@ -7,34 +7,31 @@ use serde::Serialize;
 
 use crate::SimulationContext;
 
-/// A simple implementation of unbounded multi-producer multi-consumer queue with blocking receives.
+/// A simple implementation of unbounded multi-producer multi-consumer queue with items of type `T`.
 ///
-/// It can store items of any data type `T`.
-/// The items are guarantied to be delivered in the order of [`UnboundedBlockingQueue::receive`] calls.
-/// Each future returned by [`UnboundedBlockingQueue::receive`] must be awaited.
-pub struct UnboundedBlockingQueue<T> {
-    queue: RefCell<VecDeque<T>>,
+/// The items are guarantied to be delivered to consumers in the order of [`UnboundedQueue::take`] calls.
+pub struct UnboundedQueue<T> {
+    items: RefCell<VecDeque<T>>,
     send_ticket: Ticket,
     receive_ticket: Ticket,
     ctx: SimulationContext,
 }
 
-// TODO: call methods push/pop or rename to channel?
-impl<T> UnboundedBlockingQueue<T> {
+impl<T> UnboundedQueue<T> {
     pub(crate) fn new(ctx: SimulationContext) -> Self {
         ctx.register_key_getter_for::<ConsumerNotify>(|notify| notify.ticket_id);
         Self {
-            queue: RefCell::new(VecDeque::new()),
+            items: RefCell::new(VecDeque::new()),
             send_ticket: Ticket::new(),
             receive_ticket: Ticket::new(),
             ctx,
         }
     }
 
-    /// Send an item to the queue without blocking.
-    pub fn send(&self, item: T) {
+    /// Inserts the specified item into the queue without blocking.
+    pub fn put(&self, item: T) {
         self.send_ticket.next();
-        self.queue.borrow_mut().push_back(item);
+        self.items.borrow_mut().push_back(item);
         // notify awaiting consumer if needed
         if self.receive_ticket.is_after(&self.send_ticket) {
             self.ctx.emit_self_now(ConsumerNotify {
@@ -43,16 +40,19 @@ impl<T> UnboundedBlockingQueue<T> {
         }
     }
 
-    /// Asynchronously receive an item from the queue.
-    pub async fn receive(&self) -> T {
+    /// Removes the head of the queue and returns it, waiting if necessary until an item becomes available.
+    ///
+    /// This function is asynchronous and its result (future) must be awaited.
+    /// If multiple consumers are waiting for item, the items will be delivered in the order of `take()` calls.
+    pub async fn take(&self) -> T {
         self.receive_ticket.next();
         // wait for notification from producer side if the queue is empty
-        if self.queue.borrow().is_empty() {
+        if self.items.borrow().is_empty() {
             self.ctx
                 .recv_event_by_key_from_self::<ConsumerNotify>(self.receive_ticket.value())
                 .await;
         }
-        self.queue.borrow_mut().pop_front().unwrap()
+        self.items.borrow_mut().pop_front().unwrap()
     }
 }
 

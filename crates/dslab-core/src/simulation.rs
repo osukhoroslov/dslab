@@ -22,10 +22,9 @@ async_mode_enabled!(
 
     use futures::Future;
 
-    use crate::async_mode::executor::Executor;
     use crate::event::EventData;
-    use crate::async_mode::EventKey;
-    use crate::async_mode::queue::UnboundedBlockingQueue;
+    use crate::async_mode::executor::Executor;
+    use crate::async_mode::{UnboundedQueue, EventKey};
 );
 
 async_mode_disabled!(
@@ -511,7 +510,7 @@ impl Simulation {
             self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
         }
 
-        /// Creates an [`UnboundedBlockingQueue`] for producer-consumer communication.
+        /// Creates an [`crate::async_mode::UnboundedQueue`] for producer-consumer communication.
         ///
         /// This queue is designed to support convenient communication between several asynchronous tasks
         /// within a single simulation component. This enables implementing the component logic as a set of
@@ -529,7 +528,7 @@ impl Simulation {
         /// use serde::Serialize;
         ///
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
-        /// use dslab_core::async_mode::queue::UnboundedBlockingQueue;
+        /// use dslab_core::async_mode::UnboundedQueue;
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Start {}
@@ -540,7 +539,7 @@ impl Simulation {
         ///
         /// struct Component {
         ///     ctx: SimulationContext,
-        ///     queue: UnboundedBlockingQueue<Message>,
+        ///     queue: UnboundedQueue<Message>,
         /// }
         ///
         /// impl Component {
@@ -552,13 +551,13 @@ impl Simulation {
         ///     async fn producer(&self) {
         ///         for i in 0..10 {
         ///             self.ctx.sleep(5.).await;
-        ///             self.queue.send(Message {payload: i});
+        ///             self.queue.put(Message {payload: i});
         ///         }
         ///     }
         ///
         ///     async fn consumer(&self) {
         ///         for i in 0..10 {
-        ///             let msg = self.queue.receive().await;
+        ///             let msg = self.queue.take().await;
         ///             assert_eq!(msg.payload, i);
         ///         }
         ///     }
@@ -577,7 +576,7 @@ impl Simulation {
         /// let mut sim = Simulation::new(123);
         ///
         /// let comp_ctx = sim.create_context("comp");
-        /// let queue: UnboundedBlockingQueue<Message> = sim.create_queue("_queue");
+        /// let queue: UnboundedQueue<Message> = sim.create_queue("_queue");
         /// let comp_id = sim.add_handler("comp", Rc::new(RefCell::new(Component {ctx: comp_ctx, queue })));
         ///
         /// let root_ctx = sim.create_context("root");
@@ -587,11 +586,11 @@ impl Simulation {
         ///
         /// assert_eq!(sim.time(), 60.); // 10. from start delay + 5.*10 from send steps delays
         /// ```
-        pub fn create_queue<T, S>(&mut self, name: S) -> UnboundedBlockingQueue<T>
+        pub fn create_queue<T, S>(&mut self, name: S) -> UnboundedQueue<T>
         where
             S: AsRef<str>,
         {
-            UnboundedBlockingQueue::new(self.create_context(name))
+            UnboundedQueue::new(self.create_context(name))
         }
     );
 
