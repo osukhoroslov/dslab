@@ -9,7 +9,7 @@ async_mode_enabled!(
     pub mod timer_future;
 
     pub(crate) mod executor;
-    pub(crate) mod promise_storage;
+    pub(crate) mod promise_store;
     pub(crate) mod task;
     pub(crate) mod waker;
 

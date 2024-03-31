@@ -1,63 +1,66 @@
-//! Queue implementation.
+//! Queue for producer-consumer communication between asynchronous tasks.
 
-use std::{cell::RefCell, collections::VecDeque};
+use std::cell::RefCell;
+use std::collections::VecDeque;
 
 use serde::Serialize;
 
-use crate::{async_mode::EventKey, SimulationContext};
+use crate::SimulationContext;
 
-type TicketID = u64;
-
-#[derive(Serialize, Clone)]
-struct Notify {
-    ticket_id: TicketID,
-}
-
-/// MPMC Unbounded queue with blocking receives for any type of data.
+/// A simple implementation of unbounded multi-producer multi-consumer queue with blocking receives.
 ///
-/// Data is guarantied to be delivered in order that receivers call their .receive() method.
-///
-/// Each Future got by .receive() must be awaited.
+/// It can store items of any data type `T`.
+/// The items are guarantied to be delivered in the order of [`UnboundedBlockingQueue::receive`] calls.
+/// Each future returned by [`UnboundedBlockingQueue::receive`] must be awaited.
 pub struct UnboundedBlockingQueue<T> {
-    ctx: SimulationContext,
     queue: RefCell<VecDeque<T>>,
     send_ticket: Ticket,
     receive_ticket: Ticket,
+    ctx: SimulationContext,
 }
 
+// TODO: call methods push/pop or rename to channel?
 impl<T> UnboundedBlockingQueue<T> {
     pub(crate) fn new(ctx: SimulationContext) -> Self {
-        ctx.register_key_getter_for::<Notify>(|notify| notify.ticket_id as EventKey);
+        ctx.register_key_getter_for::<ConsumerNotify>(|notify| notify.ticket_id);
         Self {
-            ctx,
             queue: RefCell::new(VecDeque::new()),
             send_ticket: Ticket::new(),
             receive_ticket: Ticket::new(),
+            ctx,
         }
     }
 
-    /// Sends data to the queue without blocking.
-    pub fn send(&self, data: T) {
+    /// Send an item to the queue without blocking.
+    pub fn send(&self, item: T) {
         self.send_ticket.next();
-        self.queue.borrow_mut().push_back(data);
+        self.queue.borrow_mut().push_back(item);
+        // notify awaiting consumer if needed
         if self.receive_ticket.is_after(&self.send_ticket) {
-            self.ctx.emit_self_now(Notify {
+            self.ctx.emit_self_now(ConsumerNotify {
                 ticket_id: self.send_ticket.value(),
             });
         }
     }
 
-    /// Async receives data from queue. Each receive must be awaited.
+    /// Asynchronously receive an item from the queue.
     pub async fn receive(&self) -> T {
         self.receive_ticket.next();
+        // wait for notification from producer side if the queue is empty
         if self.queue.borrow().is_empty() {
             self.ctx
-                .recv_event_by_key_from_self::<Notify>(self.receive_ticket.value())
+                .recv_event_by_key_from_self::<ConsumerNotify>(self.receive_ticket.value())
                 .await;
         }
-
         self.queue.borrow_mut().pop_front().unwrap()
     }
+}
+
+type TicketID = u64;
+
+#[derive(Serialize, Clone)]
+struct ConsumerNotify {
+    ticket_id: TicketID,
 }
 
 struct Ticket {

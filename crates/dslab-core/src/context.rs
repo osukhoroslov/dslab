@@ -657,6 +657,8 @@ impl SimulationContext {
     async_mode_enabled!(
         /// Spawns a new asynchronous task.
         ///
+        /// TODO: Write about limitation of using only immutable methods and add example using Rc<RefCell>>
+        ///
         /// # Examples
         ///
         /// ```rust

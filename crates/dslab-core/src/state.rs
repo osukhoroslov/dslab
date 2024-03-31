@@ -19,7 +19,7 @@ async_mode_enabled!(
     use futures::Future;
 
     use crate::async_mode::EventKey;
-    use crate::async_mode::promise_storage::EventPromisesStorage;
+    use crate::async_mode::promise_store::EventPromiseStore;
     use crate::async_mode::event_future::{EventFuture, EventPromise};
     use crate::async_mode::task::Task;
     use crate::async_mode::timer_future::{TimerPromise, TimerId, TimerFuture};
@@ -61,7 +61,7 @@ async_mode_enabled!(
         // Specific to async mode
         registered_handlers: Vec<bool>,
 
-        event_promises: EventPromisesStorage,
+        event_promises: EventPromiseStore,
         key_getters: HashMap<TypeId, KeyGetterFn>,
 
         timers: BinaryHeap<TimerPromise>,
@@ -100,7 +100,7 @@ impl SimulationState {
                 component_names: Vec::new(),
                 // Specific to async mode
                 registered_handlers: Vec::new(),
-                event_promises: EventPromisesStorage::new(),
+                event_promises: EventPromiseStore::new(),
                 key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
                 canceled_timers: HashSet::new(),

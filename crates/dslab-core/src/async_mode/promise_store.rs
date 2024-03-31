@@ -5,12 +5,12 @@ use super::{event_future::EventPromise, EventKey};
 use crate::{Event, EventData, Id};
 
 #[derive(Clone)]
-pub(crate) struct EventPromisesStorage {
+pub(crate) struct EventPromiseStore {
     promises: HashMap<AwaitKey, EventPromise>,
     promises_with_source: HashMap<AwaitKey, HashMap<Id, EventPromise>>,
 }
 
-impl EventPromisesStorage {
+impl EventPromiseStore {
     pub fn new() -> Self {
         Self {
             promises: HashMap::new(),
