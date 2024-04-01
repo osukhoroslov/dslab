@@ -1,8 +1,12 @@
-use std::{cell::RefCell, rc::Rc};
+//! Tests of event cancellation policies on event handler removal.
+
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::rc::Rc;
 
 use serde::Serialize;
 
-use dslab_core::{event::EventId, Event, EventCancellationPolicy, EventHandler, Simulation};
+use dslab_core::{Event, EventCancellationPolicy, EventHandler, EventId, Simulation};
 
 #[derive(Clone, Serialize)]
 struct TestEvent {}
@@ -13,98 +17,85 @@ impl EventHandler for TestComponent {
     fn on(&mut self, _: Event) {}
 }
 
-fn prepare_test(first_component: &str, second_component: &str) -> Simulation {
-    let mut sim = Simulation::new(42);
+fn prepare_test(comp1_name: &str, comp2_name: &str) -> Simulation {
+    let mut sim = Simulation::new(123);
 
-    for name in [first_component, second_component] {
-        let cmp = Rc::new(RefCell::new(TestComponent {}));
-        sim.add_handler(name, cmp);
+    for name in [comp1_name, comp2_name] {
+        let comp = Rc::new(RefCell::new(TestComponent {}));
+        sim.add_handler(name, comp);
     }
+    let comp1_id = sim.lookup_id(comp1_name);
+    let comp2_id = sim.lookup_id(comp2_name);
 
-    let ctx = sim.create_context("master");
-    let first_id = sim.lookup_id(first_component);
-    let second_id = sim.lookup_id(second_component);
-
-    ctx.emit_as(TestEvent {}, first_id, second_id, 0.);
-    ctx.emit_as(TestEvent {}, second_id, first_id, 0.);
-    ctx.emit_as(TestEvent {}, second_id, second_id, 0.);
-    ctx.emit_as(TestEvent {}, first_id, first_id, 0.);
+    let ctx = sim.create_context("main");
+    ctx.emit_as(TestEvent {}, comp1_id, comp2_id, 0.);
+    ctx.emit_as(TestEvent {}, comp2_id, comp1_id, 0.);
+    ctx.emit_as(TestEvent {}, comp2_id, comp2_id, 0.);
+    ctx.emit_as(TestEvent {}, comp1_id, comp1_id, 0.);
 
     sim
 }
 
 #[test]
-fn cancel_nothing() {
-    let mut sim = prepare_test("first", "second");
+fn test_none_policy() {
+    let mut sim = prepare_test("comp1", "comp2");
 
     let events = sim.dump_events();
-    sim.remove_handler("first", EventCancellationPolicy::None);
+    sim.remove_handler("comp1", EventCancellationPolicy::None);
 
     assert_eq!(sim.dump_events().len(), events.len());
 }
 
 #[test]
-fn cancel_incoming() {
-    let mut sim = prepare_test("first", "second");
+fn test_incoming_policy() {
+    let mut sim = prepare_test("comp1", "comp2");
 
-    let first_id = sim.lookup_id("first");
-    let mut event_ids_to_check = sim
+    let comp1_id = sim.lookup_id("comp1");
+    let expected_event_ids = sim
         .dump_events()
         .iter()
-        .filter(|e| e.dst != first_id)
+        .filter(|e| e.dst != comp1_id)
         .map(|e| e.id)
-        .collect::<Vec<EventId>>();
+        .collect::<HashSet<EventId>>();
 
-    event_ids_to_check.sort();
+    sim.remove_handler("comp1", EventCancellationPolicy::Incoming);
 
-    sim.remove_handler("first", EventCancellationPolicy::Incoming);
-
-    let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
-    events_after.sort();
-
-    assert_eq!(event_ids_to_check, events_after);
+    let left_event_ids = sim.dump_events().iter().map(|e| e.id).collect::<HashSet<EventId>>();
+    assert_eq!(left_event_ids, expected_event_ids);
 }
 
 #[test]
-fn cancel_outgoing() {
-    let mut sim = prepare_test("first", "second");
+fn test_outgoing_policy() {
+    let mut sim = prepare_test("comp1", "comp2");
 
-    let first_id = sim.lookup_id("first");
-    let mut event_ids_to_check = sim
+    let comp1_id = sim.lookup_id("comp1");
+    let expected_event_ids = sim
         .dump_events()
         .iter()
-        .filter(|e| e.src != first_id)
+        .filter(|e| e.src != comp1_id)
         .map(|e| e.id)
-        .collect::<Vec<EventId>>();
+        .collect::<HashSet<EventId>>();
 
-    event_ids_to_check.sort();
+    sim.remove_handler("comp1", EventCancellationPolicy::Outgoing);
 
-    sim.remove_handler("first", EventCancellationPolicy::Outgoing);
-
-    let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
-    events_after.sort();
-
-    assert_eq!(event_ids_to_check, events_after);
+    let left_event_ids = sim.dump_events().iter().map(|e| e.id).collect::<HashSet<EventId>>();
+    assert_eq!(left_event_ids, expected_event_ids);
 }
 
 #[test]
-fn cancel_all() {
-    let mut sim = prepare_test("first", "second");
+fn test_all_policy() {
+    let mut sim = prepare_test("comp1", "comp2");
 
-    let first_id = sim.lookup_id("first");
-    let mut event_ids_to_check = sim
+    let comp1_id = sim.lookup_id("comp1");
+    let expected_event_ids = sim
         .dump_events()
         .iter()
-        .filter(|e| e.src != first_id && e.dst != first_id)
+        .filter(|e| e.src != comp1_id && e.dst != comp1_id)
         .map(|e| e.id)
-        .collect::<Vec<EventId>>();
+        .collect::<HashSet<EventId>>();
 
-    event_ids_to_check.sort();
+    sim.remove_handler("comp1", EventCancellationPolicy::All);
 
-    sim.remove_handler("first", EventCancellationPolicy::All);
-
-    let mut events_after = sim.dump_events().iter().map(|e| e.id).collect::<Vec<EventId>>();
-    events_after.sort();
-
-    assert_eq!(event_ids_to_check, events_after);
+    let left_event_ids = sim.dump_events().iter().map(|e| e.id).collect::<HashSet<EventId>>();
+    assert_eq!(expected_event_ids, left_event_ids);
 }
