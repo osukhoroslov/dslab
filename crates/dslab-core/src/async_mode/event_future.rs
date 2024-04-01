@@ -296,7 +296,7 @@ impl EventPromise {
     /// Since `Task` is stored inside [`TypedEventAwaitState`] as a [`std::task::Waker`],
     /// we take it out here and drop when the state borrow is released.
     pub fn drop_shared_state(&mut self) {
-        let _waker = self.state.borrow_mut().drop_state();
+        let _waker = self.state.borrow_mut().drop();
     }
 }
 
@@ -320,7 +320,7 @@ impl<T: EventData> Default for TypedEventAwaitState<T> {
 
 trait EventAwaitState {
     fn complete(&mut self, event: Event);
-    fn drop_state(&mut self) -> Option<Waker>;
+    fn drop(&mut self) -> Option<Waker>;
 }
 
 impl<T: EventData> EventAwaitState for TypedEventAwaitState<T> {
@@ -335,7 +335,7 @@ impl<T: EventData> EventAwaitState for TypedEventAwaitState<T> {
         }
     }
 
-    fn drop_state(&mut self) -> Option<Waker> {
+    fn drop(&mut self) -> Option<Waker> {
         // TODO: ???
         // Set completed to true to prevent calling callback on EventFuture drop.
         self.completed = true;

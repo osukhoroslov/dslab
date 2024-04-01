@@ -93,7 +93,7 @@ impl TimerPromise {
     /// Since `Task` is stored inside [`TimerAwaitState`] as a [`std::task::Waker`],
     /// we take it out here and drop when the state borrow is released.
     pub fn drop_shared_state(&self) {
-        let _waker = self.state.borrow_mut().drop_state();
+        let _waker = self.state.borrow_mut().drop();
     }
 }
 
@@ -137,7 +137,7 @@ impl TimerAwaitState {
         }
     }
 
-    pub fn drop_state(&mut self) -> Option<Waker> {
+    pub fn drop(&mut self) -> Option<Waker> {
         // TODO: ???
         // Set completed to true to prevent calling callback on TimerFuture drop.
         self.completed = true;
