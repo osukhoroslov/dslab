@@ -1,4 +1,5 @@
-mod details_test;
-mod test_future_drop;
-mod wait_for_event_test;
-mod wait_for_test;
+mod future_drop;
+mod recv_event;
+mod recv_event_by_key;
+mod select;
+mod sleep;
