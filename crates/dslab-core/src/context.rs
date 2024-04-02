@@ -657,8 +657,8 @@ impl SimulationContext {
     async_mode_enabled!(
         /// Spawns a new asynchronous task.
         ///
-        /// According to Rust borrow-checker rules, it is not allowed to spawn futures that contains mutable
-        /// reference to the component itself. Mutating the component state from asynchronous tasks
+        /// According to Rust borrow checker rules it is not allowed to spawn futures that contain a mutable
+        /// reference to the component itself. Mutating the component state by asynchronous tasks
         /// can be achieved by wrapping this state into `RefCell<_>`. See the examples below.
         ///
         /// # Examples
