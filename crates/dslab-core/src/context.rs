@@ -657,7 +657,9 @@ impl SimulationContext {
     async_mode_enabled!(
         /// Spawns a new asynchronous task.
         ///
-        /// TODO: Write about limitation of using only immutable methods and add example using Rc<RefCell>>
+        /// According to Rust borrow-checker rules, it is not allowed to spawn futures that contains mutable
+        /// reference to the component itself. Mutating the component state from asynchronous tasks
+        /// can be achieved by wrapping this state into `RefCell<_>`. See the examples below.
         ///
         /// # Examples
         ///
@@ -743,6 +745,100 @@ impl SimulationContext {
         /// // due to safety reasons.
         /// // Register Component via Simulation::add_handler as in the previous example.
         /// comp.start(10);
+        /// ```
+        ///
+        /// ```compile_fail
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        ///
+        /// struct Component {
+        ///     ctx: SimulationContext,
+        ///     counter: u32,
+        /// }
+        ///
+        /// impl Component {
+        ///     fn on_start(&mut self, tasks: u32) {
+        ///        for i in 1..=tasks {
+        ///             // Compile fails because mutable reference to self is used in the async task,
+        ///             // which is not allowed by Rust borrow-checker rules (several mutable references are prohibited).
+        ///             // Use RefCell to wrap the mutable state and access it in the async task via RefCell::borrow_mut
+        ///             // as in the next example.
+        ///             self.ctx.spawn(self.increase_counter(i));
+        ///        }
+        ///     }
+        ///
+        ///     async fn increase_counter(&mut self, num_steps: u32) {
+        ///         for _ in 0..num_steps {
+        ///             self.ctx.sleep(1.).await;
+        ///             self.counter += 1;
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Component {
+        ///     fn on(&mut self, event: Event) {}
+        /// }
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let comp_ctx = sim.create_context("comp");
+        /// let comp = Rc::new(RefCell::new(Component {ctx: comp_ctx, counter: 0 }));
+        /// sim.add_handler("comp", comp.clone());
+        ///
+        /// comp.borrow().on_start(10);
+        ///
+        /// sim.step_until_no_events();
+        /// ```
+        ///
+        /// ```rust
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        ///
+        /// use serde::Serialize;
+        ///
+        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        ///
+        /// struct Component {
+        ///     ctx: SimulationContext,
+        ///     counter: RefCell<u32>,
+        /// }
+        ///
+        /// impl Component {
+        ///     fn on_start(&self, tasks: u32) {
+        ///        for i in 1..=tasks {
+        ///             self.ctx.spawn(self.increase_counter(i));
+        ///        }
+        ///     }
+        ///
+        ///     async fn increase_counter(&self, num_steps: u32) {
+        ///         for _ in 0..num_steps {
+        ///             self.ctx.sleep(1.).await;
+        ///             *self.counter.borrow_mut() += 1;
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Component {
+        ///     fn on(&mut self, event: Event) {}
+        /// }
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let comp_ctx = sim.create_context("comp");
+        /// let comp = Rc::new(RefCell::new(Component {ctx: comp_ctx, counter: RefCell::new(0) }));
+        /// sim.add_handler("comp", comp.clone());
+        ///
+        /// comp.borrow().on_start(10);
+        ///
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(sim.time(), 10.);
+        /// // 1 + 2 + 3 + ... + 10 = 55
+        /// assert_eq!(*comp.borrow().counter.borrow(), 55);
         /// ```
         pub fn spawn(&self, future: impl Future<Output = ()>) {
             self.sim_state.borrow_mut().spawn_component(self.id(), future);

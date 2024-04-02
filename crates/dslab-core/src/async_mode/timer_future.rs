@@ -48,7 +48,7 @@ impl Future for TimerFuture {
 
 impl Drop for TimerFuture {
     fn drop(&mut self) {
-        if !self.state.borrow().completed {
+        if !self.state.borrow().completed && !self.state.borrow().manually_dropped {
             self.sim_state
                 .borrow_mut()
                 .on_incomplete_timer_future_drop(self.timer_id);
@@ -119,6 +119,7 @@ impl PartialOrd for TimerPromise {
 
 struct TimerAwaitState {
     pub completed: bool,
+    pub manually_dropped: bool,
     pub waker: Option<Waker>,
 }
 
@@ -126,6 +127,7 @@ impl TimerAwaitState {
     pub fn new() -> Self {
         Self {
             completed: false,
+            manually_dropped: false,
             waker: None,
         }
     }
@@ -138,11 +140,9 @@ impl TimerAwaitState {
     }
 
     pub fn drop(&mut self) -> Option<Waker> {
-        // TODO: ???
-        // Set completed to true to prevent calling callback on TimerFuture drop.
-        self.completed = true;
+        self.manually_dropped = true;
         // Take waker out of scope to release &mut self first and avoid several mutable borrows.
-        // Next borrow() appears in TimerFuture::drop to check if state is completed.
+        // Next borrow() appears in TimerFuture::drop to check if state is manually dropped.
         self.waker.take()
     }
 }
