@@ -789,7 +789,7 @@ impl SimulationContext {
         /// let comp = Rc::new(RefCell::new(Component {ctx: comp_ctx, counter: 0 }));
         /// sim.add_handler("comp", comp.clone());
         ///
-        /// comp.borrow().on_start(10);
+        /// comp.borrow_mut().on_start(10);
         ///
         /// sim.step_until_no_events();
         /// ```
