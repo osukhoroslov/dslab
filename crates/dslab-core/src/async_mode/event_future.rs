@@ -254,7 +254,7 @@ impl<T: EventData> Future for EventFuture<T> {
 
 impl<T: EventData> Drop for EventFuture<T> {
     fn drop(&mut self) {
-        if !self.state.borrow().completed {
+        if !self.state.borrow().completed && !self.state.borrow().manually_dropped {
             self.sim_state
                 .borrow_mut()
                 .on_incomplete_event_future_drop::<T>(self.dst, &self.src, self.event_key);
@@ -304,6 +304,7 @@ impl EventPromise {
 
 struct TypedEventAwaitState<T: EventData> {
     pub completed: bool,
+    pub manually_dropped: bool,
     pub event: Option<TypedEvent<T>>,
     pub waker: Option<Waker>,
 }
@@ -312,6 +313,7 @@ impl<T: EventData> Default for TypedEventAwaitState<T> {
     fn default() -> Self {
         Self {
             completed: false,
+            manually_dropped: false,
             event: None,
             waker: None,
         }
@@ -336,12 +338,10 @@ impl<T: EventData> EventAwaitState for TypedEventAwaitState<T> {
     }
 
     fn drop(&mut self) -> Option<Waker> {
-        // TODO: ???
-        // Set completed to true to prevent calling callback on EventFuture drop.
-        self.completed = true;
+        self.manually_dropped = true;
         self.event = None;
         // Take waker out of scope to release &mut self first and avoid several mutable borrows.
-        // Next borrow() appears in EventFuture::drop to check if state is completed.
+        // Next borrow() appears in EventFuture::drop to check if state is manually dropped.
         self.waker.take()
     }
 }

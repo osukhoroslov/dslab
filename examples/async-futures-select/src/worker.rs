@@ -51,7 +51,7 @@ impl Worker {
                     let req_id = finished.data.id;
                     let task = dispatched_tasks.remove(&req_id).unwrap();
                     log_debug!(self.ctx, format!("task {} with key {} is completed", task.id, req_id));
-                    pending_tasks.is_empty()
+                    !pending_tasks.is_empty()
                 }
             };
             if try_dispatch {
