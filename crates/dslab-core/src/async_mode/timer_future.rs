@@ -48,6 +48,10 @@ impl Future for TimerFuture {
 
 impl Drop for TimerFuture {
     fn drop(&mut self) {
+        // We cannot call SimulationState::on_incomplete_timer_future_drop when dropping futures on component handler
+        // removal, because sim_state is already mutably borrowed in SimulationState::cancel_component_timers.
+        // Instead, we do the necessary clean up directly in SimulationState::cancel_component_timers and set the
+        // manually_dropped flag in the state.
         if !self.state.borrow().completed && !self.state.borrow().manually_dropped {
             self.sim_state
                 .borrow_mut()
@@ -141,8 +145,9 @@ impl TimerAwaitState {
 
     pub fn drop(&mut self) -> Option<Waker> {
         self.manually_dropped = true;
-        // Take waker out of scope to release &mut self first and avoid several mutable borrows.
-        // Next borrow() appears in TimerFuture::drop to check if state is manually dropped.
+        // We cannot drop the waker immediately here because it will trigger TimerFuture::drop,
+        // which requires borrowing of (already mutably borrowed) state.
+        // Instead, we take the waker out of scope to drop it when the state borrow is released.
         self.waker.take()
     }
 }

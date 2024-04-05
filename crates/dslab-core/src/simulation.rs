@@ -302,7 +302,7 @@ impl Simulation {
 
     async_mode_enabled!(
         fn remove_handler_inner(&mut self, id: u32) {
-            // cancel pending timers related to the removed component
+            // cancel pending timers and event promises related to the removed component
             self.sim_state.borrow_mut().cancel_component_timers(id);
             self.sim_state.borrow_mut().cancel_component_promises(id);
         }

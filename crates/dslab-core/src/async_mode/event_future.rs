@@ -254,6 +254,10 @@ impl<T: EventData> Future for EventFuture<T> {
 
 impl<T: EventData> Drop for EventFuture<T> {
     fn drop(&mut self) {
+        // We cannot call SimulationState::on_incomplete_event_future_drop when dropping futures on component handler
+        // removal, because sim_state is already mutably borrowed in SimulationState::cancel_component_promises.
+        // Instead, we do the necessary clean up directly in SimulationState::cancel_component_promises and set the
+        // manually_dropped flag in the state.
         if !self.state.borrow().completed && !self.state.borrow().manually_dropped {
             self.sim_state
                 .borrow_mut()
@@ -340,8 +344,9 @@ impl<T: EventData> EventAwaitState for TypedEventAwaitState<T> {
     fn drop(&mut self) -> Option<Waker> {
         self.manually_dropped = true;
         self.event = None;
-        // Take waker out of scope to release &mut self first and avoid several mutable borrows.
-        // Next borrow() appears in EventFuture::drop to check if state is manually dropped.
+        // We cannot drop the waker immediately here because it will trigger EventFuture::drop,
+        // which requires borrowing of (already mutably borrowed) state.
+        // Instead, we take the waker out of scope to drop it when the state borrow is released.
         self.waker.take()
     }
 }

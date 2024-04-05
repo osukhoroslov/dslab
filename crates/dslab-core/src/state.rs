@@ -425,6 +425,7 @@ impl SimulationState {
             }
         }
 
+        // Called when component handler is removed.
         pub fn cancel_component_timers(&mut self, component_id: Id) {
             let mut cancelled_count = 0;
             self.timers.retain(|timer_promise| {
@@ -476,8 +477,9 @@ impl SimulationState {
             promise.complete(event);
         }
 
+        // Called when component handler is removed.
         pub fn cancel_component_promises(&mut self, component_id: Id) {
-            let cancelled_count = self.event_promises.remove_promises_by_dst(component_id);
+            let cancelled_count = self.event_promises.drop_promises_by_dst(component_id);
             if cancelled_count > 0 {
                 log::warn!(
                     target: "simulation",

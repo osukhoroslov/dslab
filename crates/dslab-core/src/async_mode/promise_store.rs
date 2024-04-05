@@ -86,7 +86,7 @@ impl EventPromiseStore {
         None
     }
 
-    pub fn remove_promises_by_dst(&mut self, dst: Id) -> u32 {
+    pub fn drop_promises_by_dst(&mut self, dst: Id) -> u32 {
         let mut removed_count = 0;
         self.promises.retain(|key, promise| {
             if key.dst == dst {
