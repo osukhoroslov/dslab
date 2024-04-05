@@ -655,11 +655,11 @@ impl SimulationContext {
     }
 
     async_mode_enabled!(
-        /// Spawns a new asynchronous task.
+        /// Spawns a new asynchronous task for component associated with this context.
         ///
-        /// According to Rust borrow checker rules it is not allowed to spawn futures that contain a mutable
-        /// reference to the component itself. Mutating the component state by asynchronous tasks
-        /// can be achieved by wrapping this state into `RefCell<_>`. See the examples below.
+        /// Due to the Rust borrow checker rules, it is not allowed to spawn futures that contain a mutable reference
+        /// to the component itself. Mutating the component state by asynchronous tasks can be achieved by wrapping
+        /// this state into `RefCell<_>`. See the examples below.
         ///
         /// # Examples
         ///
@@ -741,7 +741,7 @@ impl SimulationContext {
         /// let mut sim = Simulation::new(123);
         /// let mut comp = Component { ctx: sim.create_context("comp") };
         ///
-        /// // Panics because spawning async tasks by a component without event handler is prohibited
+        /// // Panics because spawning async tasks for component without event handler is prohibited
         /// // due to safety reasons.
         /// // Register Component via Simulation::add_handler as in the previous example.
         /// comp.start(10);
@@ -751,9 +751,7 @@ impl SimulationContext {
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
         ///
-        /// use serde::Serialize;
-        ///
-        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
         ///
         /// struct Component {
         ///     ctx: SimulationContext,
@@ -764,7 +762,7 @@ impl SimulationContext {
         ///     fn on_start(&mut self, tasks: u32) {
         ///        for i in 1..=tasks {
         ///             // Compile fails because mutable reference to self is used in the async task,
-        ///             // which is not allowed by Rust borrow-checker rules (several mutable references are prohibited).
+        ///             // which is not allowed by Rust borrow checker rules (several mutable references are prohibited).
         ///             // Use RefCell to wrap the mutable state and access it in the async task via RefCell::borrow_mut
         ///             // as in the next example.
         ///             self.ctx.spawn(self.increase_counter(i));
@@ -798,9 +796,7 @@ impl SimulationContext {
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
         ///
-        /// use serde::Serialize;
-        ///
-        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
         ///
         /// struct Component {
         ///     ctx: SimulationContext,

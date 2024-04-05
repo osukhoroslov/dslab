@@ -373,8 +373,8 @@ impl SimulationState {
         pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
             assert!(
                 self.has_registered_handler(component_id),
-                "Spawning component without registered event handler is not supported. \
-                Register handler for component {} before spawning it (empty impl EventHandler is OK).",
+                "Spawning async tasks for component without registered event handler is not supported. \
+                Register handler for component {} before spawning tasks for it (empty impl EventHandler is OK).",
                 component_id,
             );
             Task::spawn(future, self.executor.clone());
