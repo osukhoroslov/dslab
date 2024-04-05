@@ -9,7 +9,7 @@ use crate::SimulationContext;
 
 /// A simple implementation of unbounded multi-producer multi-consumer queue with items of type `T`.
 ///
-/// The items are guarantied to be delivered to consumers in the order of [`UnboundedQueue::take`] calls.
+/// The items are guarantied to be delivered to consumers in the order of [`take`](UnboundedQueue::take) calls.
 pub struct UnboundedQueue<T> {
     items: RefCell<VecDeque<T>>,
     send_ticket: Ticket,
@@ -43,7 +43,7 @@ impl<T> UnboundedQueue<T> {
     /// Removes the head of the queue and returns it, waiting if necessary until an item becomes available.
     ///
     /// This function is asynchronous and its result (future) must be awaited.
-    /// If multiple consumers are waiting for item, the items will be delivered in the order of `take()` calls.
+    /// If multiple consumers are waiting for item, the items will be delivered in the order of [`take`](Self::take) calls.
     pub async fn take(&self) -> T {
         self.receive_ticket.next();
         // wait for notification from producer side if the queue is empty

@@ -1,7 +1,7 @@
-//! Custom waker creation logic to avoid Send+Sync requirement.
-//!
-//! Based on waker-related code from the futures crate:
-//! https://github.com/rust-lang/futures-rs/tree/master/futures-task/src
+// Custom waker creation logic to avoid Send+Sync requirement.
+//
+// Based on waker-related code from the futures crate:
+// https://github.com/rust-lang/futures-rs/tree/master/futures-task/src
 
 use std::rc::Rc;
 use std::task::{RawWaker, RawWakerVTable, Waker};
@@ -9,26 +9,22 @@ use std::task::{RawWaker, RawWakerVTable, Waker};
 use core::mem::ManuallyDrop;
 use futures::task::WakerRef;
 
-/// A way of waking up a specific task.
-///
-/// By implementing this trait, types that are expected to be wrapped in an `Rc`
-/// can be converted into [`Waker`] objects.
-/// The waker is used to signal executor that a task is ready to be polled again.
+// A way of waking up a specific task.
+// By implementing this trait, types that are expected to be wrapped in Rc can be converted into Waker objects.
+// The waker is used to signal executor that a task is ready to be polled again.
 pub(super) trait RcWake {
-    /// Indicates that the associated task is ready to make progress and should be polled.
+    // Indicates that the associated task is ready to make progress and should be polled.
     fn wake(self: Rc<Self>) {
         Self::wake_by_ref(&self)
     }
 
-    /// Indicates that the associated task is ready to make progress and should be polled.
-    ///
-    /// This function is similar to [`RcWake::wake`], but must not consume the provided data pointer.
+    // Indicates that the associated task is ready to make progress and should be polled.
+    // This function is similar to wake(), but must not consume the provided data pointer.
     fn wake_by_ref(rc_self: &Rc<Self>);
 }
 
-/// Creates a reference to a [`Waker`] from a reference to `Rc<impl RcWake>`.
-///
-/// The resulting [`Waker`] will call [`RcWake::wake`] if awoken.
+// Creates a reference to a Waker from a reference to Rc<impl RcWake>.
+// The resulting Waker will call RcWake::wake if awoken.
 pub(super) fn waker_ref<W>(wake: &Rc<W>) -> WakerRef<'_>
 where
     W: RcWake + 'static,

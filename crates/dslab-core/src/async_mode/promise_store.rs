@@ -90,7 +90,7 @@ impl EventPromiseStore {
         let mut removed_count = 0;
         self.promises.retain(|key, promise| {
             if key.dst == dst {
-                promise.drop_shared_state();
+                promise.drop_state();
                 removed_count += 1;
                 return false;
             }
@@ -99,7 +99,7 @@ impl EventPromiseStore {
         self.promises_with_source.retain(|key, promises| {
             if key.dst == dst {
                 promises.iter_mut().for_each(|(_, promise)| {
-                    promise.drop_shared_state();
+                    promise.drop_state();
                     removed_count += 1;
                 });
                 return false;

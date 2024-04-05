@@ -143,8 +143,8 @@ impl SimulationContext {
     /// The event time will be `current_time + delay`.
     /// It is not allowed to create events before the current simulation time, so `delay` should be non-negative.
     ///
-    /// The event source will be equal to [`id`](Self::id()).
-    /// See [`emit_as()`](Self::emit_as()) if you want to emit event on behalf of some other component.
+    /// The event source will be equal to [`id`](Self::id).
+    /// See [`emit_as`](Self::emit_as) if you want to emit event on behalf of some other component.
     ///
     /// # Examples
     ///
@@ -155,11 +155,11 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -192,7 +192,7 @@ impl SimulationContext {
     /// use dslab_core::{Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -219,7 +219,7 @@ impl SimulationContext {
     /// use dslab_core::{Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -241,7 +241,7 @@ impl SimulationContext {
     /// use dslab_core::{Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -270,7 +270,7 @@ impl SimulationContext {
     /// use dslab_core::{Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -293,7 +293,7 @@ impl SimulationContext {
 
     /// Creates new immediate (zero-delay) event with specified payload and destination, returns event id.
     ///
-    /// This is a shorthand for [`emit()`](Self::emit()) with zero delay.
+    /// This is a shorthand for [`emit`](Self::emit) with zero delay.
     ///
     /// # Examples
     ///
@@ -304,11 +304,11 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -342,7 +342,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, dst, 0.)
     }
 
-    /// See [`Self::emit_ordered`].
+    /// See [`emit_ordered`](Self::emit_ordered).
     pub fn emit_ordered_now<T>(&self, data: T, dst: Id) -> EventId
     where
         T: EventData,
@@ -352,7 +352,7 @@ impl SimulationContext {
 
     /// Creates new event for itself with specified payload and delay, returns event id.
     ///
-    /// This is a shorthand for [`emit()`](Self::emit()) with event destination equals [`id`](Self::id()).
+    /// This is a shorthand for [`emit`](Self::emit) with event destination equals [`id`](Self::id).
     ///
     /// # Examples
     ///
@@ -363,11 +363,11 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -418,7 +418,7 @@ impl SimulationContext {
 
     /// Creates new immediate event for itself with specified payload, returns event id.
     ///
-    /// This is a shorthand for [`emit()`](Self::emit()) with event destination equals [`id`](Self::id())
+    /// This is a shorthand for [`emit`](Self::emit) with event destination equals [`id`](Self::id)
     /// and zero delay.
     ///
     /// # Examples
@@ -430,11 +430,11 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -473,7 +473,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, self.id, self.id, 0.)
     }
 
-    /// See [`Self::emit_ordered`].
+    /// See [`emit_ordered`](Self::emit_ordered).
     pub fn emit_ordered_self_now<T>(&self, data: T) -> EventId
     where
         T: EventData,
@@ -485,7 +485,7 @@ impl SimulationContext {
 
     /// Creates new event with specified payload, source, destination and delay, returns event id.
     ///
-    /// This is an extended version of [`emit()`](Self::emit()) for special cases when the event should be emitted
+    /// This is an extended version of [`emit`](Self::emit) for special cases when the event should be emitted
     /// on behalf of another component.
     ///
     /// ```rust
@@ -495,11 +495,11 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -536,7 +536,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().add_event(data, src, dst, delay)
     }
 
-    /// See [`Self::emit_ordered`].
+    /// See [`emit_ordered`](Self::emit_ordered).
     pub fn emit_ordered_as<T>(&self, data: T, src: Id, dst: Id, delay: f64) -> EventId
     where
         T: EventData,
@@ -546,7 +546,7 @@ impl SimulationContext {
 
     /// Cancels the specified event.
     ///
-    /// Use [`EventId`](crate::event::EventId) obtained when creating the event to cancel it.
+    /// Use [`EventId`] obtained when creating the event to cancel it.
     /// Note that already processed events cannot be cancelled.
     ///
     /// # Examples
@@ -556,7 +556,7 @@ impl SimulationContext {
     /// use dslab_core::{Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -584,7 +584,7 @@ impl SimulationContext {
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -604,7 +604,7 @@ impl SimulationContext {
         self.sim_state.borrow_mut().cancel_events(pred);
     }
 
-    /// Same as [`Self::cancel_events`], but ignores events added through `emit_ordered_...` methods.
+    /// Same as [`cancel_events`](Self::cancel_events), but ignores events added through `emit_ordered_...` methods.
     pub fn cancel_heap_events<F>(&self, pred: F)
     where
         F: Fn(&Event) -> bool,
@@ -623,10 +623,10 @@ impl SimulationContext {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
@@ -666,9 +666,7 @@ impl SimulationContext {
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        ///
         /// use serde::Serialize;
-        ///
         /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
         ///
         /// #[derive(Clone, Serialize)]
@@ -750,7 +748,6 @@ impl SimulationContext {
         /// ```compile_fail
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        ///
         /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
         ///
         /// struct Component {
@@ -795,7 +792,6 @@ impl SimulationContext {
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        ///
         /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
         ///
         /// struct Component {
@@ -846,7 +842,6 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use futures::{stream::FuturesUnordered, StreamExt};
-        ///
         /// use dslab_core::Simulation;
         ///
         /// let mut sim = Simulation::new(123);
@@ -891,7 +886,6 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use serde::Serialize;
-        ///
         /// use dslab_core::Simulation;
         ///
         /// #[derive(Clone, Serialize)]
@@ -921,7 +915,6 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use serde::Serialize;
-        ///
         /// use dslab_core::Simulation;
         ///
         /// #[derive(Clone, Serialize)]
@@ -963,7 +956,7 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_to::<T>(None, self.id)
+            self.recv_event_inner::<T>(self.id, None, None)
         }
 
         /// Waits (asynchronously) for event of type `T` from component `src`.
@@ -976,7 +969,6 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use serde::Serialize;
-        ///
         /// use dslab_core::Simulation;
         ///
         /// #[derive(Clone, Serialize)]
@@ -1007,7 +999,7 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_to::<T>(Some(src), self.id)
+            self.recv_event_inner::<T>(self.id, Some(src), None)
         }
 
         /// Waits (asynchronously) for event of type `T` from self.
@@ -1020,7 +1012,6 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use serde::Serialize;
-        ///
         /// use dslab_core::Simulation;
         ///
         /// #[derive(Clone, Serialize)]
@@ -1046,11 +1037,11 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_to::<T>(Some(self.id), self.id)
+            self.recv_event_inner::<T>(self.id, Some(self.id), None)
         }
 
-        /// Registers a key getter function for event type `T` to be used with [`Self::recv_event_by_key`] and
-        /// [`Self::recv_event_by_key_from`].
+        /// Registers a key getter function for event type `T` to be used with
+        /// [`recv_event_by_key`](Self::recv_event_by_key) and [`recv_event_by_key_from`](Self::recv_event_by_key_from).
         pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
             self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
         }
@@ -1061,12 +1052,12 @@ impl SimulationContext {
         ///
         /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
-        /// See [`Self::recv_event_by_key_from`] and [`Self::recv_event`] for examples.
+        /// See [`recv_event_by_key_from`](Self::recv_event_by_key_from) and [`recv_event`](Self::recv_event) for examples.
         pub fn recv_event_by_key<T>(&self, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
         {
-            self.recv_event_by_key_to::<T>(None, self.id, key)
+            self.recv_event_inner::<T>(self.id, None, Some(key))
         }
 
         /// Waits (asynchronously) for event of type `T` with key `key` from component `src`.
@@ -1079,12 +1070,8 @@ impl SimulationContext {
         ///
         /// ```rust
         /// use std::{cell::RefCell, rc::Rc};
-        ///
         /// use serde::Serialize;
-        ///
-        /// use dslab_core::{
-        ///     cast, Id, Event, EventHandler, Simulation, SimulationContext, event::EventData,
-        /// };
+        /// use dslab_core::{cast, Id, Event, EventHandler, Simulation, SimulationContext};
         /// use dslab_core::async_mode::EventKey;
         ///
         /// #[derive(Clone, Serialize)]
@@ -1094,7 +1081,8 @@ impl SimulationContext {
         /// }
         ///
         /// #[derive(Clone, Serialize)]
-        /// struct Start {}
+        /// struct Start {
+        /// }
         ///
         /// struct Component {
         ///     ctx: SimulationContext,
@@ -1118,6 +1106,7 @@ impl SimulationContext {
         ///         })
         ///     }
         /// }
+        ///
         /// let mut sim = Simulation::new(124);
         /// let root_ctx = sim.create_context("sender");
         /// let comp_ctx = sim.create_context("comp");
@@ -1136,7 +1125,7 @@ impl SimulationContext {
         where
             T: EventData,
         {
-            self.recv_event_by_key_to::<T>(Some(src), self.id, key)
+            self.recv_event_inner::<T>(self.id, Some(src), Some(key))
         }
 
         /// Waits (asynchronously) for event of type `T` with key `key` from self.
@@ -1145,41 +1134,30 @@ impl SimulationContext {
         ///
         /// The timeout for waiting can be set by calling [`EventFuture::with_timeout`] on the returned future.
         ///
-        /// See [`Self::recv_event_by_key_from`] and [`Self::recv_event_from_self`] for examples.
+        /// See [`recv_event_by_key_from`](Self::recv_event_by_key_from) and [`recv_event_from_self`](Self::recv_event_from_self) for examples.
         pub fn recv_event_by_key_from_self<T>(&self, key: EventKey) -> EventFuture<T>
         where
             T: EventData,
         {
-            self.recv_event_by_key_to::<T>(Some(self.id), self.id, key)
+            self.recv_event_inner::<T>(self.id, Some(self.id), Some(key))
         }
 
-        fn recv_event_to<T>(&self, src: Option<Id>, dst: Id) -> EventFuture<T>
+        fn recv_event_inner<T>(&self, dst: Id, src: Option<Id>, key: Option<EventKey>) -> EventFuture<T>
         where
             T: EventData,
         {
-            assert!(
-                self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_none(),
-                "Trying to receive event of type with registered key getter, use receive by key for such events"
-            );
-            self.create_event_future(dst, None, src)
-        }
-
-        fn recv_event_by_key_to<T>(&self, src: Option<Id>, dst: Id, key: EventKey) -> EventFuture<T>
-        where
-            T: EventData,
-        {
-            assert!(
-                self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_some(),
-                "Trying to receive event by key for type {} without key getter, register it before using this feature",
-                type_name::<T>()
-            );
-            self.create_event_future(dst, Some(key), src)
-        }
-
-        fn create_event_future<T>(&self, dst: Id, key: Option<EventKey>, src: Option<Id>) -> EventFuture<T>
-        where
-            T: EventData,
-        {
+            if key.is_none() {
+                assert!(
+                    self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_none(),
+                    "Trying to receive event of type with registered key getter, use receive by key for such events"
+                );
+            } else {
+                assert!(
+                    self.sim_state.borrow().get_key_getter(TypeId::of::<T>()).is_some(),
+                    "Trying to receive event by key for type {} without key getter, register it before using this feature",
+                    type_name::<T>()
+                );
+            }
             self.sim_state
                 .borrow_mut()
                 .create_event_future::<T>(dst, src, key, self.sim_state.clone())

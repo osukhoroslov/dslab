@@ -303,7 +303,7 @@ impl SimulationState {
         events
     }
 
-    /// This function does not check events from `ordered_events`.
+    // This function does not check events from ordered_events.
     pub fn cancel_heap_events<F>(&mut self, pred: F)
     where
         F: Fn(&Event) -> bool,
@@ -399,7 +399,6 @@ impl SimulationState {
             loop {
                 let maybe_timer = self.timers.peek();
                 let timer_id = maybe_timer.map(|t| t.id).unwrap_or(0);
-
                 if maybe_timer.is_some() {
                     if self.canceled_timers.remove(&timer_id) {
                         self.timers.pop();
@@ -430,7 +429,7 @@ impl SimulationState {
             let mut cancelled_count = 0;
             self.timers.retain(|timer_promise| {
                 if timer_promise.component_id == component_id {
-                    timer_promise.drop_shared_state();
+                    timer_promise.drop_state();
                     cancelled_count += 1;
                     return false;
                 }

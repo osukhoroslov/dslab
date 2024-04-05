@@ -9,16 +9,16 @@ use std::task::{Context, Poll, Waker};
 
 use crate::{state::SimulationState, Id};
 
-/// Timer identifier.
+// Timer identifier.
 pub(crate) type TimerId = u64;
 
 // Timer future --------------------------------------------------------------------------------------------------------
 
 /// Future that represents asynchronous waiting for timer completion.
 pub struct TimerFuture {
-    /// Unique timer identifier.
+    // Unique timer identifier.
     timer_id: TimerId,
-    /// State with completion info shared with [`TimerPromise`].
+    // State with completion info shared with TimerPromise.
     state: Rc<RefCell<TimerAwaitState>>,
     sim_state: Rc<RefCell<SimulationState>>,
 }
@@ -64,13 +64,13 @@ impl Drop for TimerFuture {
 
 #[derive(Clone)]
 pub(crate) struct TimerPromise {
-    /// Unique timer identifier.
+    // Unique timer identifier.
     pub id: TimerId,
-    /// Id of simulation component that set the timer.
+    // Id of simulation component that set the timer.
     pub component_id: Id,
-    /// The time when the timer will be fired.
+    // The time when the timer will be fired.
     pub time: f64,
-    /// State with completion info shared with [`TimerFuture`].
+    // State with completion info shared with TimerFuture.
     state: Rc<RefCell<TimerAwaitState>>,
 }
 
@@ -92,11 +92,10 @@ impl TimerPromise {
         self.state.borrow_mut().complete();
     }
 
-    /// When cancelling asynchronous waiting for timer we need to break a reference cycle
-    /// between [`TimerFuture`] and [`super::task::Task`].
-    /// Since `Task` is stored inside [`TimerAwaitState`] as a [`std::task::Waker`],
-    /// we take it out here and drop when the state borrow is released.
-    pub fn drop_shared_state(&self) {
+    // When cancelling asynchronous waiting for timer we need to break a reference cycle
+    // between TimerFuture and Task by dropping the state which stores Task as a Waker.
+    pub fn drop_state(&self) {
+        // Take the waker out and drop it when the state borrow is released
         let _waker = self.state.borrow_mut().drop();
     }
 }

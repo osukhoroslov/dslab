@@ -36,7 +36,7 @@ pub struct EventFuture<T: EventData> {
     dst: Id,
     src: Option<Id>,
     event_key: Option<EventKey>,
-    /// State with completion info shared with [`EventPromise`].
+    // State with completion info shared with EventPromise.
     state: Rc<RefCell<TypedEventAwaitState<T>>>,
     sim_state: Rc<RefCell<SimulationState>>,
 }
@@ -58,13 +58,12 @@ impl<T: EventData> EventFuture<T> {
         }
     }
 
-    /// Waits for `EventFuture` with specified timeout and returns `AwaitResult`.
+    /// Waits for event with specified timeout and returns result (either event of timeout).
     ///
     /// # Examples
     ///
     /// ```rust
     /// use serde::Serialize;
-    ///
     /// use dslab_core::Simulation;
     /// use dslab_core::async_mode::AwaitResult;
     ///
@@ -86,7 +85,7 @@ impl<T: EventData> EventFuture<T> {
     /// sim.spawn(async move {
     ///     let mut res = comp_ctx.recv_event_from::<Message>(root_id).with_timeout(10.).await;
     ///     match res {
-    ///         AwaitResult::Ok(..) => panic!("expect timeout here"),
+    ///         AwaitResult::Ok(..) => panic!("Expect timeout here"),
     ///         AwaitResult::Timeout {src, event_key, timeout} => {
     ///             assert_eq!(src, Some(root_id));
     ///             assert_eq!(event_key, None);
@@ -101,7 +100,7 @@ impl<T: EventData> EventFuture<T> {
     ///             assert_eq!(event.time, 50.);
     ///             assert_eq!(event.data.payload, 42);
     ///         }
-    ///         AwaitResult::Timeout {..} => panic!("expect ok here"),
+    ///         AwaitResult::Timeout {..} => panic!("Expect ok here"),
     ///     }
     /// });
     ///
@@ -114,9 +113,7 @@ impl<T: EventData> EventFuture<T> {
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    ///
     /// use serde::Serialize;
-    ///
     /// use dslab_core::async_mode::{AwaitResult, EventKey};
     /// use dslab_core::{cast, Event, EventData, EventHandler, Id, Simulation, SimulationContext};
     ///
@@ -157,7 +154,7 @@ impl<T: EventData> EventFuture<T> {
     ///             assert_eq!(src, Some(self.root_id));
     ///             assert_eq!(event_key, Some(1));
     ///         } else {
-    ///             panic!("expect result timeout here");
+    ///             panic!("Expect result timeout here");
     ///         }
     ///         result = self
     ///             .ctx
@@ -169,7 +166,7 @@ impl<T: EventData> EventFuture<T> {
     ///             assert_eq!(event.time, 50.);
     ///             assert_eq!(self.ctx.time(), 50.);
     ///         } else {
-    ///             panic!("expected result ok");
+    ///             panic!("Expected result ok");
     ///         }
     ///         *self.actions_finished.borrow_mut() += 1;
     ///     }
@@ -192,7 +189,7 @@ impl<T: EventData> EventFuture<T> {
     ///             }
     ///             SomeEvent { request_id } => {
     ///                 panic!(
-    ///                     "unexpected handling of SomeEvent with request id {} at time {}",
+    ///                     "Unexpected handling of SomeEvent with request id {} at time {}",
     ///                     request_id,
     ///                     self.ctx.time()
     ///                 );
@@ -270,7 +267,7 @@ impl<T: EventData> Drop for EventFuture<T> {
 
 #[derive(Clone)]
 pub(crate) struct EventPromise {
-    /// State with completion info shared with [`EventFuture`].
+    // State with completion info shared with EventFuture.
     state: Rc<RefCell<dyn EventAwaitState>>,
 }
 
@@ -295,11 +292,10 @@ impl EventPromise {
         }
     }
 
-    /// When cancelling asynchronous waiting for event we need to break a reference cycle
-    /// between [`EventFuture`] and [`super::task::Task`].
-    /// Since `Task` is stored inside [`TypedEventAwaitState`] as a [`std::task::Waker`],
-    /// we take it out here and drop when the state borrow is released.
-    pub fn drop_shared_state(&mut self) {
+    // When cancelling asynchronous waiting for event we need to break a reference cycle
+    // between EventFuture and Task by dropping the state which stores Task as a Waker.
+    pub fn drop_state(&mut self) {
+        // Take the waker out and drop it when the state borrow is released
         let _waker = self.state.borrow_mut().drop();
     }
 }
