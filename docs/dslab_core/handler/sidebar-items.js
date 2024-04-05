@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":["EventHandler"]};
+window.SIDEBAR_ITEMS = {"enum":["EventCancellationPolicy"],"trait":["EventHandler"]};

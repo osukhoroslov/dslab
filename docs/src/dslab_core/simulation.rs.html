@@ -1,5 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-core/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/dslab-core/src/simulation.rs`."><title>simulation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dslab_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.1 (7cf61ebde 2024-03-27)" data-channel="1.77.1" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../dslab_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -693,10 +694,256 @@
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
 <a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a>
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a>
+<a href="#911" id="911">911</a>
+<a href="#912" id="912">912</a>
+<a href="#913" id="913">913</a>
+<a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Simulation configuration and execution.
 
 </span><span class="kw">use </span>std::cell::RefCell;
-<span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>log::Level::Trace;
@@ -708,38 +955,68 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::component::Id;
 <span class="kw">use </span><span class="kw">crate</span>::context::SimulationContext;
-<span class="kw">use </span><span class="kw">crate</span>::handler::EventHandler;
+<span class="kw">use </span><span class="kw">crate</span>::handler::{EventCancellationPolicy, EventHandler};
 <span class="kw">use </span><span class="kw">crate</span>::log::log_undelivered_event;
 <span class="kw">use </span><span class="kw">crate</span>::state::SimulationState;
-<span class="kw">use </span><span class="kw">crate</span>::Event;
+<span class="kw">use crate</span>::{async_mode_disabled, async_mode_enabled, Event};
 
-<span class="doccomment">/// Represents a simulation, provides methods for its configuration and execution.
-</span><span class="kw">pub struct </span>Simulation {
-    sim_state: Rc&lt;RefCell&lt;SimulationState&gt;&gt;,
-    name_to_id: HashMap&lt;String, Id&gt;,
-    names: Rc&lt;RefCell&lt;Vec&lt;String&gt;&gt;&gt;,
-    handlers: Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;&gt;&gt;,
-}
+<span class="macro">async_mode_enabled!</span>(
+    <span class="kw">use </span>std::sync::mpsc::channel;
+
+    <span class="kw">use </span>futures::Future;
+
+    <span class="kw">use </span><span class="kw">crate</span>::event::EventData;
+    <span class="kw">use </span><span class="kw">crate</span>::async_mode::executor::Executor;
+    <span class="kw">use </span><span class="kw">crate</span>::async_mode::{UnboundedQueue, EventKey};
+);
+
+<span class="macro">async_mode_disabled!</span>(
+    <span class="doccomment">/// Represents a simulation, provides methods for its configuration and execution.
+    </span><span class="kw">pub struct </span>Simulation {
+        sim_state: Rc&lt;RefCell&lt;SimulationState&gt;&gt;,
+        handlers: Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;&gt;&gt;,
+    }
+);
+
+<span class="macro">async_mode_enabled!</span>(
+    <span class="doccomment">/// Represents a simulation, provides methods for its configuration and execution.
+    </span><span class="kw">pub struct </span>Simulation {
+        sim_state: Rc&lt;RefCell&lt;SimulationState&gt;&gt;,
+        handlers: Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;&gt;&gt;,
+        <span class="comment">// Specific to async mode
+        </span>executor: Executor,
+    }
+);
 
 <span class="kw">impl </span>Simulation {
-    <span class="doccomment">/// Creates a new simulation with specified random seed.
-    </span><span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
-            name_to_id: HashMap::new(),
-            names: Rc::new(RefCell::new(Vec::new())),
-            handlers: Vec::new(),
+    <span class="macro">async_mode_disabled!</span>(
+        <span class="doccomment">/// Creates a new simulation with specified random seed.
+        </span><span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
+            <span class="self">Self </span>{
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
+                handlers: Vec::new(),
+            }
         }
-    }
+    );
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="doccomment">/// Creates a new simulation with specified random seed.
+        </span><span class="kw">pub fn </span>new(seed: u64) -&gt; <span class="self">Self </span>{
+            <span class="kw">let </span>(task_sender, task_receiver) = channel();
+            <span class="self">Self </span>{
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
+                handlers: Vec::new(),
+                <span class="comment">// Specific to async mode
+                </span>executor: Executor::new(task_receiver),
+            }
+        }
+    );
 
     <span class="kw">fn </span>register(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; Id {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>id) = <span class="self">self</span>.name_to_id.get(name) {
-            <span class="kw">return </span>id;
+        <span class="kw">let </span>id = <span class="self">self</span>.sim_state.borrow_mut().register(name);
+        <span class="kw">if </span>id <span class="kw">as </span>usize == <span class="self">self</span>.handlers.len() {
+            <span class="self">self</span>.handlers.push(<span class="prelude-val">None</span>);
         }
-        <span class="kw">let </span>id = <span class="self">self</span>.name_to_id.len() <span class="kw">as </span>Id;
-        <span class="self">self</span>.name_to_id.insert(name.to_owned(), id);
-        <span class="self">self</span>.names.borrow_mut().push(name.to_owned());
-        <span class="self">self</span>.handlers.push(<span class="prelude-val">None</span>);
         id
     }
 
@@ -766,7 +1043,7 @@
     /// let comp1_id = sim.lookup_id("comp1");
     /// ```
     </span><span class="kw">pub fn </span>lookup_id(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; Id {
-        <span class="kw-2">*</span><span class="self">self</span>.name_to_id.get(name).unwrap()
+        <span class="self">self</span>.sim_state.borrow().lookup_id(name)
     }
 
     <span class="doccomment">/// Returns the name of component by its identifier.
@@ -792,7 +1069,7 @@
     /// let comp_name = sim.lookup_name(comp_ctx.id() + 1);
     /// ```
     </span><span class="kw">pub fn </span>lookup_name(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Id) -&gt; String {
-        <span class="self">self</span>.names.borrow()[id <span class="kw">as </span>usize].clone()
+        <span class="self">self</span>.sim_state.borrow().lookup_name(id)
     }
 
     <span class="doccomment">/// Creates a new simulation context with specified name.
@@ -811,12 +1088,7 @@
     <span class="kw">where
         </span>S: AsRef&lt;str&gt;,
     {
-        <span class="kw">let </span>ctx = SimulationContext::new(
-            <span class="self">self</span>.register(name.as_ref()),
-            name.as_ref(),
-            <span class="self">self</span>.sim_state.clone(),
-            <span class="self">self</span>.names.clone(),
-        );
+        <span class="kw">let </span>ctx = SimulationContext::new(<span class="self">self</span>.register(name.as_ref()), name.as_ref(), <span class="self">self</span>.sim_state.clone());
         <span class="macro">debug!</span>(
             target: <span class="string">"simulation"</span>,
             <span class="string">"[{:.3} {} simulation] Created context: {}"</span>,
@@ -834,26 +1106,15 @@
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&amp;mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } =&gt; {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -869,29 +1130,18 @@
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&amp;mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } =&gt; {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp = Rc::new(RefCell::new(Component {}));
     /// // It is possible to register event handler for component without context.
     /// // In this case the component Id is assigned inside add_handler().
     /// let comp_id = sim.add_handler("comp", comp);
@@ -919,6 +1169,7 @@
     {
         <span class="kw">let </span>id = <span class="self">self</span>.register(name.as_ref());
         <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(handler);
+        <span class="self">self</span>.sim_state.borrow_mut().on_handler_added(id);
         <span class="macro">debug!</span>(
             target: <span class="string">"simulation"</span>,
             <span class="string">"[{:.3} {} simulation] Added handler: {}"</span>,
@@ -933,46 +1184,52 @@
     ///
     /// All subsequent events destined for this component will not be delivered until the handler is added again.
     ///
+    /// Pending events to be cancelled upon the handler removal are specified via [`EventCancellationPolicy`].
+    ///
+    /// If async mode is enabled, all pending asynchronous tasks and activities related to this component are cancelled.
+    /// To continue receiving events asynchronously after the handler is re-added, spawn new asynchronous tasks
+    /// using [`SimulationContext::spawn`]. Otherwise, the events will be delivered via [`EventHandler::on`].
+    ///
     /// # Examples
     ///
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventCancellationPolicy, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&amp;mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } =&gt; {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp = Rc::new(RefCell::new(Component {}));
     /// let comp_id1 = sim.add_handler("comp", comp.clone());
-    /// sim.remove_handler("comp");
+    /// sim.remove_handler("comp", EventCancellationPolicy::None);
     /// // Assigned component Id is not changed if we call `add_handler` again.
     /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
-    </span><span class="kw">pub fn </span>remove_handler&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S)
+    </span><span class="kw">pub fn </span>remove_handler&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S, cancel_policy: EventCancellationPolicy)
     <span class="kw">where
         </span>S: AsRef&lt;str&gt;,
     {
         <span class="kw">let </span>id = <span class="self">self</span>.lookup_id(name.as_ref());
         <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">None</span>;
+        <span class="self">self</span>.sim_state.borrow_mut().on_handler_removed(id);
+        <span class="self">self</span>.remove_handler_inner(id);
+
+        <span class="comment">// cancel pending events related to the removed component based on the cancellation policy
+        </span><span class="kw">match </span>cancel_policy {
+            EventCancellationPolicy::All =&gt; <span class="self">self</span>.cancel_events(|e| e.src == id || e.dst == id),
+            EventCancellationPolicy::Incoming =&gt; <span class="self">self</span>.cancel_events(|e| e.dst == id),
+            EventCancellationPolicy::Outgoing =&gt; <span class="self">self</span>.cancel_events(|e| e.src == id),
+            <span class="kw">_ </span>=&gt; {}
+        }
+
         <span class="macro">debug!</span>(
             target: <span class="string">"simulation"</span>,
             <span class="string">"[{:.3} {} simulation] Removed handler: {}"</span>,
@@ -981,6 +1238,18 @@
             <span class="macro">json!</span>({<span class="string">"name"</span>: name.as_ref(), <span class="string">"id"</span>: id})
         );
     }
+
+    <span class="macro">async_mode_disabled!</span>(
+        <span class="kw">fn </span>remove_handler_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _id: u32) {}
+    );
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="kw">fn </span>remove_handler_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: u32) {
+            <span class="comment">// cancel pending timers and event promises related to the removed component
+            </span><span class="self">self</span>.sim_state.borrow_mut().cancel_component_timers(id);
+            <span class="self">self</span>.sim_state.borrow_mut().cancel_component_promises(id);
+        }
+    );
 
     <span class="doccomment">/// Returns the current simulation time.
     ///
@@ -991,13 +1260,13 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// sim.step();
     /// assert_eq!(sim.time(), 1.2);
     /// ```
@@ -1008,7 +1277,7 @@
     <span class="doccomment">/// Performs a single step through the simulation.
     ///
     /// Takes the next event from the queue, advances the simulation time to event time and tries to process it
-    /// by invoking the [`EventHandler::on()`](crate::EventHandler::on()) method of the corresponding event handler.
+    /// by invoking the [`EventHandler::on`] method of the corresponding event handler.
     /// If there is no handler registered for component with Id `event.dst`, logs the undelivered event and discards it.
     ///
     /// Returns `true` if some pending event was found (no matter was it properly processed or not) and `false`
@@ -1021,52 +1290,238 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// let mut status = sim.step();
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.2);
     /// status = sim.step();
     /// assert!(!status);
     /// ```
-    </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">let </span>next = <span class="self">self</span>.sim_state.borrow_mut().next_event();
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(event) = next {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
-                <span class="kw">if </span><span class="macro">log_enabled!</span>(Trace) {
-                    <span class="kw">let </span>src_name = <span class="self">self</span>.lookup_name(event.src);
-                    <span class="kw">let </span>dst_name = <span class="self">self</span>.lookup_name(event.dst);
-                    <span class="macro">trace!</span>(
-                        target: <span class="kw-2">&amp;</span>dst_name,
-                        <span class="string">"[{:.3} {} {}] {}"</span>,
-                        event.time,
-                        <span class="kw">crate</span>::log::get_colored(<span class="string">"EVENT"</span>, colored::Color::BrightBlack),
-                        dst_name,
-                        <span class="macro">json!</span>({<span class="string">"type"</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">"data"</span>: event.data, <span class="string">"src"</span>: src_name})
-                    );
-                }
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
-                    handler.borrow_mut().on(event);
-                } <span class="kw">else </span>{
-                    log_undelivered_event(event);
-                }
+    </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.step_inner()
+    }
+
+    <span class="macro">async_mode_disabled!</span>(
+        <span class="kw">fn </span>step_inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+            <span class="kw">let </span>event_opt = <span class="self">self</span>.sim_state.borrow_mut().next_event();
+            <span class="kw">match </span>event_opt {
+                <span class="prelude-val">Some</span>(event) =&gt; {
+                    <span class="self">self</span>.deliver_event_via_handler(event);
+                    <span class="bool-val">true
+                </span>}
+                <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+            }
+        }
+    );
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="kw">fn </span>step_inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+            <span class="kw">if </span><span class="self">self</span>.process_task() {
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
+
+            <span class="kw">let </span>has_timer = <span class="self">self</span>.sim_state.borrow_mut().peek_timer().is_some();
+            <span class="kw">let </span>has_event = <span class="self">self</span>.sim_state.borrow_mut().peek_event().is_some();
+            <span class="kw">if </span>!has_timer &amp;&amp; !has_event {
+                <span class="kw">return </span><span class="bool-val">false</span>;
+            }
+            <span class="kw">if </span>!has_timer {
+                <span class="self">self</span>.process_event();
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
+            <span class="kw">if </span>!has_event {
+                <span class="self">self</span>.process_timer();
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
+
+            <span class="kw">let </span>next_timer_time = <span class="self">self</span>.sim_state.borrow_mut().peek_timer().unwrap().time;
+            <span class="kw">let </span>next_event_time = <span class="self">self</span>.sim_state.borrow_mut().peek_event().unwrap().time;
+            <span class="kw">if </span>next_timer_time &lt;= next_event_time {
+                <span class="self">self</span>.process_timer();
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.process_event();
+            }
+
+            <span class="bool-val">true
+        </span>}
+
+        <span class="kw">fn </span>process_event(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+            <span class="kw">let </span>event = <span class="self">self</span>.sim_state.borrow_mut().next_event().unwrap();
+            <span class="kw">let </span>event_key = <span class="self">self
+                </span>.sim_state
+                .borrow()
+                .get_key_getter(event.data.type_id())
+                .map(|getter| getter(event.data.as_ref()));
+            <span class="kw">if </span><span class="self">self</span>.sim_state.borrow().has_event_promise_for(<span class="kw-2">&amp;</span>event, event_key) {
+                <span class="self">self</span>.log_event(<span class="kw-2">&amp;</span>event);
+                <span class="self">self</span>.sim_state.borrow_mut().complete_event_promise(event, event_key);
+                <span class="self">self</span>.process_task();
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.deliver_event_via_handler(event);
+            }
+        }
+
+        <span class="kw">fn </span>process_task(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+            <span class="self">self</span>.executor.process_task()
+        }
+
+        <span class="kw">fn </span>process_timer(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+            <span class="kw">let </span>next_timer = <span class="self">self</span>.sim_state.borrow_mut().next_timer().unwrap();
+            next_timer.complete();
+            <span class="comment">// drop timer to release the pointer to the state
+            </span>drop(next_timer);
+            <span class="self">self</span>.process_task();
+        }
+    );
+
+    <span class="kw">fn </span>deliver_event_via_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, event: Event) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
+            <span class="self">self</span>.log_event(<span class="kw-2">&amp;</span>event);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
+                handler.borrow_mut().on(event);
             } <span class="kw">else </span>{
                 log_undelivered_event(event);
             }
-            <span class="bool-val">true
-        </span>} <span class="kw">else </span>{
-            <span class="bool-val">false
-        </span>}
+        } <span class="kw">else </span>{
+            log_undelivered_event(event);
+        }
     }
+
+    <span class="kw">fn </span>log_event(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>Event) {
+        <span class="kw">if </span><span class="macro">log_enabled!</span>(Trace) {
+            <span class="kw">let </span>src_name = <span class="self">self</span>.lookup_name(event.src);
+            <span class="kw">let </span>dst_name = <span class="self">self</span>.lookup_name(event.dst);
+            <span class="macro">trace!</span>(
+                target: <span class="kw-2">&amp;</span>dst_name,
+                <span class="string">"[{:.3} {} {}] {}"</span>,
+                event.time,
+                <span class="kw">crate</span>::log::get_colored(<span class="string">"EVENT"</span>, colored::Color::BrightBlack),
+                dst_name,
+                <span class="macro">json!</span>({<span class="string">"type"</span>: type_name(<span class="kw-2">&amp;</span>event.data).unwrap(), <span class="string">"data"</span>: event.data, <span class="string">"src"</span>: src_name})
+            );
+        }
+    }
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="doccomment">/// Spawns a new asynchronous task.
+        ///
+        /// The task's type lifetime must be `'static`.
+        /// This means that the spawned task must not contain any references to data owned outside the task.
+        ///
+        /// To spawn methods inside simulation components use [`SimulationContext::spawn`].
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use dslab_core::Simulation;
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let ctx = sim.create_context("client");
+        ///
+        /// sim.spawn(async move {
+        ///     let initial_time = ctx.time();
+        ///     ctx.sleep(5.).await;
+        ///     assert_eq!(ctx.time(), 5.);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 5.);
+        /// ```
+        </span><span class="kw">pub fn </span>spawn(<span class="kw-2">&amp;</span><span class="self">self</span>, future: <span class="kw">impl </span>Future&lt;Output = ()&gt; + <span class="lifetime">'static</span>) {
+            <span class="self">self</span>.sim_state.borrow_mut().spawn(future);
+        }
+
+        <span class="doccomment">/// Registers a function that extracts [`EventKey`] from events of a type `T`.
+        ///
+        /// Calling this function is required before using [`SimulationContext::recv_event_by_key`] or
+        /// [`SimulationContext::recv_event_by_key_from`] with type `T`. See examples for these methods.
+        </span><span class="kw">pub fn </span>register_key_getter_for&lt;T: EventData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key_getter: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>T) -&gt; EventKey + <span class="lifetime">'static</span>) {
+            <span class="self">self</span>.sim_state.borrow_mut().register_key_getter_for::&lt;T&gt;(key_getter);
+        }
+
+        <span class="doccomment">/// Creates an [`UnboundedQueue`] for producer-consumer communication.
+        ///
+        /// This queue is designed to support convenient communication between several asynchronous tasks
+        /// within a single simulation component. This enables implementing the component logic as a set of
+        /// communicating concurrent activities.
+        ///
+        /// The use of this primitive for inter-component communication is discouraged in favor of passing events
+        /// directly or via intermediate components.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::async_mode::UnboundedQueue;
+        ///
+        /// struct Message {
+        ///     payload: u32,
+        /// }
+        ///
+        /// struct Component {
+        ///     ctx: SimulationContext,
+        ///     queue: UnboundedQueue&lt;Message&gt;,
+        /// }
+        ///
+        /// impl Component {
+        ///     fn start(&amp;self) {
+        ///         self.ctx.spawn(self.producer());
+        ///         self.ctx.spawn(self.consumer());
+        ///     }
+        ///
+        ///     async fn producer(&amp;self) {
+        ///         for i in 0..10 {
+        ///             self.ctx.sleep(5.).await;
+        ///             self.queue.put(Message {payload: i});
+        ///         }
+        ///     }
+        ///
+        ///     async fn consumer(&amp;self) {
+        ///         for i in 0..10 {
+        ///             let msg = self.queue.take().await;
+        ///             assert_eq!(msg.payload, i);
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Component {
+        ///     fn on(&amp;mut self, event: Event) {
+        ///     }
+        /// }
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let comp = Rc::new(RefCell::new(Component {
+        ///     ctx: sim.create_context("comp"),
+        ///     queue: sim.create_queue("comp_queue")
+        /// }));
+        /// sim.add_handler("comp", comp.clone());
+        ///
+        /// comp.borrow().start();
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
+        </span><span class="kw">pub fn </span>create_queue&lt;T, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S) -&gt; UnboundedQueue&lt;T&gt;
+        <span class="kw">where
+            </span>S: AsRef&lt;str&gt;,
+        {
+            UnboundedQueue::new(<span class="self">self</span>.create_context(name))
+        }
+    );
 
     <span class="doccomment">/// Performs the specified number of steps through the simulation.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the specified number of
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the specified number of
     /// steps is made, or `false` is returned (no more pending events).
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
@@ -1078,15 +1533,15 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// let mut status = sim.steps(2);
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.3);
@@ -1105,7 +1560,7 @@
 
     <span class="doccomment">/// Steps through the simulation until there are no pending events left.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until `false` is returned.
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until `false` is returned.
     ///
     /// # Examples
     ///
@@ -1114,15 +1569,15 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// sim.step_until_no_events();
     /// assert_eq!(sim.time(), 1.4);
     /// ```
@@ -1132,12 +1587,12 @@
 
     <span class="doccomment">/// Steps through the simulation with duration limit.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the next event
     /// time is above the specified threshold (`initial_time + duration`) or there are no pending events left.
     ///
     /// This method also advances the simulation time to `initial_time + duration`. Note that the resulted time may
     /// slightly differ from the expected value due to the floating point errors. This issue can be avoided by using
-    /// the [`step_until_time()`](Self::step_until_time()) method.
+    /// the [`step_until_time`](Self::step_until_time) method.
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
     ///
@@ -1148,15 +1603,15 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_for_duration(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -1171,7 +1626,7 @@
 
     <span class="doccomment">/// Steps through the simulation until the specified time.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the next event
     /// time is above the specified time or there are no pending events left.
     ///
     /// This method also advances the simulation time to the specified time.
@@ -1185,15 +1640,15 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_until_time(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -1202,21 +1657,61 @@
     /// assert!(!status); // there are no more events
     /// ```
     </span><span class="kw">pub fn </span>step_until_time(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) -&gt; bool {
-        <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="bool-val">true</span>;
-        <span class="kw">loop </span>{
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(event) = <span class="self">self</span>.sim_state.borrow().peek_event() {
-                <span class="kw">if </span>event.time &gt; time {
+        <span class="self">self</span>.step_until_time_inner(time)
+    }
+
+    <span class="macro">async_mode_disabled!</span>(
+        <span class="kw">fn </span>step_until_time_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) -&gt; bool {
+            <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="bool-val">true</span>;
+            <span class="kw">loop </span>{
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(event) = <span class="self">self</span>.sim_state.borrow_mut().peek_event() {
+                    <span class="kw">if </span>event.time &gt; time {
+                        <span class="kw">break</span>;
+                    }
+                } <span class="kw">else </span>{
+                    result = <span class="bool-val">false</span>;
                     <span class="kw">break</span>;
                 }
-            } <span class="kw">else </span>{
-                result = <span class="bool-val">false</span>;
-                <span class="kw">break</span>;
+                <span class="self">self</span>.step();
             }
-            <span class="self">self</span>.step();
+            <span class="self">self</span>.sim_state.borrow_mut().set_time(time);
+            result
         }
-        <span class="self">self</span>.sim_state.borrow_mut().set_time(time);
-        result
-    }
+    );
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="kw">fn </span>step_until_time_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) -&gt; bool {
+            <span class="kw">let </span><span class="kw-2">mut </span>result;
+            <span class="kw">loop </span>{
+                <span class="kw">while </span><span class="self">self</span>.process_task() {}
+
+                result = <span class="bool-val">false</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>step = <span class="bool-val">false</span>;
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(event) = <span class="self">self</span>.sim_state.borrow_mut().peek_event() {
+                    result = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>event.time &lt;= time {
+                        step = <span class="bool-val">true</span>;
+                    }
+                }
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(timer) = <span class="self">self</span>.sim_state.borrow_mut().peek_timer() {
+                    result = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>timer.time &lt;= time {
+                        step = <span class="bool-val">true</span>;
+                    }
+                }
+
+                <span class="kw">if </span>step {
+                    <span class="self">self</span>.step();
+                } <span class="kw">else </span>{
+                    <span class="kw">break</span>;
+                }
+            }
+            <span class="self">self</span>.sim_state.borrow_mut().set_time(time);
+            result
+        }
+    );
 
     <span class="doccomment">/// Returns a random float in the range _[0, 1)_
     /// using the simulation-wide random number generator.
@@ -1279,15 +1774,15 @@
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// assert_eq!(sim.event_count(), 3);
     /// ```
     </span><span class="kw">pub fn </span>event_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
@@ -1305,15 +1800,15 @@
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// sim.cancel_events(|e| e.id &lt; 2);
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
@@ -1336,15 +1831,15 @@
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// let cancelled = sim.cancel_and_get_events(|e| e.id &lt; 2);
     /// assert_eq!(cancelled.len(), 2);
     /// sim.step();
@@ -1368,15 +1863,15 @@
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut ctx1 = sim.create_context("comp1");
     /// let mut ctx2 = sim.create_context("comp2");
-    /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
-    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 1.0);
-    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 2.0);
+    /// let event1 = ctx1.emit(SomeEvent {}, ctx2.id(), 1.0);
+    /// let event2 = ctx2.emit(SomeEvent {}, ctx1.id(), 1.0);
+    /// let event3 = ctx1.emit(SomeEvent {}, ctx2.id(), 2.0);
     /// let events = sim.dump_events();
     /// assert_eq!(events.len(), 3);
     /// assert_eq!((events[0].id, events[0].time), (event1, 1.0));
