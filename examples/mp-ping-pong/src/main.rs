@@ -276,7 +276,7 @@ fn test_mc_consecutive_messages(config: &TestConfig) -> TestResult {
     let data = r#"{"value": 0}"#.to_string();
     let data2 = r#"{"value": 1}"#.to_string();
 
-    let messages_data = vec![data, data2];
+    let messages_data = [data, data2];
     let mut messages_expected = HashSet::new();
     let mut collected_states = HashSet::new();
 

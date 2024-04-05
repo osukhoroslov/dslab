@@ -68,6 +68,11 @@ impl Network {
         }
     }
 
+    /// Returns id of corresponding simulation component.
+    pub fn id(&self) -> Id {
+        self.ctx.id()
+    }
+
     // Topology --------------------------------------------------------------------------------------------------------
 
     /// Adds a new network node.

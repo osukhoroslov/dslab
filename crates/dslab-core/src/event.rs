@@ -58,3 +58,45 @@ impl PartialOrd for Event {
         Some(self.cmp(other))
     }
 }
+
+/// Typed version of [`crate::Event`].
+pub struct TypedEvent<T>
+where
+    T: EventData,
+{
+    /// Unique event identifier.
+    ///
+    /// Events are numbered sequentially starting from 0.
+    pub id: EventId,
+    /// Time of event occurrence.
+    pub time: f64,
+    /// Identifier of event source.
+    pub src: Id,
+    /// Identifier of event destination.
+    pub dst: Id,
+    /// Event payload.
+    pub data: T,
+}
+
+impl Event {
+    /// Converts [`Event`] to [`TypedEvent`] of type `T`.
+    ///
+    /// Panics on downcast error.
+    pub fn downcast<T>(e: Event) -> TypedEvent<T>
+    where
+        T: EventData,
+    {
+        match e.data.downcast::<T>() {
+            Ok(data) => TypedEvent {
+                id: e.id,
+                time: e.time,
+                src: e.src,
+                dst: e.dst,
+                data: *data,
+            },
+            Err(_) => {
+                panic!("Event downcast error");
+            }
+        }
+    }
+}

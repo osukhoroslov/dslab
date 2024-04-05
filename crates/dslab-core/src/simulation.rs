@@ -1,7 +1,6 @@
 //! Simulation configuration and execution.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use log::Level::Trace;
@@ -13,38 +12,68 @@ use serde_type_name::type_name;
 
 use crate::component::Id;
 use crate::context::SimulationContext;
-use crate::handler::EventHandler;
+use crate::handler::{EventCancellationPolicy, EventHandler};
 use crate::log::log_undelivered_event;
 use crate::state::SimulationState;
-use crate::Event;
+use crate::{async_mode_disabled, async_mode_enabled, Event};
 
-/// Represents a simulation, provides methods for its configuration and execution.
-pub struct Simulation {
-    sim_state: Rc<RefCell<SimulationState>>,
-    name_to_id: HashMap<String, Id>,
-    names: Rc<RefCell<Vec<String>>>,
-    handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
-}
+async_mode_enabled!(
+    use std::sync::mpsc::channel;
+
+    use futures::Future;
+
+    use crate::event::EventData;
+    use crate::async_mode::executor::Executor;
+    use crate::async_mode::{UnboundedQueue, EventKey};
+);
+
+async_mode_disabled!(
+    /// Represents a simulation, provides methods for its configuration and execution.
+    pub struct Simulation {
+        sim_state: Rc<RefCell<SimulationState>>,
+        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+    }
+);
+
+async_mode_enabled!(
+    /// Represents a simulation, provides methods for its configuration and execution.
+    pub struct Simulation {
+        sim_state: Rc<RefCell<SimulationState>>,
+        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+        // Specific to async mode
+        executor: Executor,
+    }
+);
 
 impl Simulation {
-    /// Creates a new simulation with specified random seed.
-    pub fn new(seed: u64) -> Self {
-        Self {
-            sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
-            name_to_id: HashMap::new(),
-            names: Rc::new(RefCell::new(Vec::new())),
-            handlers: Vec::new(),
+    async_mode_disabled!(
+        /// Creates a new simulation with specified random seed.
+        pub fn new(seed: u64) -> Self {
+            Self {
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed))),
+                handlers: Vec::new(),
+            }
         }
-    }
+    );
+
+    async_mode_enabled!(
+        /// Creates a new simulation with specified random seed.
+        pub fn new(seed: u64) -> Self {
+            let (task_sender, task_receiver) = channel();
+            Self {
+                sim_state: Rc::new(RefCell::new(SimulationState::new(seed, task_sender))),
+                handlers: Vec::new(),
+                // Specific to async mode
+                executor: Executor::new(task_receiver),
+            }
+        }
+    );
 
     fn register(&mut self, name: &str) -> Id {
-        if let Some(&id) = self.name_to_id.get(name) {
-            return id;
+        let id = self.sim_state.borrow_mut().register(name);
+        if id as usize == self.handlers.len() {
+            self.handlers.push(None);
         }
-        let id = self.name_to_id.len() as Id;
-        self.name_to_id.insert(name.to_owned(), id);
-        self.names.borrow_mut().push(name.to_owned());
-        self.handlers.push(None);
         id
     }
 
@@ -71,7 +100,7 @@ impl Simulation {
     /// let comp1_id = sim.lookup_id("comp1");
     /// ```
     pub fn lookup_id(&self, name: &str) -> Id {
-        *self.name_to_id.get(name).unwrap()
+        self.sim_state.borrow().lookup_id(name)
     }
 
     /// Returns the name of component by its identifier.
@@ -97,7 +126,7 @@ impl Simulation {
     /// let comp_name = sim.lookup_name(comp_ctx.id() + 1);
     /// ```
     pub fn lookup_name(&self, id: Id) -> String {
-        self.names.borrow()[id as usize].clone()
+        self.sim_state.borrow().lookup_name(id)
     }
 
     /// Creates a new simulation context with specified name.
@@ -116,12 +145,7 @@ impl Simulation {
     where
         S: AsRef<str>,
     {
-        let ctx = SimulationContext::new(
-            self.register(name.as_ref()),
-            name.as_ref(),
-            self.sim_state.clone(),
-            self.names.clone(),
-        );
+        let ctx = SimulationContext::new(self.register(name.as_ref()), name.as_ref(), self.sim_state.clone());
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Created context: {}",
@@ -139,26 +163,15 @@ impl Simulation {
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     ///     ctx: SimulationContext,
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } => {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
@@ -174,29 +187,18 @@ impl Simulation {
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } => {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp = Rc::new(RefCell::new(Component {}));
     /// // It is possible to register event handler for component without context.
     /// // In this case the component Id is assigned inside add_handler().
     /// let comp_id = sim.add_handler("comp", comp);
@@ -224,6 +226,7 @@ impl Simulation {
     {
         let id = self.register(name.as_ref());
         self.handlers[id as usize] = Some(handler);
+        self.sim_state.borrow_mut().on_handler_added(id);
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -238,46 +241,52 @@ impl Simulation {
     ///
     /// All subsequent events destined for this component will not be delivered until the handler is added again.
     ///
+    /// Pending events to be cancelled upon the handler removal are specified via [`EventCancellationPolicy`].
+    ///
+    /// If async mode is enabled, all pending asynchronous tasks and activities related to this component are cancelled.
+    /// To continue receiving events asynchronously after the handler is re-added, spawn new asynchronous tasks
+    /// using [`SimulationContext::spawn`]. Otherwise, the events will be delivered via [`EventHandler::on`].
+    ///
     /// # Examples
     ///
     /// ```rust
     /// use std::cell::RefCell;
     /// use std::rc::Rc;
-    /// use serde::Serialize;
-    /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+    /// use dslab_core::{Event, EventCancellationPolicy, EventHandler, Simulation, SimulationContext};
     ///
-    /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
-    /// }
-    ///
-    /// pub struct Component {
+    /// struct Component {
     /// }
     ///
     /// impl EventHandler for Component {
     ///     fn on(&mut self, event: Event) {
-    ///         cast!(match event.data {
-    ///             SomeEvent { } => {
-    ///                 // some event processing logic...
-    ///             }
-    ///         })
-    ///
-    ///    }
+    ///     }
     /// }
     ///
     /// let mut sim = Simulation::new(123);
-    /// let comp = Rc::new(RefCell::new(Component { }));
+    /// let comp = Rc::new(RefCell::new(Component {}));
     /// let comp_id1 = sim.add_handler("comp", comp.clone());
-    /// sim.remove_handler("comp");
+    /// sim.remove_handler("comp", EventCancellationPolicy::None);
     /// // Assigned component Id is not changed if we call `add_handler` again.
     /// let comp_id2 = sim.add_handler("comp", comp);
     /// assert_eq!(comp_id1, comp_id2);
     /// ```
-    pub fn remove_handler<S>(&mut self, name: S)
+    pub fn remove_handler<S>(&mut self, name: S, cancel_policy: EventCancellationPolicy)
     where
         S: AsRef<str>,
     {
         let id = self.lookup_id(name.as_ref());
         self.handlers[id as usize] = None;
+        self.sim_state.borrow_mut().on_handler_removed(id);
+        self.remove_handler_inner(id);
+
+        // cancel pending events related to the removed component based on the cancellation policy
+        match cancel_policy {
+            EventCancellationPolicy::All => self.cancel_events(|e| e.src == id || e.dst == id),
+            EventCancellationPolicy::Incoming => self.cancel_events(|e| e.dst == id),
+            EventCancellationPolicy::Outgoing => self.cancel_events(|e| e.src == id),
+            _ => {}
+        }
+
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Removed handler: {}",
@@ -286,6 +295,18 @@ impl Simulation {
             json!({"name": name.as_ref(), "id": id})
         );
     }
+
+    async_mode_disabled!(
+        fn remove_handler_inner(&mut self, _id: u32) {}
+    );
+
+    async_mode_enabled!(
+        fn remove_handler_inner(&mut self, id: u32) {
+            // cancel pending timers and event promises related to the removed component
+            self.sim_state.borrow_mut().cancel_component_timers(id);
+            self.sim_state.borrow_mut().cancel_component_promises(id);
+        }
+    );
 
     /// Returns the current simulation time.
     ///
@@ -296,13 +317,13 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// sim.step();
     /// assert_eq!(sim.time(), 1.2);
     /// ```
@@ -313,7 +334,7 @@ impl Simulation {
     /// Performs a single step through the simulation.
     ///
     /// Takes the next event from the queue, advances the simulation time to event time and tries to process it
-    /// by invoking the [`EventHandler::on()`](crate::EventHandler::on()) method of the corresponding event handler.
+    /// by invoking the [`EventHandler::on`] method of the corresponding event handler.
     /// If there is no handler registered for component with Id `event.dst`, logs the undelivered event and discards it.
     ///
     /// Returns `true` if some pending event was found (no matter was it properly processed or not) and `false`
@@ -326,52 +347,238 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
     /// let mut status = sim.step();
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.2);
     /// status = sim.step();
     /// assert!(!status);
     /// ```
-    pub fn step(&mut self) -> bool {
-        let next = self.sim_state.borrow_mut().next_event();
-        if let Some(event) = next {
-            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
-                if log_enabled!(Trace) {
-                    let src_name = self.lookup_name(event.src);
-                    let dst_name = self.lookup_name(event.dst);
-                    trace!(
-                        target: &dst_name,
-                        "[{:.3} {} {}] {}",
-                        event.time,
-                        crate::log::get_colored("EVENT", colored::Color::BrightBlack),
-                        dst_name,
-                        json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
-                    );
+    pub fn step(&self) -> bool {
+        self.step_inner()
+    }
+
+    async_mode_disabled!(
+        fn step_inner(&self) -> bool {
+            let event_opt = self.sim_state.borrow_mut().next_event();
+            match event_opt {
+                Some(event) => {
+                    self.deliver_event_via_handler(event);
+                    true
                 }
-                if let Some(handler) = handler_opt {
-                    handler.borrow_mut().on(event);
-                } else {
-                    log_undelivered_event(event);
-                }
+                None => false,
+            }
+        }
+    );
+
+    async_mode_enabled!(
+        fn step_inner(&self) -> bool {
+            if self.process_task() {
+                return true;
+            }
+
+            let has_timer = self.sim_state.borrow_mut().peek_timer().is_some();
+            let has_event = self.sim_state.borrow_mut().peek_event().is_some();
+            if !has_timer && !has_event {
+                return false;
+            }
+            if !has_timer {
+                self.process_event();
+                return true;
+            }
+            if !has_event {
+                self.process_timer();
+                return true;
+            }
+
+            let next_timer_time = self.sim_state.borrow_mut().peek_timer().unwrap().time;
+            let next_event_time = self.sim_state.borrow_mut().peek_event().unwrap().time;
+            if next_timer_time <= next_event_time {
+                self.process_timer();
+            } else {
+                self.process_event();
+            }
+
+            true
+        }
+
+        fn process_event(&self) {
+            let event = self.sim_state.borrow_mut().next_event().unwrap();
+            let event_key = self
+                .sim_state
+                .borrow()
+                .get_key_getter(event.data.type_id())
+                .map(|getter| getter(event.data.as_ref()));
+            if self.sim_state.borrow().has_event_promise_for(&event, event_key) {
+                self.log_event(&event);
+                self.sim_state.borrow_mut().complete_event_promise(event, event_key);
+                self.process_task();
+            } else {
+                self.deliver_event_via_handler(event);
+            }
+        }
+
+        fn process_task(&self) -> bool {
+            self.executor.process_task()
+        }
+
+        fn process_timer(&self) {
+            let next_timer = self.sim_state.borrow_mut().next_timer().unwrap();
+            next_timer.complete();
+            // drop timer to release the pointer to the state
+            drop(next_timer);
+            self.process_task();
+        }
+    );
+
+    fn deliver_event_via_handler(&self, event: Event) {
+        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+            self.log_event(&event);
+            if let Some(handler) = handler_opt {
+                handler.borrow_mut().on(event);
             } else {
                 log_undelivered_event(event);
             }
-            true
         } else {
-            false
+            log_undelivered_event(event);
         }
     }
 
+    fn log_event(&self, event: &Event) {
+        if log_enabled!(Trace) {
+            let src_name = self.lookup_name(event.src);
+            let dst_name = self.lookup_name(event.dst);
+            trace!(
+                target: &dst_name,
+                "[{:.3} {} {}] {}",
+                event.time,
+                crate::log::get_colored("EVENT", colored::Color::BrightBlack),
+                dst_name,
+                json!({"type": type_name(&event.data).unwrap(), "data": event.data, "src": src_name})
+            );
+        }
+    }
+
+    async_mode_enabled!(
+        /// Spawns a new asynchronous task.
+        ///
+        /// The task's type lifetime must be `'static`.
+        /// This means that the spawned task must not contain any references to data owned outside the task.
+        ///
+        /// To spawn methods inside simulation components use [`SimulationContext::spawn`].
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use dslab_core::Simulation;
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let ctx = sim.create_context("client");
+        ///
+        /// sim.spawn(async move {
+        ///     let initial_time = ctx.time();
+        ///     ctx.sleep(5.).await;
+        ///     assert_eq!(ctx.time(), 5.);
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 5.);
+        /// ```
+        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
+            self.sim_state.borrow_mut().spawn(future);
+        }
+
+        /// Registers a function that extracts [`EventKey`] from events of a type `T`.
+        ///
+        /// Calling this function is required before using [`SimulationContext::recv_event_by_key`] or
+        /// [`SimulationContext::recv_event_by_key_from`] with type `T`. See examples for these methods.
+        pub fn register_key_getter_for<T: EventData>(&self, key_getter: impl Fn(&T) -> EventKey + 'static) {
+            self.sim_state.borrow_mut().register_key_getter_for::<T>(key_getter);
+        }
+
+        /// Creates an [`UnboundedQueue`] for producer-consumer communication.
+        ///
+        /// This queue is designed to support convenient communication between several asynchronous tasks
+        /// within a single simulation component. This enables implementing the component logic as a set of
+        /// communicating concurrent activities.
+        ///
+        /// The use of this primitive for inter-component communication is discouraged in favor of passing events
+        /// directly or via intermediate components.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use std::rc::Rc;
+        /// use std::cell::RefCell;
+        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::async_mode::UnboundedQueue;
+        ///
+        /// struct Message {
+        ///     payload: u32,
+        /// }
+        ///
+        /// struct Component {
+        ///     ctx: SimulationContext,
+        ///     queue: UnboundedQueue<Message>,
+        /// }
+        ///
+        /// impl Component {
+        ///     fn start(&self) {
+        ///         self.ctx.spawn(self.producer());
+        ///         self.ctx.spawn(self.consumer());
+        ///     }
+        ///
+        ///     async fn producer(&self) {
+        ///         for i in 0..10 {
+        ///             self.ctx.sleep(5.).await;
+        ///             self.queue.put(Message {payload: i});
+        ///         }
+        ///     }
+        ///
+        ///     async fn consumer(&self) {
+        ///         for i in 0..10 {
+        ///             let msg = self.queue.take().await;
+        ///             assert_eq!(msg.payload, i);
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// impl EventHandler for Component {
+        ///     fn on(&mut self, event: Event) {
+        ///     }
+        /// }
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let comp = Rc::new(RefCell::new(Component {
+        ///     ctx: sim.create_context("comp"),
+        ///     queue: sim.create_queue("comp_queue")
+        /// }));
+        /// sim.add_handler("comp", comp.clone());
+        ///
+        /// comp.borrow().start();
+        /// sim.step_until_no_events();
+        ///
+        /// assert_eq!(sim.time(), 50.);
+        /// ```
+        pub fn create_queue<T, S>(&mut self, name: S) -> UnboundedQueue<T>
+        where
+            S: AsRef<str>,
+        {
+            UnboundedQueue::new(self.create_context(name))
+        }
+    );
+
     /// Performs the specified number of steps through the simulation.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the specified number of
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the specified number of
     /// steps is made, or `false` is returned (no more pending events).
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
@@ -383,15 +590,15 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// let mut status = sim.steps(2);
     /// assert!(status);
     /// assert_eq!(sim.time(), 1.3);
@@ -410,7 +617,7 @@ impl Simulation {
 
     /// Steps through the simulation until there are no pending events left.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until `false` is returned.
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until `false` is returned.
     ///
     /// # Examples
     ///
@@ -419,15 +626,15 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.2);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.3);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.4);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.2);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.3);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.4);
     /// sim.step_until_no_events();
     /// assert_eq!(sim.time(), 1.4);
     /// ```
@@ -437,12 +644,12 @@ impl Simulation {
 
     /// Steps through the simulation with duration limit.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the next event
     /// time is above the specified threshold (`initial_time + duration`) or there are no pending events left.
     ///
     /// This method also advances the simulation time to `initial_time + duration`. Note that the resulted time may
     /// slightly differ from the expected value due to the floating point errors. This issue can be avoided by using
-    /// the [`step_until_time()`](Self::step_until_time()) method.
+    /// the [`step_until_time`](Self::step_until_time) method.
     ///
     /// Returns `true` if there could be more pending events and `false` otherwise.
     ///
@@ -453,15 +660,15 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_for_duration(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -476,7 +683,7 @@ impl Simulation {
 
     /// Steps through the simulation until the specified time.
     ///
-    /// This is a convenient wrapper around [`step()`](Self::step()), which invokes this method until the next event
+    /// This is a convenient wrapper around [`step`](Self::step), which invokes this method until the next event
     /// time is above the specified time or there are no pending events left.
     ///
     /// This method also advances the simulation time to the specified time.
@@ -490,15 +697,15 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// let mut status = sim.step_until_time(1.8);
     /// assert_eq!(sim.time(), 1.8);
     /// assert!(status); // there are more events
@@ -507,21 +714,61 @@ impl Simulation {
     /// assert!(!status); // there are no more events
     /// ```
     pub fn step_until_time(&mut self, time: f64) -> bool {
-        let mut result = true;
-        loop {
-            if let Some(event) = self.sim_state.borrow().peek_event() {
-                if event.time > time {
+        self.step_until_time_inner(time)
+    }
+
+    async_mode_disabled!(
+        fn step_until_time_inner(&mut self, time: f64) -> bool {
+            let mut result = true;
+            loop {
+                if let Some(event) = self.sim_state.borrow_mut().peek_event() {
+                    if event.time > time {
+                        break;
+                    }
+                } else {
+                    result = false;
                     break;
                 }
-            } else {
-                result = false;
-                break;
+                self.step();
             }
-            self.step();
+            self.sim_state.borrow_mut().set_time(time);
+            result
         }
-        self.sim_state.borrow_mut().set_time(time);
-        result
-    }
+    );
+
+    async_mode_enabled!(
+        fn step_until_time_inner(&mut self, time: f64) -> bool {
+            let mut result;
+            loop {
+                while self.process_task() {}
+
+                result = false;
+                let mut step = false;
+
+                if let Some(event) = self.sim_state.borrow_mut().peek_event() {
+                    result = true;
+                    if event.time <= time {
+                        step = true;
+                    }
+                }
+
+                if let Some(timer) = self.sim_state.borrow_mut().peek_timer() {
+                    result = true;
+                    if timer.time <= time {
+                        step = true;
+                    }
+                }
+
+                if step {
+                    self.step();
+                } else {
+                    break;
+                }
+            }
+            self.sim_state.borrow_mut().set_time(time);
+            result
+        }
+    );
 
     /// Returns a random float in the range _[0, 1)_
     /// using the simulation-wide random number generator.
@@ -584,15 +831,15 @@ impl Simulation {
     /// use dslab_core::Simulation;
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp_ctx = sim.create_context("comp");
     /// assert_eq!(sim.time(), 0.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 1.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 2.0);
-    /// comp_ctx.emit_self(SomeEvent{ }, 3.5);
+    /// comp_ctx.emit_self(SomeEvent {}, 1.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 2.0);
+    /// comp_ctx.emit_self(SomeEvent {}, 3.5);
     /// assert_eq!(sim.event_count(), 3);
     /// ```
     pub fn event_count(&self) -> u64 {
@@ -610,15 +857,15 @@ impl Simulation {
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// sim.cancel_events(|e| e.id < 2);
     /// sim.step();
     /// assert_eq!(sim.time(), 3.0);
@@ -641,15 +888,15 @@ impl Simulation {
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut comp1_ctx = sim.create_context("comp1");
     /// let mut comp2_ctx = sim.create_context("comp2");
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 1.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 2.0);
-    /// comp1_ctx.emit(SomeEvent{}, comp2_ctx.id(), 3.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 1.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 2.0);
+    /// comp1_ctx.emit(SomeEvent {}, comp2_ctx.id(), 3.0);
     /// let cancelled = sim.cancel_and_get_events(|e| e.id < 2);
     /// assert_eq!(cancelled.len(), 2);
     /// sim.step();
@@ -673,15 +920,15 @@ impl Simulation {
     /// use dslab_core::{Event, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     /// }
     ///
     /// let mut sim = Simulation::new(123);
     /// let mut ctx1 = sim.create_context("comp1");
     /// let mut ctx2 = sim.create_context("comp2");
-    /// let event1 = ctx1.emit(SomeEvent{}, ctx2.id(), 1.0);
-    /// let event2 = ctx2.emit(SomeEvent{}, ctx1.id(), 1.0);
-    /// let event3 = ctx1.emit(SomeEvent{}, ctx2.id(), 2.0);
+    /// let event1 = ctx1.emit(SomeEvent {}, ctx2.id(), 1.0);
+    /// let event2 = ctx2.emit(SomeEvent {}, ctx1.id(), 1.0);
+    /// let event3 = ctx1.emit(SomeEvent {}, ctx2.id(), 2.0);
     /// let events = sim.dump_events();
     /// assert_eq!(events.len(), 3);
     /// assert_eq!((events[0].id, events[0].time), (event1, 1.0));

@@ -17,11 +17,11 @@ pub trait EventHandler {
     /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
-    /// pub struct SomeEvent {
+    /// struct SomeEvent {
     ///     some_field: u32,
     /// }
     ///
-    /// pub struct Component {
+    /// struct Component {
     ///     state: u32,
     ///     ctx: SimulationContext,
     /// }
@@ -43,7 +43,7 @@ pub trait EventHandler {
     /// let mut comp2_ctx = sim.create_context("comp2");
     /// let comp2 = Rc::new(RefCell::new(Component { state: 0, ctx: comp2_ctx }));
     /// let comp2_id = sim.add_handler("comp2", comp2.clone());
-    /// comp1_ctx.emit(SomeEvent{ some_field: 16 }, comp2_id, 1.2);
+    /// comp1_ctx.emit(SomeEvent { some_field: 16 }, comp2_id, 1.2);
     /// assert_eq!(comp2.borrow().state, 0);
     /// sim.step();
     /// assert_eq!(comp2.borrow().state, 16);
@@ -66,16 +66,16 @@ pub trait EventHandler {
 /// use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
 ///
 /// #[derive(Clone, Serialize)]
-/// pub struct SomeEvent {
+/// struct SomeEvent {
 ///     some_field: u32,
 /// }
 ///
 /// #[derive(Clone, Serialize)]
-/// pub struct AnotherEvent {
+/// struct AnotherEvent {
 ///     another_field: f64,
 /// }
 ///
-/// pub struct Component {
+/// struct Component {
 ///     ctx: SimulationContext,
 /// }
 ///
@@ -116,4 +116,16 @@ macro_rules! cast {
             $crate::log::log_unhandled_event($event);
         }
     }
+}
+
+/// Specifies which pending events are cancelled on event handler removal.
+pub enum EventCancellationPolicy {
+    /// Cancel events destined to the component.
+    Incoming,
+    /// Cancel events produced by the component.
+    Outgoing,
+    /// Cancel all events related to the component.
+    All,
+    /// Do not cancel events.
+    None,
 }

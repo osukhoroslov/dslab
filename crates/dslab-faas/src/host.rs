@@ -1,9 +1,9 @@
 //! Host model.
 //!
 //! In DSLab FaaS, the main components of a host are:
-//! - [Container manager][crate::container::ContainerManager] -- a component that manages running containers.
-//! - [CPU model][crate::cpu::Cpu] -- a component that models CPU sharing among running containers.
-//! - [Invoker][crate::invoker::Invoker] -- a component that routes invocation requests to appropriate containers and creates
+//! - [Container manager](crate::container::ContainerManager) -- a component that manages running containers.
+//! - [CPU model](crate::cpu::Cpu) -- a component that models CPU sharing among running containers.
+//! - [Invoker] -- a component that routes invocation requests to appropriate containers and creates
 //! new containers if needed.
 use std::cell::RefCell;
 use std::rc::Rc;

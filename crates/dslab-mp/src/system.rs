@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
+use dslab_core::handler::EventCancellationPolicy;
 use dslab_core::{cast, Simulation};
 
 use crate::events::MessageReceived;
@@ -16,7 +17,7 @@ use crate::network::Network;
 use crate::node::{EventLogEntry, Node};
 use crate::process::Process;
 
-/// Models distributed system consisting of multiple nodes connected via network.  
+/// Models distributed system consisting of multiple nodes connected via network.
 pub struct System {
     sim: Simulation,
     net: Rc<RefCell<Network>>,
@@ -112,8 +113,6 @@ impl System {
     /// with processes after the crash (i.e. examine event log).
     pub fn crash_node(&mut self, node_name: &str) {
         let node = self.nodes.get(node_name).unwrap();
-        // remove the handler to discard all events sent to this node
-        self.sim.remove_handler(node_name);
         node.borrow_mut().crash();
 
         self.logger.borrow_mut().log(LogEntry::NodeCrashed {
@@ -146,6 +145,9 @@ impl System {
                 }
             })
         }
+
+        // remove the handler to discard all pending and future events sent to this node
+        self.sim.remove_handler(node_name, EventCancellationPolicy::Incoming);
     }
 
     /// Recovers the previously crashed node.
