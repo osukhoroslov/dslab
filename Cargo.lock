@@ -662,6 +662,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "dag-cloud-benchmark"
+version = "0.1.0"
+dependencies = [
+ "clap 4.2.1",
+ "dslab-compute",
+ "dslab-core",
+ "dslab-dag",
+ "env_logger 0.9.3",
+ "indexmap 2.2.6",
+ "log 0.4.17",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "reqwest",
+ "serde_json",
+ "sugars",
+]
+
+[[package]]
 name = "dag-demo"
 version = "0.1.0"
 dependencies = [
@@ -999,7 +1017,7 @@ version = "0.1.0"
 dependencies = [
  "dslab-core",
  "dslab-models",
- "indexmap 2.0.0",
+ "indexmap 2.2.6",
  "log 0.4.17",
  "rstest",
  "serde",
@@ -1661,9 +1679,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.14.0"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
+checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "heck"
@@ -1900,12 +1918,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.0.0"
+version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5477fe2230a79769d8dc68e0eabf5437907c0457a5614a9e8dddb67f65eb65d"
+checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
 dependencies = [
  "equivalent",
- "hashbrown 0.14.0",
+ "hashbrown 0.14.3",
 ]
 
 [[package]]

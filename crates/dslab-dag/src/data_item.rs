@@ -25,7 +25,7 @@ pub struct DataItem {
     /// The size of data item in MB.
     pub size: f64,
     pub producer: Option<usize>,
-    pub(crate) consumers: Vec<usize>,
+    pub consumers: Vec<usize>,
     pub(crate) state: DataItemState,
 }
 

@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 
 use dslab_core::context::SimulationContext;
@@ -160,7 +159,7 @@ impl Scheduler for MOHeftScheduler {
 }
 
 #[derive(Clone)]
-struct PartialSchedule<'a> {
+pub struct PartialSchedule<'a> {
     dag: &'a DAG,
     data_transfer: DataTransferStrategy,
     system: &'a System<'a>,
@@ -258,8 +257,12 @@ impl<'a> PartialSchedule<'a> {
                                 self.ctx.id(),
                             );
                         self.resource_start[resource] = self.resource_start[resource].min(self.finish_time[producer]);
-                        self.resource_end[prev_resource] =
-                            self.resource_end[prev_resource].max(self.finish_time[producer] + transfer);
+                        if prev_resource != resource {
+                            self.cost -= self.compute_resource_cost(prev_resource);
+                            self.resource_end[prev_resource] =
+                                self.resource_end[prev_resource].max(self.finish_time[producer] + transfer);
+                            self.cost += self.compute_resource_cost(prev_resource);
+                        }
                     }
                     DataTransferStrategy::Lazy => {
                         let download_time = match self.config.data_transfer_mode {
@@ -350,9 +353,16 @@ pub fn compute_crowding_distance(objectives: &[(f64, f64)]) -> Vec<f64> {
     order.sort_by(|a, b| objectives[*a].0.total_cmp(&objectives[*b].0));
     dist[order[0]] = f64::INFINITY;
     dist[order[order.len() - 1]] = f64::INFINITY;
+    let mut range = objectives[*order.last().unwrap()].0 - objectives[order[0]].0;
     for i in 1..order.len() - 1 {
-        dist[order[i]] = objectives[order[i + 1]].0 - objectives[order[i - 1]].0 + objectives[order[i - 1]].1
-            - objectives[order[i + 1]].1;
+        dist[order[i]] = (objectives[order[i + 1]].0 - objectives[order[i - 1]].0) / range;
+    }
+    order.sort_by(|a, b| objectives[*a].1.total_cmp(&objectives[*b].1));
+    let mut range = objectives[*order.last().unwrap()].1 - objectives[order[0]].1;
+    dist[order[0]] = f64::INFINITY;
+    dist[order[order.len() - 1]] = f64::INFINITY;
+    for i in 1..order.len() - 1 {
+        dist[order[i]] += (objectives[order[i + 1]].1 - objectives[order[i - 1]].1) / range;
     }
     dist
 }

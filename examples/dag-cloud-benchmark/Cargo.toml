@@ -1,0 +1,19 @@
+[package]
+name = "dag-cloud-benchmark"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-compute = { path = "../../crates/dslab-compute" }
+dslab-core = { path = "../../crates/dslab-core" }
+dslab-dag = { path = "../../crates/dslab-dag" }
+clap = { version = "4.1.9", features = ["derive"] }
+env_logger = "0.9.0"
+indexmap = "2.2.6"
+log = "0.4"
+rand = "0.8.4"
+rand_pcg = "0.3.1"
+reqwest = { version = "0.11.10", features = ["blocking"] }
+serde_json = "1.0"
+sugars = "3.0.0"
