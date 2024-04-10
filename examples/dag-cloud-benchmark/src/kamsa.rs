@@ -27,7 +27,8 @@ pub struct KAMSAScheduler {
     mutation_eta: f64,
     rng: Pcg64,
     sbx_eta: f64,
-    time_limit: Duration,
+    obj_eval_limit: i64,
+    //time_limit: Duration,
 }
 
 impl KAMSAScheduler {
@@ -38,7 +39,8 @@ impl KAMSAScheduler {
         mutation_eta: f64,
         sbx_eta: f64,
         seed: u64,
-        time_limit: Duration,
+        obj_eval_limit: i64,
+        //time_limit: Duration,
     ) -> Self {
         Self {
             n_schedules,
@@ -47,7 +49,8 @@ impl KAMSAScheduler {
             mutation_eta,
             rng: Pcg64::seed_from_u64(seed),
             sbx_eta,
-            time_limit,
+            obj_eval_limit,
+            //time_limit,
         }
     }
 
@@ -59,7 +62,8 @@ impl KAMSAScheduler {
             mutation_eta: params.get::<f64, &str>("mutation_eta").unwrap(),
             rng: Pcg64::seed_from_u64(params.get::<u64, &str>("seed").unwrap()),
             sbx_eta: params.get::<f64, &str>("sbx_eta").unwrap(),
-            time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
+            obj_eval_limit: 0,
+            //time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
         }
     }
 
@@ -77,6 +81,7 @@ impl KAMSAScheduler {
             }
         }
         for schedule in &mut schedules {
+            self.obj_eval_limit -= 1;
             schedule.compute_objectives(dag, &system, &config, ctx);
         }
         let mut old_hv = self.hypervolume(&schedules);
@@ -91,7 +96,7 @@ impl KAMSAScheduler {
         let mut task_ids = (0..task_count).collect::<Vec<_>>();
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
         let all_indices = task_ids; //(0..n_tasks).collect::<Vec<usize>>();
-        while start.elapsed() < self.time_limit {
+        while self.obj_eval_limit > 0 {//start.elapsed() < self.time_limit {
             let mut probs = vec![0f64; groups.len()];
             for i in 0..groups.len() {
                 for j in 0..self.memory_length {
@@ -113,6 +118,8 @@ impl KAMSAScheduler {
             old_hv = hv;
             matr[self.memory_length - 1][group_id] = c.max(self.min_contrib);
         }
+
+        println!("KAMSA elapsed secs = {:?}", start.elapsed());
         schedules
             .into_iter()
             .map(|x| x.to_actions(dag, &system, &config, ctx))
@@ -318,6 +325,7 @@ impl KAMSAScheduler {
             result.push(b);
         }
         for s in &mut result {
+            self.obj_eval_limit -= 1;
             s.compute_objectives(dag, system, config, ctx);
         }
         result

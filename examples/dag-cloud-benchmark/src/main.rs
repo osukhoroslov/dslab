@@ -61,22 +61,7 @@ fn main() {
     let mut fronts = Vec::new();
 
     let n_schedules = 100;
-    /*{
-        print!("running MOHEFT...");
-        let sim = ParetoSimulation::new(
-            dag.clone(),
-            read_resource_configs(&args.system),
-            read_network_config(&args.system),
-            rc!(refcell!(MOHeftScheduler::new(n_schedules))),
-            DataTransferMode::Direct,
-            Some(args.interval),
-        );
-        let mut results = sim.run(n_schedules);
-        let metrics = results.run_stats.iter().map(|x| (x.makespan, x.total_execution_cost)).collect::<Vec<_>>();
-        names.push("MOHEFT".to_string());
-        fronts.push(metrics);
-        println!(" finished");
-    }*/
+    let obj_eval_limit = (total_tasks * 200) as i64;
     let schedulers: Vec<(&'static str, Rc<RefCell<dyn ParetoScheduler>>)> = vec![
         (
             "KAMSA_1",
@@ -87,7 +72,8 @@ fn main() {
                 20.,
                 2.,
                 1,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         (
@@ -99,7 +85,8 @@ fn main() {
                 20.,
                 2.,
                 2,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         (
@@ -111,7 +98,8 @@ fn main() {
                 20.,
                 2.,
                 3,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         //("KAMSA_4", rc!(refcell!(KAMSAScheduler::new(n_schedules, 12, 1e-6, 20., 2., 4, Duration::from_secs_f64(60.))))),
@@ -123,7 +111,8 @@ fn main() {
                 20,
                 2.,
                 1,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         (
@@ -133,7 +122,8 @@ fn main() {
                 20,
                 2.,
                 2,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         (
@@ -143,7 +133,8 @@ fn main() {
                 20,
                 2.,
                 3,
-                Duration::from_secs_f64(5. * 60.)
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.)
             ))),
         ),
         //("VCAES_4", rc!(refcell!(VCAESScheduler::new(n_schedules, 20, 2., 4, Duration::from_secs_f64(60.))))),
@@ -156,7 +147,8 @@ fn main() {
                 0.1,
                 0.9,
                 1,
-                Duration::from_secs_f64(5. * 60.),
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.),
                 10,
                 0.3
             ))),
@@ -169,7 +161,8 @@ fn main() {
                 0.1,
                 0.9,
                 2,
-                Duration::from_secs_f64(5. * 60.),
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.),
                 10,
                 0.3
             ))),
@@ -182,16 +175,17 @@ fn main() {
                 0.1,
                 0.9,
                 3,
-                Duration::from_secs_f64(5. * 60.),
+                obj_eval_limit,
+                //Duration::from_secs_f64(5. * 60.),
                 10,
                 0.3
             ))),
         ),
         //("VMALS_4", rc!(refcell!(VMALSScheduler::new(n_schedules, 2, 0.1, 0.9, 4, Duration::from_secs_f64(30.), 10, 0.3)))),
         //("VMALS_5", rc!(refcell!(VMALSScheduler::new(n_schedules, 2, 0.1, 0.9, 5, Duration::from_secs_f64(30.), 10, 0.3)))),
-        ("CMSWC_1", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 1)))),
-        ("CMSWC_2", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 2)))),
-        ("CMSWC_3", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 3)))),
+        ("CMSWC_1", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 1)))),
+        ("CMSWC_2", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 2)))),
+        ("CMSWC_3", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 3)))),
         //("CMSWC_4", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 4)))),
         //("CMSWC_5", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 5)))),
     ];
@@ -234,7 +228,7 @@ fn main() {
         );
     }
     println!("");
-    /*let n_algos = names.len();
+    let n_algos = names.len();
     assert_eq!(fronts.len(), n_algos);
     let max_len = names.iter().map(|x| x.len()).max().unwrap();
     println!("C-metric table:");
@@ -249,5 +243,5 @@ fn main() {
             print!("{: >1$.3}", coverage(front_i, front_j), max_len + 1);
         }
         println!("");
-    }*/
+    }
 }

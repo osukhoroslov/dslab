@@ -158,6 +158,20 @@ impl Scheduler for MOHeftScheduler {
     }
 }
 
+#[derive(Default)]
+pub struct Rollback {
+    task: usize,
+    resource: usize,
+    makespan: f64,
+    cost: f64,
+    start: f64,
+    finish: f64,
+    cores: Vec<u32>,
+    resource_start: f64,
+    resource_end: f64,
+    prev_resource_end: HashMap<usize, f64>,
+}
+
 #[derive(Clone)]
 pub struct PartialSchedule<'a> {
     dag: &'a DAG,
@@ -210,7 +224,12 @@ impl<'a> PartialSchedule<'a> {
         }
     }
 
-    pub fn assign_task(&mut self, task: usize, resource: usize) {
+    pub fn assign_task(&mut self, task: usize, resource: usize) -> Rollback {
+        let mut rollback = Rollback::default();
+        rollback.task = task;
+        rollback.resource = resource;
+        rollback.makespan = self.makespan;
+        rollback.cost = self.cost;
         self.task_resource[task] = resource;
         let res = evaluate_assignment(
             task,
@@ -229,6 +248,11 @@ impl<'a> PartialSchedule<'a> {
         );
         assert!(res.is_some());
         let (start_time, finish_time, cores) = res.unwrap();
+        rollback.start = start_time;
+        rollback.finish = finish_time;
+        rollback.cores = cores.clone();
+        rollback.resource_start = self.resource_start[resource];
+        rollback.resource_end = self.resource_end[resource];
         self.makespan = self.makespan.max(finish_time);
         self.finish_time[task] = finish_time;
         for &core in cores.iter() {
@@ -246,6 +270,7 @@ impl<'a> PartialSchedule<'a> {
             if let Some(producer) = item.producer {
                 assert!(self.task_locations.contains_key(&producer)); // parents must be scheduled
                 let prev_resource = self.task_resource[producer];
+                rollback.prev_resource_end.insert(item_id, self.resource_end[prev_resource]);
                 // TODO: properly update master node in DataTransferMode::ViaMasterNode (note that the paper uses DataTransferMode::Direct)
                 match self.data_transfer {
                     DataTransferStrategy::Eager => {
@@ -313,6 +338,43 @@ impl<'a> PartialSchedule<'a> {
                 expected_span: Some(TimeSpan::new(start_time, finish_time)),
             },
         ));
+        rollback
+    }
+
+    // this can be called only once per assignment
+    pub fn rollback(&mut self, rb: Rollback) {
+        let task = rb.task;
+        let resource = rb.resource;
+        self.finish_time[task] = 0.;
+        self.task_resource[task] = self.system.resources.len();
+        self.makespan = rb.makespan;
+        self.task_locations.remove(&task);
+        for &output in self.dag.get_task(task).outputs.iter() {
+            self.data_locations.remove(&output);
+        }
+        let scheduled_task = ScheduledTask::new(rb.start, rb.finish, task);
+        for &core in rb.cores.iter() {
+            self.scheduled_tasks[resource][core as usize].remove(&scheduled_task);
+        }
+        for item_id in self.dag.get_task(task).inputs.iter().rev().copied() {
+            let item = self.dag.get_data_item(item_id);
+            if let Some(producer) = item.producer {
+                let prev_resource = self.task_resource[producer];
+                if prev_resource != resource {
+                    self.cost -= self.compute_resource_cost(prev_resource);
+                    self.resource_end[prev_resource] = *rb.prev_resource_end.get(&item_id).unwrap();
+                    self.cost += self.compute_resource_cost(prev_resource);
+                }
+            }
+        }
+        self.cost -= self.compute_resource_cost(resource);
+        self.resource_start[resource] = rb.resource_start;
+        self.resource_end[resource] = rb.resource_end;
+        self.cost += self.compute_resource_cost(resource);
+        self.actions.pop();
+        assert!((self.cost - rb.cost).abs() < 1e-6);
+        // NOTE: we ignore memory here because on cloud benchmarks it's not really important
+        // maybe I should fix it later
     }
 
     fn compute_resource_cost(&self, resource: usize) -> f64 {

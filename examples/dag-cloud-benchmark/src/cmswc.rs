@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
+use std::time::{Duration, Instant};
 
 use indexmap::IndexSet;
 use rand::prelude::*;
@@ -52,6 +53,7 @@ impl CMSWCScheduler {
     }
 
     fn schedule(&mut self, dag: &DAG, system: System, config: Config, ctx: &SimulationContext) -> Vec<Vec<Action>> {
+        let start = Instant::now();
         let resources = system.resources;
 
         let avg_net_time = system.avg_net_time(ctx.id(), &config.data_transfer_mode);
@@ -74,7 +76,28 @@ impl CMSWCScheduler {
             //println!("{}", task_id);
             let mut new_schedules = Vec::new();
             for schedule in partial_schedules.into_iter() {
+                let mut used = vec![false; resources.len()];
+                for r in &schedule.task_resource {
+                    if *r != resources.len() {
+                        used[*r] = true;
+                    }
+                }
+                let mut ban = vec![false; resources.len()];
+                let mut hs = IndexSet::new();
+                for (id, r) in resources.iter().enumerate() {
+                    if !used[id] {
+                        let tp = ((r.speed * 1000.).round() as i64, r.cores, r.memory);
+                        if hs.contains(&tp) {
+                            ban[id] = true;
+                        } else {
+                            hs.insert(tp);
+                        }
+                    }
+                }
                 for i in 0..resources.len() {
+                    if ban[i] {
+                        continue;
+                    }
                     let need_cores = dag.get_task(task_id).min_cores;
                     if resources[i].compute.borrow().cores_total() < need_cores {
                         continue;
@@ -155,6 +178,8 @@ impl CMSWCScheduler {
         for s in &mut partial_schedules {
             s.actions.sort_by(|a, b| a.0.total_cmp(&b.0));
         }
+
+        println!("CMSWC elapsed secs = {:?}", start.elapsed());
 
         partial_schedules
             .into_iter()

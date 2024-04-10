@@ -21,17 +21,22 @@ pub struct VCAESScheduler {
     memory_length: usize,
     rng: Pcg64,
     sbx_eta: f64,
-    time_limit: Duration,
+    obj_eval_limit: i64,
+    //time_limit: Duration,
 }
 
 impl VCAESScheduler {
-    pub fn new(n_schedules: usize, memory_length: usize, sbx_eta: f64, seed: u64, time_limit: Duration) -> Self {
+    pub fn new(n_schedules: usize, memory_length: usize, sbx_eta: f64, seed: u64,
+               obj_eval_limit: i64,
+               //time_limit: Duration
+               ) -> Self {
         Self {
             n_schedules,
             memory_length,
             rng: Pcg64::seed_from_u64(seed),
             sbx_eta,
-            time_limit,
+            obj_eval_limit,
+            //time_limit,
         }
     }
 
@@ -41,7 +46,8 @@ impl VCAESScheduler {
             memory_length: params.get::<usize, &str>("memory_length").unwrap(),
             rng: Pcg64::seed_from_u64(params.get::<u64, &str>("seed").unwrap()),
             sbx_eta: params.get::<f64, &str>("sbx_eta").unwrap(),
-            time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
+            obj_eval_limit: 0,
+            //time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
         }
     }
 
@@ -59,6 +65,7 @@ impl VCAESScheduler {
             }
         }
         for schedule in &mut schedules {
+            self.obj_eval_limit -= 1;
             schedule.compute_objectives(dag, &system, &config, ctx);
         }
         let n_tasks = dag.get_tasks().len();
@@ -79,7 +86,8 @@ impl VCAESScheduler {
         task_ids.sort_by(|&a, &b| task_ranks[b].total_cmp(&task_ranks[a]));
         let all_indices = task_ids; //(0..n_tasks).collect::<Vec<usize>>();
         let generations = 5;
-        while start.elapsed() < self.time_limit {
+        while self.obj_eval_limit > 0 {
+        //while start.elapsed() < self.time_limit {
             let k = self.adaptive_coevolution(&mut schedules, &matr, &refvec, generations, dag, &system, &config, ctx);
             for j in 0..self.memory_length - 1 {
                 for i in 0..n_tasks {
@@ -95,6 +103,7 @@ impl VCAESScheduler {
             }
             schedules = self.select_population(new_schedules);
         }
+        println!("VCAES elapsed secs = {:?}", start.elapsed());
         schedules
             .into_iter()
             .map(|x| x.to_actions(dag, &system, &config, ctx))
@@ -332,6 +341,7 @@ impl VCAESScheduler {
             result.push(b);
         }
         for s in &mut result {
+            self.obj_eval_limit -= 1;
             s.compute_objectives(dag, system, config, ctx);
         }
         result
@@ -387,6 +397,7 @@ impl VCAESScheduler {
             result.push(b);
         }
         for s in &mut result {
+            self.obj_eval_limit -= 1;
             s.compute_objectives(dag, system, config, ctx);
         }
         result

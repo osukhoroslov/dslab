@@ -28,7 +28,8 @@ pub struct VMALSScheduler {
     n_schedules: usize,
     q0: f64,
     rng: Pcg64,
-    time_limit: Duration,
+    obj_eval_limit: i64,
+    //time_limit: Duration,
     vns_no_improvement_max: usize,
     vns_sample_rate: f64,
 }
@@ -40,7 +41,8 @@ impl VMALSScheduler {
         evaporation: f64,
         q0: f64,
         seed: u64,
-        time_limit: Duration,
+        obj_eval_limit: i64,
+        //time_limit: Duration,
         vns_no_improvement_max: usize,
         vns_sample_rate: f64,
     ) -> Self {
@@ -51,7 +53,8 @@ impl VMALSScheduler {
             n_schedules,
             q0,
             rng: Pcg64::seed_from_u64(seed),
-            time_limit,
+            obj_eval_limit,
+            //time_limit,
             vns_no_improvement_max,
             vns_sample_rate,
         }
@@ -67,7 +70,8 @@ impl VMALSScheduler {
             n_schedules: params.get::<usize, &str>("n_schedules").unwrap(),
             q0: params.get::<f64, &str>("q0").unwrap(),
             rng: Pcg64::seed_from_u64(params.get::<u64, &str>("seed").unwrap()),
-            time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
+            obj_eval_limit: 0,
+            //time_limit: Duration::from_secs_f64(params.get::<f64, &str>("time_limit").unwrap()),
             vns_no_improvement_max: params.get::<usize, &str>("vns_no_improvement_max").unwrap(),
             vns_sample_rate: params.get::<f64, &str>("vns_sample_rate").unwrap(),
         }
@@ -104,7 +108,8 @@ impl VMALSScheduler {
         };
 
         let mut loops = 0;
-        while start.elapsed() < self.time_limit {
+        while self.obj_eval_limit > 0 {//start.elapsed() < self.time_limit {
+            //println!("loop has started w {}", self.obj_eval_limit);
             loops += 1;
             let mut seq = vec![Vec::with_capacity(n_tasks); self.n_schedules];
             let mut deg = vec![vec![0; n_tasks]; self.n_schedules];
@@ -164,6 +169,7 @@ impl VMALSScheduler {
                     }
                 }
             }
+            //println!("gen done");
             for j in 0..self.n_schedules {
                 let w = self.rng.gen_range(0f64..1f64);
                 let sched = self.build_schedule(dag, &system, &config, ctx, w, heftspan, mincost, &seq[j]);
@@ -184,14 +190,16 @@ impl VMALSScheduler {
                     archive.push(Solution::new(sched, seq[j].clone()));
                 }
             }
+            //println!("pruned");
             let mut n_sols = ((archive.len() as f64) * self.vns_sample_rate).ceil() as usize;
             let mut cnt = 1;
-            loop {
+            while self.obj_eval_limit > 0 {
+                //println!("vns loop w {}", self.obj_eval_limit);
                 let mut sol = archive[self.rng.gen_range(0..archive.len())].clone();
                 let mut l = 1;
-                while l <= self.vns_no_improvement_max {
+                while l <= self.vns_no_improvement_max && self.obj_eval_limit > 0 {
                     let mut neigh = 0;
-                    while neigh <= 1 && l <= self.vns_no_improvement_max {
+                    while neigh <= 1 && l <= self.vns_no_improvement_max && self.obj_eval_limit > 0 {
                         let mut new_sol = sol.clone();
                         if neigh == 0 {
                             let other = &archive[self.rng.gen_range(0..archive.len())];
@@ -331,6 +339,7 @@ impl VMALSScheduler {
                 prv = x;
             }
         }
+        println!("VMALS elapsed secs = {:?}", start.elapsed());
         /*println!("VMALS raw data:");
         for x in &archive {
             println!("{:.3} {:.3}", x.sched.makespan, x.sched.cost);
@@ -452,7 +461,7 @@ impl VMALSScheduler {
     }
 
     fn build_schedule<'a>(
-        &self,
+        &mut self,
         dag: &'a DAG,
         system: &'a System,
         config: &'a Config,
@@ -462,23 +471,54 @@ impl VMALSScheduler {
         mincost: f64,
         seq: &[usize],
     ) -> PartialSchedule<'a> {
+        self.obj_eval_limit -= 1;
         let mut sched = PartialSchedule::new(dag, self.data_transfer_strategy.clone(), system, config, ctx);
+        let mut empty = HashMap::<(i64, u32, u64), Vec<usize>>::new();
+        let mut ok = IndexSet::new();
+        for (idx, r) in system.resources.iter().enumerate() {
+            let tp = ((r.speed * 1000.).round() as i64, r.cores, r.memory);
+            empty.entry(tp).or_default().push(idx);
+        }
         for t in seq.iter().copied() {
             let mut best_fitness = f64::INFINITY;
             let mut best_next = sched.clone();
-            for r in 0..system.resources.len() {
+            let mut choice = 0;
+            for r in ok.iter().copied() {
                 if dag.get_task(t).is_allowed_on(r) {
-                    let mut tmp = sched.clone();
-                    tmp.assign_task(t, r);
-                    let fitness = tmp.makespan / heftspan * weight + tmp.cost / mincost * (1. - weight);
+                    let rb = sched.assign_task(t, r);
+                    let fitness = sched.makespan / heftspan * weight + sched.cost / mincost * (1. - weight);
+                    sched.rollback(rb);
                     if fitness < best_fitness {
                         best_fitness = fitness;
-                        best_next = tmp;
+                        choice = r;
                     }
                 }
             }
+            for (k, v) in empty.iter_mut() {
+                let r = *v.last().unwrap();
+                if dag.get_task(t).is_allowed_on(r) {
+                    let rb = sched.assign_task(t, r);
+                    let fitness = sched.makespan / heftspan * weight + sched.cost / mincost * (1. - weight);
+                    sched.rollback(rb);
+                    if fitness < best_fitness {
+                        best_fitness = fitness;
+                        choice = r;
+                    }
+                }
+            }
+            sched.assign_task(t, choice);
+            if !ok.contains(&choice) {
+                let r = &system.resources[choice];
+                let tp = ((r.speed * 1000.).round() as i64, r.cores, r.memory);
+                let v = empty.get_mut(&tp).unwrap();
+                if v.len() > 1 {
+                    v.pop();
+                } else {
+                    empty.remove(&tp);
+                }
+                ok.insert(choice);
+            }
             assert!(best_fitness.is_finite());
-            sched = best_next;
         }
         sched
     }
