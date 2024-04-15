@@ -1,0 +1,35 @@
+   Compiling dslab-compute v0.1.0 (/Users/amgfrthsp/Desktop/thesis/code/dslab/crates/dslab-compute)
+   Compiling compute-multicore-preemption-example v0.1.0 (/Users/amgfrthsp/Desktop/thesis/code/dslab/examples/compute-multicore-preemption)
+    Finished dev [unoptimized + debuginfo] target(s) in 1.07s
+     Running `/Users/amgfrthsp/Desktop/thesis/code/dslab/target/debug/compute-multicore-preemption-example`
+[0.000 DEBUG simulation] Created context: {"name":"admin","id":0}
+[0.000 DEBUG simulation] Created context: {"name":"host_0::compute","id":1}
+[0.000 DEBUG simulation] Added handler: {"name":"host_0::compute","id":1}
+[0.000 DEBUG simulation] Created context: {"name":"host_0::worker","id":2}
+[0.000 DEBUG simulation] Added handler: {"name":"host_0::worker","id":2}
+[0.000 EVENT host_0::worker] {"type":"Start","data":{},"src":"admin"}
+[0.000 DEBUG host_0::worker] started
+[0.000 EVENT host_0::worker] {"type":"TaskRequest","data":{"flops":756.0,"memory":512,"min_cores":1,"max_cores":1,"cores_dependency":"Linear"},"src":"admin"}
+[0.000 DEBUG host_0::worker] task request: TaskRequest { flops: 756.0, memory: 512, min_cores: 1, max_cores: 1, cores_dependency: Linear }
+[0.000 EVENT host_0::compute] {"type":"CompRequest","data":{"flops":756.0,"memory":512,"min_cores":1,"max_cores":1,"cores_dependency":"Linear","requester":2},"src":"host_0::compute"}
+[0.000 EVENT host_0::worker] {"type":"CompStarted","data":{"id":2,"cores":1},"src":"host_0::compute"}
+[0.000 DEBUG host_0::worker] started execution of task
+[100.000 EVENT host_0::worker] {"type":"PreemptTask","data":{"id":2},"src":"host_0::worker"}
+[100.000 EVENT host_0::compute] {"type":"PreemptComp","data":{"id":2},"src":"host_0::compute"}
+[100.000 EVENT host_0::worker] {"type":"CompPreempted","data":{"id":2,"fraction_done":0.3968253968253968},"src":"host_0::compute"}
+[100.000 DEBUG host_0::worker] Task is preempted. Task is 39.682539682539684% done
+[200.000 EVENT host_0::worker] {"type":"ContinueTask","data":{"id":2},"src":"host_0::worker"}
+[200.000 EVENT host_0::compute] {"type":"ContinueComp","data":{"id":2},"src":"host_0::compute"}
+[200.000 EVENT host_0::worker] {"type":"CompContinued","data":{"id":2},"src":"host_0::compute"}
+[200.000 DEBUG host_0::worker] Task is continued
+[250.000 EVENT host_0::worker] {"type":"PreemptTask","data":{"id":2},"src":"host_0::worker"}
+[250.000 EVENT host_0::compute] {"type":"PreemptComp","data":{"id":2},"src":"host_0::compute"}
+[250.000 EVENT host_0::worker] {"type":"CompPreempted","data":{"id":2,"fraction_done":0.5952380952380952},"src":"host_0::compute"}
+[250.000 DEBUG host_0::worker] Task is preempted. Task is 59.523809523809526% done
+[350.000 EVENT host_0::worker] {"type":"ContinueTask","data":{"id":2},"src":"host_0::worker"}
+[350.000 EVENT host_0::compute] {"type":"ContinueComp","data":{"id":2},"src":"host_0::compute"}
+[350.000 EVENT host_0::worker] {"type":"CompContinued","data":{"id":2},"src":"host_0::compute"}
+[350.000 DEBUG host_0::worker] Task is continued
+[452.000 EVENT host_0::compute] {"type":"CompFinished","data":{"id":2},"src":"host_0::compute"}
+[452.000 EVENT host_0::worker] {"type":"CompFinished","data":{"id":2},"src":"host_0::compute"}
+[452.000 DEBUG host_0::worker] completed execution of task

@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use dslab_core::cast;
 use dslab_core::component::Id;
 use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
+use dslab_core::{cast, EventId};
 
 // STRUCTS -------------------------------------------------------------------------------------------------------------
 
@@ -75,19 +75,41 @@ pub enum FailReason {
     },
 }
 
-#[derive(Debug)]
-struct RunningComputation {
-    cores: u32,
-    memory: u64,
-    requester: Id,
+/// Computation state
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub enum ComputationState {
+    /// Computation is currently running
+    Running,
+    /// Computation is preempted
+    Preempted,
 }
 
-impl RunningComputation {
-    fn new(cores: u32, memory: u64, requester: Id) -> Self {
-        RunningComputation {
+#[derive(Debug)]
+struct Computation {
+    req: CompRequest,
+    start_time: f64,
+    cores: u32,
+    state: ComputationState,
+    fraction_done: f64,
+    comp_finished_event_id: EventId,
+}
+
+impl Computation {
+    fn new(
+        req: CompRequest,
+        start_time: f64,
+        cores: u32,
+        state: ComputationState,
+        fraction_done: f64,
+        comp_finished_event_id: EventId,
+    ) -> Self {
+        Computation {
+            req,
+            start_time,
             cores,
-            memory,
-            requester,
+            state,
+            fraction_done,
+            comp_finished_event_id,
         }
     }
 }
@@ -95,7 +117,7 @@ impl RunningComputation {
 // EVENTS --------------------------------------------------------------------------------------------------------------
 
 /// Request to start a computation.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 pub struct CompRequest {
     /// Total computation size.
     pub flops: f64,
@@ -120,6 +142,36 @@ pub struct CompStarted {
     /// Equals to the minimum between the number of available cores
     /// and the maximum number of cores for the computation.
     pub cores: u32,
+}
+
+/// Computation preemption request
+#[derive(Clone, Serialize)]
+pub struct PreemptComp {
+    /// Id of the computation.
+    pub id: u64,
+}
+
+/// Computation is preempted successfully
+#[derive(Clone, Serialize)]
+pub struct CompPreempted {
+    /// Id of the computation.
+    pub id: u64,
+    /// Fraction of the flops computed
+    pub fraction_done: f64,
+}
+
+/// Computation continuing request
+#[derive(Clone, Serialize)]
+pub struct ContinueComp {
+    /// Id of the computation.
+    pub id: u64,
+}
+
+/// Computation is successfully continued
+#[derive(Clone, Serialize)]
+pub struct CompContinued {
+    /// Id of the computation.
+    pub id: u64,
 }
 
 /// Computation is finished successfully.
@@ -203,7 +255,7 @@ pub struct Compute {
     cores_available: u32,
     memory_total: u64,
     memory_available: u64,
-    computations: HashMap<u64, RunningComputation>,
+    computations: HashMap<u64, Computation>,
     allocations: HashMap<Id, Allocation>,
     ctx: SimulationContext,
 }
@@ -274,6 +326,16 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
+    /// Preempts computation which is currently running
+    pub fn preempt_computation(&mut self, comp_id: u64) {
+        self.ctx.emit_self_now(PreemptComp { id: comp_id });
+    }
+
+    /// Continues computation which has been preempted
+    pub fn continue_computation(&mut self, comp_id: u64) {
+        self.ctx.emit_self_now(ContinueComp { id: comp_id });
+    }
+
     /// Requests resource allocation with given parameters and returns allocation id.
     pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
         let request = AllocationRequest {
@@ -326,9 +388,101 @@ impl EventHandler for Compute {
                     let speedup = cores_dependency.speedup(cores);
 
                     let compute_time = flops / self.speed / speedup;
-                    self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
-                    self.computations
-                        .insert(event.id, RunningComputation::new(cores, memory, requester));
+                    let comp_finished_event_id = self.ctx.emit_self(CompFinished { id: event.id }, compute_time);
+
+                    let req = CompRequest {
+                        flops,
+                        memory,
+                        min_cores,
+                        max_cores,
+                        cores_dependency: cores_dependency.clone(),
+                        requester,
+                    };
+                    self.computations.insert(
+                        event.id,
+                        Computation::new(
+                            req,
+                            self.ctx.time(),
+                            cores,
+                            ComputationState::Running,
+                            0.,
+                            comp_finished_event_id,
+                        ),
+                    );
+                }
+            }
+            PreemptComp { id } => {
+                let running_computation = self
+                    .computations
+                    .get_mut(&id)
+                    .expect("Unexpected PreemptComp event in Compute");
+
+                if running_computation.state != ComputationState::Running {
+                    panic!("Computation is already preempted");
+                }
+                running_computation.state = ComputationState::Preempted;
+
+                self.ctx.cancel_event(running_computation.comp_finished_event_id);
+                running_computation.comp_finished_event_id = 0;
+
+                self.memory_available += running_computation.req.memory;
+                self.cores_available += running_computation.cores;
+
+                let speedup = running_computation
+                    .req
+                    .cores_dependency
+                    .speedup(running_computation.cores);
+                let total_compute_time = running_computation.req.flops / self.speed / speedup;
+
+                running_computation.fraction_done +=
+                    (self.ctx.time() - running_computation.start_time) / total_compute_time;
+
+                self.ctx.emit_now(
+                    CompPreempted {
+                        id,
+                        fraction_done: running_computation.fraction_done,
+                    },
+                    running_computation.req.requester,
+                );
+            }
+            ContinueComp { id } => {
+                let computation = self
+                    .computations
+                    .get_mut(&id)
+                    .expect("Unexpected ContinueComp event in Compute");
+
+                if computation.state != ComputationState::Preempted {
+                    panic!("Computation is already running");
+                }
+
+                if self.memory_available < computation.req.memory || self.cores_available < computation.req.min_cores {
+                    self.ctx.emit_now(
+                        CompFailed {
+                            id,
+                            reason: FailReason::NotEnoughResources {
+                                available_cores: self.cores_available,
+                                available_memory: self.memory_available,
+                                requested_cores: computation.req.min_cores,
+                                requested_memory: computation.req.memory,
+                            },
+                        },
+                        computation.req.requester,
+                    );
+                } else {
+                    let cores = self.cores_available.min(computation.req.max_cores);
+                    self.memory_available -= computation.req.memory;
+                    self.cores_available -= cores;
+                    self.ctx.emit_now(CompContinued { id }, computation.req.requester);
+
+                    let speedup = computation.req.cores_dependency.speedup(cores);
+
+                    let compute_time = (1. - computation.fraction_done) * computation.req.flops / self.speed / speedup;
+
+                    computation.comp_finished_event_id = self.ctx.emit_self(CompFinished { id }, compute_time);
+
+                    computation.cores = cores;
+                    computation.start_time = self.ctx.time();
+                    computation.state = ComputationState::Running;
                 }
             }
             CompFinished { id } => {
@@ -336,9 +490,10 @@ impl EventHandler for Compute {
                     .computations
                     .remove(&id)
                     .expect("Unexpected CompFinished event in Compute");
-                self.memory_available += running_computation.memory;
+                self.memory_available += running_computation.req.memory;
                 self.cores_available += running_computation.cores;
-                self.ctx.emit(CompFinished { id }, running_computation.requester, 0.);
+                self.ctx
+                    .emit(CompFinished { id }, running_computation.req.requester, 0.);
             }
             AllocationRequest { allocation, requester } => {
                 if self.memory_available < allocation.memory || self.cores_available < allocation.cores {
