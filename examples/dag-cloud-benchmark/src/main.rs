@@ -47,6 +47,8 @@ struct Args {
     interval: f64,
 }
 
+const N_TRIES: usize = 10;
+
 fn main() {
     Builder::from_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
@@ -54,7 +56,9 @@ fn main() {
 
     let args = Args::parse();
 
-    let dag = DAG::from_wfcommons(&args.dag, &ParserConfig::with_reference_speed(100.));
+    let mut config = ParserConfig::with_reference_speed(100.);
+    config.ignore_memory = true;
+    let dag = DAG::from_wfcommons(&args.dag, &config);
     let total_tasks = dag.get_tasks().len();
 
     let mut names = Vec::new();
@@ -62,133 +66,54 @@ fn main() {
 
     let n_schedules = 100;
     let obj_eval_limit = (total_tasks * 200) as i64;
-    let schedulers: Vec<(&'static str, Rc<RefCell<dyn ParetoScheduler>>)> = vec![
-        (
-            "KAMSA_1",
+    let mut schedulers: Vec<(String, Rc<RefCell<dyn ParetoScheduler>>)> = Vec::with_capacity(4 * N_TRIES);
+    for i in 1..N_TRIES + 1 {
+        schedulers.push((
+            format!("KAMSA_{}", i),
             rc!(refcell!(KAMSAScheduler::new(
                 n_schedules,
                 12,
                 1e-6,
                 20.,
                 2.,
-                1,
+                i as u64,
                 obj_eval_limit
                 //Duration::from_secs_f64(5. * 60.)
             ))),
-        ),
-        (
-            "KAMSA_2",
-            rc!(refcell!(KAMSAScheduler::new(
-                n_schedules,
-                12,
-                1e-6,
-                20.,
-                2.,
-                2,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.)
-            ))),
-        ),
-        (
-            "KAMSA_3",
-            rc!(refcell!(KAMSAScheduler::new(
-                n_schedules,
-                12,
-                1e-6,
-                20.,
-                2.,
-                3,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.)
-            ))),
-        ),
-        //("KAMSA_4", rc!(refcell!(KAMSAScheduler::new(n_schedules, 12, 1e-6, 20., 2., 4, Duration::from_secs_f64(60.))))),
-        //("KAMSA_5", rc!(refcell!(KAMSAScheduler::new(n_schedules, 12, 1e-6, 20., 2., 5, Duration::from_secs_f64(60.))))),
-        (
-            "VCAES_1",
+        ));
+    }
+    for i in 1..N_TRIES + 1 {
+        schedulers.push((
+            format!("VCAES_{}", i),
             rc!(refcell!(VCAESScheduler::new(
                 n_schedules,
                 20,
                 2.,
-                1,
+                i as u64,
                 obj_eval_limit,
                 //Duration::from_secs_f64(5. * 60.)
             ))),
-        ),
-        (
-            "VCAES_2",
-            rc!(refcell!(VCAESScheduler::new(
-                n_schedules,
-                20,
-                2.,
-                2,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.)
-            ))),
-        ),
-        (
-            "VCAES_3",
-            rc!(refcell!(VCAESScheduler::new(
-                n_schedules,
-                20,
-                2.,
-                3,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.)
-            ))),
-        ),
-        //("VCAES_4", rc!(refcell!(VCAESScheduler::new(n_schedules, 20, 2., 4, Duration::from_secs_f64(60.))))),
-        //("VCAES_5", rc!(refcell!(VCAESScheduler::new(n_schedules, 20, 2., 5, Duration::from_secs_f64(60.))))),
-        (
-            "VMALS_1",
-            rc!(refcell!(VMALSScheduler::new(
-                n_schedules,
-                2,
-                0.1,
-                0.9,
-                1,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.),
-                10,
-                0.3
-            ))),
-        ),
-        (
-            "VMALS_2",
-            rc!(refcell!(VMALSScheduler::new(
-                n_schedules,
-                2,
-                0.1,
-                0.9,
-                2,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.),
-                10,
-                0.3
-            ))),
-        ),
-        (
-            "VMALS_3",
-            rc!(refcell!(VMALSScheduler::new(
-                n_schedules,
-                2,
-                0.1,
-                0.9,
-                3,
-                obj_eval_limit,
-                //Duration::from_secs_f64(5. * 60.),
-                10,
-                0.3
-            ))),
-        ),
-        //("VMALS_4", rc!(refcell!(VMALSScheduler::new(n_schedules, 2, 0.1, 0.9, 4, Duration::from_secs_f64(30.), 10, 0.3)))),
-        //("VMALS_5", rc!(refcell!(VMALSScheduler::new(n_schedules, 2, 0.1, 0.9, 5, Duration::from_secs_f64(30.), 10, 0.3)))),
-        ("CMSWC_1", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 1)))),
-        ("CMSWC_2", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 2)))),
-        ("CMSWC_3", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, 3)))),
-        //("CMSWC_4", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 4)))),
-        //("CMSWC_5", rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.7, 5)))),
-    ];
+        ));
+    }
+    for i in 1..N_TRIES + 1 {
+        schedulers.push((
+                format!("VMALS_{}", i),
+                rc!(refcell!(VMALSScheduler::new(
+                    n_schedules,
+                    2,
+                    0.1,
+                    0.9,
+                    i as u64,
+                    obj_eval_limit,
+                    //Duration::from_secs_f64(5. * 60.),
+                    10,
+                    0.3
+                ))),
+            ));
+    }
+    for i in 1..N_TRIES + 1 {
+        schedulers.push((format!("CMSWC_{}", i), rc!(refcell!(CMSWCScheduler::new(n_schedules, 0.3, i as u64)))));
+    }
     for (name, sched) in schedulers.into_iter() {
         print!("running {}...", name);
         let sim = ParetoSimulation::new(
