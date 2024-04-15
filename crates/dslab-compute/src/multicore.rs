@@ -395,7 +395,7 @@ impl EventHandler for Compute {
                         memory,
                         min_cores,
                         max_cores,
-                        cores_dependency: cores_dependency.clone(),
+                        cores_dependency: *cores_dependency,
                         requester,
                     };
                     self.computations.insert(
@@ -423,7 +423,6 @@ impl EventHandler for Compute {
                 running_computation.state = ComputationState::Preempted;
 
                 self.ctx.cancel_event(running_computation.comp_finished_event_id);
-                running_computation.comp_finished_event_id = 0;
 
                 self.memory_available += running_computation.req.memory;
                 self.cores_available += running_computation.cores;
