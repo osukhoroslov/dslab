@@ -305,6 +305,25 @@ impl Compute {
         self.memory_available
     }
 
+    /// Returns estimated compute time for a workload with given flops, cores and cores dependency
+    pub fn est_compute_time(&self, flops: f64, cores: u32, cores_dependency: CoresDependency) -> f64 {
+        flops / self.speed / cores_dependency.speedup(cores)
+    }
+
+    /// Returns workload fraction done for a given computation
+    pub fn fraction_done(&self, comp_id: EventId) -> f64 {
+        let computation = self.computations.get(&comp_id).expect("Computation does not exist");
+
+        let speedup = computation.req.cores_dependency.speedup(computation.cores);
+        let total_compute_time = computation.req.flops / self.speed / speedup;
+
+        if computation.state == ComputationState::Running {
+            computation.fraction_done + (self.ctx.time() - computation.start_time) / total_compute_time
+        } else {
+            computation.fraction_done
+        }
+    }
+
     /// Starts computation with given parameters and returns computation id.
     pub fn run(
         &mut self,
