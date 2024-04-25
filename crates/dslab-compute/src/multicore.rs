@@ -311,16 +311,22 @@ impl Compute {
     }
 
     /// Returns workload fraction done for a given computation
-    pub fn fraction_done(&self, comp_id: EventId) -> f64 {
-        let computation = self.computations.get(&comp_id).expect("Computation does not exist");
+    pub fn fraction_done(&self, comp_id: EventId) -> Result<f64, &str> {
+        let computation_opt = self.computations.get(&comp_id);
+
+        if computation_opt.is_none() {
+            return Err("Computation does not exist");
+        }
+
+        let computation = computation_opt.unwrap();
 
         let speedup = computation.req.cores_dependency.speedup(computation.cores);
         let total_compute_time = computation.req.flops / self.speed / speedup;
 
         if computation.state == ComputationState::Running {
-            computation.fraction_done + (self.ctx.time() - computation.start_time) / total_compute_time
+            Ok(computation.fraction_done + (self.ctx.time() - computation.start_time) / total_compute_time)
         } else {
-            computation.fraction_done
+            Ok(computation.fraction_done)
         }
     }
 
