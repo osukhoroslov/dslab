@@ -85,7 +85,7 @@ fn run_simulation(disk_builder: DiskBuilder) {
 struct ExampleActivityFactorFn {}
 
 impl ActivityFactorFn<DiskOperation> for ExampleActivityFactorFn {
-    fn get_factor(&mut self, item: &DiskOperation, ctx: &mut SimulationContext) -> f64 {
+    fn get_factor(&mut self, item: &DiskOperation, ctx: &SimulationContext) -> f64 {
         if item.size < 100 {
             1.
         } else {
