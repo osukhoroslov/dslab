@@ -65,7 +65,7 @@ impl PartialEq for ActivityInfo {
 
 impl Eq for ActivityInfo {}
 
-/// Fast implementation of fair throughput sharing model.
+/// Fast implementation of fair throughput sharing model with ability to cancel activities.
 pub struct FairThroughputSharingModelWithCancellation<T> {
     activities_queue: BinaryHeap<ActivityInfo>,
     running_activities: HashMap<ActivityId, Activity<T>>,

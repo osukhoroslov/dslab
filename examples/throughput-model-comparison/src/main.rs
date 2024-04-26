@@ -32,7 +32,7 @@ fn run_new_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut result = vec![0.; transfers.len()];
 
     let mut sim = Simulation::new(SEED);
-    let mut ctx = sim.create_context("dummy");
+    let ctx = sim.create_context("dummy");
 
     for (id, transfer) in transfers.into_iter() {
         loop {
@@ -44,7 +44,7 @@ fn run_new_model(transfers: &[Transfer]) -> Vec<f64> {
             result[id] = time;
         }
         sim.step_until_time(transfer.start_time as f64);
-        model.insert(id, transfer.weight as f64, &mut ctx);
+        model.insert(id, transfer.weight as f64, &ctx);
     }
 
     loop {
@@ -67,7 +67,7 @@ fn run_old_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut result = vec![0.; transfers.len()];
 
     let mut sim = Simulation::new(SEED);
-    let mut ctx = sim.create_context("dummy");
+    let ctx = sim.create_context("dummy");
 
     for (id, transfer) in transfers.into_iter() {
         loop {
@@ -79,7 +79,7 @@ fn run_old_model(transfers: &[Transfer]) -> Vec<f64> {
             result[id] = time;
         }
         sim.step_until_time(transfer.start_time as f64);
-        model.insert(id, transfer.weight as f64, &mut ctx);
+        model.insert(id, transfer.weight as f64, &ctx);
     }
 
     loop {
@@ -102,7 +102,7 @@ fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
     let mut result = vec![0.; transfers.len()];
 
     let mut sim = Simulation::new(SEED);
-    let mut ctx = sim.create_context("dummy");
+    let ctx = sim.create_context("dummy");
 
     for (id, transfer) in transfers.into_iter() {
         loop {
@@ -114,7 +114,7 @@ fn run_slow_model(transfers: &[Transfer]) -> Vec<f64> {
             result[id] = time;
         }
         sim.step_until_time(transfer.start_time as f64);
-        model.insert(id, transfer.weight as f64, &mut ctx);
+        model.insert(id, transfer.weight as f64, &ctx);
     }
 
     loop {
