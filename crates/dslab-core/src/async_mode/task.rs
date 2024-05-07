@@ -26,7 +26,7 @@ impl Task {
     // - components are not supposed to be moved because they are allocated in the heap under Rc<RefCell<...>>.
     fn new(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) -> Self {
         Self {
-            future: RefCell::new(Some(Box::into_pin(Box::new(future)))),
+            future: RefCell::new(Some(Box::pin(future))),
             executor,
         }
     }
