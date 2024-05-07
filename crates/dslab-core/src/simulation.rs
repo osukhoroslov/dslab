@@ -487,9 +487,9 @@ impl Simulation {
             if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
                 self.log_event(&event);
                 if let Some(handler) = handler_opt {
-                    match &handler {
-                        &EventHandlerComponent::Mutable(handler) => handler.borrow_mut().on(event),
-                        &EventHandlerComponent::Shared(handler) => handler.clone().on(event),
+                    match handler {
+                        EventHandlerComponent::Mutable(handler) => handler.borrow_mut().on(event),
+                        EventHandlerComponent::Shared(handler) => handler.clone().on(event),
                     }
                 } else {
                     log_undelivered_event(event);
