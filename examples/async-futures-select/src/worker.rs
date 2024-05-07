@@ -7,7 +7,7 @@ use serde_json::json;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug, Event, EventHandler, Id, SimulationContext};
+use dslab_core::{cast, log_debug, Event, Id, SharedEventHandler, SimulationContext};
 
 use crate::events::{Start, TaskRequest};
 
@@ -33,12 +33,12 @@ impl Worker {
         self.id
     }
 
-    fn on_start(&self) {
+    fn on_start(self: Rc<Self>) {
         log_debug!(self.ctx, "Worker started");
-        self.ctx.spawn(self.dispatch_loop());
+        self.ctx.spawn(self.clone().dispatch_loop());
     }
 
-    async fn dispatch_loop(&self) {
+    async fn dispatch_loop(self: Rc<Self>) {
         let mut pending_tasks: VecDeque<TaskRequest> = VecDeque::new();
         let mut dispatched_tasks: HashMap<u64, TaskRequest> = HashMap::new();
         loop {
@@ -94,8 +94,8 @@ impl Worker {
     }
 }
 
-impl EventHandler for Worker {
-    fn on(&mut self, event: Event) {
+impl SharedEventHandler for Worker {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
                 self.on_start();

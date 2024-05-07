@@ -59,7 +59,7 @@ async_mode_enabled!(
         component_names: Vec<String>,
 
         // Specific to async mode
-        registered_handlers: Vec<bool>,
+        registered_shared_handlers: Vec<bool>,
 
         event_promises: EventPromiseStore,
         key_getters: HashMap<TypeId, KeyGetterFn>,
@@ -99,7 +99,7 @@ impl SimulationState {
                 component_name_to_id: HashMap::new(),
                 component_names: Vec::new(),
                 // Specific to async mode
-                registered_handlers: Vec::new(),
+                registered_shared_handlers: Vec::new(),
                 event_promises: EventPromiseStore::new(),
                 key_getters: HashMap::new(),
                 timers: BinaryHeap::new(),
@@ -339,27 +339,27 @@ impl SimulationState {
 
     async_mode_disabled!(
         fn on_register(&mut self) {}
-        pub fn on_handler_added(&mut self, _id: Id) {}
-        pub fn on_handler_removed(&mut self, _id: Id) {}
+        pub fn on_shared_handler_added(&mut self, _id: Id) {}
+        pub fn on_shared_handler_removed(&mut self, _id: Id) {}
     );
 
     async_mode_enabled!(
         // Components --------------------------------------------------------------------------------------------------
 
         fn on_register(&mut self) {
-            self.registered_handlers.push(false)
+            self.registered_shared_handlers.push(false)
         }
 
-        pub fn on_handler_added(&mut self, id: Id) {
-            self.registered_handlers[id as usize] = true;
+        pub fn on_shared_handler_added(&mut self, id: Id) {
+            self.registered_shared_handlers[id as usize] = true;
         }
 
-        pub fn on_handler_removed(&mut self, id: Id) {
-            self.registered_handlers[id as usize] = false;
+        pub fn on_shared_handler_removed(&mut self, id: Id) {
+            self.registered_shared_handlers[id as usize] = false;
         }
 
-        fn has_registered_handler(&self, id: Id) -> bool {
-            self.registered_handlers
+        fn has_shared_registered_handler(&self, id: Id) -> bool {
+            self.registered_shared_handlers
                 .get(id as usize)
                 .map_or_else(|| false, |flag| *flag)
         }
@@ -370,11 +370,11 @@ impl SimulationState {
             Task::spawn(future, self.executor.clone());
         }
 
-        pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
+        pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()> + 'static) {
             assert!(
-                self.has_registered_handler(component_id),
-                "Spawning async tasks for component without registered event handler is not supported. \
-                Register handler for component {} before spawning tasks for it (empty impl EventHandler is OK).",
+                self.has_shared_registered_handler(component_id),
+                "Spawning async tasks for component without registered shared event handler is not supported. \
+                Register shared handler for component {} before spawning tasks for it (empty impl SharedEventHandler is OK).",
                 component_id,
             );
             Task::spawn(future, self.executor.clone());

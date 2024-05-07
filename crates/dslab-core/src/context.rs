@@ -832,7 +832,7 @@ impl SimulationContext {
         /// // 1 + 2 + 3 + ... + 10 = 55
         /// assert_eq!(*comp.borrow().counter.borrow(), 55);
         /// ```
-        pub fn spawn(&self, future: impl Future<Output = ()>) {
+        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
             self.sim_state.borrow_mut().spawn_component(self.id(), future);
         }
 

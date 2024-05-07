@@ -24,19 +24,15 @@ impl Task {
     // the spawned tasks should always finish before the corresponding components are deleted:
     // - deletion of components is supposed to be done only through the Simulation::remove_handler method,
     // - components are not supposed to be moved because they are allocated in the heap under Rc<RefCell<...>>.
-    fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
-        unsafe {
-            let boxed: Box<dyn Future<Output = ()>> = Box::new(future);
-            let converted: Box<dyn Future<Output = ()> + 'static> = std::mem::transmute(boxed);
-            Self {
-                future: RefCell::new(Some(Box::into_pin(converted))),
-                executor,
-            }
+    fn new(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) -> Self {
+        Self {
+            future: RefCell::new(Some(Box::into_pin(Box::new(future)))),
+            executor,
         }
     }
 
     // Converts a future into a task and sends it to executor.
-    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
+    pub fn spawn(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) {
         let task = Rc::new(Task::new(future, executor));
         task.schedule();
     }

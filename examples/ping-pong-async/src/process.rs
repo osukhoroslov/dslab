@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use dslab_core::handler::SharedEventHandler;
 use serde::Serialize;
 
 use dslab_core::cast;
 use dslab_core::event::EventData;
-use dslab_core::{Event, EventHandler, Id, SimulationContext};
+use dslab_core::{Event, Id, SimulationContext};
 use dslab_network::Network;
 
 #[derive(Clone, Serialize)]
@@ -42,13 +43,13 @@ impl Process {
         }
     }
 
-    fn on_start(&self) {
+    fn on_start(self: Rc<Self>) {
         if self.is_pinger {
-            self.ctx.spawn(self.pinger_loop());
+            self.ctx.spawn(self.clone().pinger_loop());
         }
     }
 
-    async fn pinger_loop(&self) {
+    async fn pinger_loop(self: Rc<Self>) {
         for _ in 0..self.iterations {
             let peer = if self.peer_count > 1 {
                 self.peers[self.ctx.gen_range(0..self.peer_count)]
@@ -80,8 +81,8 @@ impl Process {
     }
 }
 
-impl EventHandler for Process {
-    fn on(&mut self, event: Event) {
+impl SharedEventHandler for Process {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
                 self.on_start();
@@ -122,13 +123,13 @@ impl NetworkProcess {
         }
     }
 
-    fn on_start(&self) {
+    fn on_start(self: Rc<Self>) {
         if self.is_pinger {
-            self.ctx.spawn(self.pinger_loop());
+            self.ctx.spawn(self.clone().pinger_loop());
         }
     }
 
-    pub async fn pinger_loop(&self) {
+    pub async fn pinger_loop(self: Rc<Self>) {
         for _ in 0..=self.iterations {
             let peer = if self.peer_count > 1 {
                 self.peers[self.ctx.gen_range(0..self.peer_count)]
@@ -157,8 +158,8 @@ impl NetworkProcess {
     }
 }
 
-impl EventHandler for NetworkProcess {
-    fn on(&mut self, event: Event) {
+impl SharedEventHandler for NetworkProcess {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
                 self.on_start();

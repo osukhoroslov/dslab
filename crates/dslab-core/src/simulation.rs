@@ -25,6 +25,7 @@ async_mode_enabled!(
     use crate::event::EventData;
     use crate::async_mode::executor::Executor;
     use crate::async_mode::{UnboundedQueue, EventKey};
+    use crate::handler::SharedEventHandler;
 );
 
 async_mode_disabled!(
@@ -36,10 +37,14 @@ async_mode_disabled!(
 );
 
 async_mode_enabled!(
+    enum EventHandlerComponent {
+        Mutable(Rc<RefCell<dyn EventHandler>>),
+        Shared(Rc<dyn SharedEventHandler>),
+    }
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
-        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+        handlers: Vec<Option<EventHandlerComponent>>,
         // Specific to async mode
         executor: Executor,
     }
@@ -225,8 +230,7 @@ impl Simulation {
         S: AsRef<str>,
     {
         let id = self.register(name.as_ref());
-        self.handlers[id as usize] = Some(handler);
-        self.sim_state.borrow_mut().on_handler_added(id);
+        self.add_handler_inner(id, handler);
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -236,6 +240,36 @@ impl Simulation {
         );
         id
     }
+
+    async_mode_disabled!(
+        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
+            self.handlers[id as usize] = Some(handler);
+        }
+    );
+
+    async_mode_enabled!(
+        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
+            self.handlers[id as usize] = Some(EventHandlerComponent::Mutable(handler));
+        }
+
+        /// TODO add docs
+        pub fn add_shared_handler<S>(&mut self, name: S, shared_handler: Rc<dyn SharedEventHandler>) -> Id
+        where
+            S: AsRef<str>,
+        {
+            let id = self.register(name.as_ref());
+            self.handlers[id as usize] = Some(EventHandlerComponent::Shared(shared_handler));
+            self.sim_state.borrow_mut().on_shared_handler_added(id);
+            debug!(
+                target: "simulation",
+                "[{:.3} {} simulation] Added shared handler: {}",
+                self.time(),
+                crate::log::get_colored("DEBUG", colored::Color::Blue),
+                json!({"name": name.as_ref(), "id": id})
+            );
+            id
+        }
+    );
 
     /// Removes the event handler for component with specified name.
     ///
@@ -276,7 +310,7 @@ impl Simulation {
     {
         let id = self.lookup_id(name.as_ref());
         self.handlers[id as usize] = None;
-        self.sim_state.borrow_mut().on_handler_removed(id);
+        self.sim_state.borrow_mut().on_shared_handler_removed(id);
         self.remove_handler_inner(id);
 
         // cancel pending events related to the removed component based on the cancellation policy
@@ -375,6 +409,19 @@ impl Simulation {
                 None => false,
             }
         }
+
+        fn deliver_event_via_handler(&self, event: Event) {
+            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+                self.log_event(&event);
+                if let Some(handler) = handler_opt {
+                    handler.borrow_mut().on(event);
+                } else {
+                    log_undelivered_event(event);
+                }
+            } else {
+                log_undelivered_event(event);
+            }
+        }
     );
 
     async_mode_enabled!(
@@ -435,20 +482,23 @@ impl Simulation {
             drop(next_timer);
             self.process_task();
         }
-    );
 
-    fn deliver_event_via_handler(&self, event: Event) {
-        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
-            self.log_event(&event);
-            if let Some(handler) = handler_opt {
-                handler.borrow_mut().on(event);
+        fn deliver_event_via_handler(&self, event: Event) {
+            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+                self.log_event(&event);
+                if let Some(handler) = handler_opt {
+                    match &handler {
+                        &EventHandlerComponent::Mutable(handler) => handler.borrow_mut().on(event),
+                        &EventHandlerComponent::Shared(handler) => handler.clone().on(event),
+                    }
+                } else {
+                    log_undelivered_event(event);
+                }
             } else {
                 log_undelivered_event(event);
             }
-        } else {
-            log_undelivered_event(event);
         }
-    }
+    );
 
     fn log_event(&self, event: &Event) {
         if log_enabled!(Trace) {

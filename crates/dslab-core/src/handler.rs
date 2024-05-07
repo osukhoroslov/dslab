@@ -1,6 +1,10 @@
 //! Event handling.
 
-use crate::event::Event;
+use crate::{async_mode_enabled, event::Event};
+
+async_mode_enabled!(
+    use std::rc::Rc;
+);
 
 /// Trait for consuming events in simulation components.
 pub trait EventHandler {
@@ -129,3 +133,11 @@ pub enum EventCancellationPolicy {
     /// Do not cancel events.
     None,
 }
+
+async_mode_enabled!(
+    /// TODO add docs
+    pub trait SharedEventHandler {
+        /// TODO add docs
+        fn on(self: Rc<Self>, event: Event);
+    }
+);
