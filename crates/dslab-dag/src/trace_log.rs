@@ -1,7 +1,8 @@
 //! DAG execution log.
 
-use std::fs::File;
+use std::fmt::Formatter;
 use std::io::Write;
+use std::{fmt::Display, fs::File};
 
 use dslab_core::context::SimulationContext;
 use dslab_core::log_debug;
@@ -60,29 +61,29 @@ impl Event {
     }
 }
 
-impl ToString for Event {
-    fn to_string(&self) -> String {
+impl Display for Event {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
             Event::TaskScheduled {
                 ref task_name,
                 ref location,
                 cores,
                 ..
-            } => format!("scheduled task {task_name} to {location} on {cores} cores"),
-            Event::TaskStarted { ref task_name, .. } => format!("started task {task_name}"),
-            Event::TaskCompleted { ref task_name, .. } => format!("completed task {task_name}"),
+            } => write!(f, "scheduled task {task_name} to {location} on {cores} cores"),
+            Event::TaskStarted { ref task_name, .. } => write!(f, "started task {task_name}"),
+            Event::TaskCompleted { ref task_name, .. } => write!(f, "completed task {task_name}"),
             Event::StartUploading {
                 ref data_name,
                 ref from,
                 ref to,
                 ..
-            } => format!("data item {data_name} started uploading from {from} to {to}"),
+            } => write!(f, "data item {data_name} started uploading from {from} to {to}"),
             Event::FinishUploading {
                 ref data_name,
                 ref from,
                 ref to,
                 ..
-            } => format!("data item {data_name} finished uploading from {from} to {to}"),
+            } => write!(f, "data item {data_name} finished uploading from {from} to {to}"),
         }
     }
 }

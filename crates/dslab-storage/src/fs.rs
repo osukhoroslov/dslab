@@ -51,7 +51,7 @@ impl FileSystem {
     /// Mounts `disk` to `mount_point` if it is not taken yet.
     pub fn mount_disk(&mut self, mount_point: &str, disk: Rc<RefCell<dyn Storage>>) -> Result<(), String> {
         log_debug!(self.ctx, "Received mount disk request, mount_point: [{}]", mount_point);
-        if self.disks.get(mount_point).is_some() {
+        if self.disks.contains_key(mount_point) {
             return Err(format!("mount point [{}] is already is use", mount_point));
         }
         self.disks.insert(mount_point.to_string(), disk);
@@ -232,7 +232,7 @@ impl FileSystem {
     /// Creates file at `file_path` if it doesn’t already exist.
     pub fn create_file(&mut self, file_path: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received create file request, file_path: [{}]", file_path);
-        if self.files.get(file_path).is_some() {
+        if self.files.contains_key(file_path) {
             return Err(format!("file [{}] already exists", file_path));
         }
         self.resolve_disk(file_path)?;
@@ -281,7 +281,7 @@ impl FileSystem {
         self.disks.keys().cloned().collect()
     }
 
-    /// Deletes file located at `file_path` if there is any.    
+    /// Deletes file located at `file_path` if there is any.
     pub fn delete_file(&mut self, file_path: &str) -> Result<(), String> {
         log_debug!(self.ctx, "Received delete file request, file_path: [{}]", file_path);
         let disk = self.resolve_disk(file_path)?;
