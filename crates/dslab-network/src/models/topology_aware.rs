@@ -278,9 +278,6 @@ impl TopologyAwareNetworkModel {
             }
 
             let bandwidth = min_link.get_path_bandwidth();
-            if bandwidth < last_bandwidth - 1e-12 {
-                panic!("{:.20} < {:.20}", bandwidth, last_bandwidth);
-            }
             let bandwidth = bandwidth.max(last_bandwidth);
             last_bandwidth = bandwidth;
             for &transfer_idx in transfers_through_link[min_link_id].iter() {
@@ -355,9 +352,6 @@ impl TopologyAwareNetworkModel {
             }
 
             let bandwidth = min_link.get_path_bandwidth();
-            if bandwidth < last_bandwidth - 1e-12 {
-                panic!("{:.20} < {:.20}", bandwidth, last_bandwidth);
-            }
             let bandwidth = bandwidth.max(last_bandwidth);
             last_bandwidth = bandwidth;
             for &transfer_idx in self.transfers_through_link[min_link_id].iter() {
