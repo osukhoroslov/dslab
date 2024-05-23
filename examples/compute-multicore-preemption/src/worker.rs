@@ -5,8 +5,8 @@ use serde::Serialize;
 
 use dslab_compute::multicore::*;
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug};
-use dslab_core::{Event, EventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, log_debug, StaticEventHandler};
+use dslab_core::{Event, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize)]
 pub struct Start {}
@@ -49,12 +49,12 @@ impl Worker {
         sim.register_key_getter_for::<CompFinished>(|e| e.id as EventKey);
     }
 
-    fn on_task_request(&self, req: TaskRequest) {
+    fn on_task_request(self: Rc<Self>, req: TaskRequest) {
         log_debug!(self.ctx, "task request: {:?}", req);
-        self.ctx.spawn(self.run(req));
+        self.ctx.spawn(self.clone().run(req));
     }
 
-    pub async fn run(&self, req: TaskRequest) {
+    pub async fn run(self: Rc<Self>, req: TaskRequest) {
         let comp_id = self.compute.borrow_mut().run(
             req.flops,
             req.memory,
@@ -87,8 +87,8 @@ impl Worker {
     }
 }
 
-impl EventHandler for Worker {
-    fn on(&mut self, event: Event) {
+impl StaticEventHandler for Worker {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
                 self.on_start();

@@ -500,6 +500,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute-multicore-preemption-example"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.25",
+ "dslab-compute",
+ "dslab-core",
+ "dslab-network",
+ "dslab-storage",
+ "env_logger 0.9.3",
+ "futures",
+ "log 0.4.20",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "serde",
+ "sugars",
+]
+
+[[package]]
 name = "compute-singlecore-example"
 version = "0.1.0"
 dependencies = [

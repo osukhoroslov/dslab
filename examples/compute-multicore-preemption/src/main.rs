@@ -43,8 +43,8 @@ fn main() {
     )));
     sim.add_handler(compute_name, compute.clone());
 
-    let worker = rc!(refcell!(Worker::new(compute.clone(), sim.create_context(worker_name))));
-    let worker_id = sim.add_handler(worker_name, worker.clone());
+    let worker = Worker::new(compute.clone(), sim.create_context(worker_name));
+    let worker_id = sim.add_static_handler(worker_name, rc!(worker));
     admin.emit_now(Start {}, worker_id);
 
     Worker::register_key_getters(&sim);

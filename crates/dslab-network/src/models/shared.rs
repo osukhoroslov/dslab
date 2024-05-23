@@ -43,14 +43,27 @@ impl NetworkModel for SharedBandwidthNetworkModel {
         let size = dt.size;
         self.throughput_model.insert(dt, size, ctx);
         if let Some((time, dt)) = self.throughput_model.peek() {
-            self.next_event = ctx.emit_self(DataTransferCompleted { dt: dt.clone() }, time - ctx.time());
+            let delay = if (time - ctx.time()).abs() < 1e-8 {
+                0.
+            } else {
+                time - ctx.time()
+            };
+            //let delay = time - ctx.time();
+
+            self.next_event = ctx.emit_self(DataTransferCompleted { dt: dt.clone() }, delay);
         }
     }
 
     fn on_transfer_completion(&mut self, _dt: DataTransfer, ctx: &mut SimulationContext) {
         self.throughput_model.pop().unwrap();
         if let Some((time, dt)) = self.throughput_model.peek() {
-            self.next_event = ctx.emit_self(DataTransferCompleted { dt: dt.clone() }, time - ctx.time());
+            let delay = if (time - ctx.time()).abs() < 1e-8 {
+                0.
+            } else {
+                time - ctx.time()
+            };
+            //let delay = time - ctx.time();
+            self.next_event = ctx.emit_self(DataTransferCompleted { dt: dt.clone() }, delay);
         }
     }
 }
