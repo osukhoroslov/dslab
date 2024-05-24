@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use dslab_core::{Event, Id, StaticEventHandler, SimulationContext};
+use dslab_core::{Event, Id, SimulationContext, StaticEventHandler};
 
 use crate::events::TaskRequest;
 
