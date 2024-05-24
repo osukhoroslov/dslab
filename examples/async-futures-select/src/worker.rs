@@ -7,7 +7,7 @@ use serde_json::json;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug, Event, Id, SharedEventHandler, SimulationContext};
+use dslab_core::{cast, log_debug, Event, Id, StaticEventHandler, SimulationContext};
 
 use crate::events::{Start, TaskRequest};
 
@@ -94,7 +94,7 @@ impl Worker {
     }
 }
 
-impl SharedEventHandler for Worker {
+impl StaticEventHandler for Worker {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {

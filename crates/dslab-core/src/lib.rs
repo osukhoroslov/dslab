@@ -19,5 +19,5 @@ pub use simulation::Simulation;
 pub use state::EPSILON;
 
 async_mode_enabled!(
-    pub use handler::SharedEventHandler;
+    pub use handler::StaticEventHandler;
 );

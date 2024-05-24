@@ -98,7 +98,7 @@ fn main() {
                 network.clone(),
                 sim.create_context(&proc_name),
             );
-            sim.add_shared_handler(&proc_name, rc!(proc));
+            sim.add_static_handler(&proc_name, rc!(proc));
             let host = format!("host{}", 2 - i % 2);
             network.borrow_mut().set_location(proc_id, &host);
         } else {
@@ -109,7 +109,7 @@ fn main() {
                 iterations,
                 sim.create_context(&proc_name),
             );
-            sim.add_shared_handler(&proc_name, rc!(proc));
+            sim.add_static_handler(&proc_name, rc!(proc));
         }
         root.emit(Start {}, proc_id, 0.);
     }

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use dslab_compute::multicore::*;
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug, SharedEventHandler};
+use dslab_core::{cast, log_debug, StaticEventHandler};
 use dslab_core::{Event, Id, Simulation, SimulationContext};
 use dslab_network::{DataTransferCompleted, Network};
 use dslab_storage::disk::Disk;
@@ -162,7 +162,7 @@ impl AsyncWorker {
     }
 }
 
-impl SharedEventHandler for AsyncWorker {
+impl StaticEventHandler for AsyncWorker {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {

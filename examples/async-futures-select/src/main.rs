@@ -46,11 +46,11 @@ fn main() {
     )));
     sim.add_handler("compute", compute.clone());
     let worker = rc!(Worker::new(compute, sim.create_context("worker")));
-    let worker_id = sim.add_shared_handler("worker", worker);
+    let worker_id = sim.add_static_handler("worker", worker);
 
     // Create client component which submits tasks
     let client = rc!(Client::new(sim.create_context("client"), task_count, 100., worker_id));
-    sim.add_shared_handler("client", client.clone());
+    sim.add_static_handler("client", client.clone());
 
     // Start worker and client
     root.emit_now(Start {}, worker_id);

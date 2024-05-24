@@ -135,8 +135,8 @@ pub enum EventCancellationPolicy {
 }
 
 async_mode_enabled!(
-    /// TODO add docs
-    pub trait SharedEventHandler {
+    /// Alternative trait to consume events in simulation components.
+    pub trait StaticEventHandler {
         /// TODO add docs
         fn on(self: Rc<Self>, event: Event);
     }

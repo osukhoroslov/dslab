@@ -4,7 +4,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_core::async_mode::AwaitResult;
-use dslab_core::{cast, Event, Id, SharedEventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, Event, Id, Simulation, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 struct TestEvent {
@@ -64,7 +64,7 @@ impl Listener {
     }
 }
 
-impl SharedEventHandler for Listener {
+impl StaticEventHandler for Listener {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             TestEvent { value } => {
@@ -82,7 +82,7 @@ fn test_recv_event() {
     let ctx = sim.create_context("main");
 
     let listener = Rc::new(Listener::new(ctx.id(), timeout, sim.create_context("listener")));
-    let listener_id = sim.add_shared_handler("listener", listener.clone());
+    let listener_id = sim.add_static_handler("listener", listener.clone());
     listener.clone().start();
 
     *listener.expect_timeout.borrow_mut() = true;

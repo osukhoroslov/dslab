@@ -126,7 +126,7 @@ fn main() {
             master_id,
             sim.create_context(worker_name),
         );
-        let worker_id = sim.add_shared_handler(worker_name, rc!(worker));
+        let worker_id = sim.add_static_handler(worker_name, rc!(worker));
         network.borrow_mut().set_location(worker_id, host);
         admin.emit_now(Start {}, worker_id);
     }

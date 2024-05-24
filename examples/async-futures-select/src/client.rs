@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use dslab_core::{Event, Id, SharedEventHandler, SimulationContext};
+use dslab_core::{Event, Id, StaticEventHandler, SimulationContext};
 
 use crate::events::TaskRequest;
 
@@ -48,6 +48,6 @@ impl Client {
 }
 
 // Empty event handler is needed because spawning async tasks by a component without event handler is prohibited
-impl SharedEventHandler for Client {
+impl StaticEventHandler for Client {
     fn on(self: Rc<Self>, _event: Event) {}
 }

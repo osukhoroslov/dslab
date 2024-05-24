@@ -2,9 +2,9 @@ use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::mpsc::Sender;
 use std::task::Context;
 
+use super::channel::Sender;
 use super::waker::{waker_ref, RcWake};
 
 type BoxedFuture = Pin<Box<dyn Future<Output = ()>>>;
@@ -58,7 +58,7 @@ impl Task {
 
     // Schedules the task for polling by sending it to the executor.
     fn schedule(self: &Rc<Self>) {
-        self.executor.send(self.clone()).expect("channel is closed");
+        self.executor.send(self.clone());
     }
 }
 

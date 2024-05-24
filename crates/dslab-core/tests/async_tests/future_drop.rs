@@ -4,7 +4,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, EventCancellationPolicy, SharedEventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, EventCancellationPolicy, Simulation, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 struct TestEventWithRc {
@@ -66,7 +66,7 @@ impl TestComponent {
     }
 }
 
-impl SharedEventHandler for TestComponent {
+impl StaticEventHandler for TestComponent {
     fn on(self: Rc<Self>, event: dslab_core::Event) {
         cast!(match event.data {
             TestEventWithRc { .. } => {
@@ -88,7 +88,7 @@ fn test_event_futures_drop_on_remove_handler() {
 
     let comp_ctx = sim.create_context("comp");
     let comp = Rc::new(TestComponent::new(async_task_count, comp_ctx));
-    let comp_id = sim.add_shared_handler("comp", comp.clone());
+    let comp_id = sim.add_static_handler("comp", comp.clone());
     comp.clone().start_waiting_for_events();
 
     let root_ctx = sim.create_context("root");
@@ -119,7 +119,7 @@ fn test_event_futures_drop_on_remove_handler() {
     // Check that all async activities are dropped.
     assert_eq!(Rc::strong_count(&rc), 1);
 
-    sim.add_shared_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
 
     assert_eq!(Rc::strong_count(&rc), 1);
     assert_eq!(*rc.borrow(), async_task_count);
@@ -154,7 +154,7 @@ fn test_timer_futures_drop_on_remove_handler() {
 
     let comp_ctx = sim.create_context("comp");
     let comp = Rc::new(TestComponent::new(async_task_count, comp_ctx));
-    sim.add_shared_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
     comp.clone().start_waiting_for_timeouts(timeout, rc.clone());
 
     sim.step_until_time(30.);
@@ -167,7 +167,7 @@ fn test_timer_futures_drop_on_remove_handler() {
 
     assert_eq!(Rc::strong_count(&rc), 1);
 
-    sim.add_shared_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
 
     assert_eq!(Rc::strong_count(&rc), 1);
     assert_eq!(*rc.borrow(), async_task_count);

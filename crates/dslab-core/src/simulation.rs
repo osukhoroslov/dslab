@@ -18,14 +18,13 @@ use crate::state::SimulationState;
 use crate::{async_mode_disabled, async_mode_enabled, Event};
 
 async_mode_enabled!(
-    use std::sync::mpsc::channel;
-
     use futures::Future;
 
     use crate::event::EventData;
     use crate::async_mode::executor::Executor;
+    use crate::async_mode::channel::channel;
     use crate::async_mode::{UnboundedQueue, EventKey};
-    use crate::handler::SharedEventHandler;
+    use crate::handler::StaticEventHandler;
 );
 
 async_mode_disabled!(
@@ -39,7 +38,7 @@ async_mode_disabled!(
 async_mode_enabled!(
     enum EventHandlerComponent {
         Mutable(Rc<RefCell<dyn EventHandler>>),
-        Shared(Rc<dyn SharedEventHandler>),
+        Shared(Rc<dyn StaticEventHandler>),
     }
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
@@ -253,13 +252,13 @@ impl Simulation {
         }
 
         /// TODO add docs
-        pub fn add_shared_handler<S>(&mut self, name: S, shared_handler: Rc<dyn SharedEventHandler>) -> Id
+        pub fn add_static_handler<S>(&mut self, name: S, shared_handler: Rc<dyn StaticEventHandler>) -> Id
         where
             S: AsRef<str>,
         {
             let id = self.register(name.as_ref());
             self.handlers[id as usize] = Some(EventHandlerComponent::Shared(shared_handler));
-            self.sim_state.borrow_mut().on_shared_handler_added(id);
+            self.sim_state.borrow_mut().on_static_handler_added(id);
             debug!(
                 target: "simulation",
                 "[{:.3} {} simulation] Added shared handler: {}",
@@ -310,7 +309,7 @@ impl Simulation {
     {
         let id = self.lookup_id(name.as_ref());
         self.handlers[id as usize] = None;
-        self.sim_state.borrow_mut().on_shared_handler_removed(id);
+        self.sim_state.borrow_mut().on_static_handler_removed(id);
         self.remove_handler_inner(id);
 
         // cancel pending events related to the removed component based on the cancellation policy
@@ -567,7 +566,7 @@ impl Simulation {
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, StaticEventHandler};
         /// use dslab_core::async_mode::UnboundedQueue;
         ///
         /// struct Message {
@@ -580,19 +579,19 @@ impl Simulation {
         /// }
         ///
         /// impl Component {
-        ///     fn start(&self) {
-        ///         self.ctx.spawn(self.producer());
-        ///         self.ctx.spawn(self.consumer());
+        ///     fn start(self: Rc<Self>) {
+        ///         self.ctx.spawn(self.clone().producer());
+        ///         self.ctx.spawn(self.clone().consumer());
         ///     }
         ///
-        ///     async fn producer(&self) {
+        ///     async fn producer(self: Rc<Self>) {
         ///         for i in 0..10 {
         ///             self.ctx.sleep(5.).await;
         ///             self.queue.put(Message {payload: i});
         ///         }
         ///     }
         ///
-        ///     async fn consumer(&self) {
+        ///     async fn consumer(self: Rc<Self>) {
         ///         for i in 0..10 {
         ///             let msg = self.queue.take().await;
         ///             assert_eq!(msg.payload, i);
@@ -600,20 +599,20 @@ impl Simulation {
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&mut self, event: Event) {
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc<Self>, event: Event) {
         ///     }
         /// }
         ///
         /// let mut sim = Simulation::new(123);
         ///
-        /// let comp = Rc::new(RefCell::new(Component {
+        /// let comp = Rc::new(Component {
         ///     ctx: sim.create_context("comp"),
         ///     queue: sim.create_queue("comp_queue")
-        /// }));
-        /// sim.add_handler("comp", comp.clone());
+        /// });
+        /// sim.add_static_handler("comp", comp.clone());
         ///
-        /// comp.borrow().start();
+        /// comp.start();
         /// sim.step_until_no_events();
         ///
         /// assert_eq!(sim.time(), 50.);

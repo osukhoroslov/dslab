@@ -3,7 +3,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, Event, SharedEventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, Event, Simulation, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 struct TestEvent {
@@ -58,7 +58,7 @@ impl TestComponent {
     }
 }
 
-impl SharedEventHandler for TestComponent {
+impl StaticEventHandler for TestComponent {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             TestEvent { .. } => {
@@ -76,7 +76,7 @@ fn test_recv_event_by_key() {
 
     let comp_ctx = sim.create_context("comp");
     let comp = Rc::new(TestComponent::new(100, 100, comp_ctx));
-    sim.add_shared_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
 
     comp.start();
     sim.step_until_no_events();

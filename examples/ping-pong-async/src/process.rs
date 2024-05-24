@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::handler::SharedEventHandler;
+use dslab_core::handler::StaticEventHandler;
 use serde::Serialize;
 
 use dslab_core::cast;
@@ -81,7 +81,7 @@ impl Process {
     }
 }
 
-impl SharedEventHandler for Process {
+impl StaticEventHandler for Process {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
@@ -158,7 +158,7 @@ impl NetworkProcess {
     }
 }
 
-impl SharedEventHandler for NetworkProcess {
+impl StaticEventHandler for NetworkProcess {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {

@@ -1,20 +1,21 @@
 use std::any::TypeId;
-use std::collections::HashMap;
+
+use rustc_hash::FxHashMap;
 
 use super::{event_future::EventPromise, EventKey};
 use crate::{Event, EventData, Id};
 
 #[derive(Clone)]
 pub(crate) struct EventPromiseStore {
-    promises: HashMap<AwaitKey, EventPromise>,
-    promises_with_source: HashMap<AwaitKey, HashMap<Id, EventPromise>>,
+    promises: FxHashMap<AwaitKey, EventPromise>,
+    promises_with_source: FxHashMap<AwaitKey, FxHashMap<Id, EventPromise>>,
 }
 
 impl EventPromiseStore {
     pub fn new() -> Self {
         Self {
-            promises: HashMap::new(),
-            promises_with_source: HashMap::new(),
+            promises: FxHashMap::default(),
+            promises_with_source: FxHashMap::default(),
         }
     }
 
