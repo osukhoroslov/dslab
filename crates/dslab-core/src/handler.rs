@@ -138,7 +138,7 @@ async_mode_enabled!(
     /// Alternative trait to consume events in simulation components. `Rc<Self>` has 'static lifetime,
     /// which allows spawning asynchronous tasks using component's context. You can implement any processing logic here.
     pub trait StaticEventHandler {
-        /// Processes event. See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) for relevant examples.
+        /// Processes event. See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
         fn on(self: Rc<Self>, event: Event);
     }
 );

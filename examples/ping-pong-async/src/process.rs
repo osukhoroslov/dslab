@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::handler::StaticEventHandler;
 use serde::Serialize;
 
 use dslab_core::cast;
 use dslab_core::event::EventData;
+use dslab_core::handler::StaticEventHandler;
 use dslab_core::{Event, Id, SimulationContext};
 use dslab_network::Network;
 

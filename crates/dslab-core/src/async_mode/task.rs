@@ -18,12 +18,6 @@ pub(crate) struct Task {
 
 impl Task {
     // Creates a new task from a future.
-    //
-    // Unsafe is used to make possible spawning components' methods as tasks via SimulationContext::spawn.
-    // &self argument prevents any method to have a 'static lifetime, but following the simulation logic
-    // the spawned tasks should always finish before the corresponding components are deleted:
-    // - deletion of components is supposed to be done only through the Simulation::remove_handler method,
-    // - components are not supposed to be moved because they are allocated in the heap under Rc<RefCell<...>>.
     fn new(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) -> Self {
         Self {
             future: RefCell::new(Some(Box::pin(future))),

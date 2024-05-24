@@ -38,7 +38,7 @@ async_mode_disabled!(
 async_mode_enabled!(
     enum EventHandlerComponent {
         Mutable(Rc<RefCell<dyn EventHandler>>),
-        Shared(Rc<dyn StaticEventHandler>),
+        Static(Rc<dyn StaticEventHandler>),
     }
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
@@ -247,17 +247,19 @@ impl Simulation {
     );
 
     async_mode_enabled!(
-        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
-            self.handlers[id as usize] = Some(EventHandlerComponent::Mutable(handler));
-        }
-
-        /// TODO add docs
-        pub fn add_static_handler<S>(&mut self, name: S, shared_handler: Rc<dyn StaticEventHandler>) -> Id
+        /// Alternative way to register the event handler implementation for component with specified name.
+        /// StaticEventHandler has 'static lifetime while processing incoming events
+        /// which allows spawning asynchronous tasks using component's context.
+        ///
+        /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+        ///
+        /// Returns the component Id.
+        pub fn add_static_handler<S>(&mut self, name: S, static_handler: Rc<dyn StaticEventHandler>) -> Id
         where
             S: AsRef<str>,
         {
             let id = self.register(name.as_ref());
-            self.handlers[id as usize] = Some(EventHandlerComponent::Shared(shared_handler));
+            self.handlers[id as usize] = Some(EventHandlerComponent::Static(static_handler));
             self.sim_state.borrow_mut().on_static_handler_added(id);
             debug!(
                 target: "simulation",
@@ -267,6 +269,10 @@ impl Simulation {
                 json!({"name": name.as_ref(), "id": id})
             );
             id
+        }
+
+        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
+            self.handlers[id as usize] = Some(EventHandlerComponent::Mutable(handler));
         }
     );
 
@@ -488,7 +494,7 @@ impl Simulation {
                 if let Some(handler) = handler_opt {
                     match handler {
                         EventHandlerComponent::Mutable(handler) => handler.borrow_mut().on(event),
-                        EventHandlerComponent::Shared(handler) => handler.clone().on(event),
+                        EventHandlerComponent::Static(handler) => handler.clone().on(event),
                     }
                 } else {
                     log_undelivered_event(event);
