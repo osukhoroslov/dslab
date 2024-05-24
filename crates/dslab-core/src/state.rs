@@ -340,7 +340,6 @@ impl SimulationState {
 
     async_mode_disabled!(
         fn on_register(&mut self) {}
-        pub fn on_static_handler_added(&mut self, _id: Id) {}
         pub fn on_static_handler_removed(&mut self, _id: Id) {}
     );
 
