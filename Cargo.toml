@@ -1,3 +1,12 @@
 [workspace]
 members = ["crates/*", "examples/*", "tools/*"]
 resolver = "2"
+
+[profile.flamegraph-release]
+inherits = "release"
+debug = true
+
+[profile.release-optimized]
+inherits = "release"
+codegen-units = 1
+lto = "fat"
