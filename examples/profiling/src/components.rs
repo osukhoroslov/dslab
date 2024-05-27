@@ -1,11 +1,16 @@
-use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
+//! Components used in the profiling example.
+
 use serde::Serialize;
+
+use dslab_core::{cast, Event, EventHandler, Id, SimulationContext};
 
 const TOTAL_QUEUE_TIME: f64 = 1e5;
 
+/// A message that is emitted by the server.
 #[derive(Clone, Serialize)]
 pub struct Message {}
 
+/// A server component that emits messages to clients.
 pub struct Server {
     clients: Vec<Id>,
     events_count: u64,
@@ -15,6 +20,7 @@ pub struct Server {
 }
 
 impl Server {
+    /// Create a new server component.
     pub fn new(
         ctx: SimulationContext,
         clients: Vec<Id>,
@@ -31,6 +37,13 @@ impl Server {
         }
     }
 
+    /// Start the server by emitting messages to clients.
+    ///
+    /// The messages are emitted in a round-robin fashion to the clients or
+    /// randomly if `rand_client_choose` is set to `true`.
+    ///
+    /// Based on the `emit_ordered` flag uses either `emit` or `emit_ordered` method
+    /// to compare the performance of the two.
     pub fn start(&self) {
         let mut next_client = 0;
         let mut delay = 1.;
@@ -56,12 +69,14 @@ impl Server {
     }
 }
 
+/// A client component that counts the number of messages received.
 #[derive(Default)]
 pub struct Client {
     messages_received: u64,
 }
 
 impl Client {
+    /// Get the number of messages received by the client.
     pub fn messages_count(&self) -> u64 {
         self.messages_received
     }

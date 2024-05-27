@@ -1,4 +1,6 @@
-mod components;
+#![doc = include_str!("../readme.md")]
+
+pub mod components;
 
 use std::time::Instant;
 
@@ -9,27 +11,27 @@ use dslab_core::Simulation;
 
 use components::{Client, Server};
 
-/// Ping-pong example
+/// Profiling example
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Number of processes (>= 2)
-    #[clap(long, default_value_t = 2)]
+    /// Number of clients (>= 1)
+    #[clap(long, default_value_t = 10)]
     clients_count: u32,
 
-    /// choose next client to send event randomly
+    /// Choose next client to send event randomly
     #[clap(long)]
     rand_clients_choose: bool,
 
-    /// use emit_ordered to improve performance
+    /// Use emit_ordered to improve performance
     #[clap(long)]
-    emit_ordered: bool,
+    use_emit_ordered: bool,
 
-    /// Number of iterations (>= 1)
+    /// Number of events (>= 1)
     #[clap(long, default_value_t = 100)]
     events_count: u64,
 
-    /// display messages count
+    /// Display messages count
     #[clap(long)]
     display_messages_count: bool,
 }
@@ -52,7 +54,7 @@ fn main() {
         sim.create_context("server"),
         clients_ids,
         args.events_count,
-        args.emit_ordered,
+        args.use_emit_ordered,
         args.rand_clients_choose,
     );
 
