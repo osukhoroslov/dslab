@@ -263,7 +263,7 @@ impl Simulation {
             self.sim_state.borrow_mut().on_static_handler_added(id);
             debug!(
                 target: "simulation",
-                "[{:.3} {} simulation] Added shared handler: {}",
+                "[{:.3} {} simulation] Added static handler: {}",
                 self.time(),
                 crate::log::get_colored("DEBUG", colored::Color::Blue),
                 json!({"name": name.as_ref(), "id": id})

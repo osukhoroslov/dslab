@@ -373,7 +373,7 @@ impl SimulationState {
         pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()> + 'static) {
             assert!(
                 self.has_registered_static_handler(component_id),
-                "Spawning async tasks for component without registered shared event handler is not supported. \
+                "Spawning async tasks for component without registered static event handler is not supported. \
                 Register static handler for component {} before spawning tasks for it (empty impl StaticEventHandler is OK).",
                 component_id,
             );
