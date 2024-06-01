@@ -136,7 +136,7 @@ pub enum EventCancellationPolicy {
 
 async_mode_enabled!(
     /// Alternative trait for consuming events in simulation components.
-    /// 
+    ///
     /// This trait supports spawning asynchronous tasks using component's context.
     /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
     pub trait StaticEventHandler {

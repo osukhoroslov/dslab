@@ -36,7 +36,7 @@ async_mode_disabled!(
 );
 
 async_mode_enabled!(
-    enum EventHandlerComponent {
+    enum EventHandlerImpl {
         Mutable(Rc<RefCell<dyn EventHandler>>),
         Static(Rc<dyn StaticEventHandler>),
     }
@@ -44,7 +44,7 @@ async_mode_enabled!(
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
-        handlers: Vec<Option<EventHandlerComponent>>,
+        handlers: Vec<Option<EventHandlerImpl>>,
         // Specific to async mode
         executor: Executor,
     }
@@ -258,7 +258,7 @@ impl Simulation {
             S: AsRef<str>,
         {
             let id = self.register(name.as_ref());
-            self.handlers[id as usize] = Some(EventHandlerComponent::Static(static_handler));
+            self.handlers[id as usize] = Some(EventHandlerImpl::Static(static_handler));
             self.sim_state.borrow_mut().on_static_handler_added(id);
             debug!(
                 target: "simulation",
@@ -271,7 +271,7 @@ impl Simulation {
         }
 
         fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
-            self.handlers[id as usize] = Some(EventHandlerComponent::Mutable(handler));
+            self.handlers[id as usize] = Some(EventHandlerImpl::Mutable(handler));
         }
     );
 
@@ -492,8 +492,8 @@ impl Simulation {
                 self.log_event(&event);
                 if let Some(handler) = handler_opt {
                     match handler {
-                        EventHandlerComponent::Mutable(handler) => handler.borrow_mut().on(event),
-                        EventHandlerComponent::Static(handler) => handler.clone().on(event),
+                        EventHandlerImpl::Mutable(handler) => handler.borrow_mut().on(event),
+                        EventHandlerImpl::Static(handler) => handler.clone().on(event),
                     }
                 } else {
                     log_undelivered_event(event);
