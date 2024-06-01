@@ -247,7 +247,7 @@ impl LookaheadScheduler {
                     best_finish = finish_time;
                     best_makespan = makespan;
                     best_resource = resource;
-                    best_cores = cores.clone();
+                    best_cores.clone_from(&cores);
                 }
             }
 

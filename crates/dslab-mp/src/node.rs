@@ -198,7 +198,7 @@ impl Node {
 
     /// Reads and returns the local messages produced by the process.
     ///
-    /// Returns `None` if there are no messages.   
+    /// Returns `None` if there are no messages.
     pub fn read_local_messages(&mut self, proc: &str) -> Option<Vec<Message>> {
         let proc_entry = self.processes.get_mut(proc).unwrap();
         if !proc_entry.local_outbox.is_empty() {
@@ -407,7 +407,7 @@ impl Node {
                 .unwrap()
         );
         if state != proc_entry.last_state {
-            self.processes.get_mut(proc).unwrap().last_state = state.clone();
+            self.processes.get_mut(proc).unwrap().last_state.clone_from(&state);
             self.logger.borrow_mut().log(LogEntry::ProcessStateUpdated {
                 time: self.ctx.borrow().time(),
                 node: self.name.clone(),

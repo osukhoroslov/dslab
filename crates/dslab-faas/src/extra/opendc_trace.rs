@@ -130,7 +130,7 @@ impl<'a> Iterator for OpenDCRequestIter<'a> {
         while self.invocations == self.curr.invocations {
             while self.sample_id == self.trace.len() {
                 if let Some(trace) = self.trace_iter.next() {
-                    self.trace = trace.clone();
+                    self.trace.clone_from(trace);
                     self.fn_id += 1;
                     self.sample_id = 0;
                 } else {
