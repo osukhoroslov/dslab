@@ -230,6 +230,11 @@ impl Simulation {
         S: AsRef<str>,
     {
         let id = self.register(name.as_ref());
+        assert!(
+            self.handlers[id as usize].is_none(),
+            "Handler for component with Id {} already exists",
+            id
+        );
         self.add_handler_inner(id, handler);
         debug!(
             target: "simulation",
@@ -258,6 +263,11 @@ impl Simulation {
             S: AsRef<str>,
         {
             let id = self.register(name.as_ref());
+            assert!(
+                self.handlers[id as usize].is_none(),
+                "Handler for component with Id {} already exists",
+                id
+            );
             self.handlers[id as usize] = Some(EventHandlerImpl::Static(static_handler));
             self.sim_state.borrow_mut().on_static_handler_added(id);
             debug!(
