@@ -21,8 +21,8 @@ async_mode_enabled!(
     use futures::Future;
 
     use crate::event::EventData;
-    use crate::async_mode::executor::Executor;
     use crate::async_mode::channel::channel;
+    use crate::async_mode::executor::Executor;
     use crate::async_mode::{UnboundedQueue, EventKey};
     use crate::handler::StaticEventHandler;
 );
@@ -40,6 +40,7 @@ async_mode_enabled!(
         Mutable(Rc<RefCell<dyn EventHandler>>),
         Static(Rc<dyn StaticEventHandler>),
     }
+
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
@@ -247,13 +248,11 @@ impl Simulation {
     );
 
     async_mode_enabled!(
-        /// Alternative way to register the event handler implementation for component with specified name.
-        /// StaticEventHandler has 'static lifetime while processing incoming events
-        /// which allows spawning asynchronous tasks using component's context.
+        /// Registers the static event handler for component with specified name, returns the component Id.
         ///
+        /// In contrast to [`EventHandler`], [`StaticEventHandler`] has `'static` lifetime while processing
+        /// incoming events, which allows spawning asynchronous tasks using component's context.
         /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
-        ///
-        /// Returns the component Id.
         pub fn add_static_handler<S>(&mut self, name: S, static_handler: Rc<dyn StaticEventHandler>) -> Id
         where
             S: AsRef<str>,

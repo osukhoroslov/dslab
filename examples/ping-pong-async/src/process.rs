@@ -5,8 +5,7 @@ use serde::Serialize;
 
 use dslab_core::cast;
 use dslab_core::event::EventData;
-use dslab_core::handler::StaticEventHandler;
-use dslab_core::{Event, Id, SimulationContext};
+use dslab_core::{Event, Id, SimulationContext, StaticEventHandler};
 use dslab_network::Network;
 
 #[derive(Clone, Serialize)]

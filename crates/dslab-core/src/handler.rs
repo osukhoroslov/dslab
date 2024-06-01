@@ -135,10 +135,15 @@ pub enum EventCancellationPolicy {
 }
 
 async_mode_enabled!(
-    /// Alternative trait to consume events in simulation components. `Rc<Self>` has 'static lifetime,
-    /// which allows spawning asynchronous tasks using component's context. You can implement any processing logic here.
+    /// Alternative trait for consuming events in simulation components.
+    /// 
+    /// This trait supports spawning asynchronous tasks using component's context.
+    /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
     pub trait StaticEventHandler {
-        /// Processes event. See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+        /// Processes event.
+        ///
+        /// It differs from [`EventHandler::on`] by passing `Rc<Self>` instead of `&mut self`.         
+        /// `Rc<Self>` has `'static` lifetime, which allows spawning asynchronous tasks using component's context.
         fn on(self: Rc<Self>, event: Event);
     }
 );
