@@ -4,7 +4,7 @@ use std::rc::Rc;
 use sugars::{rc, refcell};
 
 use dslab_core::simulation::Simulation;
-use dslab_core::{cast, Event, EventHandler};
+use dslab_core::{cast, Event, EventCancellationPolicy, EventHandler};
 
 use crate::disk::{Disk, DiskBuilder};
 use crate::events::*;
@@ -317,6 +317,8 @@ fn fs_good_read_write() {
     fs.borrow_mut().write("/mnt/file", 99, checker_id);
     sim.step_until_no_events();
 
+    sim.remove_handler("User", EventCancellationPolicy::None);
+
     let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::FileReadCompleted)));
     let read_checker_id = sim.add_handler("User", read_checker);
 
@@ -382,6 +384,8 @@ fn fs_failed_read_file_bad_size() {
 
     fs.borrow_mut().write("/mnt/file", 98, checker_id);
     sim.step_until_no_events();
+
+    sim.remove_handler("User", EventCancellationPolicy::None);
 
     let read_checker = rc!(refcell!(Checker::new(ExpectedEventType::FileReadFailed)));
     let read_checker_id = sim.add_handler("User", read_checker);
