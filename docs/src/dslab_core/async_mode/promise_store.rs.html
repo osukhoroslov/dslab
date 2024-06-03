@@ -136,23 +136,25 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::any::TypeId;
-<span class="kw">use </span>std::collections::HashMap;
+
+<span class="kw">use </span>rustc_hash::FxHashMap;
 
 <span class="kw">use super</span>::{event_future::EventPromise, EventKey};
 <span class="kw">use crate</span>::{Event, EventData, Id};
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>EventPromiseStore {
-    promises: HashMap&lt;AwaitKey, EventPromise&gt;,
-    promises_with_source: HashMap&lt;AwaitKey, HashMap&lt;Id, EventPromise&gt;&gt;,
+    promises: FxHashMap&lt;AwaitKey, EventPromise&gt;,
+    promises_with_source: FxHashMap&lt;AwaitKey, FxHashMap&lt;Id, EventPromise&gt;&gt;,
 }
 
 <span class="kw">impl </span>EventPromiseStore {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            promises: HashMap::new(),
-            promises_with_source: HashMap::new(),
+            promises: FxHashMap::default(),
+            promises_with_source: FxHashMap::default(),
         }
     }
 

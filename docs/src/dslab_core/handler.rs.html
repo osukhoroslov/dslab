@@ -131,9 +131,31 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Event handling.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::event::Event;
+</span><span class="kw">use crate</span>::{async_mode_enabled, event::Event};
+
+<span class="macro">async_mode_enabled!</span>(
+    <span class="kw">use </span>std::rc::Rc;
+);
 
 <span class="doccomment">/// Trait for consuming events in simulation components.
 </span><span class="kw">pub trait </span>EventHandler {
@@ -262,4 +284,18 @@
     <span class="doccomment">/// Do not cancel events.
     </span><span class="prelude-val">None</span>,
 }
+
+<span class="macro">async_mode_enabled!</span>(
+    <span class="doccomment">/// Alternative trait for consuming events in simulation components.
+    ///
+    /// This trait supports spawning asynchronous tasks using component's context.
+    /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+    </span><span class="kw">pub trait </span>StaticEventHandler {
+        <span class="doccomment">/// Processes event.
+        ///
+        /// It differs from [`EventHandler::on`] by passing `Rc&lt;Self&gt;` instead of `&amp;mut self`.         
+        /// `Rc&lt;Self&gt;` has `'static` lifetime, which allows spawning asynchronous tasks using component's context.
+        </span><span class="kw">fn </span>on(<span class="self">self</span>: Rc&lt;<span class="self">Self</span>&gt;, event: Event);
+    }
+);
 </code></pre></div></section></main></body></html>

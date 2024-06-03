@@ -22,6 +22,7 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Asynchronous programming support.
 
 </span><span class="attr">#![warn(unsafe_op_in_unsafe_fn)]
@@ -34,6 +35,7 @@
     <span class="kw">pub mod </span>queue;
     <span class="kw">pub mod </span>timer_future;
 
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>channel;
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>executor;
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>promise_store;
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>task;

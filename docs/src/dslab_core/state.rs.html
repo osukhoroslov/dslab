@@ -527,12 +527,13 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::{BinaryHeap, VecDeque};
 
 <span class="kw">use </span>rand::distributions::uniform::{SampleRange, SampleUniform};
 <span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
 <span class="kw">use </span>rand::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>rand_pcg::Pcg64;
+<span class="kw">use </span>rustc_hash::{FxHashMap, FxHashSet};
 
 <span class="kw">use </span><span class="kw">crate</span>::component::Id;
 <span class="kw">use </span><span class="kw">crate</span>::event::{Event, EventData, EventId};
@@ -543,11 +544,11 @@
     <span class="kw">use </span>std::any::TypeId;
     <span class="kw">use </span>std::cell::RefCell;
     <span class="kw">use </span>std::rc::Rc;
-    <span class="kw">use </span>std::sync::mpsc::Sender;
 
     <span class="kw">use </span>futures::Future;
 
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::EventKey;
+    <span class="kw">use </span><span class="kw">crate</span>::async_mode::channel::Sender;
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::promise_store::EventPromiseStore;
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::event_future::{EventFuture, EventPromise};
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::task::Task;
@@ -564,10 +565,10 @@
         rand: Pcg64,
         events: BinaryHeap&lt;Event&gt;,
         ordered_events: VecDeque&lt;Event&gt;,
-        canceled_events: HashSet&lt;EventId&gt;,
+        canceled_events: FxHashSet&lt;EventId&gt;,
         event_count: u64,
 
-        component_name_to_id: HashMap&lt;String, Id&gt;,
+        component_name_to_id: FxHashMap&lt;String, Id&gt;,
         component_names: Vec&lt;String&gt;,
     }
 );
@@ -581,20 +582,20 @@
         rand: Pcg64,
         events: BinaryHeap&lt;Event&gt;,
         ordered_events: VecDeque&lt;Event&gt;,
-        canceled_events: HashSet&lt;EventId&gt;,
+        canceled_events: FxHashSet&lt;EventId&gt;,
         event_count: u64,
 
-        component_name_to_id: HashMap&lt;String, Id&gt;,
+        component_name_to_id: FxHashMap&lt;String, Id&gt;,
         component_names: Vec&lt;String&gt;,
 
         <span class="comment">// Specific to async mode
-        </span>registered_handlers: Vec&lt;bool&gt;,
+        </span>registered_static_handlers: Vec&lt;bool&gt;,
 
         event_promises: EventPromiseStore,
-        key_getters: HashMap&lt;TypeId, KeyGetterFn&gt;,
+        key_getters: FxHashMap&lt;TypeId, KeyGetterFn&gt;,
 
         timers: BinaryHeap&lt;TimerPromise&gt;,
-        canceled_timers: HashSet&lt;TimerId&gt;,
+        canceled_timers: FxHashSet&lt;TimerId&gt;,
         timer_count: u64,
 
         executor: Sender&lt;Rc&lt;Task&gt;&gt;,
@@ -609,9 +610,9 @@
                 rand: Pcg64::seed_from_u64(seed),
                 events: BinaryHeap::new(),
                 ordered_events: VecDeque::new(),
-                canceled_events: HashSet::new(),
+                canceled_events: FxHashSet::default(),
                 event_count: <span class="number">0</span>,
-                component_name_to_id: HashMap::new(),
+                component_name_to_id: FxHashMap::default(),
                 component_names: Vec::new(),
             }
         }
@@ -623,16 +624,16 @@
                 rand: Pcg64::seed_from_u64(seed),
                 events: BinaryHeap::new(),
                 ordered_events: VecDeque::new(),
-                canceled_events: HashSet::new(),
+                canceled_events: FxHashSet::default(),
                 event_count: <span class="number">0</span>,
-                component_name_to_id: HashMap::new(),
+                component_name_to_id: FxHashMap::default(),
                 component_names: Vec::new(),
                 <span class="comment">// Specific to async mode
-                </span>registered_handlers: Vec::new(),
+                </span>registered_static_handlers: Vec::new(),
                 event_promises: EventPromiseStore::new(),
-                key_getters: HashMap::new(),
+                key_getters: FxHashMap::default(),
                 timers: BinaryHeap::new(),
-                canceled_timers: HashSet::new(),
+                canceled_timers: FxHashSet::default(),
                 timer_count: <span class="number">0</span>,
                 executor,
             }
@@ -868,27 +869,26 @@
 
     <span class="macro">async_mode_disabled!</span>(
         <span class="kw">fn </span>on_register(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {}
-        <span class="kw">pub fn </span>on_handler_added(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _id: Id) {}
-        <span class="kw">pub fn </span>on_handler_removed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _id: Id) {}
+        <span class="kw">pub fn </span>on_static_handler_removed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _id: Id) {}
     );
 
     <span class="macro">async_mode_enabled!</span>(
         <span class="comment">// Components --------------------------------------------------------------------------------------------------
 
         </span><span class="kw">fn </span>on_register(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-            <span class="self">self</span>.registered_handlers.push(<span class="bool-val">false</span>)
+            <span class="self">self</span>.registered_static_handlers.push(<span class="bool-val">false</span>)
         }
 
-        <span class="kw">pub fn </span>on_handler_added(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id) {
-            <span class="self">self</span>.registered_handlers[id <span class="kw">as </span>usize] = <span class="bool-val">true</span>;
+        <span class="kw">pub fn </span>on_static_handler_added(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id) {
+            <span class="self">self</span>.registered_static_handlers[id <span class="kw">as </span>usize] = <span class="bool-val">true</span>;
         }
 
-        <span class="kw">pub fn </span>on_handler_removed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id) {
-            <span class="self">self</span>.registered_handlers[id <span class="kw">as </span>usize] = <span class="bool-val">false</span>;
+        <span class="kw">pub fn </span>on_static_handler_removed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id) {
+            <span class="self">self</span>.registered_static_handlers[id <span class="kw">as </span>usize] = <span class="bool-val">false</span>;
         }
 
-        <span class="kw">fn </span>has_registered_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Id) -&gt; bool {
-            <span class="self">self</span>.registered_handlers
+        <span class="kw">fn </span>has_registered_static_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Id) -&gt; bool {
+            <span class="self">self</span>.registered_static_handlers
                 .get(id <span class="kw">as </span>usize)
                 .map_or_else(|| <span class="bool-val">false</span>, |flag| <span class="kw-2">*</span>flag)
         }
@@ -899,11 +899,11 @@
             Task::spawn(future, <span class="self">self</span>.executor.clone());
         }
 
-        <span class="kw">pub fn </span>spawn_component(<span class="kw-2">&amp;mut </span><span class="self">self</span>, component_id: Id, future: <span class="kw">impl </span>Future&lt;Output = ()&gt;) {
+        <span class="kw">pub fn </span>spawn_component(<span class="kw-2">&amp;mut </span><span class="self">self</span>, component_id: Id, future: <span class="kw">impl </span>Future&lt;Output = ()&gt; + <span class="lifetime">'static</span>) {
             <span class="macro">assert!</span>(
-                <span class="self">self</span>.has_registered_handler(component_id),
-                <span class="string">"Spawning async tasks for component without registered event handler is not supported. \
-                Register handler for component {} before spawning tasks for it (empty impl EventHandler is OK)."</span>,
+                <span class="self">self</span>.has_registered_static_handler(component_id),
+                <span class="string">"Spawning async tasks for component without registered static event handler is not supported. \
+                Register static handler for component {} before spawning tasks for it (empty impl StaticEventHandler is OK)."</span>,
                 component_id,
             );
             Task::spawn(future, <span class="self">self</span>.executor.clone());

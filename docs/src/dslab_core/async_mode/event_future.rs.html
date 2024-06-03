@@ -465,7 +465,7 @@
     /// use std::rc::Rc;
     /// use serde::Serialize;
     /// use dslab_core::async_mode::{AwaitResult, EventKey};
-    /// use dslab_core::{cast, Event, EventData, EventHandler, Id, Simulation, SimulationContext};
+    /// use dslab_core::{cast, Event, EventData, StaticEventHandler, Id, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
     /// struct Start {}
@@ -490,12 +490,12 @@
     ///         }
     ///     }
     ///
-    ///     fn on_start(&amp;self) {
-    ///         self.ctx.spawn(self.listen_first());
-    ///         self.ctx.spawn(self.listen_second());
+    ///     fn on_start(self: Rc&lt;Self&gt;) {
+    ///         self.ctx.spawn(self.clone().listen_first());
+    ///         self.ctx.spawn(self.clone().listen_second());
     ///     }
     ///
-    ///     async fn listen_first(&amp;self) {
+    ///     async fn listen_first(self: Rc&lt;Self&gt;) {
     ///         let mut result = self
     ///             .ctx
     ///             .recv_event_by_key_from::&lt;SomeEvent&gt;(self.root_id, 1).with_timeout(10.)
@@ -521,7 +521,7 @@
     ///         *self.actions_finished.borrow_mut() += 1;
     ///     }
     ///
-    ///     async fn listen_second(&amp;self) {
+    ///     async fn listen_second(self: Rc&lt;Self&gt;) {
     ///         let e = self.ctx.recv_event_by_key_from::&lt;SomeEvent&gt;(self.root_id, 2).await;
     ///         assert_eq!(e.src, self.root_id);
     ///         assert_eq!(e.data.request_id, 2);
@@ -531,8 +531,8 @@
     ///     }
     /// }
     ///
-    /// impl EventHandler for Component {
-    ///     fn on(&amp;mut self, event: Event) {
+    /// impl StaticEventHandler for Component {
+    ///     fn on(self: Rc&lt;Self&gt;, event: Event) {
     ///         cast!(match event.data {
     ///             Start {} =&gt; {
     ///                 self.on_start();
@@ -552,8 +552,8 @@
     ///
     /// let root_ctx = sim.create_context("root");
     /// let comp_ctx = sim.create_context("comp");
-    /// let comp = Rc::new(RefCell::new(Component::new(root_ctx.id(), comp_ctx)));
-    /// let comp_id = sim.add_handler("comp", comp.clone());
+    /// let comp = Rc::new(Component::new(root_ctx.id(), comp_ctx));
+    /// let comp_id = sim.add_static_handler("comp", comp.clone());
     ///
     /// sim.register_key_getter_for::&lt;SomeEvent&gt;(|event| event.request_id as EventKey);
     ///
@@ -563,7 +563,7 @@
     ///
     /// sim.step_until_no_events();
     ///
-    /// assert_eq!(*comp.borrow().actions_finished.borrow(), 2);
+    /// assert_eq!(*comp.actions_finished.borrow(), 2);
     /// assert_eq!(sim.time(), 60.);
     /// ```
     </span><span class="kw">pub async fn </span>with_timeout(<span class="self">self</span>, timeout: f64) -&gt; AwaitResult&lt;T&gt; {

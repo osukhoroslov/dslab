@@ -27,9 +27,9 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::{rc::Rc, sync::mpsc::Receiver};
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span><span class="kw">super</span>::task::Task;
+<span class="kw">use super</span>::{channel::Receiver, task::Task};
 
 <span class="comment">// Polls tasks to advance their state.
 // Tasks schedule themselves for polling by writing to the channel which is read by the executor.
@@ -46,7 +46,7 @@
     <span class="comment">// Polls one scheduled task, if any.
     // Returns true if a task was polled and false otherwise.
     </span><span class="kw">pub fn </span>process_task(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">if let </span><span class="prelude-val">Ok</span>(task) = <span class="self">self</span>.scheduled_tasks.try_recv() {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(task) = <span class="self">self</span>.scheduled_tasks.try_recv() {
             task.poll();
             <span class="bool-val">true
         </span>} <span class="kw">else </span>{

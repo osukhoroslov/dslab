@@ -941,6 +941,72 @@
 <a href="#939" id="939">939</a>
 <a href="#940" id="940">940</a>
 <a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a>
+<a href="#943" id="943">943</a>
+<a href="#944" id="944">944</a>
+<a href="#945" id="945">945</a>
+<a href="#946" id="946">946</a>
+<a href="#947" id="947">947</a>
+<a href="#948" id="948">948</a>
+<a href="#949" id="949">949</a>
+<a href="#950" id="950">950</a>
+<a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Simulation configuration and execution.
 
 </span><span class="kw">use </span>std::cell::RefCell;
@@ -961,13 +1027,13 @@
 <span class="kw">use crate</span>::{async_mode_disabled, async_mode_enabled, Event};
 
 <span class="macro">async_mode_enabled!</span>(
-    <span class="kw">use </span>std::sync::mpsc::channel;
-
     <span class="kw">use </span>futures::Future;
 
     <span class="kw">use </span><span class="kw">crate</span>::event::EventData;
+    <span class="kw">use </span><span class="kw">crate</span>::async_mode::channel::channel;
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::executor::Executor;
     <span class="kw">use </span><span class="kw">crate</span>::async_mode::{UnboundedQueue, EventKey};
+    <span class="kw">use </span><span class="kw">crate</span>::handler::StaticEventHandler;
 );
 
 <span class="macro">async_mode_disabled!</span>(
@@ -979,10 +1045,15 @@
 );
 
 <span class="macro">async_mode_enabled!</span>(
+    <span class="kw">enum </span>EventHandlerImpl {
+        Mutable(Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;),
+        Static(Rc&lt;<span class="kw">dyn </span>StaticEventHandler&gt;),
+    }
+
     <span class="doccomment">/// Represents a simulation, provides methods for its configuration and execution.
     </span><span class="kw">pub struct </span>Simulation {
         sim_state: Rc&lt;RefCell&lt;SimulationState&gt;&gt;,
-        handlers: Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;&gt;&gt;,
+        handlers: Vec&lt;<span class="prelude-ty">Option</span>&lt;EventHandlerImpl&gt;&gt;,
         <span class="comment">// Specific to async mode
         </span>executor: Executor,
     }
@@ -1168,8 +1239,13 @@
         </span>S: AsRef&lt;str&gt;,
     {
         <span class="kw">let </span>id = <span class="self">self</span>.register(name.as_ref());
-        <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(handler);
-        <span class="self">self</span>.sim_state.borrow_mut().on_handler_added(id);
+        <span class="macro">assert!</span>(
+            <span class="self">self</span>.handlers[id <span class="kw">as </span>usize].is_none(),
+            <span class="string">"Handler for component {} with Id {} already exists"</span>,
+            name.as_ref(),
+            id
+        );
+        <span class="self">self</span>.add_handler_inner(id, handler);
         <span class="macro">debug!</span>(
             target: <span class="string">"simulation"</span>,
             <span class="string">"[{:.3} {} simulation] Added handler: {}"</span>,
@@ -1179,6 +1255,46 @@
         );
         id
     }
+
+    <span class="macro">async_mode_disabled!</span>(
+        <span class="kw">fn </span>add_handler_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id, handler: Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;) {
+            <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(handler);
+        }
+    );
+
+    <span class="macro">async_mode_enabled!</span>(
+        <span class="doccomment">/// Registers the static event handler for component with specified name, returns the component Id.
+        ///
+        /// In contrast to [`EventHandler`], [`StaticEventHandler`] has `'static` lifetime while processing
+        /// incoming events, which allows spawning asynchronous tasks using component's context.
+        /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+        </span><span class="kw">pub fn </span>add_static_handler&lt;S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: S, static_handler: Rc&lt;<span class="kw">dyn </span>StaticEventHandler&gt;) -&gt; Id
+        <span class="kw">where
+            </span>S: AsRef&lt;str&gt;,
+        {
+            <span class="kw">let </span>id = <span class="self">self</span>.register(name.as_ref());
+            <span class="macro">assert!</span>(
+                <span class="self">self</span>.handlers[id <span class="kw">as </span>usize].is_none(),
+                <span class="string">"Handler for component {} with Id {} already exists"</span>,
+                name.as_ref(),
+                id
+            );
+            <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(EventHandlerImpl::Static(static_handler));
+            <span class="self">self</span>.sim_state.borrow_mut().on_static_handler_added(id);
+            <span class="macro">debug!</span>(
+                target: <span class="string">"simulation"</span>,
+                <span class="string">"[{:.3} {} simulation] Added static handler: {}"</span>,
+                <span class="self">self</span>.time(),
+                <span class="kw">crate</span>::log::get_colored(<span class="string">"DEBUG"</span>, colored::Color::Blue),
+                <span class="macro">json!</span>({<span class="string">"name"</span>: name.as_ref(), <span class="string">"id"</span>: id})
+            );
+            id
+        }
+
+        <span class="kw">fn </span>add_handler_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: Id, handler: Rc&lt;RefCell&lt;<span class="kw">dyn </span>EventHandler&gt;&gt;) {
+            <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">Some</span>(EventHandlerImpl::Mutable(handler));
+        }
+    );
 
     <span class="doccomment">/// Removes the event handler for component with specified name.
     ///
@@ -1219,7 +1335,7 @@
     {
         <span class="kw">let </span>id = <span class="self">self</span>.lookup_id(name.as_ref());
         <span class="self">self</span>.handlers[id <span class="kw">as </span>usize] = <span class="prelude-val">None</span>;
-        <span class="self">self</span>.sim_state.borrow_mut().on_handler_removed(id);
+        <span class="self">self</span>.sim_state.borrow_mut().on_static_handler_removed(id);
         <span class="self">self</span>.remove_handler_inner(id);
 
         <span class="comment">// cancel pending events related to the removed component based on the cancellation policy
@@ -1318,6 +1434,19 @@
                 <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
             }
         }
+
+        <span class="kw">fn </span>deliver_event_via_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, event: Event) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
+                <span class="self">self</span>.log_event(<span class="kw-2">&amp;</span>event);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
+                    handler.borrow_mut().on(event);
+                } <span class="kw">else </span>{
+                    log_undelivered_event(event);
+                }
+            } <span class="kw">else </span>{
+                log_undelivered_event(event);
+            }
+        }
     );
 
     <span class="macro">async_mode_enabled!</span>(
@@ -1378,20 +1507,23 @@
             </span>drop(next_timer);
             <span class="self">self</span>.process_task();
         }
-    );
 
-    <span class="kw">fn </span>deliver_event_via_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, event: Event) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
-            <span class="self">self</span>.log_event(<span class="kw-2">&amp;</span>event);
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
-                handler.borrow_mut().on(event);
+        <span class="kw">fn </span>deliver_event_via_handler(<span class="kw-2">&amp;</span><span class="self">self</span>, event: Event) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(handler_opt) = <span class="self">self</span>.handlers.get(event.dst <span class="kw">as </span>usize) {
+                <span class="self">self</span>.log_event(<span class="kw-2">&amp;</span>event);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = handler_opt {
+                    <span class="kw">match </span>handler {
+                        EventHandlerImpl::Mutable(handler) =&gt; handler.borrow_mut().on(event),
+                        EventHandlerImpl::Static(handler) =&gt; handler.clone().on(event),
+                    }
+                } <span class="kw">else </span>{
+                    log_undelivered_event(event);
+                }
             } <span class="kw">else </span>{
                 log_undelivered_event(event);
             }
-        } <span class="kw">else </span>{
-            log_undelivered_event(event);
         }
-    }
+    );
 
     <span class="kw">fn </span>log_event(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>Event) {
         <span class="kw">if </span><span class="macro">log_enabled!</span>(Trace) {
@@ -1460,7 +1592,7 @@
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, StaticEventHandler};
         /// use dslab_core::async_mode::UnboundedQueue;
         ///
         /// struct Message {
@@ -1473,19 +1605,19 @@
         /// }
         ///
         /// impl Component {
-        ///     fn start(&amp;self) {
-        ///         self.ctx.spawn(self.producer());
-        ///         self.ctx.spawn(self.consumer());
+        ///     fn start(self: Rc&lt;Self&gt;) {
+        ///         self.ctx.spawn(self.clone().producer());
+        ///         self.ctx.spawn(self.clone().consumer());
         ///     }
         ///
-        ///     async fn producer(&amp;self) {
+        ///     async fn producer(self: Rc&lt;Self&gt;) {
         ///         for i in 0..10 {
         ///             self.ctx.sleep(5.).await;
         ///             self.queue.put(Message {payload: i});
         ///         }
         ///     }
         ///
-        ///     async fn consumer(&amp;self) {
+        ///     async fn consumer(self: Rc&lt;Self&gt;) {
         ///         for i in 0..10 {
         ///             let msg = self.queue.take().await;
         ///             assert_eq!(msg.payload, i);
@@ -1493,20 +1625,20 @@
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&amp;mut self, event: Event) {
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc&lt;Self&gt;, event: Event) {
         ///     }
         /// }
         ///
         /// let mut sim = Simulation::new(123);
         ///
-        /// let comp = Rc::new(RefCell::new(Component {
+        /// let comp = Rc::new(Component {
         ///     ctx: sim.create_context("comp"),
         ///     queue: sim.create_queue("comp_queue")
-        /// }));
-        /// sim.add_handler("comp", comp.clone());
+        /// });
+        /// sim.add_static_handler("comp", comp.clone());
         ///
-        /// comp.borrow().start();
+        /// comp.start();
         /// sim.step_until_no_events();
         ///
         /// assert_eq!(sim.time(), 50.);
