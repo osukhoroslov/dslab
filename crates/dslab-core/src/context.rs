@@ -657,9 +657,9 @@ impl SimulationContext {
     async_mode_enabled!(
         /// Spawns a new asynchronous task for component associated with this context.
         ///
-        /// Capturing component's state to asynchronous tasks can be achieved by using `Rc<Self>` instead of `&self` reference.
+        /// Passing component's state to asynchronous tasks can be achieved by using `Rc<Self>` instead of `&self` reference.
         /// Mutating the component's state by asynchronous tasks can be achieved by wrapping this state into `RefCell<_>`.
-        /// In order to spawn asynchronous tasks, component is required be [registered](crate::Simulation::add_static_handler)
+        /// In order to spawn asynchronous tasks, component is required to be [registered](crate::Simulation::add_static_handler)
         /// as [`StaticEventHandler`](crate::StaticEventHandler). See the examples below.
         ///
         /// # Examples
