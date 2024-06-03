@@ -233,7 +233,8 @@ impl Simulation {
         assert!(
             self.handlers[id as usize].is_none(),
             "Handler for component {} with Id {} already exists",
-            name.as_ref(), id
+            name.as_ref(),
+            id
         );
         self.add_handler_inner(id, handler);
         debug!(
@@ -266,7 +267,8 @@ impl Simulation {
             assert!(
                 self.handlers[id as usize].is_none(),
                 "Handler for component {} with Id {} already exists",
-                name.as_ref(), id
+                name.as_ref(),
+                id
             );
             self.handlers[id as usize] = Some(EventHandlerImpl::Static(static_handler));
             self.sim_state.borrow_mut().on_static_handler_added(id);
