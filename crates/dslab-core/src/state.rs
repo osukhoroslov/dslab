@@ -1,9 +1,10 @@
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, VecDeque};
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::distributions::{Alphanumeric, DistString};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::component::Id;
 use crate::event::{Event, EventData, EventId};
@@ -14,11 +15,11 @@ async_mode_enabled!(
     use std::any::TypeId;
     use std::cell::RefCell;
     use std::rc::Rc;
-    use std::sync::mpsc::Sender;
 
     use futures::Future;
 
     use crate::async_mode::EventKey;
+    use crate::async_mode::channel::Sender;
     use crate::async_mode::promise_store::EventPromiseStore;
     use crate::async_mode::event_future::{EventFuture, EventPromise};
     use crate::async_mode::task::Task;
@@ -35,10 +36,10 @@ async_mode_disabled!(
         rand: Pcg64,
         events: BinaryHeap<Event>,
         ordered_events: VecDeque<Event>,
-        canceled_events: HashSet<EventId>,
+        canceled_events: FxHashSet<EventId>,
         event_count: u64,
 
-        component_name_to_id: HashMap<String, Id>,
+        component_name_to_id: FxHashMap<String, Id>,
         component_names: Vec<String>,
     }
 );
@@ -52,20 +53,20 @@ async_mode_enabled!(
         rand: Pcg64,
         events: BinaryHeap<Event>,
         ordered_events: VecDeque<Event>,
-        canceled_events: HashSet<EventId>,
+        canceled_events: FxHashSet<EventId>,
         event_count: u64,
 
-        component_name_to_id: HashMap<String, Id>,
+        component_name_to_id: FxHashMap<String, Id>,
         component_names: Vec<String>,
 
         // Specific to async mode
-        registered_handlers: Vec<bool>,
+        registered_static_handlers: Vec<bool>,
 
         event_promises: EventPromiseStore,
-        key_getters: HashMap<TypeId, KeyGetterFn>,
+        key_getters: FxHashMap<TypeId, KeyGetterFn>,
 
         timers: BinaryHeap<TimerPromise>,
-        canceled_timers: HashSet<TimerId>,
+        canceled_timers: FxHashSet<TimerId>,
         timer_count: u64,
 
         executor: Sender<Rc<Task>>,
@@ -80,9 +81,9 @@ impl SimulationState {
                 rand: Pcg64::seed_from_u64(seed),
                 events: BinaryHeap::new(),
                 ordered_events: VecDeque::new(),
-                canceled_events: HashSet::new(),
+                canceled_events: FxHashSet::default(),
                 event_count: 0,
-                component_name_to_id: HashMap::new(),
+                component_name_to_id: FxHashMap::default(),
                 component_names: Vec::new(),
             }
         }
@@ -94,16 +95,16 @@ impl SimulationState {
                 rand: Pcg64::seed_from_u64(seed),
                 events: BinaryHeap::new(),
                 ordered_events: VecDeque::new(),
-                canceled_events: HashSet::new(),
+                canceled_events: FxHashSet::default(),
                 event_count: 0,
-                component_name_to_id: HashMap::new(),
+                component_name_to_id: FxHashMap::default(),
                 component_names: Vec::new(),
                 // Specific to async mode
-                registered_handlers: Vec::new(),
+                registered_static_handlers: Vec::new(),
                 event_promises: EventPromiseStore::new(),
-                key_getters: HashMap::new(),
+                key_getters: FxHashMap::default(),
                 timers: BinaryHeap::new(),
-                canceled_timers: HashSet::new(),
+                canceled_timers: FxHashSet::default(),
                 timer_count: 0,
                 executor,
             }
@@ -339,27 +340,26 @@ impl SimulationState {
 
     async_mode_disabled!(
         fn on_register(&mut self) {}
-        pub fn on_handler_added(&mut self, _id: Id) {}
-        pub fn on_handler_removed(&mut self, _id: Id) {}
+        pub fn on_static_handler_removed(&mut self, _id: Id) {}
     );
 
     async_mode_enabled!(
         // Components --------------------------------------------------------------------------------------------------
 
         fn on_register(&mut self) {
-            self.registered_handlers.push(false)
+            self.registered_static_handlers.push(false)
         }
 
-        pub fn on_handler_added(&mut self, id: Id) {
-            self.registered_handlers[id as usize] = true;
+        pub fn on_static_handler_added(&mut self, id: Id) {
+            self.registered_static_handlers[id as usize] = true;
         }
 
-        pub fn on_handler_removed(&mut self, id: Id) {
-            self.registered_handlers[id as usize] = false;
+        pub fn on_static_handler_removed(&mut self, id: Id) {
+            self.registered_static_handlers[id as usize] = false;
         }
 
-        fn has_registered_handler(&self, id: Id) -> bool {
-            self.registered_handlers
+        fn has_registered_static_handler(&self, id: Id) -> bool {
+            self.registered_static_handlers
                 .get(id as usize)
                 .map_or_else(|| false, |flag| *flag)
         }
@@ -370,11 +370,11 @@ impl SimulationState {
             Task::spawn(future, self.executor.clone());
         }
 
-        pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()>) {
+        pub fn spawn_component(&mut self, component_id: Id, future: impl Future<Output = ()> + 'static) {
             assert!(
-                self.has_registered_handler(component_id),
-                "Spawning async tasks for component without registered event handler is not supported. \
-                Register handler for component {} before spawning tasks for it (empty impl EventHandler is OK).",
+                self.has_registered_static_handler(component_id),
+                "Spawning async tasks for component without registered static event handler is not supported. \
+                Register static handler for component {} before spawning tasks for it (empty impl StaticEventHandler is OK).",
                 component_id,
             );
             Task::spawn(future, self.executor.clone());

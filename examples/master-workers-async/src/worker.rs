@@ -5,8 +5,8 @@ use serde::Serialize;
 
 use dslab_compute::multicore::*;
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug};
-use dslab_core::{Event, EventHandler, Id, Simulation, SimulationContext};
+use dslab_core::{cast, log_debug, StaticEventHandler};
+use dslab_core::{Event, Id, Simulation, SimulationContext};
 use dslab_network::{DataTransferCompleted, Network};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
@@ -75,12 +75,12 @@ impl AsyncWorker {
         );
     }
 
-    fn on_task_request(&self, req: TaskRequest) {
+    fn on_task_request(self: Rc<Self>, req: TaskRequest) {
         log_debug!(self.ctx, "task request: {:?}", req);
-        self.ctx.spawn(self.process_task_request(req));
+        self.ctx.spawn(self.clone().process_task_request(req));
     }
 
-    async fn process_task_request(&self, req: TaskRequest) {
+    async fn process_task_request(self: Rc<Self>, req: TaskRequest) {
         let mut task = TaskInfo {
             req,
             state: TaskState::Downloading,
@@ -162,8 +162,8 @@ impl AsyncWorker {
     }
 }
 
-impl EventHandler for AsyncWorker {
-    fn on(&mut self, event: Event) {
+impl StaticEventHandler for AsyncWorker {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             Start {} => {
                 self.on_start();

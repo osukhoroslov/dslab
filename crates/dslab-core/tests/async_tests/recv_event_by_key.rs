@@ -1,10 +1,9 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use serde::Serialize;
 
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, Event, EventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, Event, Simulation, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 struct TestEvent {
@@ -30,14 +29,14 @@ impl TestComponent {
         }
     }
 
-    fn start(&self) {
+    fn start(self: Rc<Self>) {
         for i in 0..self.num_listeners {
-            self.ctx.spawn(self.listener(i as u64));
+            self.ctx.spawn(self.clone().listener(i as u64));
         }
-        self.ctx.spawn(self.sender());
+        self.ctx.spawn(self.clone().sender());
     }
 
-    async fn sender(&self) {
+    async fn sender(self: Rc<Self>) {
         for _ in 0..self.iterations {
             for i in 0..self.num_listeners {
                 self.ctx.emit_self_now(TestEvent { key: i as u64 });
@@ -46,7 +45,7 @@ impl TestComponent {
         }
     }
 
-    async fn listener(&self, key: u64) {
+    async fn listener(self: Rc<Self>, key: u64) {
         for i in 0..self.iterations {
             let event = self.ctx.recv_event_by_key_from_self::<TestEvent>(key).await;
             assert_eq!(event.src, self.ctx.id());
@@ -59,8 +58,8 @@ impl TestComponent {
     }
 }
 
-impl EventHandler for TestComponent {
-    fn on(&mut self, event: Event) {
+impl StaticEventHandler for TestComponent {
+    fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
             TestEvent { .. } => {
                 panic!("Standard event handling must be unreachable");
@@ -76,9 +75,9 @@ fn test_recv_event_by_key() {
     sim.register_key_getter_for::<TestEvent>(get_event_key);
 
     let comp_ctx = sim.create_context("comp");
-    let comp = Rc::new(RefCell::new(TestComponent::new(100, 100, comp_ctx)));
-    sim.add_handler("comp", comp.clone());
+    let comp = Rc::new(TestComponent::new(100, 100, comp_ctx));
+    sim.add_static_handler("comp", comp.clone());
 
-    comp.borrow().start();
+    comp.start();
     sim.step_until_no_events();
 }

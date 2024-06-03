@@ -2,9 +2,9 @@ use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::mpsc::Sender;
 use std::task::Context;
 
+use super::channel::Sender;
 use super::waker::{waker_ref, RcWake};
 
 type BoxedFuture = Pin<Box<dyn Future<Output = ()>>>;
@@ -18,25 +18,15 @@ pub(crate) struct Task {
 
 impl Task {
     // Creates a new task from a future.
-    //
-    // Unsafe is used to make possible spawning components' methods as tasks via SimulationContext::spawn.
-    // &self argument prevents any method to have a 'static lifetime, but following the simulation logic
-    // the spawned tasks should always finish before the corresponding components are deleted:
-    // - deletion of components is supposed to be done only through the Simulation::remove_handler method,
-    // - components are not supposed to be moved because they are allocated in the heap under Rc<RefCell<...>>.
-    fn new(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) -> Self {
-        unsafe {
-            let boxed: Box<dyn Future<Output = ()>> = Box::new(future);
-            let converted: Box<dyn Future<Output = ()> + 'static> = std::mem::transmute(boxed);
-            Self {
-                future: RefCell::new(Some(Box::into_pin(converted))),
-                executor,
-            }
+    fn new(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) -> Self {
+        Self {
+            future: RefCell::new(Some(Box::pin(future))),
+            executor,
         }
     }
 
     // Converts a future into a task and sends it to executor.
-    pub fn spawn(future: impl Future<Output = ()>, executor: Sender<Rc<Task>>) {
+    pub fn spawn(future: impl Future<Output = ()> + 'static, executor: Sender<Rc<Task>>) {
         let task = Rc::new(Task::new(future, executor));
         task.schedule();
     }
@@ -62,7 +52,7 @@ impl Task {
 
     // Schedules the task for polling by sending it to the executor.
     fn schedule(self: &Rc<Self>) {
-        self.executor.send(self.clone()).expect("channel is closed");
+        self.executor.send(self.clone());
     }
 }
 

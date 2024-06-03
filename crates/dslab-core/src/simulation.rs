@@ -18,13 +18,13 @@ use crate::state::SimulationState;
 use crate::{async_mode_disabled, async_mode_enabled, Event};
 
 async_mode_enabled!(
-    use std::sync::mpsc::channel;
-
     use futures::Future;
 
     use crate::event::EventData;
+    use crate::async_mode::channel::channel;
     use crate::async_mode::executor::Executor;
     use crate::async_mode::{UnboundedQueue, EventKey};
+    use crate::handler::StaticEventHandler;
 );
 
 async_mode_disabled!(
@@ -36,10 +36,15 @@ async_mode_disabled!(
 );
 
 async_mode_enabled!(
+    enum EventHandlerImpl {
+        Mutable(Rc<RefCell<dyn EventHandler>>),
+        Static(Rc<dyn StaticEventHandler>),
+    }
+
     /// Represents a simulation, provides methods for its configuration and execution.
     pub struct Simulation {
         sim_state: Rc<RefCell<SimulationState>>,
-        handlers: Vec<Option<Rc<RefCell<dyn EventHandler>>>>,
+        handlers: Vec<Option<EventHandlerImpl>>,
         // Specific to async mode
         executor: Executor,
     }
@@ -225,8 +230,13 @@ impl Simulation {
         S: AsRef<str>,
     {
         let id = self.register(name.as_ref());
-        self.handlers[id as usize] = Some(handler);
-        self.sim_state.borrow_mut().on_handler_added(id);
+        assert!(
+            self.handlers[id as usize].is_none(),
+            "Handler for component {} with Id {} already exists",
+            name.as_ref(),
+            id
+        );
+        self.add_handler_inner(id, handler);
         debug!(
             target: "simulation",
             "[{:.3} {} simulation] Added handler: {}",
@@ -236,6 +246,46 @@ impl Simulation {
         );
         id
     }
+
+    async_mode_disabled!(
+        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
+            self.handlers[id as usize] = Some(handler);
+        }
+    );
+
+    async_mode_enabled!(
+        /// Registers the static event handler for component with specified name, returns the component Id.
+        ///
+        /// In contrast to [`EventHandler`], [`StaticEventHandler`] has `'static` lifetime while processing
+        /// incoming events, which allows spawning asynchronous tasks using component's context.
+        /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+        pub fn add_static_handler<S>(&mut self, name: S, static_handler: Rc<dyn StaticEventHandler>) -> Id
+        where
+            S: AsRef<str>,
+        {
+            let id = self.register(name.as_ref());
+            assert!(
+                self.handlers[id as usize].is_none(),
+                "Handler for component {} with Id {} already exists",
+                name.as_ref(),
+                id
+            );
+            self.handlers[id as usize] = Some(EventHandlerImpl::Static(static_handler));
+            self.sim_state.borrow_mut().on_static_handler_added(id);
+            debug!(
+                target: "simulation",
+                "[{:.3} {} simulation] Added static handler: {}",
+                self.time(),
+                crate::log::get_colored("DEBUG", colored::Color::Blue),
+                json!({"name": name.as_ref(), "id": id})
+            );
+            id
+        }
+
+        fn add_handler_inner(&mut self, id: Id, handler: Rc<RefCell<dyn EventHandler>>) {
+            self.handlers[id as usize] = Some(EventHandlerImpl::Mutable(handler));
+        }
+    );
 
     /// Removes the event handler for component with specified name.
     ///
@@ -276,7 +326,7 @@ impl Simulation {
     {
         let id = self.lookup_id(name.as_ref());
         self.handlers[id as usize] = None;
-        self.sim_state.borrow_mut().on_handler_removed(id);
+        self.sim_state.borrow_mut().on_static_handler_removed(id);
         self.remove_handler_inner(id);
 
         // cancel pending events related to the removed component based on the cancellation policy
@@ -375,6 +425,19 @@ impl Simulation {
                 None => false,
             }
         }
+
+        fn deliver_event_via_handler(&self, event: Event) {
+            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+                self.log_event(&event);
+                if let Some(handler) = handler_opt {
+                    handler.borrow_mut().on(event);
+                } else {
+                    log_undelivered_event(event);
+                }
+            } else {
+                log_undelivered_event(event);
+            }
+        }
     );
 
     async_mode_enabled!(
@@ -435,20 +498,23 @@ impl Simulation {
             drop(next_timer);
             self.process_task();
         }
-    );
 
-    fn deliver_event_via_handler(&self, event: Event) {
-        if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
-            self.log_event(&event);
-            if let Some(handler) = handler_opt {
-                handler.borrow_mut().on(event);
+        fn deliver_event_via_handler(&self, event: Event) {
+            if let Some(handler_opt) = self.handlers.get(event.dst as usize) {
+                self.log_event(&event);
+                if let Some(handler) = handler_opt {
+                    match handler {
+                        EventHandlerImpl::Mutable(handler) => handler.borrow_mut().on(event),
+                        EventHandlerImpl::Static(handler) => handler.clone().on(event),
+                    }
+                } else {
+                    log_undelivered_event(event);
+                }
             } else {
                 log_undelivered_event(event);
             }
-        } else {
-            log_undelivered_event(event);
         }
-    }
+    );
 
     fn log_event(&self, event: &Event) {
         if log_enabled!(Trace) {
@@ -517,7 +583,7 @@ impl Simulation {
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, StaticEventHandler};
         /// use dslab_core::async_mode::UnboundedQueue;
         ///
         /// struct Message {
@@ -530,19 +596,19 @@ impl Simulation {
         /// }
         ///
         /// impl Component {
-        ///     fn start(&self) {
-        ///         self.ctx.spawn(self.producer());
-        ///         self.ctx.spawn(self.consumer());
+        ///     fn start(self: Rc<Self>) {
+        ///         self.ctx.spawn(self.clone().producer());
+        ///         self.ctx.spawn(self.clone().consumer());
         ///     }
         ///
-        ///     async fn producer(&self) {
+        ///     async fn producer(self: Rc<Self>) {
         ///         for i in 0..10 {
         ///             self.ctx.sleep(5.).await;
         ///             self.queue.put(Message {payload: i});
         ///         }
         ///     }
         ///
-        ///     async fn consumer(&self) {
+        ///     async fn consumer(self: Rc<Self>) {
         ///         for i in 0..10 {
         ///             let msg = self.queue.take().await;
         ///             assert_eq!(msg.payload, i);
@@ -550,20 +616,20 @@ impl Simulation {
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&mut self, event: Event) {
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc<Self>, event: Event) {
         ///     }
         /// }
         ///
         /// let mut sim = Simulation::new(123);
         ///
-        /// let comp = Rc::new(RefCell::new(Component {
+        /// let comp = Rc::new(Component {
         ///     ctx: sim.create_context("comp"),
         ///     queue: sim.create_queue("comp_queue")
-        /// }));
-        /// sim.add_handler("comp", comp.clone());
+        /// });
+        /// sim.add_static_handler("comp", comp.clone());
         ///
-        /// comp.borrow().start();
+        /// comp.start();
         /// sim.step_until_no_events();
         ///
         /// assert_eq!(sim.time(), 50.);

@@ -1,6 +1,10 @@
 //! Event handling.
 
-use crate::event::Event;
+use crate::{async_mode_enabled, event::Event};
+
+async_mode_enabled!(
+    use std::rc::Rc;
+);
 
 /// Trait for consuming events in simulation components.
 pub trait EventHandler {
@@ -129,3 +133,17 @@ pub enum EventCancellationPolicy {
     /// Do not cancel events.
     None,
 }
+
+async_mode_enabled!(
+    /// Alternative trait for consuming events in simulation components.
+    ///
+    /// This trait supports spawning asynchronous tasks using component's context.
+    /// See [`SimulationContext::spawn`](crate::context::SimulationContext::spawn) examples.
+    pub trait StaticEventHandler {
+        /// Processes event.
+        ///
+        /// It differs from [`EventHandler::on`] by passing `Rc<Self>` instead of `&mut self`.         
+        /// `Rc<Self>` has `'static` lifetime, which allows spawning asynchronous tasks using component's context.
+        fn on(self: Rc<Self>, event: Event);
+    }
+);

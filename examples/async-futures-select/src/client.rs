@@ -1,4 +1,6 @@
-use dslab_core::{Event, EventHandler, Id, SimulationContext};
+use std::rc::Rc;
+
+use dslab_core::{Event, Id, SimulationContext, StaticEventHandler};
 
 use crate::events::TaskRequest;
 
@@ -19,11 +21,11 @@ impl Client {
         }
     }
 
-    pub fn run(&self) {
-        self.ctx.spawn(self.submit_tasks())
+    pub fn run(self: Rc<Self>) {
+        self.ctx.spawn(self.clone().submit_tasks())
     }
 
-    async fn submit_tasks(&self) {
+    async fn submit_tasks(self: Rc<Self>) {
         for i in 0..self.task_count {
             // submit new task
             let cores = self.ctx.gen_range(1..=8);
@@ -46,6 +48,6 @@ impl Client {
 }
 
 // Empty event handler is needed because spawning async tasks by a component without event handler is prohibited
-impl EventHandler for Client {
-    fn on(&mut self, _event: Event) {}
+impl StaticEventHandler for Client {
+    fn on(self: Rc<Self>, _event: Event) {}
 }

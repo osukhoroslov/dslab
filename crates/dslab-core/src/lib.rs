@@ -17,3 +17,7 @@ pub use event::{Event, EventData, EventId, TypedEvent};
 pub use handler::{EventCancellationPolicy, EventHandler};
 pub use simulation::Simulation;
 pub use state::EPSILON;
+
+async_mode_enabled!(
+    pub use handler::StaticEventHandler;
+);

@@ -10,6 +10,7 @@ async_mode_enabled!(
     pub mod queue;
     pub mod timer_future;
 
+    pub(crate) mod channel;
     pub(crate) mod executor;
     pub(crate) mod promise_store;
     pub(crate) mod task;

@@ -657,17 +657,17 @@ impl SimulationContext {
     async_mode_enabled!(
         /// Spawns a new asynchronous task for component associated with this context.
         ///
-        /// Due to the Rust borrow checker rules, it is not allowed to spawn futures that contain a mutable reference
-        /// to the component itself. Mutating the component state by asynchronous tasks can be achieved by wrapping
-        /// this state into `RefCell<_>`. See the examples below.
+        /// Passing component's state to asynchronous tasks can be achieved by using `Rc<Self>` instead of `&self` reference.
+        /// Mutating the component's state by asynchronous tasks can be achieved by wrapping this state into `RefCell<_>`.
+        /// In order to spawn asynchronous tasks, component is required to be [registered](crate::Simulation::add_static_handler)
+        /// as [`StaticEventHandler`](crate::StaticEventHandler). See the examples below.
         ///
         /// # Examples
         ///
         /// ```rust
         /// use std::rc::Rc;
-        /// use std::cell::RefCell;
         /// use serde::Serialize;
-        /// use dslab_core::{cast, Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{cast, Simulation, SimulationContext, Event, StaticEventHandler};
         ///
         /// #[derive(Clone, Serialize)]
         /// struct Start {
@@ -679,21 +679,21 @@ impl SimulationContext {
         /// }
         ///
         /// impl Component {
-        ///     fn on_start(&self, tasks: u32) {
+        ///     fn on_start(self: Rc<Self>, tasks: u32) {
         ///        for i in 1..=tasks {
-        ///             self.ctx.spawn(self.step_waiting(i));
+        ///             self.ctx.spawn(self.clone().step_waiting(i));
         ///        }
         ///     }
         ///
-        ///     async fn step_waiting(&self, num_steps: u32) {
+        ///     async fn step_waiting(self: Rc<Self>, num_steps: u32) {
         ///         for _ in 0..num_steps {
         ///             self.ctx.sleep(1.).await;
         ///         }
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&mut self, event: Event) {
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc<Self>, event: Event) {
         ///         cast!(match event.data {
         ///             Start { tasks } => {
         ///                 self.on_start(tasks);
@@ -705,7 +705,7 @@ impl SimulationContext {
         /// let mut sim = Simulation::new(123);
         ///
         /// let comp_ctx = sim.create_context("comp");
-        /// let comp_id = sim.add_handler("comp", Rc::new(RefCell::new(Component {ctx: comp_ctx })));
+        /// let comp_id = sim.add_static_handler("comp", Rc::new(Component {ctx: comp_ctx }));
         ///
         /// let root_ctx = sim.create_context("root");
         /// root_ctx.emit(Start { tasks: 10 }, comp_id, 10.);
@@ -716,6 +716,7 @@ impl SimulationContext {
         /// ```
         ///
         /// ```should_panic
+        /// use std::rc::Rc;
         /// use dslab_core::{Simulation, SimulationContext};
         ///
         /// struct Component {
@@ -723,13 +724,13 @@ impl SimulationContext {
         /// }
         ///
         /// impl Component {
-        ///     fn start(&self, tasks: u32) {
+        ///     fn start(self: Rc<Self>, tasks: u32) {
         ///        for i in 1..=tasks {
-        ///             self.ctx.spawn(self.step_waiting(i));
+        ///             self.ctx.spawn(self.clone().step_waiting(i));
         ///        }
         ///     }
         ///
-        ///     async fn step_waiting(&self, num_steps: u32) {
+        ///     async fn step_waiting(self: Rc<Self>, num_steps: u32) {
         ///         for _i in 0..num_steps {
         ///             self.ctx.sleep(1.).await;
         ///         }
@@ -737,11 +738,11 @@ impl SimulationContext {
         /// }
         ///
         /// let mut sim = Simulation::new(123);
-        /// let mut comp = Component { ctx: sim.create_context("comp") };
+        /// let mut comp = Rc::new(Component { ctx: sim.create_context("comp") });
         ///
         /// // Panics because spawning async tasks for component without event handler is prohibited
         /// // due to safety reasons.
-        /// // Register Component via Simulation::add_handler as in the previous example.
+        /// // Register Component via Simulation::add_static_handler as in the previous example.
         /// comp.start(10);
         /// ```
         ///
@@ -758,10 +759,11 @@ impl SimulationContext {
         /// impl Component {
         ///     fn on_start(&mut self, tasks: u32) {
         ///        for i in 1..=tasks {
-        ///             // Compile fails because mutable reference to self is used in the async task,
-        ///             // which is not allowed by Rust borrow checker rules (several mutable references are prohibited).
-        ///             // Use RefCell to wrap the mutable state and access it in the async task via RefCell::borrow_mut
-        ///             // as in the next example.
+        ///             // Compile fails because reference to self is used in the async task,
+        ///             // which is not allowed because of 'static requirements on the spawned future.
+        ///             // 1. To spawn 'static futures register this component as StaticEventHandler.
+        ///             // 2. Use RefCell to wrap the mutable state and access it in the async task via RefCell::borrow_mut.
+        ///             // See the next example for details.
         ///             self.ctx.spawn(self.increase_counter(i));
         ///        }
         ///     }
@@ -792,7 +794,7 @@ impl SimulationContext {
         /// ```rust
         /// use std::rc::Rc;
         /// use std::cell::RefCell;
-        /// use dslab_core::{Simulation, SimulationContext, Event, EventHandler};
+        /// use dslab_core::{Simulation, SimulationContext, Event, StaticEventHandler};
         ///
         /// struct Component {
         ///     ctx: SimulationContext,
@@ -800,13 +802,13 @@ impl SimulationContext {
         /// }
         ///
         /// impl Component {
-        ///     fn on_start(&self, tasks: u32) {
+        ///     fn on_start(self: Rc<Self>, tasks: u32) {
         ///        for i in 1..=tasks {
-        ///             self.ctx.spawn(self.increase_counter(i));
+        ///             self.ctx.spawn(self.clone().increase_counter(i));
         ///        }
         ///     }
         ///
-        ///     async fn increase_counter(&self, num_steps: u32) {
+        ///     async fn increase_counter(self: Rc<Self>, num_steps: u32) {
         ///         for _ in 0..num_steps {
         ///             self.ctx.sleep(1.).await;
         ///             *self.counter.borrow_mut() += 1;
@@ -814,25 +816,25 @@ impl SimulationContext {
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&mut self, event: Event) {}
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc<Self>, event: Event) {}
         /// }
         ///
         /// let mut sim = Simulation::new(123);
         ///
         /// let comp_ctx = sim.create_context("comp");
-        /// let comp = Rc::new(RefCell::new(Component {ctx: comp_ctx, counter: RefCell::new(0) }));
-        /// sim.add_handler("comp", comp.clone());
+        /// let comp = Rc::new(Component {ctx: comp_ctx, counter: RefCell::new(0) });
+        /// sim.add_static_handler("comp", comp.clone());
         ///
-        /// comp.borrow().on_start(10);
+        /// comp.clone().on_start(10);
         ///
         /// sim.step_until_no_events();
         ///
         /// assert_eq!(sim.time(), 10.);
         /// // 1 + 2 + 3 + ... + 10 = 55
-        /// assert_eq!(*comp.borrow().counter.borrow(), 55);
+        /// assert_eq!(*comp.counter.borrow(), 55);
         /// ```
-        pub fn spawn(&self, future: impl Future<Output = ()>) {
+        pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
             self.sim_state.borrow_mut().spawn_component(self.id(), future);
         }
 
@@ -1071,7 +1073,7 @@ impl SimulationContext {
         /// ```rust
         /// use std::{cell::RefCell, rc::Rc};
         /// use serde::Serialize;
-        /// use dslab_core::{cast, Id, Event, EventHandler, Simulation, SimulationContext};
+        /// use dslab_core::{cast, Id, Event, StaticEventHandler, Simulation, SimulationContext};
         /// use dslab_core::async_mode::EventKey;
         ///
         /// #[derive(Clone, Serialize)]
@@ -1090,18 +1092,18 @@ impl SimulationContext {
         /// }
         ///
         /// impl Component {
-        ///     async fn recv_event_for_key(&self, key: EventKey) {
+        ///     async fn recv_event_for_key(self: Rc<Self>, key: EventKey) {
         ///         let e = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, key).await;
         ///         assert_eq!(e.data.key, key);
         ///     }
         /// }
         ///
-        /// impl EventHandler for Component {
-        ///     fn on(&mut self, event: Event) {
+        /// impl StaticEventHandler for Component {
+        ///     fn on(self: Rc<Self>, event: Event) {
         ///         cast!(match event.data {
         ///             Start {} => {
-        ///                 self.ctx.spawn(self.recv_event_for_key(1));
-        ///                 self.ctx.spawn(self.recv_event_for_key(2));
+        ///                 self.ctx.spawn(self.clone().recv_event_for_key(1));
+        ///                 self.ctx.spawn(self.clone().recv_event_for_key(2));
         ///             }
         ///         })
         ///     }
@@ -1110,7 +1112,7 @@ impl SimulationContext {
         /// let mut sim = Simulation::new(124);
         /// let root_ctx = sim.create_context("sender");
         /// let comp_ctx = sim.create_context("comp");
-        /// let comp_id =  sim.add_handler("comp", Rc::new(RefCell::new(Component { ctx: comp_ctx, root_id: root_ctx.id() })));
+        /// let comp_id =  sim.add_static_handler("comp", Rc::new(Component { ctx: comp_ctx, root_id: root_ctx.id() }));
         ///
         /// sim.register_key_getter_for::<SomeEvent>(|message| message.key);
         ///

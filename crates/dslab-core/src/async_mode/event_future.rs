@@ -115,7 +115,7 @@ impl<T: EventData> EventFuture<T> {
     /// use std::rc::Rc;
     /// use serde::Serialize;
     /// use dslab_core::async_mode::{AwaitResult, EventKey};
-    /// use dslab_core::{cast, Event, EventData, EventHandler, Id, Simulation, SimulationContext};
+    /// use dslab_core::{cast, Event, EventData, StaticEventHandler, Id, Simulation, SimulationContext};
     ///
     /// #[derive(Clone, Serialize)]
     /// struct Start {}
@@ -140,12 +140,12 @@ impl<T: EventData> EventFuture<T> {
     ///         }
     ///     }
     ///
-    ///     fn on_start(&self) {
-    ///         self.ctx.spawn(self.listen_first());
-    ///         self.ctx.spawn(self.listen_second());
+    ///     fn on_start(self: Rc<Self>) {
+    ///         self.ctx.spawn(self.clone().listen_first());
+    ///         self.ctx.spawn(self.clone().listen_second());
     ///     }
     ///
-    ///     async fn listen_first(&self) {
+    ///     async fn listen_first(self: Rc<Self>) {
     ///         let mut result = self
     ///             .ctx
     ///             .recv_event_by_key_from::<SomeEvent>(self.root_id, 1).with_timeout(10.)
@@ -171,7 +171,7 @@ impl<T: EventData> EventFuture<T> {
     ///         *self.actions_finished.borrow_mut() += 1;
     ///     }
     ///
-    ///     async fn listen_second(&self) {
+    ///     async fn listen_second(self: Rc<Self>) {
     ///         let e = self.ctx.recv_event_by_key_from::<SomeEvent>(self.root_id, 2).await;
     ///         assert_eq!(e.src, self.root_id);
     ///         assert_eq!(e.data.request_id, 2);
@@ -181,8 +181,8 @@ impl<T: EventData> EventFuture<T> {
     ///     }
     /// }
     ///
-    /// impl EventHandler for Component {
-    ///     fn on(&mut self, event: Event) {
+    /// impl StaticEventHandler for Component {
+    ///     fn on(self: Rc<Self>, event: Event) {
     ///         cast!(match event.data {
     ///             Start {} => {
     ///                 self.on_start();
@@ -202,8 +202,8 @@ impl<T: EventData> EventFuture<T> {
     ///
     /// let root_ctx = sim.create_context("root");
     /// let comp_ctx = sim.create_context("comp");
-    /// let comp = Rc::new(RefCell::new(Component::new(root_ctx.id(), comp_ctx)));
-    /// let comp_id = sim.add_handler("comp", comp.clone());
+    /// let comp = Rc::new(Component::new(root_ctx.id(), comp_ctx));
+    /// let comp_id = sim.add_static_handler("comp", comp.clone());
     ///
     /// sim.register_key_getter_for::<SomeEvent>(|event| event.request_id as EventKey);
     ///
@@ -213,7 +213,7 @@ impl<T: EventData> EventFuture<T> {
     ///
     /// sim.step_until_no_events();
     ///
-    /// assert_eq!(*comp.borrow().actions_finished.borrow(), 2);
+    /// assert_eq!(*comp.actions_finished.borrow(), 2);
     /// assert_eq!(sim.time(), 60.);
     /// ```
     pub async fn with_timeout(self, timeout: f64) -> AwaitResult<T> {

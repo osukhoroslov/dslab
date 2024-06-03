@@ -4,7 +4,7 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, EventCancellationPolicy, EventHandler, Simulation, SimulationContext};
+use dslab_core::{cast, EventCancellationPolicy, Simulation, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 struct TestEventWithRc {
@@ -15,7 +15,7 @@ struct TestEventWithRc {
 
 struct TestComponent {
     async_task_count: u32,
-    on_handler_messages: u32,
+    on_handler_messages: RefCell<u32>,
     ctx: SimulationContext,
 }
 
@@ -23,24 +23,24 @@ impl TestComponent {
     fn new(async_task_count: u32, ctx: SimulationContext) -> Self {
         Self {
             async_task_count,
-            on_handler_messages: 0,
+            on_handler_messages: RefCell::new(0),
             ctx,
         }
     }
 
-    fn start_waiting_for_events(&self) {
+    fn start_waiting_for_events(self: Rc<Self>) {
         for i in 0..self.async_task_count {
-            self.ctx.spawn(self.wait_for_event_with_key(i as EventKey));
+            self.ctx.spawn(self.clone().wait_for_event_with_key(i as EventKey));
         }
     }
 
-    fn start_waiting_for_timeouts(&self, timeout: f64, rc: Rc<RefCell<u32>>) {
+    fn start_waiting_for_timeouts(self: Rc<Self>, timeout: f64, rc: Rc<RefCell<u32>>) {
         for _ in 0..self.async_task_count {
-            self.ctx.spawn(self.wait_for_timeout(timeout, rc.clone()));
+            self.ctx.spawn(self.clone().wait_for_timeout(timeout, rc.clone()));
         }
     }
 
-    async fn wait_for_event_with_key(&self, key: EventKey) {
+    async fn wait_for_event_with_key(self: Rc<Self>, key: EventKey) {
         let e = self.ctx.recv_event_by_key::<TestEventWithRc>(key).await;
         *e.data.rc.borrow_mut() += 1;
         self.ctx.sleep(10.).await;
@@ -53,7 +53,7 @@ impl TestComponent {
         panic!("This code must be unreachable");
     }
 
-    async fn wait_for_timeout(&self, timeout: f64, rc: Rc<RefCell<u32>>) {
+    async fn wait_for_timeout(self: Rc<Self>, timeout: f64, rc: Rc<RefCell<u32>>) {
         self.ctx.sleep(timeout).await;
         *rc.borrow_mut() += 1;
 
@@ -66,11 +66,11 @@ impl TestComponent {
     }
 }
 
-impl EventHandler for TestComponent {
-    fn on(&mut self, event: dslab_core::Event) {
+impl StaticEventHandler for TestComponent {
+    fn on(self: Rc<Self>, event: dslab_core::Event) {
         cast!(match event.data {
             TestEventWithRc { .. } => {
-                self.on_handler_messages += 1;
+                *self.on_handler_messages.borrow_mut() += 1;
             }
         })
     }
@@ -87,9 +87,9 @@ fn test_event_futures_drop_on_remove_handler() {
     sim.register_key_getter_for::<TestEventWithRc>(|m| m.key);
 
     let comp_ctx = sim.create_context("comp");
-    let comp = Rc::new(RefCell::new(TestComponent::new(async_task_count, comp_ctx)));
-    let comp_id = sim.add_handler("comp", comp.clone());
-    comp.borrow().start_waiting_for_events();
+    let comp = Rc::new(TestComponent::new(async_task_count, comp_ctx));
+    let comp_id = sim.add_static_handler("comp", comp.clone());
+    comp.clone().start_waiting_for_events();
 
     let root_ctx = sim.create_context("root");
     for i in 0..async_task_count {
@@ -119,7 +119,7 @@ fn test_event_futures_drop_on_remove_handler() {
     // Check that all async activities are dropped.
     assert_eq!(Rc::strong_count(&rc), 1);
 
-    sim.add_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
 
     assert_eq!(Rc::strong_count(&rc), 1);
     assert_eq!(*rc.borrow(), async_task_count);
@@ -139,7 +139,7 @@ fn test_event_futures_drop_on_remove_handler() {
 
     assert_eq!(sim.time(), 25.);
     // Check that all new events are delivered via EventHandler.
-    assert_eq!(comp.borrow().on_handler_messages, async_task_count);
+    assert_eq!(*comp.on_handler_messages.borrow(), async_task_count);
 }
 
 #[test]
@@ -153,9 +153,9 @@ fn test_timer_futures_drop_on_remove_handler() {
     let mut sim = Simulation::new(123);
 
     let comp_ctx = sim.create_context("comp");
-    let comp = Rc::new(RefCell::new(TestComponent::new(async_task_count, comp_ctx)));
-    sim.add_handler("comp", comp.clone());
-    comp.borrow().start_waiting_for_timeouts(timeout, rc.clone());
+    let comp = Rc::new(TestComponent::new(async_task_count, comp_ctx));
+    sim.add_static_handler("comp", comp.clone());
+    comp.clone().start_waiting_for_timeouts(timeout, rc.clone());
 
     sim.step_until_time(30.);
 
@@ -167,7 +167,7 @@ fn test_timer_futures_drop_on_remove_handler() {
 
     assert_eq!(Rc::strong_count(&rc), 1);
 
-    sim.add_handler("comp", comp.clone());
+    sim.add_static_handler("comp", comp.clone());
 
     assert_eq!(Rc::strong_count(&rc), 1);
     assert_eq!(*rc.borrow(), async_task_count);
