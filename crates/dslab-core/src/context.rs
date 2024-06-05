@@ -1160,9 +1160,15 @@ impl SimulationContext {
                     type_name::<T>()
                 );
             }
-            self.sim_state
-                .borrow_mut()
-                .create_event_future::<T>(dst, src, key, self.sim_state.clone())
+            let future_result =
+                self.sim_state
+                    .borrow_mut()
+                    .create_event_future::<T>(dst, src, key, self.sim_state.clone());
+
+            match future_result {
+                Ok(future) => future,
+                Err((_, e)) => panic!("Failed to create EventFuture: {}", e),
+            }
         }
     );
 }

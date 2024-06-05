@@ -25,26 +25,40 @@ impl EventPromiseStore {
         src: Option<Id>,
         event_key: Option<EventKey>,
         promise: EventPromise,
-    ) {
+    ) -> Result<(), String> {
         let key = AwaitKey::new::<T>(dst, event_key);
 
         // check that promise with such key (with or without source) doesn't exist yet
         if self.promises.contains_key(&key) {
-            panic!("Event promise {:?} already exists", key);
-        }
-        if let Some(promises) = self.promises_with_source.get(&key) {
-            if !promises.is_empty() {
-                let src = promises.keys().next().unwrap();
-                panic!("Event promise {:?} with source {} already exists", key, src);
-            }
+            return Err(format!("Event promise for key {:?} already exists", key));
         }
 
         // store promise
         if let Some(src) = src {
+            if let Some(promises) = self.promises_with_source.get(&key) {
+                // check that promise with such key and source doesn't exist yet
+                if promises.contains_key(&src) {
+                    return Err(format!(
+                        "Event promise for key {:?} with source {} already exists",
+                        key, src
+                    ));
+                }
+            }
             self.promises_with_source.entry(key).or_default().insert(src, promise);
         } else {
+            if let Some(promises) = self.promises_with_source.get(&key) {
+                // check that promise with such key and some source doesn't exist yet
+                if !promises.is_empty() {
+                    return Err(format!(
+                        "Event promise for key {:?} with source {} already exists",
+                        key,
+                        promises.keys().next().unwrap(),
+                    ));
+                }
+            }
             self.promises.insert(key, promise);
         }
+        Ok(())
     }
 
     pub fn remove<T: EventData>(

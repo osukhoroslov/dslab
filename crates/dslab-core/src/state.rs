@@ -460,10 +460,14 @@ impl SimulationState {
             src: Option<Id>,
             key: Option<EventKey>,
             sim_state: Rc<RefCell<SimulationState>>,
-        ) -> EventFuture<T> {
+        ) -> Result<EventFuture<T>, (EventFuture<T>, String)> {
             let (promise, future) = EventPromise::contract(dst, src, key, sim_state);
-            self.event_promises.insert::<T>(dst, src, key, promise);
-            future
+            match self.event_promises.insert::<T>(dst, src, key, promise) {
+                Ok(()) => Ok(future),
+                // return future back to the caller in order to release BorrowMut of the
+                // simulation state before the future is dropped
+                Err(err) => Err((future, err)),
+            }
         }
 
         pub fn has_event_promise_for(&self, event: &Event, event_key: Option<EventKey>) -> bool {
