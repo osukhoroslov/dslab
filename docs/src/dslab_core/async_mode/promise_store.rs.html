@@ -137,6 +137,20 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::any::TypeId;
 
 <span class="kw">use </span>rustc_hash::FxHashMap;
@@ -164,26 +178,40 @@
         src: <span class="prelude-ty">Option</span>&lt;Id&gt;,
         event_key: <span class="prelude-ty">Option</span>&lt;EventKey&gt;,
         promise: EventPromise,
-    ) {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
         <span class="kw">let </span>key = AwaitKey::new::&lt;T&gt;(dst, event_key);
 
         <span class="comment">// check that promise with such key (with or without source) doesn't exist yet
         </span><span class="kw">if </span><span class="self">self</span>.promises.contains_key(<span class="kw-2">&amp;</span>key) {
-            <span class="macro">panic!</span>(<span class="string">"Event promise {:?} already exists"</span>, key);
-        }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(promises) = <span class="self">self</span>.promises_with_source.get(<span class="kw-2">&amp;</span>key) {
-            <span class="kw">if </span>!promises.is_empty() {
-                <span class="kw">let </span>src = promises.keys().next().unwrap();
-                <span class="macro">panic!</span>(<span class="string">"Event promise {:?} with source {} already exists"</span>, key, src);
-            }
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Event promise for key {:?} already exists"</span>, key));
         }
 
         <span class="comment">// store promise
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(src) = src {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(promises) = <span class="self">self</span>.promises_with_source.get(<span class="kw-2">&amp;</span>key) {
+                <span class="comment">// check that promise with such key and source doesn't exist yet
+                </span><span class="kw">if </span>promises.contains_key(<span class="kw-2">&amp;</span>src) {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                        <span class="string">"Event promise for key {:?} with source {} already exists"</span>,
+                        key, src
+                    ));
+                }
+            }
             <span class="self">self</span>.promises_with_source.entry(key).or_default().insert(src, promise);
         } <span class="kw">else </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(promises) = <span class="self">self</span>.promises_with_source.get(<span class="kw-2">&amp;</span>key) {
+                <span class="comment">// check that promise with such key and some source doesn't exist yet
+                </span><span class="kw">if </span>!promises.is_empty() {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                        <span class="string">"Event promise for key {:?} with source {} already exists"</span>,
+                        key,
+                        promises.keys().next().unwrap(),
+                    ));
+                }
+            }
             <span class="self">self</span>.promises.insert(key, promise);
         }
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">pub fn </span>remove&lt;T: EventData&gt;(
