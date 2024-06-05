@@ -1,5 +1,6 @@
-use dslab_core::{async_mode::EventKey, Simulation, SimulationContext};
 use serde::Serialize;
+
+use dslab_core::{async_mode::EventKey, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize)]
 struct EventWithKey {
