@@ -4,15 +4,15 @@ Profiling programs is a very efficient way to figure out what parts of program t
 
 In this example we present the simple possible performance improvement in DSLab Simulation. There are two ways of emitting events to the simulation: 
 
-1. Using [`emit`](dslab_core::SimulationContext::emit) functions from [`SimulationContext`](dslab_core::SimulationContext). This way use `BinaryHeap` to order incoming events.
-2. Using [`emit_ordered`](dslab_core::SimulationContext::emit_ordered) functions from [`SimulationContext`](dslab_core::SimulationContext). This approach relies on user-side ordering events and a `VecDeque` is provided as a queue.
+1. Using [`emit`](dslab_core::SimulationContext::emit) functions from [`SimulationContext`](dslab_core::SimulationContext). This way uses `BinaryHeap` to store and order incoming events.
+2. Using [`emit_ordered`](dslab_core::SimulationContext::emit_ordered) functions from [`SimulationContext`](dslab_core::SimulationContext). This approach relies on user-side ordering of events and a `VecDeque` is used to store events.
 
-In case simulation contains component that emits already ordered events (like [`Server`](components::Server) in this example), the performance of the whole simulation may be significantly improved by using `emit_ordered` instead of `emit`.
+In case simulation contains a component that emits already ordered events (like [`Server`](components::Server) in this example), the performance of the whole simulation may be significantly improved by using `emit_ordered` instead of `emit`.
 
 
 ## cargo-flamegraph 
 
-We propose to use [`cargo flamegraph`](https://github.com/flamegraph-rs/flamegraph) profiler as it is very easy compatible with `Rust` projects on `MacOS` and `Linux`. 
+We propose to use [`cargo flamegraph`](https://github.com/flamegraph-rs/flamegraph) profiler as it is very easy to use with Rust projects on MacOS and Linux. 
 
 ### Installation
 `cargo flamegraph` can be installed with the following command: 
@@ -25,21 +25,21 @@ Full instructions see in the [`official documentation`](https://github.com/flame
 
 ### Running  
 
-The given example could be launched with the following command:
+The given example can be launched with the following command:
 ```bash
 cargo flamegraph --dev --root -- --events-count 100000
 ```
 
-To see how release-optimized binary performs we provide the `flamegraph-release` profile that inherits `release` profile in optimizations but provides the debug info, which is required for profiling. The command changes as follows: 
+To see how release-optimized binary performs we provide the `release-flamegraph` profile that inherits `release` profile with optimizations but provides the debug info, which is required for profiling. The command changes as follows: 
 ```bash
-cargo flamegraph --profile flamegraph-release --root -- --events-count 100000
+cargo flamegraph --profile release-flamegraph --root -- --events-count 100000
 ```
 
 Both commands produce interactive `flamegraph.svg` that can be viewed using any browser. For more detailed examples, usage instructions, and the explanation of the result produced see the [`official documentation`](https://github.com/flamegraph-rs/flamegraph?tab=readme-ov-file#usage)
 
 # Comparing results 
 
-Launching with different arguments you will see how [`emit_ordered`](dslab_core::SimulationContext::emit_ordered) is more efficient than [`emit`](dslab_core::SimulationContext::emit).
+By launching the provided example with different arguments, you will see how [`emit_ordered`](dslab_core::SimulationContext::emit_ordered) is more efficient than [`emit`](dslab_core::SimulationContext::emit).
 
 Here are some possible launch configurations: 
 1. Debug mode with `emit`: 
@@ -47,14 +47,14 @@ Here are some possible launch configurations:
     cargo flamegraph --dev --root -- --events-count 5000000 --rand-clients-choose 
     ```
 
-    The analysis of the produced `flamegraph.svg` will indicates that `BinaryHeap` operations take approximately 60-70% of the total time. Random clients choose takes approximately 6% of the total time.
+    The analysis of the produced `flamegraph.svg` will show that `BinaryHeap` operations take approximately 60-70% of the total time. Selection of a random client takes approximately 6% of the total time.
 
 2. Release mode with `emit`: 
     ```bash 
-     cargo flamegraph --profile flamegraph-release --root -- --events-count 5000000 --rand-clients-choose 
+     cargo flamegraph --profile release-flamegraph --root -- --events-count 5000000 --rand-clients-choose 
     ```
 
-    The analysis of the produced `flamegraph.svg` will indicates that `BinaryHeap` operations take approximately 75% of the total time. 
+    The analysis of the produced `flamegraph.svg` will show that `BinaryHeap` operations take approximately 75% of the total time. 
 
 3. Debug mode with `emit_ordered`: 
     ```bash 
@@ -65,16 +65,16 @@ Here are some possible launch configurations:
 
 4. Release mode with `emit_ordered`: 
     ```bash 
-     cargo flamegraph --profile flamegraph-release --root -- --events-count 5000000 --rand-clients-choose --use-emit-ordered
+     cargo flamegraph --profile release-flamegraph --root -- --events-count 5000000 --rand-clients-choose --use-emit-ordered
     ```
 
     This example shows even more significant performance improvement.
 
 # Optimized release build 
 
-In addition to the `flamegraph-release` profile, we provide the `release-optimized` profile that inherits `release` profile with the highest level of optimizations. The compilation time may be significantly increased, but the performance of the binary will be improved by 5-10%.
+In addition to the `release-flamegraph` profile, we provide the `release-optimized` profile that inherits `release` profile and includes extra optimizations. The compilation time may be significantly increased, but the performance of the binary is expected to be improved by 5-10%.
 
-Compare the following launch configurations on your device: 
+Compare the following launch configurations on your machine: 
 ```bash
 cargo run --release -- --events-count 50000000 --rand-clients-choose
 cargo run --profile release-optimized -- --events-count 50000000 --rand-clients-choose
