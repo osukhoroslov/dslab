@@ -462,10 +462,10 @@ impl Simulation {
 
             let next_timer_time = self.sim_state.borrow_mut().peek_timer().unwrap().time;
             let next_event_time = self.sim_state.borrow_mut().peek_event().unwrap().time;
-            if next_timer_time <= next_event_time {
-                self.process_timer();
-            } else {
+            if next_event_time <= next_timer_time {
                 self.process_event();
+            } else {
+                self.process_timer();
             }
 
             true

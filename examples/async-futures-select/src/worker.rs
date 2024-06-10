@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::{cell::RefCell, rc::Rc};
 
 use futures::future::FutureExt;
-use futures::select;
+use futures::{select, Future};
 use serde_json::json;
 
 use dslab_compute::multicore::{CompFailed, CompFinished, CompStarted, Compute};
@@ -41,32 +41,56 @@ impl Worker {
     async fn dispatch_loop(self: Rc<Self>) {
         let mut pending_tasks: VecDeque<TaskRequest> = VecDeque::new();
         let mut dispatched_tasks: HashMap<u64, TaskRequest> = HashMap::new();
+        let mut dispatching = self.dispatching(&mut pending_tasks, &mut dispatched_tasks, false);
+        let mut start_dispatching = false;
         loop {
-            let try_dispatch = select! {
+            select! {
                 task_req = self.ctx.recv_event::<TaskRequest>().fuse() => {
                     pending_tasks.push_back(task_req.data);
-                    pending_tasks.len() == 1
+                    start_dispatching = pending_tasks.len() == 1;
                 },
                 finished = self.ctx.recv_event::<CompFinished>().fuse() => {
                     let req_id = finished.data.id;
                     let task = dispatched_tasks.remove(&req_id).unwrap();
                     log_debug!(self.ctx, format!("task {} with key {} is completed", task.id, req_id));
-                    !pending_tasks.is_empty()
-                }
+                    start_dispatching = !pending_tasks.is_empty();
+                },
+                _ = dispatching.fuse() => {}
             };
-            if try_dispatch {
-                for _ in 0..pending_tasks.len() {
-                    let task = pending_tasks.front().unwrap();
-                    match self.try_dispatch_task(task).await {
-                        Some(req_id) => {
-                            dispatched_tasks.insert(req_id, pending_tasks.pop_front().unwrap());
-                        }
-                        None => {
-                            break;
-                        }
-                    }
+            if start_dispatching {
+                start_dispatching = false;
+            }
+        }
+    }
+
+    async fn dispatching(
+        &self,
+        pending_tasks: &mut VecDeque<TaskRequest>,
+        dispatched_tasks: &mut HashMap<u64, TaskRequest>,
+        active: bool,
+    ) {
+        if !active {
+            futures::future::pending::<()>().await;
+        }
+
+        for _ in 0..pending_tasks.len() {
+            let task = pending_tasks.front().unwrap();
+            match self.try_dispatch_task(task).await {
+                Some(req_id) => {
+                    dispatched_tasks.insert(req_id, pending_tasks.pop_front().unwrap());
+                }
+                None => {
+                    break;
                 }
             }
+        }
+    }
+
+    async fn try_yield(&self, need_yield: bool) {
+        if need_yield {
+            self.ctx.sleep(0.).await;
+        } else {
+            futures::future::pending::<()>().await;
         }
     }
 
