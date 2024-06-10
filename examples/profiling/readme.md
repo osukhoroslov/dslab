@@ -30,9 +30,9 @@ The given example can be launched with the following command:
 cargo flamegraph --dev --root -- --events-count 100000
 ```
 
-To see how release-optimized binary performs we provide the `release-flamegraph` profile that inherits `release` profile with optimizations but provides the debug info, which is required for profiling. The command changes as follows: 
+To see how release-optimized binary performs we provide the `release-debug` profile that inherits `release` profile with optimizations but provides the debug info, which is required for profiling. The command changes as follows: 
 ```bash
-cargo flamegraph --profile release-flamegraph --root -- --events-count 100000
+cargo flamegraph --profile release-debug --root -- --events-count 100000
 ```
 
 Both commands produce interactive `flamegraph.svg` that can be viewed using any browser. For more detailed examples, usage instructions, and the explanation of the result produced see the [`official documentation`](https://github.com/flamegraph-rs/flamegraph?tab=readme-ov-file#usage)
@@ -51,7 +51,7 @@ Here are some possible launch configurations:
 
 2. Release mode with `emit`: 
     ```bash 
-     cargo flamegraph --profile release-flamegraph --root -- --events-count 5000000 --rand-clients-choose 
+     cargo flamegraph --profile release-debug --root -- --events-count 5000000 --rand-clients-choose 
     ```
 
     The analysis of the produced `flamegraph.svg` will show that `BinaryHeap` operations take approximately 75% of the total time. 
@@ -65,14 +65,14 @@ Here are some possible launch configurations:
 
 4. Release mode with `emit_ordered`: 
     ```bash 
-     cargo flamegraph --profile release-flamegraph --root -- --events-count 5000000 --rand-clients-choose --use-emit-ordered
+     cargo flamegraph --profile release-debug --root -- --events-count 5000000 --rand-clients-choose --use-emit-ordered
     ```
 
     This example shows even more significant performance improvement.
 
 # Optimized release build 
 
-In addition to the `release-flamegraph` profile, we provide the `release-optimized` profile that inherits `release` profile and includes extra optimizations. The compilation time may be significantly increased, but the performance of the binary is expected to be improved by 5-10%.
+In addition to the `release-debug` profile, we provide the `release-optimized` profile that inherits `release` profile and includes extra optimizations. The compilation time may be significantly increased, but the performance of the binary is expected to be improved by 5-10%.
 
 Compare the following launch configurations on your machine: 
 ```bash

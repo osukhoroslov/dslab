@@ -2,7 +2,7 @@
 members = ["crates/*", "examples/*", "tools/*"]
 resolver = "2"
 
-[profile.flamegraph-release]
+[profile.release-debug]
 inherits = "release"
 debug = true
 
