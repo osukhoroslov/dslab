@@ -8,6 +8,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["dslab_mp",["",[["mc",[["strategies",[],["bfs.rs","dfs.rs","mod.rs"]]],["dependency.rs","error.rs","events.rs","mod.rs","model_checker.rs","network.rs","node.rs","pending_events.rs","predicates.rs","state.rs","strategy.rs","system.rs","trace_handler.rs","util.rs"]]],["context.rs","events.rs","lib.rs","logger.rs","message.rs","network.rs","node.rs","process.rs","system.rs","test.rs","util.rs"]]],\
 ["dslab_mp_python",["",[],["lib.rs"]]],\
 ["dslab_network",["",[["models",[],["constant.rs","mod.rs","shared.rs","topology_aware.rs"]]],["lib.rs","link.rs","model.rs","network.rs","node.rs","routing.rs","topology.rs"]]],\
-["dslab_storage",["",[],["disk.rs","events.rs","fs.rs","lib.rs","scheduler.rs","storage.rs"]]]\
+["dslab_storage",["",[],["disk.rs","events.rs","fs.rs","lib.rs","scheduler.rs","storage.rs"]]],\
+["profiling",["",[],["components.rs","main.rs"]]]\
 ]'));
 createSrcSidebar();
