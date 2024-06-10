@@ -17,3 +17,9 @@ examples/iaas-experiment/*.json
 
 # Maven
 examples-other/vetand_cloudsim_benchmark/target
+
+# MacOS
+.DS_Store 
+
+# Flamegraph 
+*.svg 
