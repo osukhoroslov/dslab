@@ -157,7 +157,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46016233fc1bb55c23b856fe556b7db6ccd05119a0a392e04f0b3b7c79058f16"
 
 [[package]]
-name = "async-futures-combiners"
+name = "async-futures-select"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
@@ -316,6 +316,14 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "callbacks-vs-async"
+version = "0.1.0"
+dependencies = [
+ "dslab-core",
+ "serde",
 ]
 
 [[package]]
