@@ -28,7 +28,23 @@ fn parse_params(s: &[char]) -> HashMap<String, String> {
             continue;
         }
         let mid = mid.unwrap();
-        let name = &item[0..mid];
+        let name = if mid == 0 {
+            &item[0..mid]
+        } else {
+            let mut l = 0;
+            let mut r = mid - 1;
+            while l < mid && s[l].is_whitespace() {
+                l += 1;
+            }
+            while r > 0 && s[r].is_whitespace() {
+                r -= 1;
+            }
+            if l == mid {
+                &item[0..0]
+            } else {
+                &item[l..r + 1]
+            }
+        };
         let value = &item[mid + 1..];
         if value.is_empty() || value[0] != '"' || value[value.len() - 1] != '"' {
             continue;
