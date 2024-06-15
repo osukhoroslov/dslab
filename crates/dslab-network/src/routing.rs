@@ -24,7 +24,6 @@ pub struct PathIterator<'a> {
     dst: NodeId,
     node_links_map: &'a NodeLinksMap,
     parent_path: &'a Vec<Vec<NodeId>>,
-    star_central_node: Option<NodeId>,
 }
 
 impl Iterator for PathIterator<'_> {
@@ -34,11 +33,7 @@ impl Iterator for PathIterator<'_> {
         if self.src == self.dst {
             return None;
         }
-        let next = if self.star_central_node.is_none() {
-            self.parent_path[self.dst][self.src]
-        } else {
-            self.dst
-        };
+        let next = self.parent_path[self.dst][self.src];
         let link_id = self.node_links_map[&self.src][&next];
         self.src = next;
         Some(link_id)
@@ -96,7 +91,6 @@ impl RoutingAlgorithm for ShortestPathFloydWarshall {
                 dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
-                star_central_node: None,
             })
         }
     }
@@ -163,41 +157,6 @@ impl RoutingAlgorithm for ShortestPathDijkstra {
                 dst,
                 node_links_map: topology.node_links_map(),
                 parent_path: &self.parent_path,
-                star_central_node: None,
-            })
-        }
-    }
-}
-
-// Shortest Path (Star Topology Routing) --------------------------------------------------------------------------------------------
-
-/// Static routing algorithm which returns shortest paths (by latency) computed for Star topology network
-#[derive(Default)]
-pub struct ShortestPathStarTopology {
-    central_node: NodeId,
-    parent_path: Vec<Vec<NodeId>>,
-}
-
-impl RoutingAlgorithm for ShortestPathStarTopology {
-    fn init(&mut self, topology: &Topology) {
-        let node_count = topology.node_count();
-        for node in 0..topology.node_count() {
-            if topology.node_links_map().get(&node).unwrap().len() == node_count - 1 {
-                self.central_node = node;
-            }
-        }
-    }
-
-    fn get_path_iter<'a>(&'a self, src: NodeId, dst: NodeId, topology: &'a Topology) -> Option<PathIterator<'a>> {
-        if src != self.central_node && dst != self.central_node {
-            None
-        } else {
-            Some(PathIterator {
-                src,
-                dst,
-                node_links_map: topology.node_links_map(),
-                parent_path: &self.parent_path,
-                star_central_node: Some(self.central_node),
             })
         }
     }
