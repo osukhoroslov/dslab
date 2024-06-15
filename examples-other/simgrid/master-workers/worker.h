@@ -33,6 +33,6 @@ private:
     sg4::Mailbox* mb_ = nullptr;
     sg4::Mailbox* master_mb_ = nullptr;
     sg4::Host* master_host_ = nullptr;
-    std::vector<sg4::ActivityPtr> pending_activities_;
+    sg4::ActivitySet* pending_activities_ = nullptr;
     std::unordered_map<std::string, int> activity_tasks_;
 };

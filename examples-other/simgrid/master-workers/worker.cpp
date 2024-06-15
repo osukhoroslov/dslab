@@ -15,6 +15,7 @@ Worker::Worker(const std::string& name, int speed, int cores, double memory, boo
       master_mb_(master_mb),
       master_host_(master_host) {
     mb_ = sg4::Mailbox::by_name(name);
+    pending_activities_ = new sg4::ActivitySet();
 }
 
 void Worker::operator()() {
@@ -24,15 +25,14 @@ void Worker::operator()() {
     // start message receive activity
     Message* msg;
     auto comm = mb_->get_async<Message>(&msg);
-    pending_activities_.push_back(comm);
+    pending_activities_->push(comm);
 
     bool stopped = false;
     while (!stopped) {
         // wait for completion of any pending activities (message receive, data transfer, task exec,
         // disk I/O...)
-        ssize_t changed_pos = sg4::Activity::wait_any(pending_activities_);
-        if (changed_pos != -1) {
-            auto* completed = pending_activities_[changed_pos].get();
+        auto completed = pending_activities_->wait_any();
+        if (completed != nullptr) {
             XBT_DEBUG("Completed %s", completed->get_cname());
             const std::string& completed_name = completed->get_name();
             // message received
@@ -60,7 +60,7 @@ void Worker::operator()() {
                 // start next message receive activity
                 if (!stopped) {
                     comm = mb_->get_async<Message>(&msg);
-                    pending_activities_.push_back(comm);
+                    pending_activities_->push(comm);
                 }
                 // task-related activities
             } else {
@@ -83,8 +83,6 @@ void Worker::operator()() {
                     OnDataWriteCompleted(task_id);
                 }
             }
-            std::swap(pending_activities_[changed_pos], pending_activities_.back());
-            pending_activities_.pop_back();
         }
     }
     XBT_DEBUG("Exiting");
@@ -138,7 +136,7 @@ void Worker::OnTaskRequestAsync(TaskRequest* req) {
     auto comm =
         sg4::Comm::sendto_async(master_host_, sg4::this_actor::get_host(), req->output_size);
     comm->set_name("download-" + std::to_string(task_id));
-    pending_activities_.push_back(comm);
+    pending_activities_->push(comm);
     activity_tasks_.emplace(comm->get_name(), task_id);
 }
 
@@ -148,7 +146,7 @@ void Worker::OnDataDownloadCompleted(int task_id) {
     // read data from disk asynchronously
     auto io = sg4::Host::current()->get_disks().front()->read_async(task.req->input_size);
     io->set_name("read-" + std::to_string(task_id));
-    pending_activities_.push_back(io);
+    pending_activities_->push(io);
     activity_tasks_.emplace(io->get_name(), task_id);
 }
 
@@ -158,7 +156,7 @@ void Worker::OnDataReadCompleted(int task_id) {
     // execute task asynchronously
     auto exec = sg4::this_actor::exec_async(task.req->flops);
     exec->set_name("exec-" + std::to_string(task_id));
-    pending_activities_.push_back(exec);
+    pending_activities_->push(exec);
     activity_tasks_.emplace(exec->get_name(), task_id);
 }
 
@@ -168,7 +166,7 @@ void Worker::OnTaskExecCompleted(int task_id) {
     // write data to disk asynchronously
     auto io = sg4::Host::current()->get_disks().front()->write_async(task.req->output_size);
     io->set_name("write-" + std::to_string(task_id));
-    pending_activities_.push_back(io);
+    pending_activities_->push(io);
     activity_tasks_.emplace(io->get_name(), task_id);
 }
 
@@ -179,7 +177,7 @@ void Worker::OnDataWriteCompleted(int task_id) {
     auto comm =
         sg4::Comm::sendto_async(sg4::this_actor::get_host(), master_host_, task.req->output_size);
     comm->set_name("upload-" + std::to_string(task_id));
-    pending_activities_.push_back(comm);
+    pending_activities_->push(comm);
     activity_tasks_.emplace(comm->get_name(), task_id);
 }
 
