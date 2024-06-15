@@ -9,6 +9,7 @@ XBT_LOG_NEW_DEFAULT_CATEGORY(main, "Main");
 int main(int argc, char* argv[]) {
     sg4::Engine e(&argc, argv);
     // use simple network config
+    sg4::Engine::set_config("network/TCP-gamma:0");
     sg4::Engine::set_config("network/latency-factor:1");
     sg4::Engine::set_config("network/bandwidth-factor:1");
     sg4::Engine::set_config("network/weight-S:0.0");
