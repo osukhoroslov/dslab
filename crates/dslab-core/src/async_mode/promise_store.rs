@@ -30,14 +30,18 @@ impl EventPromiseStore {
 
         // check that promise with such key (with or without source) doesn't exist yet
         if self.promises.contains_key(&key) {
-            panic!("Event promise {:?} already exists", key);
+            return Err(format!("Event promise for key {:?} already exists", key));
         }
 
         // store promise
         if let Some(src) = src {
             if let Some(promises) = self.promises_with_source.get(&key) {
+                // check that promise with such key and source doesn't exist yet
                 if promises.contains_key(&src) {
-                    panic!("Event promise {:?} with source {} already exists", key, src);
+                    return Err(format!(
+                        "Event promise for key {:?} with source {} already exists",
+                        key, src
+                    ));
                 }
             }
             self.promises_with_source.entry(key).or_default().insert(src, promise);
