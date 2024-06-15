@@ -1,18 +1,16 @@
-mod worker;
+use std::io::Write;
+use sugars::{rc, refcell};
 
 use env_logger::Builder;
-use std::io::Write;
-use worker::{Start, TaskRequest};
-
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-
-use sugars::{rc, refcell};
 
 use dslab_compute::multicore::*;
 use dslab_core::simulation::Simulation;
 
+mod worker;
 use crate::worker::Worker;
+use worker::{Start, TaskRequest};
 
 fn main() {
     // logger
