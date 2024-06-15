@@ -323,7 +323,7 @@ impl Compute {
                 Ok(computation.flops_done / computation.req.flops)
             }
         } else {
-            return Err("Computation does not exist");
+            Err("Computation does not exist")
         }
     }
 
