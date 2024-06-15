@@ -79,11 +79,14 @@ impl ModelChecker {
     where
         S: Strategy,
     {
+        let initial_state = self.system.get_state();
         self.system.trace_handler.borrow_mut().push(LogEntry::McStarted {});
         preliminary_callback(&mut self.system);
         strategy.mark_visited(self.system.get_state());
         let res = strategy.run(&mut self.system);
         strategy.reset();
+        // McSystem is always rolled back to the state before MC run
+        self.system.set_state(initial_state);
         res
     }
 
