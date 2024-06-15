@@ -1,3 +1,5 @@
+import json
+
 from dslabmp import Context, Message, Process
 
 
@@ -22,9 +24,21 @@ class PingClient(Process):
 
     def on_timer(self, timer_name: str, ctx: Context):
         # process fired timers
-        if timer_name == 'check_pong':
+        if timer_name == 'check_pong' and self._ping is not None:
             ctx.send(self._ping, self._server_id)
             ctx.set_timer('check_pong', 3)
+
+    def get_state(self) -> str:
+        if self._ping is None:
+            return ''
+        else:
+            return json.dumps(self._ping._data)
+
+    def set_state(self, state_encoded: str):
+        if state_encoded == '':
+            self._ping = None
+        else:
+            self._ping = Message.from_json('PING', state_encoded)
 
 
 class PingServer(Process):

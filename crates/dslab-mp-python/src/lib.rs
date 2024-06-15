@@ -67,7 +67,6 @@ impl PyProcessFactory {
     }
 }
 
-#[derive(Clone)]
 pub struct PyProcess {
     proc: PyObject,
     msg_class: Rc<PyObject>,
@@ -116,6 +115,14 @@ impl PyProcess {
                 self.max_size_counter = self.max_size_freq;
             }
         }
+    }
+
+    fn clone_process(&self) -> PyObject {
+        Python::with_gil(|py| -> PyObject {
+            let module = PyModule::import(py, "copy").unwrap();
+            let fun = module.getattr("deepcopy").unwrap();
+            fun.call1((&self.proc,)).unwrap().to_object(py)
+        })
     }
 }
 
@@ -187,6 +194,21 @@ impl Process for PyProcess {
                 .map_err(|e| error_to_string(e, py))?;
             Ok(())
         })
+    }
+}
+
+impl Clone for PyProcess {
+    fn clone(&self) -> Self {
+        PyProcess {
+            // process is cloned via deepcopy to avoid leaking state between MC and simulation
+            proc: self.clone_process(),
+            msg_class: self.msg_class.clone(),
+            ctx_class: self.ctx_class.clone(),
+            get_size_fun: self.get_size_fun.clone(),
+            max_size: self.max_size,
+            max_size_freq: self.max_size_freq,
+            max_size_counter: self.max_size_counter,
+        }
     }
 }
 
