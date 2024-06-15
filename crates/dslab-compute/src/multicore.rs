@@ -90,7 +90,7 @@ struct Computation {
     start_time: f64,
     cores: u32,
     state: ComputationState,
-    fraction_done: f64,
+    flops_done: f64,
     comp_finished_event_id: EventId,
 }
 
@@ -100,7 +100,7 @@ impl Computation {
         start_time: f64,
         cores: u32,
         state: ComputationState,
-        fraction_done: f64,
+        flops_done: f64,
         comp_finished_event_id: EventId,
     ) -> Self {
         Computation {
@@ -108,7 +108,7 @@ impl Computation {
             start_time,
             cores,
             state,
-            fraction_done,
+            flops_done,
             comp_finished_event_id,
         }
     }
@@ -314,12 +314,13 @@ impl Compute {
     pub fn fraction_done(&self, comp_id: EventId) -> Result<f64, &str> {
         if let Some(computation) = self.computations.get(&comp_id) {
             let speedup = computation.req.cores_dependency.speedup(computation.cores);
-            let total_compute_time = computation.req.flops / self.speed / speedup;
+
+            let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
 
             if computation.state == ComputationState::Running {
-                Ok(computation.fraction_done + (self.ctx.time() - computation.start_time) / total_compute_time)
+                Ok((computation.flops_done + flops_computed) / computation.req.flops)
             } else {
-                Ok(computation.fraction_done)
+                Ok(computation.flops_done / computation.req.flops)
             }
         } else {
             return Err("Computation does not exist");
@@ -452,15 +453,15 @@ impl EventHandler for Compute {
                     .req
                     .cores_dependency
                     .speedup(running_computation.cores);
-                let total_compute_time = running_computation.req.flops / self.speed / speedup;
 
-                running_computation.fraction_done +=
-                    (self.ctx.time() - running_computation.start_time) / total_compute_time;
+                let flops_computed = (self.ctx.time() - running_computation.start_time) * self.speed * speedup;
+
+                running_computation.flops_done += flops_computed;
 
                 self.ctx.emit_now(
                     CompPreempted {
                         id,
-                        fraction_done: running_computation.fraction_done,
+                        fraction_done: running_computation.flops_done / running_computation.req.flops,
                     },
                     running_computation.req.requester,
                 );
@@ -496,7 +497,7 @@ impl EventHandler for Compute {
 
                     let speedup = computation.req.cores_dependency.speedup(cores);
 
-                    let compute_time = (1. - computation.fraction_done) * computation.req.flops / self.speed / speedup;
+                    let compute_time = (computation.req.flops - computation.flops_done) / self.speed / speedup;
 
                     computation.comp_finished_event_id = self.ctx.emit_self(CompFinished { id }, compute_time);
 
