@@ -95,20 +95,13 @@ struct Computation {
 }
 
 impl Computation {
-    fn new(
-        req: CompRequest,
-        start_time: f64,
-        cores: u32,
-        state: ComputationState,
-        flops_done: f64,
-        comp_finished_event_id: EventId,
-    ) -> Self {
+    fn new(req: CompRequest, start_time: f64, cores: u32, comp_finished_event_id: EventId) -> Self {
         Computation {
             req,
             start_time,
             cores,
-            state,
-            flops_done,
+            state: ComputationState::Running,
+            flops_done: 0.,
             comp_finished_event_id,
         }
     }
@@ -422,14 +415,7 @@ impl EventHandler for Compute {
                     };
                     self.computations.insert(
                         event.id,
-                        Computation::new(
-                            req,
-                            self.ctx.time(),
-                            cores,
-                            ComputationState::Running,
-                            0.,
-                            comp_finished_event_id,
-                        ),
+                        Computation::new(req, self.ctx.time(), cores, comp_finished_event_id),
                     );
                 }
             }
