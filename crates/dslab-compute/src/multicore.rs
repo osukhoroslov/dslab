@@ -75,12 +75,12 @@ pub enum FailReason {
     },
 }
 
-/// Computation state
+/// Computation state.
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub enum ComputationState {
-    /// Computation is currently running
+    /// Computation is currently running.
     Running,
-    /// Computation is preempted
+    /// Computation is preempted.
     Preempted,
 }
 
@@ -137,30 +137,30 @@ pub struct CompStarted {
     pub cores: u32,
 }
 
-/// Computation preemption request
+/// Computation preemption request.
 #[derive(Clone, Serialize)]
 pub struct PreemptComp {
     /// Id of the computation.
     pub id: u64,
 }
 
-/// Computation is preempted successfully
+/// Computation is preempted successfully.
 #[derive(Clone, Serialize)]
 pub struct CompPreempted {
     /// Id of the computation.
     pub id: u64,
-    /// Fraction of the flops computed
+    /// Fraction of the flops computed.
     pub fraction_done: f64,
 }
 
-/// Computation resumption request
+/// Computation resumption request.
 #[derive(Clone, Serialize)]
 pub struct ResumeComp {
     /// Id of the computation.
     pub id: u64,
 }
 
-/// Computation is successfully resumed
+/// Computation is successfully resumed.
 #[derive(Clone, Serialize)]
 pub struct CompResumed {
     /// Id of the computation.
@@ -298,12 +298,12 @@ impl Compute {
         self.memory_available
     }
 
-    /// Returns estimated compute time for a workload with given flops, cores and cores dependency
+    /// Returns estimated compute time for a workload with given flops, cores and cores dependency.
     pub fn est_compute_time(&self, flops: f64, cores: u32, cores_dependency: CoresDependency) -> f64 {
         flops / self.speed / cores_dependency.speedup(cores)
     }
 
-    /// Returns workload fraction done for a given computation
+    /// Returns workload fraction done for a given computation.
     pub fn fraction_done(&self, comp_id: EventId) -> Result<f64, &str> {
         if let Some(computation) = self.computations.get(&comp_id) {
             match computation.state {
@@ -340,12 +340,12 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
-    /// Preempts computation which is currently running
+    /// Preempts computation which is currently running.
     pub fn preempt_computation(&mut self, comp_id: u64) {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
     }
 
-    /// Resumes computation which has been preempted
+    /// Resumes computation which has been preempted.
     pub fn resume_computation(&mut self, comp_id: u64) {
         self.ctx.emit_self_now(ResumeComp { id: comp_id });
     }
