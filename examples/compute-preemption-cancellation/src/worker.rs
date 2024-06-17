@@ -48,7 +48,7 @@ impl Worker {
             self.ctx.id(),
         ) as EventKey;
         self.ctx.recv_event_by_key::<CompStarted>(comp_id).await;
-        log_debug!(self.ctx, "Task {} execution started", comp_id);
+        log_debug!(self.ctx, "Task {} is running", comp_id);
 
         let min_compute_time = self
             .compute
@@ -70,14 +70,14 @@ impl Worker {
             self.compute.borrow_mut().resume_computation(comp_id);
 
             self.ctx.recv_event_by_key::<CompFinished>(comp_id).await;
-            log_debug!(self.ctx, "Task {} execution completed", comp_id);
+            log_debug!(self.ctx, "Task {} is completed", comp_id);
         } else {
             // cancel
             self.ctx.sleep(min_compute_time / 2.).await;
             self.compute.borrow_mut().cancel_computation(comp_id);
 
             self.ctx.recv_event_by_key::<CompCancelled>(comp_id).await;
-            log_debug!(self.ctx, "Task {} was cancelled", comp_id);
+            log_debug!(self.ctx, "Task {} is cancelled", comp_id);
         }
     }
 }
@@ -103,7 +103,7 @@ impl StaticEventHandler for Worker {
             CompPreempted { id, fraction_done } => {
                 log_debug!(
                     self.ctx,
-                    "Task {} is preempted. Task is {}% done",
+                    "Task {} is preempted. (fraction_done: {}%)",
                     id,
                     fraction_done * 100.
                 );

@@ -77,7 +77,7 @@ pub enum FailReason {
 }
 
 /// Computation state.
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ComputationState {
     /// Computation is currently running.
     Running,
@@ -377,6 +377,29 @@ impl Compute {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
     }
 
+    /// Resumes computation which has been preempted.
+    pub fn resume_computation(&mut self, comp_id: u64) {
+        self.ctx.emit_self_now(ResumeComp { id: comp_id });
+    }
+
+    /// Requests resource allocation with given parameters and returns allocation id.
+    pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
+        let request = AllocationRequest {
+            allocation: Allocation::new(cores, memory),
+            requester,
+        };
+        self.ctx.emit_self_now(request)
+    }
+
+    /// Requests resource deallocation with given parameters and returns deallocation id.
+    pub fn deallocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
+        let request = DeallocationRequest {
+            allocation: Allocation::new(cores, memory),
+            requester,
+        };
+        self.ctx.emit_self_now(request)
+    }
+
     fn stop_computation(&mut self, comp_id: u64, preempt: bool) {
         if let Some(computation) = self.computations.get_mut(&comp_id) {
             if computation.state == ComputationState::Running {
@@ -414,29 +437,6 @@ impl Compute {
                 self.computations.remove(&comp_id);
             }
         }
-    }
-
-    /// Resumes computation which has been preempted.
-    pub fn resume_computation(&mut self, comp_id: u64) {
-        self.ctx.emit_self_now(ResumeComp { id: comp_id });
-    }
-
-    /// Requests resource allocation with given parameters and returns allocation id.
-    pub fn allocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
-        let request = AllocationRequest {
-            allocation: Allocation::new(cores, memory),
-            requester,
-        };
-        self.ctx.emit_self_now(request)
-    }
-
-    /// Requests resource deallocation with given parameters and returns deallocation id.
-    pub fn deallocate(&mut self, cores: u32, memory: u64, requester: Id) -> u64 {
-        let request = DeallocationRequest {
-            allocation: Allocation::new(cores, memory),
-            requester,
-        };
-        self.ctx.emit_self_now(request)
     }
 }
 
