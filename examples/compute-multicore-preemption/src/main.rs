@@ -9,8 +9,7 @@ use dslab_compute::multicore::*;
 use dslab_core::simulation::Simulation;
 
 mod worker;
-use crate::worker::Worker;
-use worker::{Start, TaskRequest};
+use crate::worker::{Start, TaskRequest, Worker};
 
 fn main() {
     // logger
