@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use clap::Parser;
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -11,14 +12,22 @@ use dslab_core::simulation::Simulation;
 mod worker;
 use crate::worker::{TaskRequest, Worker};
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Number of tasks (>= 1)
+    #[clap(long, default_value_t = 10)]
+    task_count: u32,
+}
+
 fn main() {
+    let args = Args::parse();
     // logger
     Builder::from_default_env()
         .format(|buf, record| writeln!(buf, "{}", record.args()))
         .init();
 
     // params
-    let task_count = 1;
     let seed = 123;
 
     let mut sim = Simulation::new(seed);
@@ -46,7 +55,7 @@ fn main() {
     Worker::register_key_getters(&sim);
 
     // submit tasks
-    for _ in 0..task_count {
+    for _ in 0..args.task_count {
         let task = TaskRequest {
             flops: rand.gen_range(100..=1000) as f64,
             memory: rand.gen_range(1..=8) * 128,
