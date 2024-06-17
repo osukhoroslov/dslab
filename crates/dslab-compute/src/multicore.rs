@@ -464,8 +464,8 @@ impl EventHandler for Compute {
             }
             PreemptComp { id } => {
                 if let Some(computation) = self.computations.get_mut(&id) {
-                    if computation.state == ComputationState::Preempted {
-                        return;
+                    if computation.state != ComputationState::Running {
+                        panic!("Computation is already preempted");
                     }
                     computation.state = ComputationState::Preempted;
 
