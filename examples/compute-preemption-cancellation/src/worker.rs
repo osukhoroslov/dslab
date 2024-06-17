@@ -53,7 +53,8 @@ impl Worker {
         let min_compute_time = self
             .compute
             .borrow()
-            .est_compute_time(req.flops, req.max_cores, req.cores_dependency);
+            .est_compute_time(req.flops, req.max_cores, req.cores_dependency)
+            .unwrap();
 
         if preempt {
             self.ctx.sleep(min_compute_time / 4.).await;

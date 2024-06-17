@@ -315,8 +315,11 @@ impl Compute {
     }
 
     /// Returns estimated compute time for a workload with given flops, cores and cores dependency.
-    pub fn est_compute_time(&self, flops: f64, cores: u32, cores_dependency: CoresDependency) -> f64 {
-        flops / self.speed / cores_dependency.speedup(cores)
+    pub fn est_compute_time(&self, flops: f64, cores: u32, cores_dependency: CoresDependency) -> Result<f64, &str> {
+        if self.cores_total() < cores {
+            return Err("Total number of compute cores is less than given cores");
+        }
+        return Ok(flops / self.speed / cores_dependency.speedup(cores));
     }
 
     /// Returns workload fraction done for a given computation.
