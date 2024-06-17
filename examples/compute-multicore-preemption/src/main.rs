@@ -9,7 +9,7 @@ use dslab_compute::multicore::*;
 use dslab_core::simulation::Simulation;
 
 mod worker;
-use crate::worker::{Start, TaskRequest, Worker};
+use crate::worker::{TaskRequest, Worker};
 
 fn main() {
     // logger
@@ -42,7 +42,6 @@ fn main() {
 
     let worker = Worker::new(compute.clone(), sim.create_context(worker_name));
     let worker_id = sim.add_static_handler(worker_name, rc!(worker));
-    admin.emit_now(Start {}, worker_id);
 
     Worker::register_key_getters(&sim);
 

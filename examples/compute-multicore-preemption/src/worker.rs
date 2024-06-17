@@ -8,9 +8,6 @@ use dslab_core::async_mode::EventKey;
 use dslab_core::{cast, log_debug, StaticEventHandler};
 use dslab_core::{Event, Simulation, SimulationContext};
 
-#[derive(Clone, Serialize)]
-pub struct Start {}
-
 #[derive(Clone, Serialize, Debug)]
 pub struct TaskRequest {
     pub flops: f64,
@@ -40,10 +37,6 @@ impl Worker {
         Self { compute, ctx }
     }
 
-    fn on_start(&self) {
-        log_debug!(self.ctx, "started");
-    }
-
     pub fn register_key_getters(sim: &Simulation) {
         sim.register_key_getter_for::<CompStarted>(|e| e.id as EventKey);
         sim.register_key_getter_for::<CompFinished>(|e| e.id as EventKey);
@@ -66,33 +59,31 @@ impl Worker {
         self.ctx.recv_event_by_key::<CompStarted>(comp_id).await;
         log_debug!(self.ctx, "started execution of task");
 
-        self.ctx.emit_self(PreemptTask { id: comp_id }, 100.);
+        let min_compute_time = self
+            .compute
+            .borrow()
+            .est_compute_time(req.flops, req.max_cores, req.cores_dependency);
 
-        self.ctx.emit_self(ContinueTask { id: comp_id }, 200.);
+        self.ctx.sleep(min_compute_time / 4.).await;
+        self.compute.borrow_mut().preempt_computation(comp_id);
 
-        self.ctx.emit_self(PreemptTask { id: comp_id }, 250.);
+        self.ctx.sleep(min_compute_time / 4.).await;
+        self.compute.borrow_mut().resume_computation(comp_id);
 
-        self.ctx.emit_self(ContinueTask { id: comp_id }, 350.);
+        self.ctx.sleep(min_compute_time / 2.).await;
+        self.compute.borrow_mut().preempt_computation(comp_id);
+
+        self.ctx.sleep(min_compute_time / 8.).await;
+        self.compute.borrow_mut().resume_computation(comp_id);
 
         self.ctx.recv_event_by_key::<CompFinished>(comp_id).await;
         log_debug!(self.ctx, "completed execution of task");
-    }
-
-    pub fn on_preempt_task(&self, id: u64) {
-        self.compute.borrow_mut().preempt_computation(id);
-    }
-
-    pub fn on_continue_task(&self, id: u64) {
-        self.compute.borrow_mut().resume_computation(id);
     }
 }
 
 impl StaticEventHandler for Worker {
     fn on(self: Rc<Self>, event: Event) {
         cast!(match event.data {
-            Start {} => {
-                self.on_start();
-            }
             TaskRequest {
                 flops,
                 memory,
@@ -108,17 +99,11 @@ impl StaticEventHandler for Worker {
                     cores_dependency,
                 });
             }
-            PreemptTask { id } => {
-                self.on_preempt_task(id);
-            }
             CompPreempted { fraction_done, .. } => {
                 log_debug!(self.ctx, "Task is preempted. Task is {}% done", fraction_done * 100.);
             }
-            ContinueTask { id } => {
-                self.on_continue_task(id);
-            }
             CompResumed { .. } => {
-                log_debug!(self.ctx, "Task is continued");
+                log_debug!(self.ctx, "Task is resumed");
             }
         })
     }
