@@ -1,9 +1,9 @@
 use std::io::Write;
-use sugars::{rc, refcell};
 
 use env_logger::Builder;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use sugars::{rc, refcell};
 
 use dslab_compute::multicore::*;
 use dslab_core::simulation::Simulation;
